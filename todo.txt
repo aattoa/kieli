@@ -1,0 +1,7 @@
+implicit move normally, explicit if the objects address has been taken
+
+(unsafe_)mov keyword, move from behind references
+
+unbound unification variabales -> implicit function template parameters
+
+macro definitions regular entities, expand during resolution, fold expressions

@@ -1,0 +1,15 @@
+# Ignore everything that is not handled below
+*
+
+# Keep the following files
+!.gitignore
+!README.md
+!todo.txt
+
+# And keep all source code
+!*.hpp
+!*.cpp
+!*.kieli
+
+# Recursively apply rules to subdirectories
+!*/
