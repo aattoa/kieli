@@ -1,0 +1,166 @@
+#ifndef KIELI_MIR_NODES_EXPRESSION
+#define KIELI_MIR_NODES_EXPRESSION
+#else
+#error This isn't supposed to be included by anything other than mir/mir.hpp
+#endif
+
+
+namespace mir {
+
+    struct Enum_constructor {
+        ast::Name           name;
+        std::optional<Type> payload_type;
+        std::optional<Type> function_type;
+        Type                enum_type;
+    };
+
+    namespace expression {
+
+        template <class T>
+        struct Literal {
+            T value;
+        };
+
+        struct Array_literal {
+            std::vector<Expression> elements;
+        };
+
+        struct Tuple {
+            std::vector<Expression> fields;
+        };
+
+        struct Block {
+            std::vector<Expression>                side_effects;
+            std::optional<utl::Wrapper<Expression>> result;
+        };
+
+        struct Let_binding {
+            utl::Wrapper<Pattern>    pattern;
+            Type                    type;
+            utl::Wrapper<Expression> initializer;
+        };
+
+        struct Conditional {
+            utl::Wrapper<Expression> condition;
+            utl::Wrapper<Expression> true_branch;
+            utl::Wrapper<Expression> false_branch;
+        };
+
+        struct Match {
+            struct Case {
+                utl::Wrapper<Pattern>    pattern;
+                utl::Wrapper<Expression> handler;
+            };
+            std::vector<Case>       cases;
+            utl::Wrapper<Expression> matched_expression;
+        };
+
+        struct Local_variable_reference {
+            compiler::Identifier identifier;
+        };
+
+        struct Struct_initializer {
+            std::vector<Expression> initializers;
+            Type                    struct_type;
+        };
+
+        struct Struct_member_access {
+            utl::Wrapper<Expression> base_expression;
+            compiler::Identifier    member_identifier;
+            utl::Source_view         member_source_view;
+        };
+
+        struct Tuple_member_access {
+            utl::Wrapper<Expression> base_expression;
+            utl::Usize               member_index;
+            utl::Source_view         member_source_view;
+        };
+
+        struct Function_reference {
+            utl::Wrapper<resolution::Function_info> info;
+            bool                                   is_application = false;
+        };
+
+        struct Direct_invocation {
+            Function_reference      function;
+            std::vector<Expression> arguments;
+        };
+
+        struct Indirect_invocation {
+            std::vector<Expression> arguments;
+            utl::Wrapper<Expression> invocable;
+        };
+
+        struct Enum_constructor_reference {
+            Enum_constructor constructor;
+        };
+
+        struct Direct_enum_constructor_invocation {
+            Enum_constructor        constructor;
+            std::vector<Expression> arguments;
+        };
+
+        struct Sizeof {
+            Type inspected_type;
+        };
+
+        struct Reference {
+            Mutability              mutability;
+            utl::Wrapper<Expression> referenced_expression;
+        };
+
+        struct Dereference {
+            utl::Wrapper<Expression> dereferenced_expression;
+        };
+
+        struct Addressof {
+            utl::Wrapper<Expression> lvalue;
+        };
+
+        struct Unsafe_dereference {
+            utl::Wrapper<Expression> pointer;
+        };
+
+        struct Hole {};
+
+    }
+
+
+    struct Expression {
+        using Variant = std::variant<
+            expression::Literal<utl::Isize>,
+            expression::Literal<utl::Float>,
+            expression::Literal<utl::Char>,
+            expression::Literal<bool>,
+            expression::Literal<compiler::String>,
+            expression::Array_literal,
+            expression::Tuple,
+            expression::Block,
+            expression::Let_binding,
+            expression::Conditional,
+            expression::Match,
+            expression::Local_variable_reference,
+            expression::Struct_initializer,
+            expression::Struct_member_access,
+            expression::Tuple_member_access,
+            expression::Function_reference,
+            expression::Direct_invocation,
+            expression::Indirect_invocation,
+            expression::Enum_constructor_reference,
+            expression::Direct_enum_constructor_invocation,
+            expression::Sizeof,
+            expression::Reference,
+            expression::Dereference,
+            expression::Addressof,
+            expression::Unsafe_dereference,
+            expression::Hole
+        >;
+
+        Variant         value;
+        Type            type;
+        utl::Source_view source_view;
+        Mutability      mutability;
+        bool            is_addressable = false;
+    };
+
+}
