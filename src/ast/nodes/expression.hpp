@@ -201,6 +201,10 @@ namespace ast {
             utl::Wrapper<Expression> initializer;
         };
 
+        struct Move {
+            utl::Wrapper<Expression> lvalue;
+        };
+
         struct Meta {
             utl::Wrapper<Expression> expression;
         };
@@ -248,11 +252,12 @@ namespace ast {
             expression::Addressof,
             expression::Unsafe_dereference,
             expression::Placement_init,
+            expression::Move,
             expression::Meta,
             expression::Hole
         >;
 
-        Variant         value;
+        Variant          value;
         utl::Source_view source_view;
     };
 

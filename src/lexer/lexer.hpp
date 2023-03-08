@@ -15,8 +15,8 @@ namespace compiler {
 
     struct [[nodiscard]] Lex_result {
         std::vector<Lexical_token> tokens;
-        utl::Source                 source;
-        utl::diagnostics::Builder   diagnostics;
+        utl::Source                source;
+        utl::diagnostics::Builder  diagnostics;
         Program_string_pool&       string_pool;
     };
 

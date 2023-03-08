@@ -60,6 +60,7 @@ auto compiler::token_description(Lexical_token::Type const type)
     case typeof:
     case addressof:
     case unsafe_dereference:
+    case mov:
     case meta:
     case where:
     case dyn:
@@ -106,7 +107,7 @@ DEFINE_FORMATTER_FOR(compiler::Lexical_token::Type) {
 
         "let", "mut", "immut", "if", "else", "elif", "for", "in", "while", "loop", "continue", "break",
         "match", "ret", "discard", "fn", "as", "enum", "struct", "class", "inst", "impl", "alias",
-        "namespace", "import", "export", "module", "sizeof", "typeof", "addressof", "unsafe_dereference", "meta", "where", "dyn", "pub", "macro",
+        "namespace", "import", "export", "module", "sizeof", "typeof", "addressof", "unsafe_dereference", "mov", "meta", "where", "dyn", "pub", "macro",
 
         "underscore", "lower", "upper", "op",
 

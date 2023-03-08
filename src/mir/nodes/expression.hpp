@@ -121,6 +121,10 @@ namespace mir {
             utl::Wrapper<Expression> pointer;
         };
 
+        struct Move {
+            utl::Wrapper<Expression> lvalue;
+        };
+
         struct Hole {};
 
     }
@@ -153,14 +157,15 @@ namespace mir {
             expression::Dereference,
             expression::Addressof,
             expression::Unsafe_dereference,
+            expression::Move,
             expression::Hole
         >;
 
-        Variant         value;
-        Type            type;
+        Variant          value;
+        Type             type;
         utl::Source_view source_view;
-        Mutability      mutability;
-        bool            is_addressable = false;
+        Mutability       mutability;
+        bool             is_addressable = false;
     };
 
 }

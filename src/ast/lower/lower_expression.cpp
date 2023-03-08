@@ -311,6 +311,9 @@ namespace {
                 .initializer = context.lower(init.initializer)
             };
         }
+        auto operator()(ast::expression::Move const& move) -> hir::Expression::Variant {
+            return hir::expression::Move { context.lower(move.lvalue) };
+        }
         auto operator()(ast::expression::Meta const& meta) -> hir::Expression::Variant {
             return hir::expression::Meta { .expression = context.lower(meta.expression) };
         }

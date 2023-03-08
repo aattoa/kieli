@@ -63,9 +63,9 @@ namespace mir {
             pattern::Guarded
         >;
 
-        Variant         value;
-        Type            type;
-        bool            is_exhaustive_by_itself = false;
+        Variant          value;
+        Type             type;
+        bool             is_exhaustive_by_itself = false;
         utl::Source_view source_view;
 
         [[nodiscard]] auto hash() const -> utl::Usize;

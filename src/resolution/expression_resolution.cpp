@@ -7,15 +7,26 @@ namespace {
     using namespace resolution;
 
 
+    auto require_addressability(
+        Context               & context,
+        mir::Expression  const& expression,
+        std::string_view const  explanation) -> void
+    {
+        if (!expression.is_addressable) {
+            context.error(expression.source_view, {
+                .message   = "This expression is not addressable",
+                .help_note = explanation
+            });
+        }
+    }
+
     auto take_reference(
         Context&              context,
         mir::Expression&&     referenced_expression,
         mir::Mutability const requested_mutability,
         utl::Source_view const source_view) -> mir::Expression
     {
-        if (!referenced_expression.is_addressable) {
-            context.error(referenced_expression.source_view, { "This expression is not addressable" });
-        }
+        require_addressability(context, referenced_expression, "A temporary object can not be referenced");
 
         mir::Type       const referenced_type   = referenced_expression.type;
         mir::Mutability const actual_mutability = referenced_expression.mutability;
@@ -351,6 +362,18 @@ namespace {
                 },
                 .source_view = this_expression.source_view,
                 .mutability  = context.immut_constant(this_expression.source_view)
+            };
+        }
+
+        auto operator()(hir::expression::Move& move) -> mir::Expression {
+            mir::Expression lvalue = recurse(*move.lvalue);
+            mir::Type const type   = lvalue.type;
+            require_addressability(context, lvalue, "Temporary expressions may not be explicitly moved");
+            return {
+                .value       = mir::expression::Move { utl::wrap(std::move(lvalue)) },
+                .type        = type,
+                .source_view = this_expression.source_view,
+                .mutability  = context.immut_constant(this_expression.source_view),
             };
         }
 
@@ -911,10 +934,7 @@ namespace {
 
         auto operator()(hir::expression::Addressof& addressof) -> mir::Expression {
             mir::Expression lvalue = recurse(*addressof.lvalue);
-
-            if (!lvalue.is_addressable) {
-                context.error(lvalue.source_view, { "This expression is not addressable" });
-            }
+            require_addressability(context, lvalue, "The address of a temporary object can not be taken");
 
             mir::Type pointer_type {
                 .value = wrap_type(mir::type::Pointer {

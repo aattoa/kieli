@@ -78,6 +78,7 @@ namespace compiler {
             typeof,
             addressof,
             unsafe_dereference,
+            mov,
             meta,
             where,
             dyn,
