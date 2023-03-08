@@ -499,6 +499,9 @@ namespace {
                 .member_source_view = access.member_source_view
             };
         }
+        auto operator()(mir::expression::Move const& move) -> R {
+            return mir::expression::Move { .lvalue = context.recurse(move.lvalue) };
+        }
 
         auto operator()(mir::expression::Function_reference const& function) -> R {
             if (function.is_application) {

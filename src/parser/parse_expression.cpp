@@ -590,6 +590,12 @@ namespace {
         };
     }
 
+    auto extract_move(Parse_context& context)
+        -> ast::Expression::Variant
+    {
+        return ast::expression::Move { utl::wrap(extract_expression(context)) };
+    }
+
     auto extract_meta(Parse_context& context)
         -> ast::Expression::Variant
     {
@@ -697,6 +703,8 @@ namespace {
             return extract_discard(context);
         case Token::Type::ampersand:
             return extract_reference(context);
+        case Token::Type::mov:
+            return extract_move(context);
         case Token::Type::meta:
             return extract_meta(context);
         case Token::Type::brace_open:

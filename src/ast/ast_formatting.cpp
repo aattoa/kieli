@@ -230,6 +230,9 @@ namespace {
         auto operator()(ast::expression::Placement_init const& init) {
             return format("{} <- {}", init.lvalue, init.initializer);
         }
+        auto operator()(ast::expression::Move const& move) {
+            return format("mov {}", move.lvalue);
+        }
         auto operator()(ast::expression::Meta const& meta) {
             return format("meta({})", meta.expression);
         }

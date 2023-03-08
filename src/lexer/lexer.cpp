@@ -8,16 +8,16 @@ namespace {
 
     struct Lex_context {
         std::vector<Token>             tokens;
-        utl::Source                     source;
-        utl::diagnostics::Builder       diagnostics;
+        utl::Source                    source;
+        utl::diagnostics::Builder      diagnostics;
         compiler::Program_string_pool& string_pool;
         char const                   * start;
         char const                   * stop;
 
         struct [[nodiscard]] State {
             char const* pointer = nullptr;
-            utl::Usize   line    = 1;
-            utl::Usize   column  = 1;
+            utl::Usize  line    = 1;
+            utl::Usize  column  = 1;
         };
 
         State token_start;
@@ -52,9 +52,9 @@ namespace {
         }
     public:
         explicit Lex_context(
-            utl::Source                   && source,
-            utl::diagnostics::Builder     && diagnostics,
-            compiler::Program_string_pool & string_pool
+            utl::Source                  && source,
+            utl::diagnostics::Builder    && diagnostics,
+            compiler::Program_string_pool&  string_pool
         ) noexcept
             : source      { std::move(source) }
             , diagnostics { std::move(diagnostics) }
@@ -331,6 +331,7 @@ namespace {
             { "typeof"             , Token::Type::typeof             },
             { "addressof"          , Token::Type::addressof          },
             { "unsafe_dereference" , Token::Type::unsafe_dereference },
+            { "mov"                , Token::Type::mov                },
             { "meta"               , Token::Type::meta               },
             { "where"              , Token::Type::where              },
             { "immut"              , Token::Type::immut              },

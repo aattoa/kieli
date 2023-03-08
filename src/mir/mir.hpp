@@ -163,7 +163,7 @@ struct mir::Template_parameter {
     ast::Name                        name;
     std::optional<Template_argument> default_argument;
     Template_parameter_tag           reference_tag;
-    utl::Source_view                  source_view;
+    utl::Source_view                 source_view;
 };
 
 struct mir::Function_parameter {
@@ -245,27 +245,28 @@ namespace resolution {
     class [[nodiscard]] Scope {
     public:
         struct Variable_binding {
-            mir::Type       type;
-            mir::Mutability mutability;
-            bool            has_been_mentioned = false;
-            utl::Source_view source_view;
+            mir::Type                       type;
+            mir::Mutability                 mutability;
+            bool                            has_been_mentioned = false;
+            std::optional<utl::Source_view> moved_at;
+            utl::Source_view                source_view;
         };
         struct Type_binding {
-            mir::Type       type;
-            bool            has_been_mentioned = false;
+            mir::Type        type;
+            bool             has_been_mentioned = false;
             utl::Source_view source_view;
         };
         struct Mutability_binding {
-            mir::Mutability mutability;
-            bool            has_been_mentioned = false;
+            mir::Mutability  mutability;
+            bool             has_been_mentioned = false;
             utl::Source_view source_view;
         };
     private:
         utl::Flatmap<compiler::Identifier, Variable_binding>   variable_bindings;
         utl::Flatmap<compiler::Identifier, Type_binding>       type_bindings;
         utl::Flatmap<compiler::Identifier, Mutability_binding> mutability_bindings;
-        Context*                                              context;
-        Scope*                                                parent = nullptr;
+        Context*                                               context;
+        Scope*                                                 parent = nullptr;
     public:
         Scope(Context&) noexcept;
 
@@ -329,7 +330,7 @@ namespace resolution {
         utl::Flatmap<compiler::Identifier, Lower_variant> lower_table;
         utl::Flatmap<compiler::Identifier, Upper_variant> upper_table;
         std::optional<utl::Wrapper<Namespace>>            parent;
-        std::optional<ast::Name>                         name;
+        std::optional<ast::Name>                          name;
     };
 
 
@@ -358,10 +359,10 @@ namespace resolution {
     struct Definition_info {
         using Variant = std::variant<HIR_representation, mir::From_HIR<HIR_representation>>;
 
-        Variant                value;
+        Variant                 value;
         utl::Wrapper<Namespace> home_namespace;
-        Definition_state       state = Definition_state::unresolved;
-        ast::Name              name;
+        Definition_state        state = Definition_state::unresolved;
+        ast::Name               name;
     };
 
     template <template <ast::tree_configuration> class Definition>
@@ -372,11 +373,11 @@ namespace resolution {
             mir::From_HIR<ast::definition::Template<Definition<hir::HIR_configuration>>>
         >;
 
-        Variant                value;
+        Variant                 value;
         utl::Wrapper<Namespace> home_namespace;
-        mir::Type              parameterized_type_of_this; // One of mir::type::{Structure, Enumeration
-        Definition_state       state = Definition_state::unresolved;
-        ast::Name              name;
+        mir::Type               parameterized_type_of_this; // One of mir::type::{Structure, Enumeration
+        Definition_state        state = Definition_state::unresolved;
+        ast::Name               name;
     };
 
     template <>
@@ -387,15 +388,15 @@ namespace resolution {
             mir::Function_template                // Fully resolved
         >;
 
-        Variant                value;
+        Variant                 value;
         utl::Wrapper<Namespace> home_namespace;
-        Definition_state       state = Definition_state::unresolved;
-        ast::Name              name;
+        Definition_state        state = Definition_state::unresolved;
+        ast::Name               name;
     };
 
     template <class Info>
     struct Template_instantiation_info {
-        utl::Wrapper<Info>                    template_instantiated_from;
+        utl::Wrapper<Info>                   template_instantiated_from;
         std::vector<mir::Template_parameter> template_parameters;
         std::vector<mir::Template_argument>  template_arguments;
     };
@@ -408,10 +409,10 @@ namespace resolution {
             mir::Function                // Fully resolved
         >;
 
-        Variant                value;
+        Variant                 value;
         utl::Wrapper<Namespace> home_namespace;
-        Definition_state       state = Definition_state::unresolved;
-        ast::Name              name;
+        Definition_state        state = Definition_state::unresolved;
+        ast::Name               name;
 
         std::optional<Template_instantiation_info<Function_template_info>> template_instantiation_info;
     };
@@ -420,11 +421,11 @@ namespace resolution {
     struct Definition_info<hir::definition::Struct> {
         using Variant = std::variant<hir::definition::Struct, mir::Struct>;
 
-        Variant                value;
+        Variant                 value;
         utl::Wrapper<Namespace> home_namespace;
-        mir::Type              structure_type;
-        Definition_state       state = Definition_state::unresolved;
-        ast::Name              name;
+        mir::Type               structure_type;
+        Definition_state        state = Definition_state::unresolved;
+        ast::Name               name;
 
         std::optional<Template_instantiation_info<Struct_template_info>> template_instantiation_info;
     };
@@ -433,11 +434,11 @@ namespace resolution {
     struct Definition_info<hir::definition::Enum> {
         using Variant = std::variant<hir::definition::Enum, mir::Enum>;
 
-        Variant                value;
+        Variant                 value;
         utl::Wrapper<Namespace> home_namespace;
-        mir::Type              enumeration_type;
-        Definition_state       state = Definition_state::unresolved;
-        ast::Name              name;
+        mir::Type               enumeration_type;
+        Definition_state        state = Definition_state::unresolved;
+        ast::Name               name;
 
         std::optional<Template_instantiation_info<Enum_template_info>> template_instantiation_info;
 
@@ -448,18 +449,18 @@ namespace resolution {
     struct Definition_info<hir::definition::Implementation> {
         using Variant = std::variant<hir::definition::Implementation, mir::Implementation>;
 
-        Variant                value;
+        Variant                 value;
         utl::Wrapper<Namespace> home_namespace;
-        Definition_state       state = Definition_state::unresolved;
+        Definition_state        state = Definition_state::unresolved;
     };
 
     template <>
     struct Definition_info<hir::definition::Instantiation> {
         using Variant = std::variant<hir::definition::Instantiation, mir::Instantiation>;
 
-        Variant                value;
+        Variant                 value;
         utl::Wrapper<Namespace> home_namespace;
-        Definition_state       state = Definition_state::unresolved;
+        Definition_state        state = Definition_state::unresolved;
     };
 
     template <template <ast::tree_configuration> class Definition>
@@ -472,7 +473,7 @@ namespace resolution {
 
         Variant                value;
         utl::Wrapper<Namespace> home_namespace;
-        Definition_state       state = Definition_state::unresolved;
+        Definition_state        state = Definition_state::unresolved;
     };
 
 }

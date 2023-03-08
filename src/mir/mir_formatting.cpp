@@ -182,6 +182,9 @@ namespace {
         auto operator()(mir::expression::Unsafe_dereference const& dereference) {
             return format("unsafe_dereference({})", dereference.pointer);
         }
+        auto operator()(mir::expression::Move const& move) {
+            return format("mov {}", move.lvalue);
+        }
         auto operator()(mir::expression::Hole const&) {
             return format("???");
         }

@@ -36,7 +36,7 @@ namespace mir {
         };
 
         struct Array {
-            Type                    element_type;
+            Type                     element_type;
             utl::Wrapper<Expression> array_length;
         };
 
@@ -61,12 +61,12 @@ namespace mir {
 
         struct Structure {
             utl::Wrapper<resolution::Struct_info> info;
-            bool                                 is_application = false;
+            bool                                  is_application = false;
         };
 
         struct Enumeration {
             utl::Wrapper<resolution::Enum_info> info;
-            bool                               is_application = false;
+            bool                                is_application = false;
         };
 
         struct General_unification_variable {

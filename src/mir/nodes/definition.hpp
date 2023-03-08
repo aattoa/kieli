@@ -14,15 +14,15 @@ namespace mir {
 
     template <class Definition>
     struct Template {
-        Definition                                                                definition;
-        std::vector<Template_parameter>                                           parameters;
+        Definition                                                                 definition;
+        std::vector<Template_parameter>                                            parameters;
         std::vector<utl::Wrapper<resolution::Definition_info<To_HIR<Definition>>>> instantiations;
     };
 
 
     struct [[nodiscard]] Self_parameter {
-        mir::Mutability mutability;
-        bool            is_reference = false;
+        mir::Mutability  mutability;
+        bool             is_reference = false;
         utl::Source_view source_view;
     };
 
@@ -45,15 +45,15 @@ namespace mir {
             Type      type;
             bool      is_public;
         };
-        std::vector<Member>                members;
-        ast::Name                          name;
+        std::vector<Member>                 members;
+        ast::Name                           name;
         utl::Wrapper<resolution::Namespace> associated_namespace;
     };
     using Struct_template = Template<Struct>;
 
     struct Enum {
-        std::vector<Enum_constructor>      constructors;
-        ast::Name                          name;
+        std::vector<Enum_constructor>       constructors;
+        ast::Name                           name;
         utl::Wrapper<resolution::Namespace> associated_namespace;
     };
     using Enum_template = Template<Enum>;
@@ -84,7 +84,7 @@ namespace mir {
         utl::Flatmap<compiler::Identifier, Function_template_signature> function_template_signatures;
         utl::Flatmap<compiler::Identifier, Type_signature>              type_signatures;
         utl::Flatmap<compiler::Identifier, Type_template_signature>     type_template_signatures;
-        ast::Name                                                      name;
+        ast::Name                                                       name;
     };
     using Typeclass_template = Template<Typeclass>;
 

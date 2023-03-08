@@ -172,6 +172,9 @@ namespace {
         auto operator()(hir::expression::Placement_init const& init) {
             return format("{} <- {}", init.lvalue, init.initializer);
         }
+        auto operator()(hir::expression::Move const& move) {
+            return format("mov {}", move.lvalue);
+        }
         auto operator()(hir::expression::Meta const& meta) {
             return format("meta {}", meta.expression);
         }
