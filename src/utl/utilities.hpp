@@ -397,7 +397,6 @@ namespace utl {
         return string;
     }
 
-
     template <class T> [[nodiscard]]
     constexpr auto vector_with_capacity(Usize const capacity) -> std::vector<T> {
         std::vector<T> vector;
@@ -612,20 +611,15 @@ struct std::hash<std::vector<T>> {
 
 template <utl::hashable Fst, utl::hashable Snd>
 struct std::hash<utl::Pair<Fst, Snd>> {
-    auto operator()(utl::Pair<Fst, Snd> const& pair) const
-        noexcept(
-            std::is_nothrow_invocable_v<std::hash<Fst>, Fst const&> &&
-            std::is_nothrow_invocable_v<std::hash<Snd>, Snd const&>
-        ) -> utl::Usize
-    {
+    auto operator()(utl::Pair<Fst, Snd> const& pair) const -> utl::Usize {
         return utl::hash_combine(pair.first, pair.second);
     }
 };
 
 template <class X>
-requires requires (X const x) { { x.hash() } -> std::same_as<utl::Usize>; }
+    requires requires (X const x) { { x.hash() } -> std::same_as<utl::Usize>; }
 struct std::hash<X> {
-    auto operator()(X const& x) const noexcept(noexcept(x.hash())) -> utl::Usize {
+    auto operator()(X const& x) const -> utl::Usize {
         return x.hash();
     }
 };

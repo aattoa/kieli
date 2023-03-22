@@ -2,6 +2,7 @@
 
 #include "utl/utilities.hpp"
 #include "utl/flatmap.hpp"
+#include "utl/diagnostics.hpp"
 
 
 namespace cli {
@@ -72,7 +73,7 @@ namespace cli {
 
 
     struct [[nodiscard]] Options_description {
-        std::vector<Parameter>         parameters;
+        std::vector<Parameter>          parameters;
         utl::Flatmap<char, std::string> long_forms;
 
     private:
@@ -114,7 +115,7 @@ namespace cli {
         struct Argument_proxy {
             std::string_view         name;
             Named_argument::Variant* pointer = nullptr;
-            utl::Usize                count   = 0;
+            utl::Usize               count   = 0;
             bool                     indexed = false;
             bool                     empty   = true;
 

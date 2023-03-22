@@ -6,7 +6,7 @@
 
 namespace {
 
-    auto run_bu_tests() -> void {
+    auto run_utl_tests() -> void {
         using namespace tests;
 
         "vector"_test = [] {
@@ -77,6 +77,6 @@ namespace {
 }
 
 
-REGISTER_TEST(run_bu_tests);
+REGISTER_TEST(run_utl_tests);
 REGISTER_TEST(run_safe_integer_tests);
 REGISTER_TEST(run_flatmap_tests);
