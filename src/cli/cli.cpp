@@ -47,19 +47,15 @@ namespace {
         auto is_finished() const noexcept -> bool {
             return pointer == stop;
         }
-
         auto current() const noexcept -> std::string_view& {
             return *pointer;
         }
-
         auto extract() noexcept -> std::string_view& {
             return *pointer++;
         }
-
         auto advance() noexcept -> void {
             ++pointer;
         }
-
         auto retreat() noexcept -> void {
             --pointer;
         }
@@ -68,36 +64,23 @@ namespace {
         auto make_error(utl::diagnostics::Message_arguments const arguments) const
             -> utl::diagnostics::Builder
         {
-            // We must recreate the command line as a single string which will
-            // emulate the file that would normally be passed to utl::textual_error
+            std::string command_line_string
+                = std::span { start, stop }
+                | std::views::join_with(' ')
+                | std::ranges::to<std::string>();
 
-            std::string fake_file;
-            fake_file.reserve(
-                std::max(
-                    std::transform_reduce(
-                        start,
-                        stop,
-                        utl::unsigned_distance(start, stop), // Account for whitespace delimiters
-                        std::plus {},
-                        utl::size
-                    ),
-                    sizeof(std::string) // Disable SSO
-                )
-            );
+            // Disable SSO
+            command_line_string.reserve(sizeof(std::string));
 
-            for (auto view = start; view != stop; ++view) {
-                fake_file.append(*view) += ' ';
-            }
-
-            // The erroneous view must be a view into the fake_file
+            // The erroneous view must be a view into command_line_string
             std::string_view erroneous_view;
 
             if (pointer == stop) {
-                auto const end = fake_file.data() + fake_file.size();
+                auto const end = command_line_string.data() + command_line_string.size();
                 erroneous_view = { end - 1, end };
             }
             else {
-                char const* view_begin = fake_file.data();
+                char const* view_begin = command_line_string.data();
                 for (auto view = start; view != pointer; ++view) {
                     view_begin += view->size() + 1; // +1 for the whitespace delimiter
                 }
@@ -106,7 +89,7 @@ namespace {
 
             utl::Source fake_source {
                 utl::Source::Mock_tag { .filename = "command line" },
-                std::move(fake_file)
+                std::move(command_line_string)
             };
 
             utl::diagnostics::Builder builder;
