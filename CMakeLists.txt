@@ -2,6 +2,11 @@ cmake_minimum_required(VERSION 3.25)
 project(kieli)
 set(CMAKE_CXX_STANDARD 20)
 
+if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+  # Clang doesn't provide sized deallocation functions by default
+  add_compile_options(-fsized-deallocation)
+endif()
+
 set(SOURCE_FILES
 	src/main.cpp
 

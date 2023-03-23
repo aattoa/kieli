@@ -301,7 +301,7 @@ namespace {
         template <class T>
         auto operator()(hir::expression::Literal<T>& literal) -> mir::Expression {
             return {
-                .value       = mir::expression::Literal { literal.value },
+                .value       = mir::expression::Literal<T> { literal.value },
                 .type        = context.literal_type<T>(this_expression.source_view),
                 .source_view = this_expression.source_view,
                 .mutability  = context.immut_constant(this_expression.source_view)
@@ -349,7 +349,7 @@ namespace {
                     .value = wrap_type(mir::type::Array {
                         .element_type = element_type,
                         .array_length = utl::wrap(mir::Expression {
-                            .value       = mir::expression::Literal { array_length },
+                            .value       = mir::expression::Literal<utl::Isize> { array_length },
                             .type        = context.size_type(this_expression.source_view),
                             .source_view = this_expression.source_view,
                             .mutability  = context.immut_constant(this_expression.source_view)
@@ -645,8 +645,8 @@ namespace {
                 auto initializers = utl::vector_with_capacity<mir::Expression>(structure.members.size());
 
                 for (mir::Struct::Member& member : structure.members) {
-                    if (hir::Expression* const member_initializer_ptr = struct_initializer.member_initializers.find(member.name)) {
-                        mir::Expression member_initializer = recurse(*member_initializer_ptr);
+                    if (utl::wrapper auto* const member_initializer_ptr = struct_initializer.member_initializers.find(member.name)) {
+                        mir::Expression member_initializer = recurse(**member_initializer_ptr);
                         context.solve(constraint::Type_equality {
                             .constrainer_type = member.type,
                             .constrained_type = member_initializer.type,

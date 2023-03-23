@@ -45,7 +45,7 @@ namespace {
     auto extract_tuple(Parse_context& context)
         -> ast::Type::Variant
     {
-        auto types = extract_comma_separated_zero_or_more<parse_type, "a type">(context);
+        auto types = extract_type_sequence(context);
         context.consume_required(Token::Type::paren_close);
         if (types.size() == 1) {
             return std::move(types.front().value);
@@ -87,10 +87,7 @@ namespace {
         -> ast::Type::Variant
     {
         if (context.try_consume(Token::Type::paren_open)) {
-            static constexpr auto parse_argument_types =
-                extract_comma_separated_zero_or_more<parse_type, "a type">;
-
-            auto argument_types = parse_argument_types(context);
+            auto argument_types = extract_type_sequence(context);
             context.consume_required(Token::Type::paren_close);
 
             if (context.try_consume(Token::Type::colon)) {

@@ -244,7 +244,7 @@ namespace {
     struct Pattern_format_visitor : utl::formatting::Visitor_base {
         template <class T>
         auto operator()(hir::pattern::Literal<T> const& literal) {
-            return std::invoke(Expression_format_visitor { { out } }, hir::expression::Literal { literal.value });
+            return std::invoke(Expression_format_visitor { { out } }, hir::expression::Literal<T> { literal.value });
         }
         auto operator()(hir::pattern::Wildcard const&) {
             return format("_");

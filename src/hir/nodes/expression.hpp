@@ -33,7 +33,7 @@ namespace hir {
         struct Continue {};
 
         struct Break {
-            tl::optional<ast::Name>               label;
+            tl::optional<ast::Name>                label;
             tl::optional<utl::Wrapper<Expression>> result;
         };
 
@@ -44,18 +44,18 @@ namespace hir {
 
         struct Invocation {
             std::vector<Function_argument> arguments;
-            utl::Wrapper<Expression>        invocable;
+            utl::Wrapper<Expression>       invocable;
         };
 
         struct Struct_initializer {
-            utl::Flatmap<ast::Name, Expression> member_initializers;
-            utl::Wrapper<Type>                  struct_type;
+            utl::Flatmap<ast::Name, utl::Wrapper<Expression>> member_initializers;
+            utl::Wrapper<Type>                                struct_type;
         };
 
         struct Binary_operator_invocation {
             utl::Wrapper<Expression> left;
             utl::Wrapper<Expression> right;
-            compiler::Identifier    op;
+            compiler::Identifier     op;
         };
 
         struct Member_access_chain {

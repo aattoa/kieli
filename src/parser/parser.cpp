@@ -213,7 +213,7 @@ namespace {
             tl::optional<ast::Type> payload_type;
 
             if (context.try_consume(Token::Type::paren_open)) {
-                auto types = extract_comma_separated_zero_or_more<parse_type, "a type">(context);
+                auto types = extract_type_sequence(context);
 
                 switch (types.size()) {
                 case 0:
@@ -363,7 +363,7 @@ namespace {
         auto template_parameters = parse_template_parameters(context);
 
         context.consume_required(Token::Type::paren_open);
-        auto parameters = extract_comma_separated_zero_or_more<parse_type, "a parameter type">(context);
+        auto parameters = extract_type_sequence(context);
         context.consume_required(Token::Type::paren_close);
 
         context.consume_required(Token::Type::colon);
