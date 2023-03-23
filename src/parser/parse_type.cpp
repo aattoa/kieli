@@ -220,7 +220,7 @@ auto parse_type(Parse_context& context) -> tl::optional<ast::Type> {
             }
         }
 
-        return std::move(type);
+        return type;
     }
     else {
         return tl::nullopt;

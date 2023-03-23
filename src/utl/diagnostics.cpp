@@ -65,11 +65,11 @@ namespace {
 
     auto format_highlighted_section(
         std::back_insert_iterator<std::string> const  out,
-        utl::Color                              const  title_color,
-        utl::diagnostics::Text_section          const& section,
-        tl::optional<std::string>             const& location_info) -> void
+        utl::Color                             const  title_color,
+        utl::diagnostics::Text_section         const& section,
+        tl::optional<std::string>              const& location_info) -> void
     {
-        auto const lines       = lines_of_occurrence(section.source.string(), section.source_view.string);
+        auto const lines       = lines_of_occurrence(section.source.get().string(), section.source_view.string);
         auto const digit_count = utl::digit_count(section.source_view.stop_position.line);
         auto       line_number = section.source_view.start_position.line;
 
@@ -208,12 +208,12 @@ namespace {
 
         for (auto& section : sections) {
             utl::always_assert(section.source_view.string.empty()
-                           || section.source_view.string.front() != '\0');
+                            || section.source_view.string.front() != '\0');
 
             tl::optional<std::string> location_info;
 
-            if (current_source != &section.source) {
-                current_source = &section.source;
+            if (current_source != &section.source.get()) {
+                current_source = &section.source.get();
 
                 location_info = fmt::format(
                     "{}:{}-{}",
@@ -261,12 +261,6 @@ namespace {
         };
     }
 
-}
-
-
-auto utl::diagnostics::Text_section::operator=(Text_section const& other) noexcept -> Text_section& {
-    this->~Text_section();
-    return *::new(this) Text_section { other };
 }
 
 
