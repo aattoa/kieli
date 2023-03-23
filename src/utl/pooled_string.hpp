@@ -66,8 +66,8 @@ namespace utl {
 
 
 template <class Tag>
-struct std::formatter<utl::Pooled_string<Tag>> : std::formatter<std::string_view> {
+struct fmt::formatter<utl::Pooled_string<Tag>> : fmt::formatter<std::string_view> {
     auto format(utl::Pooled_string<Tag> const string, auto& context) {
-        return std::formatter<std::string_view>::format(string.view(), context);
+        return fmt::formatter<std::string_view>::format(string.view(), context);
     }
 };

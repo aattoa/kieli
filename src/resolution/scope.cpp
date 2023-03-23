@@ -15,9 +15,9 @@ namespace {
                     .erroneous_view      = binding.source_view,
                     .source              = context.source,
                     .message             = "Unused local {}",
-                    .message_arguments   = std::make_format_args(description),
+                    .message_arguments   = fmt::make_format_args(description),
                     .help_note           = "If this is intentional, prefix the {} with an underscore: _{}",
-                    .help_note_arguments = std::make_format_args(description, name)
+                    .help_note_arguments = fmt::make_format_args(description, name)
                 });
             }
         }
@@ -34,7 +34,7 @@ namespace {
         // binding has already been mentioned in order to prevent possible warnings.
         binding.has_been_mentioned = identifier.view().front() == '_';
 
-        if (auto const it = std::ranges::find(bindings, identifier, utl::first); it == bindings.end()) {
+        if (auto const it = ranges::find(bindings, identifier, utl::first); it == bindings.end()) {
             bindings.emplace_back(identifier, std::forward<decltype(binding)>(binding));
         }
         else {
@@ -55,9 +55,9 @@ namespace {
                         }
                     }),
                     .message             = "Local {} shadows an unused local {}",
-                    .message_arguments   = std::make_format_args(description, description),
+                    .message_arguments   = fmt::make_format_args(description, description),
                     .help_note           = "If this is intentional, prefix the first {} with an underscore: _{}",
-                    .help_note_arguments = std::make_format_args(description, it->first)
+                    .help_note_arguments = fmt::make_format_args(description, it->first)
                 });
                 it->second.has_been_mentioned = true; // Prevent a second warning about the same variable
             }

@@ -75,7 +75,7 @@ namespace compiler {
             export_,
             module_,
             sizeof_,
-            typeof,
+            typeof_,
             addressof,
             unsafe_dereference,
             mov,

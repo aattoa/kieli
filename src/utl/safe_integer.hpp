@@ -3,6 +3,8 @@
 #include "utl/utilities.hpp"
 
 
+APPLY_EXPLICIT_OBJECT_PARAMETER_HERE;
+
 namespace utl {
 
     struct Safe_integer_error : std::exception {};
@@ -112,8 +114,8 @@ namespace utl {
         }
 
         [[nodiscard]]
-        constexpr auto get(this Safe_integer const self) noexcept -> T {
-            return self.value;
+        constexpr auto get() const noexcept -> T {
+            return value;
         }
 
         constexpr auto operator+=(Safe_integer const other) -> Safe_integer& {
@@ -126,8 +128,9 @@ namespace utl {
             value += other.value;
             return *this;
         }
-        constexpr auto operator+(this Safe_integer self, Safe_integer const other) -> Safe_integer {
-            return self += other;
+        constexpr auto operator+(Safe_integer const other) const -> Safe_integer {
+            auto copy = *this;
+            return copy += other;
         }
 
         constexpr auto operator-=(Safe_integer const other) -> Safe_integer& {
@@ -140,8 +143,9 @@ namespace utl {
             value -= other.value;
             return *this;
         }
-        constexpr auto operator-(this Safe_integer self, Safe_integer const other) -> Safe_integer {
-            return self -= other;
+        constexpr auto operator-(Safe_integer const other) const -> Safe_integer {
+            auto copy = *this;
+            return copy -= other;
         }
 
         constexpr auto operator*=(Safe_integer const other) -> Safe_integer& {
@@ -154,8 +158,9 @@ namespace utl {
             value *= other.value;
             return *this;
         }
-        constexpr auto operator*(this Safe_integer self, Safe_integer const other) -> Safe_integer {
-            return self *= other;
+        constexpr auto operator*(Safe_integer const other) const -> Safe_integer {
+            auto copy = *this;
+            return copy *= other;
         }
 
         constexpr auto operator/=(Safe_integer const other) -> Safe_integer& {
@@ -168,8 +173,9 @@ namespace utl {
             value /= other.value;
             return *this;
         }
-        constexpr auto operator/(this Safe_integer self, Safe_integer const other) -> Safe_integer {
-            return self /= other;
+        constexpr auto operator/(Safe_integer const other) const -> Safe_integer {
+            auto copy = *this;
+            return copy /= other;
         }
 
         constexpr auto operator%=(Safe_integer const other) -> Safe_integer& {
@@ -179,8 +185,9 @@ namespace utl {
             value %= other.value;
             return *this;
         }
-        constexpr auto operator%(this Safe_integer self, Safe_integer const other) -> Safe_integer {
-            return self %= other;
+        constexpr auto operator%(Safe_integer const other) -> Safe_integer {
+            auto copy = *this;
+            return copy %= other;
         }
 
         constexpr auto operator++() -> Safe_integer& {
@@ -191,7 +198,7 @@ namespace utl {
             return *this;
         }
         constexpr auto operator++(int) -> Safe_integer {
-            Safe_integer copy = *this;
+            auto copy = *this;
             ++*this;
             return copy;
         }
@@ -204,21 +211,18 @@ namespace utl {
             return *this;
         }
         constexpr auto operator--(int) -> Safe_integer {
-            Safe_integer copy = *this;
+            auto copy = *this;
             ++*this;
             return copy;
         }
 
         [[nodiscard]]
-        constexpr explicit operator bool(this Safe_integer const self) noexcept {
-            return self.value != 0;
+        constexpr explicit operator bool() const noexcept {
+            return value != 0;
         }
 
         [[nodiscard]]
-        auto operator==(this Safe_integer const self, Safe_integer const other) noexcept -> bool {
-            return self.value == other.value;
-        }
-
+        auto operator==(Safe_integer const&) const noexcept -> bool = default;
         [[nodiscard]]
         auto operator<=>(Safe_integer const&) const noexcept -> std::strong_ordering = default;
     };
@@ -241,8 +245,8 @@ namespace utl {
 
 
 template <class T>
-struct std::formatter<utl::Safe_integer<T>> : std::formatter<T> {
+struct fmt::formatter<utl::Safe_integer<T>> : fmt::formatter<T> {
     auto format(utl::Safe_integer<T> const value, auto& context) {
-        return std::formatter<T>::format(value.get(), context);
+        return formatter<T>::format(value.get(), context);
     }
 };

@@ -10,7 +10,7 @@ namespace {
     constinit utl::Usize test_count    = 0;
 
     auto red_note() -> std::string_view {
-        static auto const note = std::format("{}NOTE:{}", utl::Color::red, utl::Color::white);
+        static auto const note = fmt::format("{}NOTE:{}", utl::Color::red, utl::Color::white);
         return note;
     }
 
@@ -29,7 +29,7 @@ tests::Failure::Failure(std::string&& message, std::source_location const throwe
 
 auto tests::Test::operator=(Invoke&& test) -> void {
     auto const test_name = [&] {
-        return std::format("[{}.{}]", test.caller.function_name(), this->name);
+        return fmt::format("[{}.{}]", test.caller.function_name(), this->name);
     };
 
     ++test_count;
@@ -39,7 +39,7 @@ auto tests::Test::operator=(Invoke&& test) -> void {
     }
     catch (Failure const& failure) {
         if (type != Type::failing) {
-            utl::print(
+            fmt::print(
                 "{} Test case failed in {}, on line {}: {}\n",
                 red_note(),
                 test_name(),
@@ -54,7 +54,7 @@ auto tests::Test::operator=(Invoke&& test) -> void {
     }
     catch (std::exception const& exception) {
         if (type != Type::throwing) {
-            utl::print(
+            fmt::print(
                 "{} Exception thrown during test {}: {}\n",
                 red_note(),
                 test_name(),
@@ -67,7 +67,7 @@ auto tests::Test::operator=(Invoke&& test) -> void {
         return;
     }
     catch (...) {
-        utl::print(
+        fmt::print(
             "{} Unknown exception thrown during test {}\n",
             red_note(),
             test_name()
@@ -83,7 +83,7 @@ auto tests::Test::operator=(Invoke&& test) -> void {
     }
     case Type::failing:
     {
-        utl::print(
+        fmt::print(
             "{} Test {} should have failed, but didn't\n",
             red_note(),
             test_name()
@@ -92,7 +92,7 @@ auto tests::Test::operator=(Invoke&& test) -> void {
     }
     case Type::throwing:
     {
-        utl::print(
+        fmt::print(
             "{} Test {} should have thrown an exception, but didn't\n",
             red_note(),
             test_name()
@@ -118,7 +118,7 @@ auto tests::run_all_tests() -> void {
     }
 
     if (success_count == test_count) {
-        utl::print(
+        fmt::print(
             "{}All {} tests passed! ({}){}\n",
             utl::Color::green,
             test_count,

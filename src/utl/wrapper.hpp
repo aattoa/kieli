@@ -95,14 +95,16 @@ namespace utl {
             return Wrapper { context_pointer->m_arena.make_arena_element(std::forward<Args>(args)...) };
         }
         [[nodiscard]]
-        auto operator*(this Wrapper const self) noexcept -> T& {
+        auto operator*() const noexcept -> T& {
+            APPLY_EXPLICIT_OBJECT_PARAMETER_HERE;
             assert(context_pointer != nullptr);
-            return *self.m_pointer;
+            return *m_pointer;
         }
         [[nodiscard]]
-        auto operator->(this Wrapper const self) noexcept -> T* {
+        auto operator->() const noexcept -> T* {
+            APPLY_EXPLICIT_OBJECT_PARAMETER_HERE;
             assert(context_pointer != nullptr);
-            return self.m_pointer;
+            return m_pointer;
         }
     private:
         inline static thread_local constinit Wrapper_context<T>* context_pointer = nullptr;
@@ -176,8 +178,8 @@ struct std::hash<utl::Wrapper<T>> {
 };
 
 template <class T>
-struct std::formatter<utl::Wrapper<T>> : std::formatter<T> {
-    auto format(utl::Wrapper<T> const wrapper, std::format_context& context) {
-        return std::formatter<T>::format(*wrapper, context);
+struct fmt::formatter<utl::Wrapper<T>> : fmt::formatter<T> {
+    auto format(utl::Wrapper<T> const wrapper, fmt::format_context& context) {
+        return fmt::formatter<T>::format(*wrapper, context);
     }
 };

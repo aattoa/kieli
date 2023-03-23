@@ -93,10 +93,10 @@ namespace {
             return occurs_check(tag, slice.element_type);
         }
         auto operator()(mir::type::Tuple const& tuple) {
-            return std::ranges::any_of(tuple.field_types, std::bind_front(occurs_check, tag));
+            return ranges::any_of(tuple.field_types, std::bind_front(occurs_check, tag));
         }
         auto operator()(mir::type::Function const& function) {
-            return std::ranges::any_of(function.parameter_types, std::bind_front(occurs_check, tag))
+            return ranges::any_of(function.parameter_types, std::bind_front(occurs_check, tag))
                 || occurs_check(tag, function.return_type);
         }
         auto operator()(mir::type::Reference const& reference) {
@@ -116,7 +116,7 @@ namespace {
                     );
                 };
                 auto& info = utl::get(user_defined.info->template_instantiation_info);
-                return std::ranges::any_of(info.template_arguments, check_template_argument);
+                return ranges::any_of(info.template_arguments, check_template_argument);
             }
             return false;
         }
@@ -297,7 +297,7 @@ namespace {
                 destructive_unification_map.type_mappings.emplace_back(variable.value, solution.value);
             }
             if (unification_arguments.gather_variable_solutions) {
-                //utl::print("adding solution: {} -> {}\n", variable_tag, solution);
+                //fmt::print("adding solution: {} -> {}\n", variable_tag, solution);
                 solutions.types.add(variable_tag, solution.value);
             }
             return true;
@@ -321,8 +321,7 @@ namespace {
             return left.tag == right.tag ? true : unification_error();
         }
 
-        template <utl::one_of<mir::type::General_unification_variable, mir::type::Integral_unification_variable> Variable>
-        auto operator()(Variable& left, Variable& right) -> bool {
+        auto operator()(mir::type::General_unification_variable& left, mir::type::General_unification_variable& right) -> bool {
             if (left.tag == right.tag) {
                 return true;
             }
@@ -336,6 +335,21 @@ namespace {
                 return defer(original_constraint);
             }
         }
+        auto operator()(mir::type::Integral_unification_variable& left, mir::type::Integral_unification_variable& right) -> bool {
+            if (left.tag == right.tag) {
+                return true;
+            }
+            else if (original_constraint.is_deferred) {
+                unsolved_unification_type_variables.push_back(current_left_type.value);
+                unsolved_unification_type_variables.push_back(current_right_type.value);
+                return solution(left.tag, current_left_type, current_right_type)
+                    && solution(right.tag, current_right_type, current_left_type);
+            }
+            else {
+                return defer(original_constraint);
+            }
+        }
+
 
         auto operator()(mir::type::Integer, mir::type::Integral_unification_variable const right) -> bool {
             return solution(right.tag, current_right_type, current_left_type);
@@ -372,14 +386,14 @@ namespace {
 
         auto operator()(mir::type::Tuple& left, mir::type::Tuple& right) -> bool {
             if (left.field_types.size() == right.field_types.size())
-                return std::ranges::all_of(std::views::zip(left.field_types, right.field_types), recurse());
+                return ranges::all_of(ranges::views::zip(left.field_types, right.field_types), recurse());
             else
                 return unification_error();
         }
 
         auto operator()(mir::type::Function& left, mir::type::Function& right) -> bool {
             if (left.parameter_types.size() == right.parameter_types.size()) {
-                return std::ranges::all_of(std::views::zip(left.parameter_types, right.parameter_types), recurse())
+                return ranges::all_of(ranges::views::zip(left.parameter_types, right.parameter_types), recurse())
                     && recurse(left.return_type, right.return_type);
             }
             else {
@@ -418,7 +432,7 @@ namespace {
                 }, l.value, r.value);;
             };
 
-            return std::ranges::all_of(std::views::zip(a.template_arguments, b.template_arguments), unify_template_arguments);
+            return ranges::all_of(ranges::views::zip(a.template_arguments, b.template_arguments), unify_template_arguments);
         }
 
         auto operator()(auto const&, auto const&) -> bool {
@@ -461,7 +475,7 @@ auto resolution::Context::unify_mutabilities(Mutability_unification_arguments co
 
 
 auto resolution::Context::unify_types(Type_unification_arguments const arguments) -> bool {
-    /*utl::print(
+    /*fmt::print(
         "unifying {} ~ {}\n",
         arguments.constraint_to_be_tested.constrainer_type,
         arguments.constraint_to_be_tested.constrained_type

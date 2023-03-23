@@ -57,9 +57,9 @@ auto project::Configuration::string() const -> std::string {
     auto out = std::back_inserter(string);
 
     for (auto const& [key, value] : span()) {
-        out = std::format_to(out, "{}: ", key);
+        out = fmt::format_to(out, "{}: ", key);
         if (value) {
-            out = std::format_to(out, "{}", value->string);
+            out = fmt::format_to(out, "{}", value->string);
         }
     }
 
@@ -68,7 +68,7 @@ auto project::Configuration::string() const -> std::string {
 
 
 auto project::Configuration::operator[](std::string_view const name) -> Configuration_key& {
-    utl::always_assert(std::ranges::contains(allowed_keys, name));
+    utl::always_assert(ranges::contains(allowed_keys, name));
 
     if (auto* const key = find(name); key && *key) {
         return **key;
@@ -84,9 +84,9 @@ auto project::default_configuration() -> Configuration {
     configuration.add("language version", std::to_string(language::version));
     configuration.add("source directory", "src"s);
     configuration.add("stack capacity"  , "1048576 // 2^20"s);
-    configuration.add("name"            , std::nullopt);
-    configuration.add("version"         , std::nullopt);
-    configuration.add("authors"         , std::nullopt);
+    configuration.add("name"            , tl::nullopt);
+    configuration.add("version"         , tl::nullopt);
+    configuration.add("authors"         , tl::nullopt);
     configuration.add("created"         , "{:%d-%m-%Y}"_format(utl::local_time()));
     return configuration;
 }
@@ -110,11 +110,13 @@ auto project::read_configuration() -> Configuration {
                 continue;
             }
 
+            auto const mkview = [](auto&&) -> std::string_view { utl::todo(); };
+
             std::vector<std::string_view> components
                 = line
-                | std::views::split(':')
-                | std::views::transform(utl::compose(&trim, &remove_comments, utl::make<std::string_view>))
-                | std::ranges::to<std::vector>();
+                | ranges::views::split(':')
+                | ranges::views::transform(utl::compose(&trim, &remove_comments, mkview))
+                | ranges::to<std::vector>();
 
             switch (components.size()) {
             case 1:
@@ -125,17 +127,17 @@ auto project::read_configuration() -> Configuration {
                 throw utl::exception("kieli_config: Only one ':' is allowed per line: '{}'", trim(line));
             }
 
-            auto const key = components.front();
-            auto const value = components.back();
+            std::string_view const key = components.front();
+            std::string_view const value = components.back();
 
             if (key.empty()) {
                 throw utl::exception(
                     "kieli_config: empty key on the {} line",
-                    utl::fmt::integer_with_ordinal_indicator(line_number)
+                    utl::formatting::integer_with_ordinal_indicator(line_number)
                 );
             }
 
-            if (!std::ranges::contains(allowed_keys, key)) {
+            if (!ranges::contains(allowed_keys, key)) {
                 throw utl::exception(
                     "kieli_config: '{}' is not a recognized configuration key",
                     key
@@ -146,15 +148,15 @@ auto project::read_configuration() -> Configuration {
                 throw utl::exception(
                     "kieli_config: '{}' key redefinition on the {} line",
                     key,
-                    utl::fmt::integer_with_ordinal_indicator(line_number)
+                    utl::formatting::integer_with_ordinal_indicator(line_number)
                 );
             }
 
             configuration.add(
                 std::string(key),
                 value.empty()
-                    ? std::optional(std::string(value))
-                    : std::nullopt
+                    ? tl::optional(std::string(value))
+                    : tl::nullopt
             );
         }
 

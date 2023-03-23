@@ -26,13 +26,13 @@ auto compiler::reify(Resolve_result&& resolve_result) -> Reify_result {
     reification::Context context;
 
     for (utl::wrapper auto const function : resolve_result.main_module.functions) {
-        utl::print("function: {}\n", function->name);
+        fmt::print("function: {}\n", function->name);
         reify_function(context, *function);
     }
     for (utl::wrapper auto const function_template : resolve_result.main_module.function_templates) {
-        utl::print("function template: {}\n", function_template->name);
+        fmt::print("function template: {}\n", function_template->name);
         for (utl::wrapper auto const instantiation : utl::get<mir::Function_template>(function_template->value).instantiations) {
-            utl::print("instantiation: [{}]\n", utl::get(instantiation->template_instantiation_info).template_arguments);
+            fmt::print("instantiation: [{}]\n", utl::get(instantiation->template_instantiation_info).template_arguments);
             reify_function(context, *instantiation);
         }
     }

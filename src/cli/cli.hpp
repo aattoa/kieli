@@ -13,9 +13,9 @@ namespace cli {
 
         std::string_view name;
 
-        std::optional<T> default_value;
-        std::optional<T> minimum_value;
-        std::optional<T> maximum_value;
+        tl::optional<T> default_value;
+        tl::optional<T> minimum_value;
+        tl::optional<T> maximum_value;
 
         auto default_to(T&&) noexcept -> Value;
         auto min       (T&&) noexcept -> Value;
@@ -38,9 +38,9 @@ namespace cli {
     struct [[nodiscard]] Parameter {
         struct Name {
             std::string         long_form;
-            std::optional<char> short_form;
+            tl::optional<char> short_form;
 
-            Name(char const* long_name, std::optional<char> short_name = std::nullopt) noexcept;
+            Name(char const* long_name, tl::optional<char> short_name = tl::nullopt) noexcept;
         };
 
         using Variant = std::variant<
@@ -52,7 +52,7 @@ namespace cli {
 
         Name                            name;
         std::vector<Variant>            values;
-        std::optional<std::string_view> description;
+        tl::optional<std::string_view> description;
         bool                            defaulted = false;
     };
 
@@ -84,18 +84,18 @@ namespace cli {
             auto map_short_to_long(Parameter::Name const&) noexcept -> void;
 
             auto operator()(Parameter::Name&&               name,
-                            std::optional<std::string_view> description = std::nullopt)
+                            tl::optional<std::string_view> description = tl::nullopt)
                 noexcept -> Option_adder;
 
             template <class T>
             auto operator()(Parameter::Name&&               name,
                             Value<T>&&                      value,
-                            std::optional<std::string_view> description = std::nullopt)
+                            tl::optional<std::string_view> description = tl::nullopt)
                 noexcept -> Option_adder;
 
             auto operator()(Parameter::Name&&                 name,
                             std::vector<Parameter::Variant>&& values,
-                            std::optional<std::string_view>   description = std::nullopt)
+                            tl::optional<std::string_view>   description = tl::nullopt)
                 noexcept -> Option_adder;
         };
 
@@ -141,7 +141,7 @@ namespace cli {
 
 
     auto parse_command_line(int argc, char const* const* argv, Options_description const&)
-        -> std::expected<Options, Unrecognized_option>;
+        -> tl::expected<Options, Unrecognized_option>;
 
 }
 

@@ -66,8 +66,8 @@ namespace {
         {
             std::string command_line_string
                 = std::span { start, stop }
-                | std::views::join_with(' ')
-                | std::ranges::to<std::string>();
+                | ranges::views::join(' ')
+                | ranges::to<std::string>();
 
             // Disable SSO
             command_line_string.reserve(sizeof(std::string));
@@ -115,8 +115,8 @@ namespace {
         [[noreturn]]
         auto expected(std::string_view const expectation) const -> void {
             error({
-                .message = "Expected {}",
-                .message_arguments = std::make_format_args(expectation)
+                .message           = "Expected {}",
+                .message_arguments = fmt::make_format_args(expectation)
             });
         }
 
@@ -128,9 +128,9 @@ namespace {
 
 
     template <class T>
-    auto extract_value(Parse_context& context) -> std::optional<T> {
+    auto extract_value(Parse_context& context) -> tl::optional<T> {
         if (context.is_finished()) {
-            return std::nullopt;
+            return tl::nullopt;
         }
 
         auto const view = context.extract();
@@ -151,8 +151,8 @@ namespace {
                 else {
                     context.retreat();
                     context.error({
-                        .message = "Unexpected suffix: '{}'",
-                        .message_arguments = std::make_format_args(std::string_view { ptr, stop })
+                        .message           = "Unexpected suffix: '{}'",
+                        .message_arguments = fmt::make_format_args(std::string_view { ptr, stop })
                     });
                 }
             }
@@ -160,14 +160,14 @@ namespace {
             {
                 context.retreat();
                 context.error({
-                    .message = "The given value is too large to be represented by a {}-bit value",
-                    .message_arguments = std::make_format_args(sizeof(T) * CHAR_BIT)
+                    .message           = "The given value is too large to be represented by a {}-bit value",
+                    .message_arguments = fmt::make_format_args(sizeof(T) * CHAR_BIT)
                 });
             }
             case std::errc::invalid_argument:
             {
                 context.retreat();
-                return std::nullopt;
+                return tl::nullopt;
             }
             default:
                 utl::todo();
@@ -177,7 +177,7 @@ namespace {
         else if constexpr (std::same_as<T, cli::types::Bool>) {
             std::string input;
             input.reserve(view.size());
-            std::ranges::copy(view | std::views::transform(to_lower), std::back_inserter(input));
+            ranges::copy(view | ranges::views::transform(to_lower), std::back_inserter(input));
 
             auto const is_one_of = [&](auto const&... args) {
                 return ((input == args) || ...);
@@ -191,7 +191,7 @@ namespace {
             }
             else {
                 context.retreat();
-                return std::nullopt;
+                return tl::nullopt;
             }
         }
 
@@ -217,7 +217,7 @@ namespace {
                 if (!argument) {
                     context.error({
                         .message = "Expected an argument [{}]",
-                        .message_arguments = std::make_format_args(type_description<T>())
+                        .message_arguments = fmt::make_format_args(type_description<T>())
                     });
                 }
 
@@ -226,7 +226,7 @@ namespace {
                         context.retreat();
                         context.error({
                             .message = "The minimum allowed value is {}",
-                            .message_arguments = std::make_format_args(*value.minimum_value)
+                            .message_arguments = fmt::make_format_args(*value.minimum_value)
                         });
                     }
                 }
@@ -235,7 +235,7 @@ namespace {
                         context.retreat();
                         context.error({
                             .message = "The maximum allowed value is {}",
-                            .message_arguments = std::make_format_args(*value.maximum_value)
+                            .message_arguments = fmt::make_format_args(*value.maximum_value)
                         });
                     }
                 }
@@ -253,7 +253,7 @@ namespace {
 auto cli::parse_command_line(
     int                 const  argc,
     char const* const*  const  argv,
-    Options_description const& description) -> std::expected<Options, Unrecognized_option>
+    Options_description const& description) -> tl::expected<Options, Unrecognized_option>
 {
     std::vector<std::string_view> command_line(argv + 1, argv + argc);
     Options options { .program_name_as_invoked = *argv };
@@ -261,7 +261,7 @@ auto cli::parse_command_line(
     Parse_context context { command_line };
 
     while (!context.is_finished()) {
-        std::optional<std::string> name;
+        tl::optional<std::string> name;
 
         {
             auto view = context.extract();
@@ -287,7 +287,7 @@ auto cli::parse_command_line(
                     }
                     else {
                         context.retreat();
-                        return std::unexpected(context.unrecognized_option());
+                        return tl::unexpected(context.unrecognized_option());
                     }
                 default:
                     context.retreat();
@@ -300,7 +300,7 @@ auto cli::parse_command_line(
         }
 
         if (name) {
-            auto it = std::ranges::find(
+            auto it = ranges::find(
                 description.parameters,
                 name,
                 utl::compose(&Parameter::Name::long_form, &Parameter::name)
@@ -314,7 +314,7 @@ auto cli::parse_command_line(
             }
             else {
                 context.retreat();
-                return std::unexpected(context.unrecognized_option());
+                return tl::unexpected(context.unrecognized_option());
             }
         }
         else {
@@ -373,7 +373,7 @@ template struct cli::Value<cli::types::Str  >;
 
 cli::Parameter::Name::Name(
     char const*         const long_name,
-    std::optional<char> const short_name
+    tl::optional<char> const short_name
 ) noexcept
     : long_form  { long_name  }
     , short_form { short_name } {}
@@ -390,7 +390,7 @@ auto cli::Options_description::Option_adder::map_short_to_long(Parameter::Name c
 
 auto cli::Options_description::Option_adder::operator()(
     Parameter::Name&&               name,
-    std::optional<std::string_view> description
+    tl::optional<std::string_view> description
 )
     noexcept -> Option_adder
 {
@@ -406,7 +406,7 @@ template <class T>
 auto cli::Options_description::Option_adder::operator()(
     Parameter::Name&&               name,
     Value<T>&&                      value,
-    std::optional<std::string_view> description
+    tl::optional<std::string_view> description
 )
     noexcept -> Option_adder
 {
@@ -425,7 +425,7 @@ auto cli::Options_description::Option_adder::operator()(
 auto cli::Options_description::Option_adder::operator()(
     Parameter::Name&&                 name,
     std::vector<Parameter::Variant>&& values,
-    std::optional<std::string_view>   description
+    tl::optional<std::string_view>   description
 )
     noexcept -> Option_adder
 {
@@ -440,13 +440,13 @@ auto cli::Options_description::Option_adder::operator()(
     bool is_defaulted = false;
     if (!values.empty()) {
         is_defaulted = has_default(values.front());
-        auto rest = values | std::views::drop(1);
+        auto rest = values | ranges::views::drop(1);
 
         if (is_defaulted) {
-            utl::always_assert(std::ranges::all_of(rest, has_default));
+            utl::always_assert(ranges::all_of(rest, has_default));
         }
         else {
-            utl::always_assert(std::ranges::none_of(rest, has_default));
+            utl::always_assert(ranges::none_of(rest, has_default));
         }
     }
 
@@ -459,10 +459,10 @@ auto cli::Options_description::Option_adder::operator()(
     return *this;
 }
 
-template auto cli::Options_description::Option_adder::operator()(Parameter::Name&&, Value<types::Int  >&&, std::optional<std::string_view>) -> Option_adder;
-template auto cli::Options_description::Option_adder::operator()(Parameter::Name&&, Value<types::Float>&&, std::optional<std::string_view>) -> Option_adder;
-template auto cli::Options_description::Option_adder::operator()(Parameter::Name&&, Value<types::Bool >&&, std::optional<std::string_view>) -> Option_adder;
-template auto cli::Options_description::Option_adder::operator()(Parameter::Name&&, Value<types::Str  >&&, std::optional<std::string_view>) -> Option_adder;
+template auto cli::Options_description::Option_adder::operator()(Parameter::Name&&, Value<types::Int  >&&, tl::optional<std::string_view>) -> Option_adder;
+template auto cli::Options_description::Option_adder::operator()(Parameter::Name&&, Value<types::Float>&&, tl::optional<std::string_view>) -> Option_adder;
+template auto cli::Options_description::Option_adder::operator()(Parameter::Name&&, Value<types::Bool >&&, tl::optional<std::string_view>) -> Option_adder;
+template auto cli::Options_description::Option_adder::operator()(Parameter::Name&&, Value<types::Str  >&&, tl::optional<std::string_view>) -> Option_adder;
 
 
 namespace {
@@ -544,7 +544,7 @@ auto cli::Options::Argument_proxy::operator[](utl::Usize const index) -> Argumen
         utl::abort(
             "The cli option --{} does not have a {} parameter"_format(
                 name,
-                utl::fmt::integer_with_ordinal_indicator(index + 1)
+                utl::formatting::integer_with_ordinal_indicator(index + 1)
             )
         );
     }
@@ -552,7 +552,7 @@ auto cli::Options::Argument_proxy::operator[](utl::Usize const index) -> Argumen
 
 
 auto cli::Options::operator[](std::string_view const name) noexcept -> Argument_proxy {
-    auto it = std::ranges::find(named_arguments, name, &Named_argument::name);
+    auto it = ranges::find(named_arguments, name, &Named_argument::name);
 
     if (it != named_arguments.end()) {
         return {
@@ -570,7 +570,7 @@ auto cli::Options::operator[](std::string_view const name) noexcept -> Argument_
 
 
 DEFINE_FORMATTER_FOR(cli::Options_description) {
-    std::vector<utl::Pair<std::string, std::optional<std::string_view>>> lines;
+    std::vector<utl::Pair<std::string, tl::optional<std::string_view>>> lines;
     lines.reserve(value.parameters.size());
     utl::Usize max_length = 0;
 
@@ -578,15 +578,15 @@ DEFINE_FORMATTER_FOR(cli::Options_description) {
         std::string line;
         auto out = std::back_inserter(line);
 
-        std::format_to(
+        fmt::format_to(
             out,
             "--{}{}",
             name.long_form,
-            name.short_form ? std::format(", -{}", *name.short_form) : ""
+            name.short_form ? fmt::format(", -{}", *name.short_form) : ""
         );
 
         for (auto& argument : arguments) {
-            std::format_to(out, " [{}]", std::visit([]<class T>(cli::Value<T> const& value) {
+            fmt::format_to(out, " [{}]", std::visit([]<class T>(cli::Value<T> const& value) {
                 return value.name.empty() ? type_description<T>() : value.name;
             }, argument));
         }
@@ -596,12 +596,12 @@ DEFINE_FORMATTER_FOR(cli::Options_description) {
     }
 
     for (auto& [names, description] : lines) {
-        std::format_to(
+        fmt::format_to(
             context.out(),
             "\t{:{}}{}\n",
             names,
             max_length,
-            description ? std::format(" : {}", *description) : ""
+            description ? fmt::format(" : {}", *description) : ""
         );
     }
 

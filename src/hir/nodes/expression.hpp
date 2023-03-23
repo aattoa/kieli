@@ -1,7 +1,7 @@
 #ifndef KIELI_HIR_NODES_EXPRESSION
 #define KIELI_HIR_NODES_EXPRESSION
 #else
-#error This isn't supposed to be included by anything other than hir/hir.hpp
+#error "This isn't supposed to be included by anything other than hir/hir.hpp"
 #endif
 
 
@@ -33,13 +33,13 @@ namespace hir {
         struct Continue {};
 
         struct Break {
-            std::optional<ast::Name>               label;
-            std::optional<utl::Wrapper<Expression>> result;
+            tl::optional<ast::Name>               label;
+            tl::optional<utl::Wrapper<Expression>> result;
         };
 
         struct Block {
             std::vector<Expression>                side_effects;
-            std::optional<utl::Wrapper<Expression>> result;
+            tl::optional<utl::Wrapper<Expression>> result;
         };
 
         struct Invocation {
@@ -81,7 +81,7 @@ namespace hir {
 
         struct Method_invocation {
             std::vector<Function_argument>                arguments;
-            std::optional<std::vector<Template_argument>> template_arguments;
+            tl::optional<std::vector<Template_argument>> template_arguments;
             utl::Wrapper<Expression>                       base_expression;
             ast::Name                                     method_name;
         };
@@ -115,7 +115,7 @@ namespace hir {
         struct Let_binding {
             utl::Wrapper<Pattern>             pattern;
             utl::Wrapper<Expression>          initializer;
-            std::optional<utl::Wrapper<Type>> type;
+            tl::optional<utl::Wrapper<Type>> type;
         };
 
         struct Local_type_alias {
@@ -124,7 +124,7 @@ namespace hir {
         };
 
         struct Ret {
-            std::optional<utl::Wrapper<Expression>> returned_expression;
+            tl::optional<utl::Wrapper<Expression>> returned_expression;
         };
 
         struct Sizeof {

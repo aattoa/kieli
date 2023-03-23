@@ -39,7 +39,7 @@ namespace {
             for (;;) {
                 std::string string;
 
-                utl::print(" >>> ");
+                fmt::print(" >>> ");
                 std::getline(std::cin, string);
 
                 if (string.empty()) {
@@ -66,7 +66,7 @@ namespace {
     [[maybe_unused]]
     constexpr auto lexer_repl = generic_repl([](utl::Source source) {
         compiler::Program_string_pool string_pool;
-        utl::print("Tokens: {}\n", compiler::lex(std::move(source), string_pool).tokens);
+        fmt::print("Tokens: {}\n", compiler::lex(std::move(source), string_pool).tokens);
     });
 
     [[maybe_unused]]
@@ -75,14 +75,14 @@ namespace {
         Parse_context context { compiler::lex(std::move(source), string_pool) };
 
         if (auto result = parse_expression(context)) {
-            utl::print("Result: {}\n", result);
+            fmt::print("Result: {}\n", result);
 
             if (!context.pointer->source_view.string.empty()) {
-                utl::print("Remaining input: '{}'\n", context.pointer->source_view.string.data());
+                fmt::print("Remaining input: '{}'\n", context.pointer->source_view.string.data());
             }
         }
         else {
-            utl::print("No parse\n");
+            fmt::print("No parse\n");
         }
     });
 
@@ -90,14 +90,14 @@ namespace {
     constexpr auto program_parser_repl = generic_repl([](utl::Source source) {
         compiler::Program_string_pool string_pool;
         auto parse_result = compiler::parse(compiler::lex(std::move(source), string_pool));
-        utl::print("{}\n", parse_result.module);
+        fmt::print("{}\n", parse_result.module);
     });
 
     [[maybe_unused]]
     constexpr auto lowering_repl = generic_repl([](utl::Source source) {
         compiler::Program_string_pool string_pool;
         auto lower_result = compiler::lower(compiler::parse(compiler::lex(std::move(source), string_pool)));
-        utl::print("{}\n\n", utl::fmt::delimited_range(lower_result.module.definitions, "\n\n"));
+        fmt::print("{}\n\n", utl::formatting::delimited_range(lower_result.module.definitions, "\n\n"));
     });
 
 
@@ -145,7 +145,7 @@ namespace {
             main_file << "import std\n\nfn main() {\n    print(\"Hello, world!\\n\")\n}";
         }
 
-        utl::print("Successfully created a new project at '{}'\n", project_path.string());
+        fmt::print("Successfully created a new project at '{}'\n", project_path.string());
     }
 
 }
@@ -170,13 +170,10 @@ auto main(int argc, char const** argv) -> int try {
     cli::Options options = utl::expect(cli::parse_command_line(argc, argv, description));
 
 
-    auto configuration = project::read_configuration();
-    (void)configuration;
-
     utl::Logging_timer execution_timer {
         [&options](utl::Logging_timer::Duration const elapsed) {
             if (options["time"]) {
-                utl::print("Total execution time: {}\n", elapsed);
+                fmt::print("Total execution time: {}\n", elapsed);
             }
         }
     };
@@ -186,12 +183,12 @@ auto main(int argc, char const** argv) -> int try {
     }
 
     if (options["help"]) {
-        utl::print("Valid options:\n\n{}", description);
+        fmt::print("Valid options:\n\n{}", description);
         return 0;
     }
 
     if (options["version"]) {
-        utl::print("kieli version {}, compiled on " __DATE__ ", " __TIME__ ".\n", language::version);
+        fmt::print("kieli version {}, compiled on " __DATE__ ", " __TIME__ ".\n", language::version);
     }
 
     if (std::string_view const* const name = options["new"]) {
@@ -224,7 +221,7 @@ auto main(int argc, char const** argv) -> int try {
     if (options["debug"]) {
         using namespace compiler;
 
-        utl::Source debug_source { (std::filesystem::current_path() / "sample-project" / "src" / "main.kieli").string() };
+        utl::Source debug_source { (std::filesystem::current_path().parent_path() / "sample-project" / "src" / "main.kieli").string() };
         Program_string_pool debug_string_pool;
 
         constexpr auto pipeline = utl::compose(&reify, &resolve, &lower, &parse, &lex);

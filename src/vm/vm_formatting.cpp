@@ -74,20 +74,20 @@ namespace {
         return x;
     }
 
-    auto format_instruction(std::format_context::iterator out,
+    auto format_instruction(fmt::format_context::iterator out,
                             std::byte const*&             start,
                             std::byte const*              stop)
     {
         auto const opcode = extract<vm::Opcode>(start, stop);
 
         auto const unary = [=, &start]<class T>(utl::Type<T>) {
-            return std::format_to(out, "{} {}", opcode, extract<T>(start, stop));
+            return fmt::format_to(out, "{} {}", opcode, extract<T>(start, stop));
         };
 
         auto const binary = [=, &start]<class T, class U>(utl::Type<T>, utl::Type<U>) {
             auto const first = extract<T>(start, stop);
             auto const second = extract<U>(start, stop);
-            return std::format_to(out, "{} {} {}", opcode, first, second);
+            return fmt::format_to(out, "{} {} {}", opcode, first, second);
         };
 
         switch (opcode) {
@@ -165,7 +165,7 @@ namespace {
 
         default:
             assert(vm::argument_bytes(opcode) == 0);
-            return std::format_to(out, "{}", opcode);
+            return fmt::format_to(out, "{}", opcode);
         }
     }
 
@@ -173,7 +173,7 @@ namespace {
 
 
 DEFINE_FORMATTER_FOR(vm::Opcode) {
-    return std::format_to(context.out(), "{}", opcode_strings[static_cast<utl::Usize>(value)]);
+    return fmt::format_to(context.out(), "{}", opcode_strings[static_cast<utl::Usize>(value)]);
 }
 
 DEFINE_FORMATTER_FOR(vm::Bytecode) {
@@ -184,9 +184,9 @@ DEFINE_FORMATTER_FOR(vm::Bytecode) {
     auto const digit_count = utl::digit_count(utl::unsigned_distance(start, stop));
 
     for (auto pointer = start; pointer < stop; ) {
-        std::format_to(out, "{:>{}} ", std::distance(start, pointer), digit_count);
+        fmt::format_to(out, "{:>{}} ", std::distance(start, pointer), digit_count);
         format_instruction(out, pointer, stop);
-        std::format_to(out, "\n");
+        fmt::format_to(out, "\n");
     }
 
     return out;

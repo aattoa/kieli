@@ -57,7 +57,7 @@ auto compiler::token_description(Lexical_token::Type const type)
     case export_:
     case module_:
     case sizeof_:
-    case typeof:
+    case typeof_:
     case addressof:
     case unsafe_dereference:
     case mov:
@@ -96,7 +96,7 @@ auto compiler::token_description(Lexical_token::Type const type)
         return "a primitive typename";
 
     default:
-        utl::abort("Unimplemented for {}"_format(std::to_underlying(type)));
+        utl::abort("Unimplemented for {}"_format(bootleg::to_underlying(type)));
     }
 }
 
@@ -107,7 +107,7 @@ DEFINE_FORMATTER_FOR(compiler::Lexical_token::Type) {
 
         "let", "mut", "immut", "if", "else", "elif", "for", "in", "while", "loop", "continue", "break",
         "match", "ret", "discard", "fn", "as", "enum", "struct", "class", "inst", "impl", "alias",
-        "namespace", "import", "export", "module", "sizeof", "typeof", "addressof", "unsafe_dereference", "mov", "meta", "where", "dyn", "pub", "macro",
+        "namespace", "import", "export", "module", "sizeof", "typeof_", "addressof", "unsafe_dereference", "mov", "meta", "where", "dyn", "pub", "macro",
 
         "underscore", "lower", "upper", "op",
 
@@ -119,15 +119,15 @@ DEFINE_FORMATTER_FOR(compiler::Lexical_token::Type) {
         "end of input"
     });
     static_assert(strings.size() == static_cast<utl::Usize>(compiler::Lexical_token::Type::_token_type_count));
-    return std::format_to(context.out(), "{}", strings[static_cast<utl::Usize>(value)]);
+    return fmt::format_to(context.out(), "{}", strings[static_cast<utl::Usize>(value)]);
 }
 
 
 DEFINE_FORMATTER_FOR(compiler::Lexical_token) {
     if (std::holds_alternative<std::monostate>(value.value)) {
-        return std::format_to(context.out(), "'{}'", value.type);
+        return fmt::format_to(context.out(), "'{}'", value.type);
     }
     else {
-        return std::format_to(context.out(), "({}: '{}')", value.type, value.value);
+        return fmt::format_to(context.out(), "({}: '{}')", value.type, value.value);
     }
 }

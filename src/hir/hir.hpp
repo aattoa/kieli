@@ -70,13 +70,13 @@ namespace hir {
 
 struct hir::Function_argument {
     Expression               expression;
-    std::optional<ast::Name> name;
+    tl::optional<ast::Name> name;
 };
 
 struct hir::Function_parameter {
     Pattern                   pattern;
     Type                      type;
-    std::optional<Expression> default_value;
+    tl::optional<Expression> default_value;
 };
 
 
@@ -101,8 +101,8 @@ DECLARE_FORMATTER_FOR(hir::Implicit_template_parameter::Tag);
 
 
 template <>
-struct std::formatter<hir::Definition> : std::formatter<ast::Basic_definition<hir::HIR_configuration>> {
-    auto format(hir::Definition const& definition, std::format_context& context) {
-        return std::formatter<ast::Basic_definition<hir::HIR_configuration>>::format(definition, context);
+struct fmt::formatter<hir::Definition> : fmt::formatter<ast::Basic_definition<hir::HIR_configuration>> {
+    auto format(hir::Definition const& definition, fmt::format_context& context) {
+        return fmt::formatter<ast::Basic_definition<hir::HIR_configuration>>::format(definition, context);
     }
 };

@@ -5,7 +5,7 @@
 namespace {
 
     auto parse_template_argument(Parse_context& context)
-        -> std::optional<ast::Template_argument>
+        -> tl::optional<ast::Template_argument>
     {
         if (Token const* const wildcard = context.try_extract(Token::Type::underscore)) {
             return ast::Template_argument {
@@ -19,7 +19,7 @@ namespace {
             return ast::Template_argument { utl::wrap(std::move(*expression)) };
         }
         else {
-            std::optional<ast::Mutability> mutability;
+            tl::optional<ast::Mutability> mutability;
 
             if (Token const* const token = context.try_extract(Token::Type::immut)) {
                 mutability = ast::Mutability {
@@ -39,10 +39,10 @@ namespace {
     }
 
     auto parse_template_parameter(Parse_context& context)
-        -> std::optional<ast::Template_parameter>
+        -> tl::optional<ast::Template_parameter>
     {
         auto const template_parameter = [&, anchor = context.pointer](ast::Name const name, ast::Template_parameter::Variant&& value) {
-            std::optional<ast::Template_argument> default_argument;
+            tl::optional<ast::Template_argument> default_argument;
 
             if (context.try_consume(Token::Type::equals)) {
                 default_argument = extract_required<parse_template_argument, "a default template argument">(context);
@@ -69,7 +69,7 @@ namespace {
                 }
             }
 
-            return template_parameter(*name, ast::Template_parameter::Value_parameter { .type = std::nullopt });
+            return template_parameter(*name, ast::Template_parameter::Value_parameter { .type = tl::nullopt });
         }
         else if (auto name = parse_upper_name(context)) {
             std::vector<ast::Class_reference> classes;
@@ -79,7 +79,7 @@ namespace {
             return template_parameter(*name, ast::Template_parameter::Type_parameter { .classes = std::move(classes) });
         }
         else {
-            return std::nullopt;
+            return tl::nullopt;
         }
     }
 
@@ -111,7 +111,7 @@ namespace {
                     );
                     context.error(parameter.source_view, {
                         .message = "Invalid default template argument: {} parameter's default argument is a {} argument",
-                        .message_arguments = std::make_format_args(parameter_description, argument_description)
+                        .message_arguments = fmt::make_format_args(parameter_description, argument_description)
                     });
                 };
 
@@ -137,7 +137,7 @@ namespace {
 }
 
 
-auto parse_top_level_pattern(Parse_context& context) -> std::optional<ast::Pattern> {
+auto parse_top_level_pattern(Parse_context& context) -> tl::optional<ast::Pattern> {
     return parse_comma_separated_one_or_more<parse_pattern, "a pattern">(context)
         .transform([](std::vector<ast::Pattern>&& patterns) -> ast::Pattern
     {
@@ -156,7 +156,7 @@ auto parse_top_level_pattern(Parse_context& context) -> std::optional<ast::Patte
 
 
 auto parse_template_arguments(Parse_context& context)
-    -> std::optional<std::vector<ast::Template_argument>>
+    -> tl::optional<std::vector<ast::Template_argument>>
 {
     static constexpr auto extract_arguments =
         extract_comma_separated_zero_or_more<parse_template_argument, "a template argument">;
@@ -167,13 +167,13 @@ auto parse_template_arguments(Parse_context& context)
         return std::move(arguments);
     }
     else {
-        return std::nullopt;
+        return tl::nullopt;
     }
 }
 
 
 auto parse_template_parameters(Parse_context& context)
-    -> std::optional<std::vector<ast::Template_parameter>>
+    -> tl::optional<std::vector<ast::Template_parameter>>
 {
     static constexpr auto extract_parameters =
         parse_comma_separated_one_or_more<parse_template_parameter, "a template parameter">;
@@ -189,7 +189,7 @@ auto parse_template_parameters(Parse_context& context)
         }
     }
     else {
-        return std::nullopt;
+        return tl::nullopt;
     }
 }
 
@@ -199,15 +199,15 @@ auto extract_function_parameters(Parse_context& context)
 {
     return extract_comma_separated_zero_or_more<
         [](Parse_context& context)
-            -> std::optional<ast::Function_parameter>
+            -> tl::optional<ast::Function_parameter>
         {
             if (auto pattern = parse_pattern(context)) {
-                std::optional<ast::Type> type;
+                tl::optional<ast::Type> type;
                 if (context.try_consume(Token::Type::colon)) {
                     type = extract_type(context);
                 }
 
-                std::optional<ast::Expression> default_value;
+                tl::optional<ast::Expression> default_value;
                 if (context.try_consume(Token::Type::equals)) {
                     default_value = extract_expression(context);
                 }
@@ -219,7 +219,7 @@ auto extract_function_parameters(Parse_context& context)
                 };
             }
             else {
-                return std::nullopt;
+                return tl::nullopt;
             }
         },
         "a function parameter"
@@ -321,11 +321,11 @@ auto extract_mutability(Parse_context& context) -> ast::Mutability {
 
 
 auto parse_class_reference(Parse_context& context)
-    -> std::optional<ast::Class_reference>
+    -> tl::optional<ast::Class_reference>
 {
     auto* const anchor = context.pointer;
 
-    auto name = std::invoke([&]() -> std::optional<ast::Qualified_name> {
+    auto name = std::invoke([&]() -> tl::optional<ast::Qualified_name> {
         ast::Root_qualifier root;
         auto* const anchor = context.pointer;
 
@@ -336,7 +336,7 @@ auto parse_class_reference(Parse_context& context)
             root.value = ast::Root_qualifier::Global{};
         }
         else {
-            return std::nullopt;
+            return tl::nullopt;
         }
 
         auto name = extract_qualified(std::move(root), context);
@@ -362,7 +362,7 @@ auto parse_class_reference(Parse_context& context)
         };
     }
     else {
-        return std::nullopt;
+        return tl::nullopt;
     }
 }
 

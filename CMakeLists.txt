@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.25)
 project(kieli)
-set(CMAKE_CXX_STANDARD 23)
+set(CMAKE_CXX_STANDARD 20)
 
 set(SOURCE_FILES
 	src/main.cpp
@@ -112,6 +112,11 @@ set(SOURCE_FILES
 	src/vm/vm_formatting.hpp
 	src/vm/vm_test.cpp)
 
-add_executable(${PROJECT_NAME} ${SOURCE_FILES})
+add_executable(${PROJECT_NAME} ${SOURCE_FILES} ${PROJECT_SOURCE_DIR}/dependencies/src/fmt/format.cc)
+
 target_precompile_headers(${PROJECT_NAME} PRIVATE src/utl/utilities.hpp)
-target_include_directories(${PROJECT_NAME} PRIVATE src)
+
+target_include_directories(${PROJECT_NAME}
+    PRIVATE src
+    PRIVATE dependencies/include
+    PRIVATE dependencies/include/rangev3)

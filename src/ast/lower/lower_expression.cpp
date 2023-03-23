@@ -264,7 +264,7 @@ namespace {
                         .value = hir::expression::Let_binding {
                             .pattern     = context.wildcard_pattern(this_expression.source_view),
                             .initializer = context.lower(discard.discarded_expression),
-                            .type        = std::nullopt
+                            .type        = tl::nullopt
                         },
                         .source_view = this_expression.source_view
                     }

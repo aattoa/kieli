@@ -1,7 +1,7 @@
 #ifndef KIELI_MIR_NODES_TYPE
 #define KIELI_MIR_NODES_TYPE
 #else
-#error This isn't supposed to be included by anything other than mir/mir.hpp
+#error "This isn't supposed to be included by anything other than mir/mir.hpp"
 #endif
 
 

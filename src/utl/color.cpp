@@ -113,7 +113,7 @@ auto operator<<(std::ostream& os, utl::Color const color) -> std::ostream& {
 DEFINE_FORMATTER_FOR(utl::Color) {
     if (color_formatting_state) {
         enable_virtual_terminal_processing();
-        return std::format_to(context.out(), "{}", color_string(value));
+        return fmt::format_to(context.out(), "{}", color_string(value));
     }
     return context.out();
 }

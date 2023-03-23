@@ -5,11 +5,11 @@
 
 namespace {
 
-    auto parse_definition(Parse_context&) -> std::optional<ast::Definition>;
+    auto parse_definition(Parse_context&) -> tl::optional<ast::Definition>;
 
 
     template <class Definition>
-    auto definition(std::optional<std::vector<ast::Template_parameter>>&& parameters, Definition&& definition)
+    auto definition(tl::optional<std::vector<ast::Template_parameter>>&& parameters, Definition&& definition)
         -> ast::Definition::Variant
     {
         if (parameters.has_value()) {
@@ -44,7 +44,7 @@ namespace {
     }
 
 
-    auto parse_self_parameter(Parse_context& context) -> std::optional<ast::Self_parameter> {
+    auto parse_self_parameter(Parse_context& context) -> tl::optional<ast::Self_parameter> {
         Token* const anchor = context.pointer;
         using Self = ast::Self_parameter;
 
@@ -72,7 +72,7 @@ namespace {
         }
 
         context.pointer = anchor;
-        return std::nullopt;
+        return tl::nullopt;
     }
 
 
@@ -91,7 +91,7 @@ namespace {
             }
             context.consume_required(Token::Type::paren_close);
 
-            std::optional<ast::Type> return_type;
+            tl::optional<ast::Type> return_type;
             if (context.try_consume(Token::Type::colon)) {
                 return_type = extract_type(context);
             }
@@ -136,12 +136,12 @@ namespace {
         std::string_view    const  description) -> void
     {
         for (auto it = range.cbegin(); it != range.cend(); ++it) {
-            auto found = std::ranges::find(range.cbegin(), it, it->name, &Member::name);
+            auto found = ranges::find(range.cbegin(), it, it->name, &Member::name);
 
             if (found != it) {
                 context.error(it->source_view, {
                     .message = "A {} with this name has already been defined",
-                    .message_arguments = std::make_format_args(description)
+                    .message_arguments = fmt::make_format_args(description)
                 });
 
                 // TODO: add more info to the error message
@@ -151,7 +151,7 @@ namespace {
 
 
     auto parse_struct_member(Parse_context& context)
-        -> std::optional<ast::definition::Struct::Member>
+        -> tl::optional<ast::definition::Struct::Member>
     {
         auto* const anchor    = context.pointer;
         bool  const is_public = context.try_consume(Token::Type::pub);
@@ -172,7 +172,7 @@ namespace {
             context.error_expected("a struct member name");
         }
         else {
-            return std::nullopt;
+            return tl::nullopt;
         }
     }
 
@@ -205,12 +205,12 @@ namespace {
 
 
     auto parse_enum_constructor(Parse_context& context)
-        -> std::optional<ast::definition::Enum::Constructor>
+        -> tl::optional<ast::definition::Enum::Constructor>
     {
         auto* const anchor = context.pointer;
 
         if (auto name = parse_lower_name(context)) {
-            std::optional<ast::Type> payload_type;
+            tl::optional<ast::Type> payload_type;
 
             if (context.try_consume(Token::Type::paren_open)) {
                 auto types = extract_comma_separated_zero_or_more<parse_type, "a type">(context);
@@ -241,7 +241,7 @@ namespace {
             };
         }
         else {
-            return std::nullopt;
+            return tl::nullopt;
         }
     }
 
@@ -271,7 +271,7 @@ namespace {
                         .message =
                             "An enum-definition must not define more "
                             "than {} constructors, but {} defines {}",
-                        .message_arguments = std::make_format_args(max, name, constructors->size()),
+                        .message_arguments = fmt::make_format_args(max, name, constructors->size()),
                         .help_note =
                             "If this is truly necessary, consider categorizing "
                             "the constructors under several simpler types"
@@ -484,10 +484,10 @@ namespace {
 
 
     auto parse_definition(Parse_context& context)
-        -> std::optional<ast::Definition>
+        -> tl::optional<ast::Definition>
     {
         return parse_node<ast::Definition, [](Parse_context& context)
-            -> std::optional<ast::Definition::Variant>
+            -> tl::optional<ast::Definition::Variant>
         {
             switch (context.extract().type) {
             case Token::Type::fn:
@@ -508,7 +508,7 @@ namespace {
                 return extract_namespace(context);
             default:
                 context.retreat();
-                return std::nullopt;
+                return tl::nullopt;
             }
         }>(context);
     }
@@ -521,7 +521,7 @@ auto compiler::parse(Lex_result&& lex_result) -> Parse_result {
 
     ast::Node_context         module_context;
     std::vector<ast::Import>  module_imports;
-    std::optional<Identifier> module_name;
+    tl::optional<Identifier> module_name;
 
     if (context.try_consume(Token::Type::module_)) {
         module_name = extract_lower_id(context, "a module name");

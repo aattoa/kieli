@@ -22,8 +22,8 @@ namespace {
         required_types.push_back(Token::Type::end_of_input);
 
         auto const actual_types = lex_result.tokens
-            | std::views::transform(&Token::type)
-            | std::ranges::to<std::vector>();
+            | ranges::views::transform(&Token::type)
+            | ranges::to<std::vector>();
 
         tests::assert_eq(required_types, actual_types, caller);
     }

@@ -29,8 +29,7 @@ namespace {
             context.solve(constraint::Type_equality {
                 .constrainer_type = parameter_type,
                 .constrained_type = parameter_pattern.type,
-                .constrainer_note {
-                    std::in_place,
+                .constrainer_note = constraint::Explanation {
                     parameter_type.source_view,
                     "This parameter declared to be of type {0}"
                 },
@@ -54,7 +53,7 @@ namespace {
     }
 
 
-    auto resolve_self_parameter(Context& context, Scope& scope, std::optional<ast::Self_parameter> const& self) {
+    auto resolve_self_parameter(Context& context, Scope& scope, tl::optional<ast::Self_parameter> const& self) {
         return self.transform([&](ast::Self_parameter const& self) {
             return mir::Self_parameter {
                 .mutability   = context.resolve_mutability(self.mutability, scope),
@@ -180,7 +179,7 @@ namespace {
         Partially_resolved_function& function,
         Context                    & context,
         Scope                        scope,
-        utl::Wrapper<Namespace>       home_namespace) -> mir::Function
+        utl::Wrapper<Namespace>      home_namespace) -> mir::Function
     {
         mir::Expression body = context.resolve_expression(function.unresolved_body, function.signature_scope, *home_namespace);
 
@@ -189,8 +188,7 @@ namespace {
         context.solve(constraint::Type_equality {
             .constrainer_type = function.resolved_signature.return_type,
             .constrained_type = body.type,
-            .constrainer_note {
-                std::in_place,
+            .constrainer_note = constraint::Explanation {
                 function.resolved_signature.return_type.source_view,
                 "The return type is specified to be {0}"
             },
@@ -482,7 +480,7 @@ auto resolution::Context::resolve_implementation(utl::Wrapper<Implementation_inf
             }
             error(self_type.source_view, {
                 .message           = "{} does not have an associated namespace, so it can not be the Self type in an implementation block",
-                .message_arguments = std::make_format_args(self_type)
+                .message_arguments = fmt::make_format_args(self_type)
             });
         });
 

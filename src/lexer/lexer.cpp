@@ -328,7 +328,7 @@ namespace {
             { "export"             , Token::Type::export_            },
             { "module"             , Token::Type::module_            },
             { "sizeof"             , Token::Type::sizeof_            },
-            { "typeof"             , Token::Type::typeof             },
+            { "typeof_"             , Token::Type::typeof_             },
             { "addressof"          , Token::Type::addressof          },
             { "unsafe_dereference" , Token::Type::unsafe_dereference },
             { "mov"                , Token::Type::mov                },
@@ -342,7 +342,7 @@ namespace {
 
         std::string_view const view = context.extract(is_identifier);
 
-        if (std::ranges::all_of(view, is_one_of<'_'>)) {
+        if (ranges::all_of(view, is_one_of<'_'>)) {
             return context.success(Token::Type::underscore);
         }
 
@@ -509,7 +509,7 @@ namespace {
                     { state.pointer, 2 }, // view of the base specifier
                     {
                         .message = "Expected an integer literal after the base-{} specifier",
-                        .message_arguments = std::make_format_args(base)
+                        .message_arguments = fmt::make_format_args(base)
                     }
                 );
             }
@@ -665,8 +665,8 @@ auto compiler::lex(
 
     if (source.string().empty()) {
         Token const end_of_input {
-            .type = Token::Type::end_of_input,
-            .source_view { source.string(), { 0, 0 }, { 0, 0 } }
+            .type        = Token::Type::end_of_input,
+            .source_view = utl::Source_view { source.string(), { 0, 0 }, { 0, 0 } }
         };
         return {
             .tokens      = std::vector { end_of_input },

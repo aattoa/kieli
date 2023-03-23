@@ -94,12 +94,12 @@ namespace ast {
             Wildcard
         >;
         Variant             value;
-        std::optional<Name> name;
+        tl::optional<Name> name;
     };
 
     template <tree_configuration Configuration>
     struct Basic_qualifier {
-        std::optional<std::vector<Basic_template_argument<Configuration>>> template_arguments;
+        tl::optional<std::vector<Basic_template_argument<Configuration>>> template_arguments;
         Name                                                               name;
         utl::Source_view                                                    source_view;
     };
@@ -125,7 +125,7 @@ namespace ast {
 
     template <tree_configuration Configuration>
     struct Basic_class_reference {
-        std::optional<std::vector<Basic_template_argument<Configuration>>> template_arguments;
+        tl::optional<std::vector<Basic_template_argument<Configuration>>> template_arguments;
         Basic_qualified_name<Configuration>                                name;
         utl::Source_view                                                    source_view;
     };
@@ -136,7 +136,7 @@ namespace ast {
             std::vector<Basic_class_reference<Configuration>> classes;
         };
         struct Value_parameter {
-            std::optional<utl::Wrapper<typename Configuration::Type>> type;
+            tl::optional<utl::Wrapper<typename Configuration::Type>> type;
         };
         struct Mutability_parameter {};
 
@@ -148,7 +148,7 @@ namespace ast {
 
         Variant                                               value;
         Name                                                  name;
-        std::optional<Basic_template_argument<Configuration>> default_argument;
+        tl::optional<Basic_template_argument<Configuration>> default_argument;
         utl::Source_view                                       source_view;
     };
 
@@ -178,13 +178,13 @@ namespace ast {
 
 struct ast::Function_argument {
     Expression          expression;
-    std::optional<Name> name;
+    tl::optional<Name> name;
 };
 
 struct ast::Function_parameter {
     Pattern                   pattern;
-    std::optional<Type>       type;
-    std::optional<Expression> default_value;
+    tl::optional<Type>       type;
+    tl::optional<Expression> default_value;
 };
 
 template <ast::tree_configuration Configuration>
@@ -211,12 +211,12 @@ namespace ast {
 
     struct [[nodiscard]] Import {
         Module_path                         path;
-        std::optional<compiler::Identifier> alias;
+        tl::optional<compiler::Identifier> alias;
     };
 
     struct [[nodiscard]] Module {
         std::vector<Definition>             definitions;
-        std::optional<compiler::Identifier> name;
+        tl::optional<compiler::Identifier> name;
         std::vector<Import>                 imports;
         std::vector<Module_path>            imported_by;
     };
@@ -254,8 +254,8 @@ template <ast::tree_configuration Configuration>
 DECLARE_FORMATTER_FOR_TEMPLATE(ast::Basic_definition<Configuration>);
 
 template <>
-struct std::formatter<ast::Definition> : std::formatter<ast::Basic_definition<ast::AST_configuration>> {
-    auto format(ast::Definition const& definition, std::format_context& context) {
-        return std::formatter<ast::Basic_definition<ast::AST_configuration>>::format(definition, context);
+struct fmt::formatter<ast::Definition> : fmt::formatter<ast::Basic_definition<ast::AST_configuration>> {
+    auto format(ast::Definition const& definition, fmt::format_context& context) {
+        return fmt::formatter<ast::Basic_definition<ast::AST_configuration>>::format(definition, context);
     }
 };

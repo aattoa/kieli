@@ -113,7 +113,7 @@ namespace {
         }
     }
 
-    auto extract_typeof(Parse_context& context)
+    auto extract_typeof_(Parse_context& context)
         -> ast::Type::Variant
     {
         if (context.try_consume(Token::Type::paren_open)) {
@@ -147,7 +147,7 @@ namespace {
     }
 
 
-    auto parse_normal_type(Parse_context& context) -> std::optional<ast::Type::Variant> {
+    auto parse_normal_type(Parse_context& context) -> tl::optional<ast::Type::Variant> {
         switch (context.extract().type) {
         case Token::Type::i8_type:  return ast::type::Integer::i8;
         case Token::Type::i16_type: return ast::type::Integer::i16;
@@ -167,7 +167,7 @@ namespace {
         case Token::Type::paren_open:     return extract_tuple(context);
         case Token::Type::bracket_open:   return extract_array_or_slice(context);
         case Token::Type::fn:             return extract_function(context);
-        case Token::Type::typeof:         return extract_typeof(context);
+        case Token::Type::typeof_:         return extract_typeof_(context);
         case Token::Type::inst:           return extract_instance_of(context);
         case Token::Type::ampersand:      return extract_reference(context);
         case Token::Type::asterisk:       return extract_pointer(context);
@@ -177,14 +177,14 @@ namespace {
 
         default:
             context.retreat();
-            return std::nullopt;
+            return tl::nullopt;
         }
     }
 
 }
 
 
-auto parse_type(Parse_context& context) -> std::optional<ast::Type> {
+auto parse_type(Parse_context& context) -> tl::optional<ast::Type> {
     Token const* const type_anchor = context.pointer;
 
     if (auto type_value = parse_normal_type(context)) {
@@ -226,6 +226,6 @@ auto parse_type(Parse_context& context) -> std::optional<ast::Type> {
         return std::move(type);
     }
     else {
-        return std::nullopt;
+        return tl::nullopt;
     }
 }

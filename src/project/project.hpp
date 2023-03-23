@@ -12,20 +12,23 @@ namespace project {
         Configuration_key(std::string&& string) noexcept
             : string { std::move(string) } {}
 
+        [[nodiscard]]
+        auto operator==(Configuration_key const&) const noexcept -> bool = default;
+
         template <class T>
-        auto parse() const -> std::optional<T> requires std::is_arithmetic_v<T> {
+        auto parse() const -> tl::optional<T> requires std::is_arithmetic_v<T> {
             if (string.empty()) {
-                return std::nullopt;
+                return tl::nullopt;
             }
             T value;
             auto const [ptr, ec] = std::from_chars(&string.front(), &string.back(), value);
-            return ec == std::errc {} ? value : std::optional<T> {};
+            return ec == std::errc {} ? value : tl::optional<T> {};
         }
     };
 
 
     class [[nodiscard]] Configuration :
-        utl::Flatmap<std::string, std::optional<Configuration_key>, utl::Flatmap_strategy::store_keys>
+        utl::Flatmap<std::string, tl::optional<Configuration_key>, utl::Flatmap_strategy::store_keys>
     {
     public:
         Configuration() = default;

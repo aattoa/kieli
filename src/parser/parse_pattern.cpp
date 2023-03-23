@@ -51,14 +51,14 @@ namespace {
     };
 
 
-    constexpr std::optional<ast::Pattern> (*parse_constructor_pattern)(Parse_context&) =
+    constexpr tl::optional<ast::Pattern> (*parse_constructor_pattern)(Parse_context&) =
         parenthesized<parse_top_level_pattern, "a pattern">;
 
 
-    auto parse_constructor_name(Parse_context& context) -> std::optional<ast::Qualified_name> {
+    auto parse_constructor_name(Parse_context& context) -> tl::optional<ast::Qualified_name> {
         auto* const anchor = context.pointer;
 
-        auto name = std::invoke([&]() -> std::optional<ast::Qualified_name> {
+        auto name = std::invoke([&]() -> tl::optional<ast::Qualified_name> {
             switch (context.pointer->type) {
             case Token::Type::lower_name:
             case Token::Type::upper_name:
@@ -71,7 +71,7 @@ namespace {
                     return extract_qualified({ utl::wrap(std::move(*type)) }, context);
                 }
                 else {
-                    return std::nullopt;
+                    return tl::nullopt;
                 }
             }
         });
@@ -93,7 +93,7 @@ namespace {
         context.retreat();
         auto mutability = extract_mutability(context);
 
-        std::optional<compiler::Identifier> identifier;
+        tl::optional<compiler::Identifier> identifier;
 
         if (!mutability.was_explicitly_specified()) {
             if (auto ctor_name = parse_constructor_name(context)) {
@@ -136,7 +136,7 @@ namespace {
     };
 
 
-    auto parse_normal_pattern(Parse_context& context) -> std::optional<ast::Pattern::Variant> {
+    auto parse_normal_pattern(Parse_context& context) -> tl::optional<ast::Pattern::Variant> {
         switch (context.extract().type) {
         case Token::Type::underscore:
             return extract_wildcard(context);
@@ -161,13 +161,13 @@ namespace {
             return extract_qualified_constructor(context);
         default:
             context.retreat();
-            return std::nullopt;
+            return tl::nullopt;
         }
     }
 
 
     auto parse_potentially_aliased_pattern(Parse_context& context)
-        -> std::optional<ast::Pattern::Variant>
+        -> tl::optional<ast::Pattern::Variant>
     {
         if (auto pattern = parse_node<ast::Pattern, parse_normal_pattern>(context)) {
             if (context.try_consume(Token::Type::as)) {
@@ -185,13 +185,13 @@ namespace {
             return std::move(pattern->value);
         }
         else {
-            return std::nullopt;
+            return tl::nullopt;
         }
     }
 
 
     auto parse_potentially_guarded_pattern(Parse_context& context)
-        -> std::optional<ast::Pattern::Variant>
+        -> tl::optional<ast::Pattern::Variant>
     {
         if (auto pattern = parse_node<ast::Pattern, parse_potentially_aliased_pattern>(context)) {
             if (context.try_consume(Token::Type::if_)) {
@@ -210,13 +210,13 @@ namespace {
             }
         }
         else {
-            return std::nullopt;
+            return tl::nullopt;
         }
     }
 
 }
 
 
-auto parse_pattern(Parse_context& context) -> std::optional<ast::Pattern> {
+auto parse_pattern(Parse_context& context) -> tl::optional<ast::Pattern> {
     return parse_node<ast::Pattern, parse_potentially_guarded_pattern>(context);
 }

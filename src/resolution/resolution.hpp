@@ -13,7 +13,7 @@ namespace compiler {
 
     struct Resolve_result {
         mir::Module                           main_module;
-        utl::Flatmap<Module_path, mir::Module> imports;
+        //std::vector<Module_path, mir::Module> imports;
 
         mir::Node_context              node_context;
         mir::Namespace_context         namespace_context;
