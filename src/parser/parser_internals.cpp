@@ -164,7 +164,7 @@ auto parse_template_arguments(Parse_context& context)
     if (context.try_consume(Token::Type::bracket_open)) {
         auto arguments = extract_arguments(context);
         context.consume_required(Token::Type::bracket_close);
-        return std::move(arguments);
+        return arguments;
     }
     else {
         return tl::nullopt;

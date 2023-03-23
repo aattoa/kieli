@@ -178,7 +178,6 @@ namespace {
     auto resolve_function_impl(
         Partially_resolved_function& function,
         Context                    & context,
-        Scope                        scope,
         utl::Wrapper<Namespace>      home_namespace) -> mir::Function
     {
         mir::Expression body = context.resolve_expression(function.unresolved_body, function.signature_scope, *home_namespace);
@@ -322,7 +321,6 @@ auto resolution::Context::resolve_function(utl::Wrapper<Function_info> const wra
         info.value = resolve_function_impl(
             *function,
             *this,
-            Scope { *this },
             info.home_namespace
         );
     }
@@ -602,7 +600,6 @@ auto resolution::Context::resolve_function_template(utl::Wrapper<Function_templa
             .definition = resolve_function_impl(
                 function_template->function,
                 *this,
-                Scope { *this },
                 info.home_namespace
             ),
             .parameters = std::move(function_template->template_parameters)

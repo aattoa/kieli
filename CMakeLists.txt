@@ -2,6 +2,18 @@ cmake_minimum_required(VERSION 3.25)
 project(kieli)
 set(CMAKE_CXX_STANDARD 20)
 
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
+if (MSVC)
+    add_compile_options("/W4")
+else()
+    # Turn up warning levels
+    add_compile_options("-Wall" "-Wextra" "-Wpedantic")
+    # Turn off unnecessary warnings
+    add_compile_options("-Wno-missing-field-initializers"
+                        "-Wno-switch")
+endif()
+
 if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
   # Clang doesn't provide sized deallocation functions by default
   add_compile_options(-fsized-deallocation)
@@ -117,9 +129,12 @@ set(SOURCE_FILES
 	src/vm/vm_formatting.hpp
 	src/vm/vm_test.cpp)
 
-add_executable(${PROJECT_NAME} ${SOURCE_FILES} ${PROJECT_SOURCE_DIR}/dependencies/src/fmt/format.cc)
+add_executable(${PROJECT_NAME}
+    ${SOURCE_FILES}
+    ${PROJECT_SOURCE_DIR}/dependencies/src/fmt/format.cc)
 
-target_precompile_headers(${PROJECT_NAME} PRIVATE src/utl/utilities.hpp)
+target_precompile_headers(${PROJECT_NAME}
+    PRIVATE src/utl/utilities.hpp)
 
 target_include_directories(${PROJECT_NAME}
     PRIVATE src

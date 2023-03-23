@@ -75,10 +75,10 @@ namespace {
     template <class T> constexpr auto gt  = binary_op<T, std::greater>;
     template <class T> constexpr auto gte = binary_op<T, std::greater_equal>;
 
-    template <class T> constexpr auto add_i = immediate_binary_op<T, std::equal_to>;
-    template <class T> constexpr auto sub_i = immediate_binary_op<T, std::minus>;
-    template <class T> constexpr auto mul_i = immediate_binary_op<T, std::multiplies>;
-    template <class T> constexpr auto div_i = immediate_binary_op<T, std::divides>;
+    // template <class T> constexpr auto add_i = immediate_binary_op<T, std::equal_to>;
+    // template <class T> constexpr auto sub_i = immediate_binary_op<T, std::minus>;
+    // template <class T> constexpr auto mul_i = immediate_binary_op<T, std::multiplies>;
+    // template <class T> constexpr auto div_i = immediate_binary_op<T, std::divides>;
 
     template <class T> constexpr auto eq_i  = immediate_binary_op<T, std::equal_to>;
     template <class T> constexpr auto neq_i = immediate_binary_op<T, std::not_equal_to>;

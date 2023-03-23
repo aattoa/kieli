@@ -17,13 +17,10 @@ namespace utl::diagnostics {
 
 
     struct Text_section {
-        Source_view          source_view;
-        Source const&        source;
-        std::string_view     note = "here";
-        tl::optional<Color> note_color;
-
-        // Has to be manually defined due to reference member
-        auto operator=(Text_section const&) noexcept -> Text_section&;
+        Source_view                          source_view;
+        std::reference_wrapper<Source const> source;
+        std::string_view                     note = "here";
+        tl::optional<Color>                  note_color;
     };
 
 
@@ -88,10 +85,10 @@ namespace utl::diagnostics {
 
 
     struct Message_arguments {
-        std::string_view                message;
-        fmt::format_args                message_arguments;
+        std::string_view               message;
+        fmt::format_args               message_arguments;
         tl::optional<std::string_view> help_note;
-        fmt::format_args                help_note_arguments;
+        fmt::format_args               help_note_arguments;
 
         auto add_source_info(utl::Source const&, utl::Source_view) const
             -> Builder::Simple_emit_arguments;
