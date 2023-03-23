@@ -227,7 +227,7 @@ namespace {
     }
 
 
-    static constexpr auto instructions = std::to_array({
+    constexpr auto instructions = std::to_array({
         push <utl::Isize>, push <utl::Float>, push <utl::Char>, push <String>, push_bool<true>, push_bool<false>,
         dup  <utl::Isize>, dup  <utl::Float>, dup  <utl::Char>, dup  <String>, dup  <bool>,
         print<utl::Isize>, print<utl::Float>, print<utl::Char>, print<String>, print<bool>,

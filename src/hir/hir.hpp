@@ -51,7 +51,7 @@ namespace hir {
     struct Implicit_template_parameter {
         struct Tag {
             utl::Usize value;
-            constexpr Tag(utl::Usize const value) noexcept
+            explicit constexpr Tag(utl::Usize const value) noexcept
                 : value { value } {}
         };
 

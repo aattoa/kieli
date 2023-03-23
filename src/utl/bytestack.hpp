@@ -49,9 +49,9 @@ namespace utl {
             return x;
         }
 
-        auto base()           noexcept -> std::byte      * { return m_buffer.get(); }
-        auto base()     const noexcept -> std::byte const* { return m_buffer.get(); }
-        auto capacity() const noexcept -> Usize            { return m_length; }
+        [[nodiscard]] auto base()           noexcept -> std::byte      * { return m_buffer.get(); }
+        [[nodiscard]] auto base()     const noexcept -> std::byte const* { return m_buffer.get(); }
+        [[nodiscard]] auto capacity() const noexcept -> Usize            { return m_length; }
     };
 
 }

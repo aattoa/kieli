@@ -122,7 +122,7 @@ namespace {
 
         [[nodiscard]]
         auto unrecognized_option() const -> cli::Unrecognized_option {
-            return make_error({ "Unrecognized option" }).string();
+            return cli::Unrecognized_option { make_error({ "Unrecognized option" }).string() };
         }
     };
 

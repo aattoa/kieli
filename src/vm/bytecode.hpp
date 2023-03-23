@@ -11,7 +11,7 @@ namespace vm {
         auto write(utl::trivial auto const... args) noexcept -> void {
             utl::serialize_to(std::back_inserter(bytes), args...);
         }
-
+        [[nodiscard]]
         auto current_offset() const noexcept -> utl::Usize {
             return bytes.size();
         }

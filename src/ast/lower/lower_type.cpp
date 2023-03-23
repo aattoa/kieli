@@ -75,14 +75,13 @@ namespace {
                     hir::Implicit_template_parameter::Tag { tag }
                 );
 
-                return hir::type::Implicit_parameter_reference { .tag = tag };
+                return hir::type::Implicit_parameter_reference {
+                    .tag = hir::Implicit_template_parameter::Tag { tag } };
             }
             else if (context.is_within_function()) {
                 // Within a function body, inst types are simply used for constraint collection.
-
                 return hir::type::Instance_of {
-                    .classes = utl::map(context.lower())(instance_of.classes)
-                };
+                    .classes = utl::map(context.lower())(instance_of.classes) };
             }
             else {
                 context.error(this_type.source_view, { "'inst' types are only usable within functions" });

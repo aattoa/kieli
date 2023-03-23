@@ -19,13 +19,9 @@ namespace {
         static_assert(utl::variant_has_alternative<Lower_variant, utl::Wrapper<Function_info>>);
 
         auto const add_definition = [&](utl::wrapper auto definition) -> void {
-            if constexpr (utl::variant_has_alternative<Upper_variant, decltype(definition)>)
-                context.add_to_namespace(*space, definition->name, definition);
-            else if constexpr (utl::variant_has_alternative<Lower_variant, decltype(definition)>)
-                context.add_to_namespace(*space, definition->name, definition);
-            else
-                static_assert(utl::always_false<decltype(definition)>);
-
+            static_assert(utl::variant_has_alternative<Upper_variant, decltype(definition)>
+                       || utl::variant_has_alternative<Lower_variant, decltype(definition)>);
+            context.add_to_namespace(*space, definition->name, definition);
             space->definitions_in_order.push_back(definition);
         };
 
@@ -94,7 +90,7 @@ namespace {
                         .name   = hir_child.name
                     });
 
-                    space->definitions_in_order.push_back(child);
+                    space->definitions_in_order.emplace_back(child);
                     space->lower_table.add(utl::copy(hir_child.name.identifier), utl::copy(child));
 
                     register_namespace(context, hir_child.definitions, child);
@@ -128,7 +124,7 @@ namespace {
                         .value          = std::move(implementation),
                         .home_namespace = space
                     });
-                    space->definitions_in_order.push_back(info);
+                    space->definitions_in_order.emplace_back(info);
                     context.nameless_entities.implementations.push_back(info);
                 },
                 [&](hir::definition::Instantiation& instantiation) {
@@ -136,7 +132,7 @@ namespace {
                         .value          = std::move(instantiation),
                         .home_namespace = space
                     });
-                    space->definitions_in_order.push_back(info);
+                    space->definitions_in_order.emplace_back(info);
                     context.nameless_entities.instantiations.push_back(info);
                 },
                 [&](hir::definition::Implementation_template& implementation_template) {
@@ -144,7 +140,7 @@ namespace {
                         .value          = std::move(implementation_template),
                         .home_namespace = space
                     });
-                    space->definitions_in_order.push_back(info);
+                    space->definitions_in_order.emplace_back(info);
                     context.nameless_entities.implementation_templates.push_back(info);
                 },
                 [&](hir::definition::Instantiation_template& instantiation_template) {
@@ -152,7 +148,7 @@ namespace {
                         .value          = std::move(instantiation_template),
                         .home_namespace = space
                     });
-                    space->definitions_in_order.push_back(info);
+                    space->definitions_in_order.emplace_back(info);
                     context.nameless_entities.instantiation_templates.push_back(info);
                 },
 

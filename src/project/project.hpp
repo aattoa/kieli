@@ -17,9 +17,9 @@ namespace project {
 
         template <class T>
         auto parse() const -> tl::optional<T> requires std::is_arithmetic_v<T> {
-            if (string.empty()) {
+            if (string.empty())
                 return tl::nullopt;
-            }
+
             T value;
             auto const [ptr, ec] = std::from_chars(&string.front(), &string.back(), value);
             return ec == std::errc {} ? value : tl::optional<T> {};
@@ -33,7 +33,9 @@ namespace project {
     public:
         Configuration() = default;
 
+        [[nodiscard]]
         auto operator[](std::string_view) -> Configuration_key&;
+        [[nodiscard]]
         auto string() const -> std::string;
 
         using Flatmap::find;

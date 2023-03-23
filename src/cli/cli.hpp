@@ -37,10 +37,10 @@ namespace cli {
 
     struct [[nodiscard]] Parameter {
         struct Name {
-            std::string         long_form;
+            std::string        long_form;
             tl::optional<char> short_form;
 
-            Name(char const* long_name, tl::optional<char> short_name = tl::nullopt) noexcept;
+            /* implicit */ Name(char const* long_name, tl::optional<char> short_name = tl::nullopt) noexcept;
         };
 
         using Variant = std::variant<
@@ -119,10 +119,10 @@ namespace cli {
             bool                     indexed = false;
             bool                     empty   = true;
 
-            operator types::Int  *();
-            operator types::Float*();
-            operator types::Bool *();
-            operator types::Str  *();
+            /* implicit */ operator types::Int  *();
+            /* implicit */ operator types::Float*();
+            /* implicit */ operator types::Bool *();
+            /* implicit */ operator types::Str  *();
 
             explicit operator bool() noexcept;
 

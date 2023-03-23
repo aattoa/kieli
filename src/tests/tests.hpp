@@ -32,8 +32,9 @@ namespace tests {
             std::source_location  caller;
 
             Invoke(auto&& callable, std::source_location const caller = std::source_location::current())
+                requires (!std::same_as<Invoke, std::remove_cvref_t<decltype(callable)>>)
                 : callable { std::forward<decltype(callable)>(callable) }
-                , caller { caller } {}
+                , caller   { caller } {}
         };
 
         auto operator=(Invoke&&) -> void;

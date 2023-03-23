@@ -27,8 +27,10 @@ public:
         compiler::Program_string_pool&
     ) noexcept;
 
+    [[nodiscard]]
     auto is_within_function() const noexcept -> bool;
 
+    [[nodiscard]]
     auto fresh_name_tag() -> utl::Usize;
 
     auto lower(ast::Expression const&) -> hir::Expression;

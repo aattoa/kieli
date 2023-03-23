@@ -117,22 +117,22 @@ namespace compiler {
             _token_type_count
         };
 
-        Variant         value;
-        Type            type;
+        Variant          value;
+        Type             type;
         utl::Source_view source_view;
 
-        template <class T>
-        inline auto value_as() noexcept -> T& {
+        template <class T> [[nodiscard]]
+        inline auto value_as() const noexcept -> T const& {
             assert(std::holds_alternative<T>(value));
             return *std::get_if<T>(&value);
         }
 
-        inline auto& as_integer    () noexcept { return value_as<utl::Isize >(); }
-        inline auto& as_floating   () noexcept { return value_as<utl::Float >(); }
-        inline auto& as_character  () noexcept { return value_as<utl::Char  >(); }
-        inline auto& as_boolean    () noexcept { return value_as<bool      >(); }
-        inline auto& as_string     () noexcept { return value_as<String    >(); }
-        inline auto& as_identifier () noexcept { return value_as<Identifier>(); }
+        [[nodiscard]] inline auto& as_integer    () const noexcept { return value_as<utl::Isize >(); }
+        [[nodiscard]] inline auto& as_floating   () const noexcept { return value_as<utl::Float >(); }
+        [[nodiscard]] inline auto& as_character  () const noexcept { return value_as<utl::Char  >(); }
+        [[nodiscard]] inline auto& as_boolean    () const noexcept { return value_as<bool      >(); }
+        [[nodiscard]] inline auto& as_string     () const noexcept { return value_as<String    >(); }
+        [[nodiscard]] inline auto& as_identifier () const noexcept { return value_as<Identifier>(); }
     };
 
     static_assert(std::is_trivially_copyable_v<Lexical_token>);

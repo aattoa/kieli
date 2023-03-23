@@ -10,6 +10,7 @@ namespace {
         Context&  context;
         mir::Type this_type;
 
+        [[nodiscard]]
         auto recurse() const noexcept {
             return std::bind_front(&Context::reify_type, &context);
         }
