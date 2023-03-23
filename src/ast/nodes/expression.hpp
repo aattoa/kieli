@@ -44,8 +44,8 @@ namespace ast {
         };
 
         struct Struct_initializer {
-            utl::Flatmap<Name, Expression> member_initializers;
-            utl::Wrapper<Type>             struct_type;
+            utl::Flatmap<Name, utl::Wrapper<Expression>> member_initializers;
+            utl::Wrapper<Type>                           struct_type;
         };
 
         struct Binary_operator_invocation {

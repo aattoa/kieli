@@ -8,23 +8,25 @@ namespace {
     auto extract_literal(Parse_context& context)
         -> ast::Expression::Variant
     {
-        return ast::expression::Literal<T> { context.previous().value_as<T>() };
+        return ast::expression::Literal<T> {
+            context.previous().value_as<T>() };
     }
 
     template <>
     auto extract_literal<char>(Parse_context& context)
         -> ast::Expression::Variant
     {
-        return ast::expression::Literal { static_cast<utl::Char>(context.previous().as_character()) };
+        return ast::expression::Literal<utl::Char> {
+            static_cast<utl::Char>(context.previous().as_character()) };
     }
 
 
     auto parse_struct_member_initializer(Parse_context& context)
-        -> tl::optional<utl::Pair<ast::Name, ast::Expression>>
+        -> tl::optional<utl::Pair<ast::Name, utl::Wrapper<ast::Expression>>>
     {
         if (auto member = parse_lower_name(context)) {
             context.consume_required(Token::Type::equals);
-            return utl::Pair { *member, extract_expression(context) };
+            return utl::Pair { *member, utl::wrap(extract_expression(context)) };
         }
         else {
             return tl::nullopt;
@@ -44,9 +46,8 @@ namespace {
             std::vector<utl::Source_view> duplicates;
 
             for (auto& [name, initializer] : std::span { it + 1, initializers.end() }) {
-                if (it->first == name) {
+                if (it->first == name)
                     duplicates.push_back(name.source_view);
-                }
             }
 
             if (!duplicates.empty()) {

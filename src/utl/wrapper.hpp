@@ -29,7 +29,7 @@ namespace utl::dtl {
         ~Wrapper_arena_page() {
             if (!m_buffer) return;
             std::destroy(m_buffer, m_slot);
-            ::operator delete(m_buffer, sizeof(T) * page_size, static_cast<std::align_val_t>(alignof(T)));
+            ::operator delete(static_cast<void*>(m_buffer), sizeof(T) * page_size, static_cast<std::align_val_t>(alignof(T)));
         }
 
         template <class... Args> [[nodiscard]]

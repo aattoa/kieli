@@ -11,6 +11,7 @@
 #include <climits>
 #include <cassert>
 
+#include <new>
 #include <limits>
 #include <memory>
 #include <chrono>
@@ -244,6 +245,9 @@ namespace utl {
         auto operator==(Pair const&) const -> bool = default;
     };
 
+    template <class Fst, class Snd>
+    Pair(Fst, Snd) -> Pair<Fst, Snd>;
+
     constexpr auto first  = [](auto&& pair) noexcept -> decltype(auto) { return bootleg::forward_like<decltype(pair)>(pair.first); };
     constexpr auto second = [](auto&& pair) noexcept -> decltype(auto) { return bootleg::forward_like<decltype(pair)>(pair.second); };
 
@@ -465,6 +469,14 @@ namespace utl {
         vector.erase(vector.begin() + static_cast<typename std::vector<T>::iterator::difference_type>(new_size), vector.end());
     }
 
+
+    template <std::integral To> [[nodiscard]]
+    constexpr auto safe_cast(std::integral auto const from) -> To {
+        if (std::in_range<To>(from))
+            return static_cast<To>(from);
+        else
+            throw exception("utl::safe_cast argument out of target range");
+    }
 
     [[nodiscard]]
     constexpr auto unsigned_distance(auto const start, auto const stop) noexcept -> Usize {

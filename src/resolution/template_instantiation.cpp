@@ -217,7 +217,7 @@ namespace {
             .home_namespace = template_info->home_namespace,
             .state          = Definition_state::resolved,
             .name           = template_info->name,
-            .template_instantiation_info = Template_instantiation_info {
+            .template_instantiation_info = Template_instantiation_info<Function_template_info> {
                 template_info,
                 function_template.parameters,
                 std::move(template_arguments)
@@ -270,7 +270,7 @@ namespace {
             .structure_type = std::move(concrete_type),
             .state          = Definition_state::resolved,
             .name           = template_info->name,
-            .template_instantiation_info = Template_instantiation_info {
+            .template_instantiation_info = Template_instantiation_info<Struct_template_info> {
                 template_info,
                 struct_template.parameters,
                 std::move(template_arguments)
@@ -287,12 +287,12 @@ namespace {
 
 
     auto instantiate_enum_template_application(
-        Context                             & resolution_context,
-        mir::Enum_template                  & enum_template,
+        Context                              & resolution_context,
+        mir::Enum_template                   & enum_template,
         utl::Wrapper<Enum_template_info> const template_info,
-        std::vector<mir::Template_argument>&& template_arguments,
-        Scope                               & scope,
-        Namespace                           & space) -> utl::Wrapper<Enum_info>
+        std::vector<mir::Template_argument> && template_arguments,
+        Scope                                & scope,
+        Namespace                            & space) -> utl::Wrapper<Enum_info>
     {
         Substitutions substitutions { enum_template.parameters, template_arguments };
 
@@ -339,7 +339,7 @@ namespace {
             .enumeration_type = concrete_type,
             .state            = Definition_state::resolved,
             .name             = template_info->name,
-            .template_instantiation_info = Template_instantiation_info {
+            .template_instantiation_info = Template_instantiation_info<Enum_template_info> {
                 template_info,
                 enum_template.parameters,
                 std::move(template_arguments)
@@ -820,9 +820,9 @@ auto resolution::Context::instantiate_struct_template(
 
 
 auto resolution::Context::instantiate_enum_template(
-    utl::Wrapper<Enum_template_info>         const template_info,
+    utl::Wrapper<Enum_template_info>        const template_info,
     std::span<hir::Template_argument const> const template_arguments,
-    utl::Source_view                         const instantiation_view,
+    utl::Source_view                        const instantiation_view,
     Scope                                       & scope,
     Namespace                                   & space) -> utl::Wrapper<Enum_info>
 {
@@ -841,9 +841,9 @@ auto resolution::Context::instantiate_enum_template(
 
 
 auto resolution::Context::instantiate_alias_template(
-    utl::Wrapper<Alias_template_info>        const template_info,
+    utl::Wrapper<Alias_template_info>       const template_info,
     std::span<hir::Template_argument const> const template_arguments,
-    utl::Source_view                         const instantiation_view,
+    utl::Source_view                        const instantiation_view,
     Scope                                       & scope,
     Namespace                                   & space) -> utl::Wrapper<Alias_info>
 {
