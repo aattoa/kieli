@@ -1,7 +1,7 @@
 #ifndef KIELI_MIR_NODES_DEFINITION
 #define KIELI_MIR_NODES_DEFINITION
 #else
-#error This isn't supposed to be included by anything other than mir/mir.hpp
+#error "This isn't supposed to be included by anything other than mir/mir.hpp"
 #endif
 
 
@@ -35,7 +35,7 @@ namespace mir {
         Signature                     signature;
         Expression                    body;
         ast::Name                     name;
-        std::optional<Self_parameter> self_parameter;
+        tl::optional<Self_parameter> self_parameter;
     };
     using Function_template = Template<Function>;
 

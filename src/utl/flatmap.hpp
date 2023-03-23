@@ -69,12 +69,10 @@ namespace utl {
             return m_pairs.empty();
         }
 
-        constexpr auto begin(this auto& self) {
-            return self.m_pairs.begin();
-        }
-        constexpr auto end(this auto& self) {
-            return self.m_pairs.end();
-        }
+        constexpr auto begin()       { return m_pairs.begin(); }
+        constexpr auto begin() const { return m_pairs.begin(); }
+        constexpr auto end()         { return m_pairs.end(); }
+        constexpr auto end()   const { return m_pairs.end(); }
 
         constexpr auto container()      & noexcept -> decltype(m_pairs)      & { return m_pairs; }
         constexpr auto container() const& noexcept -> decltype(m_pairs) const& { return m_pairs; }

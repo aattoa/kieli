@@ -273,25 +273,25 @@ auto compiler::resolve(Lower_result&& lower_result) -> Resolve_result {
                 definition,
 
                 [](utl::Wrapper<Function_info> const def) {
-                    utl::print("{}\n\n", utl::get<2>(def->value));
+                    fmt::print("{}\n\n", utl::get<2>(def->value));
                 },
                 [](utl::wrapper auto const def) {
-                    utl::print("{}\n\n", utl::get<1>(def->value));
+                    fmt::print("{}\n\n", utl::get<1>(def->value));
                 },
                 [&](utl::Wrapper<Namespace> const space) {
-                    utl::print("namespace {} {{\n\n", space->name);
+                    fmt::print("namespace {} {{\n\n", space->name);
                     visitor(*space);
-                    utl::print("}} // closes {}\n\n", space->name);
+                    fmt::print("}} // closes {}\n\n", space->name);
                 },
                 [](utl::Wrapper<Function_template_info> const info) {
-                    utl::print(
+                    fmt::print(
                         "template [{}] {}\n\n",
                         utl::get<2>(info->value).parameters,
                         utl::get<2>(info->value).definition
                     );
                 },
                 []<class T>(utl::Wrapper<resolution::Definition_info<ast::definition::Template<T>>> const info) {
-                    utl::print(
+                    fmt::print(
                         "template [{}] {}\n\n",
                         utl::get<1>(info->value).parameters,
                         utl::get<1>(info->value).definition

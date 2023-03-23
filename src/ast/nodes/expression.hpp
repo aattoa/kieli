@@ -1,7 +1,7 @@
 #ifndef KIELI_AST_NODES_EXPRESSION
 #define KIELI_AST_NODES_EXPRESSION
 #else
-#error This isn't supposed to be included by anything other than ast/ast.hpp
+#error "This isn't supposed to be included by anything other than ast/ast.hpp"
 #endif
 
 
@@ -35,7 +35,7 @@ namespace ast {
 
         struct Block {
             std::vector<Expression>                side_effects;
-            std::optional<utl::Wrapper<Expression>> result;
+            tl::optional<utl::Wrapper<Expression>> result;
         };
 
         struct Invocation {
@@ -77,7 +77,7 @@ namespace ast {
 
         struct Method_invocation {
             std::vector<Function_argument>                arguments;
-            std::optional<std::vector<Template_argument>> template_arguments;
+            tl::optional<std::vector<Template_argument>> template_arguments;
             utl::Wrapper<Expression>                       base_expression;
             Name                                          method_name;
         };
@@ -85,7 +85,7 @@ namespace ast {
         struct Conditional {
             utl::Wrapper<Expression>                condition;
             utl::Wrapper<Expression>                true_branch;
-            std::optional<utl::Wrapper<Expression>> false_branch;
+            tl::optional<utl::Wrapper<Expression>> false_branch;
         };
 
         struct Match {
@@ -110,7 +110,7 @@ namespace ast {
         struct Let_binding {
             utl::Wrapper<Pattern>             pattern;
             utl::Wrapper<Expression>          initializer;
-            std::optional<utl::Wrapper<Type>> type;
+            tl::optional<utl::Wrapper<Type>> type;
         };
 
         struct Conditional_let {
@@ -143,18 +143,18 @@ namespace ast {
         };
 
         struct Infinite_loop {
-            std::optional<Name>     label;
+            tl::optional<Name>     label;
             utl::Wrapper<Expression> body;
         };
 
         struct While_loop {
-            std::optional<Name>     label;
+            tl::optional<Name>     label;
             utl::Wrapper<Expression> condition;
             utl::Wrapper<Expression> body;
         };
 
         struct For_loop {
-            std::optional<Name>     label;
+            tl::optional<Name>     label;
             utl::Wrapper<Pattern>    iterator;
             utl::Wrapper<Expression> iterable;
             utl::Wrapper<Expression> body;
@@ -163,8 +163,8 @@ namespace ast {
         struct Continue {};
 
         struct Break {
-            std::optional<Name>                    label;
-            std::optional<utl::Wrapper<Expression>> result;
+            tl::optional<Name>                    label;
+            tl::optional<utl::Wrapper<Expression>> result;
         };
 
         struct Discard {
@@ -172,7 +172,7 @@ namespace ast {
         };
 
         struct Ret {
-            std::optional<utl::Wrapper<Expression>> returned_expression;
+            tl::optional<utl::Wrapper<Expression>> returned_expression;
         };
 
         struct Sizeof {

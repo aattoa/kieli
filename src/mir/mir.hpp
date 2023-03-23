@@ -94,20 +94,14 @@ template <> struct dtl::To_HIR_impl<name> : std::type_identity<hir::definition::
         utl::Usize value;
         constexpr explicit Unification_variable_tag(utl::Usize const value) noexcept
             : value { value } {}
-        [[nodiscard]]
-        constexpr auto operator==(this Unification_variable_tag const self, Unification_variable_tag const other) noexcept -> bool {
-            return self.value == other.value;
-        }
+        [[nodiscard]] auto operator==(Unification_variable_tag const&) const noexcept -> bool = default;
     };
 
     struct [[nodiscard]] Template_parameter_tag {
         utl::Usize value;
         constexpr explicit Template_parameter_tag(utl::Usize const value) noexcept
             : value { value } {}
-        [[nodiscard]]
-        constexpr auto operator==(this Template_parameter_tag const self, Template_parameter_tag const other) noexcept -> bool {
-            return self.value == other.value;
-        }
+        [[nodiscard]] auto operator==(Template_parameter_tag const&) const noexcept -> bool = default;
     };
 
     struct [[nodiscard]] Mutability {
@@ -145,7 +139,7 @@ template <> struct dtl::To_HIR_impl<name> : std::type_identity<hir::definition::
 struct mir::Template_argument {
     using Variant = std::variant<Type, Expression, Mutability>;
     Variant                  value;
-    std::optional<ast::Name> name;
+    tl::optional<ast::Name> name;
 };
 
 struct mir::Template_parameter {
@@ -161,7 +155,7 @@ struct mir::Template_parameter {
 
     Variant                          value;
     ast::Name                        name;
-    std::optional<Template_argument> default_argument;
+    tl::optional<Template_argument> default_argument;
     Template_parameter_tag           reference_tag;
     utl::Source_view                 source_view;
 };
@@ -248,7 +242,7 @@ namespace resolution {
             mir::Type                       type;
             mir::Mutability                 mutability;
             bool                            has_been_mentioned = false;
-            std::optional<utl::Source_view> moved_at;
+            tl::optional<utl::Source_view> moved_at;
             utl::Source_view                source_view;
         };
         struct Type_binding {
@@ -329,8 +323,8 @@ namespace resolution {
         std::vector<Definition_variant>                  definitions_in_order;
         utl::Flatmap<compiler::Identifier, Lower_variant> lower_table;
         utl::Flatmap<compiler::Identifier, Upper_variant> upper_table;
-        std::optional<utl::Wrapper<Namespace>>            parent;
-        std::optional<ast::Name>                          name;
+        tl::optional<utl::Wrapper<Namespace>>            parent;
+        tl::optional<ast::Name>                          name;
     };
 
 
@@ -346,7 +340,7 @@ namespace resolution {
         Scope                              signature_scope;
         hir::Expression                    unresolved_body;
         ast::Name                          name;
-        std::optional<mir::Self_parameter> self_parameter;
+        tl::optional<mir::Self_parameter> self_parameter;
     };
 
     struct Partially_resolved_function_template {
@@ -414,7 +408,7 @@ namespace resolution {
         Definition_state        state = Definition_state::unresolved;
         ast::Name               name;
 
-        std::optional<Template_instantiation_info<Function_template_info>> template_instantiation_info;
+        tl::optional<Template_instantiation_info<Function_template_info>> template_instantiation_info;
     };
 
     template <>
@@ -427,7 +421,7 @@ namespace resolution {
         Definition_state        state = Definition_state::unresolved;
         ast::Name               name;
 
-        std::optional<Template_instantiation_info<Struct_template_info>> template_instantiation_info;
+        tl::optional<Template_instantiation_info<Struct_template_info>> template_instantiation_info;
     };
 
     template <>
@@ -440,7 +434,7 @@ namespace resolution {
         Definition_state        state = Definition_state::unresolved;
         ast::Name               name;
 
-        std::optional<Template_instantiation_info<Enum_template_info>> template_instantiation_info;
+        tl::optional<Template_instantiation_info<Enum_template_info>> template_instantiation_info;
 
         auto constructor_count() const noexcept -> utl::Usize;
     };

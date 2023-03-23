@@ -122,7 +122,7 @@ namespace {
                     context.error(this_pattern.source_view, { "Expected a constructor, but found a namespace" });
                 },
                 [&, this](mir::Enum_constructor constructor) -> mir::Pattern {
-                    std::optional<mir::Pattern> payload_pattern;
+                    tl::optional<mir::Pattern> payload_pattern;
 
                     if (hir_constructor.payload_pattern.has_value()) {
                         if (constructor.payload_type.has_value()) {
@@ -130,8 +130,7 @@ namespace {
                             context.solve(constraint::Type_equality {
                                 .constrainer_type = *constructor.payload_type,
                                 .constrained_type = payload_pattern->type,
-                                .constrainer_note {
-                                    std::in_place,
+                                .constrainer_note = constraint::Explanation {
                                     constructor.payload_type->source_view,
                                     "The constructor field is of type {0}"
                                 },
@@ -195,8 +194,7 @@ namespace {
                     context.solve(constraint::Type_equality {
                         .constrainer_type = element_type,
                         .constrained_type = pattern.type,
-                        .constrainer_note {
-                            std::in_place,
+                        .constrainer_note = constraint::Explanation {
                             element_type.source_view + previous_pattern.source_view,
                             i == 1 ? "The previous pattern was of type {0}"
                                    : "The previous patterns were of type {0}"

@@ -164,7 +164,7 @@ namespace {
             else {
                 context.error(qualifier.source_view, {
                     .message           = "{} does not contain a definition for this name",
-                    .message_arguments = std::make_format_args(namespace_name(*target))
+                    .message_arguments = fmt::make_format_args(namespace_name(*target))
                 });
             }
         }
@@ -186,7 +186,7 @@ namespace {
             else {
                 context.error(qualifier.source_view, {
                     .message           = "{} contains no definition for this name",
-                    .message_arguments = std::make_format_args(namespace_name(*target))
+                    .message_arguments = fmt::make_format_args(namespace_name(*target))
                 });
             }
         }
@@ -223,7 +223,7 @@ namespace {
                     else {
                         context.error(primary.source_view, {
                             .message           = "{} contains no definition for this name",
-                            .message_arguments = std::make_format_args(namespace_name(space))
+                            .message_arguments = fmt::make_format_args(namespace_name(space))
                         });
                     }
                 }
@@ -245,7 +245,7 @@ namespace {
         else {
             context.error(primary.source_view, {
                 .message           = "{} contains no definition for this name",
-                .message_arguments = std::make_format_args(namespace_name(*target_space))
+                .message_arguments = fmt::make_format_args(namespace_name(*target_space))
             });
         }
     }

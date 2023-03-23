@@ -43,7 +43,7 @@ namespace {
             );
         }
         else {
-            std::format_to(std::back_inserter(vm.output_buffer), "{}\n", popped);
+            fmt::format_to(std::back_inserter(vm.output_buffer), "{}\n", popped);
         }
 
         vm.flush_output(); // Adjust flush frequency later
@@ -308,7 +308,7 @@ auto vm::Virtual_machine::run() -> int {
 
     while (keep_running) {
         auto const opcode = extract_argument<Opcode>();
-        //utl::print(" -> {}\n", opcode);
+        //fmt::print(" -> {}\n", opcode);
         instructions[static_cast<utl::Usize>(opcode)](*this);
     }
 

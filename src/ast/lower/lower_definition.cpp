@@ -52,7 +52,10 @@ namespace {
             if (function.self_parameter.has_value()) {
                 parameters.push_back(lower_self_parameter(*function.self_parameter, context));
             }
-            parameters.append_range(utl::map(context.lower())(function.parameters));
+            auto explicit_parameters = utl::map(context.lower())(function.parameters);
+            parameters.insert(parameters.end(),
+                std::move_iterator { explicit_parameters.begin() },
+                std::move_iterator { explicit_parameters.end() });
 
             context.current_function_implicit_template_parameters = nullptr;
 

@@ -1,7 +1,7 @@
 #ifndef KIELI_HIR_NODES_TYPE
 #define KIELI_HIR_NODES_TYPE
 #else
-#error This isn't supposed to be included by anything other than hir/hir.hpp
+#error "This isn't supposed to be included by anything other than hir/hir.hpp"
 #endif
 
 

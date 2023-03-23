@@ -20,7 +20,7 @@ namespace utl::diagnostics {
         Source_view          source_view;
         Source const&        source;
         std::string_view     note = "here";
-        std::optional<Color> note_color;
+        tl::optional<Color> note_color;
 
         // Has to be manually defined due to reference member
         auto operator=(Text_section const&) noexcept -> Text_section&;
@@ -32,17 +32,17 @@ namespace utl::diagnostics {
         struct Emit_arguments {
             std::vector<Text_section>       sections;
             std::string_view                message;
-            std::format_args                message_arguments;
-            std::optional<std::string_view> help_note;
-            std::format_args                help_note_arguments;
+            fmt::format_args                message_arguments;
+            tl::optional<std::string_view> help_note;
+            fmt::format_args                help_note_arguments;
         };
         struct Simple_emit_arguments {
-            utl::Source_view                 erroneous_view;
+            utl::Source_view                erroneous_view;
             Source const&                   source;
             std::string_view                message;
-            std::format_args                message_arguments;
-            std::optional<std::string_view> help_note;
-            std::format_args                help_note_arguments;
+            fmt::format_args                message_arguments;
+            tl::optional<std::string_view> help_note;
+            fmt::format_args                help_note_arguments;
         };
         struct Configuration {
             Level note_level    = Level::normal;
@@ -53,8 +53,9 @@ namespace utl::diagnostics {
         Configuration configuration;
         bool          has_emitted_error;
     public:
-        Builder(Configuration = {}) noexcept;
-        Builder(Builder&&) noexcept;
+        Builder()              noexcept;
+        Builder(Configuration) noexcept;
+        Builder(Builder&&)     noexcept;
 
         ~Builder();
 
@@ -88,9 +89,9 @@ namespace utl::diagnostics {
 
     struct Message_arguments {
         std::string_view                message;
-        std::format_args                message_arguments;
-        std::optional<std::string_view> help_note;
-        std::format_args                help_note_arguments;
+        fmt::format_args                message_arguments;
+        tl::optional<std::string_view> help_note;
+        fmt::format_args                help_note_arguments;
 
         auto add_source_info(utl::Source const&, utl::Source_view) const
             -> Builder::Simple_emit_arguments;

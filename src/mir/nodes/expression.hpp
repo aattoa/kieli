@@ -1,7 +1,7 @@
 #ifndef KIELI_MIR_NODES_EXPRESSION
 #define KIELI_MIR_NODES_EXPRESSION
 #else
-#error This isn't supposed to be included by anything other than mir/mir.hpp
+#error "This isn't supposed to be included by anything other than mir/mir.hpp"
 #endif
 
 
@@ -9,8 +9,8 @@ namespace mir {
 
     struct Enum_constructor {
         ast::Name           name;
-        std::optional<Type> payload_type;
-        std::optional<Type> function_type;
+        tl::optional<Type> payload_type;
+        tl::optional<Type> function_type;
         Type                enum_type;
     };
 
@@ -31,7 +31,7 @@ namespace mir {
 
         struct Block {
             std::vector<Expression>                side_effects;
-            std::optional<utl::Wrapper<Expression>> result;
+            tl::optional<utl::Wrapper<Expression>> result;
         };
 
         struct Let_binding {

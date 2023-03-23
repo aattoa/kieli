@@ -3,22 +3,22 @@
 
 
 DIRECTLY_DEFINE_FORMATTER_FOR(ast::expression::Match::Case) {
-    return std::format_to(context.out(), "{} -> {}", value.pattern, value.handler);
+    return fmt::format_to(context.out(), "{} -> {}", value.pattern, value.handler);
 }
 
 DIRECTLY_DEFINE_FORMATTER_FOR(ast::expression::Lambda::Capture) {
     return std::visit(utl::Overload {
         [&](ast::expression::Lambda::Capture::By_pattern const& capture) {
-            return std::format_to(context.out(), "{} = {}", capture.pattern, capture.expression);
+            return fmt::format_to(context.out(), "{} = {}", capture.pattern, capture.expression);
         },
         [&](ast::expression::Lambda::Capture::By_reference const& capture) {
-            return std::format_to(context.out(), "&{}", capture.variable);
+            return fmt::format_to(context.out(), "&{}", capture.variable);
         }
     }, value.value);
 }
 
 DIRECTLY_DEFINE_FORMATTER_FOR(ast::Function_argument) {
-    return std::format_to(
+    return fmt::format_to(
         context.out(),
         "{}{}",
         value.name.transform("{} = "_format).value_or(""),
@@ -28,7 +28,7 @@ DIRECTLY_DEFINE_FORMATTER_FOR(ast::Function_argument) {
 
 
 DEFINE_FORMATTER_FOR(ast::Function_parameter) {
-    return std::format_to(
+    return fmt::format_to(
         context.out(),
         "{}{}{}",
         value.pattern,
@@ -42,10 +42,10 @@ DEFINE_FORMATTER_FOR(ast::Mutability) {
         value.value,
 
         [&](ast::Mutability::Concrete const concrete) {
-            return !concrete.is_mutable ? context.out() : std::format_to(context.out(), "mut ");
+            return !concrete.is_mutable ? context.out() : fmt::format_to(context.out(), "mut ");
         },
         [&](ast::Mutability::Parameterized const parameterized) {
-            return std::format_to(context.out(), "mut?{} ", parameterized.identifier);
+            return fmt::format_to(context.out(), "mut?{} ", parameterized.identifier);
         }
     );
 }
@@ -54,22 +54,22 @@ DEFINE_FORMATTER_FOR(ast::expression::Type_cast::Kind) {
     using enum ast::expression::Type_cast::Kind;
     switch (value) {
     case conversion:
-        return std::format_to(context.out(), "as");
+        return fmt::format_to(context.out(), "as");
     case ascription:
-        return std::format_to(context.out(), ":");
+        return fmt::format_to(context.out(), ":");
     default:
         utl::unreachable();
     }
 }
 
 DEFINE_FORMATTER_FOR(ast::Name) {
-    return std::format_to(context.out(), "{}", value.identifier);
+    return fmt::format_to(context.out(), "{}", value.identifier);
 }
 
 
 namespace {
 
-    struct Expression_format_visitor : utl::fmt::Visitor_base {
+    struct Expression_format_visitor : utl::formatting::Visitor_base {
         template <class T>
         auto operator()(ast::expression::Literal<T> const& literal) {
             return format("{}", literal.value);
@@ -152,7 +152,7 @@ namespace {
                 : format("if {} {}", condition, true_branch);
         }
         auto operator()(ast::expression::Match const& match) {
-            return format("match {} {{ {} }}", match.matched_expression, utl::fmt::delimited_range(match.cases, " "));
+            return format("match {} {{ {} }}", match.matched_expression, utl::formatting::delimited_range(match.cases, " "));
         }
         auto operator()(ast::expression::Type_cast const& cast) {
             return format("({} {} {})", cast.expression, cast.cast_kind, cast.target_type);
@@ -242,7 +242,7 @@ namespace {
     };
 
 
-    struct Pattern_format_visitor : utl::fmt::Visitor_base {
+    struct Pattern_format_visitor : utl::formatting::Visitor_base {
         auto operator()(ast::pattern::Wildcard) {
             return format("_");
         }
@@ -274,7 +274,7 @@ namespace {
     };
 
 
-    struct Type_format_visitor : utl::fmt::Visitor_base {
+    struct Type_format_visitor : utl::formatting::Visitor_base {
         auto operator()(ast::type::Floating)  { return format("Float");  }
         auto operator()(ast::type::Character) { return format("Char");   }
         auto operator()(ast::type::Boolean)   { return format("Bool");   }
@@ -316,11 +316,11 @@ namespace {
         auto operator()(ast::type::Function const& function) {
             return format("fn({}): {}", function.argument_types, function.return_type);
         }
-        auto operator()(ast::type::Typeof const& typeof) {
-            return format("typeof({})", typeof.inspected_expression);
+        auto operator()(ast::type::Typeof const& typeof_) {
+            return format("typeof_({})", typeof_.inspected_expression);
         }
         auto operator()(ast::type::Instance_of const& instance_of) {
-            return format("inst {}", utl::fmt::delimited_range(instance_of.classes, " + "));
+            return format("inst {}", utl::formatting::delimited_range(instance_of.classes, " + "));
         }
         auto operator()(ast::type::Reference const& reference) {
             return format("&{}{}", reference.mutability, reference.referenced_type);
@@ -351,16 +351,16 @@ DEFINE_FORMATTER_FOR(ast::Type) {
 
 DEFINE_FORMATTER_FOR(ast::Module) {
     if (value.name) {
-        std::format_to(context.out(), "module {}\n", *value.name);
+        fmt::format_to(context.out(), "module {}\n", *value.name);
     }
 
     for (auto& import : value.imports) {
-        std::format_to(context.out(), "import {}", utl::fmt::delimited_range(import.path.components, "."));
+        fmt::format_to(context.out(), "import {}", utl::formatting::delimited_range(import.path.components, "."));
         if (import.alias) {
-            std::format_to(context.out(), " as {}", *import.alias);
+            fmt::format_to(context.out(), " as {}", *import.alias);
         }
-        std::format_to(context.out(), "\n");
+        fmt::format_to(context.out(), "\n");
     }
 
-    return std::format_to(context.out(), "{}", utl::fmt::delimited_range(value.definitions, "\n\n"));
+    return fmt::format_to(context.out(), "{}", utl::formatting::delimited_range(value.definitions, "\n\n"));
 }

@@ -8,6 +8,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <climits>
 #include <cassert>
 
 #include <limits>
@@ -32,18 +33,50 @@
 
 #include <tuple>
 #include <variant>
-#include <optional>
-#include <expected>
 
 #include <string>
+#include <charconv>
 #include <string_view>
 
-#include <format>
-#include <charconv>
-
-#include <ranges>
 #include <numeric>
 #include <algorithm>
+
+#include "fmt/format.h"
+#include "fmt/chrono.h"
+#include "range/v3/all.hpp"
+#include "tl/optional.hpp"
+#include "tl/expected.hpp"
+
+
+// A tag to search for when C++23 EOP are supported
+#define APPLY_EXPLICIT_OBJECT_PARAMETER_HERE
+
+
+namespace bootleg {
+    template <class E> requires std::is_enum_v<E>
+    auto to_underlying(E const e) noexcept {
+        return static_cast<std::underlying_type_t<E>>(e);
+    }
+
+    // Copied implementation of forward_like from cppreference, this is
+    // only needed until the libstdc++ and libc++ provide std::forward_like
+    template<class T, class U> [[nodiscard]]
+    constexpr auto&& forward_like(U&& x) noexcept {
+        constexpr bool is_adding_const = std::is_const_v<std::remove_reference_t<T>>;
+        if constexpr (std::is_lvalue_reference_v<T&&>) {
+            if constexpr (is_adding_const)
+                return std::as_const(x);
+            else
+                return static_cast<U&>(x);
+        }
+        else {
+            if constexpr (is_adding_const)
+                return std::move(std::as_const(x));
+            else
+                return std::move(x);
+        }
+    }
+}
 
 
 namespace utl {
@@ -115,9 +148,9 @@ namespace utl {
         consteval auto operator"" _uz(unsigned long long const n) noexcept -> Usize { return static_cast<Usize>(n); }
         consteval auto operator"" _iz(unsigned long long const n) noexcept -> Isize { return static_cast<Isize>(n); }
 
-        consteval auto operator"" _format(char const* const s, unsigned long long const n) noexcept {
-            return [fmt = std::string_view { s, n }](auto const&... args) -> std::string {
-                return std::vformat(fmt, std::make_format_args(args...));
+        consteval auto operator"" _format(char const* const s, unsigned long const n) noexcept {
+            return [fmt = std::string_view(s, n)](auto const&... args) -> std::string {
+                return fmt::vformat(fmt, fmt::make_format_args(args...));
             };
         }
 
@@ -145,25 +178,14 @@ namespace utl {
         Exception(std::string&& message) noexcept
             : message { std::move(message) } {}
 
-        auto what() const -> char const* override {
+        auto what() const noexcept -> char const* override {
             return message.c_str();
         }
     };
 
     template <class... Args>
-    auto exception(std::format_string<Args...> const fmt, Args const&... args) -> Exception {
-        return Exception { std::vformat(fmt.get(), std::make_format_args(args...))};
-    }
-
-
-    template <class... Args>
-    auto print(std::format_string<Args...> const fmt, Args const&... args) -> void {
-        if constexpr (sizeof...(args) != 0) {
-            std::cout << std::vformat(fmt.get(), std::make_format_args(args...));
-        }
-        else {
-            std::cout << fmt.get();
-        }
+    auto exception(fmt::format_string<Args...> const fmt, Args const&... args) -> Exception {
+        return Exception { fmt::vformat(fmt.get(), fmt::make_format_args(args...))};
     }
 
     [[noreturn]]
@@ -171,7 +193,7 @@ namespace utl {
         std::string_view     const message = "no message",
         std::source_location const caller  = std::source_location::current()) -> void
     {
-        print(
+        fmt::print(
             "[{}:{}:{}] utl::abort invoked in {}, with message: {}\n",
             filename_without_path(caller.file_name()),
             caller.line(),
@@ -194,7 +216,7 @@ namespace utl {
     inline auto trace(
         std::source_location const caller = std::source_location::current()) -> void
     {
-        print(
+        fmt::print(
             "utl::trace: Reached line {} in {}, in function {}\n",
             caller.line(),
             filename_without_path(caller.file_name()),
@@ -219,12 +241,11 @@ namespace utl {
         Snd second;
 
         [[nodiscard]]
-        constexpr auto operator==(Pair const&) const
-            noexcept(noexcept(first == first, second == second)) -> bool = default;
+        auto operator==(Pair const&) const -> bool = default;
     };
 
-    constexpr auto first  = [](auto&& pair) noexcept -> decltype(auto) { return std::forward_like<decltype(pair)>(pair.first); };
-    constexpr auto second = [](auto&& pair) noexcept -> decltype(auto) { return std::forward_like<decltype(pair)>(pair.second); };
+    constexpr auto first  = [](auto&& pair) noexcept -> decltype(auto) { return bootleg::forward_like<decltype(pair)>(pair.first); };
+    constexpr auto second = [](auto&& pair) noexcept -> decltype(auto) { return bootleg::forward_like<decltype(pair)>(pair.second); };
 
 
     constexpr auto move = []<class X>(X&& x) noexcept -> std::remove_reference_t<X>&& {
@@ -288,15 +309,20 @@ namespace utl {
 
 
     template <class Variant, class Alternative>
-    constexpr Usize alternative_index;
+    struct Alternative_index;
     template <class... Ts, class T>
-    constexpr Usize alternative_index<std::variant<Ts...>, T> =
-        std::variant<Type<Ts>...> { Type<T> {} }.index();
+    struct Alternative_index<std::variant<Ts...>, T>
+        : std::integral_constant<std::size_t, std::variant<Type<Ts>...> { Type<T> {} }.index()> {};
+    template <class Variant, class Alternative>
+    constexpr Usize alternative_index = Alternative_index<Variant, Alternative>::value;
 
     template <class Variant, class Alternative>
-    constexpr bool variant_has_alternative;
+    struct Variant_has_alternative;
     template <class... Ts, class T>
-    constexpr bool variant_has_alternative<std::variant<Ts...>, T> = one_of<T, Ts...>;
+    struct Variant_has_alternative<std::variant<Ts...>, T>
+        : std::bool_constant<one_of<T, Ts...>> {};
+    template <class Variant, class Alternative>
+    constexpr bool variant_has_alternative = Variant_has_alternative<Variant, Alternative>::value;
 
 
     template <class T, class V> [[nodiscard]]
@@ -306,7 +332,7 @@ namespace utl {
         requires requires { std::get_if<T>(&variant); }
     {
         if (T* const alternative = std::get_if<T>(&variant)) [[likely]] {
-            return std::forward_like<V>(*alternative);
+            return bootleg::forward_like<V>(*alternative);
         }
         else [[unlikely]] {
             abort("Bad variant access", caller);
@@ -329,7 +355,7 @@ namespace utl {
         requires requires { optional.has_value(); }
     {
         if (optional.has_value()) [[likely]] {
-            return std::forward_like<O>(*optional);
+            return bootleg::forward_like<O>(*optional);
         }
         else [[unlikely]] {
             abort("Bad optional access", caller);
@@ -347,7 +373,7 @@ namespace utl {
     }
 
     template <class Ok, std::derived_from<std::exception> Err>
-    constexpr auto expect(std::expected<Ok, Err>&& expected) -> Ok&& {
+    constexpr auto expect(tl::expected<Ok, Err>&& expected) -> Ok&& {
         if (expected)
             return std::move(*expected);
         else
@@ -408,8 +434,9 @@ namespace utl {
         struct Vector_with_capacity_closure {
             Usize capacity;
             template <class T> [[nodiscard]]
-            operator std::vector<T>(this Vector_with_capacity_closure const self) {
-                return vector_with_capacity<T>(self.capacity);
+            operator std::vector<T>() const {
+                APPLY_EXPLICIT_OBJECT_PARAMETER_HERE;
+                return vector_with_capacity<T>(capacity);
             }
         };
     }
@@ -427,7 +454,7 @@ namespace utl {
 
     template <class T, Usize n> [[nodiscard]]
     constexpr auto to_vector(T(&&array)[n]) -> std::vector<T> {
-        return std::ranges::to<std::vector>(std::views::as_rvalue(array));
+        return ranges::to<std::vector>(ranges::views::move(array));
     }
 
     // Unlike `std::vector<T>::resize`, this does not require `T` to be default constructible.
@@ -435,7 +462,7 @@ namespace utl {
     constexpr auto resize_down_vector(std::vector<T>& vector, Usize const new_size) -> void {
         assert(vector.size() >= new_size);
         assert(std::in_range<std::ptrdiff_t>(new_size));
-        vector.erase(vector.begin() + static_cast<std::vector<T>::iterator::difference_type>(new_size), vector.end());
+        vector.erase(vector.begin() + static_cast<typename std::vector<T>::iterator::difference_type>(new_size), vector.end());
     }
 
 
@@ -469,12 +496,12 @@ namespace utl {
 
             template <class Vector>
             auto operator()(Vector&& input) const
-                noexcept(noexcept(std::invoke(f, std::forward_like<Vector>(input.front()))))
+                noexcept(noexcept(std::invoke(f, bootleg::forward_like<Vector>(input.front()))))
             {
-                auto output = std::vector<std::remove_cvref_t<decltype(std::invoke(f, std::forward_like<Vector>(input.front())))>>();
+                auto output = std::vector<std::remove_cvref_t<decltype(std::invoke(f, bootleg::forward_like<Vector>(input.front())))>>();
                 output.reserve(input.size());
                 for (auto& element : input) {
-                    output.push_back(std::invoke(f, std::forward_like<Vector>(element)));
+                    output.push_back(std::invoke(f, bootleg::forward_like<Vector>(element)));
                 }
                 return output;
             }
@@ -520,9 +547,14 @@ namespace utl {
     }
 
 
-    inline auto local_time() -> std::chrono::local_time<std::chrono::system_clock::duration> {
-        return std::chrono::current_zone()->to_local(std::chrono::system_clock::now());
+    // Placeholder
+    inline auto local_time() -> int {
+        return 0;
     }
+
+    // inline auto local_time() -> std::chrono::local_time<std::chrono::system_clock::duration> {
+    //     return std::chrono::current_zone()->to_local(std::chrono::system_clock::now());
+    // }
 
 
     auto serialize_to(std::output_iterator<std::byte> auto out, trivial auto const... args)
@@ -553,18 +585,18 @@ namespace utl {
     Metastring(char const(&)[length]) -> Metastring<length>;
 
 
-    namespace fmt {
+    namespace formatting {
         struct Formatter_base {
             constexpr auto parse(auto& parse_context) {
                 return parse_context.end();
             }
         };
         struct Visitor_base {
-            std::format_context::iterator out;
+            fmt::format_context::iterator out;
 
             template <class... Args>
-            auto format(std::format_string<Args...> const fmt, Args const&... args) {
-                return out = std::vformat_to(out, fmt.get(), std::make_format_args(args...));
+            auto format(fmt::format_string<Args...> const fmt, Args const&... args) {
+                return out = fmt::vformat_to(out, fmt.get(), fmt::make_format_args(args...));
             }
         };
 
@@ -579,12 +611,12 @@ namespace utl {
             return { .integer = integer };
         }
 
-        template <std::ranges::sized_range Range>
+        template <ranges::sized_range Range>
         struct Range_formatter_closure {
             Range const*     range;
             std::string_view delimiter;
         };
-        template <std::ranges::sized_range Range>
+        template <ranges::sized_range Range>
         auto delimited_range(Range const& range, std::string_view const delimiter)
             -> Range_formatter_closure<Range>
         {
@@ -625,18 +657,18 @@ struct std::hash<X> {
 };
 
 
-#define DECLARE_FORMATTER_FOR_TEMPLATE(...)                             \
-struct std::formatter<__VA_ARGS__> : utl::fmt::Formatter_base {          \
-    [[nodiscard]] auto format(__VA_ARGS__ const&, std::format_context&) \
-        -> std::format_context::iterator;                               \
+#define DECLARE_FORMATTER_FOR_TEMPLATE(...)                        \
+struct fmt::formatter<__VA_ARGS__> : utl::formatting::Formatter_base {    \
+    [[nodiscard]] auto format(__VA_ARGS__ const&, format_context&) \
+        -> format_context::iterator;                               \
 }
 
 #define DECLARE_FORMATTER_FOR(...) \
 template <> DECLARE_FORMATTER_FOR_TEMPLATE(__VA_ARGS__)
 
 #define DEFINE_FORMATTER_FOR(...) \
-auto std::formatter<__VA_ARGS__>::format(__VA_ARGS__ const& value, std::format_context& context) \
-    -> std::format_context::iterator
+auto fmt::formatter<__VA_ARGS__>::format(__VA_ARGS__ const& value, format_context& context) \
+    -> format_context::iterator
 
 #define DIRECTLY_DEFINE_FORMATTER_FOR(...) \
 DECLARE_FORMATTER_FOR(__VA_ARGS__);        \
@@ -652,16 +684,16 @@ DECLARE_FORMATTER_FOR_TEMPLATE(std::vector<T>);
 template <class F, class S>
 DECLARE_FORMATTER_FOR_TEMPLATE(utl::Pair<F, S>);
 template <class Range>
-DECLARE_FORMATTER_FOR_TEMPLATE(utl::fmt::Range_formatter_closure<Range>);
+DECLARE_FORMATTER_FOR_TEMPLATE(utl::formatting::Range_formatter_closure<Range>);
 template <class T>
-DECLARE_FORMATTER_FOR_TEMPLATE(utl::fmt::Integer_with_ordinal_indicator_formatter_closure<T>);
+DECLARE_FORMATTER_FOR_TEMPLATE(utl::formatting::Integer_with_ordinal_indicator_formatter_closure<T>);
 
 
 template <class T>
-struct std::formatter<std::optional<T>> : std::formatter<T> {
-    auto format(std::optional<T> const& optional, auto& context) {
+struct fmt::formatter<tl::optional<T>> : formatter<T> {
+    auto format(tl::optional<T> const& optional, auto& context) {
         return optional
-            ? std::formatter<T>::format(*optional, context)
+            ? formatter<T>::format(*optional, context)
             : context.out();
     }
 };
@@ -670,39 +702,39 @@ struct std::formatter<std::optional<T>> : std::formatter<T> {
 template <class... Ts>
 DEFINE_FORMATTER_FOR(std::variant<Ts...>) {
     return std::visit([&](auto const& alternative) {
-        return std::format_to(context.out(), "{}", alternative);
+        return format_to(context.out(), "{}", alternative);
     }, value);
 }
 
 template <class T, utl::Usize extent>
 DEFINE_FORMATTER_FOR(std::span<T, extent>) {
-    return std::format_to(context.out(), "{}", utl::fmt::delimited_range(value, ", "));
+    return format_to(context.out(), "{}", utl::formatting::delimited_range(value, ", "));
 }
 
 template <class T>
 DEFINE_FORMATTER_FOR(std::vector<T>) {
-    return std::format_to(context.out(), "{}", std::span { value });
+    return format_to(context.out(), "{}", std::span { value });
 }
 
 template <class F, class S>
 DEFINE_FORMATTER_FOR(utl::Pair<F, S>) {
-    return std::format_to(context.out(), "({}, {})", value.first, value.second);
+    return format_to(context.out(), "({}, {})", value.first, value.second);
 }
 
 template <class Range>
-DEFINE_FORMATTER_FOR(utl::fmt::Range_formatter_closure<Range>) {
+DEFINE_FORMATTER_FOR(utl::formatting::Range_formatter_closure<Range>) {
     if (!value.range->empty()) {
-        std::format_to(context.out(), "{}", value.range->front());
+        format_to(context.out(), "{}", value.range->front());
 
-        for (auto& element : *value.range | std::views::drop(1)) {
-            std::format_to(context.out(), "{}{}", value.delimiter, element);
+        for (auto& element : *value.range | ranges::views::drop(1)) {
+            format_to(context.out(), "{}{}", value.delimiter, element);
         }
     }
     return context.out();
 }
 
 template <class T>
-DEFINE_FORMATTER_FOR(utl::fmt::Integer_with_ordinal_indicator_formatter_closure<T>) {
+DEFINE_FORMATTER_FOR(utl::formatting::Integer_with_ordinal_indicator_formatter_closure<T>) {
     // https://stackoverflow.com/questions/61786685/how-do-i-print-ordinal-indicators-in-a-c-program-cant-print-numbers-with-st
 
     static constexpr auto suffixes = std::to_array<std::string_view>({ "th", "st", "nd", "rd" });
@@ -719,13 +751,13 @@ DEFINE_FORMATTER_FOR(utl::fmt::Integer_with_ordinal_indicator_formatter_closure<
         }
     }
 
-    return std::format_to(context.out(), "{}{}", value.integer, suffixes[x]);
+    return format_to(context.out(), "{}{}", value.integer, suffixes[x]);
 }
 
 
 template <>
-struct std::formatter<std::monostate> : utl::fmt::Formatter_base {
+struct fmt::formatter<std::monostate> : utl::formatting::Formatter_base {
     auto format(std::monostate, auto& context) {
-        return std::format_to(context.out(), "std::monostate");
+        return format_to(context.out(), "std::monostate");
     }
 };

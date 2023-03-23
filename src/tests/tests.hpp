@@ -46,7 +46,7 @@ namespace tests {
     {
         if (a != b) {
             throw Failure {
-                std::format(
+                fmt::format(
                     "{}{}{} != {}{}{}",
                     utl::Color::red,
                     a,

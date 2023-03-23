@@ -30,7 +30,7 @@ namespace {
             std::span<mir::Template_argument  const> const arguments)
         {
             utl::always_assert(parameters.size() == arguments.size()); // Should be guaranteed by resolve_template_arguments
-            for (auto [parameter, argument] : std::views::zip(parameters, arguments)) {
+            for (auto [parameter, argument] : ranges::views::zip(parameters, arguments)) {
                 add_substitution(parameter, argument);
             }
         }
@@ -82,7 +82,7 @@ namespace {
         Scope                                        & scope,
         Namespace                                    & space) -> std::vector<mir::Template_argument>
     {
-        auto const first_defaulted = std::ranges::find_if(parameters, [](auto const& parameter) { return parameter.default_argument.has_value(); });
+        auto const first_defaulted = ranges::find_if(parameters, [](auto const& parameter) { return parameter.default_argument.has_value(); });
         utl::Usize const required_arguments = utl::unsigned_distance(parameters.begin(), first_defaulted);
 
         {
@@ -92,13 +92,13 @@ namespace {
                 if (arguments.size() < required_arguments) {
                     context.error(instantiation_view, {
                         .message           = "The template requires at least {} arguments, but {} {} supplied",
-                        .message_arguments = std::make_format_args(required_arguments, arguments.size(), was_or_were)
+                        .message_arguments = fmt::make_format_args(required_arguments, arguments.size(), was_or_were)
                     });
                 }
                 else if (arguments.size() > parameters.size()) {
                     context.error(instantiation_view, {
                         .message           = "The template has {} parameters, but {} {} supplied",
-                        .message_arguments = std::make_format_args(parameters.size(), arguments.size(), was_or_were)
+                        .message_arguments = fmt::make_format_args(parameters.size(), arguments.size(), was_or_were)
                     });
                 }
             }
@@ -106,7 +106,7 @@ namespace {
                 if (parameters.size() != arguments.size()) {
                     context.error(instantiation_view, {
                         .message = "The template requires {} arguments, but {} {} supplied",
-                        .message_arguments = std::make_format_args(required_arguments, arguments.size(), was_or_were)
+                        .message_arguments = fmt::make_format_args(required_arguments, arguments.size(), was_or_were)
                     });
                 }
             }
@@ -140,7 +140,7 @@ namespace {
                     context.error(instantiation_view, {
                         // TODO: better message
                         .message           = "Argument {} is incompatible with parameter {}",
-                        .message_arguments = std::make_format_args(argument, parameter)
+                        .message_arguments = fmt::make_format_args(argument, parameter)
                     });
                 }
             }, parameter.value, argument.value);
@@ -184,7 +184,7 @@ namespace {
             };
         };
 
-        std::optional<mir::Self_parameter> concrete_self_parameter =
+        tl::optional<mir::Self_parameter> concrete_self_parameter =
             function_template.definition.self_parameter.transform(substitution_context.recurse());
 
         std::vector<mir::Function_parameter> concrete_function_parameters =
@@ -217,8 +217,7 @@ namespace {
             .home_namespace = template_info->home_namespace,
             .state          = Definition_state::resolved,
             .name           = template_info->name,
-            .template_instantiation_info {
-                std::in_place,
+            .template_instantiation_info = Template_instantiation_info {
                 template_info,
                 function_template.parameters,
                 std::move(template_arguments)
@@ -271,8 +270,7 @@ namespace {
             .structure_type = std::move(concrete_type),
             .state          = Definition_state::resolved,
             .name           = template_info->name,
-            .template_instantiation_info {
-                std::in_place,
+            .template_instantiation_info = Template_instantiation_info {
                 template_info,
                 struct_template.parameters,
                 std::move(template_arguments)
@@ -341,8 +339,7 @@ namespace {
             .enumeration_type = concrete_type,
             .state            = Definition_state::resolved,
             .name             = template_info->name,
-            .template_instantiation_info {
-                std::in_place,
+            .template_instantiation_info = Template_instantiation_info {
                 template_info,
                 enum_template.parameters,
                 std::move(template_arguments)
@@ -672,7 +669,7 @@ namespace {
             mir::Enum& enumeration =
                 context.resolution_context.resolve_enum(utl::get<mir::type::Enumeration>(*enum_type.value).info);
 
-            auto it = std::ranges::find(enumeration.constructors, pattern.constructor.name, &mir::Enum_constructor::name);
+            auto it = ranges::find(enumeration.constructors, pattern.constructor.name, &mir::Enum_constructor::name);
 
             if (it != enumeration.constructors.end()) {
                 return mir::pattern::Enum_constructor {

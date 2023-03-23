@@ -4,13 +4,13 @@
 
 DIRECTLY_DEFINE_FORMATTER_FOR(hir::Function_argument) {
     return value.name
-        ? std::format_to(context.out(), "{} = {}", *value.name, value.expression)
-        : std::format_to(context.out(), "{}", value.expression);
+        ? fmt::format_to(context.out(), "{} = {}", *value.name, value.expression)
+        : fmt::format_to(context.out(), "{}", value.expression);
 }
 
 
 DEFINE_FORMATTER_FOR(hir::Function_parameter) {
-    return std::format_to(
+    return fmt::format_to(
         context.out(),
         "{}: {}{}",
         value.pattern,
@@ -20,16 +20,16 @@ DEFINE_FORMATTER_FOR(hir::Function_parameter) {
 }
 
 DEFINE_FORMATTER_FOR(hir::Implicit_template_parameter::Tag) {
-    return std::format_to(context.out(), "X#{}", value.value);
+    return fmt::format_to(context.out(), "X#{}", value.value);
 }
 
 DEFINE_FORMATTER_FOR(hir::Implicit_template_parameter) {
-    return std::vformat_to(
+    return fmt::vformat_to(
         context.out(),
         value.classes.empty() ? "{}" : "{}: {}",
-        std::make_format_args(
+        fmt::make_format_args(
             value.tag,
-            utl::fmt::delimited_range(value.classes, " + ")
+            utl::formatting::delimited_range(value.classes, " + ")
         )
     );
 }
@@ -37,7 +37,7 @@ DEFINE_FORMATTER_FOR(hir::Implicit_template_parameter) {
 
 namespace {
 
-    struct Expression_format_visitor : utl::fmt::Visitor_base {
+    struct Expression_format_visitor : utl::formatting::Visitor_base {
         template <class T>
         auto operator()(hir::expression::Literal<T> const& literal) {
             return format("{}", literal.value);
@@ -184,7 +184,7 @@ namespace {
     };
 
 
-    struct Type_format_visitor : utl::fmt::Visitor_base {
+    struct Type_format_visitor : utl::formatting::Visitor_base {
         auto operator()(hir::type::Floating)  { return format("Float");  }
         auto operator()(hir::type::Character) { return format("Char");   }
         auto operator()(hir::type::Boolean)   { return format("Bool");   }
@@ -223,8 +223,8 @@ namespace {
         auto operator()(hir::type::Function const& function) {
             return format("fn({}): {}", function.argument_types, function.return_type);
         }
-        auto operator()(hir::type::Typeof const& typeof) {
-            return format("type_of({})", typeof.inspected_expression);
+        auto operator()(hir::type::Typeof const& typeof_) {
+            return format("type_of({})", typeof_.inspected_expression);
         }
         auto operator()(hir::type::Reference const& reference) {
             return format("&{}{}", reference.mutability, reference.referenced_type);
@@ -233,7 +233,7 @@ namespace {
             return format("*{}{}", pointer.mutability, pointer.pointed_to_type);
         }
         auto operator()(hir::type::Instance_of const& instance_of) {
-            return format("inst {}", utl::fmt::delimited_range(instance_of.classes, " + "));
+            return format("inst {}", utl::formatting::delimited_range(instance_of.classes, " + "));
         }
         auto operator()(hir::type::Template_application const& application) {
             return format("{}[{}]", application.name, application.arguments);
@@ -241,7 +241,7 @@ namespace {
     };
 
 
-    struct Pattern_format_visitor : utl::fmt::Visitor_base {
+    struct Pattern_format_visitor : utl::formatting::Visitor_base {
         template <class T>
         auto operator()(hir::pattern::Literal<T> const& literal) {
             return std::invoke(Expression_format_visitor { { out } }, hir::expression::Literal { literal.value });

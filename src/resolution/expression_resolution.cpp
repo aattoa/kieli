@@ -187,18 +187,17 @@ namespace {
             if (argument_count != parameter_count) {
                 context.error(this_expression.source_view, {
                     .message             = "The function has {} parameters, but {} arguments were supplied",
-                    .message_arguments   = std::make_format_args(parameter_count, argument_count),
+                    .message_arguments   = fmt::make_format_args(parameter_count, argument_count),
                     .help_note           = "The function is of type {}",
-                    .help_note_arguments = std::make_format_args(signature.function_type)
+                    .help_note_arguments = fmt::make_format_args(signature.function_type)
                 });
             }
 
-            for (auto [parameter, argument] : std::views::zip(signature.parameters, arguments)) {
+            for (auto [parameter, argument] : ranges::views::zip(signature.parameters, arguments)) {
                 context.solve(constraint::Type_equality {
                     .constrainer_type = parameter.type,
                     .constrained_type = argument.type,
-                    .constrainer_note {
-                        std::in_place,
+                    .constrainer_note = constraint::Explanation {
                         parameter.type.source_view,
                         "The parameter is specified to be of type {0}"
                     },
@@ -236,8 +235,7 @@ namespace {
                     .source_view = this_expression.source_view
                 },
                 .constrained_type = invocable.type,
-                .constrainer_note {
-                    std::in_place,
+                .constrainer_note = constraint::Explanation {
                     this_expression.source_view,
                     "The invocable should be of type {0}"
                 },
@@ -282,7 +280,7 @@ namespace {
 
 
         auto try_resolve_local_variable_reference(compiler::Identifier const identifier)
-            -> std::optional<mir::Expression>
+            -> tl::optional<mir::Expression>
         {
             if (auto* const binding = scope.find_variable(identifier)) {
                 binding->has_been_mentioned = true;
@@ -295,7 +293,7 @@ namespace {
                 };
             }
             else {
-                return std::nullopt;
+                return tl::nullopt;
             }
         }
 
@@ -326,8 +324,7 @@ namespace {
                     context.solve(constraint::Type_equality {
                         .constrainer_type = mir_array.elements.front().type,
                         .constrained_type = mir_array.elements.back().type,
-                        .constrainer_note {
-                            std::in_place,
+                        .constrainer_note = constraint::Explanation {
                             array.elements.front().source_view + previous_element.source_view,
                             i == 1 ? "The previous element was of type {0}"
                                    : "The previous elements were of type {0}"
@@ -454,7 +451,7 @@ namespace {
                 });
             }
 
-            std::optional<utl::Wrapper<mir::Expression>> block_result;
+            tl::optional<utl::Wrapper<mir::Expression>> block_result;
             if (block.result) {
                 block_result = utl::wrap(recurse(**block.result, &block_scope));
             }
@@ -495,14 +492,13 @@ namespace {
         auto operator()(hir::expression::Let_binding& let) -> mir::Expression {
             auto initializer = recurse(*let.initializer);
 
-            std::optional<mir::Type> explicit_type;
+            tl::optional<mir::Type> explicit_type;
             if (let.type.has_value()) {
                 explicit_type = context.resolve_type(**let.type, scope, space);
                 context.solve(constraint::Type_equality {
                     .constrainer_type = *explicit_type,
                     .constrained_type = initializer.type,
-                    .constrainer_note {
-                        std::in_place,
+                    .constrainer_note = constraint::Explanation {
                         (*let.type)->source_view,
                         "The variable is specified to be of type {0}"
                     },
@@ -523,8 +519,7 @@ namespace {
             context.solve(constraint::Type_equality {
                 .constrainer_type = type,
                 .constrained_type = pattern.type,
-                .constrainer_note {
-                    std::in_place,
+                .constrainer_note = constraint::Explanation {
                     type.source_view,
                     "This is of type {0}"
                 },
@@ -564,8 +559,7 @@ namespace {
             context.solve(constraint::Type_equality {
                 .constrainer_type = true_branch.type,
                 .constrained_type = false_branch.type,
-                .constrainer_note {
-                    std::in_place,
+                .constrainer_note = constraint::Explanation {
                     true_branch.type.source_view,
                     "The true branch is of type {0}"
                 },
@@ -595,7 +589,7 @@ namespace {
             mir::Expression matched_expression = recurse(*match.matched_expression);
             auto cases = utl::vector_with_capacity<mir::expression::Match::Case>(match.cases.size());
 
-            std::optional<mir::Type> previous_case_result_type;
+            tl::optional<mir::Type> previous_case_result_type;
 
             for (hir::expression::Match::Case& match_case : match.cases) {
                 resolution::Scope case_scope = scope.make_child();
@@ -618,8 +612,7 @@ namespace {
                 context.solve(constraint::Type_equality {
                     .constrainer_type = matched_expression.type,
                     .constrained_type = pattern.type,
-                    .constrainer_note {
-                        std::in_place,
+                    .constrainer_note = constraint::Explanation {
                         matched_expression.source_view,
                         "This expression is of type {0}"
                     },
@@ -657,8 +650,7 @@ namespace {
                         context.solve(constraint::Type_equality {
                             .constrainer_type = member.type,
                             .constrained_type = member_initializer.type,
-                            .constrainer_note {
-                                std::in_place,
+                            .constrainer_note = constraint::Explanation {
                                 member.name.source_view,
                                 "This member is of type {0}"
                             },
@@ -672,7 +664,7 @@ namespace {
                     else {
                         context.error(this_expression.source_view, {
                             .message           = "Field '{}' is not initialized",
-                            .message_arguments = std::make_format_args(member.name)
+                            .message_arguments = fmt::make_format_args(member.name)
                         });
                     }
                 }
@@ -699,8 +691,7 @@ namespace {
                 context.solve(constraint::Type_equality {
                     .constrainer_type = context.resolve_type(*cast.target_type, scope, space),
                     .constrained_type = result.type,
-                    .constrainer_note {
-                        std::in_place,
+                    .constrainer_note = constraint::Explanation {
                         cast.target_type->source_view,
                         "The ascribed type is {0}"
                     },
@@ -735,9 +726,9 @@ namespace {
                 [&](utl::Wrapper<Function_info> const) -> mir::Expression {
                     context.error(application.name.primary_name.source_view, {
                         .message             = "'{}' is a concrete function, not a function template",
-                        .message_arguments   = std::make_format_args(application.name),
+                        .message_arguments   = fmt::make_format_args(application.name),
                         .help_note           = "If you did mean to refer to '{}', simply remove the template argument list",
-                        .help_note_arguments = std::make_format_args(application.name)
+                        .help_note_arguments = fmt::make_format_args(application.name)
                     });
                 },
                 [](mir::Enum_constructor const) -> mir::Expression {
@@ -911,8 +902,7 @@ namespace {
                 context.solve(constraint::Type_equality {
                     .constrainer_type = reference_type,
                     .constrained_type = dereferenced_expression.type,
-                    .constrainer_note {
-                        std::in_place,
+                    .constrainer_note = constraint::Explanation {
                         this_expression.source_view,
                         "Only expressions of reference types (&T or &mut T) can be dereferenced"
                     },
@@ -969,8 +959,7 @@ namespace {
             context.solve(constraint::Type_equality {
                 .constrainer_type = pointer_type,
                 .constrained_type = pointer.type,
-                .constrainer_note {
-                    std::in_place,
+                .constrainer_note = constraint::Explanation {
                     this_expression.source_view,
                     "The operand of unsafe_dereference must be of a pointer type"
                 },

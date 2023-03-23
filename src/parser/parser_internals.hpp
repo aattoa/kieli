@@ -11,8 +11,8 @@ using Token = compiler::Lexical_token;
 
 struct Parse_context {
     std::vector<Token>             tokens;
-    utl::diagnostics::Builder       diagnostics;
-    utl::Source                     source;
+    utl::diagnostics::Builder      diagnostics;
+    utl::Source                    source;
     compiler::Program_string_pool& string_pool;
     Token                        * start;
     Token                        * pointer;
@@ -73,7 +73,7 @@ struct Parse_context {
     }
     [[noreturn]]
     auto error(
-        std::span<Token const>             const span,
+        std::span<Token const>              const span,
         utl::diagnostics::Message_arguments const arguments) -> void
     {
         error(span.front().source_view + span.back().source_view, arguments);
@@ -93,18 +93,18 @@ struct Parse_context {
     auto error_expected(
         std::span<Token const>          const span,
         std::string_view                const expectation,
-        std::optional<std::string_view> const help = std::nullopt) -> void
+        tl::optional<std::string_view> const help = tl::nullopt) -> void
     {
         error(span, {
-            .message = "Expected {}, but found {}",
-            .message_arguments = std::make_format_args(expectation, compiler::token_description(pointer->type)),
-            .help_note = help
+            .message           = "Expected {}, but found {}",
+            .message_arguments = fmt::make_format_args(expectation, compiler::token_description(pointer->type)),
+            .help_note         = help
         });
     }
     [[noreturn]]
     auto error_expected(
         std::string_view                const expectation,
-        std::optional<std::string_view> const help = std::nullopt) -> void
+        tl::optional<std::string_view> const help = tl::nullopt) -> void
     {
         error_expected({ pointer, pointer + 1 }, expectation, help);
     }
@@ -113,7 +113,7 @@ struct Parse_context {
 
 template <class P>
 concept parser = requires (P p, Parse_context context) {
-    { p(context) } -> utl::instance_of<std::optional>;
+    { p(context) } -> utl::instance_of<tl::optional>;
 };
 
 template <parser auto p>
@@ -140,7 +140,7 @@ auto parse_one_of(Parse_context& context) -> decltype(p(context)) {
             return parse_one_of<ps...>(context);
         }
         else {
-            return std::nullopt;
+            return tl::nullopt;
         }
     }
 }
@@ -162,7 +162,7 @@ auto parse_surrounded(Parse_context& context) -> decltype(p(context)) {
         }
     }
     else {
-        return std::nullopt;
+        return tl::nullopt;
     }
 }
 
@@ -204,7 +204,7 @@ auto extract_separated_zero_or_more(Parse_context& context)
 
 template <parser auto p, Token::Type separator, utl::Metastring description>
 auto parse_separated_one_or_more(Parse_context& context)
-    -> std::optional<std::vector<Parse_result<p>>>
+    -> tl::optional<std::vector<Parse_result<p>>>
 {
     auto vector = extract_separated_zero_or_more<p, separator, description>(context);
 
@@ -212,7 +212,7 @@ auto parse_separated_one_or_more(Parse_context& context)
         return vector;
     }
     else {
-        return std::nullopt;
+        return tl::nullopt;
     }
 }
 
@@ -226,43 +226,34 @@ constexpr auto parse_comma_separated_one_or_more =
     parse_separated_one_or_more<p, Token::Type::comma, description>;
 
 
-auto parse_expression(Parse_context&) -> std::optional<ast::Expression>;
-auto parse_pattern   (Parse_context&) -> std::optional<ast::Pattern   >;
-auto parse_type      (Parse_context&) -> std::optional<ast::Type      >;
+auto parse_expression(Parse_context&) -> tl::optional<ast::Expression>;
+auto parse_pattern   (Parse_context&) -> tl::optional<ast::Pattern   >;
+auto parse_type      (Parse_context&) -> tl::optional<ast::Type      >;
 
 constexpr auto extract_expression = extract_required<parse_expression, "an expression">;
 constexpr auto extract_pattern    = extract_required<parse_pattern,    "a pattern"    >;
 constexpr auto extract_type       = extract_required<parse_type,       "a type"       >;
 
-auto parse_top_level_pattern(Parse_context&) -> std::optional<ast::Pattern>;
+auto parse_top_level_pattern  (Parse_context&) -> tl::optional<ast::Pattern>;
+auto parse_block_expression   (Parse_context&) -> tl::optional<ast::Expression>;
+auto parse_template_arguments (Parse_context&) -> tl::optional<std::vector<ast::Template_argument>>;
+auto parse_template_parameters(Parse_context&) -> tl::optional<std::vector<ast::Template_parameter>>;
+auto parse_class_reference    (Parse_context&) -> tl::optional<ast::Class_reference>;
 
-auto parse_block_expression(Parse_context&) -> std::optional<ast::Expression>;
-
-auto parse_template_arguments(Parse_context&) -> std::optional<std::vector<ast::Template_argument>>;
-
-auto parse_template_parameters(Parse_context&) -> std::optional<std::vector<ast::Template_parameter>>;
-
-auto extract_function_parameters(Parse_context&) -> std::vector<ast::Function_parameter>;
-
+auto extract_function_parameters             (Parse_context&) -> std::vector<ast::Function_parameter>;
 auto extract_qualified(ast::Root_qualifier&&, Parse_context&) -> ast::Qualified_name;
-
-auto extract_mutability(Parse_context&) -> ast::Mutability;
-
-auto parse_class_reference(Parse_context&) -> std::optional<ast::Class_reference>;
-
-auto extract_class_references(Parse_context&) -> std::vector<ast::Class_reference>;
+auto extract_mutability                      (Parse_context&) -> ast::Mutability;
+auto extract_class_references                (Parse_context&) -> std::vector<ast::Class_reference>;
 
 
 template <Token::Type id_type>
 auto extract_id(Parse_context& context, std::string_view const description)
     -> compiler::Identifier
 {
-    if (auto* const token = context.try_extract(id_type)) {
+    if (auto* const token = context.try_extract(id_type))
         return token->as_identifier();
-    }
-    else {
+    else
         context.error_expected(description);
-    }
 }
 
 constexpr auto extract_lower_id = extract_id<Token::Type::lower_name>;
@@ -270,12 +261,12 @@ constexpr auto extract_upper_id = extract_id<Token::Type::upper_name>;
 
 
 template <Token::Type id_type>
-auto parse_id(Parse_context& context) -> std::optional<compiler::Identifier> {
+auto parse_id(Parse_context& context) -> tl::optional<compiler::Identifier> {
     if (auto* const token = context.try_extract(id_type)) {
         return token->as_identifier();
     }
     else {
-        return std::nullopt;
+        return tl::nullopt;
     }
 }
 
@@ -284,16 +275,16 @@ constexpr auto parse_upper_id = parse_id<Token::Type::upper_name>;
 
 
 template <Token::Type id_type>
-auto parse_name(Parse_context& context) -> std::optional<ast::Name> {
+auto parse_name(Parse_context& context) -> tl::optional<ast::Name> {
     if (auto* const token = context.try_extract(id_type)) {
         return ast::Name{
-            .identifier = token->as_identifier(),
-            .is_upper = id_type == Token::Type::upper_name,
+            .identifier  = token->as_identifier(),
+            .is_upper    = id_type == Token::Type::upper_name,
             .source_view = token->source_view
         };
     }
     else {
-        return std::nullopt;
+        return tl::nullopt;
     }
 }
 
@@ -323,15 +314,15 @@ inline auto make_source_view(Token const* const first, Token const* const last)
 }
 
 
-template <class Node, std::optional<typename Node::Variant>(*parse)(Parse_context&)>
-auto parse_node(Parse_context& context) -> std::optional<Node> {
+template <class Node, std::invocable<Parse_context&> auto parse>
+auto parse_node(Parse_context& context) -> tl::optional<Node> {
     Token const* const anchor = context.pointer;
 
     if (auto node_value = parse(context)) {
-        return Node{ std::move(*node_value), anchor->source_view + context.pointer[-1].source_view };
+        return Node { std::move(*node_value), anchor->source_view + context.pointer[-1].source_view };
     }
     else {
-        return std::nullopt;
+        return tl::nullopt;
     }
 }
 
@@ -340,7 +331,7 @@ auto extract_node(Parse_context& context) -> Node {
     Token const* const     anchor = context.pointer;
     typename Node::Variant value  = extract(context);
     return {
-        .value = std::move(value),
+        .value       = std::move(value),
         .source_view = anchor->source_view + context.pointer[-1].source_view
     };
 }

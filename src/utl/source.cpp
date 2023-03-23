@@ -10,12 +10,12 @@ utl::Source::Source(std::string&& name)
         m_contents.assign(std::istreambuf_iterator<char> { file }, {});
     }
     else {
-        throw Exception { std::format("The file '{}' could not be opened", m_filename) };
+        throw Exception { fmt::format("The file '{}' could not be opened", m_filename) };
     }
 }
 
 utl::Source::Source(Mock_tag const mock_tag, std::string&& contents)
-    : m_filename { std::format("[{}]", mock_tag.filename) }
+    : m_filename { fmt::format("[{}]", mock_tag.filename) }
     , m_contents { std::move(contents) }
 {
     m_contents.reserve(sizeof contents); // Disable SSO
@@ -67,5 +67,5 @@ static_assert(utl::Source_position { 3, 2 } > utl::Source_position { 2, 3 });
 
 
 DEFINE_FORMATTER_FOR(utl::Source_position) {
-    return std::format_to(context.out(), "{}:{}", value.line, value.column);
+    return fmt::format_to(context.out(), "{}:{}", value.line, value.column);
 }

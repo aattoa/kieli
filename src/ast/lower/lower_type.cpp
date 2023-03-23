@@ -46,9 +46,9 @@ namespace {
                 .return_type    = context.lower(function.return_type)
             };
         }
-        auto operator()(ast::type::Typeof const& typeof) -> hir::Type::Variant {
+        auto operator()(ast::type::Typeof const& typeof_) -> hir::Type::Variant {
             return hir::type::Typeof {
-                .inspected_expression = context.lower(typeof.inspected_expression)
+                .inspected_expression = context.lower(typeof_.inspected_expression)
             };
         }
         auto operator()(ast::type::Reference const& reference) -> hir::Type::Variant {

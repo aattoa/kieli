@@ -12,7 +12,7 @@ namespace {
     template <auto extractor>
     auto node_test(
         std::string                      node_string,
-        std::optional<std::string> const expected_string = std::nullopt,
+        tl::optional<std::string> const expected_string = tl::nullopt,
         std::source_location       const caller = std::source_location::current()) -> void
     {
         utl::always_assert(test_string_pool != nullptr);
@@ -32,7 +32,7 @@ namespace {
         });
 
         auto const extracted_node = extractor(parse_context);
-        std::string formatted_node = std::format("{}", extracted_node);
+        std::string formatted_node = fmt::format("{}", extracted_node);
 
         static auto const remove_whitespace = [&](std::string copy) {
             copy.erase(std::remove_if(begin(copy), end(copy), [](char const c) { return c == ' ' || c == '\t' || c == '\n'; }), end(copy));
@@ -48,21 +48,21 @@ namespace {
 
     auto expression(
         std::string                      expression_string,
-        std::optional<std::string> const expected_string = std::nullopt,
+        tl::optional<std::string> const expected_string = tl::nullopt,
         std::source_location       const caller = std::source_location::current()) -> void
     {
         node_test<extract_expression>(std::move(expression_string), expected_string, caller);
     }
     auto type(
         std::string                      type_string,
-        std::optional<std::string> const expected_string = std::nullopt,
+        tl::optional<std::string> const expected_string = tl::nullopt,
         std::source_location       const caller = std::source_location::current()) -> void
     {
         node_test<extract_type>(std::move(type_string), expected_string, caller);
     }
     auto pattern(
         std::string                      pattern_string,
-        std::optional<std::string> const expected_string = std::nullopt,
+        tl::optional<std::string> const expected_string = tl::nullopt,
         std::source_location       const caller = std::source_location::current()) -> void
     {
         node_test<extract_pattern>(std::move(pattern_string), expected_string, caller);
@@ -182,11 +182,11 @@ namespace {
         "tuple_type"_test = [] {
             type("()");
             type("(())", "()");
-            type("(typeof(5), T)");
+            type("(typeof_(5), T)");
         };
 
         "template_type"_test = [] {
-            type("Vec[Opt[typeof(sizeof(::Vec[Int]))]]");
+            type("Vec[Opt[typeof_(sizeof(::Vec[Int]))]]");
         };
 
 

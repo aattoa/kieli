@@ -18,7 +18,7 @@ namespace {
             .constraint_to_be_tested {
                 .constrainer_type = self,
                 .constrained_type = inspected,
-                .constrainer_note { std::in_place, self.source_view },
+                .constrainer_note = constraint::Explanation { self.source_view },
                 .constrained_note { inspected.source_view }
             },
             .deferred_equality_constraints = dec,
@@ -44,7 +44,7 @@ namespace {
         ast::Name const method_name,
         mir::Type const inspected_type) -> Method_lookup_result
     {
-        std::optional<Method_lookup_result> return_value;
+        tl::optional<Method_lookup_result> return_value;
 
         auto const emit_ambiguity_error = [&](utl::Pair<utl::Source_view> const views) {
             context.diagnostics.emit_error({
@@ -68,7 +68,7 @@ namespace {
                     }
                 }),
                 .message           = "Ambiguous method: {}",
-                .message_arguments = std::make_format_args(method_name)
+                .message_arguments = fmt::make_format_args(method_name)
             });
         };
 
@@ -105,7 +105,7 @@ namespace {
 
         context.error(method_name.source_view, {
             .message           = "No appropriate method '{}' in scope",
-            .message_arguments = std::make_format_args(method_name)
+            .message_arguments = fmt::make_format_args(method_name)
         });
     }
 
@@ -114,7 +114,7 @@ namespace {
 
 auto resolution::Context::resolve_method(
     ast::Name                                              const method_name,
-    std::optional<std::span<hir::Template_argument const>> const template_arguments,
+    tl::optional<std::span<hir::Template_argument const>> const template_arguments,
     mir::Type                                              const type,
     Scope                                                      & scope,
     Namespace                                                  & space) -> utl::Wrapper<Function_info>

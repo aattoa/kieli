@@ -6,52 +6,52 @@
 
 
 DIRECTLY_DEFINE_FORMATTER_FOR(mir::Function_parameter) {
-    return std::format_to(context.out(), "{}: {}", value.pattern, value.type);
+    return fmt::format_to(context.out(), "{}: {}", value.pattern, value.type);
 }
 
 DIRECTLY_DEFINE_FORMATTER_FOR(mir::Struct::Member) {
-    return std::format_to(context.out(), "{}{}: {}", value.is_public ? "pub " : "", value.name, value.type);
+    return fmt::format_to(context.out(), "{}{}: {}", value.is_public ? "pub " : "", value.name, value.type);
 }
 
 DIRECTLY_DEFINE_FORMATTER_FOR(mir::Enum_constructor) {
-    return std::format_to(context.out(), "{}{}", value.name, value.payload_type.transform("({})"_format).value_or(""));
+    return fmt::format_to(context.out(), "{}{}", value.name, value.payload_type.transform("({})"_format).value_or(""));
 }
 
 DIRECTLY_DEFINE_FORMATTER_FOR(mir::expression::Match::Case) {
-    return std::format_to(context.out(), "{} -> {}", value.pattern, value.handler);
+    return fmt::format_to(context.out(), "{} -> {}", value.pattern, value.handler);
 }
 
 
 DEFINE_FORMATTER_FOR(mir::Class_reference) {
-    return std::format_to(context.out(), "{}", value.info->name);
+    return fmt::format_to(context.out(), "{}", value.info->name);
 }
 
 DEFINE_FORMATTER_FOR(mir::Mutability::Variant) {
     return utl::match(value,
         [&](mir::Mutability::Concrete const concrete) {
-            return !concrete.is_mutable ? context.out() : std::format_to(context.out(), "mut ");
+            return !concrete.is_mutable ? context.out() : fmt::format_to(context.out(), "mut ");
         },
         [&](mir::Mutability::Variable const variable) {
-            return std::format_to(context.out(), "'mut{} ", variable.tag.value);
+            return fmt::format_to(context.out(), "'mut{} ", variable.tag.value);
         },
         [&](mir::Mutability::Parameterized const parameterized) {
-            return std::format_to(context.out(), "mut?'P{} {} ", parameterized.tag.value, parameterized.identifier);
+            return fmt::format_to(context.out(), "mut?'P{} {} ", parameterized.tag.value, parameterized.identifier);
         }
     );
 }
 
 DEFINE_FORMATTER_FOR(mir::Mutability) {
-    return std::format_to(context.out(), "{}", *value.value);
+    return fmt::format_to(context.out(), "{}", *value.value);
 }
 
 DEFINE_FORMATTER_FOR(mir::Unification_variable_tag) {
-    return std::format_to(context.out(), "'{}", value.value);
+    return fmt::format_to(context.out(), "'{}", value.value);
 }
 
 DEFINE_FORMATTER_FOR(mir::Template_argument) {
     auto out = context.out();
     if (value.name.has_value()) {
-        out = std::format_to(out, "{} = ", *value.name);
+        out = fmt::format_to(out, "{} = ", *value.name);
     }
     return utl::match(
         value.value,
@@ -61,18 +61,18 @@ DEFINE_FORMATTER_FOR(mir::Template_argument) {
                 *mutability.value,
 
                 [&](mir::Mutability::Concrete const concrete) {
-                    return std::format_to(out, "{}", concrete.is_mutable ? "mut" : "immut");
+                    return fmt::format_to(out, "{}", concrete.is_mutable ? "mut" : "immut");
                 },
                 [&](mir::Mutability::Variable const variable) {
-                    return std::format_to(context.out(), "'mut{}", variable.tag.value);
+                    return fmt::format_to(context.out(), "'mut{}", variable.tag.value);
                 },
                 [&](mir::Mutability::Parameterized const parameterized) {
-                    return std::format_to(context.out(), "mut?'P{} {}", parameterized.tag.value, parameterized.identifier);
+                    return fmt::format_to(context.out(), "mut?'P{} {}", parameterized.tag.value, parameterized.identifier);
                 }
             );
         },
         [&](auto const& argument) {
-            return std::format_to(out, "{}", argument);
+            return fmt::format_to(out, "{}", argument);
         }
     );
 }
@@ -84,24 +84,24 @@ DEFINE_FORMATTER_FOR(mir::Template_parameter) {
         value.value,
 
         [&](mir::Template_parameter::Type_parameter const& parameter) {
-            out = std::format_to(context.out(), "'P{} {}", value.reference_tag.value, value.name);
-            out = parameter.classes.empty() ? out : std::format_to(out, ": {}", utl::fmt::delimited_range(parameter.classes, " + "));
+            out = fmt::format_to(context.out(), "'P{} {}", value.reference_tag.value, value.name);
+            out = parameter.classes.empty() ? out : fmt::format_to(out, ": {}", utl::formatting::delimited_range(parameter.classes, " + "));
         },
         [&](mir::Template_parameter::Value_parameter const& parameter) {
-            out = std::format_to(out, "{}: {}", value.name, parameter.type);
+            out = fmt::format_to(out, "{}: {}", value.name, parameter.type);
         },
         [&](mir::Template_parameter::Mutability_parameter const&){
-            out = std::format_to(out, "{}: mut", value.name);
+            out = fmt::format_to(out, "{}: mut", value.name);
         }
     );
 
-    return value.default_argument.has_value() ? std::format_to(out, " = {}", *value.default_argument) : out;
+    return value.default_argument.has_value() ? fmt::format_to(out, " = {}", *value.default_argument) : out;
 }
 
 
 namespace {
 
-    struct Expression_format_visitor : utl::fmt::Visitor_base {
+    struct Expression_format_visitor : utl::formatting::Visitor_base {
         template <class T>
         auto operator()(mir::expression::Literal<T> const& literal) {
             return format("{}", literal.value);
@@ -190,7 +190,7 @@ namespace {
         }
     };
 
-    struct Pattern_format_visitor : utl::fmt::Visitor_base {
+    struct Pattern_format_visitor : utl::formatting::Visitor_base {
         auto operator()(mir::pattern::Wildcard const&) {
             return format("_");
         }
@@ -229,7 +229,7 @@ namespace {
         }
     };
 
-    struct Type_format_visitor : utl::fmt::Visitor_base {
+    struct Type_format_visitor : utl::formatting::Visitor_base {
         auto operator()(mir::type::Integer const integer) {
             using enum mir::type::Integer;
             switch (integer) {
@@ -291,9 +291,9 @@ namespace {
 
 
 DEFINE_FORMATTER_FOR(mir::Expression) {
-    auto out = std::format_to(context.out(), "(");
+    auto out = fmt::format_to(context.out(), "(");
     out = std::visit(Expression_format_visitor { { out } }, value.value);
-    return std::format_to(out, "): {}", value.type);
+    return fmt::format_to(out, "): {}", value.type);
 }
 
 DEFINE_FORMATTER_FOR(mir::Pattern) {
@@ -305,12 +305,12 @@ DEFINE_FORMATTER_FOR(mir::Type::Variant) {
 }
 
 DEFINE_FORMATTER_FOR(mir::Type) {
-    return std::format_to(context.out(), "{}", *value.value);
+    return fmt::format_to(context.out(), "{}", *value.value);
 }
 
 
 DEFINE_FORMATTER_FOR(mir::Function) {
-    return std::format_to(
+    return fmt::format_to(
         context.out(),
         "fn {}({}): {} = {}",
         value.name,
@@ -321,7 +321,7 @@ DEFINE_FORMATTER_FOR(mir::Function) {
 }
 
 DEFINE_FORMATTER_FOR(mir::Struct) {
-    return std::format_to(
+    return fmt::format_to(
         context.out(),
         "struct {} = {}",
         value.name,
@@ -330,16 +330,16 @@ DEFINE_FORMATTER_FOR(mir::Struct) {
 }
 
 DEFINE_FORMATTER_FOR(mir::Enum) {
-    return std::format_to(
+    return fmt::format_to(
         context.out(),
         "enum {} = {}",
         value.name,
-        utl::fmt::delimited_range(value.constructors, " | ")
+        utl::formatting::delimited_range(value.constructors, " | ")
     );
 }
 
 DEFINE_FORMATTER_FOR(mir::Alias) {
-    return std::format_to(
+    return fmt::format_to(
         context.out(),
         "alias {} = {}",
         value.name,
@@ -348,7 +348,7 @@ DEFINE_FORMATTER_FOR(mir::Alias) {
 }
 
 DEFINE_FORMATTER_FOR(mir::Typeclass) {
-    return std::format_to(
+    return fmt::format_to(
         context.out(),
         "class {} {{ /*TODO*/ }}",
         value.name
@@ -356,7 +356,7 @@ DEFINE_FORMATTER_FOR(mir::Typeclass) {
 }
 
 DEFINE_FORMATTER_FOR(mir::Implementation) {
-    return std::format_to(
+    return fmt::format_to(
         context.out(),
         "impl {} {{ /*TODO*/ }}",
         value.self_type
@@ -364,7 +364,7 @@ DEFINE_FORMATTER_FOR(mir::Implementation) {
 }
 
 DEFINE_FORMATTER_FOR(mir::Instantiation) {
-    return std::format_to(
+    return fmt::format_to(
         context.out(),
         "inst {} for {} {{ /*TODO*/ }}",
         value.class_reference,

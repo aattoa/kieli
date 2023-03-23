@@ -26,7 +26,7 @@ namespace resolution {
         struct Type_equality {
             mir::Type                  constrainer_type;
             mir::Type                  constrained_type;
-            std::optional<Explanation> constrainer_note;
+            tl::optional<Explanation> constrainer_note;
             Explanation                constrained_note;
             bool                       is_deferred = false;
         };
@@ -68,8 +68,8 @@ namespace resolution {
 
     // Sets and resets the Self type within classes and impl/inst blocks
     class Self_type_guard {
-        std::optional<mir::Type>& current_self_type;
-        std::optional<mir::Type>  previous_self_type;
+        tl::optional<mir::Type>& current_self_type;
+        tl::optional<mir::Type>  previous_self_type;
     public:
         Self_type_guard(Context&, mir::Type new_self_type);
         ~Self_type_guard();
@@ -161,7 +161,7 @@ namespace resolution {
         utl::Source                     source;
         utl::Wrapper<Namespace>         global_namespace;
         Nameless_entities              nameless_entities;
-        std::optional<mir::Type>       current_self_type;
+        tl::optional<mir::Type>       current_self_type;
         compiler::Program_string_pool& string_pool;
 
         compiler::Identifier self_variable_identifier = string_pool.identifiers.make("self");
@@ -226,7 +226,7 @@ namespace resolution {
 
         [[nodiscard]] auto resolve_class_reference(hir::Class_reference&, Scope&, Namespace&) -> mir::Class_reference;
 
-        [[nodiscard]] auto resolve_method(ast::Name method_name, std::optional<std::span<hir::Template_argument const>>, mir::Type method_for, Scope&, Namespace&) -> utl::Wrapper<Function_info>;
+        [[nodiscard]] auto resolve_method(ast::Name method_name, tl::optional<std::span<hir::Template_argument const>>, mir::Type method_for, Scope&, Namespace&) -> utl::Wrapper<Function_info>;
 
         [[nodiscard]] auto find_lower(hir::Qualified_name&, Scope&, Namespace&) -> Lower_variant;
         [[nodiscard]] auto find_upper(hir::Qualified_name&, Scope&, Namespace&) -> Upper_variant;
@@ -235,7 +235,7 @@ namespace resolution {
         auto add_to_namespace(Namespace&, ast::Name, Upper_variant) -> void;
 
         // Returns the associated namespace of the given type, or returns nullopt if the type does not have one.
-        auto associated_namespace_if(mir::Type) -> std::optional<utl::Wrapper<Namespace>>;
+        auto associated_namespace_if(mir::Type) -> tl::optional<utl::Wrapper<Namespace>>;
         // Returns the associated namespace of the given type, or emits an error diagnostic if the type does not have one.
         auto associated_namespace(mir::Type) -> utl::Wrapper<Namespace>;
 

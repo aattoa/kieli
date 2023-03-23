@@ -73,7 +73,9 @@ auto resolution::Context::error(
 auto resolution::Context::fresh_unification_mutability_variable(utl::Source_view const view) -> mir::Mutability {
     return {
         .value = utl::wrap(mir::Mutability::Variant {
-            mir::Mutability::Variable { .tag { current_unification_variable_tag++.get() } }
+            mir::Mutability::Variable {
+                .tag = mir::Unification_variable_tag { current_unification_variable_tag++.get() }
+            }
         }),
         .source_view = view
     };
@@ -82,7 +84,7 @@ auto resolution::Context::fresh_unification_mutability_variable(utl::Source_view
 auto resolution::Context::fresh_general_unification_type_variable(utl::Source_view const view) -> mir::Type {
     return {
         .value = wrap_type(mir::type::General_unification_variable {
-            .tag { current_unification_variable_tag++.get() }
+            .tag = mir::Unification_variable_tag { current_unification_variable_tag++.get() }
         }),
         .source_view = view
     };
@@ -90,7 +92,7 @@ auto resolution::Context::fresh_general_unification_type_variable(utl::Source_vi
 auto resolution::Context::fresh_integral_unification_type_variable(utl::Source_view const view) -> mir::Type {
     return {
         .value = wrap_type(mir::type::Integral_unification_variable {
-            .tag { current_unification_variable_tag++.get() }
+            .tag = mir::Unification_variable_tag { current_unification_variable_tag++.get() }
         }),
         .source_view = view
     };
@@ -129,7 +131,7 @@ auto resolution::Context::temporary_placeholder_type(utl::Source_view const view
 
 
 auto resolution::Context::associated_namespace_if(mir::Type type)
-    -> std::optional<utl::Wrapper<Namespace>>
+    -> tl::optional<utl::Wrapper<Namespace>>
 {
     if (auto* const structure = std::get_if<mir::type::Structure>(&*type.value)) {
         return resolve_struct(structure->info).associated_namespace;
@@ -138,7 +140,7 @@ auto resolution::Context::associated_namespace_if(mir::Type type)
         return resolve_enum(enumeration->info).associated_namespace;
     }
     else {
-        return std::nullopt;
+        return tl::nullopt;
     }
 }
 
@@ -150,7 +152,7 @@ auto resolution::Context::associated_namespace(mir::Type type)
     }
     error(type.source_view, {
         .message           = "{} does not have an associated namespace",
-        .message_arguments = std::make_format_args(type)
+        .message_arguments = fmt::make_format_args(type)
     });
 }
 
@@ -180,7 +182,7 @@ namespace {
                     }
                 }),
                 .message           = "{} erroneously redefined",
-                .message_arguments = std::make_format_args(name)
+                .message_arguments = fmt::make_format_args(name)
             });
         }
         else {
@@ -222,7 +224,7 @@ auto resolution::Context::resolve_mutability(ast::Mutability const mutability, S
             else {
                 error(mutability.source_view, {
                     .message           = "No mutability parameter '{}' in scope",
-                    .message_arguments = std::make_format_args(parameterized.identifier)
+                    .message_arguments = fmt::make_format_args(parameterized.identifier)
                 });
             }
         }
@@ -347,21 +349,21 @@ auto resolution::Enum_info::constructor_count() const noexcept -> utl::Usize {
 
 
 DEFINE_FORMATTER_FOR(resolution::constraint::Type_equality) {
-    return std::format_to(context.out(), "{} ~ {}", value.constrainer_type, value.constrained_type);
+    return fmt::format_to(context.out(), "{} ~ {}", value.constrainer_type, value.constrained_type);
 }
 
 DEFINE_FORMATTER_FOR(resolution::constraint::Mutability_equality) {
-    return std::format_to(context.out(), "{} ~ {}", value.constrainer_mutability, value.constrained_mutability);
+    return fmt::format_to(context.out(), "{} ~ {}", value.constrainer_mutability, value.constrained_mutability);
 }
 
 DEFINE_FORMATTER_FOR(resolution::constraint::Instance) {
-    return std::format_to(context.out(), "{}: {}", value.type, value.typeclass->name);
+    return fmt::format_to(context.out(), "{}: {}", value.type, value.typeclass->name);
 }
 
 DEFINE_FORMATTER_FOR(resolution::constraint::Struct_field) {
-    return std::format_to(context.out(), "({}.{}): {}", value.struct_type, value.field_identifier, value.field_type);
+    return fmt::format_to(context.out(), "({}.{}): {}", value.struct_type, value.field_identifier, value.field_type);
 }
 
 DEFINE_FORMATTER_FOR(resolution::constraint::Tuple_field) {
-    return std::format_to(context.out(), "({}.{}): {}", value.tuple_type, value.field_index, value.field_type);
+    return fmt::format_to(context.out(), "({}.{}): {}", value.tuple_type, value.field_index, value.field_type);
 }

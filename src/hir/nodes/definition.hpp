@@ -1,7 +1,7 @@
 #ifndef KIELI_HIR_NODES_DEFINITION
 #define KIELI_HIR_NODES_DEFINITION
 #else
-#error This isn't supposed to be included by anything other than hir/hir.hpp
+#error "This isn't supposed to be included by anything other than hir/hir.hpp"
 #endif
 
 
@@ -9,10 +9,10 @@ template <>
 struct ast::definition::Basic_function<hir::HIR_configuration> {
     std::vector<hir::Implicit_template_parameter> implicit_template_parameters;
     std::vector<hir::Function_parameter>          parameters;
-    std::optional<hir::Type>                      return_type;
+    tl::optional<hir::Type>                      return_type;
     hir::Expression                               body;
     ast::Name                                     name;
-    std::optional<Self_parameter>                 self_parameter;
+    tl::optional<Self_parameter>                 self_parameter;
 };
 
 

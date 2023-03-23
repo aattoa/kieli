@@ -17,7 +17,7 @@ namespace {
         static_assert(suffix_length("test") == 0);
         static_assert(suffix_length("test  ") == 2);
 
-        auto const shortest_prefix_length = std::ranges::min(lines | std::views::transform(prefix_length));
+        auto const shortest_prefix_length = ranges::min(lines | ranges::views::transform(prefix_length));
 
         for (auto& line : lines) {
             if (line.empty()) {
@@ -67,7 +67,7 @@ namespace {
         std::back_insert_iterator<std::string> const  out,
         utl::Color                              const  title_color,
         utl::diagnostics::Text_section          const& section,
-        std::optional<std::string>             const& location_info) -> void
+        tl::optional<std::string>             const& location_info) -> void
     {
         auto const lines       = lines_of_occurrence(section.source.string(), section.source_view.string);
         auto const digit_count = utl::digit_count(section.source_view.stop_position.line);
@@ -79,7 +79,7 @@ namespace {
 
         if (location_info) {
             std::string const whitespace(digit_count, ' ');
-            std::format_to(
+            fmt::format_to(
                 out,
                 "{}{} --> {}{}\n",
                 whitespace,
@@ -90,10 +90,10 @@ namespace {
         }
 
         utl::Usize const longest_line_length =
-            std::ranges::max(lines | std::views::transform(utl::size));
+            ranges::max(lines | ranges::views::transform(utl::size));
 
         for (auto& line : lines) {
-            std::format_to(
+            fmt::format_to(
                 out,
                 "\n {}{:<{}} |{} ",
                 line_info_color,
@@ -108,7 +108,7 @@ namespace {
                     utl::Usize const source_view_offset =
                         utl::unsigned_distance(line.data(), section.source_view.string.data());
 
-                    std::format_to(
+                    fmt::format_to(
                         out,
                         "{}{}{}{}",
                         utl::Color::dark_grey,
@@ -124,7 +124,7 @@ namespace {
                             section.source_view.string.data() + section.source_view.string.size()
                         );
 
-                    std::format_to(
+                    fmt::format_to(
                         out,
                         "{}{}{}{}",
                         line.substr(0, source_view_offset),
@@ -134,15 +134,15 @@ namespace {
                     );
                 }
                 else {
-                    std::format_to(out, "{}", line);
+                    fmt::format_to(out, "{}", line);
                 }
             }
             else {
-                std::format_to(out, "{}", line);
+                fmt::format_to(out, "{}", line);
             }
 
             if (lines.size() > 1) {
-                std::format_to(
+                fmt::format_to(
                     out,
                     "{} {}<",
                     std::string(longest_line_length - line.size(), ' '),
@@ -150,10 +150,10 @@ namespace {
                 );
 
                 if (&line == &lines.back()) {
-                    std::format_to(out, " {}", section.note);
+                    fmt::format_to(out, " {}", section.note);
                 }
 
-                std::format_to(out, "{}", utl::Color::white);
+                fmt::format_to(out, "{}", utl::Color::white);
             }
         }
 
@@ -169,7 +169,7 @@ namespace {
                 ++whitespace_length;
             }
 
-            std::format_to(
+            fmt::format_to(
                 out,
                 "\n    {}{:>{}} {}{}",
                 section.note_color.value_or(title_color),
@@ -193,15 +193,15 @@ namespace {
         auto out = std::back_inserter(diagnostic_string);
 
         if (!diagnostic_string.empty()) { // There are previous diagnostic messages, insert newlines to separate them
-            std::format_to(out, "\n\n\n");
+            fmt::format_to(out, "\n\n\n");
         }
 
-        std::format_to(out, "{}{}{}: ", title_color, title, utl::Color::white);
+        fmt::format_to(out, "{}{}{}: ", title_color, title, utl::Color::white);
 
-        std::vformat_to(out, message, message_format_arguments);
+        fmt::vformat_to(out, message, message_format_arguments);
 
         if (!sections.empty()) {
-            std::format_to(out, "\n\n");
+            fmt::format_to(out, "\n\n");
         }
 
         utl::Source const* current_source = nullptr;
@@ -210,12 +210,12 @@ namespace {
             utl::always_assert(section.source_view.string.empty()
                            || section.source_view.string.front() != '\0');
 
-            std::optional<std::string> location_info;
+            tl::optional<std::string> location_info;
 
             if (current_source != &section.source) {
                 current_source = &section.source;
 
-                location_info = std::format(
+                location_info = fmt::format(
                     "{}:{}-{}",
                     utl::filename_without_path(current_source->name()),
                     section.source_view.start_position,
@@ -226,13 +226,13 @@ namespace {
             format_highlighted_section(out, title_color, section, location_info);
 
             if (&section != &sections.back()) {
-                std::format_to(out, "\n");
+                fmt::format_to(out, "\n");
             }
         }
 
         if (help_note) {
-            std::format_to(out, "\n\nHelpful note: ");
-            std::vformat_to(out, *help_note, help_note_arguments);
+            fmt::format_to(out, "\n\nHelpful note: ");
+            fmt::vformat_to(out, *help_note, help_note_arguments);
         }
 
         if (diagnostic_type == utl::diagnostics::Type::irrecoverable) {
@@ -269,6 +269,9 @@ auto utl::diagnostics::Text_section::operator=(Text_section const& other) noexce
     return *::new(this) Text_section { other };
 }
 
+
+utl::diagnostics::Builder::Builder() noexcept
+    : Builder { Configuration {} } {}
 
 utl::diagnostics::Builder::Builder(Configuration const configuration) noexcept
     : configuration { configuration }

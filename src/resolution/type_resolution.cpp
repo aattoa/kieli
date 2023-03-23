@@ -84,9 +84,9 @@ namespace {
             };
         }
 
-        auto operator()(hir::type::Typeof& typeof) -> mir::Type {
+        auto operator()(hir::type::Typeof& typeof_) -> mir::Type {
             auto child_scope = scope.make_child();
-            return context.resolve_expression(*typeof.inspected_expression, child_scope, space).type.with(this_type.source_view);
+            return context.resolve_expression(*typeof_.inspected_expression, child_scope, space).type.with(this_type.source_view);
         }
 
         auto operator()(hir::type::Typename& type) -> mir::Type {

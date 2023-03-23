@@ -12,14 +12,14 @@ namespace {
     {
         auto sections = utl::vector_with_capacity<utl::diagnostics::Text_section>(2);
 
-        std::optional<std::string> const constrainer_note = constraint.constrainer_note.transform(
+        tl::optional<std::string> const constrainer_note = constraint.constrainer_note.transform(
             [&](resolution::constraint::Explanation const explanation) {
-                return std::vformat(explanation.explanatory_note, std::make_format_args(constraint.constrainer_type, constraint.constrained_type));
+                return fmt::vformat(explanation.explanatory_note, fmt::make_format_args(constraint.constrainer_type, constraint.constrained_type));
             }
         );
 
         std::string const constrained_note =
-            std::vformat(constraint.constrained_note.explanatory_note, std::make_format_args(constraint.constrainer_type, constraint.constrained_type));
+            fmt::vformat(constraint.constrained_note.explanatory_note, fmt::make_format_args(constraint.constrainer_type, constraint.constrained_type));
 
         if (constrainer_note.has_value()) {
             sections.push_back(utl::diagnostics::Text_section{
@@ -40,7 +40,7 @@ namespace {
         context.diagnostics.emit_error({
             .sections          = std::move(sections),
             .message           = "Could not unify {} ~ {}",
-            .message_arguments = std::make_format_args(left, right)
+            .message_arguments = fmt::make_format_args(left, right)
         });
     }
 
@@ -52,7 +52,7 @@ namespace {
     {
         context.error(constraint.constrained_type.source_view, {
             .message           = "Recursive type variable solution: {} = {}",
-            .message_arguments = std::make_format_args(variable, solution)
+            .message_arguments = fmt::make_format_args(variable, solution)
         });
     }
 
@@ -64,10 +64,10 @@ namespace {
         mir::Mutability const right = constraint.constrained_mutability;
 
         std::string const constrainer_note =
-            std::vformat(constraint.constrainer_note.explanatory_note, std::make_format_args(left, right));
+            fmt::vformat(constraint.constrainer_note.explanatory_note, fmt::make_format_args(left, right));
 
         std::string const constrained_note =
-            std::vformat(constraint.constrained_note.explanatory_note, std::make_format_args(left, right));
+            fmt::vformat(constraint.constrained_note.explanatory_note, fmt::make_format_args(left, right));
 
         context.diagnostics.emit_error({
             .sections = utl::to_vector<utl::diagnostics::Text_section>({
@@ -85,20 +85,20 @@ namespace {
                 }
             }),
             .message           = "Could not unify {} ~ {}",
-            .message_arguments = std::make_format_args(left, right)
+            .message_arguments = fmt::make_format_args(left, right)
         });
     }
 
 
     auto try_get_variable_tag(mir::Type::Variant const& variant)
-        noexcept -> std::optional<mir::Unification_variable_tag>
+        noexcept -> tl::optional<mir::Unification_variable_tag>
     {
         if (auto* const variable = std::get_if<mir::type::General_unification_variable>(&variant))
             return variable->tag;
         else if (auto* const variable = std::get_if<mir::type::Integral_unification_variable>(&variant))
             return variable->tag;
         else
-            return std::nullopt;
+            return tl::nullopt;
     }
 
 }
@@ -152,14 +152,14 @@ auto resolution::Context::solve(constraint::Struct_field const& constraint) -> v
         error(constraint.explanation.source_view, {
             .message             = constraint.explanation.explanatory_note,
             .help_note           = "{} does not have a member '{}'",
-            .help_note_arguments = std::make_format_args(constraint.struct_type, constraint.field_identifier)
+            .help_note_arguments = fmt::make_format_args(constraint.struct_type, constraint.field_identifier)
         });
     }
     else {
         error(constraint.explanation.source_view, {
             .message             = constraint.explanation.explanatory_note,
             .help_note           = "{} is not a struct type, so it does not have named fields",
-            .help_note_arguments = std::make_format_args(constraint.struct_type)
+            .help_note_arguments = fmt::make_format_args(constraint.struct_type)
         });
     }
 }
@@ -171,7 +171,7 @@ auto resolution::Context::solve(constraint::Tuple_field const& constraint) -> vo
             error(constraint.explanation.source_view, {
                 .message             = constraint.explanation.explanatory_note,
                 .help_note           = "{} does not have a {} field",
-                .help_note_arguments = std::make_format_args(constraint.tuple_type, utl::fmt::integer_with_ordinal_indicator(constraint.field_index + 1))
+                .help_note_arguments = fmt::make_format_args(constraint.tuple_type, utl::formatting::integer_with_ordinal_indicator(constraint.field_index + 1))
             });
         }
         solve(constraint::Type_equality {
@@ -187,7 +187,7 @@ auto resolution::Context::solve(constraint::Tuple_field const& constraint) -> vo
         error(constraint.explanation.source_view, {
             .message             = constraint.explanation.explanatory_note,
             .help_note           = "{} is not a tuple type, so it does not have indexed fields",
-            .help_note_arguments = std::make_format_args(constraint.tuple_type)
+            .help_note_arguments = fmt::make_format_args(constraint.tuple_type)
         });
     }
 }
@@ -208,7 +208,7 @@ auto resolution::Context::solve_deferred_constraints() -> void {
 
     Unsolved_unification_type_variables still_unsolved_unification_type_variables;
     for (utl::wrapper auto const type : unsolved_unification_type_variables) {
-        while (std::optional const tag = try_get_variable_tag(*type)) {
+        while (tl::optional const tag = try_get_variable_tag(*type)) {
             if (utl::wrapper auto* const solution = unification_variable_solutions.types.find(*tag)) {
                 *type = **solution;
             }

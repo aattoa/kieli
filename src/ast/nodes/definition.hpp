@@ -1,7 +1,7 @@
 #ifndef KIELI_AST_NODES_DEFINITION
 #define KIELI_AST_NODES_DEFINITION
 #else
-#error This isn't supposed to be included by anything other than ast/ast.hpp
+#error "This isn't supposed to be included by anything other than ast/ast.hpp"
 #endif
 
 
@@ -59,8 +59,8 @@ namespace ast {
             Expression                      body;
             std::vector<Function_parameter> parameters;
             Name                            name;
-            std::optional<Type>             return_type;
-            std::optional<Self_parameter>   self_parameter;
+            tl::optional<Type>             return_type;
+            tl::optional<Self_parameter>   self_parameter;
         };
 
 
@@ -83,7 +83,7 @@ namespace ast {
         template <tree_configuration Configuration>
         struct Basic_enum_constructor {
             Name                                        name;
-            std::optional<typename Configuration::Type> payload_type;
+            tl::optional<typename Configuration::Type> payload_type;
             utl::Source_view                             source_view;
         };
 

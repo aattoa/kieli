@@ -1,7 +1,7 @@
 #ifndef KIELI_MIR_NODES_PATTERN
 #define KIELI_MIR_NODES_PATTERN
 #else
-#error This isn't supposed to be included by anything other than mir/mir.hpp
+#error "This isn't supposed to be included by anything other than mir/mir.hpp"
 #endif
 
 
@@ -30,7 +30,7 @@ namespace mir {
         };
 
         struct Enum_constructor {
-            std::optional<utl::Wrapper<Pattern>> payload_pattern;
+            tl::optional<utl::Wrapper<Pattern>> payload_pattern;
             ::mir::Enum_constructor             constructor;
         };
 

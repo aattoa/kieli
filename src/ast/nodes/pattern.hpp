@@ -1,7 +1,7 @@
 #ifndef KIELI_AST_NODES_PATTERN
 #define KIELI_AST_NODES_PATTERN
 #else
-#error This isn't supposed to be included by anything other than ast/ast.hpp
+#error "This isn't supposed to be included by anything other than ast/ast.hpp"
 #endif
 
 
@@ -21,7 +21,7 @@ namespace ast {
 
         struct Constructor {
             Qualified_name                      constructor_name;
-            std::optional<utl::Wrapper<Pattern>> payload_pattern;
+            tl::optional<utl::Wrapper<Pattern>> payload_pattern;
         };
 
         struct Tuple {
