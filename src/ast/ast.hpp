@@ -40,6 +40,7 @@ namespace ast {
         Variant         value;
         utl::Source_view source_view;
 
+        [[nodiscard]]
         constexpr auto was_explicitly_specified() const noexcept -> bool {
             if (auto const* const concrete = std::get_if<Concrete>(&value)) {
                 // Immutability can not be specified explicitly
@@ -120,6 +121,7 @@ namespace ast {
         Basic_root_qualifier<Configuration>         root_qualifier;
         Name                                        primary_name;
 
+        [[nodiscard]]
         inline auto is_unqualified() const noexcept -> bool;
     };
 
@@ -177,12 +179,12 @@ namespace ast {
 
 
 struct ast::Function_argument {
-    Expression          expression;
+    Expression         expression;
     tl::optional<Name> name;
 };
 
 struct ast::Function_parameter {
-    Pattern                   pattern;
+    Pattern                  pattern;
     tl::optional<Type>       type;
     tl::optional<Expression> default_value;
 };

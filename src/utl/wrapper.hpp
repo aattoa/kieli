@@ -117,7 +117,7 @@ namespace utl {
         dtl::Wrapper_arena<T, wrapper_arena_page_size> m_arena;
         bool                                           m_is_responsible = true;
     public:
-        Wrapper_context(
+        explicit Wrapper_context(
             Usize                const initial_capacity = default_wrapper_arena_initial_capacity,
             std::source_location const caller = std::source_location::current())
             : m_arena { initial_capacity }
@@ -148,9 +148,9 @@ namespace utl {
     template <class... Ts>
     class [[nodiscard]] Wrapper_context : Wrapper_context<Ts>... {
     public:
-        Wrapper_context(Usize const initial_capacity = default_wrapper_arena_initial_capacity)
+        explicit Wrapper_context(Usize const initial_capacity = default_wrapper_arena_initial_capacity)
             : Wrapper_context<Ts> { initial_capacity }... {}
-        Wrapper_context(Wrapper_context<Ts>&&... children) noexcept
+        explicit Wrapper_context(Wrapper_context<Ts>&&... children) noexcept
             : Wrapper_context<Ts> { std::move(children) }... {}
         template <one_of<Ts...> T> [[nodiscard]]
         auto arena_size() const noexcept -> Usize {

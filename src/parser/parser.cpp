@@ -519,8 +519,8 @@ namespace {
 auto compiler::parse(Lex_result&& lex_result) -> Parse_result {
     Parse_context context { std::move(lex_result) };
 
-    ast::Node_context         module_context;
-    std::vector<ast::Import>  module_imports;
+    ast::Node_context        module_context;
+    std::vector<ast::Import> module_imports;
     tl::optional<Identifier> module_name;
 
     if (context.try_consume(Token::Type::module_)) {
@@ -561,7 +561,7 @@ auto compiler::parse(Lex_result&& lex_result) -> Parse_result {
         .node_context = std::move(module_context),
         .diagnostics  = std::move(context.diagnostics),
         .source       = std::move(context.source),
-        .string_pool  = lex_result.string_pool,
+        .string_pool  = context.string_pool,
         .module {
             .definitions = std::move(definitions),
             .name        = std::move(module_name),

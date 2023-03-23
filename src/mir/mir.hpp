@@ -262,7 +262,7 @@ namespace resolution {
         Context*                                               context;
         Scope*                                                 parent = nullptr;
     public:
-        Scope(Context&) noexcept;
+        explicit Scope(Context&) noexcept;
 
         auto bind_variable  (compiler::Identifier, Variable_binding  &&) -> void;
         auto bind_type      (compiler::Identifier, Type_binding      &&) -> void;
@@ -436,6 +436,7 @@ namespace resolution {
 
         tl::optional<Template_instantiation_info<Enum_template_info>> template_instantiation_info;
 
+        [[nodiscard]]
         auto constructor_count() const noexcept -> utl::Usize;
     };
 

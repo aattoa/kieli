@@ -176,9 +176,10 @@ namespace utl {
     class [[nodiscard]] Exception : public std::exception {
         std::string message;
     public:
-        Exception(std::string&& message) noexcept
+        explicit Exception(std::string&& message) noexcept
             : message { std::move(message) } {}
 
+        [[nodiscard]]
         auto what() const noexcept -> char const* override {
             return message.c_str();
         }
@@ -390,7 +391,7 @@ namespace utl {
         Callback callback;
         int exception_count;
     public:
-        Scope_success_handler(Callback callback)
+        explicit Scope_success_handler(Callback callback)
             : callback { std::move(callback) }
             , exception_count { std::uncaught_exceptions() } {}
 
@@ -408,7 +409,7 @@ namespace utl {
     class [[nodiscard]] Scope_exit_handler {
         Callback callback;
     public:
-        Scope_exit_handler(Callback callback)
+        explicit Scope_exit_handler(Callback callback)
             : callback{ std::move(callback) } {}
 
         ~Scope_exit_handler() noexcept(std::is_nothrow_invocable_v<Callback>) {
@@ -438,7 +439,7 @@ namespace utl {
         struct Vector_with_capacity_closure {
             Usize capacity;
             template <class T> [[nodiscard]]
-            operator std::vector<T>() const {
+            /* implicit */ operator std::vector<T>() const {
                 APPLY_EXPLICIT_OBJECT_PARAMETER_HERE;
                 return vector_with_capacity<T>(capacity);
             }
@@ -585,9 +586,10 @@ namespace utl {
     struct [[nodiscard]] Metastring {
         char string[length];
 
-        consteval Metastring(char const* pointer) noexcept {
+        /* implicit */ consteval Metastring(char const* pointer) noexcept {
             std::copy_n(pointer, length, string);
         }
+        [[nodiscard]]
         consteval auto view() const noexcept -> std::string_view {
             return { string, length - 1 };
         }

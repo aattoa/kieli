@@ -40,9 +40,11 @@ auto Lowering_context::lower(ast::Function_parameter const& parameter) -> hir::F
             else {
                 utl::always_assert(current_function_implicit_template_parameters != nullptr);
                 auto const tag = fresh_name_tag();
-                current_function_implicit_template_parameters->push_back({ .tag = tag });
+                current_function_implicit_template_parameters->push_back({
+                    .tag = hir::Implicit_template_parameter::Tag { tag } });
                 return {
-                    .value       = hir::type::Implicit_parameter_reference { .tag = tag },
+                    .value = hir::type::Implicit_parameter_reference {
+                        .tag = hir::Implicit_template_parameter::Tag { tag } },
                     .source_view = parameter.pattern.source_view
                 };
             }
@@ -178,7 +180,7 @@ auto Lowering_context::error(
 
 auto compiler::lower(Parse_result&& parse_result) -> Lower_result {
     Lower_result lower_result {
-        .node_context {
+        .node_context = hir::Node_context {
             utl::Wrapper_context<hir::Expression> { parse_result.node_context.arena_size<ast::Expression>() },
             utl::Wrapper_context<hir::Type>       { parse_result.node_context.arena_size<ast::Type>      () },
             utl::Wrapper_context<hir::Pattern>    { parse_result.node_context.arena_size<ast::Pattern>   () }

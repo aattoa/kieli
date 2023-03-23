@@ -26,22 +26,22 @@ namespace utl::diagnostics {
 
     class Builder {
     public:
-        struct Emit_arguments {
-            std::vector<Text_section>       sections;
-            std::string_view                message;
-            fmt::format_args                message_arguments;
+        struct [[nodiscard]] Emit_arguments {
+            std::vector<Text_section>      sections;
+            std::string_view               message;
+            fmt::format_args               message_arguments;
             tl::optional<std::string_view> help_note;
-            fmt::format_args                help_note_arguments;
+            fmt::format_args               help_note_arguments;
         };
-        struct Simple_emit_arguments {
-            utl::Source_view                erroneous_view;
-            Source const&                   source;
-            std::string_view                message;
-            fmt::format_args                message_arguments;
+        struct [[nodiscard]] Simple_emit_arguments {
+            utl::Source_view               erroneous_view;
+            Source const&                  source;
+            std::string_view               message;
+            fmt::format_args               message_arguments;
             tl::optional<std::string_view> help_note;
-            fmt::format_args                help_note_arguments;
+            fmt::format_args               help_note_arguments;
         };
-        struct Configuration {
+        struct [[nodiscard]] Configuration {
             Level note_level    = Level::normal;
             Level warning_level = Level::normal;
         };
@@ -50,28 +50,26 @@ namespace utl::diagnostics {
         Configuration configuration;
         bool          has_emitted_error;
     public:
-        Builder()              noexcept;
-        Builder(Configuration) noexcept;
-        Builder(Builder&&)     noexcept;
+        Builder() noexcept;
+        explicit Builder(Configuration) noexcept;
+        Builder(Builder&&) noexcept;
 
         ~Builder();
 
-        auto emit_note       (Emit_arguments)        -> void;
-        auto emit_simple_note(Simple_emit_arguments) -> void;
+        auto emit_note       (Emit_arguments        const&) -> void;
+        auto emit_simple_note(Simple_emit_arguments const&) -> void;
 
-        auto emit_warning       (Emit_arguments)        -> void;
-        auto emit_simple_warning(Simple_emit_arguments) -> void;
+        auto emit_warning       (Emit_arguments        const&) -> void;
+        auto emit_simple_warning(Simple_emit_arguments const&) -> void;
 
-        [[noreturn]] auto emit_error       (Emit_arguments)        -> void;
-        [[noreturn]] auto emit_simple_error(Simple_emit_arguments) -> void;
+        [[noreturn]] auto emit_error       (Emit_arguments        const&) -> void;
+        [[noreturn]] auto emit_simple_error(Simple_emit_arguments const&) -> void;
 
-        auto emit_error       (Emit_arguments,        Type) -> void;
-        auto emit_simple_error(Simple_emit_arguments, Type) -> void;
+        auto emit_error       (Emit_arguments        const&, Type) -> void;
+        auto emit_simple_error(Simple_emit_arguments const&, Type) -> void;
 
-        [[nodiscard]] auto string() && noexcept -> std::string;
-
-        [[nodiscard]] auto error() const noexcept -> bool;
-
+        [[nodiscard]] auto string() &&           noexcept -> std::string;
+        [[nodiscard]] auto error()         const noexcept -> bool;
         [[nodiscard]] auto note_level()    const noexcept -> Level;
         [[nodiscard]] auto warning_level() const noexcept -> Level;
     };

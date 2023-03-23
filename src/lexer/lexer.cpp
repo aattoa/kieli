@@ -73,6 +73,7 @@ namespace {
         auto restore(State const old) noexcept -> void {
             state = old;
         }
+        [[nodiscard]]
         auto is_finished() const noexcept -> bool {
             return state.pointer == stop;
         }
@@ -81,12 +82,15 @@ namespace {
                 update_location(*state.pointer++);
             }
         }
+        [[nodiscard]]
         auto current_pointer() const noexcept -> char const* {
             return state.pointer;
         }
+        [[nodiscard]]
         auto current() const noexcept -> char {
             return *state.pointer;
         }
+        [[nodiscard]]
         auto extract_current() noexcept -> char {
             update_location(*state.pointer);
             return *state.pointer++;
@@ -96,11 +100,13 @@ namespace {
                 update_location(*state.pointer);
             }
         }
+        [[nodiscard]]
         auto extract(std::predicate<char> auto const predicate) noexcept -> std::string_view {
             auto* const anchor = state.pointer;
             consume(predicate);
             return { anchor, state.pointer };
         }
+        [[nodiscard]]
         auto try_consume(char const c) noexcept -> bool {
             assert(c != '\n');
 
@@ -113,6 +119,7 @@ namespace {
                 return false;
             }
         }
+        [[nodiscard]]
         auto try_consume(std::string_view const string) noexcept -> bool {
             char const* ptr = state.pointer;
 
@@ -128,6 +135,7 @@ namespace {
 
             return true;
         }
+        [[nodiscard]]
         auto success(Token::Type const type, Token::Variant&& value = std::monostate {})
             noexcept -> std::true_type
         {
@@ -174,16 +182,20 @@ namespace {
             char const* start_position;
             T private_value;
 
+            [[nodiscard]]
             auto get() const noexcept -> T {
                 assert(result.ec == std::errc {});
                 return private_value;
             }
+            [[nodiscard]]
             auto did_parse() const noexcept -> bool {
                 return result.ptr != start_position;
             }
+            [[nodiscard]]
             auto is_too_large() const noexcept -> bool {
                 return result.ec == std::errc::result_out_of_range;
             }
+            [[nodiscard]]
             auto was_non_numeric() const noexcept -> bool {
                 return result.ec == std::errc::invalid_argument;
             }

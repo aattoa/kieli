@@ -34,6 +34,7 @@ namespace utl {
         template <class A, class B>
         constexpr auto add(A&& k, B&& v) &
             noexcept(std::is_nothrow_move_constructible_v<Pair<K, V>>) -> V*
+            requires std::is_constructible_v<K, A> && std::is_constructible_v<V, B>
         {
             return std::addressof(m_pairs.emplace_back(std::forward<A>(k), std::forward<B>(v)).second);
         }

@@ -469,9 +469,7 @@ namespace {
             context.consume_required(Token::Type::paren_close);
             return ast::expression::Sizeof { utl::wrap(std::move(type)) };
         }
-        else {
-            context.error_expected("a parenthesized type");
-        }
+        context.error_expected("a parenthesized type");
     }
 
     auto extract_addressof(Parse_context& context)
@@ -482,9 +480,7 @@ namespace {
             context.consume_required(Token::Type::paren_close);
             return ast::expression::Addressof { utl::wrap(std::move(lvalue)) };
         }
-        else {
-            context.error_expected("a parenthesized addressable expression");
-        }
+        context.error_expected("a parenthesized addressable expression");
     }
 
     auto extract_unsafe_dereference(Parse_context& context)
@@ -495,9 +491,7 @@ namespace {
             context.consume_required(Token::Type::paren_close);
             return ast::expression::Unsafe_dereference { utl::wrap(std::move(pointer)) };
         }
-        else {
-            context.error_expected("a parenthesized pointer expression");
-        }
+        context.error_expected("a parenthesized pointer expression");
     }
 
 
@@ -511,9 +505,7 @@ namespace {
                 utl::wrap(extract_expression(context))
             };
         }
-        else {
-            return tl::nullopt;
-        }
+        return tl::nullopt;
     }
 
 
@@ -554,12 +546,10 @@ namespace {
 
         {
             Token* const anchor = context.pointer;
-            if (auto name = parse_lower_name(context); name && context.try_consume(Token::Type::loop)) {
+            if (auto name = parse_lower_name(context); name && context.try_consume(Token::Type::loop))
                 label = *name;
-            }
-            else {
+            else
                 context.pointer = anchor;
-            }
         }
 
         return ast::expression::Break {
@@ -604,9 +594,7 @@ namespace {
             context.consume_required(Token::Type::paren_close);
             return ast::expression::Meta { utl::wrap(std::move(expression)) };
         }
-        else {
-            context.error_expected("a parenthesized expression");
-        }
+        context.error_expected("a parenthesized expression");
     }
 
     auto extract_block_expression(Parse_context& context)
@@ -639,8 +627,31 @@ namespace {
 
         return ast::expression::Block {
             .side_effects = std::move(expressions),
-            .result = std::move(result)
+            .result       = std::move(result)
         };
+    }
+
+
+    auto parse_complicated_type(Parse_context& context)
+        -> tl::optional<ast::Expression::Variant>
+    {
+        context.retreat();
+        Token const* const anchor = context.pointer;
+
+        if (auto type = parse_type(context)) {
+            if (context.try_consume(Token::Type::double_colon)) {
+                return extract_qualified_lower_name_or_struct_initializer(
+                    ast::Root_qualifier { utl::wrap(std::move(*type)) },
+                    context
+                );
+            }
+            else if (context.try_consume(Token::Type::brace_open)) {
+                return extract_struct_initializer(std::move(*type), context);
+            }
+
+            context.error({ anchor, context.pointer }, "Expected an expression, but found a type");
+        }
+        return tl::nullopt;
     }
 
 
@@ -710,31 +721,7 @@ namespace {
         case Token::Type::brace_open:
             return extract_block_expression(context);
         default:
-        {
-            context.retreat();
-            auto* const anchor = context.pointer;
-
-            if (auto type = parse_type(context)) {
-                if (context.try_consume(Token::Type::double_colon)) {
-                    return extract_qualified_lower_name_or_struct_initializer(
-                        ast::Root_qualifier { utl::wrap(std::move(*type)) },
-                        context
-                    );
-                }
-                else if (context.try_consume(Token::Type::brace_open)) {
-                    return extract_struct_initializer(std::move(*type), context);
-                }
-                else {
-                    context.error(
-                        { anchor, context.pointer },
-                        "Expected an expression, but found a type"
-                    );
-                }
-            }
-            else {
-                return tl::nullopt;
-            }
-        }
+            return parse_complicated_type(context);
         }
     }
 
@@ -753,16 +740,16 @@ namespace {
                 context.retreat();
             }
         }
-        return parse_expression(context).transform(utl::make<ast::Function_argument>);
+        static constexpr auto mk_arg = [](ast::Expression&& expression) {
+            return ast::Function_argument { .expression = std::move(expression) };
+        };
+        return parse_expression(context).transform(mk_arg);
     }
 
     auto extract_arguments(Parse_context& context)
         -> std::vector<ast::Function_argument>
     {
-        constexpr auto extract_arguments =
-            extract_comma_separated_zero_or_more<parse_argument, "a function argument">;
-        auto arguments = extract_arguments(context);
-
+        auto arguments = extract_comma_separated_zero_or_more<parse_argument, "a function argument">(context);
         context.consume_required(Token::Type::paren_close);
         return arguments;
     }
@@ -771,8 +758,8 @@ namespace {
     auto parse_potential_invocation(Parse_context& context)
         -> tl::optional<ast::Expression>
     {
-        auto* const anchor              = context.pointer;
-        auto        potential_invocable = parse_node<ast::Expression, parse_normal_expression>(context);
+        Token const* const anchor = context.pointer;
+        auto potential_invocable = parse_node<ast::Expression, parse_normal_expression>(context);
 
         if (potential_invocable) {
             while (context.try_consume(Token::Type::paren_open)) {
@@ -884,7 +871,7 @@ namespace {
     auto parse_potential_type_cast(Parse_context& context)
         -> tl::optional<ast::Expression>
     {
-        auto* const anchor = context.pointer;
+        Token const* const anchor = context.pointer;
 
         if (auto expression = parse_potential_member_access(context)) {
             bool continue_looping = true;
@@ -919,13 +906,11 @@ namespace {
 
             return expression;
         }
-        else {
-            return tl::nullopt;
-        }
+        return tl::nullopt;
     }
 
 
-    static constexpr std::tuple precedence_table {
+    constexpr std::tuple precedence_table {
         std::to_array<std::string_view>({ "*", "/", "%" }),
         std::to_array<std::string_view>({ "+", "-" }),
         std::to_array<std::string_view>({ "?=", "!=" }),
@@ -960,7 +945,7 @@ namespace {
         static constexpr auto recurse =
             parse_binary_operator_invocation_with_precedence<precedence - 1>;
 
-        auto* const anchor = context.pointer;
+        Token const* const anchor = context.pointer;
 
         if (auto left = recurse(context)) {
             while (auto op = parse_operator(context)) {
@@ -988,9 +973,7 @@ namespace {
             }
             return left;
         }
-        else {
-            return tl::nullopt;
-        }
+        return tl::nullopt;
     }
 
     template <>
@@ -1011,13 +994,9 @@ namespace {
                     .initializer = utl::wrap(extract_expression(context))
                 };
             }
-            else {
-                return std::move(expression->value);
-            }
+            return std::move(expression->value);
         }
-        else {
-            return tl::nullopt;
-        }
+        return tl::nullopt;
     }
 
 }
@@ -1028,10 +1007,8 @@ auto parse_expression(Parse_context& context) -> tl::optional<ast::Expression> {
 }
 
 auto parse_block_expression(Parse_context& context) -> tl::optional<ast::Expression> {
-    if (context.try_consume(Token::Type::brace_open)) {
+    if (context.try_consume(Token::Type::brace_open))
         return extract_node<ast::Expression, extract_block_expression>(context);
-    }
-    else {
+    else
         return tl::nullopt;
-    }
 }

@@ -11,9 +11,9 @@ namespace {
 
     template <auto extractor>
     auto node_test(
-        std::string                      node_string,
+        std::string                     node_string,
         tl::optional<std::string> const expected_string = tl::nullopt,
-        std::source_location       const caller = std::source_location::current()) -> void
+        std::source_location      const caller = std::source_location::current()) -> void
     {
         utl::always_assert(test_string_pool != nullptr);
 
@@ -47,16 +47,16 @@ namespace {
     }
 
     auto expression(
-        std::string                      expression_string,
+        std::string                     expression_string,
         tl::optional<std::string> const expected_string = tl::nullopt,
-        std::source_location       const caller = std::source_location::current()) -> void
+        std::source_location      const caller = std::source_location::current()) -> void
     {
         node_test<extract_expression>(std::move(expression_string), expected_string, caller);
     }
     auto type(
-        std::string                      type_string,
+        std::string                     type_string,
         tl::optional<std::string> const expected_string = tl::nullopt,
-        std::source_location       const caller = std::source_location::current()) -> void
+        std::source_location      const caller = std::source_location::current()) -> void
     {
         node_test<extract_type>(std::move(type_string), expected_string, caller);
     }

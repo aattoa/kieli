@@ -64,6 +64,7 @@ namespace {
         auto recurse(utl::Wrapper<T> const wrapper) const -> utl::Wrapper<T> {
             return utl::wrap(recurse(*wrapper));
         }
+        [[nodiscard]]
         auto recurse() const noexcept {
             return [*this](auto const& node)
                 requires requires (Substitution_context context) { context.recurse(node); }
@@ -267,7 +268,7 @@ namespace {
         auto const concrete_info = utl::wrap(Struct_info {
             .value          = std::move(concrete_struct),
             .home_namespace = template_info->home_namespace,
-            .structure_type = std::move(concrete_type),
+            .structure_type = concrete_type,
             .state          = Definition_state::resolved,
             .name           = template_info->name,
             .template_instantiation_info = Template_instantiation_info<Struct_template_info> {

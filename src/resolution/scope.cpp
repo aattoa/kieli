@@ -61,7 +61,7 @@ namespace {
                 });
                 it->second.has_been_mentioned = true; // Prevent a second warning about the same variable
             }
-            bindings.emplace(it, identifier, std::move(binding));
+            bindings.emplace(it, identifier, std::forward<decltype(binding)>(binding));
         }
     }
 

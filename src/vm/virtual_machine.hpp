@@ -57,7 +57,9 @@ namespace vm {
         Constants constants;
         utl::Usize stack_capacity;
 
+        [[nodiscard]]
         auto serialize() const -> std::vector<std::byte>;
+
         static auto deserialize(std::span<std::byte const>) -> Executable_program;
     };
 

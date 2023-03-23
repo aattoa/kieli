@@ -6,7 +6,7 @@ utl::Source::Source(std::string&& name)
     : m_filename { std::move(name) }
 {
     if (std::ifstream file { m_filename }) {
-        m_contents.reserve(sizeof m_contents);
+        m_contents.reserve(sizeof(std::string)); // Disable SSO
         m_contents.assign(std::istreambuf_iterator<char> { file }, {});
     }
     else {
@@ -18,7 +18,7 @@ utl::Source::Source(Mock_tag const mock_tag, std::string&& contents)
     : m_filename { fmt::format("[{}]", mock_tag.filename) }
     , m_contents { std::move(contents) }
 {
-    m_contents.reserve(sizeof contents); // Disable SSO
+    m_contents.reserve(sizeof(std::string)); // Disable SSO
 }
 
 auto utl::Source::name() const noexcept -> std::string_view {

@@ -49,11 +49,11 @@ namespace {
         for (char const* pointer = line_start; ; ++pointer) {
             if (pointer == view_stop) {
                 for (; pointer != file_stop && *pointer != '\n'; ++pointer);
-                lines.push_back({ line_start, pointer });
+                lines.emplace_back(line_start, pointer);
                 break;
             }
             else if (*pointer == '\n') {
-                lines.push_back({ line_start, pointer });
+                lines.emplace_back(line_start, pointer);
                 line_start = pointer + 1;
             }
         }
@@ -183,11 +183,11 @@ namespace {
 
 
     auto do_emit(
-        std::string&                                   diagnostic_string,
-        utl::diagnostics::Builder::Emit_arguments const arguments,
-        std::string_view                         const title,
-        utl::Color                                const title_color,
-        utl::diagnostics::Type                    const diagnostic_type = utl::diagnostics::Type::recoverable) -> void
+        std::string                                    & diagnostic_string,
+        utl::diagnostics::Builder::Emit_arguments const& arguments,
+        std::string_view                          const  title,
+        utl::Color                                const  title_color,
+        utl::diagnostics::Type                    const  diagnostic_type = utl::diagnostics::Type::recoverable) -> void
     {
         auto& [sections, message, message_format_arguments, help_note, help_note_arguments] = arguments;
         auto out = std::back_inserter(diagnostic_string);
@@ -197,12 +197,10 @@ namespace {
         }
 
         fmt::format_to(out, "{}{}{}: ", title_color, title, utl::Color::white);
-
         fmt::vformat_to(out, message, message_format_arguments);
 
-        if (!sections.empty()) {
+        if (!sections.empty())
             fmt::format_to(out, "\n\n");
-        }
 
         utl::Source const* current_source = nullptr;
 
@@ -225,9 +223,8 @@ namespace {
 
             format_highlighted_section(out, title_color, section, location_info);
 
-            if (&section != &sections.back()) {
+            if (&section != &sections.back())
                 fmt::format_to(out, "\n");
-            }
         }
 
         if (help_note) {
@@ -235,15 +232,14 @@ namespace {
             fmt::vformat_to(out, *help_note, help_note_arguments);
         }
 
-        if (diagnostic_type == utl::diagnostics::Type::irrecoverable) {
+        if (diagnostic_type == utl::diagnostics::Type::irrecoverable)
             throw utl::diagnostics::Error { std::move(diagnostic_string) };
-        }
     }
 
 
     auto to_regular_args(
-        utl::diagnostics::Builder::Simple_emit_arguments const arguments,
-        utl::Color                                       const note_color) -> utl::diagnostics::Builder::Emit_arguments
+        utl::diagnostics::Builder::Simple_emit_arguments const& arguments,
+        utl::Color                                       const  note_color) -> utl::diagnostics::Builder::Emit_arguments
     {
         return {
             .sections {
@@ -284,9 +280,8 @@ utl::diagnostics::Builder::Builder(Builder&& other) noexcept
 }
 
 utl::diagnostics::Builder::~Builder() {
-    if (!diagnostic_string.empty()) {
+    if (!diagnostic_string.empty())
         std::cout << diagnostic_string << "\n\n"; // TODO: improve
-    }
 }
 
 auto utl::diagnostics::Builder::string() && noexcept -> std::string {
@@ -305,7 +300,7 @@ auto utl::diagnostics::Builder::warning_level() const noexcept -> Level {
 }
 
 
-auto utl::diagnostics::Builder::emit_note(Emit_arguments const arguments) -> void {
+auto utl::diagnostics::Builder::emit_note(Emit_arguments const& arguments) -> void {
     switch (configuration.note_level) {
     case Level::normal:
         return do_emit(diagnostic_string, arguments, "Note", note_color);
@@ -318,12 +313,12 @@ auto utl::diagnostics::Builder::emit_note(Emit_arguments const arguments) -> voi
     }
 }
 
-auto utl::diagnostics::Builder::emit_simple_note(Simple_emit_arguments const arguments) -> void {
+auto utl::diagnostics::Builder::emit_simple_note(Simple_emit_arguments const& arguments) -> void {
     return emit_note(to_regular_args(arguments, note_color));
 }
 
 
-auto utl::diagnostics::Builder::emit_warning(Emit_arguments const arguments) -> void {
+auto utl::diagnostics::Builder::emit_warning(Emit_arguments const& arguments) -> void {
     switch (configuration.warning_level) {
     case Level::normal:
         return do_emit(diagnostic_string, arguments, "Warning", warning_color);
@@ -336,33 +331,33 @@ auto utl::diagnostics::Builder::emit_warning(Emit_arguments const arguments) -> 
     }
 }
 
-auto utl::diagnostics::Builder::emit_simple_warning(Simple_emit_arguments const arguments) -> void {
+auto utl::diagnostics::Builder::emit_simple_warning(Simple_emit_arguments const& arguments) -> void {
     return emit_warning(to_regular_args(arguments, warning_color));
 }
 
 
 auto utl::diagnostics::Builder::emit_error(
-    Emit_arguments const arguments,
-    Type           const error_type) -> void
+    Emit_arguments const& arguments,
+    Type           const  error_type) -> void
 {
     has_emitted_error = true;
     do_emit(diagnostic_string, arguments, "Error", error_color, error_type);
 }
 
-auto utl::diagnostics::Builder::emit_error(Emit_arguments const arguments) -> void {
+auto utl::diagnostics::Builder::emit_error(Emit_arguments const& arguments) -> void {
     emit_error(arguments, Type::irrecoverable);
     utl::unreachable();
 }
 
 
 auto utl::diagnostics::Builder::emit_simple_error(
-    Simple_emit_arguments const arguments,
-    Type                  const error_type) -> void
+    Simple_emit_arguments const& arguments,
+    Type                  const  error_type) -> void
 {
     emit_error(to_regular_args(arguments, error_color), error_type);
 }
 
-auto utl::diagnostics::Builder::emit_simple_error(Simple_emit_arguments const arguments) -> void {
+auto utl::diagnostics::Builder::emit_simple_error(Simple_emit_arguments const& arguments) -> void {
     emit_simple_error(arguments, Type::irrecoverable);
     utl::unreachable();
 }
