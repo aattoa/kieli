@@ -138,5 +138,4 @@ target_precompile_headers(${PROJECT_NAME}
 
 target_include_directories(${PROJECT_NAME}
     PRIVATE src
-    PRIVATE dependencies/include
-    PRIVATE dependencies/include/rangev3)
+    PRIVATE dependencies/include)

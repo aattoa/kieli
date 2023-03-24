@@ -315,7 +315,7 @@ auto resolution::Context::resolve_template_parameters(
                     return resolve_class_reference(reference, parameter_scope, space);
                 };
                 add_parameter(mir::Template_parameter::Type_parameter {
-                    .classes = utl::map(resolve_class)(type_parameter.classes)
+                    .classes = utl::map(resolve_class, type_parameter.classes)
                 });
             },
             [&](hir::Template_parameter::Mutability_parameter&) {

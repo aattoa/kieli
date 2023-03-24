@@ -13,7 +13,7 @@ namespace {
         };
 
         return cir::Function {
-            .parameter_types = utl::map(reify_parameter_type)(function.signature.parameters),
+            .parameter_types = utl::map(reify_parameter_type, function.signature.parameters),
             .body            = context.reify_expression(function.body)
         };
     }

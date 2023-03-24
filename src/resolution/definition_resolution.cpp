@@ -71,7 +71,7 @@ namespace {
     {
         mir::Type const function_type {
             .value = wrap_type(mir::type::Function {
-                .parameter_types = utl::map(&mir::Function_parameter::type)(parameters),
+                .parameter_types = utl::map(&mir::Function_parameter::type, parameters),
                 .return_type     = return_type
             }),
             .source_view = function_name.source_view
@@ -407,7 +407,7 @@ auto resolution::Context::resolve_typeclass(utl::Wrapper<Typeclass_info> const w
             mir_typeclass.function_signatures.add(
                 signature.name.identifier,
                 mir::Typeclass::Function_signature {
-                    .parameters  = utl::map(resolve_with(signature_scope))(signature.parameter_types),
+                    .parameters  = utl::map(resolve_with(signature_scope), signature.parameter_types),
                     .return_type = resolve_with(signature_scope)(signature.return_type)
                 }
             );
@@ -435,7 +435,7 @@ auto resolution::Context::resolve_typeclass(utl::Wrapper<Typeclass_info> const w
                 mir::Typeclass::Type_signature {
                     .classes = utl::map([&](hir::Class_reference& reference) {
                         return resolve_class_reference(reference, signature_scope, *info.home_namespace);
-                    })(signature.classes)
+                    }, signature.classes)
                 }
             );
         }
@@ -449,7 +449,7 @@ auto resolution::Context::resolve_typeclass(utl::Wrapper<Typeclass_info> const w
                     .type_signature {
                         .classes = utl::map([&](hir::Class_reference& reference) {
                             return resolve_class_reference(reference, signature_scope, *info.home_namespace);
-                        })(signature.type_signature.classes)
+                        }, signature.type_signature.classes)
                     },
                     .template_parameters = std::move(template_parameters)
                 }

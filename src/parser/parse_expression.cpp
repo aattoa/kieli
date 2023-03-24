@@ -62,7 +62,7 @@ namespace {
                 };
 
                 context.diagnostics.emit_error({
-                    .sections = utl::map(make_section)(duplicates),
+                    .sections = utl::map(make_section, duplicates),
                     .message  = "There are multiple initializers for the same field"
                 });
             }

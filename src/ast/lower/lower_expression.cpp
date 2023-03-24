@@ -15,7 +15,7 @@ namespace {
         }
         auto operator()(ast::expression::Array_literal const& literal) -> hir::Expression::Variant {
             return hir::expression::Array_literal {
-                .elements = utl::map(context.lower())(literal.elements)
+                .elements = utl::map(context.lower(), literal.elements)
             };
         }
         auto operator()(ast::expression::Self const& self) -> hir::Expression::Variant {
@@ -28,7 +28,7 @@ namespace {
         }
         auto operator()(ast::expression::Tuple const& tuple) -> hir::Expression::Variant {
             return hir::expression::Tuple {
-                .fields = utl::map(context.lower())(tuple.fields)
+                .fields = utl::map(context.lower(), tuple.fields)
             };
         }
         auto operator()(ast::expression::Conditional const& conditional) -> hir::Expression::Variant {
@@ -85,13 +85,13 @@ namespace {
             };
 
             return hir::expression::Match {
-                .cases              = utl::map(lower_match_case)(match.cases),
+                .cases              = utl::map(lower_match_case, match.cases),
                 .matched_expression = context.lower(match.matched_expression)
             };
         }
         auto operator()(ast::expression::Block const& block) -> hir::Expression::Variant {
             return hir::expression::Block {
-                .side_effects = utl::map(context.lower())(block.side_effects),
+                .side_effects = utl::map(context.lower(), block.side_effects),
                 .result       = block.result.transform(context.lower())
             };
         }
@@ -160,7 +160,7 @@ namespace {
         }
         auto operator()(ast::expression::Invocation const& invocation) -> hir::Expression::Variant {
             return hir::expression::Invocation {
-                .arguments = utl::map(context.lower())(invocation.arguments),
+                .arguments = utl::map(context.lower(), invocation.arguments),
                 .invocable = context.lower(invocation.invocable)
             };
         }
@@ -186,7 +186,7 @@ namespace {
         }
         auto operator()(ast::expression::Template_application const& application) -> hir::Expression::Variant {
             return hir::expression::Template_application {
-                .template_arguments = utl::map(context.lower())(application.template_arguments),
+                .template_arguments = utl::map(context.lower(), application.template_arguments),
                 .name               = context.lower(application.name)
             };
         }
@@ -212,13 +212,13 @@ namespace {
             };
 
             return hir::expression::Member_access_chain {
-                .accessors       = utl::map(lower_accessor)(chain.accessors),
+                .accessors       = utl::map(lower_accessor, chain.accessors),
                 .base_expression = context.lower(chain.base_expression)
             };
         }
         auto operator()(ast::expression::Method_invocation const& invocation) -> hir::Expression::Variant {
             return hir::expression::Method_invocation {
-                .arguments          = utl::map(context.lower())(invocation.arguments),
+                .arguments          = utl::map(context.lower(), invocation.arguments),
                 .template_arguments = invocation.template_arguments.transform(utl::map(context.lower())),
                 .base_expression    = context.lower(invocation.base_expression),
                 .method_name        = invocation.method_name

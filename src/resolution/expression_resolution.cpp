@@ -229,7 +229,7 @@ namespace {
             context.solve(constraint::Type_equality {
                 .constrainer_type {
                     .value = wrap_type(mir::type::Function {
-                        .parameter_types = utl::map(&mir::Expression::type)(arguments),
+                        .parameter_types = utl::map(&mir::Expression::type, arguments),
                         .return_type     = return_type
                     }),
                     .source_view = this_expression.source_view
@@ -275,7 +275,7 @@ namespace {
                 else
                     return recurse(argument.expression);
             };
-            return utl::map(resolve_argument)(arguments);
+            return utl::map(resolve_argument, arguments);
         }
 
 
@@ -418,10 +418,10 @@ namespace {
 
         auto operator()(hir::expression::Tuple& tuple) -> mir::Expression {
             mir::expression::Tuple mir_tuple {
-                .fields = utl::map(recurse())(tuple.fields)
+                .fields = utl::map(recurse(), tuple.fields)
             };
             mir::type::Tuple mir_tuple_type {
-                .field_types = utl::map(&mir::Expression::type)(mir_tuple.fields)
+                .field_types = utl::map(&mir::Expression::type, mir_tuple.fields)
             };
             return {
                 .value = std::move(mir_tuple),

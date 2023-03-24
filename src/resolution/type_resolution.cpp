@@ -57,7 +57,7 @@ namespace {
 
         auto operator()(hir::type::Tuple& tuple) -> mir::Type {
             return {
-                .value       = wrap_type(mir::type::Tuple { .field_types = utl::map(recurse())(tuple.field_types) }),
+                .value       = wrap_type(mir::type::Tuple { .field_types = utl::map(recurse(), tuple.field_types) }),
                 .source_view = this_type.source_view
             };
         }
@@ -166,7 +166,7 @@ namespace {
         auto operator()(hir::type::Function& function) -> mir::Type {
             return {
                 .value = wrap_type(mir::type::Function {
-                    .parameter_types = utl::map(recurse())(function.argument_types),
+                    .parameter_types = utl::map(recurse(), function.argument_types),
                     .return_type     = recurse(*function.return_type)
                 }),
                 .source_view = this_type.source_view

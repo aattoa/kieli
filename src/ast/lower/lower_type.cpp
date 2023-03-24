@@ -26,7 +26,7 @@ namespace {
         }
         auto operator()(ast::type::Tuple const& tuple) -> hir::Type::Variant {
             return hir::type::Tuple {
-                .field_types = utl::map(context.lower())(tuple.field_types)
+                .field_types = utl::map(context.lower(), tuple.field_types)
             };
         }
         auto operator()(ast::type::Array const& array) -> hir::Type::Variant {
@@ -42,7 +42,7 @@ namespace {
         }
         auto operator()(ast::type::Function const& function) -> hir::Type::Variant {
             return hir::type::Function {
-                .argument_types = utl::map(context.lower())(function.argument_types),
+                .argument_types = utl::map(context.lower(), function.argument_types),
                 .return_type    = context.lower(function.return_type)
             };
         }
@@ -71,7 +71,7 @@ namespace {
                 auto const tag = context.fresh_name_tag();
 
                 context.current_function_implicit_template_parameters->emplace_back(
-                    utl::map(context.lower())(instance_of.classes),
+                    utl::map(context.lower(), instance_of.classes),
                     hir::Implicit_template_parameter::Tag { tag }
                 );
 
@@ -81,7 +81,7 @@ namespace {
             else if (context.is_within_function()) {
                 // Within a function body, inst types are simply used for constraint collection.
                 return hir::type::Instance_of {
-                    .classes = utl::map(context.lower())(instance_of.classes) };
+                    .classes = utl::map(context.lower(), instance_of.classes) };
             }
             else {
                 context.error(this_type.source_view, { "'inst' types are only usable within functions" });
@@ -89,7 +89,7 @@ namespace {
         }
         auto operator()(ast::type::Template_application const& application) -> hir::Type::Variant {
             return hir::type::Template_application {
-                .arguments = utl::map(context.lower())(application.arguments),
+                .arguments = utl::map(context.lower(), application.arguments),
                 .name      = context.lower(application.name)
             };
         }
