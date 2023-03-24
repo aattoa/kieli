@@ -502,27 +502,20 @@ namespace utl {
     static_assert(digit_count(12345) == 5);
 
 
-    namespace dtl {
-        template <class F>
-        struct Mapper {
-            F f;
-
-            template <class Vector>
-            auto operator()(Vector&& input) const
-                noexcept(noexcept(std::invoke(f, bootleg::forward_like<Vector>(input.front()))))
-            {
-                auto output = std::vector<std::remove_cvref_t<decltype(std::invoke(f, bootleg::forward_like<Vector>(input.front())))>>();
-                output.reserve(input.size());
-                for (auto& element : input) {
-                    output.push_back(std::invoke(f, bootleg::forward_like<Vector>(element)));
-                }
-                return output;
-            }
-        };
+    template <class F, class Vector>
+    constexpr auto map(F&& f, Vector&& input) {
+        using Result = std::remove_cvref_t<decltype(std::invoke(f, bootleg::forward_like<Vector>(input.front())))>;
+        auto output = vector_with_capacity<Result>(input.size());
+        for (auto& element : input)
+            output.push_back(std::invoke(f, bootleg::forward_like<Vector>(element)));
+        return output;
     }
-    template <class F> [[nodiscard]]
-    auto map(F&& f) -> dtl::Mapper<std::decay_t<F>> {
-        return { .f = std::forward<F>(f) };
+
+    template <class F>
+    constexpr auto map(F&& f) {
+        return [f = std::forward<F>(f)]<class Vector>(Vector&& input) mutable {
+            return map(std::forward<F>(f), std::forward<Vector>(input));
+        };
     }
 
 

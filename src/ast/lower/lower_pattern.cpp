@@ -25,13 +25,13 @@ namespace {
 
         auto operator()(ast::pattern::Tuple const& tuple) -> hir::Pattern::Variant {
             return hir::pattern::Tuple {
-                .field_patterns = utl::map(context.lower())(tuple.field_patterns)
+                .field_patterns = utl::map(context.lower(), tuple.field_patterns)
             };
         }
 
         auto operator()(ast::pattern::Slice const& slice) -> hir::Pattern::Variant {
             return hir::pattern::Slice {
-                .element_patterns = utl::map(context.lower())(slice.element_patterns)
+                .element_patterns = utl::map(context.lower(), slice.element_patterns)
             };
         }
 

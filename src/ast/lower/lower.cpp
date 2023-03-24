@@ -34,20 +34,19 @@ auto Lowering_context::lower(ast::Function_parameter const& parameter) -> hir::F
     return hir::Function_parameter {
         .pattern = lower(parameter.pattern),
         .type    = std::invoke([this, &parameter]() -> hir::Type {
-            if (parameter.type) {
+            if (parameter.type)
                 return lower(*parameter.type);
-            }
-            else {
-                utl::always_assert(current_function_implicit_template_parameters != nullptr);
-                auto const tag = fresh_name_tag();
-                current_function_implicit_template_parameters->push_back({
-                    .tag = hir::Implicit_template_parameter::Tag { tag } });
-                return {
-                    .value = hir::type::Implicit_parameter_reference {
-                        .tag = hir::Implicit_template_parameter::Tag { tag } },
-                    .source_view = parameter.pattern.source_view
-                };
-            }
+
+            utl::always_assert(current_function_implicit_template_parameters != nullptr);
+            auto const tag = fresh_name_tag();
+            current_function_implicit_template_parameters->push_back({
+                .tag = hir::Implicit_template_parameter::Tag { tag } });
+
+            return {
+                .value = hir::type::Implicit_parameter_reference {
+                    .tag = hir::Implicit_template_parameter::Tag { tag } },
+                .source_view = parameter.pattern.source_view
+            };
         }),
         .default_value = parameter.default_value.transform(lower())
     };
@@ -80,7 +79,7 @@ auto Lowering_context::lower(ast::Template_parameter const& parameter) -> hir::T
         .value = std::visit<hir::Template_parameter::Variant>(utl::Overload {
             [this](ast::Template_parameter::Type_parameter const& type_parameter) {
                 return hir::Template_parameter::Type_parameter {
-                    .classes = utl::map(lower())(type_parameter.classes)
+                    .classes = utl::map(lower(), type_parameter.classes)
                 };
             },
             [this](ast::Template_parameter::Value_parameter const& value_parameter) {
@@ -108,7 +107,7 @@ auto Lowering_context::lower(ast::Qualifier const& qualifier) -> hir::Qualifier 
 
 auto Lowering_context::lower(ast::Qualified_name const& name) -> hir::Qualified_name {
     return {
-        .middle_qualifiers = utl::map(lower())(name.middle_qualifiers),
+        .middle_qualifiers = utl::map(lower(), name.middle_qualifiers),
         .root_qualifier = std::visit(utl::Overload {
             [](std::monostate)                        -> hir::Root_qualifier { return {}; },
             [](ast::Root_qualifier::Global)           -> hir::Root_qualifier { return { .value = hir::Root_qualifier::Global {} }; },
@@ -128,7 +127,7 @@ auto Lowering_context::lower(ast::Class_reference const& reference) -> hir::Clas
 
 auto Lowering_context::lower(ast::Function_signature const& signature) -> hir::Function_signature {
     return {
-        .parameter_types = utl::map(lower())(signature.parameter_types),
+        .parameter_types = utl::map(lower(), signature.parameter_types),
         .return_type     = lower(signature.return_type),
         .name            = signature.name,
     };
@@ -137,13 +136,13 @@ auto Lowering_context::lower(ast::Function_signature const& signature) -> hir::F
 auto Lowering_context::lower(ast::Function_template_signature const& signature) -> hir::Function_template_signature {
     return {
         .function_signature  = lower(signature.function_signature),
-        .template_parameters = utl::map(lower())(signature.template_parameters)
+        .template_parameters = utl::map(lower(), signature.template_parameters)
     };
 }
 
 auto Lowering_context::lower(ast::Type_signature const& signature) -> hir::Type_signature {
     return {
-        .classes = utl::map(lower())(signature.classes),
+        .classes = utl::map(lower(), signature.classes),
         .name    = signature.name,
     };
 }
@@ -151,7 +150,7 @@ auto Lowering_context::lower(ast::Type_signature const& signature) -> hir::Type_
 auto Lowering_context::lower(ast::Type_template_signature const& signature) -> hir::Type_template_signature {
     return {
         .type_signature      = lower(signature.type_signature),
-        .template_parameters = utl::map(lower())(signature.template_parameters)
+        .template_parameters = utl::map(lower(), signature.template_parameters)
     };
 }
 
@@ -198,7 +197,7 @@ auto compiler::lower(Parse_result&& parse_result) -> Lower_result {
     };
 
     lower_result.module.definitions =
-        utl::map(context.lower())(parse_result.module.definitions);
+        utl::map(context.lower(), parse_result.module.definitions);
 
     return lower_result;
 }

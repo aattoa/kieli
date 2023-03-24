@@ -189,14 +189,14 @@ namespace {
             function_template.definition.self_parameter.transform(substitution_context.recurse());
 
         std::vector<mir::Function_parameter> concrete_function_parameters =
-            utl::map(instantiate_parameter)(function_template.definition.signature.parameters);
+            utl::map(instantiate_parameter, function_template.definition.signature.parameters);
 
         mir::Type concrete_return_type =
             instantiate(function_template.definition.signature.return_type, substitution_context);
 
         mir::Type concrete_function_type {
             .value = wrap_type(mir::type::Function {
-                .parameter_types = utl::map(&mir::Function_parameter::type)(concrete_function_parameters),
+                .parameter_types = utl::map(&mir::Function_parameter::type, concrete_function_parameters),
                 .return_type     = concrete_return_type
             }),
             .source_view = template_info->name.source_view
@@ -321,7 +321,7 @@ namespace {
                 .function_type = constructor.function_type.transform([&](mir::Type const function_type) {
                     return mir::Type {
                         .value = wrap_type(mir::type::Function {
-                            .parameter_types = utl::map(substitution_context.recurse())(utl::get<mir::type::Function>(*function_type.value).parameter_types),
+                            .parameter_types = utl::map(substitution_context.recurse(), utl::get<mir::type::Function>(*function_type.value).parameter_types),
                             .return_type     = concrete_type
                         }),
                         .source_view = function_type.source_view
@@ -392,36 +392,36 @@ namespace {
 
         auto operator()(mir::expression::Tuple const& tuple) -> R {
             return mir::expression::Tuple {
-                .fields = utl::map(context.recurse())(tuple.fields)
+                .fields = utl::map(context.recurse(), tuple.fields)
             };
         }
         auto operator()(mir::expression::Array_literal const& literal) -> R {
             return mir::expression::Array_literal {
-                .elements = utl::map(context.recurse())(literal.elements)
+                .elements = utl::map(context.recurse(), literal.elements)
             };
         }
         auto operator()(mir::expression::Block const& block) -> R {
             return mir::expression::Block {
-                .side_effects = utl::map(context.recurse())(block.side_effects),
+                .side_effects = utl::map(context.recurse(), block.side_effects),
                 .result       = block.result.transform(context.recurse())
             };
         }
         auto operator()(mir::expression::Direct_invocation const& invocation) -> R {
             return mir::expression::Direct_invocation {
                 .function  = invocation.function,
-                .arguments = utl::map(context.recurse())(invocation.arguments)
+                .arguments = utl::map(context.recurse(), invocation.arguments)
             };
         }
         auto operator()(mir::expression::Indirect_invocation const& invocation) -> R {
             return mir::expression::Indirect_invocation {
-                .arguments = utl::map(context.recurse())(invocation.arguments),
+                .arguments = utl::map(context.recurse(), invocation.arguments),
                 .invocable = context.recurse(invocation.invocable)
             };
         }
         auto operator()(mir::expression::Direct_enum_constructor_invocation const& invocation) -> R {
             return mir::expression::Direct_enum_constructor_invocation {
                 .constructor = invocation.constructor,
-                .arguments   = utl::map(context.recurse())(invocation.arguments)
+                .arguments   = utl::map(context.recurse(), invocation.arguments)
             };
         }
         auto operator()(mir::expression::Let_binding const& binding) -> R {
@@ -447,7 +447,7 @@ namespace {
             };
 
             return mir::expression::Match {
-                .cases              = utl::map(instantiate_case)(match.cases),
+                .cases              = utl::map(instantiate_case, match.cases),
                 .matched_expression = context.recurse(match.matched_expression)
             };
         }
@@ -479,7 +479,7 @@ namespace {
         }
         auto operator()(mir::expression::Struct_initializer const& initializer) -> R {
             return mir::expression::Struct_initializer {
-                .initializers = utl::map(context.recurse())(initializer.initializers),
+                .initializers = utl::map(context.recurse(), initializer.initializers),
                 .struct_type  = context.recurse(initializer.struct_type)
             };
         }
@@ -519,16 +519,14 @@ namespace {
                         context.resolution_context,
                         function_template,
                         template_info,
-                        utl::map(context.recurse())(instantiation_info.template_arguments),
+                        utl::map(context.recurse(), instantiation_info.template_arguments),
                         context.scope,
                         context.space
                     ),
                     .is_application = true
                 };
             }
-            else {
-                return function;
-            }
+            return function;
         }
 
         template <class T>
@@ -562,7 +560,7 @@ namespace {
 
         auto operator()(mir::type::Tuple const& tuple) -> R {
             return wrap_type(mir::type::Tuple {
-                .field_types = utl::map(context.recurse())(tuple.field_types)
+                .field_types = utl::map(context.recurse(), tuple.field_types)
             });
         }
         auto operator()(mir::type::Array const& array) -> R {
@@ -578,7 +576,7 @@ namespace {
         }
         auto operator()(mir::type::Function const& function) -> R {
             return wrap_type(mir::type::Function {
-                .parameter_types = utl::map(context.recurse())(function.parameter_types),
+                .parameter_types = utl::map(context.recurse(), function.parameter_types),
                 .return_type     = context.recurse(function.return_type)
             });
         }
@@ -589,7 +587,7 @@ namespace {
             });
         }
         auto operator()(mir::type::Pointer const& pointer) -> R {
-            return wrap_type(mir::type::Pointer{
+            return wrap_type(mir::type::Pointer {
                 .mutability      = context.recurse(pointer.mutability),
                 .pointed_to_type = context.recurse(pointer.pointed_to_type)
             });
@@ -604,16 +602,14 @@ namespace {
                         context.resolution_context,
                         context.resolution_context.resolve_struct_template(instantiation_info.template_instantiated_from),
                         instantiation_info.template_instantiated_from,
-                        utl::map(context.recurse())(instantiation_info.template_arguments),
+                        utl::map(context.recurse(), instantiation_info.template_arguments),
                         context.scope,
                         context.space
                     ),
                     .is_application = true
                 });
             }
-            else {
-                return this_type.value;
-            }
+            return this_type.value;
         }
         auto operator()(mir::type::Enumeration const& enumeration) -> R {
             if (enumeration.is_application) {
@@ -625,16 +621,14 @@ namespace {
                         context.resolution_context,
                         context.resolution_context.resolve_enum_template(instantiation_info.template_instantiated_from),
                         instantiation_info.template_instantiated_from,
-                        utl::map(context.recurse())(instantiation_info.template_arguments),
+                        utl::map(context.recurse(), instantiation_info.template_arguments),
                         context.scope,
                         context.space
                     ),
                     .is_application = true
                 });
             }
-            else {
-                return this_type.value;
-            }
+            return this_type.value;
         }
 
         auto operator()(
@@ -671,16 +665,14 @@ namespace {
                 context.resolution_context.resolve_enum(utl::get<mir::type::Enumeration>(*enum_type.value).info);
 
             auto it = ranges::find(enumeration.constructors, pattern.constructor.name, &mir::Enum_constructor::name);
-
-            if (it != enumeration.constructors.end()) {
-                return mir::pattern::Enum_constructor {
+            if (it == enumeration.constructors.end()) {
+                // Should be unreachable because enum resolution would've caught the error
+                utl::unreachable();
+            }
+            return mir::pattern::Enum_constructor {
                     .payload_pattern = pattern.payload_pattern.transform(context.recurse()),
                     .constructor     = *it
-                };
-            }
-            else {
-                utl::abort(); // Should be unreachable because enum resolution would've caught the error
-            }
+            };
         }
         auto operator()(mir::pattern::Guarded const& guarded) -> mir::Pattern::Variant {
             return mir::pattern::Guarded {
@@ -689,10 +681,10 @@ namespace {
             };
         }
         auto operator()(mir::pattern::Tuple const& tuple) -> mir::Pattern::Variant {
-            return mir::pattern::Tuple { .field_patterns = utl::map(context.recurse())(tuple.field_patterns) };
+            return mir::pattern::Tuple { .field_patterns = utl::map(context.recurse(), tuple.field_patterns) };
         }
         auto operator()(mir::pattern::Slice const& slice) -> mir::Pattern::Variant {
-            return mir::pattern::Slice { .element_patterns = utl::map(context.recurse())(slice.element_patterns) };
+            return mir::pattern::Slice { .element_patterns = utl::map(context.recurse(), slice.element_patterns) };
         }
         template <class T>
         auto operator()(T const terminal) -> mir::Pattern::Variant

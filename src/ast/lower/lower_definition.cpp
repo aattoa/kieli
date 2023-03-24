@@ -52,7 +52,7 @@ namespace {
             if (function.self_parameter.has_value()) {
                 parameters.push_back(lower_self_parameter(*function.self_parameter, context));
             }
-            auto explicit_parameters = utl::map(context.lower())(function.parameters);
+            auto explicit_parameters = utl::map(context.lower(), function.parameters);
             parameters.insert(parameters.end(),
                 std::move_iterator { explicit_parameters.begin() },
                 std::move_iterator { explicit_parameters.end() });
@@ -82,7 +82,7 @@ namespace {
             };
 
             return {
-                .members = utl::map(lower_member)(structure.members),
+                .members = utl::map(lower_member, structure.members),
                 .name    = structure.name,
             };
         }
@@ -99,7 +99,7 @@ namespace {
             };
 
             return {
-                .constructors = utl::map(lower_constructor)(enumeration.constructors),
+                .constructors = utl::map(lower_constructor, enumeration.constructors),
                 .name         = enumeration.name,
             };
         }
@@ -113,10 +113,10 @@ namespace {
 
         auto operator()(ast::definition::Typeclass const& typeclass) -> hir::definition::Typeclass {
             return {
-                .function_signatures          = utl::map(context.lower())(typeclass.function_signatures),
-                .function_template_signatures = utl::map(context.lower())(typeclass.function_template_signatures),
-                .type_signatures              = utl::map(context.lower())(typeclass.type_signatures),
-                .type_template_signatures     = utl::map(context.lower())(typeclass.type_template_signatures),
+                .function_signatures          = utl::map(context.lower(), typeclass.function_signatures),
+                .function_template_signatures = utl::map(context.lower(), typeclass.function_template_signatures),
+                .type_signatures              = utl::map(context.lower(), typeclass.type_signatures),
+                .type_template_signatures     = utl::map(context.lower(), typeclass.type_template_signatures),
                 .name                         = typeclass.name,
             };
         }
@@ -124,7 +124,7 @@ namespace {
         auto operator()(ast::definition::Implementation const& implementation) -> hir::definition::Implementation {
             return {
                 .type        = context.lower(implementation.type),
-                .definitions = utl::map(context.lower())(implementation.definitions),
+                .definitions = utl::map(context.lower(), implementation.definitions),
             };
         }
 
@@ -132,13 +132,13 @@ namespace {
             return {
                 .typeclass   = context.lower(instantiation.typeclass),
                 .self_type   = context.lower(instantiation.self_type),
-                .definitions = utl::map(context.lower())(instantiation.definitions),
+                .definitions = utl::map(context.lower(), instantiation.definitions),
             };
         }
 
         auto operator()(ast::definition::Namespace const& space) -> hir::definition::Namespace {
             return {
-                .definitions = utl::map(context.lower())(space.definitions),
+                .definitions = utl::map(context.lower(), space.definitions),
                 .name        = space.name,
             };
         }
@@ -147,7 +147,7 @@ namespace {
         auto operator()(ast::definition::Template<Definition> const& template_definition) {
             return ast::definition::Template<decltype(operator()(template_definition.definition))> {
                 .definition = operator()(template_definition.definition),
-                .parameters = utl::map(context.lower())(template_definition.parameters)
+                .parameters = utl::map(context.lower(), template_definition.parameters)
             };
         }
     };
