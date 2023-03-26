@@ -57,10 +57,9 @@ auto project::Configuration::string() const -> std::string {
     auto out = std::back_inserter(string);
 
     for (auto const& [key, value] : span()) {
-        out = fmt::format_to(out, "{}: ", key);
-        if (value) {
-            out = fmt::format_to(out, "{}", value->string);
-        }
+        fmt::format_to(out, "{}: ", key);
+        if (value)
+            fmt::format_to(out, "{}", value->string);
     }
 
     return string;
@@ -70,12 +69,10 @@ auto project::Configuration::string() const -> std::string {
 auto project::Configuration::operator[](std::string_view const name) -> Configuration_key& {
     utl::always_assert(ranges::contains(allowed_keys, name));
 
-    if (auto* const key = find(name); key && *key) {
+    if (auto* const key = find(name); key && *key)
         return **key;
-    }
-    else {
+    else
         utl::abort();
-    }
 }
 
 
@@ -87,7 +84,7 @@ auto project::default_configuration() -> Configuration {
     configuration.add("name"            , tl::nullopt);
     configuration.add("version"         , tl::nullopt);
     configuration.add("authors"         , tl::nullopt);
-    configuration.add("created"         , "{:%d-%m-%Y}"_format(utl::local_time()));
+    configuration.add("created"         , "placeholder"s); // "{:%d-%m-%Y}"_format(utl::local_time()));
     return configuration;
 }
 
@@ -98,17 +95,14 @@ auto project::read_configuration() -> Configuration {
     Configuration configuration;
 
     if (std::ifstream file { configuration_path }) {
-        std::string line;
-        line.reserve(50);
-
+        auto line = utl::string_with_capacity(50);
         utl::Usize line_number = 0;
 
         while (std::getline(file, line)) {
             ++line_number;
 
-            if (trim(line).empty()) {
+            if (trim(line).empty())
                 continue;
-            }
 
             auto const mkview = [](auto&&) -> std::string_view { utl::todo(); };
 
@@ -133,36 +127,75 @@ auto project::read_configuration() -> Configuration {
             if (key.empty()) {
                 throw utl::exception(
                     "kieli_config: empty key on the {} line",
-                    utl::formatting::integer_with_ordinal_indicator(line_number)
-                );
+                    utl::formatting::integer_with_ordinal_indicator(line_number));
             }
 
             if (!ranges::contains(allowed_keys, key)) {
                 throw utl::exception(
                     "kieli_config: '{}' is not a recognized configuration key",
-                    key
-                );
+                    key);
             }
 
             if (configuration.find(key)) {
                 throw utl::exception(
                     "kieli_config: '{}' key redefinition on the {} line",
                     key,
-                    utl::formatting::integer_with_ordinal_indicator(line_number)
-                );
+                    utl::formatting::integer_with_ordinal_indicator(line_number));
             }
 
             configuration.add(
                 std::string(key),
                 value.empty()
                     ? tl::optional(std::string(value))
-                    : tl::nullopt
-            );
+                    : tl::nullopt);
         }
 
         return configuration;
     }
-    else {
-        return default_configuration();
+    return default_configuration();
+}
+
+
+auto project::initialize(std::string_view project_name) -> void {
+    auto parent_path  = std::filesystem::current_path();
+    auto project_path = parent_path / project_name;
+    auto source_dir   = project_path / "src";
+
+    if (project_path.has_extension()) {
+        throw utl::exception("A directory name can not have a file extension");
     }
+
+    if (is_directory(project_path)) {
+        throw utl::exception(
+            "A directory with the path '{}' already exists. Please use a new name",
+            project_path.string());
+    }
+
+    if (!create_directory(project_path)) {
+        throw utl::exception(
+            "Could not create a directory with the path '{}'",
+            project_path.string());
+    }
+
+    {
+        std::ofstream configuration_file { project_path / "kieli_config" };
+        if (!configuration_file) {
+            throw utl::exception("Could not create the configuration file");
+        }
+        configuration_file << project::default_configuration().string();
+    }
+
+    if (!create_directory(source_dir)) {
+        throw utl::exception("Could not create the source directory");
+    }
+
+    {
+        std::ofstream main_file { source_dir / "main.kieli" };
+        if (!main_file) {
+            throw utl::exception("Could not create the main file");
+        }
+        main_file << "import std\n\nfn main() {\n    print(\"Hello, world!\\n\")\n}";
+    }
+
+    fmt::print("Successfully created a new project at '{}'\n", project_path.string());
 }

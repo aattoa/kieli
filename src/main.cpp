@@ -13,7 +13,6 @@
 #include "phase/resolve/resolve.hpp"
 #include "phase/reify/reify.hpp"
 
-#include "vm/bytecode.hpp"
 #include "vm/virtual_machine.hpp"
 #include "vm/vm_formatting.hpp"
 
@@ -93,54 +92,6 @@ namespace {
         fmt::print("{}\n\n", utl::formatting::delimited_range(lower_result.module.definitions, "\n\n"));
     });
 
-
-    [[maybe_unused]]
-    auto initialize_project(std::string_view const project_name) -> void {
-        auto parent_path  = std::filesystem::current_path();
-        auto project_path = parent_path / project_name;
-        auto source_dir   = project_path / "src";
-
-        if (project_path.has_extension()) {
-            throw utl::exception("A directory name can not have a file extension");
-        }
-
-        if (is_directory(project_path)) {
-            throw utl::exception(
-                "A directory with the path '{}' already exists. Please use a new name",
-                project_path.string()
-            );
-        }
-
-        if (!create_directory(project_path)) {
-            throw utl::exception(
-                "Could not create a directory with the path '{}'",
-                project_path.string()
-            );
-        }
-
-        {
-            std::ofstream configuration_file { project_path / "kieli_config" };
-            if (!configuration_file) {
-                throw utl::exception("Could not create the configuration file");
-            }
-            configuration_file << project::default_configuration().string();
-        }
-
-        if (!create_directory(source_dir)) {
-            throw utl::exception("Could not create the source directory");
-        }
-
-        {
-            std::ofstream main_file { source_dir / "main.kieli" };
-            if (!main_file) {
-                throw utl::exception("Could not create the main file");
-            }
-            main_file << "import std\n\nfn main() {\n    print(\"Hello, world!\\n\")\n}";
-        }
-
-        fmt::print("Successfully created a new project at '{}'\n", project_path.string());
-    }
-
 }
 
 
@@ -150,15 +101,15 @@ namespace {
 auto main(int argc, char const** argv) -> int try {
     cli::Options_description description;
     description.add_options()
-        ({ "help"   , 'h' },                                   "Show this text"          )
+        ({ "help"   , 'h' },                                   "Show this text"            )
         ({ "version", 'v' },                                   "Show kieli version"        )
         ("new"             , cli::string("project name"),      "Create a new kieli project")
-        ("repl"            , cli::string("lex|expr|prog|low"), "Run the given repl"      )
-        ("machine"                                                                       )
-        ("debug"                                                                         )
-        ("nocolor"         ,                                   "Disable colored output"  )
-        ("time"            ,                                   "Print the execution time")
-        ("test"            ,                                   "Run all tests"           );
+        ("repl"            , cli::string("lex|expr|prog|low"), "Run the given repl"        )
+        ("machine"                                                                         )
+        ("debug"                                                                           )
+        ("nocolor"         ,                                   "Disable colored output"    )
+        ("time"            ,                                   "Print the execution time"  )
+        ("test"            ,                                   "Run all tests"             );
 
     cli::Options options = utl::expect(cli::parse_command_line(argc, argv, description));
 
@@ -185,7 +136,7 @@ auto main(int argc, char const** argv) -> int try {
     }
 
     if (std::string_view const* const name = options["new"]) {
-        initialize_project(*name);
+        project::initialize(*name);
     }
 
     if (options["test"]) {

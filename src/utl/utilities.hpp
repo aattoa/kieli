@@ -49,8 +49,65 @@
 #include "tl/expected.hpp"
 
 
+// 8-bit bytes are assumed
+static_assert(CHAR_BIT == 8);
+
 // A tag to search for when C++23 EOP are supported
 #define APPLY_EXPLICIT_OBJECT_PARAMETER_HERE
+
+
+namespace utl {
+    using I8  = std::int8_t;
+    using I16 = std::int16_t;
+    using I32 = std::int32_t;
+    using I64 = std::int64_t;
+
+    using U8  = std::uint8_t;
+    using U16 = std::uint16_t;
+    using U32 = std::uint32_t;
+    using U64 = std::uint64_t;
+
+    using Usize = std::size_t;
+    using Isize = std::make_signed_t<Usize>;
+
+    using Char  = char;
+    using Float = double;
+
+    template <std::integral To> [[nodiscard]]
+    constexpr auto safe_cast(std::integral auto const from) -> To {
+        if (std::in_range<To>(from))
+            return static_cast<To>(from);
+        else
+            throw std::invalid_argument { "utl::safe_cast argument out of target range" };
+    }
+}
+
+
+namespace utl::inline literals {
+    consteval auto operator"" _i8 (unsigned long long const n) noexcept { return safe_cast<I8 >(n); }
+    consteval auto operator"" _i16(unsigned long long const n) noexcept { return safe_cast<I16>(n); }
+    consteval auto operator"" _i32(unsigned long long const n) noexcept { return safe_cast<I32>(n); }
+    consteval auto operator"" _i64(unsigned long long const n) noexcept { return safe_cast<I64>(n); }
+
+    consteval auto operator"" _u8 (unsigned long long const n) noexcept { return safe_cast<U8 >(n); }
+    consteval auto operator"" _u16(unsigned long long const n) noexcept { return safe_cast<U16>(n); }
+    consteval auto operator"" _u32(unsigned long long const n) noexcept { return safe_cast<U32>(n); }
+    consteval auto operator"" _u64(unsigned long long const n) noexcept { return safe_cast<U64>(n); }
+
+    consteval auto operator"" _uz(unsigned long long const n) noexcept { return safe_cast<Usize>(n); }
+    consteval auto operator"" _iz(unsigned long long const n) noexcept { return safe_cast<Isize>(n); }
+
+    consteval auto operator"" _format(char const* const s, unsigned long const n) noexcept {
+        return [fmt = std::string_view(s, n)](auto const&... args) -> std::string {
+            return fmt::vformat(fmt, fmt::make_format_args(args...));
+        };
+    }
+}
+
+
+// Literal operators are useless when not easily accessible, so let's make them available everywhere.
+using namespace utl::literals;
+using namespace std::literals;
 
 
 namespace bootleg {
@@ -59,8 +116,7 @@ namespace bootleg {
         return static_cast<std::underlying_type_t<E>>(e);
     }
 
-    // Copied implementation of forward_like from cppreference, this is
-    // only needed until the libstdc++ and libc++ provide std::forward_like
+    // Implementation copied from https://en.cppreference.com/w/cpp/utility/forward_like
     template<class T, class U> [[nodiscard]]
     constexpr auto&& forward_like(U&& x) noexcept {
         constexpr bool is_adding_const = std::is_const_v<std::remove_reference_t<T>>;
@@ -81,25 +137,6 @@ namespace bootleg {
 
 
 namespace utl {
-
-    static_assert(CHAR_BIT == 8);
-
-    using I8  = std::int8_t;
-    using I16 = std::int16_t;
-    using I32 = std::int32_t;
-    using I64 = std::int64_t;
-
-    using U8  = std::uint8_t;
-    using U16 = std::uint16_t;
-    using U32 = std::uint32_t;
-    using U64 = std::uint64_t;
-
-    using Usize = std::size_t;
-    using Isize = std::make_signed_t<Usize>;
-
-    using Char  = char;
-    using Float = double;
-
 
     namespace dtl {
         template <class, template <class...> class>
@@ -130,32 +167,6 @@ namespace utl {
 #endif
 
     constexpr bool compiling_in_release_mode = !compiling_in_debug_mode;
-
-
-    inline namespace literals {
-
-        using namespace std::literals;
-
-        consteval auto operator"" _i8 (unsigned long long const n) noexcept -> I8  { return static_cast<I8 >(n); }
-        consteval auto operator"" _i16(unsigned long long const n) noexcept -> I16 { return static_cast<I16>(n); }
-        consteval auto operator"" _i32(unsigned long long const n) noexcept -> I32 { return static_cast<I32>(n); }
-        consteval auto operator"" _i64(unsigned long long const n) noexcept -> I64 { return static_cast<I64>(n); }
-
-        consteval auto operator"" _u8 (unsigned long long const n) noexcept -> U8  { return static_cast<U8 >(n); }
-        consteval auto operator"" _u16(unsigned long long const n) noexcept -> U16 { return static_cast<U16>(n); }
-        consteval auto operator"" _u32(unsigned long long const n) noexcept -> U32 { return static_cast<U32>(n); }
-        consteval auto operator"" _u64(unsigned long long const n) noexcept -> U64 { return static_cast<U64>(n); }
-
-        consteval auto operator"" _uz(unsigned long long const n) noexcept -> Usize { return static_cast<Usize>(n); }
-        consteval auto operator"" _iz(unsigned long long const n) noexcept -> Isize { return static_cast<Isize>(n); }
-
-        consteval auto operator"" _format(char const* const s, unsigned long const n) noexcept {
-            return [fmt = std::string_view(s, n)](auto const&... args) -> std::string {
-                return fmt::vformat(fmt, fmt::make_format_args(args...));
-            };
-        }
-
-    }
 
 
     constexpr auto filename_without_path(std::string_view path) noexcept -> std::string_view {
@@ -201,8 +212,7 @@ namespace utl {
             caller.line(),
             caller.column(),
             caller.function_name(),
-            message
-        );
+            message);
         std::exit(-1);
     }
 
@@ -210,9 +220,8 @@ namespace utl {
         bool                 const assertion,
         std::source_location const caller = std::source_location::current()) -> void
     {
-        if (!assertion) [[unlikely]] {
+        if (!assertion) [[unlikely]]
             abort("Assertion failed", caller);
-        }
     }
 
     inline auto trace(
@@ -222,8 +231,7 @@ namespace utl {
             "utl::trace: Reached line {} in {}, in function {}\n",
             caller.line(),
             filename_without_path(caller.file_name()),
-            caller.function_name()
-        );
+            caller.function_name());
     }
 
 
@@ -336,12 +344,10 @@ namespace utl {
         std::source_location const caller = std::source_location::current()) noexcept
         requires requires { std::get_if<T>(&variant); }
     {
-        if (T* const alternative = std::get_if<T>(&variant)) [[likely]] {
+        if (T* const alternative = std::get_if<T>(&variant)) [[likely]]
             return bootleg::forward_like<V>(*alternative);
-        }
-        else [[unlikely]] {
+        else [[unlikely]]
             abort("Bad variant access", caller);
-        }
     }
 
     template <Usize n, class V> [[nodiscard]]
@@ -359,21 +365,18 @@ namespace utl {
         std::source_location const caller = std::source_location::current()) noexcept
         requires requires { optional.has_value(); }
     {
-        if (optional.has_value()) [[likely]] {
+        if (optional.has_value()) [[likely]]
             return bootleg::forward_like<O>(*optional);
-        }
-        else [[unlikely]] {
+        else [[unlikely]]
             abort("Bad optional access", caller);
-        }
     }
 
     template <class Variant, class... Arms>
     constexpr decltype(auto) match(Variant&& variant, Arms&&... arms)
         noexcept(noexcept(std::visit(Overload { std::forward<Arms>(arms)... }, std::forward<Variant>(variant))))
     {
-        if (variant.valueless_by_exception()) [[unlikely]] {
+        if (variant.valueless_by_exception()) [[unlikely]]
             abort("utl::match was invoked with a valueless variant");
-        }
         return std::visit(Overload { std::forward<Arms>(arms)... }, std::forward<Variant>(variant));
     }
 
@@ -396,9 +399,8 @@ namespace utl {
             , exception_count { std::uncaught_exceptions() } {}
 
         ~Scope_success_handler() noexcept(std::is_nothrow_invocable_v<Callback>) {
-            if (exception_count == std::uncaught_exceptions()) {
+            if (exception_count == std::uncaught_exceptions())
                 std::invoke(callback);
-            }
         }
     };
     auto on_scope_success(std::invocable auto callback) {
@@ -470,14 +472,6 @@ namespace utl {
         vector.erase(vector.begin() + static_cast<typename std::vector<T>::iterator::difference_type>(new_size), vector.end());
     }
 
-
-    template <std::integral To> [[nodiscard]]
-    constexpr auto safe_cast(std::integral auto const from) -> To {
-        if (std::in_range<To>(from))
-            return static_cast<To>(from);
-        else
-            throw exception("utl::safe_cast argument out of target range");
-    }
 
     [[nodiscard]]
     constexpr auto unsigned_distance(auto const start, auto const stop) noexcept -> Usize {
@@ -553,11 +547,6 @@ namespace utl {
     }
 
 
-    // Placeholder
-    inline auto local_time() -> int {
-        return 0;
-    }
-
     // inline auto local_time() -> std::chrono::local_time<std::chrono::system_clock::duration> {
     //     return std::chrono::current_zone()->to_local(std::chrono::system_clock::now());
     // }
@@ -632,8 +621,6 @@ namespace utl {
     }
 
 }
-
-using namespace utl::literals;
 
 
 template <utl::hashable T>

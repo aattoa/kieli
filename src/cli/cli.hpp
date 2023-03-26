@@ -119,12 +119,13 @@ namespace cli {
             bool                     indexed = false;
             bool                     empty   = true;
 
-            /* implicit */ operator types::Int  *();
-            /* implicit */ operator types::Float*();
-            /* implicit */ operator types::Bool *();
-            /* implicit */ operator types::Str  *();
+            /* implicit */ operator types::Int   const*() const;
+            /* implicit */ operator types::Float const*() const;
+            /* implicit */ operator types::Bool  const*() const;
+            /* implicit */ operator types::Str   const*() const;
 
-            explicit operator bool() noexcept;
+            [[nodiscard]]
+            explicit operator bool() const noexcept;
 
             auto operator[](utl::Usize) -> Argument_proxy;
         };
