@@ -22,83 +22,86 @@ endif()
 set(SOURCE_FILES
 	src/main.cpp
 
-	src/ast/ast.hpp
-	src/ast/ast_formatting.cpp
-	src/ast/lower/lower.hpp
-	src/ast/lower/lower.cpp
-	src/ast/lower/lowering_internals.hpp
-	src/ast/lower/lower_definition.cpp
-	src/ast/lower/lower_expression.cpp
-	src/ast/lower/lower_pattern.cpp
-	src/ast/lower/lower_type.cpp
-	src/ast/nodes/definition.hpp
-	src/ast/nodes/expression.hpp
-	src/ast/nodes/pattern.hpp
-	src/ast/nodes/type.hpp
+	src/representation/ast/ast.hpp
+	src/representation/ast/ast_formatting.cpp
+	src/representation/ast/nodes/definition.hpp
+	src/representation/ast/nodes/expression.hpp
+	src/representation/ast/nodes/pattern.hpp
+	src/representation/ast/nodes/type.hpp
 
-	src/cir/cir.hpp
-	src/cli/cli.hpp
-	src/cli/cli.cpp
+	src/representation/cir/cir.hpp
 
-	src/hir/hir.hpp
-	src/hir/hir_formatting.cpp
-	src/hir/shared_formatting.cpp
-	src/hir/nodes/definition.hpp
-	src/hir/nodes/expression.hpp
-	src/hir/nodes/pattern.hpp
-	src/hir/nodes/type.hpp
+	src/representation/hir/hir.hpp
+	src/representation/hir/hir_formatting.cpp
+	src/representation/hir/shared_formatting.cpp
+	src/representation/hir/nodes/definition.hpp
+	src/representation/hir/nodes/expression.hpp
+	src/representation/hir/nodes/pattern.hpp
+	src/representation/hir/nodes/type.hpp
 
-	src/language/configuration.hpp
+	src/representation/lir/lir.hpp
 
-	src/lexer/lexer.cpp
-	src/lexer/lexer.hpp
-	src/lexer/lexer_test.cpp
-	src/lexer/token.hpp
-	src/lexer/token_formatting.cpp
+	src/representation/token/token.hpp
+	src/representation/token/token_formatting.cpp
 
-	src/lir/lir.hpp
+	src/representation/mir/mir.hpp
+	src/representation/mir/mir_formatting.cpp
+	src/representation/mir/nodes/definition.hpp
+	src/representation/mir/nodes/expression.hpp
+	src/representation/mir/nodes/pattern.hpp
+	src/representation/mir/nodes/type.hpp
 
-	src/mir/mir.hpp
-	src/mir/mir_formatting.cpp
-	src/mir/nodes/definition.hpp
-	src/mir/nodes/expression.hpp
-	src/mir/nodes/pattern.hpp
-	src/mir/nodes/type.hpp
+	src/phase/desugar/desugar.hpp
+	src/phase/desugar/desugar.cpp
+	src/phase/desugar/desugaring_internals.hpp
+	src/phase/desugar/desugar_definition.cpp
+	src/phase/desugar/desugar_expression.cpp
+	src/phase/desugar/desugar_pattern.cpp
+	src/phase/desugar/desugar_type.cpp
 
-	src/parser/parser.cpp
-	src/parser/parser.hpp
-	src/parser/parser_internals.cpp
-	src/parser/parser_internals.hpp
-	src/parser/parser_test.cpp
-	src/parser/parse_expression.cpp
-	src/parser/parse_pattern.cpp
-	src/parser/parse_type.cpp
+	src/phase/lex/lex.cpp
+	src/phase/lex/lex.hpp
+	src/phase/lex/lexer_test.cpp
+
+	src/phase/parse/parse.cpp
+	src/phase/parse/parse.hpp
+	src/phase/parse/parser_internals.cpp
+	src/phase/parse/parser_internals.hpp
+	src/phase/parse/parser_test.cpp
+	src/phase/parse/parse_expression.cpp
+	src/phase/parse/parse_pattern.cpp
+	src/phase/parse/parse_type.cpp
+
+	src/phase/reify/expression_reification.cpp
+	src/phase/reify/pattern_reification.cpp
+	src/phase/reify/reify.cpp
+	src/phase/reify/reify.hpp
+	src/phase/reify/reification_internals.cpp
+	src/phase/reify/reification_internals.hpp
+	src/phase/reify/type_reification.cpp
+
+	src/phase/resolve/constraint.cpp
+	src/phase/resolve/definition_resolution.cpp
+	src/phase/resolve/expression_resolution.cpp
+	src/phase/resolve/method.cpp
+	src/phase/resolve/namespace_lookup.cpp
+	src/phase/resolve/pattern_resolution.cpp
+	src/phase/resolve/resolve.cpp
+	src/phase/resolve/resolve.hpp
+	src/phase/resolve/resolution_internals.cpp
+	src/phase/resolve/resolution_internals.hpp
+	src/phase/resolve/scope.cpp
+	src/phase/resolve/template_instantiation.cpp
+	src/phase/resolve/type_resolution.cpp
+	src/phase/resolve/unification.cpp
 
 	src/project/project.cpp
 	src/project/project.hpp
 
-	src/reification/expression_reification.cpp
-	src/reification/pattern_reification.cpp
-	src/reification/reification.cpp
-	src/reification/reification.hpp
-	src/reification/reification_internals.cpp
-	src/reification/reification_internals.hpp
-	src/reification/type_reification.cpp
+	src/cli/cli.hpp
+	src/cli/cli.cpp
 
-	src/resolution/constraint.cpp
-	src/resolution/definition_resolution.cpp
-	src/resolution/expression_resolution.cpp
-	src/resolution/method.cpp
-	src/resolution/namespace_lookup.cpp
-	src/resolution/pattern_resolution.cpp
-	src/resolution/resolution.cpp
-	src/resolution/resolution.hpp
-	src/resolution/resolution_internals.cpp
-	src/resolution/resolution_internals.hpp
-	src/resolution/scope.cpp
-	src/resolution/template_instantiation.cpp
-	src/resolution/type_resolution.cpp
-	src/resolution/unification.cpp
+	src/language/configuration.hpp
 
 	src/tests/tests.cpp
 	src/tests/tests.hpp
