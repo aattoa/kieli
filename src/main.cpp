@@ -2,16 +2,16 @@
 #include "utl/color.hpp"
 #include "utl/timer.hpp"
 
-#include "lexer/lexer.hpp"
+#include "phase/lex/lex.hpp"
 
-#include "parser/parser.hpp"
-#include "parser/parser_internals.hpp"
+#include "phase/parse/parse.hpp"
+#include "phase/parse/parser_internals.hpp"
 
-#include "ast/ast.hpp"
-#include "ast/lower/lower.hpp"
+#include "representation/ast/ast.hpp"
+#include "phase/desugar/desugar.hpp"
 
-#include "resolution/resolution.hpp"
-#include "reification/reification.hpp"
+#include "phase/resolve/resolve.hpp"
+#include "phase/reify/reify.hpp"
 
 #include "vm/bytecode.hpp"
 #include "vm/virtual_machine.hpp"
@@ -34,7 +34,7 @@ namespace {
 
 
     [[nodiscard]]
-    consteval auto generic_repl(void (*f)(utl::Source)) {
+    consteval auto generic_repl(void(*f)(compiler::Lex_result&&)) {
         return [=] {
             for (;;) {
                 std::string string;
@@ -42,16 +42,15 @@ namespace {
                 fmt::print(" >>> ");
                 std::getline(std::cin, string);
 
-                if (string.empty()) {
+                if (string.empty())
                     continue;
-                }
-                else if (string == "q") {
+                else if (string == "q")
                     break;
-                }
 
                 try {
                     utl::Source source { utl::Source::Mock_tag { "repl" }, std::move(string) };
-                    f(std::move(source));
+                    compiler::Program_string_pool string_pool;
+                    f(compiler::lex({ .source = std::move(source), .string_pool = string_pool }));
                 }
                 catch (utl::diagnostics::Error const& error) {
                     std::cerr << error.what() << "\n\n";
@@ -64,39 +63,33 @@ namespace {
     }
 
     [[maybe_unused]]
-    constexpr auto lexer_repl = generic_repl([](utl::Source source) {
-        compiler::Program_string_pool string_pool;
-        fmt::print("Tokens: {}\n", compiler::lex(std::move(source), string_pool).tokens);
+    constexpr auto lexer_repl = generic_repl([](compiler::Lex_result&& lex_result) {
+        fmt::print("Tokens: {}\n", lex_result.tokens);
     });
 
     [[maybe_unused]]
-    constexpr auto expression_parser_repl = generic_repl([](utl::Source source) {
-        compiler::Program_string_pool string_pool;
-        Parse_context context { compiler::lex(std::move(source), string_pool) };
+    constexpr auto expression_parser_repl = generic_repl([](compiler::Lex_result&& lex_result) {
+        Parse_context context { std::move(lex_result) };
 
         if (auto result = parse_expression(context)) {
-            fmt::print("Result: {}\n", result);
-
-            if (!context.pointer->source_view.string.empty()) {
-                fmt::print("Remaining input: '{}'\n", context.pointer->source_view.string.data());
-            }
+            fmt::println("Result: {}", result);
+            if (!context.pointer->source_view.string.empty())
+                fmt::println("Remaining input: '{}'", context.pointer->source_view.string.data());
         }
         else {
-            fmt::print("No parse\n");
+            fmt::println("No parse");
         }
     });
 
     [[maybe_unused]]
-    constexpr auto program_parser_repl = generic_repl([](utl::Source source) {
-        compiler::Program_string_pool string_pool;
-        auto parse_result = compiler::parse(compiler::lex(std::move(source), string_pool));
-        fmt::print("{}\n", parse_result.module);
+    constexpr auto program_parser_repl = generic_repl([](compiler::Lex_result&& lex_result) {
+        auto parse_result = compiler::parse(std::move(lex_result));
+        fmt::println("{}", parse_result.module);
     });
 
     [[maybe_unused]]
-    constexpr auto lowering_repl = generic_repl([](utl::Source source) {
-        compiler::Program_string_pool string_pool;
-        auto lower_result = compiler::lower(compiler::parse(compiler::lex(std::move(source), string_pool)));
+    constexpr auto lowering_repl = generic_repl([](compiler::Lex_result&& lex_result) {
+        auto lower_result = compiler::desugar(compiler::parse(std::move(lex_result)));
         fmt::print("{}\n\n", utl::formatting::delimited_range(lower_result.module.definitions, "\n\n"));
     });
 
@@ -222,10 +215,15 @@ auto main(int argc, char const** argv) -> int try {
         using namespace compiler;
 
         utl::Source debug_source { (std::filesystem::current_path().parent_path() / "sample-project" / "src" / "main.kieli").string() };
-        Program_string_pool debug_string_pool;
 
-        constexpr auto pipeline = utl::compose(&reify, &resolve, &lower, &parse, &lex);
-        (void)pipeline(std::move(debug_source), debug_string_pool, utl::diagnostics::Builder::Configuration {});
+        Program_string_pool debug_string_pool;
+        compiler::Lex_arguments lex_arguments {
+            .source      = std::move(debug_source),
+            .string_pool = debug_string_pool
+        };
+
+        constexpr auto pipeline = utl::compose(&reify, &resolve, &desugar, &parse, &lex);
+        (void)pipeline(std::move(lex_arguments));
     }
 
     if (cli::types::Str const* const name = options["repl"]) {
