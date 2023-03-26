@@ -2,26 +2,20 @@
 #include "utl/color.hpp"
 #include "utl/timer.hpp"
 
-#include "phase/lex/lex.hpp"
+#include "language/configuration.hpp"
+#include "project/project.hpp"
+#include "tests/tests.hpp"
+#include "cli/cli.hpp"
 
+#include "phase/lex/lex.hpp"
 #include "phase/parse/parse.hpp"
 #include "phase/parse/parser_internals.hpp"
-
-#include "representation/ast/ast.hpp"
 #include "phase/desugar/desugar.hpp"
-
 #include "phase/resolve/resolve.hpp"
 #include "phase/reify/reify.hpp"
 
 #include "vm/virtual_machine.hpp"
 #include "vm/vm_formatting.hpp"
-
-#include "tests/tests.hpp"
-
-#include "cli/cli.hpp"
-
-#include "language/configuration.hpp"
-#include "project/project.hpp"
 
 
 namespace {
@@ -68,6 +62,7 @@ namespace {
 
     [[maybe_unused]]
     constexpr auto expression_parser_repl = generic_repl([](compiler::Lex_result&& lex_result) {
+        ast::Node_context repl_context;
         Parse_context context { std::move(lex_result) };
 
         if (auto result = parse_expression(context)) {
@@ -116,9 +111,8 @@ auto main(int argc, char const** argv) -> int try {
 
     utl::Logging_timer execution_timer {
         [&options](utl::Logging_timer::Duration const elapsed) {
-            if (options["time"]) {
+            if (options["time"])
                 fmt::print("Total execution time: {}\n", elapsed);
-            }
         }
     };
 
@@ -178,22 +172,16 @@ auto main(int argc, char const** argv) -> int try {
     }
 
     if (cli::types::Str const* const name = options["repl"]) {
-        if (*name == "lex") {
+        if (*name == "lex")
             lexer_repl();
-        }
-        else if (*name == "expr") {
-            ast::Node_context repl_context;
+        else if (*name == "expr")
             expression_parser_repl();
-        }
-        else if (*name == "prog") {
+        else if (*name == "prog")
             program_parser_repl();
-        }
-        else if (*name == "low") {
+        else if (*name == "low")
             lowering_repl();
-        }
-        else {
+        else
             utl::abort("Unrecognized repl name");
-        }
     }
 }
 
@@ -207,6 +195,6 @@ catch (std::exception const& exception) {
     error_stream() << exception.what() << '\n';
 }
 catch (...) {
-    error_stream() << "Caught unrecognized non-standard exception\n";
+    error_stream() << "Caught unrecognized exception\n";
     throw;
 }

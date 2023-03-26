@@ -11,25 +11,23 @@ namespace {
 
         template <class T>
         auto operator()(ast::expression::Literal<T> const& literal) -> hir::Expression::Variant {
-            return literal;
+            return hir::expression::Literal<T> { literal.value };
         }
         auto operator()(ast::expression::Array_literal const& literal) -> hir::Expression::Variant {
             return hir::expression::Array_literal {
                 .elements = utl::map(context.desugar(), literal.elements)
             };
         }
-        auto operator()(ast::expression::Self const& self) -> hir::Expression::Variant {
-            return self;
+        auto operator()(ast::expression::Self const&) -> hir::Expression::Variant {
+            return hir::expression::Self {};
         }
         auto operator()(ast::expression::Variable const& variable) -> hir::Expression::Variant {
             return hir::expression::Variable {
-                .name = context.desugar(variable.name)
-            };
+                .name = context.desugar(variable.name) };
         }
         auto operator()(ast::expression::Tuple const& tuple) -> hir::Expression::Variant {
             return hir::expression::Tuple {
-                .fields = utl::map(context.desugar(), tuple.fields)
-            };
+                .fields = utl::map(context.desugar(), tuple.fields) };
         }
         auto operator()(ast::expression::Conditional const& conditional) -> hir::Expression::Variant {
             utl::Wrapper<hir::Expression> false_branch
@@ -190,30 +188,23 @@ namespace {
                 .name               = context.desugar(application.name)
             };
         }
-        auto operator()(ast::expression::Member_access_chain const& chain) -> hir::Expression::Variant {
-            using AST_chain = ast::expression::Member_access_chain;
-            using HIR_chain = hir::expression::Member_access_chain;
-
-            auto const desugar_accessor = [this](AST_chain::Accessor const& accessor) {
-                return HIR_chain::Accessor {
-                    .value = std::visit<HIR_chain::Accessor::Variant>(utl::Overload {
-                        [](AST_chain::Tuple_field const& field) {
-                            return HIR_chain::Tuple_field {.index = field.index };
-                        },
-                        [](AST_chain::Struct_field const& field) {
-                            return HIR_chain::Struct_field {.identifier = field.identifier };
-                        },
-                        [this](AST_chain::Array_index const& index) {
-                            return HIR_chain::Array_index {.expression = context.desugar(index.expression) };
-                        }
-                    }, accessor.value),
-                    .source_view = accessor.source_view
-                };
+        auto operator()(ast::expression::Struct_field_access const& access) -> hir::Expression::Variant {
+            return hir::expression::Struct_field_access {
+                .base_expression = context.desugar(access.base_expression),
+                .field_name      = access.field_name
             };
-
-            return hir::expression::Member_access_chain {
-                .accessors       = utl::map(desugar_accessor, chain.accessors),
-                .base_expression = context.desugar(chain.base_expression)
+        }
+        auto operator()(ast::expression::Tuple_field_access const& access) -> hir::Expression::Variant {
+            return hir::expression::Tuple_field_access {
+                .base_expression         = context.desugar(access.base_expression),
+                .field_index             = access.field_index,
+                .field_index_source_view = access.field_index_source_view
+            };
+        }
+        auto operator()(ast::expression::Array_index_access const& access) -> hir::Expression::Variant {
+            return hir::expression::Array_index_access {
+                .base_expression  = context.desugar(access.base_expression),
+                .index_expression = context.desugar(access.index_expression),
             };
         }
         auto operator()(ast::expression::Method_invocation const& invocation) -> hir::Expression::Variant {

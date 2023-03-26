@@ -9,26 +9,22 @@ namespace utl {
 
     struct Safe_integer_error : std::exception {};
 
-    struct Safe_integer_out_of_range final : Safe_integer_error {
+    template <Metastring message>
+    struct Stateless_safe_integer_error : Safe_integer_error {
+        [[nodiscard]]
         auto what() const noexcept -> char const* override {
-            return "utl::Safe_integer out of range";
+            return message.view().data();
         }
     };
-    struct Safe_integer_overflow final : Safe_integer_error {
-        auto what() const noexcept -> char const* override {
-            return "utl::Safe_integer overflow";
-        }
-    };
-    struct Safe_integer_underflow final : Safe_integer_error {
-        auto what() const noexcept -> char const* override {
-            return "utl::Safe_integer underflow";
-        }
-    };
-    struct Safe_integer_division_by_zero final : Safe_integer_error {
-        auto what() const noexcept -> char const* override {
-            return "utl::Safe_integer division by zero";
-        }
-    };
+
+    struct Safe_integer_out_of_range final
+        : Stateless_safe_integer_error<"utl::Safe_integer out of range"> {};
+    struct Safe_integer_overflow final
+        : Stateless_safe_integer_error<"utl::Safe_integer overflow"> {};
+    struct Safe_integer_underflow final
+        : Stateless_safe_integer_error<"utl::Safe_integer underflow"> {};
+    struct Safe_integer_division_by_zero final
+        : Stateless_safe_integer_error<"utl::Safe_integer division by zero"> {};
 
 
     // Overflow & underflow detection logic for addition, subtraction, multiplication, and division
@@ -55,17 +51,13 @@ namespace utl {
 
     template <std::integral T> [[nodiscard]]
     constexpr auto would_multiplication_overflow(T const a, T const b) noexcept -> bool {
-        return b != 0
-            ? ((b > 0) && (a > 0) && (a > std::numeric_limits<T>::max() / b)) ||
-              ((b < 0) && (a < 0) && (a < std::numeric_limits<T>::max() / b))
-            : false;
+        return b != 0 && (((b > 0) && (a > 0) && (a > std::numeric_limits<T>::max() / b)) ||
+                          ((b < 0) && (a < 0) && (a < std::numeric_limits<T>::max() / b)));
     }
     template <std::integral T> [[nodiscard]]
     constexpr auto would_multiplication_underflow(T const a, T const b) noexcept -> bool {
-        return b != 0
-            ? ((b > 0) && (a < 0) && (a < std::numeric_limits<T>::min() / b)) ||
-              ((b < 0) && (a > 0) && (a > std::numeric_limits<T>::min() / b))
-            : false;
+        return b != 0 && (((b > 0) && (a < 0) && (a < std::numeric_limits<T>::min() / b)) ||
+                          ((b < 0) && (a > 0) && (a > std::numeric_limits<T>::min() / b)));
     }
 
     template <std::integral T> [[nodiscard]]
@@ -91,7 +83,7 @@ namespace utl {
         Safe_integer() noexcept = default;
 
         static constexpr auto make_unchecked(std::integral auto const value) noexcept -> Safe_integer {
-            assert(std::in_range<T>(value)); // Only checked in debug mode
+            assert(std::in_range<T>(value));
             Safe_integer result;
             result.value = static_cast<T>(value);
             return result;
@@ -100,9 +92,8 @@ namespace utl {
         /* implicit */ constexpr Safe_integer(std::integral auto const value)
             : value { static_cast<T>(value) }
         {
-            if (!std::in_range<T>(value)) [[unlikely]] {
+            if (!std::in_range<T>(value)) [[unlikely]]
                 throw Safe_integer_out_of_range {};
-            }
         }
 
         template <std::integral U> [[nodiscard]]
@@ -119,12 +110,11 @@ namespace utl {
         }
 
         constexpr auto operator+=(Safe_integer const other) -> Safe_integer& {
-            if (would_addition_overflow(value, other.value)) [[unlikely]] {
+            if (would_addition_overflow(value, other.value)) [[unlikely]]
                 throw Safe_integer_overflow {};
-            }
-            if (would_addition_underflow(value, other.value)) [[unlikely]] {
+            if (would_addition_underflow(value, other.value)) [[unlikely]]
                 throw Safe_integer_underflow {};
-            }
+
             value += other.value;
             return *this;
         }
@@ -134,12 +124,11 @@ namespace utl {
         }
 
         constexpr auto operator-=(Safe_integer const other) -> Safe_integer& {
-            if (would_subtraction_overflow(value, other.value)) [[unlikely]] {
+            if (would_subtraction_overflow(value, other.value)) [[unlikely]]
                 throw Safe_integer_overflow {};
-            }
-            if (would_subtraction_underflow(value, other.value)) [[unlikely]] {
+            if (would_subtraction_underflow(value, other.value)) [[unlikely]]
                 throw Safe_integer_underflow {};
-            }
+
             value -= other.value;
             return *this;
         }
@@ -149,12 +138,11 @@ namespace utl {
         }
 
         constexpr auto operator*=(Safe_integer const other) -> Safe_integer& {
-            if (would_multiplication_overflow(value, other.value)) [[unlikely]] {
+            if (would_multiplication_overflow(value, other.value)) [[unlikely]]
                 throw Safe_integer_overflow {};
-            }
-            if (would_multiplication_underflow(value, other.value)) [[unlikely]] {
+            if (would_multiplication_underflow(value, other.value)) [[unlikely]]
                 throw Safe_integer_underflow {};
-            }
+
             value *= other.value;
             return *this;
         }
@@ -164,12 +152,11 @@ namespace utl {
         }
 
         constexpr auto operator/=(Safe_integer const other) -> Safe_integer& {
-            if (other.value == 0) [[unlikely]] {
+            if (other.value == 0) [[unlikely]]
                 throw Safe_integer_division_by_zero {};
-            }
-            if (would_division_overflow(value, other.value)) [[unlikely]] {
+            if (would_division_overflow(value, other.value)) [[unlikely]]
                 throw Safe_integer_overflow {};
-            }
+
             value /= other.value;
             return *this;
         }
@@ -179,9 +166,9 @@ namespace utl {
         }
 
         constexpr auto operator%=(Safe_integer const other) -> Safe_integer& {
-            if (would_division_overflow(value, other.value)) [[unlikely]] {
+            if (would_division_overflow(value, other.value)) [[unlikely]]
                 throw Safe_integer_overflow {};
-            }
+
             value %= other.value;
             return *this;
         }
@@ -191,9 +178,9 @@ namespace utl {
         }
 
         constexpr auto operator++() -> Safe_integer& {
-            if (would_increment_overflow(value)) [[unlikely]] {
+            if (would_increment_overflow(value)) [[unlikely]]
                 throw Safe_integer_overflow {};
-            }
+
             ++value;
             return *this;
         }
@@ -204,9 +191,9 @@ namespace utl {
         }
 
         constexpr auto operator--() -> Safe_integer& {
-            if (would_decrement_underflow(value)) [[unlikely]] {
+            if (would_decrement_underflow(value)) [[unlikely]]
                 throw Safe_integer_underflow {};
-            }
+
             --value;
             return *this;
         }

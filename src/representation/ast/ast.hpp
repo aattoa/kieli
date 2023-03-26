@@ -37,19 +37,13 @@ namespace ast {
 
         using Variant = std::variant<Concrete, Parameterized>;
 
-        Variant         value;
+        Variant          value;
         utl::Source_view source_view;
 
         [[nodiscard]]
         constexpr auto was_explicitly_specified() const noexcept -> bool {
-            if (auto const* const concrete = std::get_if<Concrete>(&value)) {
-                // Immutability can not be specified explicitly
-                return concrete->is_mutable;
-            }
-            else {
-                // Parameterized mutability is always explicit
-                return true;
-            }
+            auto const* const concrete = std::get_if<Concrete>(&value);
+            return !concrete || concrete->is_mutable;
         }
     };
 
@@ -76,7 +70,7 @@ namespace ast {
     struct Name {
         compiler::Identifier identifier;
         bool                 is_upper = false;
-        utl::Source_view      source_view;
+        utl::Source_view     source_view;
 
         constexpr auto operator==(Name const& other) const noexcept -> bool {
             return identifier == other.identifier;
@@ -94,23 +88,23 @@ namespace ast {
             Mutability,
             Wildcard
         >;
-        Variant             value;
+        Variant            value;
         tl::optional<Name> name;
     };
 
     template <tree_configuration Configuration>
     struct Basic_qualifier {
         tl::optional<std::vector<Basic_template_argument<Configuration>>> template_arguments;
-        Name                                                               name;
-        utl::Source_view                                                    source_view;
+        Name                                                              name;
+        utl::Source_view                                                  source_view;
     };
 
     template <tree_configuration Configuration>
     struct Basic_root_qualifier {
         struct Global {};
         std::variant<
-            std::monostate,                           // id, id::id
-            Global,                                   // ::id
+            std::monostate,                            // id, id::id
+            Global,                                    // ::id
             utl::Wrapper<typename Configuration::Type> // Type::id
         > value;
     };
@@ -148,10 +142,10 @@ namespace ast {
             Mutability_parameter
         >;
 
-        Variant                                               value;
-        Name                                                  name;
+        Variant                                              value;
+        Name                                                 name;
         tl::optional<Basic_template_argument<Configuration>> default_argument;
-        utl::Source_view                                       source_view;
+        utl::Source_view                                     source_view;
     };
 
 
@@ -212,15 +206,15 @@ namespace ast {
     };
 
     struct [[nodiscard]] Import {
-        Module_path                         path;
+        Module_path                        path;
         tl::optional<compiler::Identifier> alias;
     };
 
     struct [[nodiscard]] Module {
-        std::vector<Definition>             definitions;
+        std::vector<Definition>            definitions;
         tl::optional<compiler::Identifier> name;
-        std::vector<Import>                 imports;
-        std::vector<Module_path>            imported_by;
+        std::vector<Import>                imports;
+        std::vector<Module_path>           imported_by;
     };
 
 }

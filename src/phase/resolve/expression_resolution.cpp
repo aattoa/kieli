@@ -292,9 +292,7 @@ namespace {
                     .is_addressable = true,
                 };
             }
-            else {
-                return tl::nullopt;
-            }
+            return tl::nullopt;
         }
 
 
@@ -376,9 +374,8 @@ namespace {
 
         auto operator()(hir::expression::Variable& variable) -> mir::Expression {
             if (variable.name.is_unqualified()) {
-                if (auto local_variable = try_resolve_local_variable_reference(variable.name.primary_name.identifier)) {
+                if (auto local_variable = try_resolve_local_variable_reference(variable.name.primary_name.identifier))
                     return std::move(*local_variable);
-                }
             }
 
             auto const handle_function_reference = [&](utl::Wrapper<Function_info> const info, bool const is_application) -> mir::Expression {
@@ -418,11 +415,9 @@ namespace {
 
         auto operator()(hir::expression::Tuple& tuple) -> mir::Expression {
             mir::expression::Tuple mir_tuple {
-                .fields = utl::map(recurse(), tuple.fields)
-            };
+                .fields = utl::map(recurse(), tuple.fields) };
             mir::type::Tuple mir_tuple_type {
-                .field_types = utl::map(&mir::Expression::type, mir_tuple.fields)
-            };
+                .field_types = utl::map(&mir::Expression::type, mir_tuple.fields) };
             return {
                 .value = std::move(mir_tuple),
                 .type {
@@ -452,9 +447,8 @@ namespace {
             }
 
             tl::optional<utl::Wrapper<mir::Expression>> block_result;
-            if (block.result) {
+            if (block.result)
                 block_result = utl::wrap(recurse(**block.result, &block_scope));
-            }
 
             mir::Type const result_type = block_result.has_value()
                 ? (*block_result)->type
@@ -512,9 +506,8 @@ namespace {
             mir::Pattern pattern = context.resolve_pattern(*let.pattern, scope, space);
             mir::Type    type    = explicit_type.value_or(initializer.type);
 
-            if (!pattern.is_exhaustive_by_itself) {
+            if (!pattern.is_exhaustive_by_itself)
                 context.error(pattern.source_view, { "An inexhaustive pattern can not be used in a let-binding" });
-            }
 
             context.solve(constraint::Type_equality {
                 .constrainer_type = type,
@@ -784,78 +777,69 @@ namespace {
             );
         }
 
-        auto operator()(hir::expression::Member_access_chain& chain) -> mir::Expression {
-            using Chain = hir::expression::Member_access_chain;
+        auto operator()(hir::expression::Struct_field_access& access) -> mir::Expression {
+            mir::Expression       base_expression = recurse(*access.base_expression);
+            mir::Mutability const mutability      = base_expression.mutability;
+            bool            const is_addressable  = base_expression.is_addressable;
 
-            if (chain.accessors.size() == 1) { // FIX
-                mir::Expression       base_expression = recurse(*chain.base_expression);
-                mir::Mutability const mutability      = base_expression.mutability;
-                bool            const is_addressable  = base_expression.is_addressable;
+            mir::Type field_type = context.fresh_general_unification_type_variable(
+                this_expression.source_view);
 
-                mir::Type member_type = context.fresh_general_unification_type_variable(this_expression.source_view);
-
-                return utl::match(
-                    chain.accessors.front().value,
-
-                    [&](Chain::Struct_field const field) -> mir::Expression {
-                        context.solve(constraint::Struct_field {
-                            .struct_type      = base_expression.type,
-                            .field_type       = member_type,
-                            .field_identifier = field.identifier,
-                            .explanation {
-                                chain.accessors.front().source_view,
-                                "Invalid named field access"
-                            }
-                        });
-                        return {
-                            .value = mir::expression::Struct_member_access {
-                                .base_expression    = utl::wrap(std::move(base_expression)),
-                                .member_identifier  = field.identifier,
-                                .member_source_view = chain.accessors.front().source_view
-                            },
-                            .type           = member_type,
-                            .source_view    = this_expression.source_view,
-                            .mutability     = mutability,
-                            .is_addressable = is_addressable,
-                        };
+            context.solve(constraint::Struct_field {
+                .struct_type      = base_expression.type,
+                .field_type       = field_type,
+                .field_identifier = access.field_name.identifier,
+                .explanation {
+                    access.field_name.source_view,
+                    "Invalid named field access"
+                }
+            });
+            return {
+                    .value = mir::expression::Struct_field_access {
+                        .base_expression = utl::wrap(std::move(base_expression)),
+                        .field_name      = access.field_name,
                     },
-                    [&](Chain::Tuple_field const field) -> mir::Expression {
-                        context.solve(constraint::Tuple_field {
-                            .tuple_type  = base_expression.type,
-                            .field_type  = member_type,
-                            .field_index = field.index,
-                            .explanation {
-                                chain.accessors.front().source_view,
-                                "Invalid indexed field access"
-                            }
-                        });
-                        return {
-                            .value = mir::expression::Tuple_member_access {
-                                .base_expression    = utl::wrap(std::move(base_expression)),
-                                .member_index       = field.index,
-                                .member_source_view = chain.accessors.front().source_view
-                            },
-                            .type           = member_type,
-                            .source_view    = this_expression.source_view,
-                            .mutability     = mutability,
-                            .is_addressable = is_addressable
-                        };
-                    },
-                    [](Chain::Array_index&) -> mir::Expression {
-                        utl::todo();
-                    }
-                );
-            }
-            else {
-                utl::todo();
-            }
+                    .type           = field_type,
+                    .source_view    = this_expression.source_view,
+                    .mutability     = mutability,
+                    .is_addressable = is_addressable,
+            };
+        }
+
+        auto operator()(hir::expression::Tuple_field_access& access) -> mir::Expression {
+            mir::Expression       base_expression = recurse(*access.base_expression);
+            mir::Mutability const mutability      = base_expression.mutability;
+            bool            const is_addressable  = base_expression.is_addressable;
+
+            mir::Type field_type = context.fresh_general_unification_type_variable(
+                this_expression.source_view);
+
+            context.solve(constraint::Tuple_field {
+                .tuple_type  = base_expression.type,
+                .field_type  = field_type,
+                .field_index = access.field_index,
+                .explanation {
+                    access.field_index_source_view,
+                    "Invalid indexed field access"
+                }
+            });
+            return {
+                .value = mir::expression::Tuple_field_access {
+                    .base_expression         = utl::wrap(std::move(base_expression)),
+                    .field_index             = access.field_index,
+                    .field_index_source_view = access.field_index_source_view
+                },
+                .type           = field_type,
+                .source_view    = this_expression.source_view,
+                .mutability     = mutability,
+                .is_addressable = is_addressable,
+            };
         }
 
         auto operator()(hir::expression::Sizeof& sizeof_) -> mir::Expression {
             return {
                 .value = mir::expression::Sizeof {
-                    .inspected_type = context.resolve_type(*sizeof_.inspected_type, scope, space)
-                },
+                    .inspected_type = context.resolve_type(*sizeof_.inspected_type, scope, space) },
                 .type           = context.size_type(this_expression.source_view),
                 .source_view    = this_expression.source_view,
                 .mutability     = context.immut_constant(this_expression.source_view),
@@ -979,9 +963,8 @@ namespace {
         }
 
         auto operator()(hir::expression::Self) -> mir::Expression {
-            if (auto self = try_resolve_local_variable_reference(context.self_variable_identifier)) {
+            if (auto self = try_resolve_local_variable_reference(context.self_variable_identifier))
                 return std::move(*self);
-            }
             context.error(this_expression.source_view, {
                 .message   = "'self' can only be used within a method",
                 .help_note = "A method is a function that takes 'self', '&self', or '&mut self' as its first parameter"
@@ -997,6 +980,10 @@ namespace {
             };
         }
 
+
+        auto operator()(hir::expression::Array_index_access&) -> mir::Expression {
+            utl::todo();
+        }
         auto operator()(hir::expression::Loop&) -> mir::Expression {
             utl::todo();
         }

@@ -22,8 +22,7 @@ DIRECTLY_DEFINE_FORMATTER_FOR(ast::Function_argument) {
         context.out(),
         "{}{}",
         value.name.transform("{} = "_format).value_or(""),
-        value.expression
-    );
+        value.expression);
 }
 
 
@@ -33,14 +32,11 @@ DEFINE_FORMATTER_FOR(ast::Function_parameter) {
         "{}{}{}",
         value.pattern,
         value.type.transform(": {}"_format).value_or(""),
-        value.default_value.transform(" = {}"_format).value_or("")
-    );
+        value.default_value.transform(" = {}"_format).value_or(""));
 }
 
 DEFINE_FORMATTER_FOR(ast::Mutability) {
-    return utl::match(
-        value.value,
-
+    return utl::match(value.value,
         [&](ast::Mutability::Concrete const concrete) {
             return !concrete.is_mutable ? context.out() : fmt::format_to(context.out(), "mut ");
         },
@@ -102,54 +98,40 @@ namespace {
             return format(
                 "{} {{ {} }}",
                 initializer.struct_type,
-                initializer.member_initializers.span()
-            );
+                initializer.member_initializers.span());
         }
         auto operator()(ast::expression::Binary_operator_invocation const& invocation) {
             return format("({} {} {})", invocation.left, invocation.op, invocation.right);
         }
-        auto operator()(ast::expression::Member_access_chain const& chain) {
-            using Chain = ast::expression::Member_access_chain;
-
-            format("({}", chain.base_expression);
-            for (Chain::Accessor const& accessor : chain.accessors) {
-                utl::match(
-                    accessor.value,
-
-                    [this](Chain::Tuple_field const& field) {
-                        format(".{}", field.index);
-                    },
-                    [this](Chain::Struct_field const& field) {
-                        format(".{}", field.identifier);
-                    },
-                    [this](Chain::Array_index const& index) {
-                        format(".[{}]", index.expression);
-                    }
-                );
-            }
-            return format(")");
+        auto operator()(ast::expression::Struct_field_access const& access) {
+           return format("{}.{}", access.base_expression, access.field_name);
+        }
+        auto operator()(ast::expression::Tuple_field_access const& access) {
+            return format("{}.{}", access.base_expression, access.field_index);
+        }
+        auto operator()(ast::expression::Array_index_access const& access) {
+            return format("{}.[{}]", access.base_expression, access.index_expression);
         }
         auto operator()(ast::expression::Method_invocation const& invocation) {
             format("{}.{}", invocation.base_expression, invocation.method_name);
-            if (invocation.template_arguments.has_value()) {
+            if (invocation.template_arguments.has_value())
                 format("[{}]", *invocation.template_arguments);
-            }
             return format("({})", invocation.arguments);
         }
         auto operator()(ast::expression::Block const& block) {
             format("{{ ");
-            for (auto const& side_effect : block.side_effects) {
+            for (auto const& side_effect : block.side_effects)
                 format("{}; ", side_effect);
-            }
             return block.result.has_value()
                 ? format("{} }}", *block.result)
                 : format("}}");
         }
         auto operator()(ast::expression::Conditional const& conditional) {
             auto& [condition, true_branch, false_branch] = conditional;
-            return false_branch.has_value()
-                ? format("if {} {} else {}", condition, true_branch, *false_branch)
-                : format("if {} {}", condition, true_branch);
+            format("if {} {}", condition, true_branch);
+            if (false_branch.has_value())
+                format(" else {}", *false_branch);
+            return out;
         }
         auto operator()(ast::expression::Match const& match) {
             return format("match {} {{ {} }}", match.matched_expression, utl::formatting::delimited_range(match.cases, " "));
@@ -172,25 +154,21 @@ namespace {
                 lambda.parameters,
                 lambda.explicit_captures.empty() ? "" : " . ",
                 lambda.explicit_captures,
-                lambda.body
-            );
+                lambda.body);
         }
         auto operator()(ast::expression::Infinite_loop const& loop) {
-            if (loop.label) {
+            if (loop.label)
                 format("{} ", loop.label->identifier);
-            }
             return format("loop {}", loop.body);
         }
         auto operator()(ast::expression::While_loop const& loop) {
-            if (loop.label) {
+            if (loop.label)
                 format("{} ", loop.label->identifier);
-            }
             return format("while {} {}", loop.condition, loop.body);
         }
         auto operator()(ast::expression::For_loop const& loop) {
-            if (loop.label) {
+            if (loop.label)
                 format("{} ", loop.label->identifier);
-            }
             return format("for {} in {} {}", loop.iterator, loop.iterable, loop.body);
         }
         auto operator()(ast::expression::Continue) {
@@ -198,12 +176,10 @@ namespace {
         }
         auto operator()(ast::expression::Break const& break_) {
             format("break");
-            if (break_.label) {
+            if (break_.label)
                 format(" {} loop", *break_.label);
-            }
-            if (break_.result) {
+            if (break_.result)
                 format(" {}", *break_.result);
-            }
             return out;
         }
         auto operator()(ast::expression::Ret const& ret) {
@@ -350,15 +326,13 @@ DEFINE_FORMATTER_FOR(ast::Type) {
 
 
 DEFINE_FORMATTER_FOR(ast::Module) {
-    if (value.name) {
+    if (value.name)
         fmt::format_to(context.out(), "module {}\n", *value.name);
-    }
 
     for (auto& import : value.imports) {
         fmt::format_to(context.out(), "import {}", utl::formatting::delimited_range(import.path.components, "."));
-        if (import.alias) {
+        if (import.alias)
             fmt::format_to(context.out(), " as {}", *import.alias);
-        }
         fmt::format_to(context.out(), "\n");
     }
 

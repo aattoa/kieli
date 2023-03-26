@@ -8,10 +8,10 @@
 namespace mir {
 
     struct Enum_constructor {
-        ast::Name           name;
+        ast::Name          name;
         tl::optional<Type> payload_type;
         tl::optional<Type> function_type;
-        Type                enum_type;
+        Type               enum_type;
     };
 
     namespace expression {
@@ -64,16 +64,15 @@ namespace mir {
             Type                    struct_type;
         };
 
-        struct Struct_member_access {
+        struct Struct_field_access {
             utl::Wrapper<Expression> base_expression;
-            compiler::Identifier    member_identifier;
-            utl::Source_view         member_source_view;
+            ast::Name                field_name;
         };
 
-        struct Tuple_member_access {
+        struct Tuple_field_access {
             utl::Wrapper<Expression> base_expression;
-            utl::Usize               member_index;
-            utl::Source_view         member_source_view;
+            utl::Usize               field_index {};
+            utl::Source_view         field_index_source_view;
         };
 
         struct Function_reference {
@@ -145,8 +144,8 @@ namespace mir {
             expression::Match,
             expression::Local_variable_reference,
             expression::Struct_initializer,
-            expression::Struct_member_access,
-            expression::Tuple_member_access,
+            expression::Struct_field_access,
+            expression::Tuple_field_access,
             expression::Function_reference,
             expression::Direct_invocation,
             expression::Indirect_invocation,

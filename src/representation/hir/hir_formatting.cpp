@@ -15,8 +15,7 @@ DEFINE_FORMATTER_FOR(hir::Function_parameter) {
         "{}: {}{}",
         value.pattern,
         value.type,
-        value.default_value.transform(" = {}"_format).value_or("")
-    );
+        value.default_value.transform(" = {}"_format).value_or(""));
 }
 
 DEFINE_FORMATTER_FOR(hir::Implicit_template_parameter::Tag) {
@@ -29,9 +28,7 @@ DEFINE_FORMATTER_FOR(hir::Implicit_template_parameter) {
         value.classes.empty() ? "{}" : "{}: {}",
         fmt::make_format_args(
             value.tag,
-            utl::formatting::delimited_range(value.classes, " + ")
-        )
-    );
+            utl::formatting::delimited_range(value.classes, " + ")));
 }
 
 
@@ -65,12 +62,10 @@ namespace {
         }
         auto operator()(hir::expression::Break const& break_) {
             format("break");
-            if (break_.label.has_value()) {
+            if (break_.label.has_value())
                 format(" {} loop", *break_.label);
-            }
-            if (break_.result.has_value()) {
+            if (break_.result.has_value())
                 format(" {}", *break_.result);
-            }
             return out;
         }
         auto operator()(hir::expression::Continue const&) {
@@ -78,9 +73,8 @@ namespace {
         }
         auto operator()(hir::expression::Block const& block) {
             format("{{ ");
-            for (auto const& side_effect : block.side_effects) {
+            for (auto const& side_effect : block.side_effects)
                 format("{}; ", side_effect);
-            }
             return format("{}}}", block.result.transform("{} "_format).value_or(""));
         }
         auto operator()(hir::expression::Invocation const& invocation) {
@@ -90,38 +84,24 @@ namespace {
             return format(
                 "{} {{ {} }}",
                 initializer.struct_type,
-                initializer.member_initializers.span()
-            );
+                initializer.member_initializers.span());
         }
         auto operator()(hir::expression::Binary_operator_invocation const& invocation) {
             return format("({} {} {})", invocation.left, invocation.op, invocation.right);
         }
-        auto operator()(hir::expression::Member_access_chain const& chain) {
-            using Chain = hir::expression::Member_access_chain;
-
-            format("({}", chain.base_expression);
-            for (Chain::Accessor const& accessor : chain.accessors) {
-                utl::match(
-                    accessor.value,
-
-                    [this](Chain::Tuple_field const& field) {
-                        format(".{}", field.index);
-                    },
-                    [this](Chain::Struct_field const& field) {
-                        format(".{}", field.identifier);
-                    },
-                    [this](Chain::Array_index const& index) {
-                        format(".[{}]", index.expression);
-                    }
-                );
-            }
-            return format(")");
+        auto operator()(hir::expression::Struct_field_access const& access) {
+            return format("{}.{}", access.base_expression, access.field_name);
+        }
+        auto operator()(hir::expression::Tuple_field_access const& access) {
+            return format("{}.{}", access.base_expression, access.field_index);
+        }
+        auto operator()(hir::expression::Array_index_access const& access) {
+            return format("{}.[{}]", access.base_expression, access.index_expression);
         }
         auto operator()(hir::expression::Method_invocation const& invocation) {
             format("{}.{}", invocation.base_expression, invocation.method_name);
-            if (invocation.template_arguments.has_value()) {
+            if (invocation.template_arguments.has_value())
                 format("[{}]", *invocation.template_arguments);
-            }
             return format("({})", invocation.arguments);
         }
         auto operator()(hir::expression::Conditional const& conditional) {
@@ -129,9 +109,8 @@ namespace {
         }
         auto operator()(hir::expression::Match const& match) {
             format("match {} {{ ", match.matched_expression);
-            for (auto& match_case : match.cases) {
+            for (auto& match_case : match.cases)
                 format("{} -> {}", match_case.pattern, match_case.handler);
-            }
             return format(" }}");
         }
         auto operator()(hir::expression::Template_application const& application) {
@@ -145,8 +124,7 @@ namespace {
                 "let {}{} = {}",
                 let.pattern,
                 let.type.transform(": {}"_format).value_or(""),
-                let.initializer
-            );
+                let.initializer);
         }
         auto operator()(hir::expression::Local_type_alias const& alias) {
             return format("alias {} = {}", alias.identifier, alias.aliased_type);
@@ -253,9 +231,10 @@ namespace {
             return format("{}{}", name.mutability, name.identifier);
         }
         auto operator()(hir::pattern::Constructor const& ctor) {
-            return ctor.payload_pattern.has_value()
-                ? format("ctor {}({})", ctor.constructor_name, ctor.payload_pattern)
-                : format("ctor {}", ctor.constructor_name);
+            format("ctor {}", ctor.constructor_name);
+            if (ctor.payload_pattern.has_value())
+                format("({})", *ctor.payload_pattern);
+            return out;
         }
         auto operator()(hir::pattern::Tuple const& tuple) {
             return format("({})", tuple.field_patterns);

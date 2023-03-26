@@ -483,18 +483,17 @@ namespace {
                 .struct_type  = context.recurse(initializer.struct_type)
             };
         }
-        auto operator()(mir::expression::Struct_member_access const& access) -> R {
-            return mir::expression::Struct_member_access {
-                .base_expression    = context.recurse(access.base_expression),
-                .member_identifier  = access.member_identifier,
-                .member_source_view = access.member_source_view
+        auto operator()(mir::expression::Struct_field_access const& access) -> R {
+            return mir::expression::Struct_field_access {
+                .base_expression = context.recurse(access.base_expression),
+                .field_name      = access.field_name,
             };
         }
-        auto operator()(mir::expression::Tuple_member_access const& access) -> R {
-            return mir::expression::Tuple_member_access {
-                .base_expression    = context.recurse(access.base_expression),
-                .member_index       = access.member_index,
-                .member_source_view = access.member_source_view
+        auto operator()(mir::expression::Tuple_field_access const& access) -> R {
+            return mir::expression::Tuple_field_access {
+                .base_expression         = context.recurse(access.base_expression),
+                .field_index             = access.field_index,
+                .field_index_source_view = access.field_index_source_view
             };
         }
         auto operator()(mir::expression::Move const& move) -> R {
@@ -503,8 +502,6 @@ namespace {
 
         auto operator()(mir::expression::Function_reference const& function) -> R {
             if (function.is_application) {
-                utl::trace();
-
                 auto const& instantiation_info =
                     utl::get(function.info->template_instantiation_info);
 
