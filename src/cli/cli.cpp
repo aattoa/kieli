@@ -44,12 +44,15 @@ namespace {
             , start   { pointer             }
             , stop    { start + span.size() } {}
 
+        [[nodiscard]]
         auto is_finished() const noexcept -> bool {
             return pointer == stop;
         }
+        [[nodiscard]]
         auto current() const noexcept -> std::string_view& {
             return *pointer;
         }
+        [[nodiscard]]
         auto extract() noexcept -> std::string_view& {
             return *pointer++;
         }
@@ -129,9 +132,8 @@ namespace {
 
     template <class T>
     auto extract_value(Parse_context& context) -> tl::optional<T> {
-        if (context.is_finished()) {
+        if (context.is_finished())
             return tl::nullopt;
-        }
 
         auto const view = context.extract();
 
@@ -195,12 +197,9 @@ namespace {
             }
         }
 
-        else if constexpr (std::same_as<T, cli::types::Str>) {
-            return view;
-        }
-
         else {
-            static_assert(utl::always_false<T>);
+            static_assert(std::same_as<T, cli::types::Str>);
+            return view;
         }
     }
 
@@ -382,17 +381,14 @@ cli::Parameter::Name::Name(
 auto cli::Options_description::Option_adder::map_short_to_long(Parameter::Name const& name)
     noexcept -> void
 {
-    if (name.short_form) {
+    if (name.short_form.has_value())
         self->long_forms.add(utl::copy(*name.short_form), utl::copy(name.long_form));
-    }
 }
 
 
 auto cli::Options_description::Option_adder::operator()(
-    Parameter::Name&&               name,
-    tl::optional<std::string_view> description
-)
-    noexcept -> Option_adder
+    Parameter::Name&&              name,
+    tl::optional<std::string_view> description) noexcept -> Option_adder
 {
     map_short_to_long(name);
     self->parameters.push_back({
@@ -404,11 +400,9 @@ auto cli::Options_description::Option_adder::operator()(
 
 template <class T>
 auto cli::Options_description::Option_adder::operator()(
-    Parameter::Name&&               name,
-    Value<T>&&                      value,
-    tl::optional<std::string_view> description
-)
-    noexcept -> Option_adder
+    Parameter::Name&&              name,
+    Value<T>&&                     value,
+    tl::optional<std::string_view> description) noexcept -> Option_adder
 {
     map_short_to_long(name);
     bool const is_defaulted = value.default_value.has_value();
@@ -425,9 +419,7 @@ auto cli::Options_description::Option_adder::operator()(
 auto cli::Options_description::Option_adder::operator()(
     Parameter::Name&&                 name,
     std::vector<Parameter::Variant>&& values,
-    tl::optional<std::string_view>   description
-)
-    noexcept -> Option_adder
+    tl::optional<std::string_view>    description) noexcept -> Option_adder
 {
     map_short_to_long(name);
 
@@ -466,23 +458,20 @@ template auto cli::Options_description::Option_adder::operator()(Parameter::Name
 
 
 namespace {
-
     template <class T>
-    auto get_arg(cli::Options::Argument_proxy& self) -> T* {
+    auto get_arg(cli::Options::Argument_proxy const& self) -> T const* {
         if (self.pointer) {
             switch (self.count) {
             case 0:
                 utl::abort(
                     "Attempted to access value of non-existent "
-                    "argument of nullary cli option --{}"_format(self.name)
-                );
+                    "argument of nullary cli option --{}"_format(self.name));
             case 1:
                 break;
             default:
                 utl::abort(
                     "Attempted to access value of multi-argument "
-                    "cli option --{} without indexing"_format(self.name)
-                );
+                    "cli option --{} without indexing"_format(self.name));
             }
 
             if (T* const pointer = std::get_if<T>(self.pointer)) {
@@ -494,42 +483,38 @@ namespace {
                     "option --{} as {}, but it is {}"_format(
                         self.name,
                         type_description<T>(),
-                        type_description(*self.pointer)
-                    )
-                );
+                        type_description(*self.pointer)));
             }
         }
         else {
             return nullptr;
         }
     }
-
 }
 
 
-cli::Options::Argument_proxy::operator cli::types::Int*() {
+cli::Options::Argument_proxy::operator cli::types::Int const*() const {
     return get_arg<types::Int>(*this);
 }
-cli::Options::Argument_proxy::operator cli::types::Float*() {
+cli::Options::Argument_proxy::operator cli::types::Float const*() const {
     return get_arg<types::Float>(*this);
 }
-cli::Options::Argument_proxy::operator cli::types::Bool*() {
+cli::Options::Argument_proxy::operator cli::types::Bool const*() const {
     return get_arg<types::Bool>(*this);
 }
-cli::Options::Argument_proxy::operator cli::types::Str*() {
+cli::Options::Argument_proxy::operator cli::types::Str const*() const {
     return get_arg<types::Str>(*this);
 }
 
 
-cli::Options::Argument_proxy::operator bool() noexcept {
+cli::Options::Argument_proxy::operator bool() const noexcept {
     return !empty;
 }
 
 
 auto cli::Options::Argument_proxy::operator[](utl::Usize const index) -> Argument_proxy {
-    if (indexed) {
+    if (indexed)
         utl::abort("Attempted to index into an already indexed argument proxy");
-    }
 
     if (index < count) {
         return {
@@ -544,9 +529,7 @@ auto cli::Options::Argument_proxy::operator[](utl::Usize const index) -> Argumen
         utl::abort(
             "The cli option --{} does not have a {} parameter"_format(
                 name,
-                utl::formatting::integer_with_ordinal_indicator(index + 1)
-            )
-        );
+                utl::formatting::integer_with_ordinal_indicator(index + 1)));
     }
 }
 
@@ -563,9 +546,7 @@ auto cli::Options::operator[](std::string_view const name) noexcept -> Argument_
             .empty   = false
         };
     }
-    else {
-        return { .empty = true };
-    }
+    return { .empty = true };
 }
 
 
@@ -576,17 +557,16 @@ DEFINE_FORMATTER_FOR(cli::Options_description) {
 
     for (auto& [name, arguments, description, _] : value.parameters) {
         std::string line;
-        auto out = std::back_inserter(line);
+        auto line_out = std::back_inserter(line);
 
         fmt::format_to(
-            out,
+            line_out,
             "--{}{}",
             name.long_form,
-            name.short_form ? fmt::format(", -{}", *name.short_form) : ""
-        );
+            name.short_form ? fmt::format(", -{}", *name.short_form) : "");
 
         for (auto& argument : arguments) {
-            fmt::format_to(out, " [{}]", std::visit([]<class T>(cli::Value<T> const& value) {
+            fmt::format_to(line_out, " [{}]", std::visit([]<class T>(cli::Value<T> const& value) {
                 return value.name.empty() ? type_description<T>() : value.name;
             }, argument));
         }
@@ -595,15 +575,16 @@ DEFINE_FORMATTER_FOR(cli::Options_description) {
         lines.emplace_back(std::move(line), description);
     }
 
+    auto out = context.out();
+
     for (auto& [names, description] : lines) {
-        fmt::format_to(
-            context.out(),
+        out = fmt::format_to(
+            out,
             "\t{:{}}{}\n",
             names,
             max_length,
-            description ? fmt::format(" : {}", *description) : ""
-        );
+            description ? fmt::format(" : {}", *description) : "");
     }
 
-    return context.out();
+    return out;
 }

@@ -9,7 +9,7 @@ namespace project {
     struct Configuration_key {
         std::string string;
 
-        Configuration_key(std::string&& string) noexcept
+        /* implicit */ Configuration_key(std::string&& string) noexcept
             : string { std::move(string) } {}
 
         [[nodiscard]]
@@ -22,14 +22,13 @@ namespace project {
 
             T value;
             auto const [ptr, ec] = std::from_chars(&string.front(), &string.back(), value);
-            return ec == std::errc {} ? value : tl::optional<T> {};
+            return ec == std::errc {} ? tl::optional<T> { value } : tl::nullopt;
         }
     };
 
 
-    class [[nodiscard]] Configuration :
-        utl::Flatmap<std::string, tl::optional<Configuration_key>, utl::Flatmap_strategy::store_keys>
-    {
+    class [[nodiscard]] Configuration
+        : utl::Flatmap<std::string, tl::optional<Configuration_key>, utl::Flatmap_strategy::store_keys> {
     public:
         Configuration() = default;
 
@@ -44,7 +43,8 @@ namespace project {
 
 
     auto default_configuration() -> Configuration;
+    auto read_configuration()    -> Configuration;
 
-    auto read_configuration() -> Configuration;
+    auto initialize(std::string_view project_name) -> void;
 
 }

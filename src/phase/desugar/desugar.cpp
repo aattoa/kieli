@@ -1,7 +1,6 @@
 #include "utl/utilities.hpp"
 #include "desugar.hpp"
 #include "desugaring_internals.hpp"
-#include "representation/mir/mir.hpp"
 
 
 Desugaring_context::Desugaring_context(
@@ -17,8 +16,8 @@ Desugaring_context::Desugaring_context(
 
 
 auto Desugaring_context::is_within_function() const noexcept -> bool {
-    return current_definition_kind
-        == utl::alternative_index<ast::Definition::Variant, ast::definition::Function>;
+    return current_definition_kind ==
+        utl::alternative_index<ast::Definition::Variant, ast::definition::Function>;
 }
 
 auto Desugaring_context::fresh_name_tag() -> utl::Usize {
