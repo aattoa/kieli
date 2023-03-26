@@ -58,15 +58,17 @@ namespace {
         }
 
         auto operator()(mir::type::Tuple const& tuple) -> cir::Type {
-            auto field_types = tuple.field_types
-                             | ranges::views::transform(recurse())
-                             | ranges::to<std::vector>();
+            auto field_types
+                = tuple.field_types
+                | ranges::views::transform(recurse())
+                | ranges::to<std::vector>();
 
-            auto size = std::transform_reduce(field_types.begin(),
-                                              field_types.end(),
-                                              utl::Safe_usize {},
-                                              std::plus {},
-                                              std::mem_fn(&cir::Type::size));
+            auto size = std::transform_reduce(
+                    field_types.begin(),
+                    field_types.end(),
+                    utl::Safe_usize {},
+                    std::plus {},
+                    std::mem_fn(&cir::Type::size));
 
             return {
                 .value       = wrap_type(cir::type::Tuple { .field_types = std::move(field_types) }),

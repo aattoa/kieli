@@ -148,11 +148,11 @@ namespace {
         auto operator()(mir::expression::Struct_initializer const& initializer) {
             return format("{} {{ {} }}", initializer.struct_type, initializer.initializers);
         }
-        auto operator()(mir::expression::Struct_member_access const& access) {
-            return format("{}.{}", access.base_expression, access.member_identifier);
+        auto operator()(mir::expression::Struct_field_access const& access) {
+            return format("{}.{}", access.base_expression, access.field_name);
         }
-        auto operator()(mir::expression::Tuple_member_access const& access) {
-            return format("{}.{}", access.base_expression, access.member_index);
+        auto operator()(mir::expression::Tuple_field_access const& access) {
+            return format("{}.{}", access.base_expression, access.field_index);
         }
         auto operator()(mir::expression::Direct_invocation const& invocation) {
             operator()(invocation.function);

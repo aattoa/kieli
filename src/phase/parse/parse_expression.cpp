@@ -786,81 +786,62 @@ namespace {
         auto        expression = parse_potential_invocation(context);
 
         if (expression) {
-            std::vector<ast::expression::Member_access_chain::Accessor> accessors;
-
             while (context.try_consume(Token::Type::dot)) {
-                using Chain = ast::expression::Member_access_chain;
-
-                if (auto member_name = parse_lower_name(context)) {
+                if (auto field_name = parse_lower_name(context)) {
                     auto template_arguments = parse_template_arguments(context);
 
                     if (context.try_consume(Token::Type::paren_open)) {
-                        if (!accessors.empty()) {
-                            *expression = ast::Expression {
-                                .value = ast::expression::Member_access_chain {
-                                    std::move(accessors),
-                                    utl::wrap(std::move(*expression))
-                                },
-                                .source_view = make_source_view(anchor, context.pointer - 1)
-                            };
-                            accessors = {}; // Silence warnings, even though a moved-from vector is guaranteed to be empty
-                        }
-
                         auto arguments = extract_arguments(context);
-
                         *expression = ast::Expression {
                             .value = ast::expression::Method_invocation {
                                 .arguments          = std::move(arguments),
                                 .template_arguments = std::move(template_arguments),
                                 .base_expression    = utl::wrap(std::move(*expression)),
-                                .method_name        = *member_name
+                                .method_name        = *field_name
                             },
-                            .source_view = make_source_view(anchor, context.pointer - 1)
+                            .source_view = make_source_view(anchor, context.pointer-1)
                         };
                     }
                     else if (template_arguments.has_value()) {
                         context.error_expected("a parenthesized argument set");
                     }
                     else {
-                        accessors.emplace_back(
-                            Chain::Struct_field { member_name->identifier },
-                            member_name->source_view
-                        );
+                        *expression = ast::Expression {
+                            .value = ast::expression::Struct_field_access {
+                                .base_expression = utl::wrap(std::move(*expression)),
+                                .field_name      = *field_name
+                            },
+                            .source_view = make_source_view(anchor, context.pointer-1)
+                        };
                     }
                 }
-                else if (Token* const member_index = context.try_extract(Token::Type::integer)) {
-                    auto const index = member_index->as_integer();
-                    if (index < 0) {
-                        context.error(member_index->source_view, { "Negative tuple indices are not allowed" });
-                    }
-                    assert(std::in_range<utl::Usize>(index));
-                    accessors.emplace_back(
-                        Chain::Tuple_field { static_cast<utl::Usize>(index) },
-                        member_index->source_view
-                    );
+                else if (Token* const field_index = context.try_extract(Token::Type::integer)) {
+                    auto const index = field_index->as_integer();
+                    if (index < 0)
+                        context.error(field_index->source_view, { "Negative tuple indices are not allowed" });
+                    *expression = ast::Expression {
+                        .value = ast::expression::Tuple_field_access {
+                            .base_expression         = utl::wrap(std::move(*expression)),
+                            .field_index             = utl::safe_cast<utl::Usize>(index),
+                            .field_index_source_view = field_index->source_view
+                        },
+                        .source_view = make_source_view(anchor, context.pointer-1)
+                    };
                 }
                 else if (context.try_consume(Token::Type::bracket_open)) {
-                    auto expression = extract_expression(context);
+                    auto index_expression = extract_expression(context);
                     context.consume_required(Token::Type::bracket_close);
-                    auto const source_view = expression.source_view;
-                    accessors.emplace_back(
-                        Chain::Array_index { utl::wrap(std::move(expression)) },
-                        source_view
-                    );
+                    *expression = ast::Expression {
+                        .value = ast::expression::Array_index_access {
+                            .base_expression = utl::wrap(std::move(*expression)),
+                            .index_expression = utl::wrap(std::move(index_expression))
+                        },
+                        .source_view = make_source_view(anchor, context.pointer-1)
+                    };
                 }
                 else {
                     context.error_expected("a struct member name (a.b), a tuple member index (a.0), or an array index (a.[b])");
                 }
-            }
-
-            if (!accessors.empty()) {
-                *expression = ast::Expression {
-                    .value = ast::expression::Member_access_chain {
-                        std::move(accessors),
-                        utl::wrap(std::move(*expression))
-                    },
-                    .source_view = make_source_view(anchor, context.pointer - 1)
-                };
             }
         }
 

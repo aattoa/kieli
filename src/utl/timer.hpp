@@ -36,8 +36,7 @@ namespace utl {
                     "[{}utl::Logging_timer::~Logging_timer{}]: Total elapsed time: {}\n",
                     Color::purple,
                     Color::white,
-                    duration
-                );
+                    duration);
             }
         } {}
 
@@ -45,12 +44,10 @@ namespace utl {
             : scope_exit_logger { std::move(scope_exit_logger) } {}
 
         ~Basic_logging_timer() {
-            if (scope_exit_logger) {
+            if (scope_exit_logger)
                 scope_exit_logger(Basic_timer<Clock, Duration>::elapsed());
-            }
-            else {
+            else
                 abort("utl::Logging_timer: scope_exit_logger was uninitialized");
-            }
         }
     };
 

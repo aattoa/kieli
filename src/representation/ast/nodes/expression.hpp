@@ -40,7 +40,7 @@ namespace ast {
 
         struct Invocation {
             std::vector<Function_argument> arguments;
-            utl::Wrapper<Expression>        invocable;
+            utl::Wrapper<Expression>       invocable;
         };
 
         struct Struct_initializer {
@@ -54,37 +54,32 @@ namespace ast {
             compiler::Identifier    op;
         };
 
-        struct Member_access_chain {
-            struct Tuple_field {
-                utl::Usize index;
-            };
-            struct Struct_field {
-                compiler::Identifier identifier;
-            };
-            struct Array_index {
-                utl::Wrapper<Expression> expression;
-            };
-            
-            struct Accessor {
-                using Variant = std::variant<Tuple_field, Struct_field, Array_index>;
-                Variant         value;
-                utl::Source_view source_view;
-            };
-
-            std::vector<Accessor>   accessors;
+        struct Struct_field_access {
             utl::Wrapper<Expression> base_expression;
+            Name                     field_name;
+        };
+
+        struct Tuple_field_access {
+            utl::Wrapper<Expression> base_expression;
+            utl::Usize               field_index {};
+            utl::Source_view         field_index_source_view;
+        };
+
+        struct Array_index_access {
+            utl::Wrapper<Expression> base_expression;
+            utl::Wrapper<Expression> index_expression;
         };
 
         struct Method_invocation {
-            std::vector<Function_argument>                arguments;
+            std::vector<Function_argument>               arguments;
             tl::optional<std::vector<Template_argument>> template_arguments;
-            utl::Wrapper<Expression>                       base_expression;
-            Name                                          method_name;
+            utl::Wrapper<Expression>                     base_expression;
+            Name                                         method_name;
         };
 
         struct Conditional {
-            utl::Wrapper<Expression>                condition;
-            utl::Wrapper<Expression>                true_branch;
+            utl::Wrapper<Expression>               condition;
+            utl::Wrapper<Expression>               true_branch;
             tl::optional<utl::Wrapper<Expression>> false_branch;
         };
 
@@ -93,7 +88,7 @@ namespace ast {
                 utl::Wrapper<Pattern>    pattern;
                 utl::Wrapper<Expression> handler;
             };
-            std::vector<Case>       cases;
+            std::vector<Case>        cases;
             utl::Wrapper<Expression> matched_expression;
         };
 
@@ -104,12 +99,12 @@ namespace ast {
             };
             utl::Wrapper<Expression> expression;
             utl::Wrapper<Type>       target_type;
-            Kind                    cast_kind = Kind::conversion;
+            Kind                     cast_kind = Kind::conversion;
         };
 
         struct Let_binding {
-            utl::Wrapper<Pattern>             pattern;
-            utl::Wrapper<Expression>          initializer;
+            utl::Wrapper<Pattern>            pattern;
+            utl::Wrapper<Expression>         initializer;
             tl::optional<utl::Wrapper<Type>> type;
         };
 
@@ -120,7 +115,7 @@ namespace ast {
 
         struct Local_type_alias {
             compiler::Identifier identifier;
-            utl::Wrapper<Type>    aliased_type;
+            utl::Wrapper<Type>   aliased_type;
         };
 
         struct Lambda {
@@ -134,27 +129,27 @@ namespace ast {
                 };
                 using Variant = std::variant<By_pattern, By_reference>;
 
-                Variant         value;
+                Variant          value;
                 utl::Source_view source_view;
             };
-            utl::Wrapper<Expression>         body;
+            utl::Wrapper<Expression>        body;
             std::vector<Function_parameter> parameters;
             std::vector<Capture>            explicit_captures;
         };
 
         struct Infinite_loop {
-            tl::optional<Name>     label;
+            tl::optional<Name>       label;
             utl::Wrapper<Expression> body;
         };
 
         struct While_loop {
-            tl::optional<Name>     label;
+            tl::optional<Name>       label;
             utl::Wrapper<Expression> condition;
             utl::Wrapper<Expression> body;
         };
 
         struct For_loop {
-            tl::optional<Name>     label;
+            tl::optional<Name>       label;
             utl::Wrapper<Pattern>    iterator;
             utl::Wrapper<Expression> iterable;
             utl::Wrapper<Expression> body;
@@ -163,7 +158,7 @@ namespace ast {
         struct Continue {};
 
         struct Break {
-            tl::optional<Name>                    label;
+            tl::optional<Name>                     label;
             tl::optional<utl::Wrapper<Expression>> result;
         };
 
@@ -180,7 +175,7 @@ namespace ast {
         };
 
         struct Reference {
-            Mutability              mutability;
+            Mutability               mutability;
             utl::Wrapper<Expression> referenced_expression;
         };
 
@@ -230,7 +225,9 @@ namespace ast {
             expression::Invocation,
             expression::Struct_initializer,
             expression::Binary_operator_invocation,
-            expression::Member_access_chain,
+            expression::Struct_field_access,
+            expression::Tuple_field_access,
+            expression::Array_index_access,
             expression::Method_invocation,
             expression::Conditional,
             expression::Match,

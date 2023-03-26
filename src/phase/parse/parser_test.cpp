@@ -128,14 +128,11 @@ namespace {
         };
 
         "member_access"_test = [] {
-            expression(
-                "().1.2.[???].x.50.y.[0]",
-                "(().1.2.[???].x.50.y.[0])"
-            );
+            expression("().1.2.[???].x.50.y.[0]");
         };
 
         "method"_test = [] {
-            expression("x.y.f()", "(x.y).f()");
+            expression("x.y.f()", "x.y.f()");
         };
 
         "let_binding"_test = [] {
