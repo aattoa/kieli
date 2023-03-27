@@ -28,8 +28,8 @@ namespace {
                 &Context::i8_type, &Context::i16_type, &Context::i32_type, &Context::i64_type,
                 &Context::u8_type, &Context::u16_type, &Context::u32_type, &Context::u64_type,
             });
-            static_assert(integers.size() == static_cast<utl::Usize>(hir::type::Integer::_integer_count));
-            return (context.*integers[static_cast<utl::Usize>(integer)])(this_type.source_view);
+            static_assert(integers.size() == utl::enumerator_count<hir::type::Integer>);
+            return (context.*integers[utl::as_index(integer)])(this_type.source_view);
         }
         auto operator()(hir::type::String&) -> mir::Type {
             return context.string_type(this_type.source_view);

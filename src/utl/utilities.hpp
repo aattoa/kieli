@@ -156,7 +156,28 @@ namespace utl {
 
 
     template <class>
-    constexpr bool always_false = false;
+    struct Always_false : std::false_type {};
+    template <class T>
+    constexpr bool always_false = Always_false<T>::value;
+
+
+    template <class E> requires std::is_enum_v<E> && requires { E::_enumerator_count; }
+    constexpr Usize enumerator_count = static_cast<Usize>(E::_enumerator_count);
+
+    template <class E, E min = E {}, E max = E::_enumerator_count> [[nodiscard]]
+    constexpr auto is_valid_enumerator(E const e) noexcept -> bool
+        requires std::is_enum_v<E>
+    {
+        return min <= e && max > e;
+    }
+
+    [[nodiscard]]
+    constexpr auto as_index(auto const e) noexcept -> Usize
+        requires requires { is_valid_enumerator(e); }
+    {
+        assert(is_valid_enumerator(e));
+        return static_cast<Usize>(e);
+    }
 
 
     constexpr bool compiling_in_debug_mode =
@@ -171,9 +192,8 @@ namespace utl {
 
     constexpr auto filename_without_path(std::string_view path) noexcept -> std::string_view {
         auto const trim_if = [&](char const c) {
-            if (auto const pos = path.find_last_of(c); pos != std::string_view::npos) {
+            if (auto const pos = path.find_last_of(c); pos != std::string_view::npos)
                 path.remove_prefix(pos + 1);
-            }
         };
         trim_if('\\');
         trim_if('/');
@@ -627,10 +647,8 @@ template <utl::hashable T>
 struct std::hash<std::vector<T>> {
     auto operator()(std::vector<T> const& vector) const -> utl::Usize {
         utl::Usize seed = 0;
-
         for (auto& element : vector)
             seed = utl::hash_combine_with_seed(seed, element);
-
         return seed;
     }
 };
@@ -717,14 +735,13 @@ DEFINE_FORMATTER_FOR(utl::Pair<F, S>) {
 
 template <class Range>
 DEFINE_FORMATTER_FOR(utl::formatting::Range_formatter_closure<Range>) {
-    if (!value.range->empty()) {
-        format_to(context.out(), "{}", value.range->front());
+    if (value.range->empty())
+        return context.out();
 
-        for (auto& element : *value.range | ranges::views::drop(1)) {
-            format_to(context.out(), "{}{}", value.delimiter, element);
-        }
-    }
-    return context.out();
+    auto out = format_to(context.out(), "{}", value.range->front());
+    for (auto& element : *value.range | ranges::views::drop(1))
+        out = format_to(out, "{}{}", value.delimiter, element);
+    return out;
 }
 
 template <class T>

@@ -114,7 +114,7 @@ namespace compiler {
 
             end_of_input,
 
-            _token_type_count
+            _enumerator_count
         };
 
         Variant          value;

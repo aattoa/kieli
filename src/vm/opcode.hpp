@@ -59,7 +59,7 @@ namespace vm {
 
         halt,
 
-        _opcode_count
+        _enumerator_count
     };
 
     auto argument_bytes(Opcode) noexcept -> utl::Usize;

@@ -60,8 +60,7 @@ namespace {
 
         "halt"
     });
-
-    static_assert(opcode_strings.size() == static_cast<utl::Usize>(vm::Opcode::_opcode_count));
+    static_assert(opcode_strings.size() == utl::enumerator_count<vm::Opcode>);
 
 
     template <class T>
@@ -173,7 +172,7 @@ namespace {
 
 
 DEFINE_FORMATTER_FOR(vm::Opcode) {
-    return fmt::format_to(context.out(), "{}", opcode_strings[static_cast<utl::Usize>(value)]);
+    return fmt::format_to(context.out(), "{}", opcode_strings[utl::as_index(value)]);
 }
 
 DEFINE_FORMATTER_FOR(vm::Bytecode) {
