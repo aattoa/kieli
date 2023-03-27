@@ -27,8 +27,8 @@ namespace {
             "\033[30m", // black
             "\033[0m" , // white
         });
-        static_assert(color_map.size() == static_cast<utl::Usize>(utl::Color::_color_count));
-        return color_map[static_cast<utl::Usize>(color)];
+        static_assert(color_map.size() == utl::enumerator_count<utl::Color>);
+        return color_map[utl::as_index(color)];
     }
 
 }

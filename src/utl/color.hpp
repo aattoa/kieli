@@ -25,7 +25,7 @@ namespace utl {
         black,
         white,
 
-        _color_count
+        _enumerator_count
     };
 
     auto  enable_color_formatting() noexcept -> void;

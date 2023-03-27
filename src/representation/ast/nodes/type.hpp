@@ -12,7 +12,7 @@ namespace ast {
         enum class Integer {
             i8, i16, i32, i64,
             u8, u16, u32, u64,
-            _integer_count
+            _enumerator_count
         };
 
         template <class>

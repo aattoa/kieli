@@ -118,16 +118,14 @@ DEFINE_FORMATTER_FOR(compiler::Lexical_token::Type) {
 
         "end of input"
     });
-    static_assert(strings.size() == static_cast<utl::Usize>(compiler::Lexical_token::Type::_token_type_count));
-    return fmt::format_to(context.out(), "{}", strings[static_cast<utl::Usize>(value)]);
+    static_assert(strings.size() == utl::enumerator_count<compiler::Lexical_token::Type>);
+    return fmt::format_to(context.out(), "{}", strings[utl::as_index(value)]);
 }
 
 
 DEFINE_FORMATTER_FOR(compiler::Lexical_token) {
-    if (std::holds_alternative<std::monostate>(value.value)) {
+    if (std::holds_alternative<std::monostate>(value.value))
         return fmt::format_to(context.out(), "'{}'", value.type);
-    }
-    else {
+    else
         return fmt::format_to(context.out(), "({}: '{}')", value.type, value.value);
-    }
 }

@@ -282,7 +282,7 @@ namespace {
         halt
     });
 
-    static_assert(instructions.size() == static_cast<utl::Usize>(vm::Opcode::_opcode_count));
+    static_assert(instructions.size() == utl::enumerator_count<vm::Opcode>);
 
 }
 
@@ -299,9 +299,8 @@ auto vm::Virtual_machine::run() -> int {
 
         program.constants.string_pool.reserve(program.constants.string_buffer_views.size());
 
-        for (auto const [offset, length] : program.constants.string_buffer_views) {
+        for (auto const [offset, length] : program.constants.string_buffer_views)
             program.constants.string_pool.emplace_back(program.constants.string_buffer.data() + offset, length);
-        }
 
         utl::release_vector_memory(program.constants.string_buffer_views);
     }
@@ -309,7 +308,7 @@ auto vm::Virtual_machine::run() -> int {
     while (keep_running) {
         auto const opcode = extract_argument<Opcode>();
         //fmt::print(" -> {}\n", opcode);
-        instructions[static_cast<utl::Usize>(opcode)](*this);
+        instructions[utl::as_index(opcode)](*this);
     }
 
     flush_output();
@@ -400,6 +399,6 @@ auto vm::argument_bytes(Opcode const opcode) noexcept -> utl::Usize {
 
         0, // halt
     });
-    static_assert(bytecounts.size() == static_cast<utl::Usize>(Opcode::_opcode_count));
-    return bytecounts[static_cast<utl::Usize>(opcode)];
+    static_assert(bytecounts.size() == utl::enumerator_count<vm::Opcode>);
+    return bytecounts[utl::as_index(opcode)];
 }
