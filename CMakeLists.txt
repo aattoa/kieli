@@ -6,18 +6,18 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 if (MSVC)
     add_compile_options("/W4")
-else()
+else ()
     # Turn up warning levels
     add_compile_options("-Wall" "-Wextra" "-Wpedantic")
     # Turn off unnecessary warnings
     add_compile_options("-Wno-missing-field-initializers"
                         "-Wno-switch")
-endif()
+endif ()
 
 if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
   # Clang doesn't provide sized deallocation functions by default
   add_compile_options(-fsized-deallocation)
-endif()
+endif ()
 
 set(SOURCE_FILES
 	src/main.cpp
@@ -116,6 +116,8 @@ set(SOURCE_FILES
 	src/utl/flatmap.hpp
 	src/utl/noisy.hpp
 	src/utl/pooled_string.hpp
+	src/utl/readline.hpp
+	src/utl/readline.cpp
 	src/utl/safe_integer.hpp
 	src/utl/source.cpp
 	src/utl/source.hpp
@@ -142,3 +144,8 @@ target_precompile_headers(${PROJECT_NAME}
 target_include_directories(${PROJECT_NAME}
     PRIVATE src
     PRIVATE dependencies/include)
+
+if (CMAKE_SYSTEM_NAME STREQUAL "Linux")
+	target_link_libraries(${PROJECT_NAME}
+		PRIVATE readline)
+endif ()

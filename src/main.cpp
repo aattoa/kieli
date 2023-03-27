@@ -1,4 +1,5 @@
 #include "utl/utilities.hpp"
+#include "utl/readline.hpp"
 #include "utl/color.hpp"
 #include "utl/timer.hpp"
 
@@ -26,42 +27,37 @@ namespace {
     }
 
 
-    [[nodiscard]]
-    consteval auto generic_repl(void(*f)(compiler::Lex_result&&)) {
-        return [=] {
-            for (;;) {
-                std::string string;
+    template <void(*f)(compiler::Lex_result&&)>
+    auto generic_repl() {
+        for (;;) {
+            std::string string = utl::readline(" >>> ");
 
-                fmt::print(" >>> ");
-                std::getline(std::cin, string);
+            if (string.empty())
+                continue;
+            else if (string == "q")
+                break;
 
-                if (string.empty())
-                    continue;
-                else if (string == "q")
-                    break;
-
-                try {
-                    utl::Source source { utl::Source::Mock_tag { "repl" }, std::move(string) };
-                    compiler::Program_string_pool string_pool;
-                    f(compiler::lex({ .source = std::move(source), .string_pool = string_pool }));
-                }
-                catch (utl::diagnostics::Error const& error) {
-                    std::cerr << error.what() << "\n\n";
-                }
-                catch (std::exception const& exception) {
-                    error_stream() << exception.what() << "\n\n";
-                }
+            try {
+                utl::Source source { utl::Source::Mock_tag { "repl" }, std::move(string) };
+                compiler::Program_string_pool string_pool;
+                f(compiler::lex({ .source = std::move(source), .string_pool = string_pool }));
             }
-        };
+            catch (utl::diagnostics::Error const& error) {
+                std::cerr << error.what() << "\n\n";
+            }
+            catch (std::exception const& exception) {
+                error_stream() << exception.what() << "\n\n";
+            }
+        }
     }
 
     [[maybe_unused]]
-    constexpr auto lexer_repl = generic_repl([](compiler::Lex_result&& lex_result) {
+    constexpr auto lexer_repl = generic_repl<[](compiler::Lex_result&& lex_result) {
         fmt::print("Tokens: {}\n", lex_result.tokens);
-    });
+    }>;
 
     [[maybe_unused]]
-    constexpr auto expression_parser_repl = generic_repl([](compiler::Lex_result&& lex_result) {
+    constexpr auto expression_parser_repl = generic_repl<[](compiler::Lex_result&& lex_result) {
         ast::Node_context repl_context;
         Parse_context context { std::move(lex_result) };
 
@@ -73,19 +69,19 @@ namespace {
         else {
             fmt::println("No parse");
         }
-    });
+    }>;
 
     [[maybe_unused]]
-    constexpr auto program_parser_repl = generic_repl([](compiler::Lex_result&& lex_result) {
+    constexpr auto program_parser_repl = generic_repl<[](compiler::Lex_result&& lex_result) {
         auto parse_result = compiler::parse(std::move(lex_result));
         fmt::println("{}", parse_result.module);
-    });
+    }>;
 
     [[maybe_unused]]
-    constexpr auto lowering_repl = generic_repl([](compiler::Lex_result&& lex_result) {
-        auto lower_result = compiler::desugar(compiler::parse(std::move(lex_result)));
-        fmt::print("{}\n\n", utl::formatting::delimited_range(lower_result.module.definitions, "\n\n"));
-    });
+    constexpr auto desugaring_repl = generic_repl<[](compiler::Lex_result&& lex_result) {
+        auto desugar_result = compiler::desugar(compiler::parse(std::move(lex_result)));
+        fmt::print("{}\n\n", utl::formatting::delimited_range(desugar_result.module.definitions, "\n\n"));
+    }>;
 
 }
 
@@ -96,15 +92,15 @@ namespace {
 auto main(int argc, char const** argv) -> int try {
     cli::Options_description description;
     description.add_options()
-        ({ "help"   , 'h' },                                   "Show this text"            )
-        ({ "version", 'v' },                                   "Show kieli version"        )
-        ("new"             , cli::string("project name"),      "Create a new kieli project")
-        ("repl"            , cli::string("lex|expr|prog|low"), "Run the given repl"        )
-        ("machine"                                                                         )
-        ("debug"                                                                           )
-        ("nocolor"         ,                                   "Disable colored output"    )
-        ("time"            ,                                   "Print the execution time"  )
-        ("test"            ,                                   "Run all tests"             );
+        ({ "help"   , 'h' },                                       "Show this text"            )
+        ({ "version", 'v' },                                       "Show kieli version"        )
+        ("new"             , cli::string("project name"),          "Create a new kieli project")
+        ("repl"            , cli::string("repl name"),             "Run the given repl"        )
+        ("machine"                                                                             )
+        ("debug"                                                                               )
+        ("nocolor"         ,                                       "Disable colored output"    )
+        ("time"            ,                                       "Print the execution time"  )
+        ("test"            ,                                       "Run all tests"             );
 
     cli::Options options = utl::expect(cli::parse_command_line(argc, argv, description));
 
@@ -171,17 +167,17 @@ auto main(int argc, char const** argv) -> int try {
         (void)pipeline(std::move(lex_arguments));
     }
 
-    if (cli::types::Str const* const name = options["repl"]) {
-        if (*name == "lex")
-            lexer_repl();
-        else if (*name == "expr")
-            expression_parser_repl();
-        else if (*name == "prog")
-            program_parser_repl();
-        else if (*name == "low")
-            lowering_repl();
+    if (std::string_view const* const name = options["repl"]) {
+        utl::Flatmap<std::string_view, void(*)()> const repls { {
+            { "lex"    , lexer_repl             },
+            { "expr"   , expression_parser_repl },
+            { "prog"   , program_parser_repl    },
+            { "desugar", desugaring_repl        },
+        } };
+        if (auto* const repl = repls.find(*name))
+            (*repl)();
         else
-            utl::abort("Unrecognized repl name");
+            throw utl::exception("The repl name must be one of lex, expr, prog, desugar");
     }
 }
 

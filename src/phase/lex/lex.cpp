@@ -39,14 +39,12 @@ namespace {
             noexcept -> utl::Source_view
         {
             utl::Source_position start_pos;
-            for (char const* ptr = start; ptr != view.data(); ++ptr) {
+            for (char const* ptr = start; ptr != view.data(); ++ptr)
                 start_pos.increment_with(*ptr);
-            }
 
             utl::Source_position stop_pos = start_pos;
-            for (char const c : view) {
+            for (char const c : view)
                 stop_pos.increment_with(c);
-            }
 
             return utl::Source_view { view, start_pos, stop_pos };
         }
@@ -78,9 +76,8 @@ namespace {
             return state.pointer == stop;
         }
         auto advance(utl::Usize const distance = 1) noexcept -> void {
-            for (utl::Usize i = 0; i != distance; ++i) {
+            for (utl::Usize i = 0; i != distance; ++i)
                 update_location(*state.pointer++);
-            }
         }
         [[nodiscard]]
         auto current_pointer() const noexcept -> char const* {
@@ -96,9 +93,8 @@ namespace {
             return *state.pointer++;
         }
         auto consume(std::predicate<char> auto const predicate) noexcept -> void {
-            for (; (state.pointer != stop) && predicate(*state.pointer); ++state.pointer) {
+            for (; (state.pointer != stop) && predicate(*state.pointer); ++state.pointer)
                 update_location(*state.pointer);
-            }
         }
         [[nodiscard]]
         auto extract(std::predicate<char> auto const predicate) noexcept -> std::string_view {
@@ -109,15 +105,12 @@ namespace {
         [[nodiscard]]
         auto try_consume(char const c) noexcept -> bool {
             assert(c != '\n');
-
-            if (*state.pointer == c) {
+            bool const eq = current() == c;
+            if (eq) {
                 ++state.column;
                 ++state.pointer;
-                return true;
             }
-            else {
-                return false;
-            }
+            return eq;
         }
         [[nodiscard]]
         auto try_consume(std::string_view const string) noexcept -> bool {
@@ -125,9 +118,8 @@ namespace {
 
             for (char const character : string) {
                 assert(character != '\n');
-                if (*ptr++ != character) {
+                if (*ptr++ != character)
                     return false;
-                }
             }
 
             state.pointer = ptr;
@@ -137,17 +129,17 @@ namespace {
         }
         [[nodiscard]]
         auto success(Token::Type const type, Token::Variant&& value = std::monostate {})
-            noexcept -> std::true_type
+            -> std::true_type
         {
-            tokens.emplace_back(
-                std::move(value),
-                type,
-                utl::Source_view {
-                    std::string_view    { token_start.pointer, state      .pointer },
+            tokens.push_back(Token {
+                .value = value,
+                .type  = type,
+                .source_view = utl::Source_view {
+                    std::string_view     { token_start.pointer, state      .pointer },
                     utl::Source_position { token_start.line   , token_start.column  },
                     utl::Source_position { state      .line   ,       state.column  }
                 }
-            );
+            });
             return {};
         }
 
@@ -163,24 +155,25 @@ namespace {
 
         [[noreturn]]
         auto error(
-            std::string_view                   const view,
+            std::string_view                    const view,
             utl::diagnostics::Message_arguments const arguments) -> void
         {
             diagnostics.emit_simple_error(arguments.add_source_info(source, source_view_for(view)));
         }
         [[noreturn]]
         auto error(
-            char const*                        const location,
+            char const*                         const location,
             utl::diagnostics::Message_arguments const arguments) -> void
         {
-            error({ location, location + 1 }, arguments);
+            assert(location != nullptr);
+            error({ location, location != stop ? location + 1 : location }, arguments);
         }
 
         template <utl::trivial T>
         struct Parse_result {
             std::from_chars_result result;
-            char const* start_position;
-            T private_value;
+            char const*            start_position;
+            T                      private_value;
 
             [[nodiscard]]
             auto get() const noexcept -> T {
@@ -201,14 +194,12 @@ namespace {
             }
         };
 
-        template <utl::trivial T>
-        auto parse(std::same_as<int> auto const... args) noexcept -> Parse_result<T> {
-            static_assert(
-                sizeof...(args) <= 1,
-                "The parameter pack is used for the optional base parameter only"
-            );
+        template <utl::trivial T> [[nodiscard]]
+        auto parse(std::same_as<int> auto const... base) noexcept -> Parse_result<T> {
+            static_assert(sizeof...(base) <= 1,
+                "The parameter pack is used for the optional base parameter only");
             T value;
-            auto const result = std::from_chars(state.pointer, stop, value, args...);
+            auto const result = std::from_chars(state.pointer, stop, value, base...);
             return { result, state.pointer, value };
         }
     };
@@ -402,9 +393,8 @@ namespace {
         });
 
         for (auto [punctuation, punctuation_type] : clashing) {
-            if (view == punctuation) {
+            if (view == punctuation)
                 return context.success(punctuation_type);
-            }
         }
 
         return context.success(Token::Type::operator_name, context.string_pool.identifiers.make(view));
@@ -451,9 +441,8 @@ namespace {
                 return base;
             }
 
-            if (context.try_consume('-')) {
+            if (context.try_consume('-'))
                 context.error(state.pointer - 1, { "'-' must be applied before the base specifier" });
-            }
         }
 
         return base;
@@ -470,21 +459,18 @@ namespace {
                 if (exponent.get() < 0) [[unlikely]] {
                     context.error(context.current_pointer(), {
                         .message   = "Negative exponent",
-                        .help_note = "use a floating point literal if this was intended"
-                    });
+                        .help_note = "use a floating point literal if this was intended" });
                 }
                 else if (utl::digit_count(integer) + exponent.get() >= std::numeric_limits<utl::Isize>::digits10) {
                     context.error(
                         { anchor, exponent.result.ptr },
-                        { "Integer literal is too large after applying scientific coefficient" }
-                    );
+                        { "Integer literal is too large after applying scientific coefficient" });
                 }
 
                 auto value = exponent.get();
                 utl::Isize coefficient = 1;
-                while (value--) {
+                while (value--)
                     coefficient *= 10;
-                }
 
                 integer *= coefficient;
                 context.advance(utl::unsigned_distance(context.current_pointer(), exponent.result.ptr));
@@ -494,7 +480,7 @@ namespace {
             }
             else {
                 // Should be unreachable because there either is an exponent or there isn't
-                utl::abort();
+                utl::unreachable();
             }
         }
     }
@@ -516,15 +502,13 @@ namespace {
                     {
                         .message = "Expected an integer literal after the base-{} specifier",
                         .message_arguments = fmt::make_format_args(base)
-                    }
-                );
+                    });
             }
         }
         else if (integer.is_too_large()) {
             context.error(
                 { state.pointer, integer.result.ptr },
-                { "Integer literal is too large" }
-            );
+                { "Integer literal is too large" });
         }
         else if (!integer.did_parse()) {
             // Should be unreachable because `integer.was_non_numeric`
@@ -538,15 +522,12 @@ namespace {
         auto const is_tuple_member_index = [&] {
             // If the numeric literal is preceded by '.', then don't attempt to
             // parse a float. This allows nested tuple member-access: tuple.0.0
-            return state.pointer != context.start
-                ? state.pointer[-1] == '.'
-                : false;
+            return state.pointer != context.start && state.pointer[-1] == '.';
         };
 
         if (*integer.result.ptr == '.' && !is_tuple_member_index()) {
-            if (base != 10) {
+            if (base != 10)
                 context.error({ state.pointer, 2 }, { "Float literals must be base-10" });
-            }
 
             // Go back to the beginning of the digit sequence
             context.restore(state);
@@ -561,8 +542,7 @@ namespace {
             if (floating.is_too_large()) {
                 context.error(
                     { state.pointer, floating.result.ptr },
-                    { "Floating-point literal is too large" }
-                );
+                    { "Floating-point literal is too large" });
             }
             else {
                 context.advance(utl::unsigned_distance(context.current_pointer(), floating.result.ptr));
@@ -630,9 +610,12 @@ namespace {
             string.clear();
 
             for (;;) {
+                if (context.is_finished())
+                    context.error(anchor, { "Unterminating string literal" });
+
                 switch (char c = context.extract_current()) {
                 case '\0':
-                    context.error(anchor, { "Unterminating string literal" });
+                    utl::abort();
                 case '"':
                     if (!context.tokens.empty() && context.tokens.back().type == Token::Type::string) {
                         // Concatenate adjacent string literals
