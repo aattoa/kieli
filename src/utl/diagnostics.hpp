@@ -7,9 +7,10 @@
 
 namespace utl::diagnostics {
 
-    constexpr Color note_color    = Color::cyan;
-    constexpr Color warning_color = Color::dark_yellow;
-    constexpr Color error_color   = Color::red;
+    constexpr Color line_info_color = Color::dark_cyan;
+    constexpr Color note_color      = Color::cyan;
+    constexpr Color warning_color   = Color::dark_yellow;
+    constexpr Color error_color     = Color::red;
 
 
     enum class Level { normal, error, suppress };

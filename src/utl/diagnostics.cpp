@@ -20,9 +20,8 @@ namespace {
         auto const shortest_prefix_length = ranges::min(lines | ranges::views::transform(prefix_length));
 
         for (auto& line : lines) {
-            if (line.empty()) {
+            if (line.empty())
                 continue;
-            }
             line.remove_prefix(shortest_prefix_length);
             line.remove_suffix(suffix_length(line));
         }
@@ -32,6 +31,9 @@ namespace {
     auto lines_of_occurrence(std::string_view file, std::string_view view)
         -> std::vector<std::string_view>
     {
+        assert(view.data() == nullptr || view.size() <= std::strlen(view.data()));
+        assert(file.data() == nullptr || file.size() <= std::strlen(file.data()));
+
         char const* const file_start = file.data();
         char const* const file_stop  = file_start + file.size();
         char const* const view_start = view.data();
@@ -42,9 +44,8 @@ namespace {
         char const* line_start = view_start;
         for (; line_start != file_start && *line_start != '\n'; --line_start);
 
-        if (*line_start == '\n') {
+        if (*line_start == '\n')
             ++line_start;
-        }
 
         for (char const* pointer = line_start; ; ++pointer) {
             if (pointer == view_stop) {
@@ -75,18 +76,15 @@ namespace {
 
         utl::always_assert(!lines.empty());
 
-        static constexpr auto line_info_color = utl::Color::dark_cyan;
-
         if (location_info) {
             std::string const whitespace(digit_count, ' ');
             fmt::format_to(
                 out,
                 "{}{} --> {}{}\n",
                 whitespace,
-                line_info_color,
+                utl::diagnostics::line_info_color,
                 *location_info,
-                utl::Color::white
-            );
+                utl::Color::white);
         }
 
         utl::Usize const longest_line_length =
@@ -96,12 +94,11 @@ namespace {
             fmt::format_to(
                 out,
                 "\n {}{:<{}} |{} ",
-                line_info_color,
+                utl::diagnostics::line_info_color,
                 line_number++,
                 digit_count,
                 utl::Color::white,
-                line
-            );
+                line);
 
             if (lines.size() > 1) {
                 if (&line == &lines.front()) {
@@ -114,15 +111,13 @@ namespace {
                         utl::Color::dark_grey,
                         line.substr(0, source_view_offset),
                         utl::Color::white,
-                        line.substr(source_view_offset)
-                    );
+                        line.substr(source_view_offset));
                 }
                 else if (&line == &lines.back()) {
                     utl::Usize const source_view_offset =
                         utl::unsigned_distance(
                             line.data(),
-                            section.source_view.string.data() + section.source_view.string.size()
-                        );
+                            section.source_view.string.data() + section.source_view.string.size());
 
                     fmt::format_to(
                         out,
@@ -130,8 +125,7 @@ namespace {
                         line.substr(0, source_view_offset),
                         utl::Color::dark_grey,
                         line.substr(source_view_offset),
-                        utl::Color::white
-                    );
+                        utl::Color::white);
                 }
                 else {
                     fmt::format_to(out, "{}", line);
@@ -146,28 +140,26 @@ namespace {
                     out,
                     "{} {}<",
                     std::string(longest_line_length - line.size(), ' '),
-                    section.note_color.value_or(title_color)
-                );
+                    section.note_color.value_or(title_color));
 
-                if (&line == &lines.back()) {
+                if (&line == &lines.back())
                     fmt::format_to(out, " {}", section.note);
-                }
 
                 fmt::format_to(out, "{}", utl::Color::white);
             }
         }
 
         if (lines.size() == 1) {
-            auto whitespace_length = section.source_view.string.size()
-                                   + digit_count
-                                   + utl::unsigned_distance(
-                                       lines.front().data(),
-                                       section.source_view.string.data()
-                                   );
+            auto whitespace_length
+                = section.source_view.string.size()
+                + digit_count
+                + utl::unsigned_distance(
+                    lines.front().data(),
+                    section.source_view.string.data());
 
-            if (section.source_view.string.empty()) { // only reached if the error occurs at EOI
+            if (section.source_view.string.empty())
+                // Only reached if the error occurred at the end of input
                 ++whitespace_length;
-            }
 
             fmt::format_to(
                 out,
@@ -176,8 +168,7 @@ namespace {
                 std::string(std::max(section.source_view.string.size(), 1_uz), '^'),
                 whitespace_length,
                 section.note,
-                utl::Color::white
-            );
+                utl::Color::white);
         }
     }
 
@@ -192,9 +183,9 @@ namespace {
         auto& [sections, message, message_format_arguments, help_note, help_note_arguments] = arguments;
         auto out = std::back_inserter(diagnostic_string);
 
-        if (!diagnostic_string.empty()) { // There are previous diagnostic messages, insert newlines to separate them
-            fmt::format_to(out, "\n\n\n");
-        }
+        if (!diagnostic_string.empty())
+            // There are previous diagnostic messages, insert newlines to separate them
+            fmt::format_to(out, "\n\n\n\n");
 
         fmt::format_to(out, "{}{}{}: ", title_color, title, utl::Color::white);
         fmt::vformat_to(out, message, message_format_arguments);
@@ -205,9 +196,6 @@ namespace {
         utl::Source const* current_source = nullptr;
 
         for (auto& section : sections) {
-            utl::always_assert(section.source_view.string.empty()
-                            || section.source_view.string.front() != '\0');
-
             tl::optional<std::string> location_info;
 
             if (current_source != &section.source.get()) {
@@ -217,8 +205,7 @@ namespace {
                     "{}:{}-{}",
                     utl::filename_without_path(current_source->name()),
                     section.source_view.start_position,
-                    section.source_view.stop_position
-                );
+                    section.source_view.stop_position);
             }
 
             format_highlighted_section(out, title_color, section, location_info);

@@ -44,9 +44,8 @@ namespace utl {
             noexcept(noexcept(key == std::declval<K const&>())) -> V const*
         {
             for (auto& [k, v] : m_pairs) {
-                if (key == k) {
+                if (key == k)
                     return std::addressof(v);
-                }
             }
             return nullptr;
         }
@@ -88,6 +87,7 @@ namespace utl {
             return ::utl::hash(m_pairs);
         }
 
+        [[nodiscard]]
         auto operator==(Flatmap const&) const noexcept -> bool = default;
     };
 
