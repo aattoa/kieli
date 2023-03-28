@@ -54,12 +54,12 @@ namespace {
 
 
 auto reification::Context::reify_pattern(mir::Pattern const& pattern) -> cir::Pattern {
-    cir::Type pattern_type = reify_type(pattern.type);
+    cir::Type const pattern_type = reify_type(pattern.type);
     return cir::Pattern {
         .value = std::visit(
             Pattern_reification_visitor { *this, pattern, pattern_type.size },
             pattern.value),
-        .type = pattern_type,
+        .type        = pattern_type,
         .source_view = pattern.source_view
     };
 }

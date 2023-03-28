@@ -139,8 +139,11 @@ namespace {
         auto operator()(ast::expression::Type_cast const& cast) {
             return format("({} {} {})", cast.expression, cast.cast_kind, cast.target_type);
         }
-        auto operator()(ast::expression::Let_binding const& binding) {
-            return format("let {}: {} = {}", binding.pattern, binding.type, binding.initializer);
+        auto operator()(ast::expression::Let_binding const& let) {
+            format("let {}", let.pattern);
+            if (let.type.has_value())
+                format(": {}", *let.type);
+            return format(" = {}", let.initializer);
         }
         auto operator()(ast::expression::Conditional_let const& binding) {
             return format("let {} = {}", binding.pattern, binding.initializer);
