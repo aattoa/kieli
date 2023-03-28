@@ -241,8 +241,7 @@ namespace {
             case u16: return format("U16");
             case u32: return format("U32");
             case u64: return format("U64");
-            default:
-                utl::unreachable();
+            default: utl::unreachable();
             }
         }
         auto operator()(mir::type::Floating)         { return format("Float"); }

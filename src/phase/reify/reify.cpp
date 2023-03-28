@@ -1,4 +1,6 @@
 #include "utl/utilities.hpp"
+#include "representation/cir/cir.hpp"
+#include "representation/cir/cir_formatting.hpp"
 #include "reify.hpp"
 #include "reification_internals.hpp"
 
@@ -25,8 +27,7 @@ auto compiler::reify(Resolve_result&& resolve_result) -> Reify_result {
     reification::Context context { std::move(resolve_result.diagnostics), std::move(resolve_result.source) };
 
     for (utl::wrapper auto const function : resolve_result.main_module.functions) {
-        fmt::print("function: {}\n", function->name);
-        reify_function(context, *function);
+        fmt::println("function: {} = {}", function->name, reify_function(context, *function).body);
     }
     for (utl::wrapper auto const function_template : resolve_result.main_module.function_templates) {
         fmt::print("function template: {}\n", function_template->name);
