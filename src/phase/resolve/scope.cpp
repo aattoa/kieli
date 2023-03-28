@@ -35,7 +35,7 @@ namespace {
         binding.has_been_mentioned = identifier.view().front() == '_';
 
         if (auto const it = ranges::find(bindings, identifier, utl::first); it == bindings.end()) {
-            bindings.emplace_back(identifier, std::forward<decltype(binding)>(binding)).second;
+            bindings.emplace_back(identifier, std::forward<decltype(binding)>(binding));
         }
         else {
             // The manual warning level check is not necessary because diagnostics.emit_warning performs the
@@ -73,7 +73,7 @@ resolution::Scope::Scope(Context& context) noexcept
 
 
 auto resolution::Scope::bind_variable(compiler::Identifier const identifier, Variable_binding&& binding) -> void {
-    return add_binding(*context, variable_bindings.container(), identifier, binding, "variable");
+    add_binding(*context, variable_bindings.container(), identifier, binding, "variable");
 }
 auto resolution::Scope::bind_type(compiler::Identifier const identifier, Type_binding&& binding) -> void {
     add_binding(*context, type_bindings.container(), identifier, binding, "type alias");

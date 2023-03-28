@@ -49,21 +49,31 @@ namespace {
             // The parameters must be desugared first in order to collect the implicit template parameters.
 
             std::vector<hir::Function_parameter> parameters;
-            if (function.self_parameter.has_value()) {
+            if (function.self_parameter.has_value())
                 parameters.push_back(desugar_self_parameter(*function.self_parameter, context));
-            }
-            auto explicit_parameters = utl::map(context.desugar(), function.parameters);
-            parameters.insert(parameters.end(),
-                std::move_iterator { explicit_parameters.begin() },
-                std::move_iterator { explicit_parameters.end() });
+
+            ranges::move(
+                ranges::views::transform(function.parameters, context.desugar()),
+                std::back_inserter(parameters));
 
             context.current_function_implicit_template_parameters = nullptr;
+
+            // Convert function bodies defined with shorthand syntax into blocks
+            hir::Expression function_body = context.desugar(function.body);
+            if (!std::holds_alternative<hir::expression::Block>(function_body.value)) {
+                function_body.value = hir::expression::Block {
+                    .result = utl::wrap(hir::Expression {
+                        .value       = std::move(function_body.value),
+                        .source_view = function_body.source_view
+                    })
+                };
+            }
 
             return {
                 .implicit_template_parameters = std::move(implicit_template_parameters),
                 .parameters                   = std::move(parameters),
                 .return_type                  = function.return_type.transform(context.desugar()),
-                .body                         = context.desugar(function.body),
+                .body                         = std::move(function_body),
                 .name                         = function.name,
                 .self_parameter               = function.self_parameter
             };

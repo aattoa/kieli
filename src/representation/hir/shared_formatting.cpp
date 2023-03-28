@@ -9,9 +9,8 @@
 
 template <ast::tree_configuration Configuration>
 DEFINE_FORMATTER_FOR(ast::Basic_template_argument<Configuration>) {
-    if (value.name) {
+    if (value.name)
         fmt::format_to(context.out(), "{} = ", *value.name);
-    }
     return std::visit(utl::Overload {
         [&](ast::Mutability const& mutability) {
             return utl::match(
@@ -54,8 +53,7 @@ DEFINE_FORMATTER_FOR(ast::Basic_qualified_name<Configuration>) {
             out,
             "{}{}::",
             qualifier.name,
-            qualifier.template_arguments ? fmt::format("[{}]", qualifier.template_arguments) : ""
-        );
+            qualifier.template_arguments ? fmt::format("[{}]", qualifier.template_arguments) : "");
     }
 
     return fmt::format_to(out, "{}", value.primary_name.identifier);
@@ -82,27 +80,22 @@ template <ast::tree_configuration Configuration>
 DEFINE_FORMATTER_FOR(ast::Basic_template_parameter<Configuration>) {
     auto out = fmt::format_to(context.out(), "{}", value.name);
 
-    utl::match(
-        value.value,
-
+    utl::match(value.value,
         [&](ast::Basic_template_parameter<Configuration>::Type_parameter const& parameter) {
-            if (!parameter.classes.empty()) {
+            if (!parameter.classes.empty())
                 out = fmt::format_to(out, ": {}", utl::formatting::delimited_range(parameter.classes, " + "));
-            }
         },
         [&](ast::Basic_template_parameter<Configuration>::Value_parameter const& parameter) {
-            if (parameter.type.has_value()) {
+            if (parameter.type.has_value())
                 out = fmt::format_to(out, ": {}", *parameter.type);
-            }
         },
         [&](ast::Basic_template_parameter<Configuration>::Mutability_parameter const&) {
             out = fmt::format_to(out, ": mut");
         }
     );
 
-    if (value.default_argument.has_value()) {
+    if (value.default_argument.has_value())
         out = fmt::format_to(out, " = {}", value.default_argument);
-    }
 
     return out;
 }
@@ -118,8 +111,7 @@ DEFINE_FORMATTER_FOR(ast::definition::Basic_struct_member<Configuration>) {
         "{}{}: {}",
         value.is_public ? "pub " : "",
         value.name,
-        value.type
-    );
+        value.type);
 }
 
 template struct fmt::formatter<ast::definition::Struct::Member>;
@@ -160,14 +152,11 @@ namespace {
     struct Definition_body_formatting_visitor : utl::formatting::Visitor_base {
         auto format_self_parameter(tl::optional<ast::Self_parameter> const& parameter, bool const is_only_parameter) {
             if (parameter.has_value()) {
-                if (parameter->is_reference) {
+                if (parameter->is_reference)
                     format("&");
-                }
                 format("{}self", parameter->mutability);
-
-                if (!is_only_parameter) {
+                if (!is_only_parameter)
                     format(", ");
-                }
             }
         }
 
@@ -176,23 +165,21 @@ namespace {
             format_self_parameter(function.self_parameter, function.parameters.empty());
             format("{})", function.parameters);
             
-            if (function.return_type) {
+            if (function.return_type)
                 format(": {}", *function.return_type);
-            }
             return format(" = {}", function.body);
         }
         auto operator()(hir::definition::Function const& function) {
-            if (!function.implicit_template_parameters.empty()) {
+            if (!function.implicit_template_parameters.empty())
                 format("[{}]", function.implicit_template_parameters);
-            }
+
             format("(");
             format_self_parameter(function.self_parameter, function.parameters.empty());
             format("{})", function.parameters);
 
-            if (function.return_type) {
+            if (function.return_type)
                 format(": {}", *function.return_type);
-            }
-            return format(" = {}", function.body);
+            return format(" {}", function.body);
         }
         template <utl::instance_of<ast::definition::Basic_struct> Structure>
         auto operator()(Structure const& structure) {
@@ -217,8 +204,7 @@ namespace {
                     "fn {}({}): {}\n",
                     signature.name,
                     signature.parameter_types,
-                    signature.return_type
-                );
+                    signature.return_type);
             }
             for (auto& signature : typeclass.function_template_signatures) {
                 format(
@@ -226,26 +212,22 @@ namespace {
                     signature.function_signature.name,
                     signature.template_parameters,
                     signature.function_signature.parameter_types,
-                    signature.function_signature.return_type
-                );
+                    signature.function_signature.return_type);
             }
             for (auto& signature : typeclass.type_signatures) {
                 format(
                     "alias {}{}\n",
                     signature.name,
-                    signature.classes.empty() ? "" : ": {}"_format(utl::formatting::delimited_range(signature.classes, " + "))
-                );
+                    signature.classes.empty() ? "" : ": {}"_format(utl::formatting::delimited_range(signature.classes, " + ")));
             }
             for (auto& signature : typeclass.type_template_signatures) {
                 format(
                     "alias {}{}",
                     signature.type_signature.name,
-                    signature.template_parameters
-                );
+                    signature.template_parameters);
 
-                if (!signature.type_signature.classes.empty()) {
+                if (!signature.type_signature.classes.empty())
                     format(": {}", utl::formatting::delimited_range(signature.type_signature.classes, " + "));
-                }
 
                 format("\n");
             }
@@ -261,8 +243,7 @@ namespace {
             return format(
                 "{} {{\n{}\n}}",
                 implementation.type,
-                utl::formatting::delimited_range(implementation.definitions, "\n\n")
-            );
+                utl::formatting::delimited_range(implementation.definitions, "\n\n"));
         }
         template <utl::instance_of<ast::definition::Basic_instantiation> Instantiation>
         auto operator()(Instantiation const& instantiation) {
@@ -270,8 +251,7 @@ namespace {
                 "{} {} {{\n{}\n}}",
                 instantiation.typeclass,
                 instantiation.self_type,
-                utl::formatting::delimited_range(instantiation.definitions, "\n\n")
-            );
+                utl::formatting::delimited_range(instantiation.definitions, "\n\n"));
         }
         template <class Definition>
         auto operator()(ast::definition::Template<Definition> const& definition_template) {
@@ -286,12 +266,10 @@ DEFINE_FORMATTER_FOR(ast::Basic_definition<Configuration>) {
     return std::visit([&]<class Definition>(Definition const& definition) {
         auto out = fmt::format_to(context.out(), header_name<Definition>);
 
-        if constexpr (requires { definition.name; }) {
+        if constexpr (requires { definition.name; })
             out = fmt::format_to(out, " {}", definition.name);
-        }
-        if constexpr (requires { definition.template_parameters; }) {
+        if constexpr (requires { definition.template_parameters; })
             out = fmt::format_to(out, "{}", definition.template_parameters);
-        }
 
         return Definition_body_formatting_visitor { { out } }(definition);
     }, value.value);

@@ -8,9 +8,8 @@ namespace {
     auto reify_function(reification::Context& context, resolution::Function_info& info) -> cir::Function {
         mir::Function& function = utl::get<mir::Function>(info.value);
 
-        auto const reify_parameter_type = [&](mir::Function_parameter const& parameter) {
-            return context.reify_type(parameter.type);
-        };
+        auto const reify_parameter_type = utl::compose(
+            std::bind_front(&reification::Context::reify_type, &context), &mir::Function_parameter::type);
 
         return cir::Function {
             .parameter_types = utl::map(reify_parameter_type, function.signature.parameters),
@@ -36,9 +35,6 @@ auto compiler::reify(Resolve_result&& resolve_result) -> Reify_result {
             reify_function(context, *instantiation);
         }
     }
-
-    for (auto& [a, b]: context.variable_frame_offsets)
-        fmt::println("{}: {}", a.value, b.get());
 
     utl::todo();
 }

@@ -120,11 +120,10 @@ namespace {
             return format("({} {} {})", cast.expression, cast.cast_kind, cast.target_type);
         }
         auto operator()(hir::expression::Let_binding const& let) {
-            return format(
-                "let {}{} = {}",
-                let.pattern,
-                let.type.transform(": {}"_format).value_or(""),
-                let.initializer);
+            format("let {}", let.pattern);
+            if (let.type.has_value())
+                format(": {}", *let.type);
+            return format(" = {}", let.initializer);
         }
         auto operator()(hir::expression::Local_type_alias const& alias) {
             return format("alias {} = {}", alias.identifier, alias.aliased_type);

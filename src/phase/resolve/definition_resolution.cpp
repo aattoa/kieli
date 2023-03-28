@@ -17,14 +17,13 @@ namespace {
         mir_parameters.reserve(hir_parameters.size());
 
         for (hir::Function_parameter& parameter : hir_parameters) {
-            mir::Type parameter_type =
+            mir::Type const parameter_type =
                 context.resolve_type(parameter.type, signature_scope, home_namespace);
             mir::Pattern parameter_pattern =
                 context.resolve_pattern(parameter.pattern, signature_scope, home_namespace);
 
-            if (!parameter_pattern.is_exhaustive_by_itself) {
+            if (!parameter_pattern.is_exhaustive_by_itself)
                 context.error(parameter_pattern.source_view, { "Inexhaustive function parameter pattern" });
-            }
 
             context.solve(constraint::Type_equality {
                 .constrainer_type = parameter_type,
@@ -39,14 +38,10 @@ namespace {
                 }
             });
 
-            if (parameter.default_value.has_value()) {
+            if (parameter.default_value.has_value())
                 utl::todo();
-            }
 
-            mir_parameters.emplace_back(
-                std::move(parameter_pattern),
-                std::move(parameter_type)
-            );
+            mir_parameters.emplace_back(std::move(parameter_pattern), parameter_type);
         }
 
         return { std::move(signature_scope), std::move(mir_parameters) };
@@ -90,13 +85,12 @@ namespace {
         Context                  & context,
         Scope                      scope) -> void
     {
-        Definition_state_guard state_guard { context, info.state, function.name };
+        Definition_state_guard const state_guard { context, info.state, function.name };
 
-        if (!function.implicit_template_parameters.empty()) {
+        if (!function.implicit_template_parameters.empty())
             utl::todo();
-        }
 
-        auto [signature_scope, parameters] =
+        auto [signature_scope, parameters] = // NOLINT
             resolve_function_parameters(context, std::move(scope), function.parameters, *info.home_namespace);
 
         if (function.return_type.has_value()) {
@@ -131,11 +125,11 @@ namespace {
         hir::definition::Function_template& function_template,
         Context                           & context) -> void
     {
-        Definition_state_guard state_guard { context, template_info.state, function_template.definition.name };
+        Definition_state_guard const state_guard { context, template_info.state, function_template.definition.name };
 
         auto [template_parameter_scope, template_parameters] =
             context.resolve_template_parameters(function_template.parameters, *template_info.home_namespace);
-        auto [signature_scope, function_parameters] =
+        auto [signature_scope, function_parameters] = // NOLINT
             resolve_function_parameters(context, std::move(template_parameter_scope), function_template.definition.parameters, *template_info.home_namespace);
 
         if (function_template.definition.return_type.has_value()) {
@@ -151,7 +145,7 @@ namespace {
                     .signature_scope    = std::move(signature_scope),
                     .unresolved_body    = std::move(function_template.definition.body),
                     .name               = function_template.definition.name,
-                    .self_parameter     = std::move(self_parameter)
+                    .self_parameter     = self_parameter
                 },
                 .template_parameters = std::move(template_parameters)
             };
@@ -246,7 +240,7 @@ namespace {
         Scope constructor_scope = scope.make_child();
 
         for (hir::definition::Enum::Constructor& hir_constructor : enumeration.constructors) {
-            mir::Enum_constructor constructor = std::invoke([&] {
+            mir::Enum_constructor const constructor = std::invoke([&] {
                 if (hir_constructor.payload_type.has_value()) {
                     mir::Type payload_type = context.resolve_type(*hir_constructor.payload_type, constructor_scope, *home_namespace);
                     std::vector<mir::Type> constructor_function_parameter_types;
@@ -293,16 +287,13 @@ namespace {
 auto resolution::Context::resolve_function_signature(Function_info& info)
     -> mir::Function::Signature&
 {
-    if (auto* const function = std::get_if<hir::definition::Function>(&info.value)) {
+    if (auto* const function = std::get_if<hir::definition::Function>(&info.value))
         compute_function_signature(info, *function, *this, Scope { *this });
-    }
 
-    if (auto* const function = std::get_if<Partially_resolved_function>(&info.value)) {
+    if (auto* const function = std::get_if<Partially_resolved_function>(&info.value))
         return function->resolved_signature;
-    }
-    else {
+    else
         return utl::get<mir::Function>(info.value).signature;
-    }
 }
 
 
@@ -311,18 +302,16 @@ auto resolution::Context::resolve_function(utl::Wrapper<Function_info> const wra
 {
     Function_info& info = *wrapped_info;
 
-    if (auto* const function = std::get_if<hir::definition::Function>(&info.value)) {
+    if (auto* const function = std::get_if<hir::definition::Function>(&info.value))
         compute_function_signature(info, *function, *this, Scope { *this });
-    }
 
     if (auto* const function = std::get_if<Partially_resolved_function>(&info.value)) {
-        Definition_state_guard state_guard { *this, info.state, function->name  };
+        Definition_state_guard const state_guard { *this, info.state, function->name  };
 
         info.value = resolve_function_impl(
             *function,
             *this,
-            info.home_namespace
-        );
+            info.home_namespace);
     }
     
     return utl::get<mir::Function>(info.value);
@@ -333,14 +322,13 @@ auto resolution::Context::resolve_struct(utl::Wrapper<Struct_info> const wrapped
     Struct_info& info = *wrapped_info;
 
     if (auto* const structure = std::get_if<hir::definition::Struct>(&info.value)) {
-        Definition_state_guard state_guard { *this, info.state, structure->name };
+        Definition_state_guard const state_guard { *this, info.state, structure->name };
 
         info.value = resolve_struct_impl(
             *structure,
             *this,
             Scope { *this },
-            info.home_namespace
-        );
+            info.home_namespace);
     }
     
     return utl::get<mir::Struct>(info.value);
@@ -351,15 +339,14 @@ auto resolution::Context::resolve_enum(utl::Wrapper<Enum_info> const wrapped_inf
     Enum_info& info = *wrapped_info;
 
     if (auto* const enumeration = std::get_if<hir::definition::Enum>(&info.value)) {
-        Definition_state_guard state_guard { *this, info.state, enumeration->name };
+        Definition_state_guard const state_guard { *this, info.state, enumeration->name };
 
         info.value = resolve_enum_impl(
             *enumeration,
             *this,
             Scope { *this },
             info.home_namespace,
-            info.enumeration_type
-        );
+            info.enumeration_type);
     }
     
     return utl::get<mir::Enum>(info.value);
@@ -370,7 +357,7 @@ auto resolution::Context::resolve_alias(utl::Wrapper<Alias_info> const wrapped_i
     Alias_info& info = *wrapped_info;
 
     if (auto* const alias = std::get_if<hir::definition::Alias>(&info.value)) {
-        Definition_state_guard state_guard { *this, info.state, alias->name };
+        Definition_state_guard const state_guard { *this, info.state, alias->name };
 
         Scope scope { *this };
 
@@ -388,8 +375,8 @@ auto resolution::Context::resolve_typeclass(utl::Wrapper<Typeclass_info> const w
     Typeclass_info& info = *wrapped_info;
 
     if (auto* const hir_typeclass = std::get_if<hir::definition::Typeclass>(&info.value)) {
-        Definition_state_guard state_guard { *this, info.state, hir_typeclass->name };
-        Self_type_guard self_type_guard { *this, self_placeholder_type(info.name.source_view) };
+        Definition_state_guard const state_guard { *this, info.state, hir_typeclass->name };
+        Self_type_guard const self_type_guard { *this, self_placeholder_type(info.name.source_view) };
 
         mir::Typeclass mir_typeclass { .name = hir_typeclass->name };
 
@@ -409,11 +396,10 @@ auto resolution::Context::resolve_typeclass(utl::Wrapper<Typeclass_info> const w
                 mir::Typeclass::Function_signature {
                     .parameters  = utl::map(resolve_with(signature_scope), signature.parameter_types),
                     .return_type = resolve_with(signature_scope)(signature.return_type)
-                }
-            );
+                });
         }
         for (hir::Function_template_signature& signature : hir_typeclass->function_template_signatures) {
-            auto [signature_scope, template_parameters] =
+            auto [signature_scope, template_parameters] = // NOLINT
                 resolve_template_parameters(signature.template_parameters, *info.home_namespace);
 
             mir_typeclass.function_template_signatures.add(
@@ -424,8 +410,7 @@ auto resolution::Context::resolve_typeclass(utl::Wrapper<Typeclass_info> const w
                         .return_type = resolve_with(signature_scope)(signature.function_signature.return_type)
                     },
                     .template_parameters = std::move(template_parameters)
-                }
-            );
+                });
         }
         for (hir::Type_signature& signature : hir_typeclass->type_signatures) {
             Scope signature_scope { *this };
@@ -436,11 +421,10 @@ auto resolution::Context::resolve_typeclass(utl::Wrapper<Typeclass_info> const w
                     .classes = utl::map([&](hir::Class_reference& reference) {
                         return resolve_class_reference(reference, signature_scope, *info.home_namespace);
                     }, signature.classes)
-                }
-            );
+                });
         }
         for (hir::Type_template_signature& signature : hir_typeclass->type_template_signatures) {
-            auto [signature_scope, template_parameters] =
+            auto [signature_scope, template_parameters] = // NOLINT
                 resolve_template_parameters(signature.template_parameters, *info.home_namespace);
 
             mir_typeclass.type_template_signatures.add(
@@ -473,22 +457,20 @@ auto resolution::Context::resolve_implementation(utl::Wrapper<Implementation_inf
         mir::Type self_type = resolve_type(implementation->type, scope, *info.home_namespace);
 
         utl::Wrapper<Namespace> self_type_associated_namespace = std::invoke([&] {
-            if (auto space = associated_namespace_if(self_type)) {
+            if (auto space = associated_namespace_if(self_type))
                 return *space;
-            }
+
             error(self_type.source_view, {
                 .message           = "{} does not have an associated namespace, so it can not be the Self type in an implementation block",
                 .message_arguments = fmt::make_format_args(self_type)
             });
         });
 
-        Self_type_guard self_type_guard { *this, self_type };
+        Self_type_guard const self_type_guard { *this, self_type };
         mir::Implementation::Definitions definitions;
 
         for (hir::Definition& definition : implementation->definitions) {
-            utl::match(
-                definition.value,
-
+            utl::match(definition.value,
                 [&](hir::definition::Function& function) {
                     ast::Name const name = function.name;
                     auto function_info = utl::wrap(Function_info {
@@ -538,14 +520,12 @@ auto resolution::Context::resolve_instantiation(utl::Wrapper<Instantiation_info>
         mir::Class_reference typeclass = resolve_class_reference(instantiation->typeclass, scope, *info.home_namespace);
         mir::Type            self_type = resolve_type           (instantiation->self_type, scope, *info.home_namespace);
 
-        Self_type_guard self_type_guard { *this, self_type };
+        Self_type_guard const self_type_guard { *this, self_type };
 
         mir::Instantiation::Definitions definitions;
 
         for (hir::Definition& definition : instantiation->definitions) {
-            utl::match(
-                definition.value,
-
+            utl::match(definition.value,
                 [&](hir::definition::Function& function) {
                     ast::Name const name = function.name;
                     definitions.functions.add(
@@ -554,8 +534,7 @@ auto resolution::Context::resolve_instantiation(utl::Wrapper<Instantiation_info>
                             .value          = std::move(function),
                             .home_namespace = info.home_namespace,
                             .name           = name,
-                        })
-                    );
+                        }));
                 },
                 [&](hir::definition::Function_template& function_template) {
                     ast::Name const name = function_template.definition.name;
@@ -565,8 +544,7 @@ auto resolution::Context::resolve_instantiation(utl::Wrapper<Instantiation_info>
                             .value          = std::move(function_template),
                             .home_namespace = info.home_namespace,
                             .name           = name
-                        })
-                    );
+                        }));
                 },
                 [](auto&) { utl::todo(); }
             );
@@ -589,19 +567,17 @@ auto resolution::Context::resolve_function_template(utl::Wrapper<Function_templa
 {
     Function_template_info& info = *wrapped_info;
 
-    if (auto* const function_template = std::get_if<hir::definition::Function_template>(&info.value)) {
+    if (auto* const function_template = std::get_if<hir::definition::Function_template>(&info.value))
         compute_function_template_signature(info, *function_template, *this);
-    }
 
     if (auto* const function_template = std::get_if<Partially_resolved_function_template>(&info.value)) {
-        Definition_state_guard state_guard { *this, info.state, info.name  };
+        Definition_state_guard const state_guard { *this, info.state, info.name  };
 
         info.value = mir::Function_template {
             .definition = resolve_function_impl(
                 function_template->function,
                 *this,
-                info.home_namespace
-            ),
+                info.home_namespace),
             .parameters = std::move(function_template->template_parameters)
         };
     }
@@ -616,26 +592,21 @@ auto resolution::Context::resolve_struct_template(utl::Wrapper<Struct_template_i
     Struct_template_info& info = *wrapped_info;
 
     if (auto* const structure = std::get_if<hir::definition::Struct_template>(&info.value)) {
-        Definition_state_guard state_guard { *this, info.state, info.name };
+        Definition_state_guard const state_guard { *this, info.state, info.name };
 
-        auto [scope, parameters] =
+        auto [scope, parameters] = // NOLINT
             resolve_template_parameters(structure->parameters, *info.home_namespace);
 
-        return info.value.emplace<mir::Struct_template>(
-            mir::Struct_template {
-                .definition = resolve_struct_impl(
-                    structure->definition,
-                    *this,
-                    std::move(scope),
-                    info.home_namespace
-                ),
-                .parameters = std::move(parameters)
-            }
-        );
+        info.value = mir::Struct_template {
+            .definition = resolve_struct_impl(
+                structure->definition,
+                *this,
+                std::move(scope),
+                info.home_namespace),
+            .parameters = std::move(parameters)
+        };
     }
-    else {
-        return utl::get<mir::Struct_template>(info.value);
-    }
+    return utl::get<mir::Struct_template>(info.value);
 }
 
 
@@ -645,7 +616,7 @@ auto resolution::Context::resolve_enum_template(utl::Wrapper<Enum_template_info>
     Enum_template_info& info = *wrapped_info;
 
     if (auto* const enumeration = std::get_if<hir::definition::Enum_template>(&info.value)) {
-        Definition_state_guard state_guard { *this, info.state, info.name };
+        Definition_state_guard const state_guard { *this, info.state, info.name };
 
         auto [template_parameter_scope, template_parameters] =
             resolve_template_parameters(enumeration->parameters, *info.home_namespace);
@@ -656,8 +627,7 @@ auto resolution::Context::resolve_enum_template(utl::Wrapper<Enum_template_info>
                 *this,
                 std::move(template_parameter_scope),
                 info.home_namespace,
-                info.parameterized_type_of_this
-            ),
+                info.parameterized_type_of_this),
             .parameters = std::move(template_parameters)
         };
     }
@@ -672,7 +642,7 @@ auto resolution::Context::resolve_alias_template(utl::Wrapper<Alias_template_inf
     Alias_template_info& info = *wrapped_info;
 
     if (auto* const alias_template = std::get_if<hir::definition::Alias_template>(&info.value)) {
-        Definition_state_guard state_guard { *this, info.state, info.name };
+        Definition_state_guard const state_guard { *this, info.state, info.name };
 
         auto [template_parameter_scope, template_parameters] =
             resolve_template_parameters(alias_template->parameters, *info.home_namespace);

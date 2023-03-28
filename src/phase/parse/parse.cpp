@@ -51,9 +51,8 @@ namespace {
             };
         }
         else if (context.try_consume(Token::Type::ampersand)) {
-            if (mutability.was_explicitly_specified()) {
+            if (mutability.was_explicitly_specified())
                 context.error(mutability.source_view, { "A mutability specifier can not appear here" });
-            }
 
             ast::Mutability reference_mutability = extract_mutability(context);
             if (Token* const self = context.try_extract(Token::Type::lower_self)) {
@@ -80,30 +79,25 @@ namespace {
             auto self_parameter = parse_self_parameter(context);
 
             std::vector<ast::Function_parameter> parameters;
-            if (!self_parameter.has_value() || context.try_consume(Token::Type::comma)) {
+            if (!self_parameter.has_value() || context.try_consume(Token::Type::comma))
                 parameters = extract_function_parameters(context);
-            }
+
             context.consume_required(Token::Type::paren_close);
 
             tl::optional<ast::Type> return_type;
-            if (context.try_consume(Token::Type::colon)) {
+            if (context.try_consume(Token::Type::colon))
                 return_type = extract_type(context);
-            }
 
-            if (context.try_consume(Token::Type::where)) {
+            if (context.try_consume(Token::Type::where))
                 utl::todo(); // TODO: add support for where clauses
-            }
 
             auto body = std::invoke([&] {
-                if (auto expression = parse_block_expression(context)) {
+                if (auto expression = parse_block_expression(context))
                     return std::move(*expression);
-                }
-                else if (context.try_consume(Token::Type::equals)) {
+                else if (context.try_consume(Token::Type::equals))
                     return extract_expression(context);
-                }
-                else {
-                    context.error_expected("the function body", "'=' or '{'");
-                }
+                else
+                    context.error_expected("the function body", "'=' or '{{'");
             });
 
             return definition(
@@ -114,8 +108,7 @@ namespace {
                     std::move(name),
                     std::move(return_type),
                     std::move(self_parameter)
-                }
-            );
+                });
         }
         context.error_expected("a parenthesized list of function parameters");
     };
@@ -160,10 +153,10 @@ namespace {
                 .source_view = make_source_view(anchor, context.pointer - 1)
             };
         }
-        else if (is_public) {
+        if (is_public)
             context.error_expected("a struct member name");
-        }
-        return tl::nullopt;
+        else
+            return tl::nullopt;
     }
 
     auto extract_struct(Parse_context& context)
@@ -185,8 +178,7 @@ namespace {
                 ast::definition::Struct {
                     std::move(*members),
                     std::move(name)
-                }
-            );
+                });
         }
         context.error_expected("one or more struct members");
     };
@@ -270,8 +262,7 @@ namespace {
                 ast::definition::Enum {
                     std::move(*constructors),
                     std::move(name)
-                }
-            );
+                });
         }
         context.error_expected("one or more enum constructors");
     };
@@ -290,8 +281,7 @@ namespace {
             ast::definition::Alias {
                 name,
                 extract_type(context)
-            }
-        );
+            });
     };
 
 
@@ -307,8 +297,7 @@ namespace {
             ast::definition::Implementation {
                 std::move(type),
                 std::move(definitions)
-            }
-        );
+            });
     };
 
 
@@ -329,8 +318,7 @@ namespace {
                     .typeclass   = std::move(*typeclass),
                     .self_type   = std::move(type),
                     .definitions = std::move(definitions)
-                }
-            );
+                });
         }
         context.error_expected("a class name");
     };
@@ -441,8 +429,7 @@ namespace {
                         .type_signatures              = std::move(type_signatures),
                         .type_template_signatures     = std::move(type_template_signatures),
                         .name                         = std::move(name)
-                    }
-                );
+                    });
             }
         }
     };

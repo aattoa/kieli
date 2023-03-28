@@ -16,20 +16,17 @@ namespace {
     {
         space->definitions_in_order.reserve(definitions.size());
 
-        static_assert(utl::variant_has_alternative<Lower_variant, utl::Wrapper<Function_info>>);
-
         auto const add_definition = [&](utl::wrapper auto definition) -> void {
-            static_assert(utl::variant_has_alternative<Upper_variant, decltype(definition)>
-                       || utl::variant_has_alternative<Lower_variant, decltype(definition)>);
             context.add_to_namespace(*space, definition->name, definition);
             space->definitions_in_order.push_back(definition);
         };
 
         for (hir::Definition& definition : definitions) {
-            utl::match(
-                definition.value,
-
+            utl::match(definition.value,
                 [&](hir::definition::Function& function) {
+                    // compiler::desugar should convert all function bodies to block form
+                    utl::always_assert(std::holds_alternative<hir::expression::Block>(function.body.value));
+
                     ast::Name const name = function.name;
                     auto const info = utl::wrap(Function_info {
                         .value          = std::move(function),
@@ -91,7 +88,7 @@ namespace {
                     });
 
                     space->definitions_in_order.emplace_back(child);
-                    space->lower_table.add(utl::copy(hir_child.name.identifier), utl::copy(child));
+                    space->lower_table.add(hir_child.name.identifier, child);
 
                     register_namespace(context, hir_child.definitions, child);
                 },
