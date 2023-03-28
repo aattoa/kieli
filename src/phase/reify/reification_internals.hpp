@@ -1,5 +1,7 @@
 #pragma once
 
+#include "utl/safe_integer.hpp"
+#include "vm/virtual_machine.hpp"
 #include "representation/mir/mir.hpp"
 #include "representation/cir/cir.hpp"
 
@@ -11,7 +13,9 @@ namespace reification {
         return utl::wrap(std::move(value));
     }
 
-    class Context {
+    using Frame_offset = utl::Safe_integer<vm::Local_size_type>;
+
+    class [[nodiscard]] Context {
         utl::Wrapper<cir::Type::Variant> unit_type_value      = wrap_type(cir::type::Tuple {});
         utl::Wrapper<cir::Type::Variant> boolean_type_value   = wrap_type(cir::type::Boolean {});
         utl::Wrapper<cir::Type::Variant> string_type_value    = wrap_type(cir::type::String {});
@@ -26,9 +30,25 @@ namespace reification {
         utl::Wrapper<cir::Type::Variant> u64_type_value       = wrap_type(cir::type::Integer::u64);
         utl::Wrapper<cir::Type::Variant> floating_type_value  = wrap_type(cir::type::Floating {});
     public:
+        utl::diagnostics::Builder                           diagnostics;
+        utl::Source                                         source;
+        utl::Flatmap<mir::Local_variable_tag, Frame_offset> variable_frame_offsets;
+        Frame_offset                                        current_frame_offset;
+
+        explicit Context(utl::diagnostics::Builder&&, utl::Source&&) noexcept;
+
         auto reify_expression(mir::Expression const&) -> cir::Expression;
         auto reify_pattern   (mir::Pattern    const&) -> cir::Pattern;
         auto reify_type      (mir::Type             ) -> cir::Type;
+
+        [[noreturn]]
+        auto error(utl::Source_view, utl::diagnostics::Message_arguments) -> void;
+
+        auto scope() {
+            return utl::on_scope_exit([this, old_frame_offset=current_frame_offset] {
+                current_frame_offset = old_frame_offset;
+            });
+        }
 
         auto unit_type     (utl::Source_view) -> cir::Type;
         auto i8_type       (utl::Source_view) -> cir::Type;

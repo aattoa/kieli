@@ -92,23 +92,23 @@ namespace {
 auto main(int argc, char const** argv) -> int try {
     cli::Options_description description;
     description.add_options()
-        ({ "help"   , 'h' },                                       "Show this text"            )
-        ({ "version", 'v' },                                       "Show kieli version"        )
-        ("new"             , cli::string("project name"),          "Create a new kieli project")
-        ("repl"            , cli::string("repl name"),             "Run the given repl"        )
-        ("machine"                                                                             )
-        ("debug"                                                                               )
-        ("nocolor"         ,                                       "Disable colored output"    )
-        ("time"            ,                                       "Print the execution time"  )
-        ("test"            ,                                       "Run all tests"             );
+        ({ "help"   , 'h' },                               "Show this text"            )
+        ({ "version", 'v' },                               "Show kieli version"        )
+        ("new"             , cli::string("project name"),  "Create a new kieli project")
+        ("repl"            , cli::string("repl name"),     "Run the given repl"        )
+        ("machine"                                                                     )
+        ("debug"           , cli::string("phase to debug")                             )
+        ("nocolor"         ,                               "Disable colored output"    )
+        ("time"            ,                               "Print the execution time"  )
+        ("test"            ,                               "Run all tests"             );
 
     cli::Options options = utl::expect(cli::parse_command_line(argc, argv, description));
 
 
-    utl::Logging_timer execution_timer {
+    utl::Logging_timer const execution_timer {
         [&options](utl::Logging_timer::Duration const elapsed) {
             if (options["time"])
-                fmt::print("Total execution time: {}\n", elapsed);
+                fmt::println("Total execution time: {}", elapsed);
         }
     };
 
@@ -118,7 +118,7 @@ auto main(int argc, char const** argv) -> int try {
 
     if (options["help"]) {
         fmt::print("Valid options:\n\n{}", description);
-        return 0;
+        return EXIT_SUCCESS;
     }
 
     if (options["version"]) {
@@ -152,19 +152,24 @@ auto main(int argc, char const** argv) -> int try {
         return machine.run();
     }
 
-    if (options["debug"]) {
+    if (std::string_view const* const phase = options["debug"]) {
         using namespace compiler;
 
         utl::Source debug_source { (std::filesystem::current_path().parent_path() / "sample-project" / "src" / "main.kieli").string() };
 
         Program_string_pool debug_string_pool;
-        compiler::Lex_arguments lex_arguments {
+        Lex_arguments lex_arguments {
             .source      = std::move(debug_source),
             .string_pool = debug_string_pool
         };
 
-        constexpr auto pipeline = utl::compose(&reify, &resolve, &desugar, &parse, &lex);
-        (void)pipeline(std::move(lex_arguments));
+        if (*phase == "reify")
+            (void)reify(resolve(desugar(parse(lex(std::move(lex_arguments))))));
+        else if (*phase == "resolve")
+            (void)resolve(desugar(parse(lex(std::move(lex_arguments)))));
+        else
+            throw utl::exception("The phase must be one of reify|resolve, not '{}'", *phase);
+        fmt::println("Finished debugging phase {}", *phase);
     }
 
     if (std::string_view const* const name = options["repl"]) {
@@ -177,18 +182,23 @@ auto main(int argc, char const** argv) -> int try {
         if (auto* const repl = repls.find(*name))
             (*repl)();
         else
-            throw utl::exception("The repl name must be one of lex, expr, prog, desugar");
+            throw utl::exception("The repl must be one of lex|expr|prog|desugar, not '{}'", *name);
     }
+
+    return EXIT_SUCCESS;
 }
 
 catch (cli::Unrecognized_option const& exception) {
     std::cerr << exception.what() << "; use --help to see a list of valid options\n";
+    return EXIT_FAILURE;
 }
 catch (utl::diagnostics::Error const& error) {
     std::cerr << error.what() << '\n';
+    return EXIT_FAILURE;
 }
 catch (std::exception const& exception) {
     error_stream() << exception.what() << '\n';
+    return EXIT_FAILURE;
 }
 catch (...) {
     error_stream() << "Caught unrecognized exception\n";

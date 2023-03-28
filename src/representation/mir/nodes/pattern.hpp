@@ -17,6 +17,7 @@ namespace mir {
         };
 
         struct Name {
+            Local_variable_tag   variable_tag;
             compiler::Identifier identifier;
             Mutability           mutability;
         };
@@ -35,7 +36,7 @@ namespace mir {
         };
 
         struct As {
-            Name                 alias;
+            Name                  alias;
             utl::Wrapper<Pattern> aliased_pattern;
         };
 
@@ -67,8 +68,6 @@ namespace mir {
         Type             type;
         bool             is_exhaustive_by_itself = false;
         utl::Source_view source_view;
-
-        [[nodiscard]] auto hash() const -> utl::Usize;
     };
 
 }

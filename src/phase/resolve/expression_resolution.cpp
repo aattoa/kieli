@@ -285,7 +285,7 @@ namespace {
             if (auto* const binding = scope.find_variable(identifier)) {
                 binding->has_been_mentioned = true;
                 return mir::Expression {
-                    .value          = mir::expression::Local_variable_reference { identifier },
+                    .value          = mir::expression::Local_variable_reference { binding->variable_tag, identifier },
                     .type           = binding->type.with(this_expression.source_view),
                     .source_view    = this_expression.source_view,
                     .mutability     = binding->mutability,
@@ -506,8 +506,12 @@ namespace {
             mir::Pattern pattern = context.resolve_pattern(*let.pattern, scope, space);
             mir::Type    type    = explicit_type.value_or(initializer.type);
 
-            if (!pattern.is_exhaustive_by_itself)
-                context.error(pattern.source_view, { "An inexhaustive pattern can not be used in a let-binding" });
+            if (!pattern.is_exhaustive_by_itself) {
+                context.error(pattern.source_view, {
+                    .message   = "An inexhaustive pattern can not be used in a let-binding",
+                    .help_note = "If you wish to conditionally bind the expression when the pattern matches, use `if let`",
+                });
+            }
 
             context.solve(constraint::Type_equality {
                 .constrainer_type = type,
@@ -963,7 +967,7 @@ namespace {
         }
 
         auto operator()(hir::expression::Self) -> mir::Expression {
-            if (auto self = try_resolve_local_variable_reference(context.self_variable_identifier))
+            if (auto self = try_resolve_local_variable_reference(context.self_variable_id))
                 return std::move(*self);
             context.error(this_expression.source_view, {
                 .message   = "'self' can only be used within a method",

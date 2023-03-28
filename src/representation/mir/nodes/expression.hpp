@@ -36,7 +36,7 @@ namespace mir {
 
         struct Let_binding {
             utl::Wrapper<Pattern>    pattern;
-            Type                    type;
+            Type                     type; // TODO: is this field necessary?
             utl::Wrapper<Expression> initializer;
         };
 
@@ -51,11 +51,12 @@ namespace mir {
                 utl::Wrapper<Pattern>    pattern;
                 utl::Wrapper<Expression> handler;
             };
-            std::vector<Case>       cases;
+            std::vector<Case>        cases;
             utl::Wrapper<Expression> matched_expression;
         };
 
         struct Local_variable_reference {
+            Local_variable_tag   tag;
             compiler::Identifier identifier;
         };
 
@@ -104,7 +105,7 @@ namespace mir {
         };
 
         struct Reference {
-            Mutability              mutability;
+            Mutability               mutability;
             utl::Wrapper<Expression> referenced_expression;
         };
 

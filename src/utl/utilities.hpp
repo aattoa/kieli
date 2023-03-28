@@ -6,6 +6,7 @@
 
 #include "disable_unnecessary_warnings.hpp"
 
+#include <cstdlib>
 #include <cstddef>
 #include <cstdint>
 #include <climits>
@@ -233,7 +234,7 @@ namespace utl {
             caller.column(),
             caller.function_name(),
             message);
-        std::exit(-1);
+        std::exit(EXIT_FAILURE);
     }
 
     inline auto always_assert(

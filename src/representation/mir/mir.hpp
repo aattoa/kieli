@@ -104,6 +104,14 @@ template <> struct dtl::To_HIR_impl<name> : std::type_identity<hir::definition::
         [[nodiscard]] auto operator==(Template_parameter_tag const&) const noexcept -> bool = default;
     };
 
+    struct [[nodiscard]] Local_variable_tag {
+        utl::Usize value;
+        constexpr explicit Local_variable_tag(utl::Usize const value) noexcept
+                : value { value } {}
+        [[nodiscard]] auto operator==(Local_variable_tag const&) const noexcept -> bool = default;
+    };
+
+
     struct [[nodiscard]] Mutability {
         struct Concrete {
             bool is_mutable = false;
@@ -239,11 +247,12 @@ namespace resolution {
     class [[nodiscard]] Scope {
     public:
         struct Variable_binding {
-            mir::Type                       type;
-            mir::Mutability                 mutability;
-            bool                            has_been_mentioned = false;
+            mir::Type                      type;
+            mir::Mutability                mutability;
+            mir::Local_variable_tag        variable_tag;
+            bool                           has_been_mentioned = false;
             tl::optional<utl::Source_view> moved_at;
-            utl::Source_view                source_view;
+            utl::Source_view               source_view;
         };
         struct Type_binding {
             mir::Type        type;

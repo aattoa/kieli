@@ -15,6 +15,10 @@
 
 namespace cir {
 
+    struct [[nodiscard]] Expression;
+    struct [[nodiscard]] Pattern;
+
+
     struct [[nodiscard]] Type {
         struct [[nodiscard]] Variant;
         utl::Wrapper<Variant> value;
@@ -29,18 +33,15 @@ namespace cir {
         using mir::type::Character;
         using mir::type::Boolean;
         using mir::type::String;
-
         struct Tuple {
             std::vector<Type> field_types;
         };
-
         struct Struct_reference {
 
         };
         struct Enum_reference {
 
         };
-
         // Can represent both pointers and references
         struct Pointer {
             Type pointed_to_type;
@@ -67,12 +68,28 @@ namespace cir {
 
 
     namespace pattern {
-        // TODO
+        template <class T>
+        struct Literal {
+            T value;
+        };
+        struct Tuple {
+            std::vector<Pattern> field_patterns;
+        };
+        struct Exhaustive {};
     }
 
-    struct [[nodiscard]] Pattern {
-        struct Variant {};
-        Variant         value;
+    struct Pattern {
+        using Variant = std::variant<
+            pattern::Literal<bool>,
+            pattern::Literal<utl::Isize>,
+            pattern::Literal<utl::Float>,
+            pattern::Literal<utl::Char>,
+            pattern::Literal<compiler::String>,
+            pattern::Tuple,
+            pattern::Exhaustive
+        >;
+        Variant          value;
+        Type             type; // TODO: is this field necessary?
         utl::Source_view source_view;
     };
 
@@ -80,17 +97,33 @@ namespace cir {
 
     namespace expression {
         template <class T>
-        struct Literal { T value; };
+        struct Literal {
+            T value;
+        };
+        struct Block {
+            std::vector<Expression>                side_effect_expressions;
+            tl::optional<utl::Wrapper<Expression>> result_expression;
+        };
+        struct Let_binding {
+            Pattern                  pattern;
+            utl::Wrapper<Expression> initializer;
+        };
+        struct Hole {};
     }
 
     struct [[nodiscard]] Expression {
         using Variant = std::variant<
             expression::Literal<bool>,
             expression::Literal<utl::Isize>,
-            expression::Literal<utl::Float>
+            expression::Literal<utl::Float>,
+            expression::Literal<utl::Char>,
+            expression::Literal<compiler::String>,
+            expression::Block,
+            expression::Let_binding,
+            expression::Hole
         >;
-        Variant         value;
-        Type            type;
+        Variant          value;
+        Type             type;
         utl::Source_view source_view;
     };
 

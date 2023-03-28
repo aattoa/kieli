@@ -45,17 +45,21 @@ namespace {
             mir::Type       type       = context.fresh_general_unification_type_variable(this_pattern.source_view);
             mir::Mutability mutability = context.resolve_mutability(name.mutability, scope);
 
+            auto const variable_tag = context.fresh_local_variable_tag();
+
             scope.bind_variable(name.identifier, {
                 .type               = type,
                 .mutability         = mutability,
+                .variable_tag       = variable_tag,
                 .has_been_mentioned = false,
                 .source_view        = this_pattern.source_view
             });
 
             return {
                 .value = mir::pattern::Name {
-                    .identifier = name.identifier,
-                    .mutability = mutability
+                    .variable_tag = variable_tag,
+                    .identifier   = name.identifier,
+                    .mutability   = mutability
                 },
                 .type                    = type,
                 .is_exhaustive_by_itself = true,
@@ -76,9 +80,8 @@ namespace {
             for (hir::Pattern& pattern : tuple.field_patterns) {
                 mir::Pattern mir_pattern = recurse(pattern);
 
-                if (!mir_pattern.is_exhaustive_by_itself) {
+                if (!mir_pattern.is_exhaustive_by_itself)
                     is_exhaustive = false;
-                }
 
                 mir_tuple_type.field_types.push_back(mir_pattern.type);
                 mir_tuple.field_patterns.push_back(std::move(mir_pattern));
@@ -99,9 +102,10 @@ namespace {
             mir::Pattern    aliased_pattern = recurse(*as.aliased_pattern);
             mir::Mutability mutability      = context.resolve_mutability(as.alias.mutability, scope);
 
-            scope.bind_variable(as.alias.identifier, {
+            (void)scope.bind_variable(as.alias.identifier, {
                 .type               = aliased_pattern.type,
                 .mutability         = mutability,
+                .variable_tag       = context.fresh_local_variable_tag(),
                 .has_been_mentioned = false,
                 .source_view        = this_pattern.source_view
             });

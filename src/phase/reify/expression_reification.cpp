@@ -8,14 +8,49 @@ namespace {
         reification::Context & context;
         mir::Expression const& this_expression;
 
+        auto recurse(mir::Expression const& expression) -> cir::Expression {
+            return context.reify_expression(expression);
+        }
+        auto recurse(utl::Wrapper<mir::Expression> const expression) -> utl::Wrapper<cir::Expression> {
+            return utl::wrap(recurse(*expression));
+        }
+        [[nodiscard]]
+        auto recurse() noexcept {
+            return [this](auto const& expression) { return recurse(expression); };
+        }
+
+        template <class T>
+        auto operator()(mir::expression::Literal<T> const& literal) -> cir::Expression::Variant {
+            return cir::expression::Literal<T> { literal.value };
+        }
+
         auto operator()(mir::expression::Sizeof const& sizeof_) -> cir::Expression::Variant {
             cir::Type inspected_type = context.reify_type(sizeof_.inspected_type);
             return cir::expression::Literal<utl::Isize> {
                 utl::safe_cast<utl::Isize>(inspected_type.size.get()) };
         }
 
+        auto operator()(mir::expression::Block const& block) -> cir::Expression::Variant {
+            auto const scope = context.scope();
+            return cir::expression::Block {
+                .side_effect_expressions = utl::map(recurse(), block.side_effects),
+                .result_expression       = block.result.transform(recurse()),
+            };
+        }
+
+        auto operator()(mir::expression::Let_binding const& binding) -> cir::Expression::Variant {
+            return cir::expression::Let_binding {
+                .pattern     = context.reify_pattern(*binding.pattern),
+                .initializer = recurse(binding.initializer)
+            };
+        }
+
+        auto operator()(mir::expression::Hole const&) -> cir::Expression::Variant {
+            return cir::expression::Hole {};
+        }
+
         auto operator()(auto const&) -> cir::Expression::Variant {
-            utl::abort();
+            utl::todo();
         }
     };
 
