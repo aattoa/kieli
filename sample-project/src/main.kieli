@@ -1,8 +1,12 @@
 alias Int = I64
 
-struct S = a: Int
-
 fn main() {
-  let x = S { a = 5 };
-  let _ = mov x;
+  let _x: I32 = ???;
+  let (_a, _b): (Int, Int) = ???;
+  {
+      let _x: Int = ???;
+      let _y: Int = ???;
+  };
+  let _z: Bool = ???;
+  let _z: Bool = ???;
 }

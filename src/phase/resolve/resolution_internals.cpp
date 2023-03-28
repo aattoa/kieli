@@ -101,6 +101,10 @@ auto resolution::Context::fresh_integral_unification_type_variable(utl::Source_v
 auto resolution::Context::fresh_template_parameter_reference_tag() -> mir::Template_parameter_tag {
     return mir::Template_parameter_tag { current_template_parameter_tag++.get() };
 }
+auto resolution::Context::fresh_local_variable_tag() -> mir::Local_variable_tag {
+    return mir::Local_variable_tag { current_local_variable_tag++.get() };
+}
+
 
 auto resolution::Context::immut_constant(utl::Source_view const view) -> mir::Mutability { return { immutability_value, view }; }
 auto resolution::Context::  mut_constant(utl::Source_view const view) -> mir::Mutability { return {   mutability_value, view }; }

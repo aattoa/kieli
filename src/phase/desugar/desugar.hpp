@@ -9,10 +9,10 @@
 namespace compiler {
 
     struct Desugar_result {
-        hir::Node_context        node_context;
+        hir::Node_context         node_context;
         utl::diagnostics::Builder diagnostics;
         utl::Source               source;
-        Program_string_pool&     string_pool;
+        Program_string_pool&      string_pool;
 
         hir::Module module;
     };

@@ -126,6 +126,7 @@ namespace resolution {
     class Context {
         utl::Safe_usize current_unification_variable_tag;
         utl::Safe_usize current_template_parameter_tag;
+        utl::Safe_usize current_local_variable_tag;
 
         Deferred_equality_constraints       deferred_equality_constraints;
         Unsolved_unification_type_variables unsolved_unification_type_variables;
@@ -157,21 +158,21 @@ namespace resolution {
 
         mir::Module output_module;
 
-        utl::diagnostics::Builder       diagnostics;
-        utl::Source                     source;
-        utl::Wrapper<Namespace>         global_namespace;
+        utl::diagnostics::Builder      diagnostics;
+        utl::Source                    source;
+        utl::Wrapper<Namespace>        global_namespace;
         Nameless_entities              nameless_entities;
-        tl::optional<mir::Type>       current_self_type;
+        tl::optional<mir::Type>        current_self_type;
         compiler::Program_string_pool& string_pool;
 
-        compiler::Identifier self_variable_identifier = string_pool.identifiers.make("self");
+        compiler::Identifier self_variable_id = string_pool.identifiers.make("self");
 
         Context(
             hir::Node_context            &&,
             mir::Node_context            &&,
             mir::Namespace_context       &&,
-            utl::diagnostics::Builder     &&,
-            utl::Source                   &&,
+            utl::diagnostics::Builder    &&,
+            utl::Source                  &&,
             compiler::Program_string_pool &
         ) noexcept;
 
@@ -242,7 +243,9 @@ namespace resolution {
         auto fresh_unification_mutability_variable(utl::Source_view) -> mir::Mutability;
         auto fresh_general_unification_type_variable(utl::Source_view) -> mir::Type;
         auto fresh_integral_unification_type_variable(utl::Source_view) -> mir::Type;
+
         auto fresh_template_parameter_reference_tag() -> mir::Template_parameter_tag;
+        auto fresh_local_variable_tag()               -> mir::Local_variable_tag;
 
         auto instantiate_function_template(utl::Wrapper<Function_template_info>, std::span<hir::Template_argument const>, utl::Source_view instantiation_view, Scope&, Namespace&) -> utl::Wrapper<Function_info>;
         auto instantiate_struct_template  (utl::Wrapper<Struct_template_info>,   std::span<hir::Template_argument const>, utl::Source_view instantiation_view, Scope&, Namespace&) -> utl::Wrapper<Struct_info>;
@@ -273,7 +276,7 @@ namespace resolution {
         auto size_type            (utl::Source_view) -> mir::Type;
         auto self_placeholder_type(utl::Source_view) -> mir::Type;
 
-        // Returns a type the value of which is meant to be overwritten
+        // Returns a type the value of which must be overwritten
         auto temporary_placeholder_type(utl::Source_view) -> mir::Type;
 
         template <class T>

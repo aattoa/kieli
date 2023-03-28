@@ -80,6 +80,8 @@ namespace utl {
     class [[nodiscard]] Safe_integer {
         T value = 0;
     public:
+        using Underlying_integer = T;
+
         Safe_integer() noexcept = default;
 
         static constexpr auto make_unchecked(std::integral auto const value) noexcept -> Safe_integer {

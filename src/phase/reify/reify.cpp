@@ -23,7 +23,7 @@ namespace {
 
 auto compiler::reify(Resolve_result&& resolve_result) -> Reify_result {
     cir::Node_context node_context;
-    reification::Context context;
+    reification::Context context { std::move(resolve_result.diagnostics), std::move(resolve_result.source) };
 
     for (utl::wrapper auto const function : resolve_result.main_module.functions) {
         fmt::print("function: {}\n", function->name);
@@ -36,6 +36,9 @@ auto compiler::reify(Resolve_result&& resolve_result) -> Reify_result {
             reify_function(context, *instantiation);
         }
     }
+
+    for (auto& [a, b]: context.variable_frame_offsets)
+        fmt::println("{}: {}", a.value, b.get());
 
     utl::todo();
 }

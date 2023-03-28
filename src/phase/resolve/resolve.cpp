@@ -300,6 +300,8 @@ auto compiler::resolve(Desugar_result&& desugar_result) -> Resolve_result {
 
     return Resolve_result {
         .main_module       = std::move(context.output_module),
+        .diagnostics       = std::move(context.diagnostics),
+        .source            = std::move(context.source),
         .node_context      = std::move(context.mir_node_context),
         .namespace_context = std::move(context.namespace_context),
         .string_pool       = context.string_pool

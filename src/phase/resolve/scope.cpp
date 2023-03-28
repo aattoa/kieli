@@ -28,14 +28,14 @@ namespace {
         auto                     & bindings,
         compiler::Identifier const identifier,
         auto                    && binding,
-        std::string_view     const description) -> void
+        std::string_view     const description)
     {
         // If the name starts with an underscore, then we pretend that the
         // binding has already been mentioned in order to prevent possible warnings.
         binding.has_been_mentioned = identifier.view().front() == '_';
 
         if (auto const it = ranges::find(bindings, identifier, utl::first); it == bindings.end()) {
-            bindings.emplace_back(identifier, std::forward<decltype(binding)>(binding));
+            bindings.emplace_back(identifier, std::forward<decltype(binding)>(binding)).second;
         }
         else {
             // The manual warning level check is not necessary because diagnostics.emit_warning performs the
@@ -73,39 +73,33 @@ resolution::Scope::Scope(Context& context) noexcept
 
 
 auto resolution::Scope::bind_variable(compiler::Identifier const identifier, Variable_binding&& binding) -> void {
-    add_binding(*context, variable_bindings.container(), identifier, std::move(binding), "variable");
+    return add_binding(*context, variable_bindings.container(), identifier, binding, "variable");
 }
 auto resolution::Scope::bind_type(compiler::Identifier const identifier, Type_binding&& binding) -> void {
-    add_binding(*context, type_bindings.container(), identifier, std::move(binding), "type alias");
+    add_binding(*context, type_bindings.container(), identifier, binding, "type alias");
 }
 auto resolution::Scope::bind_mutability(compiler::Identifier const identifier, Mutability_binding&& binding) -> void {
-    add_binding(*context, mutability_bindings.container(), identifier, std::move(binding), "mutability binding");
+    add_binding(*context, mutability_bindings.container(), identifier, binding, "mutability binding");
 }
 
 
 auto resolution::Scope::find_variable(compiler::Identifier const identifier) noexcept -> Variable_binding* {
-    if (Variable_binding* const binding = variable_bindings.find(identifier)) {
+    if (Variable_binding* const binding = variable_bindings.find(identifier))
         return binding;
-    }
-    else {
+    else
         return parent ? parent->find_variable(identifier) : nullptr;
-    }
 }
 auto resolution::Scope::find_type(compiler::Identifier const identifier) noexcept -> Type_binding* {
-    if (Type_binding* const binding = type_bindings.find(identifier)) {
+    if (Type_binding* const binding = type_bindings.find(identifier))
         return binding;
-    }
-    else {
+    else
         return parent ? parent->find_type(identifier) : nullptr;
-    }
 }
 auto resolution::Scope::find_mutability(compiler::Identifier const identifier) noexcept -> Mutability_binding* {
-    if (Mutability_binding* const binding = mutability_bindings.find(identifier)) {
+    if (Mutability_binding* const binding = mutability_bindings.find(identifier))
         return binding;
-    }
-    else {
+    else
         return parent ? parent->find_mutability(identifier) : nullptr;
-    }
 }
 
 
