@@ -30,6 +30,8 @@ set(SOURCE_FILES
 	src/representation/ast/nodes/type.hpp
 
 	src/representation/cir/cir.hpp
+	src/representation/cir/cir_formatting.hpp
+	src/representation/cir/cir_formatting.cpp
 
 	src/representation/hir/hir.hpp
 	src/representation/hir/hir_formatting.cpp

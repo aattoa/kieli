@@ -38,11 +38,25 @@ namespace {
             };
         }
 
+        auto operator()(mir::expression::Tuple const& tuple) -> cir::Expression::Variant {
+            return cir::expression::Tuple { .fields = utl::map(recurse(), tuple.fields) };
+        }
+
         auto operator()(mir::expression::Let_binding const& binding) -> cir::Expression::Variant {
             return cir::expression::Let_binding {
                 .pattern     = context.reify_pattern(*binding.pattern),
                 .initializer = recurse(binding.initializer)
             };
+        }
+
+        auto operator()(mir::expression::Local_variable_reference const& local) -> cir::Expression::Variant {
+            if (auto const* const frame_offset = context.variable_frame_offsets.find(local.tag)) {
+                return cir::expression::Local_variable_reference {
+                    .frame_offset = frame_offset->get(),
+                    .identifier   = local.identifier
+                };
+            }
+            utl::unreachable();
         }
 
         auto operator()(mir::expression::Hole const&) -> cir::Expression::Variant {

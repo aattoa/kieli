@@ -1,6 +1,7 @@
 #pragma once
 
 #include "representation/mir/mir.hpp"
+#include "vm/virtual_machine.hpp"
 #include "utl/safe_integer.hpp"
 
 
@@ -104,9 +105,16 @@ namespace cir {
             std::vector<Expression>                side_effect_expressions;
             tl::optional<utl::Wrapper<Expression>> result_expression;
         };
+        struct Tuple {
+            std::vector<Expression> fields;
+        };
         struct Let_binding {
             Pattern                  pattern;
             utl::Wrapper<Expression> initializer;
+        };
+        struct Local_variable_reference {
+            vm::Local_size_type  frame_offset {};
+            compiler::Identifier identifier;
         };
         struct Hole {};
     }
@@ -119,7 +127,9 @@ namespace cir {
             expression::Literal<utl::Char>,
             expression::Literal<compiler::String>,
             expression::Block,
+            expression::Tuple,
             expression::Let_binding,
+            expression::Local_variable_reference,
             expression::Hole
         >;
         Variant          value;

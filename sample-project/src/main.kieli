@@ -1,11 +1,11 @@
 alias Int = I64
 
 fn main() {
-  let _x: I32 = ???;
-  let (_a, _b): (Int, Int) = ???;
+  let x: Int = ???;
+  let (a, b): (Int, Int) = (x, x);
   {
-      let _x: Int = ???;
-      let _y: Int = ???;
+      let _x: Int = a;
+      let _y: Int = b;
   };
   let _z: Bool = ???;
   let _z: Bool = ???;
