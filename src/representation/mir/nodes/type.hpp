@@ -86,26 +86,24 @@ namespace mir {
     }
 
 
-    struct Type::Variant :
-        std::variant<
-            type::Tuple,
-            type::Integer,
-            type::Floating,
-            type::Character,
-            type::Boolean,
-            type::String,
-            type::Self_placeholder,
-            type::Array,
-            type::Slice,
-            type::Function,
-            type::Reference,
-            type::Pointer,
-            type::Structure,
-            type::Enumeration,
-            type::General_unification_variable,
-            type::Integral_unification_variable,
-            type::Template_parameter_reference
-        >
+    struct Type::Variant : std::variant<
+        type::Tuple,
+        type::Integer,
+        type::Floating,
+        type::Character,
+        type::Boolean,
+        type::String,
+        type::Self_placeholder,
+        type::Array,
+        type::Slice,
+        type::Function,
+        type::Reference,
+        type::Pointer,
+        type::Structure,
+        type::Enumeration,
+        type::General_unification_variable,
+        type::Integral_unification_variable,
+        type::Template_parameter_reference>
     {
         using variant::variant;
         using variant::operator=;

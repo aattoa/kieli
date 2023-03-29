@@ -8,16 +8,7 @@ namespace {
     auto extract_literal(Parse_context& context)
         -> ast::Expression::Variant
     {
-        return ast::expression::Literal<T> {
-            context.previous().value_as<T>() };
-    }
-
-    template <>
-    auto extract_literal<char>(Parse_context& context)
-        -> ast::Expression::Variant
-    {
-        return ast::expression::Literal<utl::Char> {
-            static_cast<utl::Char>(context.previous().as_character()) };
+        return ast::expression::Literal<T> { context.previous().value_as<T>() };
     }
 
 
@@ -28,9 +19,7 @@ namespace {
             context.consume_required(Token::Type::equals);
             return utl::Pair { *member, utl::wrap(extract_expression(context)) };
         }
-        else {
-            return tl::nullopt;
-        }
+        return tl::nullopt;
     }
 
     auto extract_struct_initializer(ast::Type&& type, Parse_context& context)
@@ -148,12 +137,10 @@ namespace {
 
 
     auto extract_loop_body(Parse_context& context) -> ast::Expression {
-        if (auto body = parse_block_expression(context)) {
+        if (auto body = parse_block_expression(context))
             return std::move(*body);
-        }
-        else {
+        else
             context.error_expected("the loop body", "the loop body must be a block expression");
-        }
     }
 
     auto extract_any_loop(Parse_context& context, tl::optional<ast::Name> const label = tl::nullopt)
@@ -173,8 +160,8 @@ namespace {
         {
             auto condition = extract_condition(context);
 
-            if (auto* const literal = std::get_if<ast::expression::Literal<bool>>(&condition.value)) {
-                if (literal->value) {
+            if (auto const* const literal = std::get_if<ast::expression::Literal<compiler::Boolean>>(&condition.value)) {
+                if (literal->value.value) {
                     context.diagnostics.emit_simple_note({
                         .erroneous_view = condition.source_view,
                         .source         = context.source,
@@ -210,7 +197,7 @@ namespace {
             };
         }
         default:
-            utl::abort(); // Should be unreachable
+            utl::unreachable();
         }
     }
 
@@ -226,7 +213,7 @@ namespace {
         case Token::Type::loop:
         case Token::Type::while_:
         case Token::Type::for_:
-            if (Token* const name_token = &context.previous(); name_token->type == Token::Type::lower_name) {
+            if (Token const* const name_token = &context.previous(); name_token->type == Token::Type::lower_name) {
                 ++context.pointer;
                 return extract_any_loop(
                     context,
@@ -321,7 +308,7 @@ namespace {
                 false_branch = utl::wrap(extract_node<ast::Expression, extract_conditional>(context));
             }
 
-            if (auto* const literal = std::get_if<ast::expression::Literal<bool>>(&condition.value)) {
+            if (auto* const literal = std::get_if<ast::expression::Literal<compiler::Boolean>>(&condition.value)) {
                 static constexpr auto selected_if = [](bool const x) noexcept {
                     return x ? "This branch will always be selected"
                              : "This branch will never be selected";
@@ -331,14 +318,13 @@ namespace {
                 sections.push_back({
                     .source_view = condition.source_view,
                     .source      = context.source,
-                    .note        = selected_if(literal->value)
+                    .note        = selected_if(literal->value.value)
                 });
-
                 if (false_branch.has_value()) {
                     sections.push_back({
                         .source_view = else_token->source_view,
                         .source      = context.source,
-                        .note        = selected_if(!literal->value)
+                        .note        = selected_if(!literal->value.value)
                     });
                 }
 
@@ -354,9 +340,7 @@ namespace {
                 std::move(false_branch)
             };
         }
-        else {
-            context.error_expected("the true branch", help);
-        }
+        context.error_expected("the true branch", help);
     }
 
     auto extract_let_binding(Parse_context& context)
@@ -365,27 +349,26 @@ namespace {
         auto pattern = extract_required<parse_top_level_pattern, "a pattern">(context);
         
         tl::optional<utl::Wrapper<ast::Type>> type;
-        if (context.try_consume(Token::Type::colon)) {
+        if (context.try_consume(Token::Type::colon))
             type = utl::wrap(extract_type(context));
-        }
 
         context.consume_required(Token::Type::equals);
 
         return ast::expression::Let_binding {
-            utl::wrap(std::move(pattern)),
-            utl::wrap(extract_expression(context)),
-            std::move(type)
+            .pattern     = utl::wrap(std::move(pattern)),
+            .initializer = utl::wrap(extract_expression(context)),
+            .type        = type
         };
     }
 
     auto extract_local_type_alias(Parse_context& context)
         -> ast::Expression::Variant
     {
-        auto name = extract_upper_id(context, "an alias name");
+        auto identifier = extract_upper_id(context, "an alias name");
         context.consume_required(Token::Type::equals);
         return ast::expression::Local_type_alias {
-            std::move(name),
-            utl::wrap(extract_type(context))
+            .identifier   = identifier,
+            .aliased_type = utl::wrap(extract_type(context))
         };
     }
 
@@ -394,7 +377,7 @@ namespace {
         -> tl::optional<ast::expression::Lambda::Capture>
     {
         using Capture = ast::expression::Lambda::Capture;
-        auto* const anchor = context.pointer;
+        Token const* const anchor = context.pointer;
 
         return std::invoke([&]() -> tl::optional<Capture::Variant> {
             if (context.try_consume(Token::Type::ampersand)) {
@@ -409,9 +392,7 @@ namespace {
                     .expression = utl::wrap(extract_expression(context))
                 };
             }
-            else {
-                return tl::nullopt;
-            }
+            return tl::nullopt;
         })
             .transform([&](Capture::Variant&& value)
         {
@@ -438,8 +419,7 @@ namespace {
                 context.error_expected(
                     "at least one lambda capture",
                     "If the lambda isn't supposed to capture anything, "
-                    "or if it only captures by move, remove the '.'"
-                );
+                    "or if it only captures by move, remove the '.'");
             }
         }
 
@@ -517,13 +497,11 @@ namespace {
         context.consume_required(Token::Type::brace_open);
 
         std::vector<ast::expression::Match::Case> cases;
-        while (auto match_case = parse_match_case(context)) {
-            cases.push_back(std::move(*match_case));
-        }
+        while (auto match_case = parse_match_case(context))
+            cases.push_back(*match_case);
 
-        if (cases.empty()) {
+        if (cases.empty())
             context.error_expected("one or more match cases");
-        }
 
         context.consume_required(Token::Type::brace_close);
 
@@ -619,7 +597,6 @@ namespace {
         context.consume_required(Token::Type::brace_close);
 
         tl::optional<utl::Wrapper<ast::Expression>> result;
-
         if (!expressions.empty()) {
             result = utl::wrap(std::move(expressions.back()));
             expressions.pop_back();
@@ -642,8 +619,7 @@ namespace {
             if (context.try_consume(Token::Type::double_colon)) {
                 return extract_qualified_lower_name_or_struct_initializer(
                     ast::Root_qualifier { utl::wrap(std::move(*type)) },
-                    context
-                );
+                    context);
             }
             else if (context.try_consume(Token::Type::brace_open)) {
                 return extract_struct_initializer(std::move(*type), context);
@@ -659,14 +635,18 @@ namespace {
         -> tl::optional<ast::Expression::Variant>
     {
         switch (context.extract().type) {
-        case Token::Type::integer:
-            return extract_literal<utl::Isize>(context);
+        case Token::Type::signed_integer:
+            return extract_literal<compiler::Signed_integer>(context);
+        case Token::Type::unsigned_integer:
+            return extract_literal<compiler::Unsigned_integer>(context);
+        case Token::Type::integer_of_unknown_sign:
+            return extract_literal<compiler::Integer_of_unknown_sign>(context);
         case Token::Type::floating:
-            return extract_literal<utl::Float>(context);
+            return extract_literal<compiler::Floating>(context);
         case Token::Type::character:
-            return extract_literal<char>(context);
+            return extract_literal<compiler::Character>(context);
         case Token::Type::boolean:
-            return extract_literal<bool>(context);
+            return extract_literal<compiler::Boolean>(context);
         case Token::Type::string:
             return extract_literal<compiler::String>(context);
         case Token::Type::lower_name:
@@ -815,15 +795,15 @@ namespace {
                         };
                     }
                 }
-                else if (Token* const field_index = context.try_extract(Token::Type::integer)) {
-                    auto const index = field_index->as_integer();
-                    if (index < 0)
-                        context.error(field_index->source_view, { "Negative tuple indices are not allowed" });
+                else if (context.pointer->type == Token::Type::integer_of_unknown_sign
+                      || context.pointer->type == Token::Type::unsigned_integer)
+                {
+                    Token const& field_index_token = context.extract();
                     *expression = ast::Expression {
                         .value = ast::expression::Tuple_field_access {
                             .base_expression         = utl::wrap(std::move(*expression)),
-                            .field_index             = utl::safe_cast<utl::Usize>(index),
-                            .field_index_source_view = field_index->source_view
+                            .field_index             = field_index_token.as_unsigned_integer(),
+                            .field_index_source_view = field_index_token.source_view
                         },
                         .source_view = make_source_view(anchor, context.pointer-1)
                     };

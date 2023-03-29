@@ -104,13 +104,12 @@ namespace {
     struct Expression_format_visitor : utl::formatting::Visitor_base {
         template <class T>
         auto operator()(mir::expression::Literal<T> const& literal) {
-            return format("{}", literal.value);
-        }
-        auto operator()(mir::expression::Literal<char> const& literal) {
-            return format("'{}'", literal.value);
-        }
-        auto operator()(mir::expression::Literal<compiler::String> const& literal) {
-            return format("\"{}\"", literal.value);
+            if constexpr (std::same_as<T, compiler::String>)
+                return format("\"{}\"", literal.value);
+            if constexpr (std::same_as<T, compiler::Character>)
+                return format("'{}'", literal.value);
+            else
+                return format("{}", literal.value);
         }
         auto operator()(mir::expression::Function_reference const& function) {
             if (function.info->template_instantiation_info.has_value()) {

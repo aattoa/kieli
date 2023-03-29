@@ -65,6 +65,9 @@ set(SOURCE_FILES
 	src/phase/lex/lex.hpp
 	src/phase/lex/lexer_test.cpp
 
+	src/phase/lower/lower.hpp
+	src/phase/lower/lower.cpp
+
 	src/phase/parse/parse.cpp
 	src/phase/parse/parse.hpp
 	src/phase/parse/parser_internals.cpp

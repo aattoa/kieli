@@ -161,10 +161,10 @@ auto Desugaring_context::wildcard_pattern(utl::Source_view const view) -> utl::W
     return utl::wrap(hir::Pattern { .value = hir::pattern::Wildcard {}, .source_view = view});
 }
 auto Desugaring_context::true_pattern(utl::Source_view const view) -> utl::Wrapper<hir::Pattern> {
-    return utl::wrap(hir::Pattern { .value = hir::pattern::Literal<bool> { true }, .source_view = view });
+    return utl::wrap(hir::Pattern { .value = hir::pattern::Literal<compiler::Boolean> { true }, .source_view = view });
 }
 auto Desugaring_context::false_pattern(utl::Source_view const view) -> utl::Wrapper<hir::Pattern> {
-    return utl::wrap(hir::Pattern { .value = hir::pattern::Literal<bool> { false }, .source_view = view });
+    return utl::wrap(hir::Pattern { .value = hir::pattern::Literal<compiler::Boolean> { false }, .source_view = view });
 }
 
 

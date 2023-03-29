@@ -14,6 +14,7 @@
 #include "phase/desugar/desugar.hpp"
 #include "phase/resolve/resolve.hpp"
 #include "phase/reify/reify.hpp"
+#include "phase/lower/lower.hpp"
 
 #include "vm/virtual_machine.hpp"
 #include "vm/vm_formatting.hpp"
@@ -30,7 +31,7 @@ namespace {
     template <void(*f)(compiler::Lex_result&&)>
     auto generic_repl() {
         for (;;) {
-            std::string string = utl::readline(" >>> ");
+            std::string string = utl::readline(">>> ");
 
             if (string.empty())
                 continue;
@@ -163,12 +164,17 @@ auto main(int argc, char const** argv) -> int try {
             .string_pool = debug_string_pool
         };
 
-        if (*phase == "reify")
-            (void)reify(resolve(desugar(parse(lex(std::move(lex_arguments))))));
+        auto resolve_result = resolve(desugar(parse(lex(std::move(lex_arguments)))));
+
+        if (*phase == "lower")
+            (void)lower(reify(std::move(resolve_result)));
+        else if (*phase == "reify")
+            (void)reify(std::move(resolve_result));
         else if (*phase == "resolve")
-            (void)resolve(desugar(parse(lex(std::move(lex_arguments)))));
+            ; // Already done
         else
-            throw utl::exception("The phase must be one of reify|resolve, not '{}'", *phase);
+            throw utl::exception("The phase must be one of lower|reify|resolve, not '{}'", *phase);
+
         fmt::println("Finished debugging phase {}", *phase);
     }
 

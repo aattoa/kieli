@@ -35,7 +35,7 @@ namespace {
         });
 
         auto const extracted_node = extractor(parse_context);
-        std::string formatted_node = fmt::format("{}", extracted_node);
+        std::string const formatted_node = fmt::format("{}", extracted_node);
 
         static auto const remove_whitespace = [&](std::string copy) {
             copy.erase(std::remove_if(begin(copy), end(copy), [](char const c) { return c == ' ' || c == '\t' || c == '\n'; }), end(copy));
@@ -45,30 +45,29 @@ namespace {
         tests::assert_eq(
             remove_whitespace(formatted_node),
             remove_whitespace(expected_string.value_or(node_string)),
-            caller
-        );
+            caller);
     }
 
     auto expression(
-        std::string                     expression_string,
-        tl::optional<std::string> const expected_string = tl::nullopt,
-        std::source_location      const caller = std::source_location::current()) -> void
+        std::string                expression_string,
+        tl::optional<std::string>  expected_string = tl::nullopt,
+        std::source_location const caller = std::source_location::current()) -> void
     {
-        node_test<extract_expression>(std::move(expression_string), expected_string, caller);
+        node_test<extract_expression>(std::move(expression_string), std::move(expected_string), caller);
     }
     auto type(
-        std::string                     type_string,
-        tl::optional<std::string> const expected_string = tl::nullopt,
-        std::source_location      const caller = std::source_location::current()) -> void
+        std::string                type_string,
+        tl::optional<std::string>  expected_string = tl::nullopt,
+        std::source_location const caller = std::source_location::current()) -> void
     {
-        node_test<extract_type>(std::move(type_string), expected_string, caller);
+        node_test<extract_type>(std::move(type_string), std::move(expected_string), caller);
     }
     auto pattern(
-        std::string                      pattern_string,
-        tl::optional<std::string> const expected_string = tl::nullopt,
-        std::source_location       const caller = std::source_location::current()) -> void
+        std::string                pattern_string,
+        tl::optional<std::string>  expected_string = tl::nullopt,
+        std::source_location const caller = std::source_location::current()) -> void
     {
-        node_test<extract_pattern>(std::move(pattern_string), expected_string, caller);
+        node_test<extract_pattern>(std::move(pattern_string), std::move(expected_string), caller);
     }
 
 
@@ -101,8 +100,7 @@ namespace {
         "conditional_elif"_test = [] {
             expression(
                 "if true { 50 } elif false { 75 } else { 100 }",
-                "if true { 50 } else if false { 75 } else { 100 }"
-            );
+                "if true { 50 } else if false { 75 } else { 100 }");
         };
 
         "for_loop"_test = [] {
@@ -112,8 +110,7 @@ namespace {
         "operator_precedence"_test = [] {
             expression(
                 "1 * 2 +$+ 3 + 4",
-                "((1*2) +$+ (3+4))"
-            );
+                "((1*2) +$+ (3+4))");
         };
 
         "duplicate_initializer"_throwing_test = [] {
@@ -123,8 +120,7 @@ namespace {
         "type_cast"_test = [] {
             expression(
                 "'x' as U32 as Bool as Float + 3.14",
-                "(((('x' as U32) as Bool) as Float) + 3.14)"
-            );
+                "(((('x' as U32) as Bool) as Float) + 3.14)");
         };
 
         "member_access"_test = [] {
@@ -142,8 +138,7 @@ namespace {
         "implicit_tuple_let_binding"_test = [] {
             expression(
                 "let a, mut b: (I64, Float) = (10, 20.5)",
-                "let (a, mut b): (I64, Float) = (10, 20.5)"
-            );
+                "let (a, mut b): (I64, Float) = (10, 20.5)");
         };
 
         "caseless_match"_throwing_test = [] {

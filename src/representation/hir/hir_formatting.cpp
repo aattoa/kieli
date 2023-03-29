@@ -37,13 +37,12 @@ namespace {
     struct Expression_format_visitor : utl::formatting::Visitor_base {
         template <class T>
         auto operator()(hir::expression::Literal<T> const& literal) {
-            return format("{}", literal.value);
-        }
-        auto operator()(hir::expression::Literal<char> const& literal) {
-            return format("'{}'", literal.value);
-        }
-        auto operator()(hir::expression::Literal<compiler::String> const& literal) {
-            return format("\"{}\"", literal.value);
+            if constexpr (std::same_as<T, compiler::String>)
+                return format("\"{}\"", literal.value);
+            if constexpr (std::same_as<T, compiler::Character>)
+                return format("'{}'", literal.value);
+            else
+                return format("{}", literal.value);
         }
         auto operator()(hir::expression::Array_literal const& literal) {
             return format("[{}]", literal.elements);

@@ -45,7 +45,7 @@ struct Parse_context {
         return *pointer++;
     }
     [[nodiscard]]
-    auto previous() noexcept -> Token& {
+    auto previous() const noexcept -> Token const& {
         assert(pointer && pointer != start);
         return pointer[-1];
     }
