@@ -339,7 +339,7 @@ namespace {
                 ? context.fresh_general_unification_type_variable(this_expression.source_view)
                 : mir_array.elements.front().type;
 
-            utl::Isize const array_length = std::ssize(mir_array.elements);
+            auto const array_length = mir_array.elements.size();
 
             return {
                 .value = std::move(mir_array),
@@ -347,7 +347,7 @@ namespace {
                     .value = wrap_type(mir::type::Array {
                         .element_type = element_type,
                         .array_length = utl::wrap(mir::Expression {
-                            .value       = mir::expression::Literal<utl::Isize> { array_length },
+                            .value       = mir::expression::Literal<compiler::Unsigned_integer> { array_length },
                             .type        = context.size_type(this_expression.source_view),
                             .source_view = this_expression.source_view,
                             .mutability  = context.immut_constant(this_expression.source_view)
@@ -396,8 +396,7 @@ namespace {
                 [&](utl::Wrapper<resolution::Function_template_info> const info) -> mir::Expression {
                     return handle_function_reference(
                         context.instantiate_function_template_with_synthetic_arguments(info, this_expression.source_view),
-                        true // is_application
-                    );
+                        true /*is_application*/);
                 },
                 [this](mir::Enum_constructor const constructor) -> mir::Expression {
                     return {
@@ -1015,5 +1014,5 @@ namespace {
 
 
 auto resolution::Context::resolve_expression(hir::Expression& expression, Scope& scope, Namespace& space) -> mir::Expression {
-    return std::visit(Expression_resolution_visitor{ *this, scope, space, expression }, expression.value);
+    return std::visit(Expression_resolution_visitor { *this, scope, space, expression }, expression.value);
 }

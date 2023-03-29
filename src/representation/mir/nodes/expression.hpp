@@ -132,10 +132,12 @@ namespace mir {
 
     struct Expression {
         using Variant = std::variant<
-            expression::Literal<utl::Isize>,
-            expression::Literal<utl::Float>,
-            expression::Literal<utl::Char>,
-            expression::Literal<bool>,
+            expression::Literal<compiler::Signed_integer>,
+            expression::Literal<compiler::Unsigned_integer>,
+            expression::Literal<compiler::Integer_of_unknown_sign>,
+            expression::Literal<compiler::Floating>,
+            expression::Literal<compiler::Character>,
+            expression::Literal<compiler::Boolean>,
             expression::Literal<compiler::String>,
             expression::Array_literal,
             expression::Tuple,

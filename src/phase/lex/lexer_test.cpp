@@ -16,7 +16,7 @@ namespace {
     {
         utl::always_assert(test_string_pool_ptr != nullptr);
 
-        utl::Source source { utl::Source::Mock_tag {}, std::string { text } };
+        utl::Source source { utl::Source::Mock_tag { "TEST" }, std::string { text } };
         auto lex_result = compiler::lex({ std::move(source), *test_string_pool_ptr });
 
         required_types.push_back(Token::Type::end_of_input);
@@ -39,94 +39,115 @@ namespace {
         "whitespace"_test = [] {
             assert_tok_eq(
                 "\ta\nb  \t  c  \n  d\n\n e ",
-                { lower_name, lower_name, lower_name, lower_name, lower_name }
-            );
+                { lower_name
+                , lower_name
+                , lower_name
+                , lower_name
+                , lower_name });
         };
 
         "numeric"_test = [] {
             assert_tok_eq(
-                "50 23.4 0xdeadbeef 1. -3",
-                { integer, floating, integer, floating, integer }
-            );
+                "23.4 1.",
+                { floating, floating });
 
             assert_tok_eq(
-                "0.3e-5 3e3 -0. -0.2E5",
-                { floating, integer, floating, floating }
-            );
+                "50 0xdeadbeef -3 3e3 18446744073709551615",
+                { integer_of_unknown_sign
+                , integer_of_unknown_sign
+                , signed_integer
+                , integer_of_unknown_sign
+                , unsigned_integer });
+
+            assert_tok_eq(
+                "0.3e-5 -0. -0.2E5",
+                { floating, floating, floating });
         };
 
         "tuple_member_access"_test = [] {
             assert_tok_eq(
                 ".0.0, 0.0",
-                { dot, integer, dot, integer, comma, floating }
-            );
+                { dot
+                , integer_of_unknown_sign
+                , dot
+                , integer_of_unknown_sign
+                , comma
+                , floating });
         };
 
         "punctuation"_test = [] {
             assert_tok_eq(
                 "\n::\t,;(--? @#",
-                { double_colon, comma, semicolon, paren_open, operator_name, operator_name }
-            );
+                { double_colon
+                , comma
+                , semicolon
+                , paren_open
+                , operator_name
+                , operator_name });
         };
 
         "comment"_test = [] {
             assert_tok_eq(
                 ". /* , /*::*/! */ in /**/ / //",
-                { dot, in, operator_name }
-            );
+                { dot, in, operator_name });
 
             assert_tok_eq(
-                "/* \"\" */ . /* \"*/\" */ . \"/* /*\" . /* /* \"*/\"*/ */ .",
-                { dot, dot, string, dot, dot }
-            );
+                R"(/* "" */ . /* "*/" */ . "/* /*" . /* /* "*/"*/ */ .)",
+                { dot, dot, string, dot, dot });
         };
 
         "keyword"_test = [] {
             assert_tok_eq(
                 "for;forr(for2",
-                { for_, semicolon, lower_name, paren_open, lower_name }
-            );
+                { for_, semicolon, lower_name, paren_open, lower_name });
 
             assert_tok_eq(
                 ",.[}\tmatch::",
-                { comma, dot, bracket_open, brace_close, match, double_colon }
-            );
+                { comma
+                , dot
+                , bracket_open
+                , brace_close
+                , match
+                , double_colon });
         };
 
         "pattern"_test = [] {
             assert_tok_eq(
                 "x1 _ wasd,3",
-                { lower_name, underscore, lower_name, comma, integer }
-            );
+                { lower_name
+                , underscore
+                , lower_name
+                , comma
+                , integer_of_unknown_sign });
 
             assert_tok_eq(
                 "a<$>_:\nVec",
-                { lower_name, operator_name, underscore, colon, upper_name }
-            );
+                { lower_name, operator_name, underscore, colon, upper_name });
 
             assert_tok_eq(
                 "_, ______::_________________",
-                { underscore, comma, underscore, double_colon, underscore }
-            );
+                { underscore, comma, underscore, double_colon, underscore });
         };
 
         "string"_test = [] {
             assert_tok_eq(
-                "\"test\\t\\\",\", 'a', '\\\\'",
-                { string, comma, character, comma, character }
-            );
+                "\"test\\t\\\",\", 'a', '\\\\'", // NOLINT
+                { string, comma, character, comma, character });
 
             assert_tok_eq(
-                "\"hmm\" \", yes\"",
-                { string }
-            );
+                R"("hmm" ", yes")",
+                { string });
         };
 
         "casing"_test = [] {
             assert_tok_eq(
                 "a A _a _A _0 _",
-                { lower_name, upper_name, lower_name, upper_name, lower_name, underscore }
-            );
+                { lower_name
+                , upper_name
+                , lower_name
+                , upper_name
+                , lower_name
+                , underscore });
         };
     }
 

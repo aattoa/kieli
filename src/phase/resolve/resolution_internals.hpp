@@ -37,12 +37,12 @@ namespace resolution {
             Explanation     constrained_note;
             bool            is_deferred = false;
         };
-        struct Instance {
-            mir::Type                   type;
+        struct Instance { // NOLINT
+            mir::Type                    type;
             utl::Wrapper<Typeclass_info> typeclass;
-            Explanation                 explanation;
+            Explanation                  explanation;
         };
-        struct Struct_field {
+        struct Struct_field { // NOLINT
             mir::Type            struct_type;
             mir::Type            field_type;
             compiler::Identifier field_identifier;
@@ -51,7 +51,7 @@ namespace resolution {
         struct Tuple_field {
             mir::Type   tuple_type;
             mir::Type   field_type;
-            utl::Usize   field_index;
+            utl::Usize  field_index {};
             Explanation explanation;
         };
     };
@@ -281,13 +281,14 @@ namespace resolution {
 
         template <class T>
         auto literal_type(utl::Source_view const view) -> mir::Type {
-            if constexpr (std::same_as<T, utl::Isize>)
+            // TODO: fix known signed/unsigned integral unification variables
+            if constexpr (utl::one_of<T, compiler::Signed_integer, compiler::Unsigned_integer, compiler::Integer_of_unknown_sign>)
                 return fresh_integral_unification_type_variable(view);
-            else if constexpr (std::same_as<T, utl::Float>)
+            else if constexpr (std::same_as<T, compiler::Floating>)
                 return floating_type(view);
-            else if constexpr (std::same_as<T, utl::Char>)
+            else if constexpr (std::same_as<T, compiler::Character>)
                 return character_type(view);
-            else if constexpr (std::same_as<T, bool>)
+            else if constexpr (std::same_as<T, compiler::Boolean>)
                 return boolean_type(view);
             else if constexpr (std::same_as<T, compiler::String>)
                 return string_type(view);

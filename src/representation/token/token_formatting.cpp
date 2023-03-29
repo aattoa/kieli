@@ -75,11 +75,14 @@ auto compiler::token_description(Lexical_token::Type const type)
     case upper_name:    return "a capitalized identifier";
     case operator_name: return "an operator";
     case string:        return "a string literal";
-    case integer:       return "an integer literal";
     case floating:      return "a floating-point literal";
     case character:     return "a character literal";
     case boolean:       return "a boolean literal";
     case end_of_input:  return "the end of input";
+
+    case signed_integer:          return "a signed integer literal";
+    case unsigned_integer:        return "an unsigned integer literal";
+    case integer_of_unknown_sign: return "an integer literal";
 
     case string_type:
     case floating_type:
@@ -111,7 +114,9 @@ DEFINE_FORMATTER_FOR(compiler::Lexical_token::Type) {
 
         "underscore", "lower", "upper", "op",
 
-        "str", "int", "float", "char", "bool",
+        "str", "float", "char", "bool",
+
+        "sint", "uint", "int",
 
         "String", "Float", "Char", "Bool", "I8", "I16", "I32", "I64", "U8", "U16", "U32", "U64",
         "self", "Self",

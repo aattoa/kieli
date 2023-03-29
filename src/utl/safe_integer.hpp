@@ -201,7 +201,7 @@ namespace utl {
         }
         constexpr auto operator--(int) -> Safe_integer {
             auto copy = *this;
-            ++*this;
+            --*this;
             return copy;
         }
 

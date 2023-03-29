@@ -19,7 +19,7 @@ namespace utl {
         Usize       m_size;
         Pool const* m_pool;
 
-        explicit constexpr Pooled_string(Usize const index, Usize const size, Pool const* const pool)
+        explicit constexpr Pooled_string(Usize const index, Usize const size, Pool const* const pool) // NOLINT
             : m_index { index }, m_size { size }, m_pool { pool } {}
     public:
         [[nodiscard]]
@@ -42,18 +42,16 @@ namespace utl {
     public:
         constexpr String_pool() {
             // Default capacity chosen for no particular reason
-            m_string.reserve(2048);
+            m_string.reserve(2048); // NOLINT
         }
         constexpr auto make(std::string_view const string) -> Pooled_string<Tag> {
             // The searcher overload is faster than the bare iterator overload for some reason
             auto it = std::search(m_string.begin(), m_string.end(), std::default_searcher { string.begin(), string.end() });
 
-            if (it == m_string.end()) {
+            if (it == m_string.end())
                 return make_guaranteed_new_string(string);
-            }
-            else {
+            else
                 return Pooled_string<Tag> { unsigned_distance(m_string.begin(), it), string.size(), this };
-            }
         }
         constexpr auto make_guaranteed_new_string(std::string_view const string) -> Pooled_string<Tag> {
             Usize const index = m_string.size();

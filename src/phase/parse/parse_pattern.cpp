@@ -23,12 +23,10 @@ namespace {
         auto patterns = extract_comma_separated_zero_or_more<parse_pattern, "a pattern">(context);
         context.consume_required(Token::Type::paren_close);
 
-        if (patterns.size() == 1) {
+        if (patterns.size() == 1)
             return std::move(patterns.front().value);
-        }
-        else {
+        else
             return ast::pattern::Tuple { std::move(patterns) };
-        }
     };
 
     auto extract_slice(Parse_context& context)
@@ -39,15 +37,12 @@ namespace {
 
         auto patterns = extract_elements(context);
 
-        if (context.try_consume(Token::Type::bracket_close)) {
+        if (context.try_consume(Token::Type::bracket_close))
             return ast::pattern::Slice { std::move(patterns) };
-        }
-        else if (patterns.empty()) {
+        else if (patterns.empty())
             context.error_expected("a slice element pattern or a ']'");
-        }
-        else {
+        else
             context.error_expected("a ',' or a ']'");
-        }
     };
 
 
@@ -56,7 +51,7 @@ namespace {
 
 
     auto parse_constructor_name(Parse_context& context) -> tl::optional<ast::Qualified_name> {
-        auto* const anchor = context.pointer;
+        Token const* const anchor = context.pointer;
 
         auto name = std::invoke([&]() -> tl::optional<ast::Qualified_name> {
             switch (context.pointer->type) {
@@ -67,20 +62,17 @@ namespace {
                 ++context.pointer;
                 return extract_qualified({ ast::Root_qualifier::Global {} }, context);
             default:
-                if (auto type = parse_type(context)) {
+                if (auto type = parse_type(context))
                     return extract_qualified({ utl::wrap(std::move(*type)) }, context);
-                }
-                else {
+                else
                     return tl::nullopt;
-                }
             }
         });
 
         if (name && name->primary_name.is_upper) {
             context.error(
                 { anchor, context.pointer },
-                "Expected an enum constructor name, but found a capitalized identifier"
-            );
+                "Expected an enum constructor name, but found a capitalized identifier");
         }
 
         return name;
@@ -109,9 +101,8 @@ namespace {
             }
         }
 
-        if (!identifier) {
+        if (!identifier)
             identifier = extract_lower_id(context, "a lowercase identifier");
-        }
 
         return ast::pattern::Name {
             .identifier = std::move(*identifier),
@@ -130,9 +121,7 @@ namespace {
                 .payload_pattern  = parse_constructor_pattern(context).transform(utl::wrap)
             };
         }
-        else {
-            utl::todo(); // Unreachable?
-        }
+        utl::todo(); // Unreachable?
     };
 
 
@@ -140,14 +129,18 @@ namespace {
         switch (context.extract().type) {
         case Token::Type::underscore:
             return extract_wildcard(context);
-        case Token::Type::integer:
-            return extract_literal<utl::Isize>(context);
+        case Token::Type::signed_integer:
+            return extract_literal<compiler::Signed_integer>(context);
+        case Token::Type::unsigned_integer:
+            return extract_literal<compiler::Unsigned_integer>(context);
+        case Token::Type::integer_of_unknown_sign:
+            return extract_literal<compiler::Integer_of_unknown_sign>(context);
         case Token::Type::floating:
-            return extract_literal<utl::Float>(context);
+            return extract_literal<compiler::Floating>(context);
         case Token::Type::character:
-            return extract_literal<utl::Char>(context);
+            return extract_literal<compiler::Character>(context);
         case Token::Type::boolean:
-            return extract_literal<bool>(context);
+            return extract_literal<compiler::Boolean>(context);
         case Token::Type::string:
             return extract_literal<compiler::String>(context);
         case Token::Type::paren_open:
@@ -184,9 +177,7 @@ namespace {
             }
             return std::move(pattern->value);
         }
-        else {
-            return tl::nullopt;
-        }
+        return tl::nullopt;
     }
 
 
@@ -201,17 +192,11 @@ namespace {
                         .guard           = std::move(*guard)
                     };
                 }
-                else {
-                    context.error_expected("a guard expression");
-                }
+                context.error_expected("a guard expression");
             }
-            else {
-                return std::move(pattern->value);
-            }
+            return std::move(pattern->value);
         }
-        else {
-            return tl::nullopt;
-        }
+        return tl::nullopt;
     }
 
 }

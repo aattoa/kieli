@@ -1,4 +1,5 @@
 #include "utl/utilities.hpp"
+#include "utl/safe_integer.hpp"
 #include "lex.hpp"
 
 
@@ -98,7 +99,7 @@ namespace {
         }
         [[nodiscard]]
         auto extract(std::predicate<char> auto const predicate) noexcept -> std::string_view {
-            auto* const anchor = state.pointer;
+            char const* const anchor = state.pointer;
             consume(predicate);
             return { anchor, state.pointer };
         }
@@ -194,7 +195,7 @@ namespace {
             }
         };
 
-        template <utl::trivial T> [[nodiscard]]
+        template <class T> [[nodiscard]]
         auto parse(std::same_as<int> auto const... base) noexcept -> Parse_result<T> {
             static_assert(sizeof...(base) <= 1,
                 "The parameter pack is used for the optional base parameter only");
@@ -348,14 +349,13 @@ namespace {
             return context.success(Token::Type::underscore);
 
         if (view == "true")
-            return context.success(Token::Type::boolean, true);
+            return context.success(Token::Type::boolean, compiler::Boolean { true });
         else if (view == "false")
-            return context.success(Token::Type::boolean, false);
+            return context.success(Token::Type::boolean, compiler::Boolean { false });
 
-        for (auto const [keyword, keyword_type] : options) {
-            if (view == keyword) {
+        for (auto const [keyword, keyword_type] : options) { // NOLINT
+            if (view == keyword)
                 return context.success(keyword_type);
-            }
         }
 
         return context.success(
@@ -425,17 +425,17 @@ namespace {
 
 
     auto extract_numeric_base(Lex_context& context) -> int {
-        int base = 10;
+        int base = 10; // NOLINT
         
         auto const state = context.current_state();
 
         if (context.try_consume('0')) {
             switch (context.extract_current()) {
-            case 'b': base = 2; break;
-            case 'q': base = 4; break;
-            case 'o': base = 8; break;
-            case 'd': base = 12; break;
-            case 'x': base = 16; break;
+            case 'b': base = 2; break;  // NOLINT
+            case 'q': base = 4; break;  // NOLINT
+            case 'o': base = 8; break;  // NOLINT
+            case 'd': base = 12; break; // NOLINT
+            case 'x': base = 16; break; // NOLINT
             default:
                 context.restore(state);
                 return base;
@@ -448,40 +448,49 @@ namespace {
         return base;
     }
 
-    auto apply_scientific_coefficient(utl::Isize& integer, char const* anchor, Lex_context& context) -> void {
-        if (context.try_consume('e') || context.try_consume('E')) {
-            auto const exponent = context.parse<utl::Isize>();
+    [[nodiscard]]
+    auto apply_scientific_coefficient(
+        char const* const anchor,
+        utl::Usize  const integer,
+        Lex_context&      context) -> utl::Usize
+    {
+        if (!context.try_consume('e') && !context.try_consume('E'))
+            return integer;
 
-            if (exponent.did_parse()) {
-                if (exponent.is_too_large()) {
-                    context.error({ exponent.start_position, exponent.result.ptr }, { "Exponent is too large" });
-                }
-                if (exponent.get() < 0) [[unlikely]] {
-                    context.error(context.current_pointer(), {
-                        .message   = "Negative exponent",
-                        .help_note = "use a floating point literal if this was intended" });
-                }
-                else if (utl::digit_count(integer) + exponent.get() >= std::numeric_limits<utl::Isize>::digits10) {
-                    context.error(
-                        { anchor, exponent.result.ptr },
-                        { "Integer literal is too large after applying scientific coefficient" });
-                }
+        auto const exponent = context.parse<utl::Isize>();
 
-                auto value = exponent.get();
-                utl::Isize coefficient = 1;
-                while (value--)
-                    coefficient *= 10;
+        if (exponent.did_parse()) {
+            if (exponent.is_too_large()) {
+                context.error({ exponent.start_position, exponent.result.ptr }, { "Exponent is too large" });
+            }
+            else if (exponent.get() < 0) {
+                context.error(context.current_pointer(), {
+                    .message   = "Negative exponent",
+                    .help_note = "use a floating point literal if this was intended" });
+            }
 
-                integer *= coefficient;
+            try {
+                utl::Safe_usize checked_value    = integer;
+                utl::Safe_isize checked_exponent = exponent.get();
+
+                while (checked_exponent--)
+                    checked_value *= 10; // NOLINT
+
                 context.advance(utl::unsigned_distance(context.current_pointer(), exponent.result.ptr));
+                return checked_value.get();
             }
-            else if (exponent.was_non_numeric()) {
-                context.error(exponent.start_position, { "Expected an exponent" });
+            catch (utl::Safe_integer_error const&) {
+                context.error(
+                    { anchor, exponent.result.ptr },
+                    { "Integer literal is too large after applying scientific coefficient" });
             }
-            else {
-                // Should be unreachable because there either is an exponent or there isn't
-                utl::unreachable();
-            }
+        }
+        else if (exponent.was_non_numeric()) {
+            context.error(exponent.start_position, { "Expected an exponent" });
+        }
+        else {
+            // Should be unreachable because there either is an exponent or there isn't
+            utl::unreachable();
         }
     }
 
@@ -489,10 +498,10 @@ namespace {
         auto const state    = context.current_state();
         auto const negative = context.try_consume('-');
         auto const base     = extract_numeric_base(context);
-        auto const integer  = context.parse<utl::Isize>(base);
+        auto const integer  = context.parse<utl::Usize>(base);
 
         if (integer.was_non_numeric()) {
-            if (base == 10) {
+            if (base == 10) { // NOLINT
                 context.restore(state);
                 return false;
             }
@@ -512,12 +521,9 @@ namespace {
         }
         else if (!integer.did_parse()) {
             // Should be unreachable because `integer.was_non_numeric`
-            // returned false, which means at one digiti was encountered
+            // returned false, which means at one digit was encountered
             utl::unreachable();
         }
-
-        if (negative && integer.get() < 0)
-            context.error(state.pointer + 1, { "Only one '-' may be applied" });
 
         auto const is_tuple_member_index = [&] {
             // If the numeric literal is preceded by '.', then don't attempt to
@@ -526,7 +532,7 @@ namespace {
         };
 
         if (*integer.result.ptr == '.' && !is_tuple_member_index()) {
-            if (base != 10)
+            if (base != 10) // NOLINT
                 context.error({ state.pointer, 2 }, { "Float literals must be base-10" });
 
             // Go back to the beginning of the digit sequence
@@ -546,22 +552,41 @@ namespace {
             }
             else {
                 context.advance(utl::unsigned_distance(context.current_pointer(), floating.result.ptr));
-                return context.success(Token::Type::floating, floating.get());
+                return context.success(Token::Type::floating, compiler::Floating { floating.get() });
             }
         }
 
-        auto value = integer.get();
-        value *= (negative ? -1 : 1);
-
         context.advance(utl::unsigned_distance(context.current_pointer(), integer.result.ptr));
-        apply_scientific_coefficient(value, state.pointer, context);
-        return context.success(Token::Type::integer, value);
+        utl::Usize const result = apply_scientific_coefficient(state.pointer, integer.private_value, context);
+
+        if (std::in_range<utl::Isize>(result)) {
+            auto const signed_representation = // NOLINT
+                utl::safe_cast<utl::Isize>(result);
+
+            if (negative)
+                return context.success(
+                    Token::Type::signed_integer,
+                    compiler::Signed_integer { -1 * signed_representation });
+            else
+                return context.success(
+                    Token::Type::integer_of_unknown_sign,
+                    compiler::Integer_of_unknown_sign { signed_representation });
+        }
+        else {
+            if (!negative)
+                return context.success(
+                    Token::Type::unsigned_integer,
+                    compiler::Unsigned_integer { result });
+            else
+                context.error(
+                    { state.pointer, integer.result.ptr },
+                    { "Integer literal is too large to be a signed integer" });
+        }
     }
 
 
     auto handle_escape_sequence(Lex_context& context) -> char {
         char const* const anchor = context.current_pointer();
-
         switch (context.extract_current()) {
         case 'a': return '\a';
         case 'b': return '\b';
@@ -593,47 +618,42 @@ namespace {
                 c = handle_escape_sequence(context);
 
             if (context.try_consume('\''))
-                return context.success(Token::Type::character, c);
+                return context.success(Token::Type::character, compiler::Character { c });
             else
                 context.error(context.current_pointer(), { "Expected a closing single-quote" });
         }
-        else {
-            return false;
-        }
+        return false;
     }
 
     auto extract_string(Lex_context& context) -> bool {
+        if (!context.try_consume('"'))
+            return false;
+
         char const* const anchor = context.current_pointer();
 
-        if (context.try_consume('"')) {
-            thread_local std::string string = utl::string_with_capacity(50);
-            string.clear();
+        static thread_local std::string string = utl::string_with_capacity(50);
+        string.clear();
 
-            for (;;) {
-                if (context.is_finished())
-                    context.error(anchor, { "Unterminating string literal" });
+        for (;;) {
+            if (context.is_finished())
+                context.error(anchor, { "Unterminating string literal" });
 
-                switch (char c = context.extract_current()) {
-                case '\0':
-                    utl::abort();
-                case '"':
-                    if (!context.tokens.empty() && context.tokens.back().type == Token::Type::string) {
-                        // Concatenate adjacent string literals
-
-                        string.insert(0, context.tokens.back().as_string().view());
-                        context.tokens.pop_back(); // Pop the previous string
-                    }
-                    return context.success(Token::Type::string, context.string_pool.literals.make(string));
-                case '\\':
-                    c = handle_escape_sequence(context);
-                    [[fallthrough]];
-                default:
-                    string.push_back(c);
+            switch (char c = context.extract_current()) {
+            case '\0':
+                utl::abort();
+            case '"':
+                if (!context.tokens.empty() && context.tokens.back().type == Token::Type::string) {
+                    // Concatenate adjacent string literals
+                    string.insert(0, context.tokens.back().as_string().view());
+                    context.tokens.pop_back(); // Pop the previous string
                 }
+                return context.success(Token::Type::string, context.string_pool.literals.make(string));
+            case '\\':
+                c = handle_escape_sequence(context);
+                [[fallthrough]];
+            default:
+                string.push_back(c);
             }
-        }
-        else {
-            return false;
         }
     }
 
@@ -681,31 +701,29 @@ auto compiler::lex(Lex_arguments&& lex_arguments) -> Lex_result {
             }
         }
 
-        if (!did_extract) {
-            if (context.is_finished()) {
-                auto const state = context.current_state();
+        if (did_extract)
+            continue;
+        else if (!context.is_finished())
+            context.error(context.current_pointer(), { "Syntax error; unable to extract lexical token" });
 
-                context.tokens.push_back(
-                    Token {
-                        .type        = Token::Type::end_of_input,
-                        .source_view = utl::Source_view {
-                            std::string_view { context.stop, context.stop },
-                            { state.line, state.column },
-                            { state.line, state.column }
-                        }
-                    }
-                );
+        auto const state = context.current_state();
 
-                return Lex_result {
-                    .tokens      = std::move(context.tokens),
-                    .source      = std::move(context.source),
-                    .diagnostics = std::move(context.diagnostics),
-                    .string_pool = string_pool
-                };
+        context.tokens.push_back(
+            Token {
+                .type        = Token::Type::end_of_input,
+                .source_view = utl::Source_view {
+                    std::string_view { context.stop, context.stop },
+                    { state.line, state.column },
+                    { state.line, state.column }
+                }
             }
-            else {
-                context.error(context.current_pointer(), { "Syntax error; unable to extract lexical token" });
-            }
-        }
+        );
+
+        return Lex_result {
+            .tokens      = std::move(context.tokens),
+            .source      = std::move(context.source),
+            .diagnostics = std::move(context.diagnostics),
+            .string_pool = string_pool
+        };
     }
 }

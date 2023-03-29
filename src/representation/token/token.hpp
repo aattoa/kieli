@@ -11,13 +11,24 @@ namespace compiler {
     using Identifier = utl::Pooled_string<struct Identifier_tag>;
 
 
+    struct Signed_integer          { utl::Isize value {}; };
+    struct Unsigned_integer        { utl::Usize value {}; };
+    struct Integer_of_unknown_sign { utl::Isize value {}; };
+
+    struct Floating                { utl::Float value {}; };
+    struct Boolean                 { bool       value {}; };
+    struct Character               { char       value {}; };
+
+
     struct [[nodiscard]] Lexical_token {
         using Variant = std::variant<
             std::monostate,
-            utl::Isize,
-            utl::Float,
-            char,
-            bool,
+            Signed_integer,
+            Unsigned_integer,
+            Integer_of_unknown_sign,
+            Floating,
+            Character,
+            Boolean,
             String,
             Identifier
         >;
@@ -91,10 +102,13 @@ namespace compiler {
             operator_name,
 
             string,
-            integer,
             floating,
             character,
             boolean,
+
+            signed_integer,
+            unsigned_integer,
+            integer_of_unknown_sign,
 
             string_type,
             floating_type,
@@ -122,17 +136,36 @@ namespace compiler {
         utl::Source_view source_view;
 
         template <class T> [[nodiscard]]
-        inline auto value_as() const noexcept -> T const& {
-            assert(std::holds_alternative<T>(value));
-            return *std::get_if<T>(&value);
+        auto value_as() const noexcept -> T {
+            if (T const* const pointer = std::get_if<T>(&value))
+                return *pointer;
+            else
+                utl::abort();
         }
 
-        [[nodiscard]] inline auto& as_integer    () const noexcept { return value_as<utl::Isize >(); }
-        [[nodiscard]] inline auto& as_floating   () const noexcept { return value_as<utl::Float >(); }
-        [[nodiscard]] inline auto& as_character  () const noexcept { return value_as<utl::Char  >(); }
-        [[nodiscard]] inline auto& as_boolean    () const noexcept { return value_as<bool      >(); }
-        [[nodiscard]] inline auto& as_string     () const noexcept { return value_as<String    >(); }
-        [[nodiscard]] inline auto& as_identifier () const noexcept { return value_as<Identifier>(); }
+        [[nodiscard]] auto as_floating  () const noexcept { return value_as<Floating>().value; }
+        [[nodiscard]] auto as_character () const noexcept { return value_as<Character>().value; }
+        [[nodiscard]] auto as_boolean   () const noexcept { return value_as<Boolean>().value; }
+        [[nodiscard]] auto as_string    () const noexcept { return value_as<String>(); }
+        [[nodiscard]] auto as_identifier() const noexcept { return value_as<Identifier>(); }
+
+        [[nodiscard]]
+        auto as_signed_integer() const noexcept -> utl::Isize {
+            if (auto const* const integer = std::get_if<Integer_of_unknown_sign>(&value))
+                return integer->value;
+            else
+                return value_as<Signed_integer>().value;
+        }
+        [[nodiscard]]
+        auto as_unsigned_integer() const noexcept -> utl::Usize {
+            if (auto const* const integer = std::get_if<Integer_of_unknown_sign>(&value)) {
+                assert(std::in_range<utl::Usize>(integer->value));
+                return static_cast<utl::Usize>(integer->value);
+            }
+            else {
+                return value_as<Unsigned_integer>().value;
+            }
+        }
     };
 
     static_assert(std::is_trivially_copyable_v<Lexical_token>);
@@ -145,3 +178,17 @@ namespace compiler {
 
 DECLARE_FORMATTER_FOR(compiler::Lexical_token::Type);
 DECLARE_FORMATTER_FOR(compiler::Lexical_token);
+
+
+template <utl::one_of<
+    compiler::Signed_integer,
+    compiler::Unsigned_integer,
+    compiler::Integer_of_unknown_sign,
+    compiler::Floating,
+    compiler::Boolean,
+    compiler::Character> T>
+struct fmt::formatter<T> : fmt::formatter<decltype(T::value)> {
+    auto format(T const value_wrapper, auto& context) {
+        return fmt::formatter<decltype(T::value)>::format(value_wrapper.value, context);
+    }
+};

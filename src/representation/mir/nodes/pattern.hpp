@@ -50,12 +50,14 @@ namespace mir {
 
     struct Pattern {
         using Variant = std::variant<
-            pattern::Wildcard,
-            pattern::Literal<utl::Isize>,
-            pattern::Literal<utl::Float>,
-            pattern::Literal<utl::Char>,
-            pattern::Literal<bool>,
+            pattern::Literal<compiler::Signed_integer>,
+            pattern::Literal<compiler::Unsigned_integer>,
+            pattern::Literal<compiler::Integer_of_unknown_sign>,
+            pattern::Literal<compiler::Floating>,
+            pattern::Literal<compiler::Character>,
+            pattern::Literal<compiler::Boolean>,
             pattern::Literal<compiler::String>,
+            pattern::Wildcard,
             pattern::Name,
             pattern::Tuple,
             pattern::Slice,
