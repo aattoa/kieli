@@ -37,7 +37,7 @@ namespace lir {
     namespace expression {
         template <class T>
         struct Constant {
-            T value;
+            T value {};
         };
         // Sequence of things that are all pushed onto the stack. Can represent tuples, array literals, and struct initializers.
         struct Tuple {

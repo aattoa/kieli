@@ -4,13 +4,13 @@
 
 namespace {
 
+    using namespace resolution;
+
+
     enum class Lookup_strategy {
         relative,
         absolute,
     };
-
-    using namespace resolution;
-
 
     // TODO: improve
     auto namespace_name(Namespace const& space) -> std::string_view {
@@ -26,9 +26,7 @@ namespace {
         Namespace          & space,
         hir::Root_qualifier& qualifier) -> utl::Pair<Lookup_strategy, Namespace*>
     {
-        return utl::match(
-            qualifier.value,
-
+        return utl::match(qualifier.value,
             [&](std::monostate) {
                 return utl::Pair { Lookup_strategy::relative, &space };
             },
@@ -55,16 +53,13 @@ namespace {
         if (qualifier.name.is_upper) {
             if (auto* const item = space.upper_table.find(qualifier.name.identifier)) {
                 auto const error_if_arguments = [&] {
-                    if (qualifier.template_arguments.has_value()) {
+                    if (qualifier.template_arguments.has_value())
                         context.error(qualifier.source_view, { "Template arguments applied to non-template entity" });
-                    }
                 };
 
                 // TODO: simplify
 
-                return utl::match(
-                    *item,
-
+                return utl::match(*item,
                     [&](utl::Wrapper<Struct_info> const info) -> Namespace* {
                         error_if_arguments();
                         return &*context.resolve_struct(info).associated_namespace;
@@ -87,24 +82,20 @@ namespace {
                     [&](utl::Wrapper<Struct_template_info> const info) -> Namespace* {
                         return &*context.resolve_struct(
                             std::invoke([&] {
-                                if (qualifier.template_arguments) {
+                                if (qualifier.template_arguments)
                                     return context.instantiate_struct_template(info, *qualifier.template_arguments, qualifier.source_view, scope, space);
-                                }
-                                else {
+                                else
                                     return context.instantiate_struct_template_with_synthetic_arguments(info, qualifier.source_view);
-                                }
                             })
                         ).associated_namespace;
                     },
                     [&](utl::Wrapper<Enum_template_info> const info) -> Namespace* {
                         return &*context.resolve_enum(
                             std::invoke([&] {
-                                if (qualifier.template_arguments) {
+                                if (qualifier.template_arguments)
                                     return context.instantiate_enum_template(info, *qualifier.template_arguments, qualifier.source_view, scope, space);
-                                }
-                                else {
+                                else
                                     return context.instantiate_enum_template_with_synthetic_arguments(info, qualifier.source_view);
-                                }
                             })
                         ).associated_namespace;
                     },
@@ -112,12 +103,10 @@ namespace {
                         return &*context.associated_namespace(
                             context.resolve_alias(
                                 std::invoke([&] {
-                                    if (qualifier.template_arguments) {
+                                    if (qualifier.template_arguments)
                                         return context.instantiate_alias_template(info, *qualifier.template_arguments, qualifier.source_view, scope, space);
-                                    }
-                                    else {
+                                    else
                                         return context.instantiate_alias_template_with_synthetic_arguments(info, qualifier.source_view);
-                                    }
                                 })
                             ).aliased_type
                         );
@@ -133,12 +122,10 @@ namespace {
                 utl::todo();
             }
             if (auto* const item = space.lower_table.find(qualifier.name.identifier)) {
-                if (utl::wrapper auto* const child = std::get_if<utl::Wrapper<Namespace>>(item)) {
+                if (utl::wrapper auto* const child = std::get_if<utl::Wrapper<Namespace>>(item))
                     return &**child;
-                }
-                else {
+                else
                     context.error(qualifier.source_view, { "Expected a namespace" });
-                }
             }
         }
 
@@ -204,7 +191,7 @@ namespace {
     {
         ast::Name const primary = name.primary_name;
 
-        auto [lookup_strategy, root] =
+        auto [lookup_strategy, root] = // NOLINT
             apply_root_qualifier(context, scope, space, name.root_qualifier);
 
         std::span<hir::Qualifier> qualifiers = name.middle_qualifiers;

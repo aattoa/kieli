@@ -259,40 +259,37 @@ auto compiler::resolve(Desugar_result&& desugar_result) -> Resolve_result {
     resolve_functions(context, context.global_namespace);
     context.solve_deferred_constraints();
 
-#if 0
-    [](this auto const visitor, Namespace const& space) -> void {
-        for (auto& definition : space.definitions_in_order) {
-            utl::match(
-                definition,
 
-                [](utl::Wrapper<Function_info> const def) {
-                    fmt::print("{}\n\n", utl::get<2>(def->value));
-                },
-                [](utl::wrapper auto const def) {
-                    fmt::print("{}\n\n", utl::get<1>(def->value));
-                },
-                [&](utl::Wrapper<Namespace> const space) {
-                    fmt::print("namespace {} {{\n\n", space->name);
-                    visitor(*space);
-                    fmt::print("}} // closes {}\n\n", space->name);
-                },
-                [](utl::Wrapper<Function_template_info> const info) {
-                    fmt::print(
-                        "template [{}] {}\n\n",
-                        utl::get<2>(info->value).parameters,
-                        utl::get<2>(info->value).definition
-                    );
-                },
-                []<class T>(utl::Wrapper<resolution::Definition_info<ast::definition::Template<T>>> const info) {
-                    fmt::print(
-                        "template [{}] {}\n\n",
-                        utl::get<1>(info->value).parameters,
-                        utl::get<1>(info->value).definition
-                    );
-                }
-            );
-        }
-    }(*context.global_namespace);
+#if 0
+    for (auto& definition : context.global_namespace->definitions_in_order) {
+        utl::match(
+            definition,
+
+            [](utl::Wrapper<Function_info> const def) {
+                fmt::print("{}\n\n", utl::get<2>(def->value));
+            },
+            [](utl::wrapper auto const def) {
+                fmt::print("{}\n\n", utl::get<1>(def->value));
+            },
+            [&](utl::Wrapper<Namespace>) {
+                utl::todo();
+            },
+            [](utl::Wrapper<Function_template_info> const info) {
+                fmt::print(
+                    "template [{}] {}\n\n",
+                    utl::get<2>(info->value).parameters,
+                    utl::get<2>(info->value).definition
+                );
+            },
+            []<class T>(utl::Wrapper<resolution::Definition_info<ast::definition::Template<T>>> const info) {
+                fmt::print(
+                    "template [{}] {}\n\n",
+                    utl::get<1>(info->value).parameters,
+                    utl::get<1>(info->value).definition
+                );
+            }
+        );
+    }
 #endif
 
     return Resolve_result {

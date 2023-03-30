@@ -42,8 +42,8 @@ namespace {
         }
 
         auto operator()(hir::pattern::Name& name) -> mir::Pattern {
-            mir::Type       type       = context.fresh_general_unification_type_variable(this_pattern.source_view);
-            mir::Mutability mutability = context.resolve_mutability(name.mutability, scope);
+            mir::Type       const type       = context.fresh_general_unification_type_variable(this_pattern.source_view);
+            mir::Mutability const mutability = context.resolve_mutability(name.mutability, scope);
 
             auto const variable_tag = context.fresh_local_variable_tag();
 
@@ -99,8 +99,8 @@ namespace {
         }
 
         auto operator()(hir::pattern::As& as) -> mir::Pattern {
-            mir::Pattern    aliased_pattern = recurse(*as.aliased_pattern);
-            mir::Mutability mutability      = context.resolve_mutability(as.alias.mutability, scope);
+            mir::Pattern          aliased_pattern = recurse(*as.aliased_pattern);
+            mir::Mutability const mutability      = context.resolve_mutability(as.alias.mutability, scope);
 
             (void)scope.bind_variable(as.alias.identifier, {
                 .type               = aliased_pattern.type,
@@ -152,7 +152,7 @@ namespace {
                         context.error(this_pattern.source_view, { "This constructor has fields which must be handled in a pattern" });
                     }
 
-                    bool const is_exhaustive = (payload_pattern ? payload_pattern->is_exhaustive_by_itself : true)
+                    bool const is_exhaustive = (!payload_pattern || payload_pattern->is_exhaustive_by_itself)
                         && utl::get<mir::type::Enumeration>(*constructor.enum_type.value).info->constructor_count() == 1;
 
                     return {
@@ -262,6 +262,5 @@ auto resolution::Context::resolve_pattern(
             .space        = space,
             .this_pattern = pattern
         },
-        pattern.value
-    );
+        pattern.value);
 }

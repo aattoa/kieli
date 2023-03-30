@@ -84,6 +84,20 @@ namespace {
         fmt::print("{}\n\n", utl::formatting::delimited_range(desugar_result.module.definitions, "\n\n"));
     }>;
 
+    [[maybe_unused]]
+    constexpr auto resolution_repl = generic_repl<[](compiler::Lex_result&& lex_result) {
+        auto resolve_result = compiler::resolve(compiler::desugar(compiler::parse(std::move(lex_result))));
+        for (utl::wrapper auto const wrapped_function : resolve_result.main_module.functions) {
+            mir::Function const& function = utl::get<mir::Function>(wrapped_function->value);
+            fmt::print("{}\n\n", function);
+        }
+    }>;
+
+    [[maybe_unused]]
+    constexpr auto reification_repl = generic_repl<[](compiler::Lex_result&& lex_result) {
+        (void)compiler::reify(compiler::resolve(compiler::desugar(compiler::parse(std::move(lex_result)))));
+    }>;
+
 }
 
 
@@ -153,10 +167,12 @@ auto main(int argc, char const** argv) -> int try {
         return machine.run();
     }
 
+    // explicitly signed integral unification variables?
+
     if (std::string_view const* const phase = options["debug"]) {
         using namespace compiler;
 
-        utl::Source debug_source { (std::filesystem::current_path().parent_path() / "sample-project" / "src" / "main.kieli").string() };
+        utl::Source debug_source { (std::filesystem::current_path().parent_path() / "sample-project" / "src" / "types.kieli").string() };
 
         Program_string_pool debug_string_pool;
         Lex_arguments lex_arguments {
@@ -164,16 +180,18 @@ auto main(int argc, char const** argv) -> int try {
             .string_pool = debug_string_pool
         };
 
-        auto resolve_result = resolve(desugar(parse(lex(std::move(lex_arguments)))));
+        auto const do_resolve = [&] {
+            return resolve(desugar(parse(lex(std::move(lex_arguments)))));
+        };
 
-        if (*phase == "lower")
-            (void)lower(reify(std::move(resolve_result)));
-        else if (*phase == "reify")
-            (void)reify(std::move(resolve_result));
-        else if (*phase == "resolve")
-            ; // Already done
+        if (*phase == "low")
+            (void)lower(reify(do_resolve()));
+        else if (*phase == "rei")
+            (void)reify(do_resolve());
+        else if (*phase == "res")
+            do_resolve();
         else
-            throw utl::exception("The phase must be one of lower|reify|resolve, not '{}'", *phase);
+            throw utl::exception("The phase must be one of low|rei|res, not '{}'", *phase);
 
         fmt::println("Finished debugging phase {}", *phase);
     }
@@ -183,12 +201,14 @@ auto main(int argc, char const** argv) -> int try {
             { "lex"    , lexer_repl             },
             { "expr"   , expression_parser_repl },
             { "prog"   , program_parser_repl    },
-            { "desugar", desugaring_repl        },
+            { "des"    , desugaring_repl        },
+            { "res"    , resolution_repl        },
+            { "rei"    , reification_repl       },
         } };
         if (auto* const repl = repls.find(*name))
             (*repl)();
         else
-            throw utl::exception("The repl must be one of lex|expr|prog|desugar, not '{}'", *name);
+            throw utl::exception("The repl must be one of lex|expr|prog|des|res, not '{}'", *name);
     }
 
     return EXIT_SUCCESS;

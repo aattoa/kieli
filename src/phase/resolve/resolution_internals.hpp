@@ -83,18 +83,25 @@ namespace resolution {
         std::vector<constraint::Mutability_equality> mutabilities;
     };
 
+    struct [[nodiscard]] Unification_variable_solutions {
+        using Types        = utl::Flatmap<mir::Unification_variable_tag, utl::Wrapper<mir::Type      ::Variant>>;
+        using Mutabilities = utl::Flatmap<mir::Unification_variable_tag, utl::Wrapper<mir::Mutability::Variant>>;
+        Types        types;
+        Mutabilities mutabilities;
+    };
+
     // Passed to `Context::unify_types`
     struct [[nodiscard]] Type_unification_arguments {
         using Report_unification_failure_callback =
-            void (Context&, constraint::Type_equality original, mir::Type left, mir::Type right);
+            void (Context&, constraint::Type_equality original, utl::Wrapper<mir::Type::Variant> left, utl::Wrapper<mir::Type::Variant> right);
         using Report_recursion_error_callback =
-            void (Context&, constraint::Type_equality original, mir::Type variable, mir::Type solution);
+            void (Context&, constraint::Type_equality original, utl::Wrapper<mir::Type::Variant> variable, utl::Wrapper<mir::Type::Variant> solution);
 
         constraint::Type_equality            constraint_to_be_tested;
         Deferred_equality_constraints&       deferred_equality_constraints;
+        Unification_variable_solutions&      unification_variable_solutions;
         bool                                 allow_coercion             = false;
         bool                                 do_destructive_unification = false;
-        bool                                 gather_variable_solutions  = true;
         Report_unification_failure_callback* report_unification_failure = nullptr;
         Report_recursion_error_callback*     report_recursive_type      = nullptr;
     };
@@ -103,19 +110,12 @@ namespace resolution {
         using Report_unification_failure_callback =
             void (Context&, constraint::Mutability_equality);
 
-        constraint::Mutability_equality      constraint_to_be_tested;
-        Deferred_equality_constraints&       deferred_equality_constraints;
-        bool                                 allow_coercion             = false;
-        bool                                 do_destructive_unification = false;
-        bool                                 gather_variable_solutions = true;
-        Report_unification_failure_callback* report_unification_failure = nullptr;
-    };
-
-    struct [[nodiscard]] Unification_variable_solutions {
-        using Types        = utl::Flatmap<mir::Unification_variable_tag, utl::Wrapper<mir::Type      ::Variant>>;
-        using Mutabilities = utl::Flatmap<mir::Unification_variable_tag, utl::Wrapper<mir::Mutability::Variant>>;
-        Types        types;
-        Mutabilities mutabilities;
+        constraint::Mutability_equality               constraint_to_be_tested;
+        Deferred_equality_constraints&                deferred_equality_constraints;
+        Unification_variable_solutions::Mutabilities& unification_variable_solutions;
+        bool                                          allow_coercion             = false;
+        bool                                          do_destructive_unification = false;
+        Report_unification_failure_callback*          report_unification_failure = nullptr;
     };
 
 
@@ -187,6 +187,8 @@ namespace resolution {
         [[nodiscard]] auto unify_types       (Type_unification_arguments)       -> bool;
         [[nodiscard]] auto unify_mutabilities(Mutability_unification_arguments) -> bool;
 
+        [[nodiscard]] auto pure_try_equate_types(utl::Wrapper<mir::Type::Variant>, utl::Wrapper<mir::Type::Variant>) -> bool;
+
         auto solve(constraint::Type_equality       const&) -> void;
         auto solve(constraint::Mutability_equality const&) -> void;
         auto solve(constraint::Instance            const&) -> void;
@@ -195,6 +197,8 @@ namespace resolution {
 
         // Clears the deferred constraint vectors, and solves their contained constraints.
         auto solve_deferred_constraints() -> void;
+
+        auto solve_as_many_unsolved_unification_type_variables_as_possible() -> void;
 
 
         // Returns a scope with local bindings for the template parameters and the MIR representations of the parameters themselves.
