@@ -119,9 +119,8 @@ auto main(int argc, char const** argv) -> int try {
 
     cli::Options options = utl::expect(cli::parse_command_line(argc, argv, description));
 
-
     utl::Logging_timer const execution_timer {
-        [&options](utl::Logging_timer::Duration const elapsed) {
+        [&options](auto const elapsed) {
             if (options["time"])
                 fmt::println("Total execution time: {}", elapsed);
         }
@@ -172,7 +171,7 @@ auto main(int argc, char const** argv) -> int try {
     if (std::string_view const* const phase = options["debug"]) {
         using namespace compiler;
 
-        utl::Source debug_source { (std::filesystem::current_path().parent_path() / "sample-project" / "src" / "types.kieli").string() };
+        utl::Source debug_source { (std::filesystem::current_path().parent_path() / "sample-project" / "src" / "main.kieli").string() };
 
         Program_string_pool debug_string_pool;
         Lex_arguments lex_arguments {
