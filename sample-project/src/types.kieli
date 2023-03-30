@@ -32,14 +32,14 @@ fn pointer_unification_test(): Int {
   unsafe_dereference(addressof(p))
 }
 
-/* works
+
 fn map_option[A, B](opt: Option[A], f: fn(A): B): Option[B] {
   match opt {
     Option::some(x) -> Option::some(f(x))
     Option::none    -> Option::none
   }
 }
-fn map_option_test(opt: Option[Int]): Option[String] = map_option(opt, ???) */
+fn map_option_test(opt: Option[Int]): Option[String] = map_option(opt, ???)
 
 
 fn basic_unification_test_0() {
@@ -61,16 +61,15 @@ fn conditional[T](c: Bool, a: T, b: T) {
 fn basic_unification_test_3() = conditional(true, 3.14, 2.74)
 
 
-/* works
+
 struct Triple[A, B = A, C = B] = a: A, b: B, c: C
-fn type_test() = Triple { a = "Hello", b = 50.2, c = ??? : Int } */
+fn type_test() = Triple { a = "Hello", b = 50.2, c = ??? : Int }
 
 
-/* works
 struct Pair[A = _, B = _] = first: A, second: B
 fn wildcard_test() = Pair[] { first = "aaaa", second = 2.74 }.second
 struct RefPair[A, B, a: mut = mut, b: mut = mut?a] = first: &mut?a A, second: &mut?b B
-fn mutability_test() = RefPair[Int, Float, _, _] { first = ??? : &Int, second = ??? : &mut Float } */
+fn mutability_test() = RefPair[Int, Float, _, _] { first = ??? : &Int, second = ??? : &mut Float }
 
 
 /* works
@@ -97,15 +96,21 @@ fn opt_hmm() {
 }*/
 
 
-/* works
-fn get[T](_: Option[T]): T = ???
+fn opt_get[T](_: Option[T]): T = ???
 fn aaa(): String {
   let o = ???;
-  let x = get(o);
+  let x = opt_get(o);
   (x, x).0
 }
 fn bbb(): Int {
   let o = ???;
-  let x = get(o);
+  let x = opt_get(o);
   (x, x).0
-} */
+}
+
+
+/*fn double_solution_test() {
+    let x = 5;
+    let _: (I32, I64) = (x, x);
+    x
+}*/

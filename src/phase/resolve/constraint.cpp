@@ -7,8 +7,8 @@ namespace {
     auto report_type_unification_failure(
         resolution::Context&                        context,
         resolution::constraint::Type_equality const constraint,
-        mir::Type                             const left,
-        mir::Type                             const right) -> void
+        utl::Wrapper<mir::Type::Variant>      const left,
+        utl::Wrapper<mir::Type::Variant>      const right) -> void
     {
         auto sections = utl::vector_with_capacity<utl::diagnostics::Text_section>(2);
 
@@ -47,8 +47,8 @@ namespace {
     auto report_recursive_type(
         resolution::Context&                        context,
         resolution::constraint::Type_equality const constraint,
-        mir::Type                             const variable,
-        mir::Type                             const solution) -> void
+        utl::Wrapper<mir::Type::Variant>      const variable,
+        utl::Wrapper<mir::Type::Variant>      const solution) -> void
     {
         context.error(constraint.constrained_type.source_view, {
             .message           = "Recursive type variable solution: {} = {}",
@@ -65,7 +65,6 @@ namespace {
 
         std::string const constrainer_note =
             fmt::vformat(constraint.constrainer_note.explanatory_note, fmt::make_format_args(left, right));
-
         std::string const constrained_note =
             fmt::vformat(constraint.constrained_note.explanatory_note, fmt::make_format_args(left, right));
 
@@ -93,10 +92,10 @@ namespace {
     auto try_get_variable_tag(mir::Type::Variant const& variant)
         noexcept -> tl::optional<mir::Unification_variable_tag>
     {
-        if (auto* const variable = std::get_if<mir::type::General_unification_variable>(&variant))
-            return variable->tag;
-        else if (auto* const variable = std::get_if<mir::type::Integral_unification_variable>(&variant))
-            return variable->tag;
+        if (auto const* const general = std::get_if<mir::type::General_unification_variable>(&variant))
+            return general->tag;
+        else if (auto const* const integral = std::get_if<mir::type::Integral_unification_variable>(&variant))
+            return integral->tag;
         else
             return tl::nullopt;
     }
@@ -106,29 +105,30 @@ namespace {
 
 auto resolution::Context::solve(constraint::Type_equality const& constraint) -> void {
     utl::always_assert(unify_types({
-        .constraint_to_be_tested       = constraint,
-        .deferred_equality_constraints = deferred_equality_constraints,
-        .allow_coercion                = true,
-        .do_destructive_unification    = true,
-        .report_unification_failure    = report_type_unification_failure,
-        .report_recursive_type         = report_recursive_type
+        .constraint_to_be_tested        = constraint,
+        .deferred_equality_constraints  = deferred_equality_constraints,
+        .unification_variable_solutions = unification_variable_solutions,
+        .allow_coercion                 = true,
+        .do_destructive_unification     = true,
+        .report_unification_failure     = report_type_unification_failure,
+        .report_recursive_type          = report_recursive_type
     }));
 }
 
 
 auto resolution::Context::solve(constraint::Mutability_equality const& constraint) -> void {
     utl::always_assert(unify_mutabilities({
-        .constraint_to_be_tested       = constraint,
-        .deferred_equality_constraints = deferred_equality_constraints,
-        .allow_coercion                = true,
-        .do_destructive_unification    = true,
-        .report_unification_failure    = report_mutability_unification_failure
+        .constraint_to_be_tested        = constraint,
+        .deferred_equality_constraints  = deferred_equality_constraints,
+        .unification_variable_solutions = unification_variable_solutions.mutabilities,
+        .allow_coercion                 = true,
+        .do_destructive_unification     = true,
+        .report_unification_failure     = report_mutability_unification_failure
     }));
 }
 
 
-auto resolution::Context::solve(constraint::Instance const& constraint) -> void {
-    (void)constraint;
+auto resolution::Context::solve(constraint::Instance const&) -> void {
     utl::todo();
 }
 
@@ -196,24 +196,41 @@ auto resolution::Context::solve(constraint::Tuple_field const& constraint) -> vo
 auto resolution::Context::solve_deferred_constraints() -> void {
     auto const solve = [this](auto& constraints) {
         // This has to be be an index-based loop because solving a constraint may defer more constraints
-        for (utl::Usize i = 0; i != constraints.size(); ++i) {
+        for (utl::Usize i = 0; i != constraints.size(); ++i)
             this->solve(std::as_const(constraints[i]));
-        }
+
         constraints.clear();
     };
 
     solve(deferred_equality_constraints.types);
     solve(deferred_equality_constraints.mutabilities);
 
+    solve_as_many_unsolved_unification_type_variables_as_possible();
+}
+
+
+auto resolution::Context::solve_as_many_unsolved_unification_type_variables_as_possible() -> void {
+    // TODO: does this need to detect existing solutions?
 
     Unsolved_unification_type_variables still_unsolved_unification_type_variables;
-    for (utl::wrapper auto const type : unsolved_unification_type_variables) {
-        while (tl::optional const tag = try_get_variable_tag(*type)) {
+    for (utl::wrapper auto const variable : unsolved_unification_type_variables) {
+        while (tl::optional const tag = try_get_variable_tag(*variable)) {
             if (utl::wrapper auto* const solution = unification_variable_solutions.types.find(*tag)) {
-                *type = **solution;
+                // Prevent infinite loop
+                if (tl::optional const solution_tag = try_get_variable_tag(**solution))
+                    if (*tag == *solution_tag)
+                        break;
+
+                // Solving an integral unification variable with a general unification variable would lose information
+                if (std::holds_alternative<mir::type::Integral_unification_variable>(*variable) &&
+                    std::holds_alternative<mir::type::General_unification_variable>(**solution))
+                    break;
+
+                // Apply solution
+                *variable = **solution;
             }
             else {
-                still_unsolved_unification_type_variables.push_back(type);
+                still_unsolved_unification_type_variables.push_back(variable);
                 break;
             }
         }

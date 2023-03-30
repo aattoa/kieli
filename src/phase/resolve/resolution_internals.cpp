@@ -10,21 +10,18 @@ resolution::Definition_state_guard::Definition_state_guard(
     : definition_state        { state }
     , initial_exception_count { std::uncaught_exceptions() }
 {
-    if (state == Definition_state::currently_on_resolution_stack) {
+    if (state == Definition_state::currently_on_resolution_stack)
         context.error(name.source_view, { "Unable to resolve circular dependency" });
-    }
-    else {
+    else
         state = Definition_state::currently_on_resolution_stack;
-    }
 }
 
 resolution::Definition_state_guard::~Definition_state_guard() {
     // If the destructor is called due to an uncaught exception
     // in definition resolution code, don't modify the state.
 
-    if (std::uncaught_exceptions() == initial_exception_count) {
+    if (std::uncaught_exceptions() == initial_exception_count)
         definition_state = Definition_state::resolved;
-    }
 }
 
 
@@ -137,23 +134,19 @@ auto resolution::Context::temporary_placeholder_type(utl::Source_view const view
 auto resolution::Context::associated_namespace_if(mir::Type type)
     -> tl::optional<utl::Wrapper<Namespace>>
 {
-    if (auto* const structure = std::get_if<mir::type::Structure>(&*type.value)) {
+    if (auto* const structure = std::get_if<mir::type::Structure>(&*type.value))
         return resolve_struct(structure->info).associated_namespace;
-    }
-    else if (auto* const enumeration = std::get_if<mir::type::Enumeration>(&*type.value)) {
+    else if (auto* const enumeration = std::get_if<mir::type::Enumeration>(&*type.value))
         return resolve_enum(enumeration->info).associated_namespace;
-    }
-    else {
+    else
         return tl::nullopt;
-    }
 }
 
 auto resolution::Context::associated_namespace(mir::Type type)
     -> utl::Wrapper<Namespace>
 {
-    if (auto space = associated_namespace_if(type)) {
+    if (tl::optional space = associated_namespace_if(type))
         return *space;
-    }
     error(type.source_view, {
         .message           = "{} does not have an associated namespace",
         .message_arguments = fmt::make_format_args(type)
@@ -212,9 +205,7 @@ auto resolution::Context::add_to_namespace(Namespace& space, ast::Name const nam
 auto resolution::Context::resolve_mutability(ast::Mutability const mutability, Scope& scope)
     -> mir::Mutability
 {
-    return utl::match(
-        mutability.value,
-
+    return utl::match(mutability.value,
         [&](ast::Mutability::Concrete const concrete) {
             return concrete.is_mutable
                 ? mut_constant(mutability.source_view)
@@ -241,9 +232,7 @@ auto resolution::Context::resolve_class_reference(
     Scope               & scope,
     Namespace           & space) -> mir::Class_reference
 {
-    return utl::match(
-        find_upper(reference.name, scope, space),
-
+    return utl::match(find_upper(reference.name, scope, space),
         [&](utl::Wrapper<Typeclass_info> info) -> mir::Class_reference {
             return { .info = info, .source_view = reference.source_view };
         },
@@ -301,9 +290,7 @@ auto resolution::Context::resolve_template_parameters(
             });
         };
 
-        utl::match(
-            parameter.value,
-
+        utl::match(parameter.value,
             [&](hir::Template_parameter::Type_parameter& type_parameter) {
                 parameter_scope.bind_type(parameter.name.identifier, {
                     .type {

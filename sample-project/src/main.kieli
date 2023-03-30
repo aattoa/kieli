@@ -1,7 +1,12 @@
 alias Int = I64
 
+fn test(): I8 {
+  let x = 10;
+  x
+}
+
 fn main() {
-  let x: Int = ???;
+  let x = ???;
   let (a, b): (Int, Int) = (x, x);
   {
       let _x: Int = a;

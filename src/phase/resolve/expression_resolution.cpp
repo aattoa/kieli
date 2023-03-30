@@ -77,8 +77,7 @@ namespace {
                         {
                             "Immutable due to this",
                             "Attempted to acquire mutable reference here"
-                        }
-                    );
+                        });
                 }
             },
             [&](mir::Mutability::Parameterized const actual, mir::Mutability::Parameterized const requested) {
@@ -88,8 +87,7 @@ namespace {
                         {
                             "Mutability parameterized by one template parameter here",
                             "Mutability parameterized by a different template parameter here"
-                        }
-                    );
+                        });
                 }
             },
             [&](mir::Mutability::Parameterized, mir::Mutability::Concrete const requested) {
@@ -99,8 +97,7 @@ namespace {
                         {
                             "Parameterized mutability here",
                             "Attempted to acquire mutable reference here"
-                        }
-                    );
+                        });
                 }
             },
             [&](mir::Mutability::Concrete const actual, mir::Mutability::Parameterized) {
@@ -110,19 +107,16 @@ namespace {
                         {
                             "Immutable due to this",
                             "Attempted to acquire of parameterized mutability here"
-                        }
-                    );
+                        });
                 }
             },
             [&](mir::Mutability::Variable const actual, mir::Mutability::Variable const requested) {
-                if (actual.tag != requested.tag) {
+                if (actual.tag != requested.tag)
                     solve_mutability_quality_constraint();
-                }
             },
             [&](mir::Mutability::Concrete const actual, auto) {
-                if (!actual.is_mutable) {
+                if (!actual.is_mutable)
                     solve_mutability_quality_constraint();
-                }
             },
             [&](auto, mir::Mutability::Concrete const requested) {
                 if (requested.is_mutable) {
@@ -131,8 +125,7 @@ namespace {
                         {
                             "Mutability is unknown due to this",
                             "Attempted to acquire mutable reference here"
-                        }
-                    );
+                        });
                 }
             },
             [&](auto, auto) {
@@ -363,7 +356,7 @@ namespace {
         auto operator()(hir::expression::Move& move) -> mir::Expression {
             mir::Expression lvalue = recurse(*move.lvalue);
             mir::Type const type   = lvalue.type;
-            require_addressability(context, lvalue, "Temporary expressions may not be explicitly moved");
+            require_addressability(context, lvalue, "Temporaries are moved by default, and may not be explicitly moved");
             return {
                 .value       = mir::expression::Move { utl::wrap(std::move(lvalue)) },
                 .type        = type,
@@ -743,13 +736,12 @@ namespace {
         auto operator()(hir::expression::Method_invocation &invocation) -> mir::Expression {
             mir::Expression base_expression = recurse(*invocation.base_expression);
 
-            utl::Wrapper<Function_info> method_info = context.resolve_method(
+            utl::Wrapper<Function_info> const method_info = context.resolve_method(
                 invocation.method_name,
                 invocation.template_arguments,
                 base_expression.type,
                 scope,
-                space
-            );
+                space);
             mir::Function& method = context.resolve_function(method_info);
 
             auto arguments = resolve_arguments(invocation.arguments);
@@ -765,8 +757,7 @@ namespace {
                             context,
                             std::move(base_expression),
                             method.self_parameter->mutability.with(base_source_view),
-                            base_source_view
-                        );
+                            base_source_view);
                     }
                 })
             );
@@ -776,8 +767,7 @@ namespace {
                     .info           = method_info,
                     .is_application = invocation.template_arguments.has_value()
                 },
-                std::move(arguments)
-            );
+                std::move(arguments));
         }
 
         auto operator()(hir::expression::Struct_field_access& access) -> mir::Expression {
@@ -785,7 +775,7 @@ namespace {
             mir::Mutability const mutability      = base_expression.mutability;
             bool            const is_addressable  = base_expression.is_addressable;
 
-            mir::Type field_type = context.fresh_general_unification_type_variable(
+            mir::Type const field_type = context.fresh_general_unification_type_variable(
                 this_expression.source_view);
 
             context.solve(constraint::Struct_field {
@@ -798,14 +788,14 @@ namespace {
                 }
             });
             return {
-                    .value = mir::expression::Struct_field_access {
-                        .base_expression = utl::wrap(std::move(base_expression)),
-                        .field_name      = access.field_name,
-                    },
-                    .type           = field_type,
-                    .source_view    = this_expression.source_view,
-                    .mutability     = mutability,
-                    .is_addressable = is_addressable,
+                .value = mir::expression::Struct_field_access {
+                    .base_expression = utl::wrap(std::move(base_expression)),
+                    .field_name      = access.field_name,
+                },
+                .type           = field_type,
+                .source_view    = this_expression.source_view,
+                .mutability     = mutability,
+                .is_addressable = is_addressable,
             };
         }
 
@@ -814,7 +804,7 @@ namespace {
             mir::Mutability const mutability      = base_expression.mutability;
             bool            const is_addressable  = base_expression.is_addressable;
 
-            mir::Type field_type = context.fresh_general_unification_type_variable(
+            mir::Type const field_type = context.fresh_general_unification_type_variable(
                 this_expression.source_view);
 
             context.solve(constraint::Tuple_field {
@@ -842,7 +832,8 @@ namespace {
         auto operator()(hir::expression::Sizeof& sizeof_) -> mir::Expression {
             return {
                 .value = mir::expression::Sizeof {
-                    .inspected_type = context.resolve_type(*sizeof_.inspected_type, scope, space) },
+                    .inspected_type = context.resolve_type(*sizeof_.inspected_type, scope, space)
+                },
                 .type           = context.size_type(this_expression.source_view),
                 .source_view    = this_expression.source_view,
                 .mutability     = context.immut_constant(this_expression.source_view),
@@ -855,8 +846,7 @@ namespace {
                 context,
                 recurse(*reference.referenced_expression),
                 context.resolve_mutability(reference.mutability, scope),
-                this_expression.source_view
-            );
+                this_expression.source_view);
         }
 
         auto operator()(hir::expression::Dereference& dereference) -> mir::Expression {
@@ -875,10 +865,10 @@ namespace {
                 };
             }
             else {
-                mir::Type       referenced_type      = context.fresh_general_unification_type_variable(dereferenced_expression.source_view);
-                mir::Mutability reference_mutability = context.fresh_unification_mutability_variable(this_expression.source_view);
+                mir::Type       const referenced_type      = context.fresh_general_unification_type_variable(dereferenced_expression.source_view);
+                mir::Mutability const reference_mutability = context.fresh_unification_mutability_variable(this_expression.source_view);
 
-                mir::Type reference_type {
+                mir::Type const reference_type {
                     .value = wrap_type(mir::type::Reference {
                         .mutability      = reference_mutability,
                         .referenced_type = referenced_type
@@ -913,7 +903,7 @@ namespace {
             mir::Expression lvalue = recurse(*addressof.lvalue);
             require_addressability(context, lvalue, "The address of a temporary object can not be taken");
 
-            mir::Type pointer_type {
+            mir::Type const pointer_type {
                 .value = wrap_type(mir::type::Pointer {
                     .mutability      = lvalue.mutability,
                     .pointed_to_type = lvalue.type
@@ -932,10 +922,10 @@ namespace {
         auto operator()(hir::expression::Unsafe_dereference& dereference) -> mir::Expression {
             mir::Expression pointer = recurse(*dereference.pointer);
 
-            mir::Type       lvalue_type       = context.fresh_general_unification_type_variable(this_expression.source_view);
-            mir::Mutability lvalue_mutability = context.fresh_unification_mutability_variable(this_expression.source_view);
+            mir::Type       const lvalue_type       = context.fresh_general_unification_type_variable(this_expression.source_view);
+            mir::Mutability const lvalue_mutability = context.fresh_unification_mutability_variable(this_expression.source_view);
 
-            mir::Type pointer_type {
+            mir::Type const pointer_type {
                 .value = wrap_type(mir::type::Pointer {
                     .mutability      = lvalue_mutability,
                     .pointed_to_type = lvalue_type

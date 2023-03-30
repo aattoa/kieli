@@ -13,23 +13,8 @@ namespace {
         mir::Type const self,
         mir::Type const inspected) -> bool
     {
-        Deferred_equality_constraints dec;
-        bool const result = context.unify_types({
-            .constraint_to_be_tested {
-                .constrainer_type = self,
-                .constrained_type = inspected,
-                .constrainer_note = constraint::Explanation { self.source_view },
-                .constrained_note { inspected.source_view }
-            },
-            .deferred_equality_constraints = dec,
-            .allow_coercion                = false,
-            .do_destructive_unification    = false,
-            .gather_variable_solutions     = false,
-            .report_unification_failure    = nullptr,
-            .report_recursive_type         = nullptr,
-        });
-        assert(dec.types.empty() && dec.mutabilities.empty());
-        return result;
+        // TODO: treat template parameter references as variables to be matched against
+        return context.pure_try_equate_types(self.value, inspected.value);
     }
 
 
@@ -40,7 +25,7 @@ namespace {
 
 
     auto lookup_method(
-        Context&  context,
+        Context&        context,
         ast::Name const method_name,
         mir::Type const inspected_type) -> Method_lookup_result
     {
@@ -91,17 +76,14 @@ namespace {
             // Try to find a method with the given name first and only then check if the implementation
             // concerns the given type, because the former is a much cheaper operation than the latter.
 
-            if (utl::wrapper auto* const function = definitions.functions.find(method_name.identifier)) {
+            if (utl::wrapper auto* const function = definitions.functions.find(method_name.identifier))
                 try_set_return_value(*function);
-            }
-            else if (utl::wrapper auto* const function_template = definitions.function_templates.find(method_name.identifier)) {
+            else if (utl::wrapper auto* const function_template = definitions.function_templates.find(method_name.identifier))
                 try_set_return_value(*function_template);
-            }
         }
 
-        if (return_value.has_value()) {
+        if (return_value.has_value())
             return *return_value;
-        }
 
         context.error(method_name.source_view, {
             .message           = "No appropriate method '{}' in scope",

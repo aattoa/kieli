@@ -215,6 +215,10 @@ namespace mir {
         return std::holds_alternative<Mutability::Variable>(variant);
     }
 
+    template <class T>
+    concept unification_variable = std::same_as<T, mir::type::General_unification_variable>
+                                || std::same_as<T, mir::type::Integral_unification_variable>;
+
 }
 
 

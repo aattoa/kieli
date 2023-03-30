@@ -32,7 +32,7 @@ namespace utl {
     };
 
 
-    struct Source_view {
+    struct [[nodiscard]] Source_view {
         std::string_view string;
         Source_position  start_position;
         Source_position  stop_position;
@@ -47,6 +47,11 @@ namespace utl {
             , stop_position  { stop   }
         {
             assert(start_position <= stop_position);
+        }
+
+        // Dummy source view for mock purposes
+        static constexpr auto dummy() -> Source_view {
+            return Source_view { {}, {}, {} };
         }
 
         auto operator+(Source_view const&) const noexcept -> Source_view;
