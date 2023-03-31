@@ -42,8 +42,7 @@ DEFINE_FORMATTER_FOR(ast::Mutability) {
         },
         [&](ast::Mutability::Parameterized const parameterized) {
             return fmt::format_to(context.out(), "mut?{} ", parameterized.identifier);
-        }
-    );
+        });
 }
 
 DEFINE_FORMATTER_FOR(ast::expression::Type_cast::Kind) {
@@ -119,14 +118,14 @@ namespace {
         }
         auto operator()(ast::expression::Block const& block) {
             format("{{ ");
-            for (auto const& side_effect : block.side_effects)
+            for (auto const& side_effect : block.side_effect_expressions)
                 format("{}; ", side_effect);
-            return block.result.has_value()
-                ? format("{} }}", *block.result)
+            return block.result_expression.has_value()
+                ? format("{} }}", *block.result_expression)
                 : format("}}");
         }
         auto operator()(ast::expression::Conditional const& conditional) {
-            auto& [condition, true_branch, false_branch] = conditional;
+            auto const& [condition, true_branch, false_branch] = conditional;
             format("if {} {}", condition, true_branch);
             if (false_branch.has_value())
                 format(" else {}", *false_branch);
@@ -331,7 +330,7 @@ DEFINE_FORMATTER_FOR(ast::Module) {
     if (value.name)
         fmt::format_to(context.out(), "module {}\n", *value.name);
 
-    for (auto& import : value.imports) {
+    for (auto const& import : value.imports) {
         fmt::format_to(context.out(), "import {}", utl::formatting::delimited_range(import.path.components, "."));
         if (import.alias)
             fmt::format_to(context.out(), " as {}", *import.alias);

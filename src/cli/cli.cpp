@@ -79,18 +79,18 @@ namespace {
             std::string_view erroneous_view;
 
             if (pointer == stop) {
-                auto const end = command_line_string.data() + command_line_string.size();
+                auto const* const end = command_line_string.data() + command_line_string.size();
                 erroneous_view = { end - 1, end };
             }
             else {
                 char const* view_begin = command_line_string.data();
-                for (auto view = start; view != pointer; ++view) {
+                for (auto const* view = start; view != pointer; ++view) {
                     view_begin += view->size() + 1; // +1 for the whitespace delimiter
                 }
                 erroneous_view = { view_begin, pointer->size() };
             }
 
-            utl::Source fake_source {
+            utl::Source const fake_source {
                 utl::Source::Mock_tag { .filename = "command line" },
                 std::move(command_line_string)
             };
@@ -138,8 +138,8 @@ namespace {
         auto const view = context.extract();
 
         if constexpr (utl::one_of<T, cli::types::Int, cli::types::Float>) {
-            auto const start = view.data();
-            auto const stop  = start + view.size();
+            auto const* const start = view.data();
+            auto const* const stop  = start + view.size();
 
             T value;
             auto [ptr, ec] = std::from_chars(start, stop, value);
@@ -209,7 +209,7 @@ namespace {
         std::vector<cli::Named_argument::Variant> arguments;
         arguments.reserve(parameter.values.size());
 
-        for (auto& value : parameter.values) {
+        for (auto const& value : parameter.values) {
             std::visit([&]<class T>(cli::Value<T> const& value) {
                 auto argument = extract_value<T>(context);
 
@@ -280,7 +280,7 @@ auto cli::parse_command_line(
                 case 0:
                     context.expected("a single-character flag name");
                 case 1:
-                    if (auto long_form = description.long_forms.find(view.front())) {
+                    if (auto const* const long_form = description.long_forms.find(view.front())) {
                         name = *long_form;
                         break;
                     }
@@ -322,11 +322,11 @@ auto cli::parse_command_line(
     }
 
     // Apply default arguments
-    for (auto& parameter : description.parameters) {
+    for (auto const& parameter : description.parameters) {
         if (parameter.defaulted && !options[parameter.name.long_form]) {
             std::vector<Named_argument::Variant> arguments;
 
-            for (auto& value : parameter.values) {
+            for (auto const& value : parameter.values) {
                 std::visit([&]<class T>(Value<T> const& value) {
                     arguments.push_back(value.default_value.value());
                 }, value);
@@ -334,8 +334,7 @@ auto cli::parse_command_line(
 
             options.named_arguments.emplace_back(
                 parameter.name.long_form,
-                std::move(arguments)
-            );
+                std::move(arguments));
         }
     }
 
@@ -371,16 +370,13 @@ template struct cli::Value<cli::types::Str  >;
 
 
 cli::Parameter::Name::Name(
-    char const*         const long_name,
-    tl::optional<char> const short_name
-) noexcept
+    char const*        const long_name,
+    tl::optional<char> const short_name) noexcept
     : long_form  { long_name  }
     , short_form { short_name } {}
 
 
-auto cli::Options_description::Option_adder::map_short_to_long(Parameter::Name const& name)
-    noexcept -> void
-{
+auto cli::Options_description::Option_adder::map_short_to_long(Parameter::Name const& name) noexcept -> void {
     if (name.short_form.has_value())
         self->long_forms.add(utl::copy(*name.short_form), utl::copy(name.long_form));
 }
@@ -392,7 +388,7 @@ auto cli::Options_description::Option_adder::operator()(
 {
     map_short_to_long(name);
     self->parameters.push_back({
-        .name = std::move(name),
+        .name        = std::move(name),
         .description = description
     });
     return *this;
@@ -555,7 +551,7 @@ DEFINE_FORMATTER_FOR(cli::Options_description) {
     lines.reserve(value.parameters.size());
     utl::Usize max_length = 0;
 
-    for (auto& [name, arguments, description, _] : value.parameters) {
+    for (auto const& [name, arguments, description, _] : value.parameters) {
         std::string line;
         auto line_out = std::back_inserter(line);
 
@@ -565,7 +561,7 @@ DEFINE_FORMATTER_FOR(cli::Options_description) {
             name.long_form,
             name.short_form ? fmt::format(", -{}", *name.short_form) : "");
 
-        for (auto& argument : arguments) {
+        for (auto const& argument : arguments) {
             fmt::format_to(line_out, " [{}]", std::visit([]<class T>(cli::Value<T> const& value) {
                 return value.name.empty() ? type_description<T>() : value.name;
             }, argument));

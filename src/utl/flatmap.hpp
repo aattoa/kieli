@@ -26,7 +26,7 @@ namespace utl {
         using Key   = K;
         using Value = V;
 
-        constexpr Flatmap(decltype(m_pairs)&& pairs) noexcept
+        /*implicit*/ constexpr Flatmap(decltype(m_pairs)&& pairs) noexcept // NOLINT
             : m_pairs { std::move(pairs) } {}
 
         Flatmap() noexcept = default;
@@ -80,13 +80,6 @@ namespace utl {
         auto container()      && = delete;
         auto container() const&& = delete;
 
-        auto hash() const
-            noexcept(noexcept(::utl::hash(m_pairs))) -> Usize
-            requires hashable<K> && hashable<V>
-        {
-            return ::utl::hash(m_pairs);
-        }
-
         [[nodiscard]]
         auto operator==(Flatmap const&) const noexcept -> bool = default;
     };
@@ -109,23 +102,17 @@ namespace utl {
 
         // The member functions aren't constexpr because the standard library does not provide constexpr hashing support.
 
-        auto add(K const& k, V&& v) &
-            noexcept(std::is_nothrow_move_constructible_v<V> && noexcept(::utl::hash(k))) -> V*
-        {
-            return Parent::add(::utl::hash(k), std::move(v));
+        auto add(K const& k, V&& v) & -> V* {
+            return Parent::add(std::hash<K>{}(k), std::move(v));
         }
 
         [[nodiscard]]
-        auto find(K const& k) const&
-            noexcept(noexcept(::utl::hash(k))) -> V const*
-        {
-            return Parent::find(::utl::hash(k));
+        auto find(K const& k) const& -> V const* {
+            return Parent::find(std::hash<K>{}(k));
         }
         [[nodiscard]]
-        auto find(K const& k) &
-            noexcept(noexcept(::utl::hash(k))) -> V*
-        {
-            return Parent::find(::utl::hash(k));
+        auto find(K const& k) & -> V* {
+            return Parent::find(std::hash<K>{}(k));
         }
     };
 

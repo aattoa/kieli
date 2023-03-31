@@ -9,7 +9,7 @@ namespace project {
     struct Configuration_key {
         std::string string;
 
-        /* implicit */ Configuration_key(std::string&& string) noexcept
+        /*implicit*/ Configuration_key(std::string&& string) noexcept // NOLINT
             : string { std::move(string) } {}
 
         [[nodiscard]]

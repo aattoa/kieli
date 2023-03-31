@@ -8,43 +8,34 @@
 namespace mir {
 
     namespace pattern {
-
         struct Wildcard {};
-
         template <class T>
         struct Literal {
             T value;
         };
-
         struct Name {
             Local_variable_tag   variable_tag;
             compiler::Identifier identifier;
             Mutability           mutability;
         };
-
         struct Tuple {
             std::vector<Pattern> field_patterns;
         };
-
         struct Slice {
             std::vector<Pattern> element_patterns;
         };
-
         struct Enum_constructor {
             tl::optional<utl::Wrapper<Pattern>> payload_pattern;
             ::mir::Enum_constructor             constructor;
         };
-
         struct As {
             Name                  alias;
             utl::Wrapper<Pattern> aliased_pattern;
         };
-
         struct Guarded {
             utl::Wrapper<Pattern> guarded_pattern;
             Expression           guard;
         };
-
     }
 
 
@@ -65,7 +56,6 @@ namespace mir {
             pattern::As,
             pattern::Guarded
         >;
-
         Variant          value;
         Type             type;
         bool             is_exhaustive_by_itself = false;

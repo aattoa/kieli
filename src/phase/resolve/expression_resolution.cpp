@@ -158,7 +158,7 @@ namespace {
         hir::Expression& this_expression;
 
         auto recurse(hir::Expression& expression, resolution::Scope* const new_scope = nullptr) {
-            return context.resolve_expression(expression, new_scope ? *new_scope : scope, space);
+            return context.resolve_expression(expression, new_scope != nullptr ? *new_scope : scope, space);
         }
 
         auto recurse() noexcept {
@@ -491,8 +491,8 @@ namespace {
                 });
             }
 
-            mir::Pattern pattern = context.resolve_pattern(*let.pattern, scope, space);
-            mir::Type    type    = explicit_type.value_or(initializer.type);
+            mir::Pattern    pattern = context.resolve_pattern(*let.pattern, scope, space);
+            mir::Type const type    = explicit_type.value_or(initializer.type);
 
             if (!pattern.is_exhaustive_by_itself) {
                 context.error(pattern.source_view, {

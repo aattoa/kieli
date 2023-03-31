@@ -8,40 +8,31 @@
 namespace ast {
 
     namespace pattern {
-
         template <class T>
         using Literal = expression::Literal<T>;
-
         struct Wildcard {};
-
         struct Name {
             compiler::Identifier identifier;
             Mutability           mutability;
         };
-
         struct Constructor {
             Qualified_name                      constructor_name;
             tl::optional<utl::Wrapper<Pattern>> payload_pattern;
         };
-
         struct Tuple {
             std::vector<Pattern> field_patterns;
         };
-
         struct Slice {
             std::vector<Pattern> element_patterns;
         };
-
         struct As {
             Name                 alias;
             utl::Wrapper<Pattern> aliased_pattern;  
         };
-
         struct Guarded {
             utl::Wrapper<Pattern> guarded_pattern;
             Expression           guard;
         };
-
     }
 
 
@@ -62,7 +53,6 @@ namespace ast {
             pattern::As,
             pattern::Guarded
         >;
-
         Variant         value;
         utl::Source_view source_view;
     };

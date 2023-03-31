@@ -17,16 +17,11 @@ namespace {
                     std::move(name)
                 };
             }
-            else {
-                return ast::type::Typename { std::move(name) };
-            }
+            return ast::type::Typename { std::move(name) };
         }
-        else {
-            context.error(
-                { anchor, context.pointer },
-                "Expected a typename, but found a lowercase identifier"
-            );
-        }
+        context.error(
+            { anchor, context.pointer },
+            "Expected a typename, but found a lowercase identifier");
     }
 
     auto extract_typename(Parse_context& context)
@@ -47,12 +42,10 @@ namespace {
     {
         auto types = extract_type_sequence(context);
         context.consume_required(Token::Type::paren_close);
-        if (types.size() == 1) {
+        if (types.size() == 1)
             return std::move(types.front().value);
-        }
-        else {
+        else
             return ast::type::Tuple { std::move(types) };
-        }
     }
 
     auto extract_array_or_slice(Parse_context& context)
@@ -97,17 +90,11 @@ namespace {
                         utl::wrap(std::move(*return_type))
                     };
                 }
-                else {
-                    context.error_expected("the function return type");
-                }
+                context.error_expected("the function return type");
             }
-            else {
-                context.error_expected("a ':' followed by the function return type");
-            }
+            context.error_expected("a ':' followed by the function return type");
         }
-        else {
-            context.error_expected("a parenthesized list of argument types");
-        }
+        context.error_expected("a parenthesized list of argument types");
     }
 
     auto extract_typeof_(Parse_context& context)
@@ -118,9 +105,7 @@ namespace {
             context.consume_required(Token::Type::paren_close);
             return ast::type::Typeof { utl::wrap(std::move(expression)) };
         }
-        else {
-            context.error_expected("a parenthesized expression");
-        }
+        context.error_expected("a parenthesized expression");
     }
 
     auto extract_instance_of(Parse_context& context)
@@ -207,9 +192,7 @@ auto parse_type(Parse_context& context) -> tl::optional<ast::Type> {
                                 std::move(name)
                             };
                         }
-                        else {
-                            return ast::type::Typename { std::move(name) };
-                        }
+                        return ast::type::Typename { std::move(name) };
                     }),
                     make_source_view(anchor, context.pointer - 1)
                 };
@@ -222,7 +205,5 @@ auto parse_type(Parse_context& context) -> tl::optional<ast::Type> {
 
         return type;
     }
-    else {
-        return tl::nullopt;
-    }
+    return tl::nullopt;
 }

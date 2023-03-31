@@ -79,9 +79,7 @@ namespace {
                     std::move(name)
                 };
             }
-            else {
-                return ast::expression::Variable { std::move(name) };
-            }
+            return ast::expression::Variable { std::move(name) };
         }
         else if (context.try_consume(Token::Type::brace_open)) {
             auto value = std::invoke([&]() -> ast::Type::Variant {
@@ -91,9 +89,7 @@ namespace {
                         std::move(name)
                     };
                 }
-                else {
-                    return ast::type::Typename { std::move(name) };
-                }
+                return ast::type::Typename { std::move(name) };
             });
 
             return extract_struct_initializer(
@@ -101,15 +97,11 @@ namespace {
                     .value       = std::move(value),
                     .source_view = make_source_view(anchor, context.pointer - 1)
                 },
-                context
-            );
+                context);
         }
-        else {
-            context.error(
-                { anchor, context.pointer },
-                "Expected an expression, but found a type"
-            );
-        }
+        context.error(
+            { anchor, context.pointer },
+            "Expected an expression, but found a type");
     }
 
 
@@ -130,9 +122,7 @@ namespace {
                 .source_view = make_source_view(anchor, context.pointer - 1)
             };
         }
-        else {
-            return extract_expression(context);
-        }
+        return extract_expression(context);
     }
 
 
@@ -221,8 +211,7 @@ namespace {
                         .identifier  = name_token->as_identifier(),
                         .is_upper    = name_token->type == Token::Type::upper_name,
                         .source_view = name_token->source_view
-                    }
-                );
+                    });
             }
             else {
                 context.error(name_token->source_view, { "Loop labels must be lowercase" });
@@ -256,12 +245,10 @@ namespace {
     {
         auto expressions = extract_comma_separated_zero_or_more<parse_expression, "an expression">(context);
         context.consume_required(Token::Type::paren_close);
-        if (expressions.size() == 1) {
+        if (expressions.size() == 1)
             return std::move(expressions.front().value);
-        }
-        else {
+        else
             return ast::expression::Tuple { std::move(expressions) };
-        }
     }
 
     auto extract_array(Parse_context& context)
@@ -272,15 +259,12 @@ namespace {
 
         auto elements = extract_elements(context);
 
-        if (context.try_consume(Token::Type::bracket_close)) {
+        if (context.try_consume(Token::Type::bracket_close))
             return ast::expression::Array_literal { std::move(elements) };
-        }
-        else if (elements.empty()) {
+        else if (elements.empty())
             context.error_expected("an array element or a ']'");
-        }
-        else {
+        else
             context.error_expected("a ',' or a ']'");
-        }
     }
 
     auto extract_conditional(Parse_context& context)
@@ -297,12 +281,10 @@ namespace {
             Token const* const else_token = context.pointer;
 
             if (context.try_consume(Token::Type::else_)) {
-                if (auto branch = parse_block_expression(context)) {
+                if (auto branch = parse_block_expression(context))
                     false_branch = utl::wrap(std::move(*branch));
-                }
-                else {
+                else
                     context.error_expected("the false branch", help);
-                }
             }
             else if (context.try_consume(Token::Type::elif)) {
                 false_branch = utl::wrap(extract_node<ast::Expression, extract_conditional>(context));
@@ -589,7 +571,7 @@ namespace {
                 }
                 else {
                     context.consume_required(Token::Type::brace_close);
-                    return ast::expression::Block { .side_effects = std::move(expressions) };
+                    return ast::expression::Block { .side_effect_expressions = std::move(expressions) };
                 }
             }
         }
@@ -603,8 +585,8 @@ namespace {
         }
 
         return ast::expression::Block {
-            .side_effects = std::move(expressions),
-            .result       = std::move(result)
+            .side_effect_expressions = std::move(expressions),
+            .result_expression       = std::move(result)
         };
     }
 
