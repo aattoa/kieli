@@ -15,37 +15,30 @@ namespace mir {
     };
 
     namespace expression {
-
         template <class T>
         struct Literal {
             T value;
         };
-
         struct Array_literal {
             std::vector<Expression> elements;
         };
-
         struct Tuple {
             std::vector<Expression> fields;
         };
-
         struct Block {
-            std::vector<Expression>                side_effects;
-            tl::optional<utl::Wrapper<Expression>> result;
+            std::vector<Expression>  side_effect_expressions;
+            utl::Wrapper<Expression> result_expression;
         };
-
         struct Let_binding {
             utl::Wrapper<Pattern>    pattern;
             Type                     type; // TODO: is this field necessary?
             utl::Wrapper<Expression> initializer;
         };
-
         struct Conditional {
             utl::Wrapper<Expression> condition;
             utl::Wrapper<Expression> true_branch;
             utl::Wrapper<Expression> false_branch;
         };
-
         struct Match {
             struct Case {
                 utl::Wrapper<Pattern>    pattern;
@@ -54,79 +47,62 @@ namespace mir {
             std::vector<Case>        cases;
             utl::Wrapper<Expression> matched_expression;
         };
-
         struct Local_variable_reference {
             Local_variable_tag   tag;
             compiler::Identifier identifier;
         };
-
         struct Struct_initializer {
             std::vector<Expression> initializers;
             Type                    struct_type;
         };
-
         struct Struct_field_access {
             utl::Wrapper<Expression> base_expression;
             ast::Name                field_name;
         };
-
         struct Tuple_field_access {
             utl::Wrapper<Expression> base_expression;
             utl::Usize               field_index {};
             utl::Source_view         field_index_source_view;
         };
-
         struct Function_reference {
             utl::Wrapper<resolution::Function_info> info;
             bool                                   is_application = false;
         };
-
         struct Direct_invocation {
             Function_reference      function;
             std::vector<Expression> arguments;
         };
-
         struct Indirect_invocation {
             std::vector<Expression> arguments;
             utl::Wrapper<Expression> invocable;
         };
-
         struct Enum_constructor_reference {
             Enum_constructor constructor;
         };
-
         struct Direct_enum_constructor_invocation {
             Enum_constructor        constructor;
             std::vector<Expression> arguments;
         };
-
         struct Sizeof {
             Type inspected_type;
         };
-
         struct Reference {
             Mutability               mutability;
             utl::Wrapper<Expression> referenced_expression;
         };
-
         struct Dereference {
             utl::Wrapper<Expression> dereferenced_expression;
         };
-
         struct Addressof {
             utl::Wrapper<Expression> lvalue;
         };
-
         struct Unsafe_dereference {
             utl::Wrapper<Expression> pointer;
         };
-
         struct Move {
             utl::Wrapper<Expression> lvalue;
         };
-
         struct Hole {};
-
     }
 
 

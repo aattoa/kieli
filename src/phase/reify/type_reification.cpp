@@ -16,13 +16,13 @@ namespace {
         }
 
 
-        auto operator()(mir::type::General_unification_variable const&) -> cir::Type {
-            utl::todo();
+        auto operator()(mir::unification_variable auto const& variable) -> cir::Type {
+            context.error(this_type.source_view, {
+                .message           = "Found an unsolved type variable: {}",
+                .message_arguments = fmt::make_format_args(variable.tag)
+            });
+            utl::unreachable(); // silence buggy warning
         }
-        auto operator()(mir::type::Integral_unification_variable const&) -> cir::Type {
-            utl::todo();
-        }
-
 
         auto operator()(mir::type::Integer const integer) -> cir::Type {
             static constexpr auto types = std::to_array({

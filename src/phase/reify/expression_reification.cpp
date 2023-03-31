@@ -32,8 +32,8 @@ namespace {
         auto operator()(mir::expression::Block const& block) -> cir::Expression::Variant {
             auto const scope = context.scope();
             return cir::expression::Block {
-                .side_effect_expressions = utl::map(recurse(), block.side_effects),
-                .result_expression       = block.result.transform(recurse()),
+                .side_effect_expressions = utl::map(recurse(), block.side_effect_expressions),
+                .result_expression       = recurse(block.result_expression)
             };
         }
 

@@ -402,8 +402,8 @@ namespace {
         }
         auto operator()(mir::expression::Block const& block) -> R {
             return mir::expression::Block {
-                .side_effects = utl::map(context.recurse(), block.side_effects),
-                .result       = block.result.transform(context.recurse())
+                .side_effect_expressions = utl::map(context.recurse(), block.side_effect_expressions),
+                .result_expression       = context.recurse(block.result_expression)
             };
         }
         auto operator()(mir::expression::Direct_invocation const& invocation) -> R {

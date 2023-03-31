@@ -89,8 +89,10 @@ namespace {
         }
         auto operator()(ast::expression::Block const& block) -> hir::Expression::Variant {
             return hir::expression::Block {
-                .side_effects = utl::map(context.desugar(), block.side_effects),
-                .result       = block.result.transform(context.desugar())
+                .side_effect_expressions = utl::map(context.desugar(), block.side_effects),
+                .result_expression = block.result.has_value()
+                    ? context.desugar(*block.result)
+                    : context.unit_value(this_expression.source_view)
             };
         }
         auto operator()(ast::expression::While_loop const& loop) -> hir::Expression::Variant {
@@ -166,9 +168,8 @@ namespace {
             decltype(hir::expression::Struct_initializer::member_initializers) initializers;
             initializers.container().reserve(initializer.member_initializers.size());
 
-            for (auto& [name, init] : initializer.member_initializers.span()) {
+            for (auto& [name, init] : initializer.member_initializers.span())
                 initializers.add(utl::copy(name), context.desugar(init));
-            }
 
             return hir::expression::Struct_initializer {
                 .member_initializers = std::move(initializers),
@@ -246,12 +247,12 @@ namespace {
 
                 is transformed into
 
-                { let _ = x; }
+                { let _ = x; () }
             */
 
             return hir::expression::Block {
-                .side_effects = utl::to_vector<hir::Expression>({
-                    {
+                .side_effect_expressions = utl::to_vector({
+                    hir::Expression {
                         .value = hir::expression::Let_binding {
                             .pattern     = context.wildcard_pattern(this_expression.source_view),
                             .initializer = context.desugar(discard.discarded_expression),
@@ -259,7 +260,8 @@ namespace {
                         },
                         .source_view = this_expression.source_view
                     }
-                })
+                }),
+                .result_expression = context.unit_value(this_expression.source_view)
             };
         }
         auto operator()(ast::expression::Break const& break_) -> hir::Expression::Variant {

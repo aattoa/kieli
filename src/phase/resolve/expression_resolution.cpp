@@ -424,9 +424,10 @@ namespace {
         auto operator()(hir::expression::Block& block) -> mir::Expression {
             resolution::Scope block_scope = scope.make_child();
 
-            auto side_effects = utl::vector_with_capacity<mir::Expression>(block.side_effects.size());
+            std::vector<mir::Expression> side_effects;
+            side_effects.reserve(block.side_effect_expressions.size());
 
-            for (hir::Expression& side_effect : block.side_effects) {
+            for (hir::Expression& side_effect : block.side_effect_expressions) {
                 side_effects.push_back(recurse(side_effect, &block_scope));
                 context.solve(constraint::Type_equality {
                     .constrainer_type = context.unit_type(this_expression.source_view),
@@ -438,20 +439,15 @@ namespace {
                 });
             }
 
-            tl::optional<utl::Wrapper<mir::Expression>> block_result;
-            if (block.result)
-                block_result = utl::wrap(recurse(**block.result, &block_scope));
-
-            mir::Type const result_type = block_result.has_value()
-                ? (*block_result)->type
-                : context.unit_type(this_expression.source_view);
+            mir::Expression block_result = recurse(*block.result_expression, &block_scope);
+            mir::Type const result_type  = block_result.type;
 
             block_scope.warn_about_unused_bindings();
 
             return {
                 .value = mir::expression::Block {
-                    .side_effects = std::move(side_effects),
-                    .result       = std::move(block_result)
+                    .side_effect_expressions = std::move(side_effects),
+                    .result_expression       = utl::wrap(std::move(block_result))
                 },
                 .type        = result_type,
                 .source_view = this_expression.source_view,
@@ -521,7 +517,7 @@ namespace {
             return {
                 .value = mir::expression::Let_binding {
                     .pattern     = utl::wrap(std::move(pattern)),
-                    .type        = std::move(type),
+                    .type        = type,
                     .initializer = utl::wrap(std::move(initializer)),
                 },
                 .type        = context.unit_type(this_expression.source_view),
@@ -558,7 +554,7 @@ namespace {
                 }
             });
 
-            mir::Type result_type = true_branch.type;
+            mir::Type const result_type = true_branch.type;
 
             return {
                 .value = mir::expression::Conditional {

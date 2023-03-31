@@ -14,6 +14,7 @@ namespace {
             std::bind_front(&reification::Context::reify_type, &context), &mir::Function_parameter::type);
 
         return cir::Function {
+            .symbol          = std::string(function.name.identifier.view()), // TODO: format function signature
             .parameter_types = utl::map(reify_parameter_type, function.signature.parameters),
             .body            = context.reify_expression(function.body)
         };
@@ -24,18 +25,25 @@ namespace {
 
 auto compiler::reify(Resolve_result&& resolve_result) -> Reify_result {
     cir::Node_context node_context;
-    reification::Context context { std::move(resolve_result.diagnostics), std::move(resolve_result.source) };
 
-    for (utl::wrapper auto const function : resolve_result.main_module.functions) {
-        fmt::println("function: {} = {}", function->name, reify_function(context, *function).body);
-    }
-    for (utl::wrapper auto const function_template : resolve_result.main_module.function_templates) {
-        fmt::print("function template: {}\n", function_template->name);
-        for (utl::wrapper auto const instantiation : utl::get<mir::Function_template>(function_template->value).instantiations) {
-            fmt::print("instantiation: [{}]\n", utl::get(instantiation->template_instantiation_info).template_arguments);
-            reify_function(context, *instantiation);
-        }
-    }
+    reification::Context context {
+        std::move(resolve_result.diagnostics),
+        std::move(resolve_result.source)
+    };
 
-    utl::todo();
+    std::vector<cir::Function> functions;
+    functions.reserve(resolve_result.main_module.functions.size());
+
+    for (utl::wrapper auto const wrapped_function : resolve_result.main_module.functions)
+        functions.push_back(reify_function(context, *wrapped_function));
+    for (utl::wrapper auto const function_template : resolve_result.main_module.function_templates)
+        for (utl::wrapper auto const instantiation : utl::get<mir::Function_template>(function_template->value).instantiations)
+            functions.push_back(reify_function(context, *instantiation));
+
+    return Reify_result {
+        .diagnostics  = std::move(context.diagnostics),
+        .source       = std::move(context.source),
+        .node_context = std::move(node_context),
+        .functions    = std::move(functions),
+    };
 }

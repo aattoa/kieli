@@ -102,8 +102,8 @@ namespace cir {
             T value;
         };
         struct Block {
-            std::vector<Expression>                side_effect_expressions;
-            tl::optional<utl::Wrapper<Expression>> result_expression;
+            std::vector<Expression>  side_effect_expressions;
+            utl::Wrapper<Expression> result_expression;
         };
         struct Tuple {
             std::vector<Expression> fields;
@@ -141,14 +141,12 @@ namespace cir {
 
 
     struct Function {
+        std::string       symbol;
         std::vector<Type> parameter_types;
         Expression        body;
     };
 
 
     using Node_context = utl::Wrapper_context<Expression, Pattern, Type::Variant>;
-
-
-    struct Program {};
 
 }

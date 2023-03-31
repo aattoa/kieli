@@ -52,12 +52,10 @@ namespace {
         }
     }
 
-    [[maybe_unused]]
     constexpr auto lexer_repl = generic_repl<[](compiler::Lex_result&& lex_result) {
         fmt::print("Tokens: {}\n", lex_result.tokens);
     }>;
 
-    [[maybe_unused]]
     constexpr auto expression_parser_repl = generic_repl<[](compiler::Lex_result&& lex_result) {
         ast::Node_context repl_context;
         Parse_context context { std::move(lex_result) };
@@ -72,19 +70,16 @@ namespace {
         }
     }>;
 
-    [[maybe_unused]]
     constexpr auto program_parser_repl = generic_repl<[](compiler::Lex_result&& lex_result) {
         auto parse_result = compiler::parse(std::move(lex_result));
         fmt::println("{}", parse_result.module);
     }>;
 
-    [[maybe_unused]]
     constexpr auto desugaring_repl = generic_repl<[](compiler::Lex_result&& lex_result) {
         auto desugar_result = compiler::desugar(compiler::parse(std::move(lex_result)));
         fmt::print("{}\n\n", utl::formatting::delimited_range(desugar_result.module.definitions, "\n\n"));
     }>;
 
-    [[maybe_unused]]
     constexpr auto resolution_repl = generic_repl<[](compiler::Lex_result&& lex_result) {
         auto resolve_result = compiler::resolve(compiler::desugar(compiler::parse(std::move(lex_result))));
         for (utl::wrapper auto const wrapped_function : resolve_result.main_module.functions) {
@@ -93,9 +88,12 @@ namespace {
         }
     }>;
 
-    [[maybe_unused]]
     constexpr auto reification_repl = generic_repl<[](compiler::Lex_result&& lex_result) {
         (void)compiler::reify(compiler::resolve(compiler::desugar(compiler::parse(std::move(lex_result)))));
+    }>;
+
+    constexpr auto lowering_repl = generic_repl<[](compiler::Lex_result&& lex_result) {
+        (void)compiler::lower(compiler::reify(compiler::resolve(compiler::desugar(compiler::parse(std::move(lex_result))))));
     }>;
 
 }
@@ -110,7 +108,7 @@ auto main(int argc, char const** argv) -> int try {
         ({ "help"   , 'h' },                               "Show this text"            )
         ({ "version", 'v' },                               "Show kieli version"        )
         ("new"             , cli::string("project name"),  "Create a new kieli project")
-        ("repl"            , cli::string("repl name"),     "Run the given repl"        )
+        ("repl"            , cli::string("repl to run"),   "Run the given repl"        )
         ("machine"                                                                     )
         ("debug"           , cli::string("phase to debug")                             )
         ("nocolor"         ,                               "Disable colored output"    )
@@ -166,7 +164,6 @@ auto main(int argc, char const** argv) -> int try {
         return machine.run();
     }
 
-    // explicitly signed integral unification variables?
 
     if (std::string_view const* const phase = options["debug"]) {
         using namespace compiler;
@@ -203,8 +200,9 @@ auto main(int argc, char const** argv) -> int try {
             { "des"    , desugaring_repl        },
             { "res"    , resolution_repl        },
             { "rei"    , reification_repl       },
+            { "low"    , lowering_repl          },
         } };
-        if (auto* const repl = repls.find(*name))
+        if (auto const* const repl = repls.find(*name))
             (*repl)();
         else
             throw utl::exception("The repl must be one of lex|expr|prog|des|res, not '{}'", *name);

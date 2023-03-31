@@ -9,7 +9,7 @@
 #include <readline/history.h>
 
 namespace {
-    std::string previous_input;
+    std::string previous_readline_input;
 
     auto is_valid_history_file_path(std::filesystem::path const& path) -> bool {
         try {
@@ -46,7 +46,7 @@ namespace {
         while (std::getline(file, line)) {
             ::add_history(line.c_str());
             // `previous_input` has to be set every time because when `getline` fails, `line` is cleared
-            previous_input = line;
+            previous_readline_input = line;
         }
     }
 
@@ -64,33 +64,33 @@ namespace {
 }
 
 
-auto utl::readline(char const* const prompt) -> std::string {
+auto utl::readline(std::string const& prompt) -> std::string {
     [[maybe_unused]]
     static auto const history_reader =
         (read_history_file_to_current_history(), 0);
 
-    char* const raw_input { ::readline(prompt) };
+    char* const raw_input { ::readline(prompt.c_str()) };
     auto const input_guard = on_scope_exit([=] { std::free(raw_input); });
 
     if ((raw_input == nullptr) || (*raw_input == 0))
         return {};
 
-    std::string current_input = raw_input;
+    std::string input = raw_input;
 
-    if (previous_input != current_input) {
-        ::add_history(current_input.c_str());
-        add_line_to_history_file(current_input);
-        previous_input = current_input;
+    if (previous_readline_input != input) {
+        ::add_history(input.c_str());
+        add_line_to_history_file(input);
+        previous_readline_input = input;
     }
 
-    return current_input;
+    return input;
 }
 
 
 #else
 
 
-auto utl::readline(char const* const prompt) -> std::string {
+auto utl::readline(std::string const& prompt) -> std::string {
     std::cout << prompt;
     std::string input;
     std::getline(std::cin, input);
