@@ -17,9 +17,7 @@ namespace {
             format("{{");
             for (auto const& side_effect : block.side_effect_expressions)
                 format(" {};", side_effect);
-            if (block.result_expression.has_value())
-                format(" {}", block.result_expression);
-            return format(" }}");
+            return format("{} }}", block.result_expression);
         }
         auto operator()(cir::expression::Tuple const& tuple) {
             return format("({})", tuple.fields);

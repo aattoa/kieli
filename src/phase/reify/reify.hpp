@@ -8,8 +8,10 @@
 namespace compiler {
 
     struct Reify_result {
-        cir::Program      program;
-        cir::Node_context node_context;
+        utl::diagnostics::Builder  diagnostics;
+        utl::Source                source;
+        cir::Node_context          node_context;
+        std::vector<cir::Function> functions;
     };
 
     auto reify(compiler::Resolve_result&&) -> Reify_result;

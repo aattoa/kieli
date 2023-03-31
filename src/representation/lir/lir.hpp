@@ -17,12 +17,6 @@
 
 namespace lir {
 
-    // TODO: replace with something more efficient
-    using Symbol = std::string;
-
-    struct [[nodiscard]] Expression;
-
-
     // Offset from the current frame pointer. Used for local addressing on the stack.
     struct Frame_offset {
         utl::I64 value {};
@@ -33,6 +27,8 @@ namespace lir {
         vm::Local_offset_type value {};
     };
 
+
+    struct [[nodiscard]] Expression;
 
     namespace expression {
         template <class T>
@@ -45,13 +41,17 @@ namespace lir {
         };
         // Invocation of a function the address of which is visible from the callsite.
         struct Direct_invocation {
-            Symbol                  function_symbol;
+            std::string             function_symbol;
             std::vector<Expression> arguments;
         };
         // Invocation of a function through a pointer the value of which is determined at runtime.
         struct Indirect_invocation {
             utl::Wrapper<Expression> invocable;
             std::vector<Expression>  arguments;
+        };
+        struct Block {
+            std::vector<Expression>  side_effect_expressions;
+            utl::Wrapper<Expression> result_expression;
         };
         struct Unconditional_jump {
             Local_jump_offset target_offset;
@@ -82,6 +82,7 @@ namespace lir {
         expression::Tuple,
         expression::Direct_invocation,
         expression::Indirect_invocation,
+        expression::Block,
         expression::Unconditional_jump,
         expression::Conditional_jump,
         expression::Hole>
@@ -91,6 +92,12 @@ namespace lir {
     };
 
 
-    struct Module {};
+    struct Function {
+        std::string symbol;
+        Expression  body;
+    };
+
+
+    using Node_context = utl::Wrapper_context<Expression>;
 
 }

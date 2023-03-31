@@ -3,9 +3,10 @@
 
 
 DIRECTLY_DEFINE_FORMATTER_FOR(hir::Function_argument) {
-    return value.name
-        ? fmt::format_to(context.out(), "{} = {}", *value.name, value.expression)
-        : fmt::format_to(context.out(), "{}", value.expression);
+    auto out = context.out();
+    if (value.name.has_value())
+        out = fmt::format_to(out, "{} = ", *value.name);
+    return fmt::format_to(out, "{}", value.expression);
 }
 
 
@@ -72,9 +73,9 @@ namespace {
         }
         auto operator()(hir::expression::Block const& block) {
             format("{{ ");
-            for (auto const& side_effect : block.side_effects)
+            for (auto const& side_effect : block.side_effect_expressions)
                 format("{}; ", side_effect);
-            return format("{}}}", block.result.transform("{} "_format).value_or(""));
+            return format("{} }}", block.result_expression);
         }
         auto operator()(hir::expression::Invocation const& invocation) {
             return format("{}({})", invocation.invocable, invocation.arguments);

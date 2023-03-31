@@ -112,22 +112,19 @@ namespace {
                 return format("{}", literal.value);
         }
         auto operator()(mir::expression::Function_reference const& function) {
-            if (function.info->template_instantiation_info.has_value()) {
+            if (function.info->template_instantiation_info.has_value())
                 return format("{}[{}]", function.info->name, function.info->template_instantiation_info->template_arguments);
-            }
-            else {
+            else
                 return format("{}", function.info->name);
-            }
         }
         auto operator()(mir::expression::Tuple const& tuple) {
             return format("({})", tuple.fields);
         }
         auto operator()(mir::expression::Block const& block) {
             format("{{ ");
-            for (mir::Expression const& side_effect : block.side_effects) {
+            for (mir::Expression const& side_effect : block.side_effect_expressions)
                 format("{}; ", side_effect);
-            }
-            return format("{}}}", block.result.transform("{} "_format).value_or(""));
+            return format("{} }}", block.result_expression);
         }
         auto operator()(mir::expression::Let_binding const& let) {
             return format("let {}: {} = {}", let.pattern, let.type, let.initializer);
@@ -223,8 +220,7 @@ namespace {
             return format(
                 "{}{}",
                 ctor.constructor.name,
-                ctor.payload_pattern.transform("({})"_format).value_or("")
-            );
+                ctor.payload_pattern.transform("({})"_format).value_or(""));
         }
     };
 
@@ -267,12 +263,10 @@ namespace {
             return format("({})", tuple.field_types);
         }
         auto operator()(utl::one_of<mir::type::Structure, mir::type::Enumeration> auto const& type) {
-            if (type.info->template_instantiation_info.has_value()) {
+            if (type.info->template_instantiation_info.has_value())
                 return format("{}[{}]", type.info->name, type.info->template_instantiation_info->template_arguments);
-            }
-            else {
+            else
                 return format("{}", type.info->name);
-            }
         }
         auto operator()(mir::type::General_unification_variable const& variable) {
             return format("'T{}", variable.tag.value);
@@ -314,8 +308,7 @@ DEFINE_FORMATTER_FOR(mir::Function) {
         value.name,
         value.signature.parameters,
         value.signature.return_type,
-        value.body
-    );
+        value.body);
 }
 
 DEFINE_FORMATTER_FOR(mir::Struct) {
@@ -323,8 +316,7 @@ DEFINE_FORMATTER_FOR(mir::Struct) {
         context.out(),
         "struct {} = {}",
         value.name,
-        value.members
-    );
+        value.members);
 }
 
 DEFINE_FORMATTER_FOR(mir::Enum) {
@@ -332,8 +324,7 @@ DEFINE_FORMATTER_FOR(mir::Enum) {
         context.out(),
         "enum {} = {}",
         value.name,
-        utl::formatting::delimited_range(value.constructors, " | ")
-    );
+        utl::formatting::delimited_range(value.constructors, " | "));
 }
 
 DEFINE_FORMATTER_FOR(mir::Alias) {
@@ -341,24 +332,21 @@ DEFINE_FORMATTER_FOR(mir::Alias) {
         context.out(),
         "alias {} = {}",
         value.name,
-        value.aliased_type
-    );
+        value.aliased_type);
 }
 
 DEFINE_FORMATTER_FOR(mir::Typeclass) {
     return fmt::format_to(
         context.out(),
         "class {} {{ /*TODO*/ }}",
-        value.name
-    );
+        value.name);
 }
 
 DEFINE_FORMATTER_FOR(mir::Implementation) {
     return fmt::format_to(
         context.out(),
         "impl {} {{ /*TODO*/ }}",
-        value.self_type
-    );
+        value.self_type);
 }
 
 DEFINE_FORMATTER_FOR(mir::Instantiation) {
@@ -366,6 +354,5 @@ DEFINE_FORMATTER_FOR(mir::Instantiation) {
         context.out(),
         "inst {} for {} {{ /*TODO*/ }}",
         value.class_reference,
-        value.self_type
-    );
+        value.self_type);
 }

@@ -62,7 +62,7 @@ namespace {
             hir::Expression function_body = context.desugar(function.body);
             if (!std::holds_alternative<hir::expression::Block>(function_body.value)) {
                 function_body.value = hir::expression::Block {
-                    .result = utl::wrap(hir::Expression {
+                    .result_expression = utl::wrap(hir::Expression {
                         .value       = std::move(function_body.value),
                         .source_view = function_body.source_view
                     })
