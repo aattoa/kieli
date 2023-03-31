@@ -364,9 +364,8 @@ namespace {
         auto template_parameters = parse_template_parameters(context);
 
         std::vector<ast::Class_reference> classes;
-        if (context.try_consume(Token::Type::colon)) {
+        if (context.try_consume(Token::Type::colon))
             classes = extract_class_references(context);
-        }
 
         ast::Type_signature signature {
             .classes = std::move(classes),
@@ -395,7 +394,7 @@ namespace {
         std::vector<ast::Function_signature>          function_signatures;
         std::vector<ast::Function_template_signature> function_template_signatures;
 
-        bool is_braced = context.try_consume(Token::Type::brace_open);
+        bool const is_braced = context.try_consume(Token::Type::brace_open);
         if (!is_braced)
             context.consume_required(Token::Type::equals);
 
@@ -405,15 +404,13 @@ namespace {
                 extract_function_signature(
                     context,
                     std::back_inserter(function_template_signatures),
-                    std::back_inserter(function_signatures)
-                );
+                    std::back_inserter(function_signatures));
                 continue;
             case Token::Type::alias:
                 extract_type_signature(
                     context,
                     std::back_inserter(type_template_signatures),
-                    std::back_inserter(type_signatures)
-                );
+                    std::back_inserter(type_signatures));
                 continue;
             default:
                 context.retreat();

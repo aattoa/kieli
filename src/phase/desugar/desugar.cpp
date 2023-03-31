@@ -7,8 +7,7 @@ Desugaring_context::Desugaring_context(
     hir::Node_context            & node_context,
     utl::diagnostics::Builder    & diagnostics,
     utl::Source             const& source,
-    compiler::Program_string_pool& string_pool
-) noexcept
+    compiler::Program_string_pool& string_pool) noexcept
     : node_context { node_context }
     , diagnostics  { diagnostics }
     , source       { source }
@@ -53,9 +52,7 @@ auto Desugaring_context::desugar(ast::Function_parameter const& parameter) -> hi
 
 auto Desugaring_context::desugar(ast::Template_argument const& argument) -> hir::Template_argument {
     return {
-        .value = utl::match(
-            argument.value,
-
+        .value = utl::match(argument.value,
             [](ast::Mutability const& mutability) -> hir::Template_argument::Variant {
                 return mutability;
             },
@@ -67,8 +64,7 @@ auto Desugaring_context::desugar(ast::Template_argument const& argument) -> hir:
             },
             [this](utl::Wrapper<ast::Expression> const expression) -> hir::Template_argument::Variant {
                 error(expression->source_view, { "Constant evaluation is not supported yet" });
-            }
-        ),
+            }),
         .name = argument.name,
     };
 }

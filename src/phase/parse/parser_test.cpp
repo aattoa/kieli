@@ -11,9 +11,9 @@ namespace {
 
     template <auto extractor>
     auto node_test(
-        std::string                     node_string,
-        tl::optional<std::string> const expected_string = tl::nullopt,
-        std::source_location      const caller = std::source_location::current()) -> void
+        std::string               const& node_string,
+        tl::optional<std::string> const& expected_string = tl::nullopt,
+        std::source_location      const  caller = std::source_location::current()) -> void
     {
         utl::always_assert(test_string_pool != nullptr);
 
@@ -49,25 +49,25 @@ namespace {
     }
 
     auto expression(
-        std::string                expression_string,
-        tl::optional<std::string>  expected_string = tl::nullopt,
-        std::source_location const caller = std::source_location::current()) -> void
+        std::string               const& expression_string,
+        tl::optional<std::string> const& expected_string = tl::nullopt,
+        std::source_location      const  caller = std::source_location::current()) -> void
     {
-        node_test<extract_expression>(std::move(expression_string), std::move(expected_string), caller);
+        node_test<extract_expression>(expression_string, expected_string, caller);
     }
     auto type(
-        std::string                type_string,
-        tl::optional<std::string>  expected_string = tl::nullopt,
-        std::source_location const caller = std::source_location::current()) -> void
+        std::string               const& type_string,
+        tl::optional<std::string> const& expected_string = tl::nullopt,
+        std::source_location      const  caller = std::source_location::current()) -> void
     {
-        node_test<extract_type>(std::move(type_string), std::move(expected_string), caller);
+        node_test<extract_type>(type_string, expected_string, caller);
     }
     auto pattern(
-        std::string                pattern_string,
-        tl::optional<std::string>  expected_string = tl::nullopt,
-        std::source_location const caller = std::source_location::current()) -> void
+        std::string               const& pattern_string,
+        tl::optional<std::string> const& expected_string = tl::nullopt,
+        std::source_location      const  caller = std::source_location::current()) -> void
     {
-        node_test<extract_pattern>(std::move(pattern_string), std::move(expected_string), caller);
+        node_test<extract_pattern>(pattern_string, expected_string, caller);
     }
 
 
@@ -152,8 +152,7 @@ namespace {
         "implicit_tuple_case_match"_test = [] {
             expression(
                 "match ??? { _, mut b, (c, _), [_] -> 1 }",
-                "match ??? { (_, mut b, (c, _), [_]) -> 1 }"
-            );
+                "match ??? { (_, mut b, (c, _), [_]) -> 1 }");
         };
 
         "scope_access_1"_throwing_test = [] {

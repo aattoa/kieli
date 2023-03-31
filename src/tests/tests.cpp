@@ -44,8 +44,7 @@ auto tests::Test::operator=(Invoke&& test) -> void {
                 red_note(),
                 test_name(),
                 failure.thrower.line(),
-                failure.what()
-            );
+                failure.what());
         }
         else {
             ++success_count;
@@ -58,8 +57,7 @@ auto tests::Test::operator=(Invoke&& test) -> void {
                 "{} Exception thrown during test {}: {}\n",
                 red_note(),
                 test_name(),
-                exception.what()
-            );
+                exception.what());
         }
         else {
             ++success_count;
@@ -70,8 +68,7 @@ auto tests::Test::operator=(Invoke&& test) -> void {
         fmt::print(
             "{} Unknown exception thrown during test {}\n",
             red_note(),
-            test_name()
-        );
+            test_name());
         throw; // Not the test's responsibility at this point
     }
 
@@ -86,8 +83,7 @@ auto tests::Test::operator=(Invoke&& test) -> void {
         fmt::print(
             "{} Test {} should have failed, but didn't\n",
             red_note(),
-            test_name()
-        );
+            test_name());
         return;
     }
     case Type::throwing:
@@ -95,8 +91,7 @@ auto tests::Test::operator=(Invoke&& test) -> void {
         fmt::print(
             "{} Test {} should have thrown an exception, but didn't\n",
             red_note(),
-            test_name()
-        );
+            test_name());
         return;
     }
     default:
@@ -111,11 +106,10 @@ tests::dtl::Test_adder::Test_adder(void(* const test)()) {
 
 
 auto tests::run_all_tests() -> void {
-    utl::Timer test_timer;
+    utl::Timer const test_timer;
 
-    for (auto const test : test_vector()) {
+    for (auto const test : test_vector())
         test();
-    }
 
     if (success_count == test_count) {
         fmt::print(
@@ -123,7 +117,6 @@ auto tests::run_all_tests() -> void {
             utl::Color::green,
             test_count,
             test_timer.elapsed(),
-            utl::Color::white
-        );
+            utl::Color::white);
     }
 }

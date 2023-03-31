@@ -28,10 +28,9 @@ namespace {
                 };
             }
             else {
-                ast::Mutability mut = extract_mutability(context);
-                if (mut.was_explicitly_specified()) {
+                ast::Mutability const mut = extract_mutability(context);
+                if (mut.was_explicitly_specified())
                     mutability = mut;
-                }
             }
 
             return mutability.transform(utl::make<ast::Template_argument>);
@@ -44,9 +43,8 @@ namespace {
         auto const template_parameter = [&, anchor = context.pointer](ast::Name const name, ast::Template_parameter::Variant&& value) {
             tl::optional<ast::Template_argument> default_argument;
 
-            if (context.try_consume(Token::Type::equals)) {
+            if (context.try_consume(Token::Type::equals))
                 default_argument = extract_required<parse_template_argument, "a default template argument">(context);
-            }
 
             return ast::Template_parameter {
                 .value            = std::move(value),
@@ -58,24 +56,20 @@ namespace {
 
         if (auto name = parse_lower_name(context)) {
             if (context.try_consume(Token::Type::colon)) {
-                if (context.try_consume(Token::Type::mut)) {
+                if (context.try_consume(Token::Type::mut))
                     return template_parameter(*name, ast::Template_parameter::Mutability_parameter {});
-                }
-                else if (auto type = parse_type(context)) {
+                else if (auto type = parse_type(context))
                     return template_parameter(*name, ast::Template_parameter::Value_parameter { .type = utl::wrap(std::move(*type)) });
-                }
-                else {
+                else
                     context.error_expected("'mut' or a type");
-                }
             }
 
             return template_parameter(*name, ast::Template_parameter::Value_parameter { .type = tl::nullopt });
         }
         else if (auto name = parse_upper_name(context)) {
             std::vector<ast::Class_reference> classes;
-            if (context.try_consume(Token::Type::colon)) {
+            if (context.try_consume(Token::Type::colon))
                 classes = extract_class_references(context);
-            }
             return template_parameter(*name, ast::Template_parameter::Type_parameter { .classes = std::move(classes) });
         }
         else {
@@ -126,7 +120,7 @@ namespace {
                     }
                 }, parameter.value, argument.value);
             }
-            else if (last_defaulted_parameter) {
+            else if (last_defaulted_parameter != nullptr) {
                 context.error(last_defaulted_parameter->source_view, {
                     "Template parameters with default arguments must appear at the end of the parameter list"
                 });
@@ -184,13 +178,9 @@ auto parse_template_parameters(Parse_context& context)
             ensure_correct_template_parameters(context, *parameters);
             return parameters;
         }
-        else {
-            context.error_expected("one or more template parameters");
-        }
+        context.error_expected("one or more template parameters");
     }
-    else {
-        return tl::nullopt;
-    }
+    return tl::nullopt;
 }
 
 
@@ -203,14 +193,12 @@ auto extract_function_parameters(Parse_context& context)
         {
             if (auto pattern = parse_pattern(context)) {
                 tl::optional<ast::Type> type;
-                if (context.try_consume(Token::Type::colon)) {
+                if (context.try_consume(Token::Type::colon))
                     type = extract_type(context);
-                }
 
                 tl::optional<ast::Expression> default_value;
-                if (context.try_consume(Token::Type::equals)) {
+                if (context.try_consume(Token::Type::equals))
                     default_value = extract_expression(context);
-                }
 
                 return ast::Function_parameter {
                     std::move(*pattern),
@@ -218,9 +206,7 @@ auto extract_function_parameters(Parse_context& context)
                     std::move(default_value)
                 };
             }
-            else {
-                return tl::nullopt;
-            }
+            return tl::nullopt;
         },
         "a function parameter"
     >(context);
@@ -329,15 +315,12 @@ auto parse_class_reference(Parse_context& context)
         ast::Root_qualifier root;
         auto* const anchor = context.pointer;
 
-        if (context.try_consume(Token::Type::upper_name) || context.try_consume(Token::Type::lower_name)) {
+        if (context.try_consume(Token::Type::upper_name) || context.try_consume(Token::Type::lower_name))
             context.retreat();
-        }
-        else if (context.try_consume(Token::Type::double_colon)) {
+        else if (context.try_consume(Token::Type::double_colon))
             root.value = ast::Root_qualifier::Global{};
-        }
-        else {
+        else
             return tl::nullopt;
-        }
 
         auto name = extract_qualified(std::move(root), context);
 
@@ -347,12 +330,11 @@ auto parse_class_reference(Parse_context& context)
         else {
             context.error(
                 { anchor, context.pointer },
-                "Expected a class name, but found a lowercase identifier"
-            );
+                "Expected a class name, but found a lowercase identifier");
         }
     });
 
-    if (name) {
+    if (name.has_value()) {
         auto template_arguments = parse_template_arguments(context);
 
         return ast::Class_reference {
@@ -361,9 +343,7 @@ auto parse_class_reference(Parse_context& context)
             .source_view        = make_source_view(anchor, context.pointer - 1)
         };
     }
-    else {
-        return tl::nullopt;
-    }
+    return tl::nullopt;
 }
 
 
@@ -375,10 +355,8 @@ auto extract_class_references(Parse_context& context)
 
     auto classes = extract_classes(context);
 
-    if (classes.empty()) {
+    if (classes.empty())
         context.error_expected("one or more class names");
-    }
-    else {
+    else
         return classes;
-    }
 }

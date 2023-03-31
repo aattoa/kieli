@@ -6,12 +6,10 @@
 namespace {
 
     constexpr auto trim(std::string_view string) -> std::string_view {
-        if (string.find_first_not_of(' ') != std::string_view::npos) {
+        if (string.find_first_not_of(' ') != std::string_view::npos)
             string.remove_prefix(string.find_first_not_of(' '));
-        }
-        if (!string.empty()) {
+        if (!string.empty())
             string.remove_suffix(string.size() - string.find_last_not_of(' ') - 1);
-        }
         return string;
     }
 
@@ -24,9 +22,8 @@ namespace {
 
 
     constexpr auto remove_comments(std::string_view string) -> std::string_view {
-        if (utl::Usize const offset = string.find("//"); offset != std::string_view::npos) {
+        if (utl::Usize const offset = string.find("//"); offset != std::string_view::npos)
             string.remove_suffix(string.size() - offset);
-        }
         return string;
     }
 
@@ -69,7 +66,7 @@ auto project::Configuration::string() const -> std::string {
 auto project::Configuration::operator[](std::string_view const name) -> Configuration_key& {
     utl::always_assert(ranges::contains(allowed_keys, name));
 
-    if (auto* const key = find(name); key && *key)
+    if (auto* const key = find(name); key && key->has_value())
         return **key;
     else
         utl::abort();
@@ -136,7 +133,7 @@ auto project::read_configuration() -> Configuration {
                     key);
             }
 
-            if (configuration.find(key)) {
+            if (configuration.find(key) != nullptr) {
                 throw utl::exception(
                     "kieli_config: '{}' key redefinition on the {} line",
                     key,
@@ -156,7 +153,7 @@ auto project::read_configuration() -> Configuration {
 }
 
 
-auto project::initialize(std::string_view project_name) -> void {
+auto project::initialize(std::string_view const project_name) -> void {
     auto parent_path  = std::filesystem::current_path();
     auto project_path = parent_path / project_name;
     auto source_dir   = project_path / "src";

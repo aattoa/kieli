@@ -64,7 +64,7 @@ namespace {
             };
         }
         auto operator()(ast::type::Instance_of const& instance_of) -> hir::Type::Variant {
-            if (context.current_function_implicit_template_parameters) {
+            if (context.current_function_implicit_template_parameters != nullptr) {
                 // Within a function's parameter list or return type, inst types
                 // are converted into references to implicit template parameters.
 

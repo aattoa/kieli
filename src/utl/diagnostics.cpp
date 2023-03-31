@@ -90,7 +90,7 @@ namespace {
         utl::Usize const longest_line_length =
             ranges::max(lines | ranges::views::transform(utl::size));
 
-        for (auto& line : lines) {
+        for (auto const& line : lines) {
             fmt::format_to(
                 out,
                 "\n {}{:<{}} |{} ",
@@ -180,7 +180,7 @@ namespace {
         utl::Color                                const  title_color,
         utl::diagnostics::Type                    const  diagnostic_type = utl::diagnostics::Type::recoverable) -> void
     {
-        auto& [sections, message, message_format_arguments, help_note, help_note_arguments] = arguments;
+        auto const& [sections, message, message_format_arguments, help_note, help_note_arguments] = arguments;
         auto out = std::back_inserter(diagnostic_string);
 
         if (!diagnostic_string.empty())
@@ -195,7 +195,7 @@ namespace {
 
         utl::Source const* current_source = nullptr;
 
-        for (auto& section : sections) {
+        for (auto const& section : sections) {
             tl::optional<std::string> location_info;
 
             if (current_source != &section.source.get()) {

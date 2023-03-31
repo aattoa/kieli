@@ -30,9 +30,8 @@ namespace {
             std::span<mir::Template_argument  const> const arguments)
         {
             utl::always_assert(parameters.size() == arguments.size()); // Should be guaranteed by resolve_template_arguments
-            for (auto [parameter, argument] : ranges::views::zip(parameters, arguments)) {
+            for (auto [parameter, argument] : ranges::views::zip(parameters, arguments))
                 add_substitution(parameter, argument);
-            }
         }
     };
 
@@ -57,6 +56,7 @@ namespace {
         Scope        & scope;
         Namespace    & space;
 
+        [[nodiscard]]
         auto recurse(instantiable auto const& node) const {
             return instantiate(node, *this);
         }
@@ -191,10 +191,10 @@ namespace {
         std::vector<mir::Function_parameter> concrete_function_parameters =
             utl::map(instantiate_parameter, function_template.definition.signature.parameters);
 
-        mir::Type concrete_return_type =
+        mir::Type const concrete_return_type =
             instantiate(function_template.definition.signature.return_type, substitution_context);
 
-        mir::Type concrete_function_type {
+        mir::Type const concrete_function_type {
             .value = wrap_type(mir::type::Function {
                 .parameter_types = utl::map(&mir::Function_parameter::type, concrete_function_parameters),
                 .return_type     = concrete_return_type

@@ -78,46 +78,39 @@ namespace utl {
 
     template <std::integral T>
     class [[nodiscard]] Safe_integer {
-        T value = 0;
+        T m_value {};
     public:
         using Underlying_integer = T;
 
         Safe_integer() noexcept = default;
 
-        static constexpr auto make_unchecked(std::integral auto const value) noexcept -> Safe_integer {
-            assert(std::in_range<T>(value));
-            Safe_integer result;
-            result.value = static_cast<T>(value);
-            return result;
-        }
-
-        /* implicit */ constexpr Safe_integer(std::integral auto const value)
-            : value { static_cast<T>(value) }
-        {
-            if (!std::in_range<T>(value)) [[unlikely]]
+        /*implicit*/ constexpr Safe_integer(std::integral auto const value) { // NOLINT
+            if (std::in_range<T>(value))
+                m_value = value;
+            else
                 throw Safe_integer_out_of_range {};
         }
 
         template <std::integral U> [[nodiscard]]
         explicit constexpr operator U() const {
-            if (std::in_range<U>(value))
-                return static_cast<U>(value);
+            if (std::in_range<U>(m_value))
+                return static_cast<U>(m_value);
             else
                 throw Safe_integer_out_of_range {};
         }
 
         [[nodiscard]]
         constexpr auto get() const noexcept -> T {
-            return value;
+            return m_value;
         }
 
         constexpr auto operator+=(Safe_integer const other) -> Safe_integer& {
-            if (would_addition_overflow(value, other.value)) [[unlikely]]
+            if (would_addition_overflow(m_value, other.m_value))
                 throw Safe_integer_overflow {};
-            if (would_addition_underflow(value, other.value)) [[unlikely]]
+            if (would_addition_underflow(m_value, other.m_value))
                 throw Safe_integer_underflow {};
 
-            value += other.value;
+            m_value += other.m_value;
             return *this;
         }
         constexpr auto operator+(Safe_integer const other) const -> Safe_integer {
@@ -126,12 +119,12 @@ namespace utl {
         }
 
         constexpr auto operator-=(Safe_integer const other) -> Safe_integer& {
-            if (would_subtraction_overflow(value, other.value)) [[unlikely]]
+            if (would_subtraction_overflow(m_value, other.m_value)) [[unlikely]]
                 throw Safe_integer_overflow {};
-            if (would_subtraction_underflow(value, other.value)) [[unlikely]]
+            if (would_subtraction_underflow(m_value, other.m_value)) [[unlikely]]
                 throw Safe_integer_underflow {};
 
-            value -= other.value;
+            m_value -= other.m_value;
             return *this;
         }
         constexpr auto operator-(Safe_integer const other) const -> Safe_integer {
@@ -140,12 +133,12 @@ namespace utl {
         }
 
         constexpr auto operator*=(Safe_integer const other) -> Safe_integer& {
-            if (would_multiplication_overflow(value, other.value)) [[unlikely]]
+            if (would_multiplication_overflow(m_value, other.m_value)) [[unlikely]]
                 throw Safe_integer_overflow {};
-            if (would_multiplication_underflow(value, other.value)) [[unlikely]]
+            if (would_multiplication_underflow(m_value, other.m_value)) [[unlikely]]
                 throw Safe_integer_underflow {};
 
-            value *= other.value;
+            m_value *= other.m_value;
             return *this;
         }
         constexpr auto operator*(Safe_integer const other) const -> Safe_integer {
@@ -154,12 +147,12 @@ namespace utl {
         }
 
         constexpr auto operator/=(Safe_integer const other) -> Safe_integer& {
-            if (other.value == 0) [[unlikely]]
+            if (other.m_value == 0) [[unlikely]]
                 throw Safe_integer_division_by_zero {};
-            if (would_division_overflow(value, other.value)) [[unlikely]]
+            if (would_division_overflow(m_value, other.m_value)) [[unlikely]]
                 throw Safe_integer_overflow {};
 
-            value /= other.value;
+            m_value /= other.m_value;
             return *this;
         }
         constexpr auto operator/(Safe_integer const other) const -> Safe_integer {
@@ -168,10 +161,10 @@ namespace utl {
         }
 
         constexpr auto operator%=(Safe_integer const other) -> Safe_integer& {
-            if (would_division_overflow(value, other.value)) [[unlikely]]
+            if (would_division_overflow(m_value, other.m_value)) [[unlikely]]
                 throw Safe_integer_overflow {};
 
-            value %= other.value;
+            m_value %= other.m_value;
             return *this;
         }
         constexpr auto operator%(Safe_integer const other) -> Safe_integer {
@@ -180,10 +173,10 @@ namespace utl {
         }
 
         constexpr auto operator++() -> Safe_integer& {
-            if (would_increment_overflow(value)) [[unlikely]]
+            if (would_increment_overflow(m_value)) [[unlikely]]
                 throw Safe_integer_overflow {};
 
-            ++value;
+            ++m_value;
             return *this;
         }
         constexpr auto operator++(int) -> Safe_integer {
@@ -193,10 +186,10 @@ namespace utl {
         }
 
         constexpr auto operator--() -> Safe_integer& {
-            if (would_decrement_underflow(value)) [[unlikely]]
+            if (would_decrement_underflow(m_value)) [[unlikely]]
                 throw Safe_integer_underflow {};
 
-            --value;
+            --m_value;
             return *this;
         }
         constexpr auto operator--(int) -> Safe_integer {
@@ -207,7 +200,7 @@ namespace utl {
 
         [[nodiscard]]
         constexpr explicit operator bool() const noexcept {
-            return value != 0;
+            return m_value != 0;
         }
 
         [[nodiscard]]
@@ -235,7 +228,7 @@ namespace utl {
 
 template <class T>
 struct fmt::formatter<utl::Safe_integer<T>> : fmt::formatter<T> {
-    auto format(utl::Safe_integer<T> const value, auto& context) {
+    auto format(utl::Safe_integer<T> const value, auto& context) { // NOLINT
         return formatter<T>::format(value.get(), context);
     }
 };

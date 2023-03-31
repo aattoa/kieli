@@ -53,8 +53,7 @@ namespace {
         explicit Lex_context(
             utl::Source                  && source,
             utl::diagnostics::Builder    && diagnostics,
-            compiler::Program_string_pool&  string_pool
-        ) noexcept
+            compiler::Program_string_pool&  string_pool) noexcept
             : source      { std::move(source) }
             , diagnostics { std::move(diagnostics) }
             , string_pool { string_pool }
@@ -248,9 +247,8 @@ namespace {
                     if (context.try_consume('"')) {
                         char const* const string_start = context.current_pointer() - 1;
                         context.consume(is_not_one_of<'"'>);
-                        if (context.is_finished()) {
+                        if (context.is_finished())
                             context.error(string_start, { .message = "Unterminating string within comment block" });
-                        }
                         context.advance();
                     }
                     
@@ -708,16 +706,14 @@ auto compiler::lex(Lex_arguments&& lex_arguments) -> Lex_result {
 
         auto const state = context.current_state();
 
-        context.tokens.push_back(
-            Token {
-                .type        = Token::Type::end_of_input,
-                .source_view = utl::Source_view {
-                    std::string_view { context.stop, context.stop },
-                    { state.line, state.column },
-                    { state.line, state.column }
-                }
+        context.tokens.push_back(Token {
+            .type        = Token::Type::end_of_input,
+            .source_view = utl::Source_view {
+                std::string_view { context.stop, context.stop },
+                { state.line, state.column },
+                { state.line, state.column }
             }
-        );
+        });
 
         return Lex_result {
             .tokens      = std::move(context.tokens),

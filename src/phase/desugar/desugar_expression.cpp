@@ -89,9 +89,9 @@ namespace {
         }
         auto operator()(ast::expression::Block const& block) -> hir::Expression::Variant {
             return hir::expression::Block {
-                .side_effect_expressions = utl::map(context.desugar(), block.side_effects),
-                .result_expression = block.result.has_value()
-                    ? context.desugar(*block.result)
+                .side_effect_expressions = utl::map(context.desugar(), block.side_effect_expressions),
+                .result_expression = block.result_expression.has_value()
+                    ? context.desugar(*block.result_expression)
                     : context.unit_value(this_expression.source_view)
             };
         }
@@ -168,7 +168,7 @@ namespace {
             decltype(hir::expression::Struct_initializer::member_initializers) initializers;
             initializers.container().reserve(initializer.member_initializers.size());
 
-            for (auto& [name, init] : initializer.member_initializers.span())
+            for (auto const& [name, init] : initializer.member_initializers.span())
                 initializers.add(utl::copy(name), context.desugar(init));
 
             return hir::expression::Struct_initializer {

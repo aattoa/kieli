@@ -22,10 +22,9 @@ public:
 
     Desugaring_context(
         hir::Node_context            &,
-        utl::diagnostics::Builder     &,
-        utl::Source              const&,
-        compiler::Program_string_pool&
-    ) noexcept;
+        utl::diagnostics::Builder    &,
+        utl::Source             const&,
+        compiler::Program_string_pool&) noexcept;
 
     [[nodiscard]]
     auto is_within_function() const noexcept -> bool;

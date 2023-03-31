@@ -498,7 +498,7 @@ namespace utl {
         struct Vector_with_capacity_closure {
             Usize capacity;
             template <class T> [[nodiscard]]
-            /* implicit */ operator std::vector<T>() const {
+            /*implicit*/ operator std::vector<T>() const {
                 APPLY_EXPLICIT_OBJECT_PARAMETER_HERE;
                 return vector_with_capacity<T>(capacity);
             }
@@ -571,27 +571,21 @@ namespace utl {
 
 
     template <class T>
-    concept hashable = std::conjunction_v<
-        std::is_default_constructible<std::hash<T>>,
-        std::is_invocable_r<Usize, std::hash<T>, T const&>
-    >;
-
-    template <hashable X>
-    auto hash(X const& x)
-        noexcept(std::is_nothrow_invocable_v<std::hash<X>, X const&>) -> Usize
-    {
-        return std::hash<X>{}(x);
-    }
+    concept hashable = requires {
+        requires std::is_default_constructible_v<std::hash<T>>;
+        requires std::is_invocable_r_v<Usize, std::hash<T>, T const&>;
+    };
 
 
+    template <hashable Head, hashable... Tail>
     auto hash_combine_with_seed(
-        Usize                   seed,
-        hashable auto const&    head,
-        hashable auto const&... tail) -> Usize
+        Usize          seed,
+        Head const&    head,
+        Tail const&... tail) -> Usize
     {
         // https://stackoverflow.com/questions/2590677/how-do-i-combine-hash-values-in-c0x
 
-        seed ^= (::utl::hash(head) + 0x9e3779b9 + (seed << 6) + (seed >> 2));
+        seed ^= (std::hash<Head>{}(head) + 0x9e3779b9 + (seed << 6) + (seed >> 2));
 
         if constexpr (sizeof...(tail) != 0)
             return hash_combine_with_seed(seed, tail...);
@@ -625,7 +619,7 @@ namespace utl {
     struct [[nodiscard]] Metastring {
         char string[length];
 
-        /* implicit */ consteval Metastring(char const* pointer) noexcept {
+        /*implicit*/ consteval Metastring(char const* pointer) noexcept {
             std::copy_n(pointer, length, string);
         }
         [[nodiscard]]
@@ -694,14 +688,6 @@ template <utl::hashable Fst, utl::hashable Snd>
 struct std::hash<utl::Pair<Fst, Snd>> {
     auto operator()(utl::Pair<Fst, Snd> const& pair) const -> utl::Usize {
         return utl::hash_combine(pair.first, pair.second);
-    }
-};
-
-template <class X>
-    requires requires (X const x) { { x.hash() } -> std::same_as<utl::Usize>; }
-struct std::hash<X> {
-    auto operator()(X const& x) const -> utl::Usize {
-        return x.hash();
     }
 };
 
@@ -794,9 +780,8 @@ DEFINE_FORMATTER_FOR(utl::formatting::Integer_with_ordinal_indicator_formatter_c
     }
     else {
         x %= 10;
-        if (x > 3) {
+        if (x > 3)
             x = 0;
-        }
     }
 
     return format_to(context.out(), "{}{}", value.integer, suffixes[x]);

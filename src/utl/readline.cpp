@@ -72,7 +72,7 @@ auto utl::readline(std::string const& prompt) -> std::string {
     char* const raw_input { ::readline(prompt.c_str()) };
     auto const input_guard = on_scope_exit([=] { std::free(raw_input); });
 
-    if ((raw_input == nullptr) || (*raw_input == 0))
+    if (!raw_input || !*raw_input)
         return {};
 
     std::string input = raw_input;

@@ -40,7 +40,7 @@ namespace cli {
             std::string        long_form;
             tl::optional<char> short_form;
 
-            /* implicit */ Name(char const* long_name, tl::optional<char> short_name = tl::nullopt) noexcept;
+            /*implicit*/ Name(char const* long_name, tl::optional<char> short_name = tl::nullopt) noexcept; // NOLINT
         };
 
         using Variant = std::variant<

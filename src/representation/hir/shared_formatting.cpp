@@ -13,16 +13,13 @@ DEFINE_FORMATTER_FOR(ast::Basic_template_argument<Configuration>) {
         fmt::format_to(context.out(), "{} = ", *value.name);
     return std::visit(utl::Overload {
         [&](ast::Mutability const& mutability) {
-            return utl::match(
-                mutability.value,
-
+            return utl::match(mutability.value,
                 [&](ast::Mutability::Concrete const concrete) {
                     return fmt::format_to(context.out(), "{}", concrete.is_mutable ? "mut" : "immut");
                 },
                 [&](ast::Mutability::Parameterized const parameterized) {
                     return fmt::format_to(context.out(), "mut?{}", parameterized.identifier);
-                }
-            );
+                });
         },
         [&](ast::Basic_template_argument<Configuration>::Wildcard) {
             return fmt::format_to(context.out(), "_");
@@ -91,8 +88,7 @@ DEFINE_FORMATTER_FOR(ast::Basic_template_parameter<Configuration>) {
         },
         [&](ast::Basic_template_parameter<Configuration>::Mutability_parameter const&) {
             out = fmt::format_to(out, ": mut");
-        }
-    );
+        });
 
     if (value.default_argument.has_value())
         out = fmt::format_to(out, " = {}", value.default_argument);

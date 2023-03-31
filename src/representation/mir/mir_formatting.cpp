@@ -8,15 +8,12 @@
 DIRECTLY_DEFINE_FORMATTER_FOR(mir::Function_parameter) {
     return fmt::format_to(context.out(), "{}: {}", value.pattern, value.type);
 }
-
 DIRECTLY_DEFINE_FORMATTER_FOR(mir::Struct::Member) {
     return fmt::format_to(context.out(), "{}{}: {}", value.is_public ? "pub " : "", value.name, value.type);
 }
-
 DIRECTLY_DEFINE_FORMATTER_FOR(mir::Enum_constructor) {
     return fmt::format_to(context.out(), "{}{}", value.name, value.payload_type.transform("({})"_format).value_or(""));
 }
-
 DIRECTLY_DEFINE_FORMATTER_FOR(mir::expression::Match::Case) {
     return fmt::format_to(context.out(), "{} -> {}", value.pattern, value.handler);
 }
@@ -36,8 +33,7 @@ DEFINE_FORMATTER_FOR(mir::Mutability::Variant) {
         },
         [&](mir::Mutability::Parameterized const parameterized) {
             return fmt::format_to(context.out(), "mut?'P{} {} ", parameterized.tag.value, parameterized.identifier);
-        }
-    );
+        });
 }
 
 DEFINE_FORMATTER_FOR(mir::Mutability) {
@@ -50,16 +46,12 @@ DEFINE_FORMATTER_FOR(mir::Unification_variable_tag) {
 
 DEFINE_FORMATTER_FOR(mir::Template_argument) {
     auto out = context.out();
-    if (value.name.has_value()) {
+    if (value.name.has_value())
         out = fmt::format_to(out, "{} = ", *value.name);
-    }
-    return utl::match(
-        value.value,
 
+    return utl::match(value.value,
         [&](mir::Mutability const mutability) {
-            return utl::match(
-                *mutability.value,
-
+            return utl::match(*mutability.value,
                 [&](mir::Mutability::Concrete const concrete) {
                     return fmt::format_to(out, "{}", concrete.is_mutable ? "mut" : "immut");
                 },
@@ -68,8 +60,7 @@ DEFINE_FORMATTER_FOR(mir::Template_argument) {
                 },
                 [&](mir::Mutability::Parameterized const parameterized) {
                     return fmt::format_to(context.out(), "mut?'P{} {}", parameterized.tag.value, parameterized.identifier);
-                }
-            );
+                });
         },
         [&](auto const& argument) {
             return fmt::format_to(out, "{}", argument);
@@ -80,9 +71,7 @@ DEFINE_FORMATTER_FOR(mir::Template_argument) {
 DEFINE_FORMATTER_FOR(mir::Template_parameter) {
     auto out = context.out();
 
-    utl::match(
-        value.value,
-
+    utl::match(value.value,
         [&](mir::Template_parameter::Type_parameter const& parameter) {
             out = fmt::format_to(context.out(), "'P{} {}", value.reference_tag.value, value.name);
             out = parameter.classes.empty() ? out : fmt::format_to(out, ": {}", utl::formatting::delimited_range(parameter.classes, " + "));
@@ -92,8 +81,7 @@ DEFINE_FORMATTER_FOR(mir::Template_parameter) {
         },
         [&](mir::Template_parameter::Mutability_parameter const&){
             out = fmt::format_to(out, "{}: mut", value.name);
-        }
-    );
+        });
 
     return value.default_argument.has_value() ? fmt::format_to(out, " = {}", *value.default_argument) : out;
 }

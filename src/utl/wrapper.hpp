@@ -61,9 +61,8 @@ namespace utl::dtl {
         template <class... Args> [[nodiscard]]
         auto make_arena_element(Args&&... args) -> T* {
             // If all pages have been exhausted, append a fresh one.
-            if (m_size++ == page_size * m_pages.size()) {
+            if (m_size++ == page_size * m_pages.size())
                 m_pages.emplace_back();
-            }
             return m_pages.back().unsafe_emplace_arena_element(std::forward<Args>(args)...);
         }
         [[nodiscard]]
@@ -122,9 +121,8 @@ namespace utl {
             std::source_location const caller = std::source_location::current())
             : m_arena { initial_capacity }
         {
-            if (std::exchange(Wrapper<T>::context_pointer, this) != nullptr) {
+            if (std::exchange(Wrapper<T>::context_pointer, this))
                 abort("Attempted to reinitialize a wrapper arena", caller);
-            }
         }
         Wrapper_context(Wrapper_context&& other) noexcept
             : m_arena { std::move(other.m_arena) }
@@ -133,9 +131,8 @@ namespace utl {
             Wrapper<T>::context_pointer = this;
         }
         ~Wrapper_context() {
-            if (m_is_responsible) {
+            if (m_is_responsible)
                 Wrapper<T>::context_pointer = nullptr;
-            }
         }
         [[nodiscard]]
         auto arena_size() const noexcept -> Usize {
@@ -171,15 +168,15 @@ namespace utl {
 
 
 template <utl::hashable T>
-struct std::hash<utl::Wrapper<T>> {
+struct std::hash<utl::Wrapper<T>> : hash<T> {
     [[nodiscard]] auto operator()(utl::Wrapper<T> const wrapper) const -> utl::Usize {
-        return utl::hash(*wrapper);
+        return hash<T>::operator()(*wrapper);
     }
 };
 
 template <class T>
-struct fmt::formatter<utl::Wrapper<T>> : fmt::formatter<T> {
-    auto format(utl::Wrapper<T> const wrapper, fmt::format_context& context) {
-        return fmt::formatter<T>::format(*wrapper, context);
+struct fmt::formatter<utl::Wrapper<T>> : formatter<T> {
+    auto format(utl::Wrapper<T> const wrapper, auto& context) {
+        return formatter<T>::format(*wrapper, context);
     }
 };

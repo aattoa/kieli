@@ -25,7 +25,7 @@ namespace {
         }
 
         auto operator()(mir::expression::Sizeof const& sizeof_) -> cir::Expression::Variant {
-            cir::Type inspected_type = context.reify_type(sizeof_.inspected_type);
+            cir::Type const inspected_type = context.reify_type(sizeof_.inspected_type);
             return cir::expression::Literal<compiler::Unsigned_integer> { inspected_type.size.get() };
         }
 

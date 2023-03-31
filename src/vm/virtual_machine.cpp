@@ -158,15 +158,15 @@ namespace {
 
 
     auto bitcopy_from_stack(VM& vm) -> void {
-        auto const size = vm.extract_argument<vm::Local_size_type>();
-        auto const destination = vm.stack.pop<std::byte*>();
+        auto  const size = vm.extract_argument<vm::Local_size_type>();
+        auto* const destination = vm.stack.pop<std::byte*>();
 
         std::memcpy(destination, vm.stack.pointer -= size, size);
     }
 
     auto bitcopy_to_stack(VM& vm) -> void {
-        auto const size = vm.extract_argument<vm::Local_size_type>();
-        auto const source = vm.stack.pop<std::byte*>();
+        auto  const size = vm.extract_argument<vm::Local_size_type>();
+        auto* const source = vm.stack.pop<std::byte*>();
 
         std::memcpy(vm.stack.pointer, source, size);
         vm.stack.pointer += size;
@@ -184,9 +184,9 @@ namespace {
 
 
     auto call(VM& vm) -> void {
-        auto const return_value_size     = vm.extract_argument<vm::Local_size_type>();
-        auto const return_value_address  = vm.stack.pointer;
-        auto const old_activation_record = vm.activation_record;
+        auto  const return_value_size     = vm.extract_argument<vm::Local_size_type>();
+        auto* const return_value_address  = vm.stack.pointer;
+        auto* const old_activation_record = vm.activation_record;
 
         vm.stack.pointer += return_value_size; // Reserve space for the return value
         vm.activation_record = reinterpret_cast<vm::Activation_record*>(vm.stack.pointer);
@@ -196,8 +196,7 @@ namespace {
                 .return_value_address = return_value_address,
                 .return_address       = vm.instruction_pointer + sizeof(vm::Jump_offset_type),
                 .caller               = old_activation_record,
-            }
-        );
+            });
         vm.jump_to(vm.extract_argument<vm::Jump_offset_type>());
     }
 
@@ -209,13 +208,12 @@ namespace {
             vm::Activation_record {
                 .return_address = vm.instruction_pointer + sizeof(vm::Jump_offset_type),
                 .caller         = old_activation_record,
-            }
-        );
+            });
         vm.jump_to(vm.extract_argument<vm::Jump_offset_type>());
     }
 
     auto ret(VM& vm) -> void {
-        auto const ar = vm.activation_record;
+        auto* const ar = vm.activation_record;
         vm.stack.pointer       = ar->pointer();      // pop callee's activation record
         vm.activation_record   = ar->caller;         // restore caller state
         vm.instruction_pointer = ar->return_address; // return control to caller

@@ -109,7 +109,7 @@ namespace {
         }
         auto operator()(hir::expression::Match const& match) {
             format("match {} {{ ", match.matched_expression);
-            for (auto& match_case : match.cases)
+            for (auto const& match_case : match.cases)
                 format("{} -> {}", match_case.pattern, match_case.handler);
             return format(" }}");
         }

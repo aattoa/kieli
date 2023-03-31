@@ -176,13 +176,13 @@ DEFINE_FORMATTER_FOR(vm::Opcode) {
 }
 
 DEFINE_FORMATTER_FOR(vm::Bytecode) {
-    auto const start = value.bytes.data();
-    auto const stop  = start + value.bytes.size();
-    auto const out   = context.out();
+    auto const* const start = value.bytes.data();
+    auto const* const stop  = start + value.bytes.size();
+    auto        const out   = context.out();
 
     auto const digit_count = utl::digit_count(utl::unsigned_distance(start, stop));
 
-    for (auto pointer = start; pointer < stop; ) {
+    for (auto const* pointer = start; pointer < stop; ) {
         fmt::format_to(out, "{:>{}} ", std::distance(start, pointer), digit_count);
         format_instruction(out, pointer, stop);
         fmt::format_to(out, "\n");
