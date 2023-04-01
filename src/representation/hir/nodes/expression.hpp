@@ -70,6 +70,7 @@ namespace hir {
             utl::Wrapper<Expression> condition;
             utl::Wrapper<Expression> true_branch;
             utl::Wrapper<Expression> false_branch;
+            bool                     has_explicit_false_branch {};
         };
         struct Match {
             struct Case {

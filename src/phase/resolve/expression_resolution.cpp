@@ -541,18 +541,34 @@ namespace {
             mir::Expression true_branch  = recurse(*conditional.true_branch);
             mir::Expression false_branch = recurse(*conditional.false_branch);
 
-            context.solve(constraint::Type_equality {
-                .constrainer_type = true_branch.type,
-                .constrained_type = false_branch.type,
-                .constrainer_note = constraint::Explanation {
-                    true_branch.type.source_view,
-                    "The true branch is of type {0}"
-                },
-                .constrained_note {
-                    false_branch.type.source_view,
-                    "But the false branch is of type {1}"
-                }
-            });
+            if (conditional.has_explicit_false_branch) {
+                context.solve(constraint::Type_equality {
+                    .constrainer_type = true_branch.type,
+                    .constrained_type = false_branch.type,
+                    .constrainer_note = constraint::Explanation {
+                        true_branch.type.source_view,
+                        "The true branch is of type {0}"
+                    },
+                    .constrained_note {
+                        false_branch.type.source_view,
+                        "But the false branch is of type {1}"
+                    }
+                });
+            }
+            else { // no explicit false branch
+                context.solve(constraint::Type_equality {
+                    .constrainer_type = context.unit_type(this_expression.source_view),
+                    .constrained_type = true_branch.type,
+                    .constrainer_note = constraint::Explanation {
+                        this_expression.source_view,
+                        "This `if` expression has no `else` block, so the true branch must be of the unit type"
+                    },
+                    .constrained_note = constraint::Explanation {
+                        true_branch.type.source_view,
+                        "But the true branch is of type {1}"
+                    }
+                });
+            }
 
             mir::Type const result_type = true_branch.type;
 

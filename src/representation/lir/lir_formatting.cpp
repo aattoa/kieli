@@ -24,13 +24,13 @@ namespace {
             format("{{ ");
             for (auto const& side_effect : block.side_effect_expressions)
                 format("{}; ", side_effect);
-            return format(" {} }}", block.result_expression);
+            return format(" {} (pop {}) }}", block.result_expression, block.scope_size);
         }
-        auto operator()(lir::expression::Unconditional_jump const& jump) {
-            return format("jump to offset {}", jump.target_offset);
+        auto operator()(lir::expression::Loop const& loop) {
+            return format("loop {}", loop.body);
         }
-        auto operator()(lir::expression::Conditional_jump const& jump) {
-            return format("if {} jump to offset {}", jump.condition, jump.target_offset);
+        auto operator()(lir::expression::Conditional const& conditional) {
+            return format("if {} {} else {}", conditional.condition, conditional.true_branch, conditional.false_branch);
         }
         auto operator()(lir::expression::Hole const&) {
             return format("???");

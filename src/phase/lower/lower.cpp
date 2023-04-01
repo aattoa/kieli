@@ -104,13 +104,21 @@ namespace {
         auto operator()(cir::expression::Block const& block) -> lir::Expression {
             return lir::expression::Block {
                 .side_effect_expressions = utl::map(recurse(), block.side_effect_expressions),
-                .result_expression       = recurse(block.result_expression)
+                .result_expression       = recurse(block.result_expression),
+                .scope_size              = block.scope_size.get()
             };
         }
         auto operator()(cir::expression::Local_variable_reference const& local) -> lir::Expression {
             return lir::expression::Local_variable_bitcopy {
                 .frame_offset = local.frame_offset,
                 .byte_count   = this_expression.type.size.get()
+            };
+        }
+        auto operator()(cir::expression::Conditional const& conditional) -> lir::Expression {
+            return lir::expression::Conditional {
+                .condition    = recurse(conditional.condition),
+                .true_branch  = recurse(conditional.true_branch),
+                .false_branch = recurse(conditional.false_branch),
             };
         }
         auto operator()(cir::expression::Hole const&) -> lir::Expression {

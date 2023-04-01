@@ -23,19 +23,21 @@ namespace {
         }
         auto operator()(ast::expression::Variable const& variable) -> hir::Expression::Variant {
             return hir::expression::Variable {
-                .name = context.desugar(variable.name) };
+                .name = context.desugar(variable.name)
+            };
         }
         auto operator()(ast::expression::Tuple const& tuple) -> hir::Expression::Variant {
             return hir::expression::Tuple {
-                .fields = utl::map(context.desugar(), tuple.fields) };
+                .fields = utl::map(context.desugar(), tuple.fields)
+            };
         }
         auto operator()(ast::expression::Conditional const& conditional) -> hir::Expression::Variant {
-            utl::Wrapper<hir::Expression> false_branch
-                = conditional.false_branch
-                . transform(context.desugar())
-                . value_or(context.unit_value(this_expression.source_view));
+            utl::Wrapper<hir::Expression> const false_branch
+                = conditional.false_branch.has_value()
+                ? context.desugar(*conditional.false_branch)
+                : context.unit_value(this_expression.source_view);
 
-            if (auto* const let = std::get_if<ast::expression::Conditional_let>(&conditional.condition->value)) {
+            if (auto const* const let = std::get_if<ast::expression::Conditional_let>(&conditional.condition->value)) {
                 /*
                     if let a = b { c } else { d }
 
@@ -58,7 +60,7 @@ namespace {
                                 .value       = hir::pattern::Wildcard {},
                                 .source_view = let->pattern->source_view
                             }),
-                            .handler = std::move(false_branch)
+                            .handler = false_branch
                         }
                     }),
                     .matched_expression = context.desugar(let->initializer)
@@ -66,22 +68,20 @@ namespace {
             }
             else {
                 return hir::expression::Conditional {
-                    .condition    = context.desugar(conditional.condition),
-                    .true_branch  = context.desugar(conditional.true_branch),
-                    .false_branch = false_branch
+                    .condition                 = context.desugar(conditional.condition),
+                    .true_branch               = context.desugar(conditional.true_branch),
+                    .false_branch              = false_branch,
+                    .has_explicit_false_branch = conditional.false_branch.has_value()
                 };
             }
         }
         auto operator()(ast::expression::Match const& match) -> hir::Expression::Variant {
-            auto const desugar_match_case = [this](ast::expression::Match::Case const& match_case)
-                -> hir::expression::Match::Case
-            {
-                return {
+            auto const desugar_match_case = [this](ast::expression::Match::Case const& match_case) {
+                return hir::expression::Match::Case {
                     .pattern = context.desugar(match_case.pattern),
                     .handler = context.desugar(match_case.handler)
                 };
             };
-
             return hir::expression::Match {
                 .cases              = utl::map(desugar_match_case, match.cases),
                 .matched_expression = context.desugar(match.matched_expression)
@@ -168,7 +168,7 @@ namespace {
             decltype(hir::expression::Struct_initializer::member_initializers) initializers;
             initializers.container().reserve(initializer.member_initializers.size());
 
-            for (auto const& [name, init] : initializer.member_initializers.span())
+            for (auto const& [name, init] : initializer.member_initializers.span()) // NOLINT
                 initializers.add(utl::copy(name), context.desugar(init));
 
             return hir::expression::Struct_initializer {

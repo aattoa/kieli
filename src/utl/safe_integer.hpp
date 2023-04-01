@@ -86,10 +86,14 @@ namespace utl {
 
         /*implicit*/ constexpr Safe_integer(std::integral auto const value) { // NOLINT
             if (std::in_range<T>(value))
-                m_value = value;
+                m_value = static_cast<T>(value);
             else
                 throw Safe_integer_out_of_range {};
         }
+
+        template <std::integral U> requires (!std::same_as<T, U>)
+        explicit constexpr Safe_integer(Safe_integer<U> const other)
+            : Safe_integer { other.get() } {}
 
         template <std::integral U> [[nodiscard]]
         explicit constexpr operator U() const {

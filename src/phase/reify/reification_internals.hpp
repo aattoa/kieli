@@ -44,12 +44,6 @@ namespace reification {
         [[noreturn]]
         auto error(utl::Source_view, utl::diagnostics::Message_arguments) -> void;
 
-        auto scope() {
-            return utl::on_scope_exit([this, old_frame_offset=current_frame_offset] {
-                current_frame_offset = old_frame_offset;
-            });
-        }
-
         auto unit_type     (utl::Source_view) -> cir::Type;
         auto i8_type       (utl::Source_view) -> cir::Type;
         auto i16_type      (utl::Source_view) -> cir::Type;

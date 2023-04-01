@@ -30,10 +30,18 @@ namespace {
         }
 
         auto operator()(mir::expression::Block const& block) -> cir::Expression::Variant {
-            auto const scope = context.scope();
+            auto const old_frame_offset = context.current_frame_offset;
+
+            auto side_effects = utl::map(recurse(), block.side_effect_expressions);
+            auto result       = recurse(block.result_expression);
+            auto scope_size   = context.current_frame_offset - old_frame_offset;
+
+            context.current_frame_offset = old_frame_offset;
+
             return cir::expression::Block {
-                .side_effect_expressions = utl::map(recurse(), block.side_effect_expressions),
-                .result_expression       = recurse(block.result_expression)
+                .side_effect_expressions = std::move(side_effects),
+                .result_expression       = std::move(result),
+                .scope_size              = cir::Type::Size { scope_size }
             };
         }
 
@@ -56,6 +64,14 @@ namespace {
                 };
             }
             utl::unreachable();
+        }
+
+        auto operator()(mir::expression::Conditional const& conditional) -> cir::Expression::Variant {
+            return cir::expression::Conditional {
+                .condition    = recurse(conditional.condition),
+                .true_branch  = recurse(conditional.true_branch),
+                .false_branch = recurse(conditional.false_branch),
+            };
         }
 
         auto operator()(mir::expression::Hole const&) -> cir::Expression::Variant {
