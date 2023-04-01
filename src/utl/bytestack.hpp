@@ -21,29 +21,26 @@ namespace utl {
             m_top_pointer = pointer + capacity;
         }
 
-        template <trivial T>
+        template <trivially_copyable T>
         auto push(T const x) noexcept -> void {
-            if (pointer + sizeof x > m_top_pointer) [[unlikely]] {
+            if (pointer + sizeof x > m_top_pointer) [[unlikely]]
                 utl::abort("stack overflow");
-            }
             std::memcpy(pointer, &x, sizeof x);
             pointer += sizeof x;
         }
-        template <trivial T>
+        template <trivially_copyable T>
         auto pop() noexcept -> T {
-            if (m_buffer.get() + sizeof(T) > pointer) [[unlikely]] {
+            if (m_buffer.get() + sizeof(T) > pointer) [[unlikely]]
                 utl::abort("stack underflow");
-            }
             T x;
             pointer -= sizeof x;
             std::memcpy(&x, pointer, sizeof x);
             return x;
         }
-        template <trivial T>
+        template <trivially_copyable T>
         auto top() const noexcept -> T {
-            if (m_buffer.get() + sizeof(T) > pointer) [[unlikely]] {
+            if (m_buffer.get() + sizeof(T) > pointer) [[unlikely]]
                 utl::abort("stack underflow");
-            }
             T x;
             std::memcpy(&x, pointer - sizeof x, sizeof x);
             return x;

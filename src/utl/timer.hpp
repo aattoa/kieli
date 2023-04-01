@@ -32,7 +32,7 @@ namespace utl {
             : scope_exit_logger
         {
             [](Duration const duration) {
-                print(
+                fmt::print(
                     "[{}utl::Logging_timer::~Logging_timer{}]: Total elapsed time: {}\n",
                     Color::purple,
                     Color::white,

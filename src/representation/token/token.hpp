@@ -7,8 +7,8 @@
 
 namespace compiler {
 
-    using String     = utl::Pooled_string<struct String_tag>;
-    using Identifier = utl::Pooled_string<struct Identifier_tag>;
+    using String     = utl::Pooled_string<struct _string_tag>;
+    using Identifier = utl::Pooled_string<struct _identifier_tag>;
 
 
     struct Signed_integer          { utl::Isize value {}; };

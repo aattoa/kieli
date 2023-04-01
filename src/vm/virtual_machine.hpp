@@ -2,6 +2,7 @@
 
 #include "utl/utilities.hpp"
 #include "utl/bytestack.hpp"
+#include "utl/pooled_string.hpp"
 #include "bytecode.hpp"
 
 
@@ -13,31 +14,23 @@ namespace vm {
 
 
     struct Activation_record {
-        std::byte*         return_value_address;
-        std::byte*         return_address;
-        Activation_record* caller;
-
-        auto pointer() noexcept -> std::byte* {
-            return reinterpret_cast<std::byte*>(this);
-        }
+        std::byte* return_value_address;
+        std::byte* return_address;
+        std::byte* caller_activation_record;
     };
 
 
     struct Constants {
-        struct String {
-            char const* pointer;
-            utl::Usize   length;
-        };
+        using String = utl::Pooled_string<struct _vm_string_tag>;
+        String::Pool                  string_pool;
+        std::vector<std::string_view> strings;
 
-        std::string                      string_buffer;
-        std::vector<utl::Pair<utl::Usize>> string_buffer_views;
-        std::vector<String>              string_pool;
+        static_assert(std::is_trivially_copyable_v<std::string_view>);
 
-        auto add_to_string_pool(std::string_view const string) noexcept -> utl::Usize {
-            auto const offset = string_buffer.size();
-            string_buffer.append(string);
-            string_buffer_views.emplace_back(offset, string.size());
-            return string_buffer_views.size() - 1;
+        [[nodiscard]]
+        auto add_to_string_pool(std::string_view const string) -> utl::Usize {
+            strings.push_back(string_pool.make(string).view());
+            return strings.size() - 1;
         }
     };
 
@@ -66,10 +59,10 @@ namespace vm {
 
     struct [[nodiscard]] Virtual_machine {
         Executable_program program;
-        utl::Bytestack      stack;
+        utl::Bytestack     stack;
         std::byte*         instruction_pointer = nullptr;
         std::byte*         instruction_anchor  = nullptr;
-        Activation_record* activation_record   = nullptr;
+        std::byte*         activation_record   = nullptr;
         bool               keep_running        = true;
 
 
@@ -77,7 +70,7 @@ namespace vm {
 
         auto jump_to(Jump_offset_type) noexcept -> void;
 
-        template <utl::trivial T>
+        template <utl::trivially_copyable T>
         auto extract_argument() noexcept -> T;
 
 

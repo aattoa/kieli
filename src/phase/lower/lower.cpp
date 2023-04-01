@@ -86,7 +86,7 @@ namespace {
                     .source              = source,
                     .message             = "The value of this integer literal is outside of the valid range for {}",
                     .message_arguments   = fmt::make_format_args(this_expression.type),
-                    .help_note           = "The valid range for {} is {{ {}..{} }}",
+                    .help_note           = "The valid range for {} is {}..{}",
                     .help_note_arguments = fmt::make_format_args(this_expression.type, min, max),
                 });
             }

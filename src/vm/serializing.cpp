@@ -4,9 +4,20 @@
 
 
 auto vm::Executable_program::serialize() const -> std::vector<std::byte> {
+    utl::todo();
+}
+
+auto vm::Executable_program::deserialize(std::span<const std::byte>) -> Executable_program {
+    utl::todo();
+}
+
+
+#if 0
+
+auto vm::Executable_program::serialize() const -> std::vector<std::byte> {
     std::vector<std::byte> buffer;
 
-    auto const write = [&](utl::trivial auto const... args) {
+    auto const write = [&](utl::trivially_copyable auto const... args) {
         utl::serialize_to(std::back_inserter(buffer), args...);
     };
 
@@ -17,13 +28,11 @@ auto vm::Executable_program::serialize() const -> std::vector<std::byte> {
         buffer.insert(
             buffer.end(),
             reinterpret_cast<std::byte const*>(constants.string_buffer.data()),
-            reinterpret_cast<std::byte const*>(constants.string_buffer.data() + constants.string_buffer.size())
-        );
+            reinterpret_cast<std::byte const*>(constants.string_buffer.data() + constants.string_buffer.size()));
 
         write(constants.string_buffer_views.size());
-        for (auto const pair : constants.string_buffer_views) {
+        for (auto const pair : constants.string_buffer_views)
             write(pair);
-        }
     }
 
     {
@@ -58,8 +67,7 @@ auto vm::Executable_program::deserialize(Byte_span bytes) -> Executable_program 
             "Attempted to deserialize a program compiled with "
             "kieli version {}, but the current version is {}",
             extracted_version,
-            language::version
-        );
+            language::version);
     }
 
     Executable_program program {
@@ -91,3 +99,5 @@ auto vm::Executable_program::deserialize(Byte_span bytes) -> Executable_program 
 
     return program;
 }
+
+#endif
