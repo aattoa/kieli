@@ -129,6 +129,7 @@ set(SOURCE_FILES
 	src/utl/wrapper.hpp
 
 	src/vm/bytecode.hpp
+	src/vm/opcode.cpp
 	src/vm/opcode.hpp
 	src/vm/serializing.cpp
 	src/vm/virtual_machine.cpp

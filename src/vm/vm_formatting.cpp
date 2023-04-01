@@ -10,6 +10,8 @@ namespace {
         "idup"  , "fdup"  , "cdup"  , "sdup"  , "bdup"  ,
         "iprint", "fprint", "cprint", "sprint", "bprint",
 
+        "pop_1", "pop_2", "pop_4", "pop_8", "pop_n",
+
         "iadd", "fadd",
         "isub", "fsub",
         "imul", "fmul",
@@ -117,12 +119,10 @@ namespace {
         case vm::Opcode::bneq_i:
             return unary(utl::type<bool>);
 
+        case vm::Opcode::pop_n:
         case vm::Opcode::bitcopy_from_stack:
         case vm::Opcode::bitcopy_to_stack:
             return unary(utl::type<vm::Local_size_type>);
-
-        case vm::Opcode::push_address:
-            return unary(utl::type<vm::Local_offset_type>);
 
         case vm::Opcode::jump:
         case vm::Opcode::jump_true:
@@ -130,6 +130,7 @@ namespace {
         case vm::Opcode::call_0:
             return unary(utl::type<vm::Jump_offset_type>);
 
+        case vm::Opcode::push_address:
         case vm::Opcode::local_jump:
         case vm::Opcode::local_jump_true:
         case vm::Opcode::local_jump_false:

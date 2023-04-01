@@ -6,19 +6,23 @@
 
 namespace {
 
-    using VM = vm::Virtual_machine;
+    using VM     = vm::Virtual_machine;
+    using String = std::string_view;
 
-    using String = vm::Constants::String;
+
+    auto current_activation_record(VM& vm) noexcept -> vm::Activation_record {
+        vm::Activation_record ar; // NOLINT
+        std::memcpy(&ar, vm.activation_record, sizeof ar);
+        return ar;
+    }
 
 
-    template <utl::trivial T>
+    template <utl::trivially_copyable T>
     auto push(VM& vm) -> void {
-        if constexpr (std::same_as<T, String>) {
-            vm.stack.push(vm.program.constants.string_pool[vm.extract_argument<utl::Usize>()]);
-        }
-        else {
+        if constexpr (std::same_as<T, String>)
+            vm.stack.push(vm.program.constants.strings[vm.extract_argument<utl::Usize>()]);
+        else
             vm.stack.push(vm.extract_argument<T>());
-        }
     }
 
     template <bool value>
@@ -26,27 +30,30 @@ namespace {
         vm.stack.push(value);
     }
 
-    template <utl::trivial T>
+    template <utl::trivially_copyable T>
     auto dup(VM& vm) -> void {
         vm.stack.push(vm.stack.top<T>());
     }
 
-    template <utl::trivial T>
+    template <utl::Usize n>
+    auto pop(VM& vm) -> void {
+        vm.stack.pointer -= n;
+    }
+
+    auto pop_n(VM& vm) -> void {
+        vm.stack.pointer -= vm.extract_argument<vm::Local_size_type>();
+    }
+
+    template <utl::trivially_copyable T>
     auto print(VM& vm) -> void {
         auto const popped = vm.stack.pop<T>();
 
-        if constexpr (std::same_as<T, String>) {
-            vm.output_buffer.insert(
-                vm.output_buffer.end(),
-                popped.pointer,
-                popped.pointer + popped.length
-            );
-        }
-        else {
+        if constexpr (std::same_as<T, String>)
+            vm.output_buffer.append(popped);
+        else
             fmt::format_to(std::back_inserter(vm.output_buffer), "{}\n", popped);
-        }
 
-        vm.flush_output(); // Adjust flush frequency later
+        vm.flush_output(); // TODO: adjust flush frequency
     }
 
     template <class T, template <class> class F>
@@ -119,9 +126,8 @@ namespace {
     template <bool value>
     auto jump_bool(VM& vm) -> void {
         auto const offset = vm.extract_argument<vm::Jump_offset_type>();
-        if (vm.stack.pop<bool>() == value) {
+        if (vm.stack.pop<bool>() == value)
             vm.jump_to(offset);
-        }
     }
 
     auto local_jump(VM& vm) -> void {
@@ -131,9 +137,8 @@ namespace {
     template <bool value>
     auto local_jump_bool(VM& vm) -> void {
         auto const offset = vm.extract_argument<vm::Local_offset_type>();
-        if (vm.stack.pop<bool>() == value) {
+        if (vm.stack.pop<bool>() == value)
             vm.instruction_pointer += offset;
-        }
     }
 
 
@@ -144,9 +149,8 @@ namespace {
         auto const right  = vm.stack.pop<T>();
         auto const left   = vm.extract_argument<T>();
 
-        if (F<T>{}(left, right)) {
+        if (F<T>{}(left, right))
             vm.instruction_pointer += offset;
-        }
     }
 
     template <class T> constexpr auto local_jump_eq_i  = local_jump_immediate<T, std::equal_to>;
@@ -165,7 +169,7 @@ namespace {
     }
 
     auto bitcopy_to_stack(VM& vm) -> void {
-        auto  const size = vm.extract_argument<vm::Local_size_type>();
+        auto  const size   = vm.extract_argument<vm::Local_size_type>();
         auto* const source = vm.stack.pop<std::byte*>();
 
         std::memcpy(vm.stack.pointer, source, size);
@@ -174,49 +178,48 @@ namespace {
 
 
     auto push_address(VM& vm) -> void {
-        auto const offset = vm.extract_argument<vm::Local_offset_type>();
-        vm.stack.push(vm.activation_record->pointer() + offset);
+        vm.stack.push(vm.activation_record + vm.extract_argument<vm::Local_offset_type>());
     }
 
     auto push_return_value(VM& vm) -> void {
-        vm.stack.push(vm.activation_record->return_value_address);
+        vm.stack.push(current_activation_record(vm).return_value_address);
     }
 
 
     auto call(VM& vm) -> void {
-        auto  const return_value_size     = vm.extract_argument<vm::Local_size_type>();
-        auto* const return_value_address  = vm.stack.pointer;
-        auto* const old_activation_record = vm.activation_record;
+        auto       const return_value_size     = vm.extract_argument<vm::Local_size_type>();
+        std::byte* const return_value_address  = vm.stack.pointer;
+        std::byte* const old_activation_record = vm.activation_record;
 
         vm.stack.pointer += return_value_size; // Reserve space for the return value
-        vm.activation_record = reinterpret_cast<vm::Activation_record*>(vm.stack.pointer);
+        vm.activation_record = vm.stack.pointer;
 
         vm.stack.push(
             vm::Activation_record {
-                .return_value_address = return_value_address,
-                .return_address       = vm.instruction_pointer + sizeof(vm::Jump_offset_type),
-                .caller               = old_activation_record,
+                .return_value_address     = return_value_address,
+                .return_address           = vm.instruction_pointer + sizeof(vm::Jump_offset_type),
+                .caller_activation_record = old_activation_record,
             });
         vm.jump_to(vm.extract_argument<vm::Jump_offset_type>());
     }
 
     auto call_0(VM& vm) -> void {
-        auto const old_activation_record = vm.activation_record;
-        vm.activation_record = reinterpret_cast<vm::Activation_record*>(vm.stack.pointer);
+        std::byte* const old_activation_record = vm.activation_record;
+        vm.activation_record = vm.stack.pointer;
 
         vm.stack.push(
             vm::Activation_record {
-                .return_address = vm.instruction_pointer + sizeof(vm::Jump_offset_type),
-                .caller         = old_activation_record,
+                .return_address           = vm.instruction_pointer + sizeof(vm::Jump_offset_type),
+                .caller_activation_record = old_activation_record,
             });
         vm.jump_to(vm.extract_argument<vm::Jump_offset_type>());
     }
 
     auto ret(VM& vm) -> void {
-        auto* const ar = vm.activation_record;
-        vm.stack.pointer       = ar->pointer();      // pop callee's activation record
-        vm.activation_record   = ar->caller;         // restore caller state
-        vm.instruction_pointer = ar->return_address; // return control to caller
+        vm::Activation_record const ar = current_activation_record(vm);
+        vm.stack.pointer       = vm.activation_record;        // pop callee's activation record
+        vm.activation_record   = ar.caller_activation_record; // restore caller state
+        vm.instruction_pointer = ar.return_address;           // return control to caller
     }
 
 
@@ -229,6 +232,8 @@ namespace {
         push <utl::Isize>, push <utl::Float>, push <utl::Char>, push <String>, push_bool<true>, push_bool<false>,
         dup  <utl::Isize>, dup  <utl::Float>, dup  <utl::Char>, dup  <String>, dup  <bool>,
         print<utl::Isize>, print<utl::Float>, print<utl::Char>, print<String>, print<bool>,
+
+        pop<1>, pop<2>, pop<4>, pop<8>, pop_n,
 
         add<utl::Isize>, add<utl::Float>,
         sub<utl::Isize>, sub<utl::Float>,
@@ -292,17 +297,6 @@ auto vm::Virtual_machine::run() -> int {
 
     // The first activation record does not need to be initialized
 
-    if (program.constants.string_pool.empty()) {
-        // move this somewhere else
-
-        program.constants.string_pool.reserve(program.constants.string_buffer_views.size());
-
-        for (auto const [offset, length] : program.constants.string_buffer_views)
-            program.constants.string_pool.emplace_back(program.constants.string_buffer.data() + offset, length);
-
-        utl::release_vector_memory(program.constants.string_buffer_views);
-    }
-
     while (keep_running) {
         auto const opcode = extract_argument<Opcode>();
         //fmt::print(" -> {}\n", opcode);
@@ -320,9 +314,9 @@ auto vm::Virtual_machine::jump_to(Jump_offset_type const offset) noexcept -> voi
 }
 
 
-template <utl::trivial T>
+template <utl::trivially_copyable T>
 auto vm::Virtual_machine::extract_argument() noexcept -> T {
-    if constexpr (sizeof(T) == 1) {
+    if constexpr (sizeof(T) == 1 && std::integral<T>) {
         return static_cast<T>(*instruction_pointer++);
     }
     else {
@@ -340,63 +334,3 @@ auto vm::Virtual_machine::flush_output() -> void {
 }
 
 
-auto vm::argument_bytes(Opcode const opcode) noexcept -> utl::Usize {
-    static constexpr auto bytecounts = std::to_array<utl::Usize>({
-        sizeof(utl::Isize), sizeof(utl::Float), sizeof(utl::Char), sizeof(utl::Usize), 0, 0, // push
-
-        0, 0, 0, 0, 0, // dup
-        0, 0, 0, 0, 0, // print
-
-        0, 0, // add
-        0, 0, // sub
-        0, 0, // mul
-        0, 0, // div
-
-        0, // iinc_top
-
-        0, 0, 0, 0, // eq
-        0, 0, 0, 0, // neq
-        0, 0,       // lt
-        0, 0,       // lte
-        0, 0,       // gt
-        0, 0,       // gte
-
-        sizeof(utl::Isize), sizeof(utl::Float), sizeof(utl::Char), 1, // eq_i
-        sizeof(utl::Isize), sizeof(utl::Float), sizeof(utl::Char), 1, // neq_i
-        sizeof(utl::Isize), sizeof(utl::Float),                      // lt_i
-        sizeof(utl::Isize), sizeof(utl::Float),                      // lte_i
-        sizeof(utl::Isize), sizeof(utl::Float),                      // gt_i
-        sizeof(utl::Isize), sizeof(utl::Float),                      // gte_i
-
-        0, 0, 0, 0, 0, // logic
-
-        0, 0, // itof, ftoi
-        0, 0, // itoc, ctoi
-        0, 0, // itob, btoi
-        0,    // ftob
-        0,    // ctob
-
-        sizeof(Local_size_type),   // bitcopy_from
-        sizeof(Local_size_type),   // bitcopy_to
-        sizeof(Local_offset_type), // push_address
-        0,                         // push_return_value_address
-
-        sizeof(Jump_offset_type), sizeof(Jump_offset_type), sizeof(Jump_offset_type),    // jump
-        sizeof(Local_offset_type), sizeof(Local_offset_type), sizeof(Local_offset_type), // local_jump
-
-        sizeof(Local_offset_type) + sizeof(utl::Isize), sizeof(Local_offset_type) + sizeof(utl::Float), sizeof(Local_offset_type) + sizeof(utl::Char), sizeof(Local_offset_type) + 1, // local_jump_eq
-        sizeof(Local_offset_type) + sizeof(utl::Isize), sizeof(Local_offset_type) + sizeof(utl::Float), sizeof(Local_offset_type) + sizeof(utl::Char), sizeof(Local_offset_type) + 1, // local_jump_neq
-        sizeof(Local_offset_type) + sizeof(utl::Isize), sizeof(Local_offset_type) + sizeof(utl::Float), // local_jump_lt
-        sizeof(Local_offset_type) + sizeof(utl::Isize), sizeof(Local_offset_type) + sizeof(utl::Float), // local_jump_lte
-        sizeof(Local_offset_type) + sizeof(utl::Isize), sizeof(Local_offset_type) + sizeof(utl::Float), // local_jump_gt
-        sizeof(Local_offset_type) + sizeof(utl::Isize), sizeof(Local_offset_type) + sizeof(utl::Float), // local_jump_gte
-
-        sizeof(Local_size_type) + sizeof(Jump_offset_type), // call
-        sizeof(Jump_offset_type),                           // call_0
-        0,                                                  // ret
-
-        0, // halt
-    });
-    static_assert(bytecounts.size() == utl::enumerator_count<vm::Opcode>);
-    return bytecounts[utl::as_index(opcode)];
-}

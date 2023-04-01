@@ -191,6 +191,9 @@ namespace utl {
     template <class T>
     concept trivial = std::is_trivial_v<T>;
 
+    template <class T>
+    concept trivially_copyable = std::is_trivially_copyable_v<T>;
+
 
     template <class>
     struct Always_false : std::false_type {};
@@ -603,14 +606,13 @@ namespace utl {
     // }
 
 
-    auto serialize_to(std::output_iterator<std::byte> auto out, trivial auto const... args)
+    auto serialize_to(std::output_iterator<std::byte> auto out, trivially_copyable auto const... args)
         noexcept -> void
     {
         (std::invoke([=]() mutable noexcept {
-            auto const memory = reinterpret_cast<std::byte const*>(&args);
-            for (Usize i = 0; i != sizeof args; ++i) {
+            auto* const memory = reinterpret_cast<std::byte const*>(&args);
+            for (Usize i = 0; i != sizeof args; ++i)
                 *out++ = memory[i];
-            }
         }), ...);
     }
 
@@ -619,7 +621,7 @@ namespace utl {
     struct [[nodiscard]] Metastring {
         char string[length];
 
-        /*implicit*/ consteval Metastring(char const* pointer) noexcept {
+        /*implicit*/ consteval Metastring(char const* pointer) noexcept { // NOLINT
             std::copy_n(pointer, length, string);
         }
         [[nodiscard]]

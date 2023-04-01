@@ -8,7 +8,6 @@ namespace utl {
     template <class Tag>
     class [[nodiscard]] String_pool;
 
-
     template <class Tag>
     class [[nodiscard]] Pooled_string {
     public:

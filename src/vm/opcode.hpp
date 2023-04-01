@@ -10,6 +10,8 @@ namespace vm {
         idup  , fdup  , cdup  , sdup  , bdup  ,
         iprint, fprint, cprint, sprint, bprint,
 
+        pop_1, pop_2, pop_4, pop_8, pop_n,
+
         iadd, fadd,
         isub, fsub,
         imul, fmul,
