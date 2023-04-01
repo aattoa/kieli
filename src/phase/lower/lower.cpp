@@ -107,8 +107,11 @@ namespace {
                 .result_expression       = recurse(block.result_expression)
             };
         }
-        auto operator()(cir::expression::Local_variable_reference const&) -> lir::Expression {
-            utl::todo();
+        auto operator()(cir::expression::Local_variable_reference const& local) -> lir::Expression {
+            return lir::expression::Local_variable_bitcopy {
+                .frame_offset = local.frame_offset,
+                .byte_count   = this_expression.type.size.get()
+            };
         }
         auto operator()(cir::expression::Hole const&) -> lir::Expression {
             return lir::expression::Hole { .source_view = this_expression.source_view };

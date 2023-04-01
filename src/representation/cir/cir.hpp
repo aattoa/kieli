@@ -22,8 +22,9 @@ namespace cir {
 
     struct [[nodiscard]] Type {
         struct [[nodiscard]] Variant;
+        using Size = utl::Safe_integer<vm::Local_size_type>;
         utl::Wrapper<Variant> value;
-        utl::Safe_usize       size;
+        Size                  size;
         utl::Source_view      source_view;
     };
 
@@ -113,8 +114,8 @@ namespace cir {
             utl::Wrapper<Expression> initializer;
         };
         struct Local_variable_reference {
-            vm::Local_size_type  frame_offset {};
-            compiler::Identifier identifier;
+            vm::Local_offset_type frame_offset {};
+            compiler::Identifier  identifier;
         };
         struct Hole {};
     }

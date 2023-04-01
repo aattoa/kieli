@@ -13,7 +13,7 @@ namespace reification {
         return utl::wrap(std::move(value));
     }
 
-    using Frame_offset = utl::Safe_integer<vm::Local_size_type>;
+    using Frame_offset = utl::Safe_integer<vm::Local_offset_type>;
 
     class [[nodiscard]] Context {
         utl::Wrapper<cir::Type::Variant> unit_type_value      = wrap_type(cir::type::Tuple {});

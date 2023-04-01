@@ -7,7 +7,7 @@ namespace {
     struct Pattern_reification_visitor {
         reification::Context& context;
         mir::Pattern   const& this_pattern;
-        utl::Safe_usize       this_type_size;
+        cir::Type::Size       this_type_size;
 
         auto increment_frame_offset() -> void {
             context.current_frame_offset +=

@@ -17,17 +17,6 @@
 
 namespace lir {
 
-    // Offset from the current frame pointer. Used for local addressing on the stack.
-    struct Frame_offset {
-        utl::I64 value {};
-    };
-
-    // Jump offset from the current instruction pointer. Used for local jumps that arise from things like `if` or `loop` expressions.
-    struct Local_jump_offset {
-        vm::Local_offset_type value {};
-    };
-
-
     struct [[nodiscard]] Expression;
 
     namespace expression {
@@ -49,16 +38,20 @@ namespace lir {
             utl::Wrapper<Expression> invocable;
             std::vector<Expression>  arguments;
         };
+        struct Local_variable_bitcopy {
+            vm::Local_offset_type frame_offset {};
+            vm::Local_size_type   byte_count   {};
+        };
         struct Block {
             std::vector<Expression>  side_effect_expressions;
             utl::Wrapper<Expression> result_expression;
         };
         struct Unconditional_jump {
-            Local_jump_offset target_offset;
+            vm::Local_offset_type target_offset;
         };
         struct Conditional_jump {
             utl::Wrapper<Expression> condition;
-            Local_jump_offset        target_offset;
+            vm::Local_offset_type    target_offset {};
         };
         struct Hole {
             utl::Source_view source_view;
@@ -82,6 +75,7 @@ namespace lir {
         expression::Tuple,
         expression::Direct_invocation,
         expression::Indirect_invocation,
+        expression::Local_variable_bitcopy,
         expression::Block,
         expression::Unconditional_jump,
         expression::Conditional_jump,
