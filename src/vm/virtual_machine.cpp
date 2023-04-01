@@ -73,7 +73,7 @@ namespace {
     template <class T> constexpr auto add = binary_op<T, std::plus>;
     template <class T> constexpr auto sub = binary_op<T, std::minus>;
     template <class T> constexpr auto mul = binary_op<T, std::multiplies>;
-    template <class T> constexpr auto div = binary_op<T, std::divides>;
+    template <class T> constexpr auto div_ = binary_op<T, std::divides>;
 
     template <class T> constexpr auto eq  = binary_op<T, std::equal_to>;
     template <class T> constexpr auto neq = binary_op<T, std::not_equal_to>;
@@ -181,7 +181,7 @@ namespace {
         vm.stack.push(vm.activation_record + vm.extract_argument<vm::Local_offset_type>());
     }
 
-    auto push_return_value(VM& vm) -> void {
+    auto push_return_value_address(VM& vm) -> void {
         vm.stack.push(current_activation_record(vm).return_value_address);
     }
 
@@ -194,12 +194,11 @@ namespace {
         vm.stack.pointer += return_value_size; // Reserve space for the return value
         vm.activation_record = vm.stack.pointer;
 
-        vm.stack.push(
-            vm::Activation_record {
-                .return_value_address     = return_value_address,
-                .return_address           = vm.instruction_pointer + sizeof(vm::Jump_offset_type),
-                .caller_activation_record = old_activation_record,
-            });
+        vm.stack.push(vm::Activation_record {
+            .return_value_address     = return_value_address,
+            .return_address           = vm.instruction_pointer + sizeof(vm::Jump_offset_type),
+            .caller_activation_record = old_activation_record,
+        });
         vm.jump_to(vm.extract_argument<vm::Jump_offset_type>());
     }
 
@@ -207,11 +206,10 @@ namespace {
         std::byte* const old_activation_record = vm.activation_record;
         vm.activation_record = vm.stack.pointer;
 
-        vm.stack.push(
-            vm::Activation_record {
-                .return_address           = vm.instruction_pointer + sizeof(vm::Jump_offset_type),
-                .caller_activation_record = old_activation_record,
-            });
+        vm.stack.push(vm::Activation_record {
+            .return_address           = vm.instruction_pointer + sizeof(vm::Jump_offset_type),
+            .caller_activation_record = old_activation_record,
+        });
         vm.jump_to(vm.extract_argument<vm::Jump_offset_type>());
     }
 
@@ -238,7 +236,7 @@ namespace {
         add<utl::Isize>, add<utl::Float>,
         sub<utl::Isize>, sub<utl::Float>,
         mul<utl::Isize>, mul<utl::Float>,
-        div<utl::Isize>, div<utl::Float>,
+        div_<utl::Isize>, div_<utl::Float>,
 
         iinc_top,
 
@@ -267,7 +265,7 @@ namespace {
         bitcopy_from_stack,
         bitcopy_to_stack,
         push_address,
-        push_return_value,
+        push_return_value_address,
 
         jump            , local_jump,
         jump_bool<true> , local_jump_bool<true>,
@@ -299,7 +297,7 @@ auto vm::Virtual_machine::run() -> int {
 
     while (keep_running) {
         auto const opcode = extract_argument<Opcode>();
-        //fmt::print(" -> {}\n", opcode);
+        //fmt::println(" -> {}", opcode);
         instructions[utl::as_index(opcode)](*this);
     }
 
@@ -316,7 +314,7 @@ auto vm::Virtual_machine::jump_to(Jump_offset_type const offset) noexcept -> voi
 
 template <utl::trivially_copyable T>
 auto vm::Virtual_machine::extract_argument() noexcept -> T {
-    if constexpr (sizeof(T) == 1 && std::integral<T>) {
+    if constexpr (sizeof(T) == 1) {
         return static_cast<T>(*instruction_pointer++);
     }
     else {

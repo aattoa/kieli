@@ -40,6 +40,8 @@ set(SOURCE_FILES
 	src/representation/hir/nodes/type.hpp
 
 	src/representation/lir/lir.hpp
+	src/representation/lir/lir_formatting.cpp
+	src/representation/lir/lir_formatting.hpp
 
 	src/representation/token/token.hpp
 	src/representation/token/token_formatting.cpp

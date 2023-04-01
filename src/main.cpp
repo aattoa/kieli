@@ -16,6 +16,8 @@
 #include "phase/reify/reify.hpp"
 #include "phase/lower/lower.hpp"
 
+#include "representation/lir/lir_formatting.hpp"
+
 #include "vm/virtual_machine.hpp"
 #include "vm/vm_formatting.hpp"
 
@@ -93,7 +95,10 @@ namespace {
     }>;
 
     constexpr auto lowering_repl = generic_repl<[](compiler::Lex_result&& lex_result) {
-        (void)compiler::lower(compiler::reify(compiler::resolve(compiler::desugar(compiler::parse(std::move(lex_result))))));
+        using namespace compiler;
+        auto lowering_result = lower(reify(resolve(desugar(parse(std::move(lex_result))))));
+        for (lir::Function const& function : lowering_result.functions)
+            fmt::println("{}: {}", function.symbol, function.body);
     }>;
 
 }
@@ -148,17 +153,32 @@ auto main(int argc, char const** argv) -> int try {
     if (options["machine"]) {
         vm::Virtual_machine machine { .stack = utl::Bytestack { 32 } };
 
+        [[maybe_unused]]
         auto const string = machine.program.constants.add_to_string_pool("Hello, world!\n");
+
+        utl::Logging_timer timer;
 
         using enum vm::Opcode;
         machine.program.bytecode.write(
             ipush, 0_iz,
             iinc_top,
             idup,
-            spush, string,
-            sprint,
-            local_jump_ineq_i, vm::Local_offset_type(-23), 10_iz,
+
+            idup,
+            idup,
+            imul,
+            pop_8,
+
+            local_jump_ineq_i, vm::Local_offset_type(-13 - 4), 1'000'000_iz,
             halt
+
+            // ipush, 0_iz,
+            // iinc_top,
+            // idup,
+            // spush, string,
+            // sprint,
+            // local_jump_ineq_i, vm::Local_offset_type(-23), 10_iz,
+            // halt
         );
 
         return machine.run();
