@@ -66,7 +66,7 @@ namespace {
             auto size = std::transform_reduce(
                     field_types.begin(),
                     field_types.end(),
-                    utl::Safe_usize {},
+                    cir::Type::Size {},
                     std::plus {},
                     std::mem_fn(&cir::Type::size));
 
