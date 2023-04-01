@@ -45,13 +45,15 @@ namespace lir {
         struct Block {
             std::vector<Expression>  side_effect_expressions;
             utl::Wrapper<Expression> result_expression;
+            vm::Local_size_type      scope_size {};
         };
-        struct Unconditional_jump {
-            vm::Local_offset_type target_offset;
+        struct Loop {
+            utl::Wrapper<Expression> body;
         };
-        struct Conditional_jump {
+        struct Conditional {
             utl::Wrapper<Expression> condition;
-            vm::Local_offset_type    target_offset {};
+            utl::Wrapper<Expression> true_branch;
+            utl::Wrapper<Expression> false_branch;
         };
         struct Hole {
             utl::Source_view source_view;
@@ -77,8 +79,8 @@ namespace lir {
         expression::Indirect_invocation,
         expression::Local_variable_bitcopy,
         expression::Block,
-        expression::Unconditional_jump,
-        expression::Conditional_jump,
+        expression::Loop,
+        expression::Conditional,
         expression::Hole>
     {
         using variant::variant;

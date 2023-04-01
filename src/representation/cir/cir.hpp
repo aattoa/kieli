@@ -105,6 +105,7 @@ namespace cir {
         struct Block {
             std::vector<Expression>  side_effect_expressions;
             utl::Wrapper<Expression> result_expression;
+            Type::Size               scope_size;
         };
         struct Tuple {
             std::vector<Expression> fields;
@@ -116,6 +117,11 @@ namespace cir {
         struct Local_variable_reference {
             vm::Local_offset_type frame_offset {};
             compiler::Identifier  identifier;
+        };
+        struct Conditional {
+            utl::Wrapper<cir::Expression> condition;
+            utl::Wrapper<cir::Expression> true_branch;
+            utl::Wrapper<cir::Expression> false_branch;
         };
         struct Hole {};
     }
@@ -133,6 +139,7 @@ namespace cir {
             expression::Tuple,
             expression::Let_binding,
             expression::Local_variable_reference,
+            expression::Conditional,
             expression::Hole
         >;
         Variant          value;

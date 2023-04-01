@@ -28,6 +28,9 @@ namespace {
         auto operator()(cir::expression::Let_binding const& let) {
             return format("let {}: {} = {}", let.pattern, let.initializer->type, let.initializer);
         }
+        auto operator()(cir::expression::Conditional const& conditional) {
+            return format("if {} {} else {}", conditional.condition, conditional.true_branch, conditional.false_branch);
+        }
         auto operator()(cir::expression::Hole const&) {
             return format("???");
         }
