@@ -108,6 +108,15 @@ namespace {
         auto operator()(mir::expression::Tuple const& tuple) {
             return format("({})", tuple.fields);
         }
+        auto operator()(mir::expression::Loop const& loop) {
+            return format("loop {}", loop.body);
+        }
+        auto operator()(mir::expression::Break const& break_) {
+            return format("break {}", break_.result);
+        }
+        auto operator()(mir::expression::Continue const&) {
+            return format("continue");
+        }
         auto operator()(mir::expression::Block const& block) {
             format("{{ ");
             for (mir::Expression const& side_effect : block.side_effect_expressions)

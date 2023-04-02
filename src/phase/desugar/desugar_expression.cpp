@@ -96,7 +96,7 @@ namespace {
             };
         }
         auto operator()(ast::expression::While_loop const& loop) -> hir::Expression::Variant {
-            if (auto* const let = std::get_if<ast::expression::Conditional_let>(&loop.condition->value)) {
+            if (auto const* const let = std::get_if<ast::expression::Conditional_let>(&loop.condition->value)) {
                 /*
                     while let a = b { c }
 
@@ -121,7 +121,9 @@ namespace {
                                 {
                                     .pattern = context.wildcard_pattern(this_expression.source_view),
                                     .handler = utl::wrap(hir::Expression {
-                                        .value       = hir::expression::Break {},
+                                        .value = hir::expression::Break {
+                                            .result = context.unit_value(this_expression.source_view)
+                                        },
                                         .source_view = this_expression.source_view
                                     })
                                 }
@@ -129,7 +131,8 @@ namespace {
                             .matched_expression = context.desugar(let->initializer)
                         },
                         .source_view = loop.body->source_view
-                    })
+                    }),
+                    .kind = hir::expression::Loop::Kind::while_loop
                 };
             }
 
@@ -147,16 +150,22 @@ namespace {
                         .condition = context.desugar(loop.condition),
                         .true_branch = context.desugar(loop.body),
                         .false_branch = utl::wrap(hir::Expression {
-                            .value       = hir::expression::Break {},
+                            .value = hir::expression::Break {
+                                .result = context.unit_value(this_expression.source_view)
+                            },
                             .source_view = this_expression.source_view
                         })
                     },
                     .source_view = loop.body->source_view
-                })
+                }),
+                .kind = hir::expression::Loop::Kind::while_loop
             };
         }
         auto operator()(ast::expression::Infinite_loop const& loop) -> hir::Expression::Variant {
-            return hir::expression::Loop { .body = context.desugar(loop.body) };
+            return hir::expression::Loop {
+                .body = context.desugar(loop.body),
+                .kind = hir::expression::Loop::Kind::plain_loop
+            };
         }
         auto operator()(ast::expression::Invocation const& invocation) -> hir::Expression::Variant {
             return hir::expression::Invocation {
@@ -267,7 +276,9 @@ namespace {
         auto operator()(ast::expression::Break const& break_) -> hir::Expression::Variant {
             return hir::expression::Break {
                 .label  = break_.label,
-                .result = break_.result.transform(context.desugar())
+                .result = break_.result.has_value()
+                    ? context.desugar(*break_.result)
+                    : context.unit_value(this_expression.source_view)
             };
         }
         auto operator()(ast::expression::Continue const&) -> hir::Expression::Variant {

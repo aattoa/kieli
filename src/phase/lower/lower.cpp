@@ -98,6 +98,15 @@ namespace {
         auto operator()(cir::expression::Tuple const& tuple) -> lir::Expression {
             return lir::expression::Tuple { .elements = utl::map(recurse(), tuple.fields) };
         }
+        auto operator()(cir::expression::Loop const& loop) -> lir::Expression {
+            return lir::expression::Loop { .body = recurse(loop.body) };
+        }
+        auto operator()(cir::expression::Break const& break_) -> lir::Expression {
+            return lir::expression::Break { .result = recurse(break_.result) };
+        }
+        auto operator()(cir::expression::Continue const&) -> lir::Expression {
+            return lir::expression::Continue {};
+        }
         auto operator()(cir::expression::Let_binding const& let) -> lir::Expression {
             return recurse(*let.initializer);
         }

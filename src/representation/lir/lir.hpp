@@ -50,6 +50,10 @@ namespace lir {
         struct Loop {
             utl::Wrapper<Expression> body;
         };
+        struct Break {
+            utl::Wrapper<Expression> result;
+        };
+        struct Continue {};
         struct Conditional {
             utl::Wrapper<Expression> condition;
             utl::Wrapper<Expression> true_branch;
@@ -80,6 +84,8 @@ namespace lir {
         expression::Local_variable_bitcopy,
         expression::Block,
         expression::Loop,
+        expression::Break,
+        expression::Continue,
         expression::Conditional,
         expression::Hole>
     {
