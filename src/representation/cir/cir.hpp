@@ -110,6 +110,13 @@ namespace cir {
         struct Tuple {
             std::vector<Expression> fields;
         };
+        struct Loop {
+            utl::Wrapper<Expression> body;
+        };
+        struct Break {
+            utl::Wrapper<Expression> result;
+        };
+        struct Continue {};
         struct Let_binding {
             Pattern                  pattern;
             utl::Wrapper<Expression> initializer;
@@ -137,6 +144,9 @@ namespace cir {
             expression::Literal<compiler::String>,
             expression::Block,
             expression::Tuple,
+            expression::Loop,
+            expression::Break,
+            expression::Continue,
             expression::Let_binding,
             expression::Local_variable_reference,
             expression::Conditional,

@@ -25,6 +25,13 @@ namespace mir {
         struct Tuple {
             std::vector<Expression> fields;
         };
+        struct Loop {
+            utl::Wrapper<Expression> body;
+        };
+        struct Break {
+            utl::Wrapper<Expression> result;
+        };
+        struct Continue {};
         struct Block {
             std::vector<Expression>  side_effect_expressions;
             utl::Wrapper<Expression> result_expression;
@@ -117,6 +124,9 @@ namespace mir {
             expression::Literal<compiler::String>,
             expression::Array_literal,
             expression::Tuple,
+            expression::Loop,
+            expression::Break,
+            expression::Continue,
             expression::Block,
             expression::Let_binding,
             expression::Conditional,

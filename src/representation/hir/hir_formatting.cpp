@@ -64,9 +64,7 @@ namespace {
             format("break");
             if (break_.label.has_value())
                 format(" {} loop", *break_.label);
-            if (break_.result.has_value())
-                format(" {}", *break_.result);
-            return out;
+            return format(" {}", break_.result);
         }
         auto operator()(hir::expression::Continue const&) {
             return format("continue");

@@ -395,6 +395,19 @@ namespace {
                 .fields = utl::map(context.recurse(), tuple.fields)
             };
         }
+        auto operator()(mir::expression::Loop const& loop) -> R {
+            return mir::expression::Loop {
+                .body = context.recurse(loop.body)
+            };
+        }
+        auto operator()(mir::expression::Break const& break_) -> R {
+            return mir::expression::Break {
+                .result = context.recurse(break_.result)
+            };
+        }
+        auto operator()(mir::expression::Continue const&) -> R {
+            return mir::expression::Continue {};
+        }
         auto operator()(mir::expression::Array_literal const& literal) -> R {
             return mir::expression::Array_literal {
                 .elements = utl::map(context.recurse(), literal.elements)

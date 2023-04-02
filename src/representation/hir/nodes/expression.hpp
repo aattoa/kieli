@@ -23,12 +23,14 @@ namespace hir {
             std::vector<Expression> fields;
         };
         struct Loop {
+            enum class Kind { plain_loop, while_loop, for_loop };
             utl::Wrapper<Expression> body;
+            Kind                     kind {};
         };
         struct Continue {};
         struct Break {
-            tl::optional<ast::Name>                label;
-            tl::optional<utl::Wrapper<Expression>> result;
+            tl::optional<ast::Name>  label;
+            utl::Wrapper<Expression> result;
         };
         struct Block {
             std::vector<Expression>  side_effect_expressions;

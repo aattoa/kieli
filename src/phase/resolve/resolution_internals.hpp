@@ -119,6 +119,12 @@ namespace resolution {
     };
 
 
+    struct [[nodiscard]] Loop_info {
+        tl::optional<mir::Type>     break_return_type;
+        hir::expression::Loop::Kind loop_kind {};
+    };
+
+
     // `wrap_type(x)` is shorthand for `utl::wrap(mir::Type::Variant { x })`
     auto wrap_type(mir::Type::Variant&&) -> utl::Wrapper<mir::Type::Variant>;
 
@@ -163,6 +169,7 @@ namespace resolution {
         utl::Wrapper<Namespace>        global_namespace;
         Nameless_entities              nameless_entities;
         tl::optional<mir::Type>        current_self_type;
+        tl::optional<Loop_info>        current_loop_info;
         compiler::Program_string_pool& string_pool;
 
         compiler::Identifier self_variable_id = string_pool.identifiers.make("self");
@@ -173,8 +180,7 @@ namespace resolution {
             mir::Namespace_context       &&,
             utl::diagnostics::Builder    &&,
             utl::Source                  &&,
-            compiler::Program_string_pool &
-        ) noexcept;
+            compiler::Program_string_pool &) noexcept;
 
         Context(Context const&) = delete;
         Context(Context&&) = default;

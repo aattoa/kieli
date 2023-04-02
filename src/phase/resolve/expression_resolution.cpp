@@ -380,9 +380,7 @@ namespace {
                 };
             };
 
-            return utl::match(
-                context.find_lower(variable.name, scope, space),
-
+            return utl::match(context.find_lower(variable.name, scope, space),
                 [&](utl::Wrapper<resolution::Function_info> const info) -> mir::Expression {
                     return handle_function_reference(info, false);
                 },
@@ -418,6 +416,81 @@ namespace {
                 },
                 .source_view = this_expression.source_view,
                 .mutability  = context.immut_constant(this_expression.source_view)
+            };
+        }
+
+        auto operator()(hir::expression::Loop& loop) -> mir::Expression {
+            auto const old_loop_info  = context.current_loop_info;
+            context.current_loop_info = Loop_info { .loop_kind = loop.kind };
+            mir::Expression loop_body = recurse(*loop.body);
+            Loop_info const loop_info = utl::get(context.current_loop_info);
+            context.current_loop_info = old_loop_info;
+            return {
+                .value = mir::expression::Loop { .body = utl::wrap(std::move(loop_body)) },
+                .type  = loop_info.break_return_type.has_value()
+                    ? loop_info.break_return_type->with(this_expression.source_view)
+                    : context.unit_type(this_expression.source_view),
+                .source_view = this_expression.source_view,
+                .mutability  = context.immut_constant(this_expression.source_view),
+            };
+        }
+
+        auto operator()(hir::expression::Break& break_) -> mir::Expression {
+            if (break_.label.has_value())
+                utl::todo();
+            if (!context.current_loop_info.has_value())
+                context.error(this_expression.source_view, { "a break expression can not appear outside of a loop" });
+
+            mir::Expression break_result = recurse(*break_.result);
+            Loop_info& loop_info = utl::get(context.current_loop_info);
+
+            if (loop_info.loop_kind == hir::expression::Loop::Kind::plain_loop) {
+                if (!loop_info.break_return_type.has_value()) {
+                    loop_info.break_return_type = break_result.type;
+                }
+                else {
+                    context.solve(constraint::Type_equality {
+                        .constrainer_type = *loop_info.break_return_type,
+                        .constrained_type = break_result.type,
+                        .constrainer_note = constraint::Explanation {
+                            loop_info.break_return_type->source_view,
+                            "Previous break expressions had results of type {0}"
+                        },
+                        .constrained_note = constraint::Explanation {
+                            break_result.type.source_view,
+                            "But this break expressions's result is of type {1}"
+                        }
+                    });
+                }
+            }
+            else {
+                context.solve(constraint::Type_equality {
+                    .constrainer_type = context.unit_type(this_expression.source_view),
+                    .constrained_type = break_result.type,
+                    .constrained_note = constraint::Explanation {
+                        break_result.source_view,
+                        "This break expression's result type is {1}, but only break "
+                        "expressions within plain loops can have results of non-unit types"
+                    }
+                });
+            }
+
+            return {
+                .value       = mir::expression::Break { .result = utl::wrap(std::move(break_result)) },
+                .type        = context.unit_type(this_expression.source_view),
+                .source_view = this_expression.source_view,
+                .mutability  = context.immut_constant(this_expression.source_view),
+            };
+        }
+
+        auto operator()(hir::expression::Continue&) -> mir::Expression {
+            if (!context.current_loop_info.has_value())
+                context.error(this_expression.source_view, { "a continue expression can not appear outside of a loop" });
+            return {
+                .value       = mir::expression::Continue {},
+                .type        = context.unit_type(this_expression.source_view),
+                .source_view = this_expression.source_view,
+                .mutability  = context.immut_constant(this_expression.source_view),
             };
         }
 
@@ -989,19 +1062,10 @@ namespace {
         auto operator()(hir::expression::Array_index_access&) -> mir::Expression {
             utl::todo();
         }
-        auto operator()(hir::expression::Loop&) -> mir::Expression {
-            utl::todo();
-        }
         auto operator()(hir::expression::Ret&) -> mir::Expression {
             utl::todo();
         }
         auto operator()(hir::expression::Binary_operator_invocation&) -> mir::Expression {
-            utl::todo();
-        }
-        auto operator()(hir::expression::Break&) -> mir::Expression {
-            utl::todo();
-        }
-        auto operator()(hir::expression::Continue&) -> mir::Expression {
             utl::todo();
         }
         auto operator()(hir::expression::Placement_init&) -> mir::Expression {

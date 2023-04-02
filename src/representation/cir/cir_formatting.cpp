@@ -22,6 +22,15 @@ namespace {
         auto operator()(cir::expression::Tuple const& tuple) {
             return format("({})", tuple.fields);
         }
+        auto operator()(cir::expression::Loop const& loop) {
+            return format("loop {}", loop.body);
+        }
+        auto operator()(cir::expression::Break const& break_) {
+            return format("break {}", break_.result);
+        }
+        auto operator()(cir::expression::Continue const&) {
+            return format("continue");
+        }
         auto operator()(cir::expression::Local_variable_reference const& local) {
             return format("{} offset {}", local.identifier, local.frame_offset);
         }

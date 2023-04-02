@@ -48,6 +48,15 @@ namespace {
         auto operator()(mir::expression::Tuple const& tuple) -> cir::Expression::Variant {
             return cir::expression::Tuple { .fields = utl::map(recurse(), tuple.fields) };
         }
+        auto operator()(mir::expression::Loop const& loop) -> cir::Expression::Variant {
+            return cir::expression::Loop { .body = recurse(loop.body) };
+        }
+        auto operator()(mir::expression::Break const& break_) -> cir::Expression::Variant {
+            return cir::expression::Break { .result = recurse(break_.result) };
+        }
+        auto operator()(mir::expression::Continue const&) -> cir::Expression::Variant {
+            return cir::expression::Continue {};
+        }
 
         auto operator()(mir::expression::Let_binding const& binding) -> cir::Expression::Variant {
             return cir::expression::Let_binding {
