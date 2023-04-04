@@ -17,22 +17,32 @@ namespace {
     }
 
 
-    template <utl::trivially_copyable T>
-    auto push(VM& vm) -> void {
-        if constexpr (std::same_as<T, String>)
-            vm.stack.push(vm.program.constants.strings[vm.extract_argument<utl::Usize>()]);
-        else
-            vm.stack.push(vm.extract_argument<T>());
+    template <utl::Usize n>
+    auto const_(VM& vm) -> void {
+        std::memcpy(vm.stack.pointer, vm.instruction_pointer, n);
+        vm.stack.pointer       += n;
+        vm.instruction_pointer += n;
+    }
+
+    auto const_string(VM& vm) -> void {
+        vm.stack.push(vm.program.constants.strings[vm.extract_argument<utl::Usize>()]);
     }
 
     template <bool value>
-    auto push_bool(VM& vm) -> void {
+    auto const_bool(VM& vm) -> void {
         vm.stack.push(value);
     }
 
-    template <utl::trivially_copyable T>
+    template <utl::Usize n>
     auto dup(VM& vm) -> void {
-        vm.stack.push(vm.stack.top<T>());
+        std::memcpy(vm.stack.pointer, vm.stack.pointer - n, n);
+        vm.stack.pointer += n;
+    }
+
+    auto dup_n(VM& vm) -> void {
+        auto const n = vm.extract_argument<vm::Local_size_type>();
+        std::memcpy(vm.stack.pointer, vm.stack.pointer - n, n);
+        vm.stack.pointer += n;
     }
 
     template <utl::Usize n>
@@ -131,7 +141,8 @@ namespace {
     }
 
     auto local_jump(VM& vm) -> void {
-        vm.instruction_pointer += vm.extract_argument<vm::Local_offset_type>();
+        auto const offset = vm.extract_argument<vm::Local_offset_type>();
+        vm.instruction_pointer += offset;
     }
 
     template <bool value>
@@ -161,23 +172,38 @@ namespace {
     template <class T> constexpr auto local_jump_gte_i = local_jump_immediate<T, std::greater_equal>;
 
 
+    auto reserve_stack_space(VM& vm) -> void {
+        vm.stack.pointer += vm.extract_argument<vm::Local_size_type>();
+    }
+
     auto bitcopy_from_stack(VM& vm) -> void {
         auto  const size = vm.extract_argument<vm::Local_size_type>();
         auto* const destination = vm.stack.pop<std::byte*>();
-
         std::memcpy(destination, vm.stack.pointer -= size, size);
     }
 
     auto bitcopy_to_stack(VM& vm) -> void {
         auto  const size   = vm.extract_argument<vm::Local_size_type>();
         auto* const source = vm.stack.pop<std::byte*>();
-
         std::memcpy(vm.stack.pointer, source, size);
         vm.stack.pointer += size;
     }
 
+    auto bitcopy_from_local(VM& vm) -> void {
+        auto  const size  = vm.extract_argument<vm::Local_size_type>();
+        auto* const local = vm.activation_record + vm.extract_argument<vm::Local_offset_type>();
+        std::memcpy(vm.stack.pointer, local, size);
+        vm.stack.pointer += size;
+    }
 
-    auto push_address(VM& vm) -> void {
+    auto bitcopy_to_local(VM& vm) -> void {
+        auto  const size  = vm.extract_argument<vm::Local_size_type>();
+        auto* const local = vm.activation_record + vm.extract_argument<vm::Local_offset_type>();
+        std::memcpy(local, vm.stack.pointer -= size, size);
+    }
+
+
+    auto push_local_address(VM& vm) -> void {
         vm.stack.push(vm.activation_record + vm.extract_argument<vm::Local_offset_type>());
     }
 
@@ -186,31 +212,53 @@ namespace {
     }
 
 
+    template <bool is_indirect>
     auto call(VM& vm) -> void {
-        auto       const return_value_size     = vm.extract_argument<vm::Local_size_type>();
-        std::byte* const return_value_address  = vm.stack.pointer;
+        std::byte* const return_value_address = vm.stack.pointer;
         std::byte* const old_activation_record = vm.activation_record;
 
-        vm.stack.pointer += return_value_size; // Reserve space for the return value
-        vm.activation_record = vm.stack.pointer;
+        // Reserve stack space for the return value
+        vm.stack.pointer += vm.extract_argument<vm::Local_size_type>();
 
+        // Where control will be returned by the corresponding ret instruction
+        std::byte* const return_address =
+            vm.instruction_pointer + (is_indirect ? 0 : sizeof(vm::Jump_offset_type));
+
+        // Activate the callee
+        vm.activation_record = vm.stack.pointer;
         vm.stack.push(vm::Activation_record {
             .return_value_address     = return_value_address,
-            .return_address           = vm.instruction_pointer + sizeof(vm::Jump_offset_type),
+            .return_address           = return_address,
             .caller_activation_record = old_activation_record,
         });
-        vm.jump_to(vm.extract_argument<vm::Jump_offset_type>());
+
+        // Give control to the callee
+        if constexpr (is_indirect)
+            vm.instruction_pointer = vm.stack.pop<std::byte*>();
+        else
+            vm.jump_to(vm.extract_argument<vm::Jump_offset_type>());
     }
 
+    template <bool is_indirect>
     auto call_0(VM& vm) -> void {
         std::byte* const old_activation_record = vm.activation_record;
-        vm.activation_record = vm.stack.pointer;
 
+        // Where control will be returned by the corresponding ret instruction
+        std::byte* const return_address =
+            vm.instruction_pointer + (is_indirect ? 0 : sizeof(vm::Jump_offset_type));
+
+        // Activate the callee
+        vm.activation_record = vm.stack.pointer;
         vm.stack.push(vm::Activation_record {
-            .return_address           = vm.instruction_pointer + sizeof(vm::Jump_offset_type),
+            .return_address           = return_address,
             .caller_activation_record = old_activation_record,
         });
-        vm.jump_to(vm.extract_argument<vm::Jump_offset_type>());
+
+        // Give control to the callee
+        if constexpr (is_indirect)
+            vm.instruction_pointer = vm.stack.pop<std::byte*>();
+        else
+            vm.jump_to(vm.extract_argument<vm::Jump_offset_type>());
     }
 
     auto ret(VM& vm) -> void {
@@ -224,11 +272,19 @@ namespace {
     auto halt(VM& vm) -> void {
         vm.keep_running = false;
     }
+    auto halt_with(VM& vm) -> void {
+        vm.return_value = utl::safe_cast<int>(vm.stack.pop<utl::Isize>());
+        vm.keep_running = false;
+    }
 
 
     constexpr auto instructions = std::to_array({
-        push <utl::Isize>, push <utl::Float>, push <utl::Char>, push <String>, push_bool<true>, push_bool<false>,
-        dup  <utl::Isize>, dup  <utl::Float>, dup  <utl::Char>, dup  <String>, dup  <bool>,
+        halt, halt_with,
+
+        const_<1>, const_<2>, const_<4>, const_<8>, const_string, const_bool<true>, const_bool<false>,
+
+        dup<1>, dup<2>, dup<4>, dup<8>, dup_n,
+
         print<utl::Isize>, print<utl::Float>, print<utl::Char>, print<String>, print<bool>,
 
         pop<1>, pop<2>, pop<4>, pop<8>, pop_n,
@@ -262,9 +318,12 @@ namespace {
         cast<utl::Float, bool>,
         cast<utl::Char , bool>,
 
+        reserve_stack_space,
         bitcopy_from_stack,
         bitcopy_to_stack,
-        push_address,
+        bitcopy_from_local,
+        bitcopy_to_local,
+        push_local_address,
         push_return_value_address,
 
         jump            , local_jump,
@@ -278,9 +337,7 @@ namespace {
         local_jump_gt_i <utl::Isize>, local_jump_gt_i <utl::Float>,
         local_jump_gte_i<utl::Isize>, local_jump_gte_i<utl::Float>,
 
-        call, call_0, ret,
-
-        halt
+        call<false>, call_0<false>, call<true>, call_0<true>, ret,
     });
 
     static_assert(instructions.size() == utl::enumerator_count<vm::Opcode>);
@@ -297,13 +354,13 @@ auto vm::Virtual_machine::run() -> int {
 
     while (keep_running) {
         auto const opcode = extract_argument<Opcode>();
-        //fmt::println(" -> {}", opcode);
+        // fmt::println("executing {}...", opcode);
         instructions[utl::as_index(opcode)](*this);
     }
 
     flush_output();
 
-    return static_cast<int>(stack.pop<utl::Isize>());
+    return return_value;
 }
 
 

@@ -53,6 +53,9 @@ set(SOURCE_FILES
 	src/representation/mir/nodes/pattern.hpp
 	src/representation/mir/nodes/type.hpp
 
+	src/phase/codegen/codegen.cpp
+	src/phase/codegen/codegen.hpp
+
 	src/phase/desugar/desugar.hpp
 	src/phase/desugar/desugar.cpp
 	src/phase/desugar/desugaring_internals.hpp

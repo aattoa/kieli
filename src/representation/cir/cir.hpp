@@ -105,7 +105,8 @@ namespace cir {
         struct Block {
             std::vector<Expression>  side_effect_expressions;
             utl::Wrapper<Expression> result_expression;
-            Type::Size               scope_size;
+            Type::Size               scope_size {};
+            vm::Local_offset_type    result_object_frame_offset {};
         };
         struct Tuple {
             std::vector<Expression> fields;

@@ -21,9 +21,9 @@ namespace {
     }
 
     auto take_reference(
-        Context&              context,
-        mir::Expression&&     referenced_expression,
-        mir::Mutability const requested_mutability,
+        Context&               context,
+        mir::Expression&&      referenced_expression,
+        mir::Mutability  const requested_mutability,
         utl::Source_view const source_view) -> mir::Expression
     {
         require_addressability(context, referenced_expression, "A temporary object can not be referenced");
@@ -161,6 +161,7 @@ namespace {
             return context.resolve_expression(expression, new_scope != nullptr ? *new_scope : scope, space);
         }
 
+        [[nodiscard]]
         auto recurse() noexcept {
             return [this](hir::Expression& expression) -> mir::Expression {
                 return recurse(expression);

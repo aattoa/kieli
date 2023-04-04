@@ -609,7 +609,7 @@ namespace utl {
     auto serialize_to(std::output_iterator<std::byte> auto out, trivially_copyable auto const... args)
         noexcept -> void
     {
-        (std::invoke([=]() mutable noexcept {
+        (std::invoke([=, &out]() mutable noexcept {
             auto* const memory = reinterpret_cast<std::byte const*>(&args);
             for (Usize i = 0; i != sizeof args; ++i)
                 *out++ = memory[i];

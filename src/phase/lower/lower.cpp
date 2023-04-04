@@ -112,9 +112,11 @@ namespace {
         }
         auto operator()(cir::expression::Block const& block) -> lir::Expression {
             return lir::expression::Block {
-                .side_effect_expressions = utl::map(recurse(), block.side_effect_expressions),
-                .result_expression       = recurse(block.result_expression),
-                .scope_size              = block.scope_size.get()
+                .side_effect_expressions    = utl::map(recurse(), block.side_effect_expressions),
+                .result_expression          = recurse(block.result_expression),
+                .result_object_frame_offset = block.result_object_frame_offset,
+                .result_size                = block.result_expression->type.size.get(),
+                .scope_size                 = block.scope_size.get()
             };
         }
         auto operator()(cir::expression::Local_variable_reference const& local) -> lir::Expression {

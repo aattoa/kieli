@@ -22,36 +22,32 @@ namespace {
             assert_eq(
                 10,
                 run_bytecode(
-                    ipush, 2_iz,
-                    ipush, 5_iz,
+                    const_8, 2_iz,
+                    const_8, 5_iz,
                     imul,
-                    halt
-                )
-            );
+                    halt_with));
 
             assert_eq(
                 100,
                 run_bytecode(
-                    ipush, 2_iz,
-                    ipush, 4_iz,
+                    const_8, 2_iz,
+                    const_8, 4_iz,
                     imul,
 
-                    ipush, 5_iz,
-                    ipush, 5_iz,
+                    const_8, 5_iz,
+                    const_8, 5_iz,
                     iadd,
 
                     imul,
 
-                    ipush, 10_iz,
-                    ipush, 6_iz,
+                    const_8, 10_iz,
+                    const_8, 6_iz,
                     isub,
-                    ipush, 5_iz,
+                    const_8, 5_iz,
                     imul,
 
                     iadd,
-                    halt
-                )
-            );
+                    halt_with));
         };
     }
 
