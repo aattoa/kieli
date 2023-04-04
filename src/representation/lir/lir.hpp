@@ -32,19 +32,23 @@ namespace lir {
         struct Direct_invocation {
             std::string             function_symbol;
             std::vector<Expression> arguments;
+            vm::Local_size_type     return_value_size {};
         };
         // Invocation of a function through a pointer the value of which is determined at runtime.
         struct Indirect_invocation {
             utl::Wrapper<Expression> invocable;
             std::vector<Expression>  arguments;
+            vm::Local_size_type      return_value_size {};
         };
         struct Local_variable_bitcopy {
             vm::Local_offset_type frame_offset {};
-            vm::Local_size_type   byte_count   {};
+            vm::Local_size_type   byte_count {};
         };
         struct Block {
             std::vector<Expression>  side_effect_expressions;
             utl::Wrapper<Expression> result_expression;
+            vm::Local_offset_type    result_object_frame_offset {};
+            vm::Local_size_type      result_size {};
             vm::Local_size_type      scope_size {};
         };
         struct Loop {

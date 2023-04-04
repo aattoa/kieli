@@ -30,6 +30,11 @@ namespace {
         }
 
         auto operator()(mir::expression::Block const& block) -> cir::Expression::Variant {
+            auto const result_object_frame_offset = context.current_frame_offset;
+
+            // Reserve space for the result object
+            context.current_frame_offset += context.reify_type(block.result_expression->type).size.get();
+
             auto const old_frame_offset = context.current_frame_offset;
 
             auto side_effects = utl::map(recurse(), block.side_effect_expressions);
@@ -39,9 +44,10 @@ namespace {
             context.current_frame_offset = old_frame_offset;
 
             return cir::expression::Block {
-                .side_effect_expressions = std::move(side_effects),
-                .result_expression       = std::move(result),
-                .scope_size              = cir::Type::Size { scope_size }
+                .side_effect_expressions    = std::move(side_effects),
+                .result_expression          = std::move(result),
+                .scope_size                 = cir::Type::Size { scope_size },
+                .result_object_frame_offset = result_object_frame_offset.get()
             };
         }
 

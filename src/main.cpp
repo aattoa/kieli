@@ -15,6 +15,7 @@
 #include "phase/resolve/resolve.hpp"
 #include "phase/reify/reify.hpp"
 #include "phase/lower/lower.hpp"
+#include "phase/codegen/codegen.hpp"
 
 #include "representation/lir/lir_formatting.hpp"
 
@@ -101,6 +102,11 @@ namespace {
             fmt::println("{}: {}", function.symbol, function.body);
     }>;
 
+    constexpr auto codegen_repl = generic_repl<[](compiler::Lex_result&& lex_result) {
+        using namespace compiler;
+        (void)codegen(lower(reify(resolve(desugar(parse(std::move(lex_result)))))));
+    }>;
+
 }
 
 
@@ -160,26 +166,17 @@ auto main(int argc, char const** argv) -> int try {
 
         using enum vm::Opcode;
         machine.program.bytecode.write(
-            ipush, 0_iz,
+            const_8, 0_iz,
             iinc_top,
-            idup,
+            dup_8,
 
-            idup,
-            idup,
+            dup_8,
+            dup_8,
             imul,
-            pop_8,
+            iprint,
 
-            local_jump_ineq_i, vm::Local_offset_type(-13 - 4), 1'000'000_iz,
-            halt
-
-            // ipush, 0_iz,
-            // iinc_top,
-            // idup,
-            // spush, string,
-            // sprint,
-            // local_jump_ineq_i, vm::Local_offset_type(-23), 10_iz,
-            // halt
-        );
+            local_jump_ineq_i, vm::Local_offset_type(-13 - 4), 10_iz,
+            halt);
 
         return machine.run();
     }
@@ -221,11 +218,12 @@ auto main(int argc, char const** argv) -> int try {
             { "res"    , resolution_repl        },
             { "rei"    , reification_repl       },
             { "low"    , lowering_repl          },
+            { "gen"    , codegen_repl           },
         } };
         if (auto const* const repl = repls.find(*name))
             (*repl)();
         else
-            throw utl::exception("The repl must be one of lex|expr|prog|des|res, not '{}'", *name);
+            throw utl::exception("The repl must be one of lex|expr|prog|des|res|rei|low|gen, not '{}'", *name);
     }
 
     return EXIT_SUCCESS;

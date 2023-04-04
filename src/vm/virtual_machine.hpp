@@ -64,6 +64,7 @@ namespace vm {
         std::byte*         instruction_anchor  = nullptr;
         std::byte*         activation_record   = nullptr;
         bool               keep_running        = true;
+        int                return_value        = 0;
 
 
         auto run() -> int;

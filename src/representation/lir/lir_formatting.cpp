@@ -33,7 +33,7 @@ namespace {
             format("{{ ");
             for (auto const& side_effect : block.side_effect_expressions)
                 format("{}; ", side_effect);
-            return format(" {} (pop {}) }}", block.result_expression, block.scope_size);
+            return format(" {} (res {}, pop {}) }}", block.result_expression, block.result_size, block.scope_size);
         }
         auto operator()(lir::expression::Conditional const& conditional) {
             return format("if {} {} else {}", conditional.condition, conditional.true_branch, conditional.false_branch);

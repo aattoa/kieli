@@ -5,12 +5,16 @@
 
 auto vm::argument_bytes(Opcode const opcode) noexcept -> utl::Usize {
     static constexpr auto bytecounts = std::to_array<utl::Usize>({
-         sizeof(utl::Isize), sizeof(utl::Float), sizeof(utl::Char), sizeof(utl::Usize), 0, 0, // push
+         0,           // halt
+         sizeof(int), // halt_with
 
-         0, 0, 0, 0, 0, // dup
+         1, 2, 4, 8, sizeof(utl::Usize), 0, 0, // const
+
+         0, 0, 0, 0, sizeof(Local_size_type), // dup
+
          0, 0, 0, 0, 0, // print
 
-         0, 0, 0, 0, sizeof(Local_size_type),
+         0, 0, 0, 0, sizeof(Local_size_type), // pop
 
          0, 0, // add
          0, 0, // sub
@@ -41,10 +45,13 @@ auto vm::argument_bytes(Opcode const opcode) noexcept -> utl::Usize {
          0,    // ftob
          0,    // ctob
 
-         sizeof(Local_size_type),   // bitcopy_from
-         sizeof(Local_size_type),   // bitcopy_to
-         sizeof(Local_offset_type), // push_address
-         0,                         // push_return_value_address
+         sizeof(Local_size_type),                             // reserve_stack_space
+         sizeof(Local_size_type),                             // bitcopy_from
+         sizeof(Local_size_type),                             // bitcopy_to
+         sizeof(Local_size_type) + sizeof(Local_offset_type), // bitcopy_from_local
+         sizeof(Local_size_type) + sizeof(Local_offset_type), // bitcopy_to_local
+         sizeof(Local_offset_type),                           // push_local_address
+         0,                                                   // push_return_value_address
 
          sizeof(Jump_offset_type), sizeof(Jump_offset_type), sizeof(Jump_offset_type),    // jump
          sizeof(Local_offset_type), sizeof(Local_offset_type), sizeof(Local_offset_type), // local_jump
@@ -58,9 +65,9 @@ auto vm::argument_bytes(Opcode const opcode) noexcept -> utl::Usize {
 
          sizeof(Local_size_type) + sizeof(Jump_offset_type), // call
          sizeof(Jump_offset_type),                           // call_0
+         sizeof(Local_size_type),                            // call_ptr
+         0,                                                  // call_ptr_0
          0,                                                  // ret
-
-         0, // halt
      });
     static_assert(bytecounts.size() == utl::enumerator_count<vm::Opcode>);
     return bytecounts[utl::as_index(opcode)];

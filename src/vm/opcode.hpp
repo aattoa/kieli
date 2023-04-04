@@ -6,9 +6,14 @@
 namespace vm {
 
     enum class Opcode : utl::U8 {
-        ipush , fpush , cpush , spush , push_true, push_false,
-        idup  , fdup  , cdup  , sdup  , bdup  ,
+        halt, halt_with,
+
+        const_1, const_2, const_4, const_8, const_string, const_true, const_false,
+
+        dup_1, dup_2, dup_4, dup_8, dup_n,
+
         iprint, fprint, cprint, sprint, bprint,
+
 
         pop_1, pop_2, pop_4, pop_8, pop_n,
 
@@ -41,9 +46,12 @@ namespace vm {
         cast_ftob,
         cast_ctob,
 
+        reserve_stack_space,
         bitcopy_from_stack,
         bitcopy_to_stack,
-        push_address,
+        bitcopy_from_local,
+        bitcopy_to_local,
+        push_local_address,
         push_return_value_address,
 
         jump,       local_jump,
@@ -57,9 +65,7 @@ namespace vm {
         local_jump_igt_i , local_jump_fgt_i ,
         local_jump_igte_i, local_jump_fgte_i,
 
-        call, call_0, ret,
-
-        halt,
+        call, call_0, call_ptr, call_ptr_0, ret,
 
         _enumerator_count
     };
