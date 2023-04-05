@@ -42,7 +42,7 @@ namespace {
                 break;
 
             try {
-                utl::Source source { utl::Source::Mock_tag { "repl" }, std::move(string) };
+                utl::Source source { utl::Source::Filename { "[repl]" }, std::move(string) };
                 compiler::Program_string_pool string_pool;
                 f(compiler::lex({ .source = std::move(source), .string_pool = string_pool }));
             }
@@ -185,7 +185,8 @@ auto main(int argc, char const** argv) -> int try {
     if (std::string_view const* const phase = options["debug"]) {
         using namespace compiler;
 
-        utl::Source debug_source { (std::filesystem::current_path().parent_path() / "sample-project" / "src" / "main.kieli").string() };
+        auto const source_path = (std::filesystem::current_path().parent_path() / "sample-project" / "src" / "main.kieli");
+        utl::Source debug_source { utl::Source::Filename { source_path.string() } };
 
         Program_string_pool debug_string_pool;
         Lex_arguments lex_arguments {

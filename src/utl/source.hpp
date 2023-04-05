@@ -9,13 +9,13 @@ namespace utl {
         std::string m_filename;
         std::string m_contents;
     public:
-        struct Mock_tag { std::string_view filename; };
+        struct Filename { std::string string; };
 
-        explicit Source(std::string&&);
-        explicit Source(Mock_tag, std::string&&);
+        explicit Source(Filename&&);
+        explicit Source(Filename&&, std::string&& file_content);
 
         [[nodiscard]]
-        auto name() const noexcept -> std::string_view;
+        auto filename() const noexcept -> std::string_view;
         [[nodiscard]]
         auto string() const noexcept -> std::string_view;
     };
@@ -40,8 +40,7 @@ namespace utl {
         explicit constexpr Source_view(
             std::string_view const string,
             Source_position  const start,
-            Source_position  const stop
-        ) noexcept
+            Source_position  const stop) noexcept
             : string         { string }
             , start_position { start  }
             , stop_position  { stop   }

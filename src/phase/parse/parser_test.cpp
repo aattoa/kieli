@@ -18,10 +18,7 @@ namespace {
         utl::always_assert(test_string_pool != nullptr);
 
         auto parse_context = std::invoke([&] {
-            utl::Source source {
-                utl::Source::Mock_tag { .filename = "TEST" },
-                utl::copy(node_string)
-            };
+            utl::Source source { utl::Source::Filename { "[TEST]" }, utl::copy(node_string) };
             return Parse_context {
                 compiler::lex(compiler::Lex_arguments {
                     .source      = std::move(source),
@@ -176,11 +173,11 @@ namespace {
         "tuple_type"_test = [] {
             type("()");
             type("(())", "()");
-            type("(typeof_(5), T)");
+            type("(typeof(5), T)");
         };
 
         "template_type"_test = [] {
-            type("Vec[Opt[typeof_(sizeof(::Vec[Int]))]]");
+            type("Vec[Opt[typeof(sizeof(::Vec[Int]))]]");
         };
 
 

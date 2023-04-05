@@ -329,7 +329,7 @@ namespace {
             { "export"             , Token::Type::export_            },
             { "module"             , Token::Type::module_            },
             { "sizeof"             , Token::Type::sizeof_            },
-            { "typeof_"             , Token::Type::typeof_             },
+            { "typeof"             , Token::Type::typeof_            },
             { "addressof"          , Token::Type::addressof          },
             { "unsafe_dereference" , Token::Type::unsafe_dereference },
             { "mov"                , Token::Type::mov                },

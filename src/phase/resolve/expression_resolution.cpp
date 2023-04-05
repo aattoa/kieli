@@ -775,6 +775,7 @@ namespace {
                         "But the actual type is {1}"
                     }
                 });
+                result.type.source_view = cast.target_type->source_view;
                 return result;
             }
             else {

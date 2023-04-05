@@ -2,26 +2,27 @@
 #include "source.hpp"
 
 
-utl::Source::Source(std::string&& name)
-    : m_filename { std::move(name) }
+utl::Source::Source(Filename&& filename)
+    : m_filename { std::move(filename.string) }
 {
-    if (std::ifstream file { m_filename }) {
-        m_contents.reserve(sizeof(std::string)); // Disable SSO
+    disable_short_string_optimization(m_filename);
+    disable_short_string_optimization(m_contents);
+
+    if (std::ifstream file { m_filename })
         m_contents.assign(std::istreambuf_iterator<char> { file }, {});
-    }
-    else {
-        throw Exception { fmt::format("The file '{}' could not be opened", m_filename) };
-    }
+    else
+        throw exception("Failed to open file '{}'", m_filename);
 }
 
-utl::Source::Source(Mock_tag const mock_tag, std::string&& contents)
-    : m_filename { fmt::format("[{}]", mock_tag.filename) }
-    , m_contents { std::move(contents) }
+utl::Source::Source(Filename&& filename, std::string&& file_content)
+    : m_filename { std::move(filename.string) }
+    , m_contents { std::move(file_content) }
 {
-    m_contents.reserve(sizeof(std::string)); // Disable SSO
+    disable_short_string_optimization(m_filename);
+    disable_short_string_optimization(m_contents);
 }
 
-auto utl::Source::name() const noexcept -> std::string_view {
+auto utl::Source::filename() const noexcept -> std::string_view {
     return m_filename;
 }
 auto utl::Source::string() const noexcept -> std::string_view {
@@ -40,13 +41,13 @@ auto utl::Source_position::increment_with(char const c) noexcept -> void {
 
 auto utl::Source_view::operator+(Source_view const& other) const noexcept -> Source_view {
     if (other.string.empty()) {
-        return Source_view { string, start_position, stop_position };
+        return *this;
     }
     else if (string.empty()) {
-        return other + *this;
+        return other;
     }
     else {
-        utl::always_assert(&string.front() <= &other.string.back());
+        always_assert(&string.front() <= &other.string.back());
 
         return Source_view {
             std::string_view {

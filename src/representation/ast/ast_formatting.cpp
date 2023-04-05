@@ -294,7 +294,7 @@ namespace {
             return format("fn({}): {}", function.argument_types, function.return_type);
         }
         auto operator()(ast::type::Typeof const& typeof_) {
-            return format("typeof_({})", typeof_.inspected_expression);
+            return format("typeof({})", typeof_.inspected_expression);
         }
         auto operator()(ast::type::Instance_of const& instance_of) {
             return format("inst {}", utl::formatting::delimited_range(instance_of.classes, " + "));
