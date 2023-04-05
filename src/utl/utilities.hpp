@@ -363,8 +363,7 @@ namespace utl {
             [](int x) { return x * x; },
             [](int x) { return x + 1; },
             [](int a, int b) { return a + b; }
-        )(2, 3) == 36
-    );
+        )(2, 3) == 36);
 
 
     template <class... Fs>
@@ -480,6 +479,12 @@ namespace utl {
     };
     auto on_scope_exit(std::invocable auto callback) {
         return Scope_exit_handler { std::move(callback) };
+    }
+
+
+    inline auto disable_short_string_optimization(std::string& string) -> void {
+        if (string.capacity() <= sizeof(std::string))
+            string.reserve(sizeof(std::string) + 1);
     }
 
 

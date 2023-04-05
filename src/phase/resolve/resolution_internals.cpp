@@ -5,8 +5,7 @@
 resolution::Definition_state_guard::Definition_state_guard(
     Context         & context,
     Definition_state& state,
-    ast::Name   const name
-)
+    ast::Name   const name)
     : definition_state        { state }
     , initial_exception_count { std::uncaught_exceptions() }
 {
@@ -48,8 +47,7 @@ resolution::Context::Context(
     mir::Namespace_context       && namespace_context,
     utl::diagnostics::Builder     && diagnostics,
     utl::Source                   && source,
-    compiler::Program_string_pool & string_pool
-) noexcept
+    compiler::Program_string_pool & string_pool) noexcept
     : hir_node_context  { std::move(hir_node_context) }
     , mir_node_context  { std::move(mir_node_context) }
     , namespace_context { std::move(namespace_context) }

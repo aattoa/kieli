@@ -203,7 +203,7 @@ namespace {
 
                 location_info = fmt::format(
                     "{}:{}-{}",
-                    utl::filename_without_path(current_source->name()),
+                    utl::filename_without_path(current_source->filename()),
                     section.source_view.start_position,
                     section.source_view.stop_position);
             }

@@ -72,8 +72,7 @@ namespace {
                 | ranges::views::join(' ')
                 | ranges::to<std::string>();
 
-            // Disable SSO
-            command_line_string.reserve(sizeof(std::string));
+            utl::disable_short_string_optimization(command_line_string);
 
             // The erroneous view must be a view into command_line_string
             std::string_view erroneous_view;
@@ -90,10 +89,7 @@ namespace {
                 erroneous_view = { view_begin, pointer->size() };
             }
 
-            utl::Source const fake_source {
-                utl::Source::Mock_tag { .filename = "command line" },
-                std::move(command_line_string)
-            };
+            utl::Source const fake_source { utl::Source::Filename { "[command line]" }, std::move(command_line_string) };
 
             utl::diagnostics::Builder builder;
             builder.emit_simple_error(
@@ -215,7 +211,7 @@ namespace {
 
                 if (!argument) {
                     context.error({
-                        .message = "Expected an argument [{}]",
+                        .message           = "Expected an argument [{}]",
                         .message_arguments = fmt::make_format_args(type_description<T>())
                     });
                 }
@@ -224,7 +220,7 @@ namespace {
                     if (*argument < *value.minimum_value) {
                         context.retreat();
                         context.error({
-                            .message = "The minimum allowed value is {}",
+                            .message           = "The minimum allowed value is {}",
                             .message_arguments = fmt::make_format_args(*value.minimum_value)
                         });
                     }
@@ -267,12 +263,10 @@ auto cli::parse_command_line(
 
             if (view.starts_with("--")) {
                 view.remove_prefix(2);
-                if (view.empty()) {
+                if (view.empty())
                     context.expected("a flag name");
-                }
-                else {
+                else
                     name = std::string(view);
-                }
             }
             else if (view.starts_with('-')) {
                 view.remove_prefix(1);
@@ -308,8 +302,7 @@ auto cli::parse_command_line(
             if (it != description.parameters.end()) {
                 options.named_arguments.emplace_back(
                     std::move(*name),
-                    extract_arguments(context, *it)
-                );
+                    extract_arguments(context, *it));
             }
             else {
                 context.retreat();
@@ -430,20 +423,17 @@ auto cli::Options_description::Option_adder::operator()(
         is_defaulted = has_default(values.front());
         auto rest = values | ranges::views::drop(1);
 
-        if (is_defaulted) {
+        if (is_defaulted)
             utl::always_assert(ranges::all_of(rest, has_default));
-        }
-        else {
+        else
             utl::always_assert(ranges::none_of(rest, has_default));
-        }
     }
 
     self->parameters.emplace_back(
         std::move(name),
         std::move(values),
         description,
-        is_defaulted
-    );
+        is_defaulted);
     return *this;
 }
 
@@ -531,8 +521,7 @@ auto cli::Options::Argument_proxy::operator[](utl::Usize const index) -> Argumen
 
 
 auto cli::Options::operator[](std::string_view const name) noexcept -> Argument_proxy {
-    auto it = ranges::find(named_arguments, name, &Named_argument::name);
-
+    auto const it = ranges::find(named_arguments, name, &Named_argument::name);
     if (it != named_arguments.end()) {
         return {
             .name    = name,

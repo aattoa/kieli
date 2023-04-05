@@ -16,7 +16,7 @@ namespace {
     {
         utl::always_assert(test_string_pool_ptr != nullptr);
 
-        utl::Source source { utl::Source::Mock_tag { "TEST" }, std::string { text } };
+        utl::Source source { utl::Source::Filename { "[TEST]" }, std::string { text } };
         auto lex_result = compiler::lex({ std::move(source), *test_string_pool_ptr });
 
         required_types.push_back(Token::Type::end_of_input);

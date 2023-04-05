@@ -97,7 +97,7 @@ namespace {
             mir::Type const return_type =
                 context.resolve_type(*function.return_type, signature_scope, *info.home_namespace);
 
-            info.value = resolution::Partially_resolved_function {
+            info.value = Partially_resolved_function {
                 .resolved_signature = make_function_signature(info.name, return_type, std::move(parameters)),
                 .signature_scope    = std::move(signature_scope),
                 .unresolved_body    = std::move(function.body),
