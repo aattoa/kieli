@@ -327,15 +327,12 @@ DEFINE_FORMATTER_FOR(ast::Type) {
 
 
 DEFINE_FORMATTER_FOR(ast::Module) {
+    auto out = context.out();
+
     if (value.name)
-        fmt::format_to(context.out(), "module {}\n", *value.name);
+        out = fmt::format_to(out, "module {}\n", *value.name);
+    for (auto const& import : value.imports)
+        out = fmt::format_to(out, "import \"{}\"", import.view());
 
-    for (auto const& import : value.imports) {
-        fmt::format_to(context.out(), "import {}", utl::formatting::delimited_range(import.path.components, "."));
-        if (import.alias)
-            fmt::format_to(context.out(), " as {}", *import.alias);
-        fmt::format_to(context.out(), "\n");
-    }
-
-    return fmt::format_to(context.out(), "{}", utl::formatting::delimited_range(value.definitions, "\n\n"));
+    return fmt::format_to(out, "{}", utl::formatting::delimited_range(value.definitions, "\n\n"));
 }

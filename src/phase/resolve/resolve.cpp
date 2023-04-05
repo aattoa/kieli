@@ -9,6 +9,7 @@ namespace {
     using namespace resolution;
 
 
+    // Collect top-level name information
     auto register_namespace(
         Context                        & context,
         std::span<hir::Definition> const definitions,
@@ -157,26 +158,6 @@ namespace {
     }
 
 
-    // Creates a resolution context by collecting top level name information
-    auto register_top_level_definitions(compiler::Desugar_result&& desugar_result) -> Context {
-        Context context {
-            std::move(desugar_result.node_context),
-            mir::Node_context {
-                utl::Wrapper_context<mir::Expression>          { desugar_result.node_context.arena_size<hir::Expression>() },
-                utl::Wrapper_context<mir::Pattern>             { desugar_result.node_context.arena_size<hir::Pattern>   () },
-                utl::Wrapper_context<mir::Type::Variant>       { desugar_result.node_context.arena_size<hir::Expression>() + desugar_result.node_context.arena_size<hir::Type>() },
-                utl::Wrapper_context<mir::Mutability::Variant> { 1_uz /* Difficult to estimate, so just make sure at least one page is allocated */ }
-            },
-            mir::Namespace_context {},
-            std::move(desugar_result.diagnostics),
-            std::move(desugar_result.source),
-            desugar_result.string_pool
-        };
-        register_namespace(context, desugar_result.module.definitions, context.global_namespace);
-        return context;
-    }
-
-
     // Resolves all definitions in order, but only visits function bodies if their return types have been omitted
     auto resolve_signatures(Context& context, utl::Wrapper<Namespace> space) -> void {
         for (Definition_variant& definition : space->definitions_in_order) {
@@ -254,50 +235,26 @@ namespace {
 
 
 auto compiler::resolve(Desugar_result&& desugar_result) -> Resolve_result {
-    Context context = register_top_level_definitions(std::move(desugar_result));
+    mir::Node_context node_context {
+        utl::Wrapper_context<mir::Expression>    { desugar_result.node_context.arena_size<hir::Expression>() },
+        utl::Wrapper_context<mir::Pattern>       { desugar_result.node_context.arena_size<hir::Pattern>() },
+        utl::Wrapper_context<mir::Type::Variant> { desugar_result.node_context.arena_size<hir::Type>() },
+        utl::Wrapper_context<mir::Mutability::Variant> {},
+    };
+    mir::Namespace_context namespace_context;
+
+    Context context { std::move(desugar_result.source), std::move(desugar_result.compilation_info) };
+
+    register_namespace(context, desugar_result.module.definitions, context.global_namespace);
     resolve_signatures(context, context.global_namespace);
     resolve_functions(context, context.global_namespace);
     context.solve_deferred_constraints();
 
-
-#if 0
-    for (auto& definition : context.global_namespace->definitions_in_order) {
-        utl::match(
-            definition,
-
-            [](utl::Wrapper<Function_info> const def) {
-                fmt::print("{}\n\n", utl::get<2>(def->value));
-            },
-            [](utl::wrapper auto const def) {
-                fmt::print("{}\n\n", utl::get<1>(def->value));
-            },
-            [&](utl::Wrapper<Namespace>) {
-                utl::todo();
-            },
-            [](utl::Wrapper<Function_template_info> const info) {
-                fmt::print(
-                    "template [{}] {}\n\n",
-                    utl::get<2>(info->value).parameters,
-                    utl::get<2>(info->value).definition
-                );
-            },
-            []<class T>(utl::Wrapper<resolution::Definition_info<ast::definition::Template<T>>> const info) {
-                fmt::print(
-                    "template [{}] {}\n\n",
-                    utl::get<1>(info->value).parameters,
-                    utl::get<1>(info->value).definition
-                );
-            }
-        );
-    }
-#endif
-
     return Resolve_result {
-        .main_module       = std::move(context.output_module),
-        .diagnostics       = std::move(context.diagnostics),
+        .compilation_info  = std::move(context.compilation_info),
         .source            = std::move(context.source),
-        .node_context      = std::move(context.mir_node_context),
-        .namespace_context = std::move(context.namespace_context),
-        .string_pool       = context.string_pool
+        .node_context      = std::move(node_context),
+        .namespace_context = std::move(namespace_context),
+        .module            = std::move(context.output_module),
     };
 }

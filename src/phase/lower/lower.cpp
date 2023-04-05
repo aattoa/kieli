@@ -51,27 +51,15 @@ namespace {
     }
 
 
-    auto lower_expression(
-        cir::Expression           const&,
-        utl::diagnostics::Builder      &,
-        utl::Source               const&) -> lir::Expression;
-
     struct Expression_lowering_visitor {
         utl::diagnostics::Builder& diagnostics;
         utl::Source         const& source;
         cir::Expression     const& this_expression;
 
-        auto recurse(cir::Expression const& expression) const -> lir::Expression {
-            return lower_expression(expression, diagnostics, source);
-        }
-        auto recurse(utl::Wrapper<cir::Expression> const expression) const -> utl::Wrapper<lir::Expression> {
-            return utl::wrap(recurse(*expression));
-        }
         [[nodiscard]]
-        auto recurse() const {
-            return [*this](auto const& expression) { return recurse(expression); };
+        auto recurse() {
+            return [this](auto const& expression) { return recurse(expression); };
         }
-
 
         template <utl::one_of<compiler::Signed_integer, compiler::Unsigned_integer, compiler::Integer_of_unknown_sign> T>
         auto operator()(cir::expression::Literal<T> const& integer_literal) -> lir::Expression {
@@ -135,33 +123,38 @@ namespace {
         auto operator()(cir::expression::Hole const&) -> lir::Expression {
             return lir::expression::Hole { .source_view = this_expression.source_view };
         }
+
+
+        auto recurse(cir::Expression const& expression) -> lir::Expression {
+            return std::visit(*this, expression.value);
+        }
+        auto recurse(utl::Wrapper<cir::Expression> const expression) -> utl::Wrapper<lir::Expression> {
+            return utl::wrap(recurse(*expression));
+        }
     };
 
-    auto lower_expression(
-        cir::Expression           const& expression,
-        utl::diagnostics::Builder      & diagnostics,
-        utl::Source               const& source) -> lir::Expression
-    {
-        return std::visit(
-            Expression_lowering_visitor { diagnostics, source, expression },
-            expression.value);
-    }
 }
 
 
 auto compiler::lower(Reify_result&& reify_result) -> Lower_result {
-    Lower_result lower_result {
-        .diagnostics  = std::move(reify_result.diagnostics),
-        .source       = std::move(reify_result.source),
-        .node_context = lir::Node_context {}
-    };
+    lir::Node_context          node_context;
+    std::vector<lir::Function> functions;
 
     for (cir::Function& function : reify_result.functions) {
-        lower_result.functions.push_back(lir::Function {
+        functions.push_back(lir::Function {
             .symbol = std::move(function.symbol),
-            .body   = lower_expression(function.body, lower_result.diagnostics, lower_result.source),
+            .body = std::visit(Expression_lowering_visitor {
+                reify_result.compilation_info.diagnostics,
+                reify_result.source,
+                function.body
+            }, function.body.value)
         });
     }
 
-    return lower_result;
+    return Lower_result {
+        .compilation_info = std::move(reify_result.compilation_info),
+        .source           = std::move(reify_result.source),
+        .node_context     = std::move(node_context),
+        .functions        = std::move(functions),
+    };
 }

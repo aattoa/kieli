@@ -37,7 +37,7 @@ namespace {
             .note_color  = utl::diagnostics::error_color
         });
 
-        context.diagnostics.emit_error({
+        context.compilation_info.diagnostics.emit_error({
             .sections          = std::move(sections),
             .message           = "Could not unify {} ~ {}",
             .message_arguments = fmt::make_format_args(left, right)
@@ -68,7 +68,7 @@ namespace {
         std::string const constrained_note =
             fmt::vformat(constraint.constrained_note.explanatory_note, fmt::make_format_args(left, right));
 
-        context.diagnostics.emit_error({
+        context.compilation_info.diagnostics.emit_error({
             .sections = utl::to_vector<utl::diagnostics::Text_section>({
                 {
                     .source_view = constraint.constrainer_note.source_view,

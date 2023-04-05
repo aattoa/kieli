@@ -20,6 +20,11 @@ endif ()
 set(SOURCE_FILES
 	src/main.cpp
 
+	src/cli/cli.hpp
+	src/cli/cli.cpp
+
+	src/compiler/compiler.hpp
+
 	src/representation/ast/ast.hpp
 	src/representation/ast/ast_formatting.cpp
 	src/representation/ast/nodes/definition.hpp
@@ -105,9 +110,6 @@ set(SOURCE_FILES
 
 	src/project/project.cpp
 	src/project/project.hpp
-
-	src/cli/cli.hpp
-	src/cli/cli.cpp
 
 	src/language/configuration.hpp
 

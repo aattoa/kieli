@@ -18,16 +18,9 @@ auto reification::Context::string_type   (utl::Source_view const view) -> cir::T
 auto reification::Context::size_type     (utl::Source_view const view) -> cir::Type { return u64_type(view); }
 
 
-reification::Context::Context(
-    utl::diagnostics::Builder&& diagnostics,
-    utl::Source              && source) noexcept
-    : diagnostics { std::move(diagnostics) }
-    , source      { std::move(source) } {}
-
-
 auto reification::Context::error(
     utl::Source_view                    const source_view,
     utl::diagnostics::Message_arguments const message_arguments) -> void
 {
-    diagnostics.emit_simple_error(message_arguments.add_source_info(source, source_view));
+    compilation_info.diagnostics.emit_simple_error(message_arguments.add_source_info(source, source_view));
 }

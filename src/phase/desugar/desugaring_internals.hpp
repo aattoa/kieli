@@ -2,29 +2,26 @@
 
 #include "utl/utilities.hpp"
 #include "utl/safe_integer.hpp"
-#include "utl/diagnostics.hpp"
+#include "compiler/compiler.hpp"
 #include "representation/ast/ast.hpp"
 #include "representation/hir/hir.hpp"
-#include "phase/lex/lex.hpp"
 
 
 class Desugaring_context {
     utl::Safe_usize current_name_tag;
     utl::Usize      current_definition_kind = std::variant_size_v<ast::Definition::Variant>;
 public:
-    hir::Node_context            & node_context;
-    utl::diagnostics::Builder    & diagnostics;
-    utl::Source             const& source;
-    compiler::Program_string_pool& string_pool;
+    compiler::Compilation_info compilation_info;
+    utl::Source                source;
 
     std::vector<hir::Implicit_template_parameter>* current_function_implicit_template_parameters = nullptr;
-    compiler::Identifier                           self_variable_identifier = string_pool.identifiers.make("self");
+    compiler::Identifier                           self_variable_identifier = compilation_info.identifier_pool.make("self");
 
-    Desugaring_context(
-        hir::Node_context            &,
-        utl::diagnostics::Builder    &,
-        utl::Source             const&,
-        compiler::Program_string_pool&) noexcept;
+    explicit Desugaring_context(
+        utl::Source               && source,
+        compiler::Compilation_info&& compilation_info) noexcept
+        : compilation_info { std::move(compilation_info) }
+        , source           { std::move(source) } {}
 
     [[nodiscard]]
     auto is_within_function() const noexcept -> bool;
@@ -65,5 +62,5 @@ public:
     auto false_pattern   (utl::Source_view) -> utl::Wrapper<hir::Pattern>;
 
     [[noreturn]]
-    auto error(utl::Source_view, utl::diagnostics::Message_arguments) const -> void;
+    auto error(utl::Source_view, utl::diagnostics::Message_arguments) -> void;
 };

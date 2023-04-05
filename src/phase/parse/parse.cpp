@@ -483,33 +483,22 @@ namespace {
 auto compiler::parse(Lex_result&& lex_result) -> Parse_result {
     Parse_context context { std::move(lex_result) };
 
-    ast::Node_context        module_context;
-    std::vector<ast::Import> module_imports;
-    tl::optional<Identifier> module_name;
+    ast::Node_context              module_context;
+    std::vector<compiler::String>  module_imports;
+    tl::optional<compiler::String> module_name;
 
     if (context.try_consume(Token::Type::module_)) {
-        module_name = extract_lower_id(context, "a module name");
+        if (Token const* const name = context.try_extract(Token::Type::string))
+            module_name = name->as_string();
+        else
+            context.error_expected("a module name");
     }
 
     while (context.try_consume(Token::Type::import_)) {
-        static constexpr auto parse_path =
-            parse_separated_one_or_more<parse_lower_id, Token::Type::dot, "a module qualifier">;
-
-        if (auto path = parse_path(context)) {
-            Identifier module_name = path->back();
-            path->pop_back();
-
-            ast::Import import_statement { .path { std::move(*path), module_name } };
-
-            if (context.try_consume(Token::Type::as)) {
-                import_statement.alias = extract_lower_id(context, "a module alias");
-            }
-
-            module_imports.push_back(std::move(import_statement));
-        }
-        else {
+        if (Token const* const name = context.try_extract(Token::Type::string))
+            module_imports.push_back(name->as_string());
+        else
             context.error_expected("a module path");
-        }
     }
 
     auto definitions = extract_definition_sequence(context);
@@ -517,19 +506,17 @@ auto compiler::parse(Lex_result&& lex_result) -> Parse_result {
     if (!context.is_finished()) {
         context.error_expected(
             "a definition",
-            "'fn', 'struct', 'enum', 'alias', 'impl', 'inst', or 'class'"
-        );
+            "'fn', 'struct', 'enum', 'alias', 'impl', 'inst', or 'class'");
     }
 
     return Parse_result {
-        .node_context = std::move(module_context),
-        .diagnostics  = std::move(context.diagnostics),
-        .source       = std::move(context.source),
-        .string_pool  = context.string_pool,
+        .compilation_info = std::move(context.compilation_info),
+        .node_context     = std::move(module_context),
+        .source           = std::move(context.source),
         .module {
             .definitions = std::move(definitions),
             .name        = std::move(module_name),
-            .imports     = std::move(module_imports)
+            .imports     = std::move(module_imports),
         }
     };
 }

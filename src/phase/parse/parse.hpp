@@ -2,18 +2,17 @@
 
 #include "utl/utilities.hpp"
 #include "phase/lex/lex.hpp"
+#include "compiler/compiler.hpp"
 #include "representation/ast/ast.hpp"
 
 
 namespace compiler {
 
     struct Parse_result {
-        ast::Node_context        node_context;
-        utl::diagnostics::Builder diagnostics;
-        utl::Source               source;
-        Program_string_pool&     string_pool;
-
-        ast::Module module;
+        Compilation_info  compilation_info;
+        ast::Node_context node_context;
+        utl::Source       source;
+        ast::Module       module;
     };
 
     [[nodiscard]]

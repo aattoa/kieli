@@ -42,9 +42,7 @@ namespace {
                 break;
 
             try {
-                utl::Source source { utl::Source::Filename { "[repl]" }, std::move(string) };
-                compiler::Program_string_pool string_pool;
-                f(compiler::lex({ .source = std::move(source), .string_pool = string_pool }));
+                f(compiler::lex({ .source = utl::Source { utl::Source::Filename { "[repl]" }, std::move(string) } }));
             }
             catch (utl::diagnostics::Error const& error) {
                 std::cerr << error.what() << "\n\n";
@@ -85,7 +83,7 @@ namespace {
 
     constexpr auto resolution_repl = generic_repl<[](compiler::Lex_result&& lex_result) {
         auto resolve_result = compiler::resolve(compiler::desugar(compiler::parse(std::move(lex_result))));
-        for (utl::wrapper auto const wrapped_function : resolve_result.main_module.functions) {
+        for (utl::wrapper auto const wrapped_function : resolve_result.module.functions) {
             mir::Function const& function = utl::get<mir::Function>(wrapped_function->value);
             fmt::print("{}\n\n", function);
         }
@@ -185,17 +183,10 @@ auto main(int argc, char const** argv) -> int try {
     if (std::string_view const* const phase = options["debug"]) {
         using namespace compiler;
 
-        auto const source_path = (std::filesystem::current_path().parent_path() / "sample-project" / "src" / "main.kieli");
-        utl::Source debug_source { utl::Source::Filename { source_path.string() } };
-
-        Program_string_pool debug_string_pool;
-        Lex_arguments lex_arguments {
-            .source      = std::move(debug_source),
-            .string_pool = debug_string_pool
-        };
-
         auto const do_resolve = [&] {
-            return resolve(desugar(parse(lex(std::move(lex_arguments)))));
+            auto const source_path = (std::filesystem::current_path().parent_path() / "sample-project" / "src" / "main.kieli");
+            utl::Source debug_source { utl::Source::Filename { source_path.string() } };
+            return resolve(desugar(parse(lex({ .source = std::move(debug_source) }))));
         };
 
         if (*phase == "low")

@@ -10,25 +10,23 @@ using Token = compiler::Lexical_token;
 
 
 struct Parse_context {
-    std::vector<Token>             tokens;
-    utl::diagnostics::Builder      diagnostics;
-    utl::Source                    source;
-    compiler::Program_string_pool& string_pool;
-    Token                        * start;
-    Token                        * pointer;
+    compiler::Compilation_info compilation_info;
+    std::vector<Token>         tokens;
+    utl::Source                source;
+    Token*                     start;
+    Token*                     pointer;
 
     compiler::Identifier plus_id;
     compiler::Identifier asterisk_id;
 
     explicit Parse_context(compiler::Lex_result&& lex_result) noexcept
-        : tokens      { std::move(lex_result.tokens) }
-        , diagnostics { std::move(lex_result.diagnostics) }
-        , source      { std::move(lex_result.source) }
-        , string_pool { lex_result.string_pool }
-        , start       { tokens.data() }
-        , pointer     { start }
-        , plus_id     { string_pool.identifiers.make("+") }
-        , asterisk_id { string_pool.identifiers.make("*") }
+        : compilation_info { std::move(lex_result.compilation_info) }
+        , tokens           { std::move(lex_result.tokens) }
+        , source           { std::move(lex_result.source) }
+        , start            { tokens.data() }
+        , pointer          { start }
+        , plus_id          { compilation_info.identifier_pool.make("+") }
+        , asterisk_id      { compilation_info.identifier_pool.make("*") }
     {
         // The end-of-input token should always be present
         utl::always_assert(!tokens.empty());
@@ -70,7 +68,7 @@ struct Parse_context {
         utl::Source_view                    const erroneous_view,
         utl::diagnostics::Message_arguments const arguments) -> void
     {
-        diagnostics.emit_simple_error(arguments.add_source_info(source, erroneous_view));
+        compilation_info.diagnostics.emit_simple_error(arguments.add_source_info(source, erroneous_view));
     }
     [[noreturn]]
     auto error(

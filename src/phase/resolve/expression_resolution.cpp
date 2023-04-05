@@ -32,7 +32,7 @@ namespace {
         mir::Mutability const actual_mutability = referenced_expression.mutability;
 
         auto const mutability_error = [&](std::string_view const message, utl::Pair<std::string_view> const notes) {
-            context.diagnostics.emit_error({
+            context.compilation_info.diagnostics.emit_error({
                 .sections = utl::to_vector<utl::diagnostics::Text_section>({
                     {
                         .source_view = actual_mutability.source_view,
