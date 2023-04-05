@@ -1,7 +1,0 @@
-track local variable moves
-
-(unsafe_)mov keyword, move from behind references
-
-unbound unification variabales -> implicit function template parameters
-
-macro definitions regular entities, expand during resolution, fold expressions
