@@ -50,7 +50,7 @@ namespace {
                     };
                 };
 
-                context.diagnostics.emit_error({
+                context.compilation_info.diagnostics.emit_error({
                     .sections = utl::map(make_section, duplicates),
                     .message  = "There are multiple initializers for the same field"
                 });
@@ -152,14 +152,14 @@ namespace {
 
             if (auto const* const literal = std::get_if<ast::expression::Literal<compiler::Boolean>>(&condition.value)) {
                 if (literal->value.value) {
-                    context.diagnostics.emit_simple_note({
+                    context.compilation_info.diagnostics.emit_simple_note({
                         .erroneous_view = condition.source_view,
                         .source         = context.source,
                         .message        = "Consider using 'loop' instead of 'while true'",
                     });
                 }
                 else {
-                    context.diagnostics.emit_simple_warning({
+                    context.compilation_info.diagnostics.emit_simple_warning({
                         .erroneous_view = condition.source_view,
                         .source         = context.source,
                         .message        = "Loop will never be run"
@@ -310,7 +310,7 @@ namespace {
                     });
                 }
 
-                context.diagnostics.emit_warning({
+                context.compilation_info.diagnostics.emit_warning({
                     .sections = std::move(sections),
                     .message  = "Boolean literal condition"
                 });

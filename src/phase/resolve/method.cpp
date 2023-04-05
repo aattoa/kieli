@@ -32,7 +32,7 @@ namespace {
         tl::optional<Method_lookup_result> return_value;
 
         auto const emit_ambiguity_error = [&](utl::Pair<utl::Source_view> const views) {
-            context.diagnostics.emit_error({
+            context.compilation_info.diagnostics.emit_error({
                 .sections = utl::to_vector<utl::diagnostics::Text_section>({
                     {
                         .source_view = method_name.source_view,

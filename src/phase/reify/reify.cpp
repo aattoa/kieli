@@ -26,24 +26,21 @@ namespace {
 auto compiler::reify(Resolve_result&& resolve_result) -> Reify_result {
     cir::Node_context node_context;
 
-    reification::Context context {
-        std::move(resolve_result.diagnostics),
-        std::move(resolve_result.source)
-    };
+    reification::Context context { std::move(resolve_result.source), std::move(resolve_result.compilation_info) };
 
     std::vector<cir::Function> functions;
-    functions.reserve(resolve_result.main_module.functions.size());
+    functions.reserve(resolve_result.module.functions.size());
 
-    for (utl::wrapper auto const wrapped_function : resolve_result.main_module.functions)
+    for (utl::wrapper auto const wrapped_function : resolve_result.module.functions)
         functions.push_back(reify_function(context, *wrapped_function));
-    for (utl::wrapper auto const function_template : resolve_result.main_module.function_templates)
+    for (utl::wrapper auto const function_template : resolve_result.module.function_templates)
         for (utl::wrapper auto const instantiation : utl::get<mir::Function_template>(function_template->value).instantiations)
             functions.push_back(reify_function(context, *instantiation));
 
     return Reify_result {
-        .diagnostics  = std::move(context.diagnostics),
-        .source       = std::move(context.source),
-        .node_context = std::move(node_context),
-        .functions    = std::move(functions),
+        .compilation_info = std::move(context.compilation_info),
+        .source           = std::move(context.source),
+        .node_context     = std::move(node_context),
+        .functions        = std::move(functions),
     };
 }

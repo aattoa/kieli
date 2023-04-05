@@ -199,22 +199,10 @@ namespace ast {
         ast::Definition
     >;
 
-
-    struct Module_path {
-        std::vector<compiler::Identifier> components;
-        compiler::Identifier              module_name;
-    };
-
-    struct [[nodiscard]] Import {
-        Module_path                        path;
-        tl::optional<compiler::Identifier> alias;
-    };
-
     struct [[nodiscard]] Module {
-        std::vector<Definition>            definitions;
-        tl::optional<compiler::Identifier> name;
-        std::vector<Import>                imports;
-        std::vector<Module_path>           imported_by;
+        std::vector<Definition>        definitions;
+        tl::optional<compiler::String> name;
+        std::vector<compiler::String>  imports;
     };
 
 }

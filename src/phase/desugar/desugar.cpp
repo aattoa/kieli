@@ -3,17 +3,6 @@
 #include "desugaring_internals.hpp"
 
 
-Desugaring_context::Desugaring_context(
-    hir::Node_context            & node_context,
-    utl::diagnostics::Builder    & diagnostics,
-    utl::Source             const& source,
-    compiler::Program_string_pool& string_pool) noexcept
-    : node_context { node_context }
-    , diagnostics  { diagnostics }
-    , source       { source }
-    , string_pool  { string_pool } {}
-
-
 auto Desugaring_context::is_within_function() const noexcept -> bool {
     return current_definition_kind ==
         utl::alternative_index<ast::Definition::Variant, ast::definition::Function>;
@@ -166,33 +155,26 @@ auto Desugaring_context::false_pattern(utl::Source_view const view) -> utl::Wrap
 
 auto Desugaring_context::error(
     utl::Source_view                    const erroneous_view,
-    utl::diagnostics::Message_arguments const arguments) const -> void
+    utl::diagnostics::Message_arguments const arguments) -> void
 {
-    diagnostics.emit_simple_error(arguments.add_source_info(source, erroneous_view));
+    compilation_info.diagnostics.emit_simple_error(arguments.add_source_info(source, erroneous_view));
 }
 
 
 auto compiler::desugar(Parse_result&& parse_result) -> Desugar_result {
-    Desugar_result desugar_result {
-        .node_context = hir::Node_context {
-            utl::Wrapper_context<hir::Expression> { parse_result.node_context.arena_size<ast::Expression>() },
-            utl::Wrapper_context<hir::Type>       { parse_result.node_context.arena_size<ast::Type>      () },
-            utl::Wrapper_context<hir::Pattern>    { parse_result.node_context.arena_size<ast::Pattern>   () }
-        },
-        .diagnostics = std::move(parse_result.diagnostics),
-        .source      = std::move(parse_result.source),
-        .string_pool = parse_result.string_pool
+    hir::Node_context node_context {
+        utl::Wrapper_context<hir::Expression> { parse_result.node_context.arena_size<ast::Expression>() },
+        utl::Wrapper_context<hir::Type>       { parse_result.node_context.arena_size<ast::Type>      () },
+        utl::Wrapper_context<hir::Pattern>    { parse_result.node_context.arena_size<ast::Pattern>   () }
     };
 
-    Desugaring_context context {
-        desugar_result.node_context,
-        desugar_result.diagnostics,
-        desugar_result.source,
-        desugar_result.string_pool
+    Desugaring_context context { std::move(parse_result.source), std::move(parse_result.compilation_info) };
+    auto desugared_definitions = utl::map(context.desugar(), parse_result.module.definitions);
+
+    return Desugar_result {
+        .compilation_info = std::move(context.compilation_info),
+        .node_context     = std::move(node_context),
+        .source           = std::move(context.source),
+        .module           { .definitions = std::move(desugared_definitions) }
     };
-
-    desugar_result.module.definitions =
-        utl::map(context.desugar(), parse_result.module.definitions);
-
-    return desugar_result;
 }

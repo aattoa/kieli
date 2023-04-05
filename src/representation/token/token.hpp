@@ -1,15 +1,11 @@
 #pragma once
 
 #include "utl/utilities.hpp"
-#include "utl/pooled_string.hpp"
+#include "compiler/compiler.hpp"
 #include "utl/source.hpp"
 
 
 namespace compiler {
-
-    using String     = utl::Pooled_string<struct _string_tag>;
-    using Identifier = utl::Pooled_string<struct _identifier_tag>;
-
 
     struct Signed_integer          { utl::Isize value {}; };
     struct Unsigned_integer        { utl::Usize value {}; };

@@ -6,27 +6,25 @@
 
 namespace {
 
-    constinit compiler::Program_string_pool* test_string_pool = nullptr;
-
-
     template <auto extractor>
     auto node_test(
         std::string               const& node_string,
         tl::optional<std::string> const& expected_string = tl::nullopt,
         std::source_location      const  caller = std::source_location::current()) -> void
     {
-        utl::always_assert(test_string_pool != nullptr);
-
         auto parse_context = std::invoke([&] {
             utl::Source source { utl::Source::Filename { "[TEST]" }, utl::copy(node_string) };
             return Parse_context {
                 compiler::lex(compiler::Lex_arguments {
-                    .source      = std::move(source),
-                    .string_pool = *test_string_pool,
-                    .diagnostics_configuration {
-                        .note_level    = utl::diagnostics::Level::suppress,
-                        .warning_level = utl::diagnostics::Level::suppress,
-                    }
+                    .compilation_info {
+                        .diagnostics = utl::diagnostics::Builder {
+                            utl::diagnostics::Builder::Configuration {
+                                .note_level    = utl::diagnostics::Level::suppress,
+                                .warning_level = utl::diagnostics::Level::suppress,
+                            }
+                        },
+                    },
+                    .source = std::move(source),
                 })
             };
         });
@@ -73,9 +71,6 @@ namespace {
         using namespace tests;
 
         ast::Node_context node_context;
-        compiler::Program_string_pool string_pool;
-        test_string_pool = &string_pool;
-
 
         "literal"_test = [] {
             expression("50");

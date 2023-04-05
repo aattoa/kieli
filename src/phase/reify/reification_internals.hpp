@@ -30,12 +30,14 @@ namespace reification {
         utl::Wrapper<cir::Type::Variant> u64_type_value       = wrap_type(cir::type::Integer::u64);
         utl::Wrapper<cir::Type::Variant> floating_type_value  = wrap_type(cir::type::Floating {});
     public:
-        utl::diagnostics::Builder                           diagnostics;
+        compiler::Compilation_info                          compilation_info;
         utl::Source                                         source;
         utl::Flatmap<mir::Local_variable_tag, Frame_offset> variable_frame_offsets;
         Frame_offset                                        current_frame_offset;
 
-        explicit Context(utl::diagnostics::Builder&&, utl::Source&&) noexcept;
+        explicit Context(utl::Source&& source, compiler::Compilation_info&& compilation_info) noexcept
+            : compilation_info { std::move(compilation_info) }
+            , source           { std::move(source) } {}
 
         auto reify_expression(mir::Expression const&) -> cir::Expression;
         auto reify_pattern   (mir::Pattern    const&) -> cir::Pattern;

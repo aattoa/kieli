@@ -1,5 +1,6 @@
 #pragma once
 
+#include "compiler/compiler.hpp"
 #include "representation/mir/mir.hpp"
 #include "representation/cir/cir.hpp"
 #include "phase/resolve/resolve.hpp"
@@ -8,7 +9,7 @@
 namespace compiler {
 
     struct Reify_result {
-        utl::diagnostics::Builder  diagnostics;
+        Compilation_info           compilation_info;
         utl::Source                source;
         cir::Node_context          node_context;
         std::vector<cir::Function> functions;

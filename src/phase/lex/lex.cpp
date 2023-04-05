@@ -8,12 +8,11 @@ namespace {
     using Token = compiler::Lexical_token;
 
     struct Lex_context {
-        std::vector<Token>             tokens;
-        utl::Source                    source;
-        utl::diagnostics::Builder      diagnostics;
-        compiler::Program_string_pool& string_pool;
-        char const                   * start;
-        char const                   * stop;
+        compiler::Compilation_info compilation_info;
+        std::vector<Token>         tokens;
+        utl::Source                source;
+        char const*                start;
+        char const*                stop;
 
         struct [[nodiscard]] State {
             char const* pointer = nullptr;
@@ -50,17 +49,13 @@ namespace {
             return utl::Source_view { view, start_pos, stop_pos };
         }
     public:
-        explicit Lex_context(
-            utl::Source                  && source,
-            utl::diagnostics::Builder    && diagnostics,
-            compiler::Program_string_pool&  string_pool) noexcept
-            : source      { std::move(source) }
-            , diagnostics { std::move(diagnostics) }
-            , string_pool { string_pool }
-            , start       { this->source.string().data() }
-            , stop        { start + this->source.string().size() }
-            , token_start { .pointer = start }
-            , state       { .pointer = start }
+        explicit Lex_context(utl::Source&& source, compiler::Compilation_info&& compilation_info) noexcept
+            : compilation_info { std::move(compilation_info) }
+            , source           { std::move(source) }
+            , start            { this->source.string().data() }
+            , stop             { start + this->source.string().size() }
+            , token_start      { .pointer = start }
+            , state            { .pointer = start }
         {
             tokens.reserve(1024);
         }
@@ -144,13 +139,13 @@ namespace {
         }
 
         auto make_string(std::string_view const string) -> compiler::String {
-            return string_pool.literals.make(string);
+            return compilation_info.string_literal_pool.make(string);
         }
         auto make_identifier(std::string_view const string) -> compiler::Identifier {
-            return string_pool.identifiers.make(string);
+            return compilation_info.identifier_pool.make(string);
         }
         auto make_new_identifier(std::string_view const string) -> compiler::Identifier {
-            return string_pool.identifiers.make_guaranteed_new_string(string);
+            return compilation_info.identifier_pool.make_guaranteed_new_string(string);
         }
 
         [[noreturn]]
@@ -158,7 +153,7 @@ namespace {
             std::string_view                    const view,
             utl::diagnostics::Message_arguments const arguments) -> void
         {
-            diagnostics.emit_simple_error(arguments.add_source_info(source, source_view_for(view)));
+            compilation_info.diagnostics.emit_simple_error(arguments.add_source_info(source, source_view_for(view)));
         }
         [[noreturn]]
         auto error(
@@ -360,7 +355,7 @@ namespace {
             is_upper(view[view.find_first_not_of('_')])
                 ? Token::Type::upper_name
                 : Token::Type::lower_name,
-            context.string_pool.identifiers.make(view)
+            context.compilation_info.identifier_pool.make(view)
         );
     }
 
@@ -395,7 +390,7 @@ namespace {
                 return context.success(punctuation_type);
         }
 
-        return context.success(Token::Type::operator_name, context.string_pool.identifiers.make(view));
+        return context.success(Token::Type::operator_name, context.compilation_info.identifier_pool.make(view));
     }
 
     auto extract_punctuation(Lex_context& context) -> bool {
@@ -645,7 +640,7 @@ namespace {
                     string.insert(0, context.tokens.back().as_string().view());
                     context.tokens.pop_back(); // Pop the previous string
                 }
-                return context.success(Token::Type::string, context.string_pool.literals.make(string));
+                return context.success(Token::Type::string, context.compilation_info.string_literal_pool.make(string));
             case '\\':
                 c = handle_escape_sequence(context);
                 [[fallthrough]];
@@ -659,23 +654,19 @@ namespace {
 
 
 auto compiler::lex(Lex_arguments&& lex_arguments) -> Lex_result {
-    auto& [source, string_pool, diagnostics_configuration] = lex_arguments;
-    utl::diagnostics::Builder diagnostics { diagnostics_configuration };
-
-    if (source.string().empty()) {
+    if (lex_arguments.source.string().empty()) {
         Token const end_of_input {
             .type        = Token::Type::end_of_input,
-            .source_view = utl::Source_view { source.string(), { 0, 0 }, { 0, 0 } }
+            .source_view = utl::Source_view { lex_arguments.source.string(), { 0, 0 }, { 0, 0 } }
         };
         return {
-            .tokens      = std::vector { end_of_input },
-            .source      = std::move(source),
-            .diagnostics = std::move(diagnostics),
-            .string_pool = string_pool
+            .compilation_info = std::move(lex_arguments.compilation_info),
+            .tokens           = std::vector { end_of_input },
+            .source           = std::move(lex_arguments.source),
         };
     }
 
-    Lex_context context { std::move(source), std::move(diagnostics), string_pool };
+    Lex_context context { std::move(lex_arguments.source), std::move(lex_arguments.compilation_info) };
 
     static constexpr auto extractors = std::to_array({
         extract_identifier,
@@ -716,10 +707,9 @@ auto compiler::lex(Lex_arguments&& lex_arguments) -> Lex_result {
         });
 
         return Lex_result {
-            .tokens      = std::move(context.tokens),
-            .source      = std::move(context.source),
-            .diagnostics = std::move(context.diagnostics),
-            .string_pool = string_pool
+            .compilation_info = std::move(context.compilation_info),
+            .tokens           = std::move(context.tokens),
+            .source           = std::move(context.source),
         };
     }
 }

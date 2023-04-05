@@ -158,29 +158,20 @@ namespace resolution {
         utl::Wrapper<mir::Type::Variant> string_type_value           = wrap_type(mir::type::String {});
         utl::Wrapper<mir::Type::Variant> self_placeholder_type_value = wrap_type(mir::type::Self_placeholder {});
     public:
-        hir::Node_context      hir_node_context;
-        mir::Node_context      mir_node_context;
-        mir::Namespace_context namespace_context;
+        compiler::Compilation_info compilation_info;
+        utl::Source                source;
+        mir::Module                output_module;
+        utl::Wrapper<Namespace>    global_namespace;
+        Nameless_entities          nameless_entities;
+        tl::optional<mir::Type>    current_self_type;
+        tl::optional<Loop_info>    current_loop_info;
 
-        mir::Module output_module;
+        compiler::Identifier self_variable_id = compilation_info.identifier_pool.make("self");
 
-        utl::diagnostics::Builder      diagnostics;
-        utl::Source                    source;
-        utl::Wrapper<Namespace>        global_namespace;
-        Nameless_entities              nameless_entities;
-        tl::optional<mir::Type>        current_self_type;
-        tl::optional<Loop_info>        current_loop_info;
-        compiler::Program_string_pool& string_pool;
-
-        compiler::Identifier self_variable_id = string_pool.identifiers.make("self");
-
-        Context(
-            hir::Node_context            &&,
-            mir::Node_context            &&,
-            mir::Namespace_context       &&,
-            utl::diagnostics::Builder    &&,
-            utl::Source                  &&,
-            compiler::Program_string_pool &) noexcept;
+        explicit Context(utl::Source&& source, compiler::Compilation_info&& compilation_info) noexcept
+            : compilation_info { std::move(compilation_info) }
+            , source           { std::move(source) }
+            , global_namespace { utl::wrap(Namespace {}) } {}
 
         Context(Context const&) = delete;
         Context(Context&&) = default;

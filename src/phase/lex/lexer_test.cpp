@@ -5,8 +5,6 @@
 
 namespace {
 
-    constinit thread_local compiler::Program_string_pool* test_string_pool_ptr = nullptr;
-
     using Token = compiler::Lexical_token;
 
     auto assert_tok_eq(
@@ -14,10 +12,8 @@ namespace {
         std::vector<Token::Type>   required_types,
         std::source_location const caller = std::source_location::current()) -> void
     {
-        utl::always_assert(test_string_pool_ptr != nullptr);
-
         utl::Source source { utl::Source::Filename { "[TEST]" }, std::string { text } };
-        auto lex_result = compiler::lex({ std::move(source), *test_string_pool_ptr });
+        auto lex_result = compiler::lex({ .source = std::move(source) });
 
         required_types.push_back(Token::Type::end_of_input);
 
@@ -32,9 +28,6 @@ namespace {
     auto run_lexer_tests() -> void {
         using namespace tests;
         using enum Token::Type;
-
-        compiler::Program_string_pool string_pool;
-        test_string_pool_ptr = &string_pool;
 
         "whitespace"_test = [] {
             assert_tok_eq(

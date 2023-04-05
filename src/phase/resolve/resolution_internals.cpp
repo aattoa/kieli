@@ -41,27 +41,11 @@ auto resolution::wrap_type(mir::Type::Variant&& value) -> utl::Wrapper<mir::Type
 }
 
 
-resolution::Context::Context(
-    hir::Node_context            && hir_node_context,
-    mir::Node_context            && mir_node_context,
-    mir::Namespace_context       && namespace_context,
-    utl::diagnostics::Builder     && diagnostics,
-    utl::Source                   && source,
-    compiler::Program_string_pool & string_pool) noexcept
-    : hir_node_context  { std::move(hir_node_context) }
-    , mir_node_context  { std::move(mir_node_context) }
-    , namespace_context { std::move(namespace_context) }
-    , diagnostics       { std::move(diagnostics) }
-    , source            { std::move(source) }
-    , global_namespace  { utl::wrap(Namespace {})}
-    , string_pool       { string_pool } {}
-
-
 auto resolution::Context::error(
     utl::Source_view                    const source_view,
     utl::diagnostics::Message_arguments const arguments) -> void
 {
-    diagnostics.emit_simple_error(arguments.add_source_info(source, source_view));
+    compilation_info.diagnostics.emit_simple_error(arguments.add_source_info(source, source_view));
 }
 
 
@@ -162,7 +146,7 @@ namespace {
         auto                   get_name_from_variant) -> void
     {
         if (auto* const existing = (space.*table).find(name.identifier)) {
-            context.diagnostics.emit_error({
+            context.compilation_info.diagnostics.emit_error({
                 .sections = utl::to_vector<utl::diagnostics::Text_section>({
                     {
                         .source_view = std::visit(get_name_from_variant, *existing).source_view,

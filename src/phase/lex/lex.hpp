@@ -2,28 +2,21 @@
 
 #include "utl/utilities.hpp"
 #include "utl/source.hpp"
-#include "utl/diagnostics.hpp"
+#include "compiler/compiler.hpp"
 #include "representation/token/token.hpp"
 
 
 namespace compiler {
 
-    struct [[nodiscard]] Program_string_pool {
-        String::Pool     literals;
-        Identifier::Pool identifiers;
-    };
-
     struct [[nodiscard]] Lex_arguments {
-        utl::Source                              source;
-        Program_string_pool&                     string_pool;
-        utl::diagnostics::Builder::Configuration diagnostics_configuration {};
+        Compilation_info compilation_info;
+        utl::Source      source;
     };
 
     struct [[nodiscard]] Lex_result {
+        Compilation_info           compilation_info;
         std::vector<Lexical_token> tokens;
         utl::Source                source;
-        utl::diagnostics::Builder  diagnostics;
-        Program_string_pool&       string_pool;
     };
 
     auto lex(Lex_arguments&&) -> Lex_result;
