@@ -330,17 +330,6 @@ namespace utl {
     constexpr auto second = [](auto&& pair) noexcept -> decltype(auto) { return bootleg::forward_like<decltype(pair)>(pair.second); };
 
 
-    constexpr auto move = []<class X>(X&& x) noexcept -> std::remove_reference_t<X>&& {
-        static_assert(!std::is_const_v<std::remove_reference_t<X>>, "Attempted to move from const");
-        return static_cast<std::remove_reference_t<X>&&>(x);
-    };
-
-    constexpr auto copy = [](auto const& x)
-        noexcept(std::is_nothrow_copy_constructible_v<std::remove_cvref_t<decltype(x)>> )
-    {
-        return x;
-    };
-
     constexpr auto size = [](auto const& x)
         noexcept(noexcept(std::size(x))) -> Usize
     {
@@ -515,7 +504,7 @@ namespace utl {
         struct Vector_with_capacity_closure {
             Usize capacity;
             template <class T> [[nodiscard]]
-            /*implicit*/ operator std::vector<T>() const {
+            /*implicit*/ operator std::vector<T>() const { // NOLINT
                 APPLY_EXPLICIT_OBJECT_PARAMETER_HERE;
                 return vector_with_capacity<T>(capacity);
             }
@@ -542,8 +531,7 @@ namespace utl {
     template <class T>
     constexpr auto resize_down_vector(std::vector<T>& vector, Usize const new_size) -> void {
         assert(vector.size() >= new_size);
-        assert(std::in_range<std::ptrdiff_t>(new_size));
-        vector.erase(vector.begin() + static_cast<typename std::vector<T>::iterator::difference_type>(new_size), vector.end());
+        vector.erase(vector.begin() + safe_cast<typename std::vector<T>::iterator::difference_type>(new_size), vector.end());
     }
 
 
