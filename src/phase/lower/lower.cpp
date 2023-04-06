@@ -56,6 +56,12 @@ namespace {
         utl::Source         const& source;
         cir::Expression     const& this_expression;
 
+        auto recurse(cir::Expression const& expression) -> lir::Expression {
+            return std::visit(Expression_lowering_visitor { diagnostics, source, expression }, expression.value);
+        }
+        auto recurse(utl::Wrapper<cir::Expression> const expression) -> utl::Wrapper<lir::Expression> {
+            return utl::wrap(recurse(*expression));
+        }
         [[nodiscard]]
         auto recurse() {
             return [this](auto const& expression) { return recurse(expression); };
@@ -122,14 +128,6 @@ namespace {
         }
         auto operator()(cir::expression::Hole const&) -> lir::Expression {
             return lir::expression::Hole { .source_view = this_expression.source_view };
-        }
-
-
-        auto recurse(cir::Expression const& expression) -> lir::Expression {
-            return std::visit(*this, expression.value);
-        }
-        auto recurse(utl::Wrapper<cir::Expression> const expression) -> utl::Wrapper<lir::Expression> {
-            return utl::wrap(recurse(*expression));
         }
     };
 

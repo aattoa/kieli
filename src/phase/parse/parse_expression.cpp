@@ -58,7 +58,7 @@ namespace {
         }
 
         return ast::expression::Struct_initializer {
-            .member_initializers { std::move(initializers) },
+            .member_initializers = utl::Flatmap { std::move(initializers) },
             .struct_type         = utl::wrap(std::move(type))
         };
     }

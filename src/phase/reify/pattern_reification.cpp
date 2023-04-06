@@ -20,7 +20,8 @@ namespace {
 
 
         auto operator()(mir::pattern::Name const& name) -> cir::Pattern::Variant {
-            context.variable_frame_offsets.add(name.variable_tag, context.current_frame_offset);
+            // Each variable is given a unique tag so there should be no possibility of conflict.
+            context.variable_frame_offsets.add_new_or_abort(name.variable_tag, context.current_frame_offset);
             increment_frame_offset();
             return cir::pattern::Exhaustive {};
         }

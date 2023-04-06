@@ -61,16 +61,20 @@ namespace {
         utl::Flatmap<int, int> flatmap;
 
         "add"_test = [&] {
-            flatmap.add(10, 20);
-
+            flatmap.add_or_assign(10, 20);
             assert_eq(flatmap.size(), 1_uz);
-            assert_eq(static_cast<bool>(flatmap.find(10)), true);
+            assert_eq(flatmap.find(10) != nullptr, true);
             assert_eq(*flatmap.find(10), 20);
 
-            flatmap.add(10, 30);
+            flatmap.add_or_assign(10, 30);
+            assert_eq(flatmap.size(), 1_uz);
+            assert_eq(flatmap.find(10) != nullptr, true);
+            assert_eq(*flatmap.find(10), 30);
 
+            flatmap.add_or_assign(20, 40);
             assert_eq(flatmap.size(), 2_uz);
-            assert_eq(*flatmap.find(10), 20);
+            assert_eq(flatmap.find(20) != nullptr, true);
+            assert_eq(*flatmap.find(20), 40);
         };
     }
 
