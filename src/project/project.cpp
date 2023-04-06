@@ -48,40 +48,30 @@ namespace {
 }
 
 
-auto project::Configuration::string() const -> std::string {
+auto project::to_string(Configuration const& configuration) -> std::string {
     std::string string;
     string.reserve(256);
     auto out = std::back_inserter(string);
 
-    for (auto const& [key, value] : span()) {
-        fmt::format_to(out, "{}: ", key);
-        if (value)
-            fmt::format_to(out, "{}", value->string);
+    for (auto const& [key, value] : configuration) {
+        out = fmt::format_to(out, "{}: ", key);
+        if (value.has_value())
+            out = fmt::format_to(out, "{}", *value);
     }
 
     return string;
 }
 
 
-auto project::Configuration::operator[](std::string_view const name) -> Configuration_key& {
-    utl::always_assert(ranges::contains(allowed_keys, name));
-
-    if (auto* const key = find(name); key && key->has_value())
-        return **key;
-    else
-        utl::abort();
-}
-
-
 auto project::default_configuration() -> Configuration {
     Configuration configuration;
-    configuration.add("language version", std::to_string(language::version));
-    configuration.add("source directory", "src"s);
-    configuration.add("stack capacity"  , "1048576 // 2^20"s);
-    configuration.add("name"            , tl::nullopt);
-    configuration.add("version"         , tl::nullopt);
-    configuration.add("authors"         , tl::nullopt);
-    configuration.add("created"         , "placeholder"s); // "{:%d-%m-%Y}"_format(utl::local_time()));
+    configuration.add_new_or_abort("language version"s, std::to_string(language::version));
+    configuration.add_new_or_abort("source directory"s, "src"s);
+    configuration.add_new_or_abort("stack capacity"s  , "1048576 // 2^20"s);
+    configuration.add_new_or_abort("name"s            , tl::nullopt);
+    configuration.add_new_or_abort("version"s         , tl::nullopt);
+    configuration.add_new_or_abort("authors"s         , tl::nullopt);
+    configuration.add_new_or_abort("created"s         , "placeholder"s); // "{:%d-%m-%Y}"_format(utl::local_time()));
     return configuration;
 }
 
@@ -140,7 +130,7 @@ auto project::read_configuration() -> Configuration {
                     utl::formatting::integer_with_ordinal_indicator(line_number));
             }
 
-            configuration.add(
+            configuration.add_or_assign(
                 std::string(key),
                 value.empty()
                     ? tl::optional(std::string(value))
@@ -149,6 +139,7 @@ auto project::read_configuration() -> Configuration {
 
         return configuration;
     }
+
     return default_configuration();
 }
 
@@ -174,25 +165,19 @@ auto project::initialize(std::string_view const project_name) -> void {
             project_path.string());
     }
 
-    {
-        std::ofstream configuration_file { project_path / "kieli_config" };
-        if (!configuration_file) {
-            throw utl::exception("Could not create the configuration file");
-        }
-        configuration_file << project::default_configuration().string();
-    }
+    if (std::ofstream configuration_file { project_path / "kieli_config" })
+        configuration_file << project::to_string(project::default_configuration());
+    else
+        throw utl::exception("Could not create the configuration file");
 
     if (!create_directory(source_dir)) {
         throw utl::exception("Could not create the source directory");
     }
 
-    {
-        std::ofstream main_file { source_dir / "main.kieli" };
-        if (!main_file) {
-            throw utl::exception("Could not create the main file");
-        }
+    if (std::ofstream main_file { source_dir / "main.kieli" })
         main_file << "import std\n\nfn main() {\n    print(\"Hello, world!\\n\")\n}";
-    }
+    else
+        throw utl::exception("Could not create the main file");
 
     fmt::print("Successfully created a new project at '{}'\n", project_path.string());
 }

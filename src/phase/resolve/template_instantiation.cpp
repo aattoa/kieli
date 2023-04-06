@@ -14,10 +14,10 @@ namespace {
         auto add_substitution(mir::Template_parameter const& parameter, mir::Template_argument const& argument) -> void {
             std::visit(utl::Overload {
                 [&](mir::Template_parameter::Type_parameter const&, mir::Type const type_argument) {
-                    type_substitutions.add(parameter.reference_tag, type_argument);
+                    type_substitutions.add_new_or_abort(parameter.reference_tag, type_argument);
                 },
                 [&](mir::Template_parameter::Mutability_parameter, mir::Mutability const mutability_argument) {
-                    mutability_substitutions.add(parameter.reference_tag, mutability_argument);
+                    mutability_substitutions.add_new_or_abort(parameter.reference_tag, mutability_argument);
                 },
                 [&](auto const&, auto const&) {
                     utl::abort(); // Should be unreachable because resolve_template_arguments handles parameter/argument mismatches
@@ -331,7 +331,7 @@ namespace {
             };
 
             concrete_enum.constructors.push_back(concrete_constructor);
-            concrete_enum.associated_namespace->lower_table.add(concrete_constructor.name.identifier, concrete_constructor);
+            concrete_enum.associated_namespace->lower_table.add_new_or_abort(concrete_constructor.name.identifier, concrete_constructor);
         }
 
         auto const concrete_info = utl::wrap(Enum_info {

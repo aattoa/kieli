@@ -371,7 +371,7 @@ cli::Parameter::Name::Name(
 
 auto cli::Options_description::Option_adder::map_short_to_long(Parameter::Name const& name) noexcept -> void {
     if (name.short_form.has_value())
-        self->long_forms.add(utl::copy(*name.short_form), utl::copy(name.long_form));
+        self->long_forms.add_or_assign(*name.short_form, name.long_form);
 }
 
 

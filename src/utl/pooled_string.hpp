@@ -8,6 +8,7 @@ namespace utl {
     template <class Tag>
     class [[nodiscard]] String_pool;
 
+
     template <class Tag>
     class [[nodiscard]] Pooled_string {
     public:
@@ -36,11 +37,16 @@ namespace utl {
 
     template <class Tag>
     class [[nodiscard]] String_pool {
-        friend class Pooled_string<Tag>;
         std::unique_ptr<std::string> m_string;
     public:
+        explicit constexpr String_pool(Usize const initial_capacity)
+            : m_string { std::make_unique<std::string>() }
+        {
+            m_string->reserve(std::max(initial_capacity, sizeof(std::string)));
+        }
+
         constexpr String_pool()
-            : m_string { std::make_unique<std::string>(string_with_capacity(2048)) } {}
+            : String_pool { 2048 } {}
 
         constexpr auto make(std::string_view const string) -> Pooled_string<Tag> {
             // The searcher overload is faster than the bare iterator overload for some reason

@@ -187,7 +187,7 @@ namespace {
         Context            & context,
         Scope              & scope,
         Namespace          & space,
-        hir::Qualified_name& name) -> std::remove_cvref_t<decltype(space.*table)>::Value
+        hir::Qualified_name& name) -> typename std::remove_cvref_t<decltype(space.*table)>::mapped_type
     {
         ast::Name const primary = name.primary_name;
 
@@ -226,7 +226,7 @@ namespace {
         Namespace* const target_space =
             apply_middle_qualifiers(context, scope, *root, qualifiers);
 
-        if (auto* const item = (target_space->*table).find(primary.identifier)) {
+        if (utl::trivially_copyable auto const* const item = (target_space->*table).find(primary.identifier)) {
             return *item;
         }
         else {

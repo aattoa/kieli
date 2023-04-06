@@ -165,7 +165,7 @@ namespace {
             });
         }
         else {
-            (space.*table).add(name.identifier, std::move(variant));
+            (space.*table).add_new_or_abort(name.identifier, std::move(variant));
         }
     }
 }

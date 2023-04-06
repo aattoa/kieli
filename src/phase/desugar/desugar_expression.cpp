@@ -174,11 +174,11 @@ namespace {
             };
         }
         auto operator()(ast::expression::Struct_initializer const& initializer) -> hir::Expression::Variant {
-            decltype(hir::expression::Struct_initializer::member_initializers) initializers;
-            initializers.container().reserve(initializer.member_initializers.size());
+            decltype(hir::expression::Struct_initializer::member_initializers) initializers
+                { utl::vector_with_capacity(initializer.member_initializers.size()) };
 
             for (auto const& [name, init] : initializer.member_initializers.span()) // NOLINT
-                initializers.add(utl::copy(name), context.desugar(init));
+                initializers.add_or_assign(name, context.desugar(init));
 
             return hir::expression::Struct_initializer {
                 .member_initializers = std::move(initializers),

@@ -89,7 +89,7 @@ namespace {
                     });
 
                     space->definitions_in_order.emplace_back(child);
-                    space->lower_table.add(hir_child.name.identifier, child);
+                    space->lower_table.add_new_or_abort(hir_child.name.identifier, child);
 
                     register_namespace(context, hir_child.definitions, child);
                 },

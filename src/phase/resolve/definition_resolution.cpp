@@ -275,7 +275,8 @@ namespace {
             });
 
             mir_enumeration.constructors.push_back(constructor);
-            mir_enumeration.associated_namespace->lower_table.add(hir_constructor.name.identifier, constructor);
+            mir_enumeration.associated_namespace->lower_table
+                .add_new_or_abort(hir_constructor.name.identifier, Lower_variant { constructor });
         }
 
         return mir_enumeration;
@@ -391,7 +392,7 @@ auto resolution::Context::resolve_typeclass(utl::Wrapper<Typeclass_info> const w
         for (hir::Function_signature& signature : hir_typeclass->function_signatures) {
             Scope signature_scope { *this };
 
-            mir_typeclass.function_signatures.add(
+            mir_typeclass.function_signatures.add_new_or_abort(
                 signature.name.identifier,
                 mir::Typeclass::Function_signature {
                     .parameters  = utl::map(resolve_with(signature_scope), signature.parameter_types),
@@ -402,7 +403,7 @@ auto resolution::Context::resolve_typeclass(utl::Wrapper<Typeclass_info> const w
             auto [signature_scope, template_parameters] = // NOLINT
                 resolve_template_parameters(signature.template_parameters, *info.home_namespace);
 
-            mir_typeclass.function_template_signatures.add(
+            mir_typeclass.function_template_signatures.add_new_or_abort(
                 signature.function_signature.name.identifier,
                 mir::Typeclass::Function_template_signature {
                     .function_signature {
@@ -415,7 +416,7 @@ auto resolution::Context::resolve_typeclass(utl::Wrapper<Typeclass_info> const w
         for (hir::Type_signature& signature : hir_typeclass->type_signatures) {
             Scope signature_scope { *this };
 
-            mir_typeclass.type_signatures.add(
+            mir_typeclass.type_signatures.add_new_or_abort(
                 signature.name.identifier,
                 mir::Typeclass::Type_signature {
                     .classes = utl::map([&](hir::Class_reference& reference) {
@@ -427,7 +428,7 @@ auto resolution::Context::resolve_typeclass(utl::Wrapper<Typeclass_info> const w
             auto [signature_scope, template_parameters] = // NOLINT
                 resolve_template_parameters(signature.template_parameters, *info.home_namespace);
 
-            mir_typeclass.type_template_signatures.add(
+            mir_typeclass.type_template_signatures.add_new_or_abort(
                 signature.type_signature.name.identifier,
                 mir::Typeclass::Type_template_signature {
                     .type_signature {
@@ -480,7 +481,7 @@ auto resolution::Context::resolve_implementation(utl::Wrapper<Implementation_inf
                     });
                     (void)resolve_function(function_info); // TODO: maybe avoid resolving here, but how to handle Self type tracking then?
                     add_to_namespace(*self_type_associated_namespace, name, function_info);
-                    definitions.functions.add(name.identifier, function_info);
+                    definitions.functions.add_new_or_abort(name.identifier, function_info);
                 },
                 [&](hir::definition::Function_template& function_template) {
                     ast::Name const name = function_template.definition.name;
@@ -491,7 +492,7 @@ auto resolution::Context::resolve_implementation(utl::Wrapper<Implementation_inf
                     });
                     (void)resolve_function_template(function_template_info);
                     add_to_namespace(*self_type_associated_namespace, name, function_template_info);
-                    definitions.function_templates.add(name.identifier, function_template_info);
+                    definitions.function_templates.add_new_or_abort(name.identifier, function_template_info);
                 },
                 [](auto const&) {
                     utl::todo();
@@ -528,7 +529,7 @@ auto resolution::Context::resolve_instantiation(utl::Wrapper<Instantiation_info>
             utl::match(definition.value,
                 [&](hir::definition::Function& function) {
                     ast::Name const name = function.name;
-                    definitions.functions.add(
+                    definitions.functions.add_new_or_abort(
                         name.identifier,
                         utl::wrap(Function_info {
                             .value          = std::move(function),
@@ -538,7 +539,7 @@ auto resolution::Context::resolve_instantiation(utl::Wrapper<Instantiation_info>
                 },
                 [&](hir::definition::Function_template& function_template) {
                     ast::Name const name = function_template.definition.name;
-                    definitions.function_templates.add(
+                    definitions.function_templates.add_new_or_abort(
                         name.identifier,
                         utl::wrap(Function_template_info {
                             .value          = std::move(function_template),

@@ -310,12 +310,21 @@ namespace utl {
         Fst first;
         Snd second;
 
+        Pair() = default;
+
+        template <class F, class S>
+        constexpr Pair(F&& f, S&& s)
+            noexcept(std::is_nothrow_constructible_v<Fst, F> && std::is_nothrow_constructible_v<Snd, S>)
+            requires std::constructible_from<Fst, F> && std::constructible_from<Snd, S>
+            : first  { std::forward<F>(f) }
+            , second { std::forward<S>(s) } {}
+
         [[nodiscard]]
         auto operator==(Pair const&) const -> bool = default;
     };
 
     template <class Fst, class Snd>
-    Pair(Fst, Snd) -> Pair<Fst, Snd>;
+    Pair(Fst, Snd) -> Pair<std::remove_cvref_t<Fst>, std::remove_cvref_t<Snd>>;
 
     constexpr auto first  = [](auto&& pair) noexcept -> decltype(auto) { return bootleg::forward_like<decltype(pair)>(pair.first); };
     constexpr auto second = [](auto&& pair) noexcept -> decltype(auto) { return bootleg::forward_like<decltype(pair)>(pair.second); };
@@ -575,6 +584,16 @@ namespace utl {
         return [f = std::forward<F>(f)]<class Vector>(Vector&& input) mutable {
             return map(std::forward<F>(f), std::forward<Vector>(input));
         };
+    }
+
+
+    template <class T> requires std::is_arithmetic_v<T> [[nodiscard]]
+    constexpr auto try_parse(std::string_view const string) noexcept -> tl::optional<T> {
+        if (string.empty())
+            return tl::nullopt;
+        T value;
+        auto const [ptr, ec] = std::from_chars(string.data(), string.data() + string.size(), value);
+        return ec == std::errc {} ? tl::optional<T> { value } : tl::nullopt;
     }
 
 

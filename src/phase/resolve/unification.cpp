@@ -170,7 +170,7 @@ namespace {
         {
             if (unification_arguments.do_destructive_unification)
                 destructive_unification_map.mutability_mappings.emplace_back(variable.value, solution.value);
-            solutions.add(variable_tag, solution.value);
+            solutions.add_new_or_abort(variable_tag, solution.value);
             return true;
         }
 
@@ -323,7 +323,7 @@ namespace {
                 if (!context.pure_try_equate_types(*existing_solution, solution))
                     return unification_error();
 
-            solutions.types.add(variable_tag, solution);
+            solutions.types.add_new_or_abort(variable_tag, solution);
 
             return true;
         }
