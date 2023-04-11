@@ -13,7 +13,6 @@ namespace {
         std::source_location      const  caller = std::source_location::current()) -> void
     {
         auto parse_context = std::invoke([&] {
-            utl::Source source { utl::Source::Filename { "[TEST]" }, std::string { node_string } };
             return Parse_context {
                 compiler::lex(compiler::Lex_arguments {
                     .compilation_info {
@@ -24,7 +23,7 @@ namespace {
                             }
                         },
                     },
-                    .source = std::move(source),
+                    .source = utl::Source { "[TEST]", std::string { node_string } }
                 })
             };
         });

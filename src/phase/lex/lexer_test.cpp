@@ -12,14 +12,10 @@ namespace {
         std::vector<Token::Type>   required_types,
         std::source_location const caller = std::source_location::current()) -> void
     {
-        utl::Source source { utl::Source::Filename { "[TEST]" }, std::string { text } };
-        auto lex_result = compiler::lex({ .source = std::move(source) });
-
         required_types.push_back(Token::Type::end_of_input);
 
-        auto const actual_types = lex_result.tokens
-            | ranges::views::transform(&Token::type)
-            | ranges::to<std::vector>();
+        auto lex_result = compiler::lex({ .source = utl::Source { "[TEST]", std::string { text } } });
+        auto const actual_types = utl::map(&Token::type, lex_result.tokens);
 
         tests::assert_eq(required_types, actual_types, caller);
     }

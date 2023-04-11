@@ -45,7 +45,8 @@ namespace {
         std::string line;
         while (std::getline(file, line)) {
             ::add_history(line.c_str());
-            // `previous_input` has to be set every time because when `getline` fails, `line` is cleared
+
+            // `line` is cleared when getline fails, so this has to be done every time.
             previous_readline_input = line;
         }
     }
@@ -69,8 +70,8 @@ auto utl::readline(std::string const& prompt) -> std::string {
     static auto const history_reader =
         (read_history_file_to_current_history(), 0);
 
-    char* const raw_input { ::readline(prompt.c_str()) };
-    auto const input_guard = on_scope_exit([=] { std::free(raw_input); });
+    char* const raw_input   = ::readline(prompt.c_str());
+    auto  const input_guard = on_scope_exit([=] { std::free(raw_input); });
 
     if (!raw_input || !*raw_input)
         return {};

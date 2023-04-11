@@ -24,31 +24,38 @@ namespace utl {
             : m_container { std::move(container) } {}
 
         template <class K, class V>
-        constexpr auto add_or_assign(K&& new_k, V&& new_v) & -> Value&
+        constexpr auto add_or_assign(K&& key, V&& value) & -> Value&
             requires std::constructible_from<Key, K>
                   && std::assignable_from<Key&, K>
                   && std::constructible_from<Value, V>
                   && std::assignable_from<Value&, V>
-                  && std::is_invocable_r_v<bool, Key_equal&&, Key const&, decltype(std::as_const(new_k))>
+                  && std::is_invocable_r_v<bool, Key_equal&&, Key const&, decltype(std::as_const(key))>
         {
-            for (auto& [k, v] : m_container) {
-                if (std::invoke(Key_equal {}, std::as_const(k), std::as_const(new_k)))
-                    return v = std::forward<V>(new_v);
-            }
-            return m_container.emplace_back(std::forward<K>(new_k), std::forward<V>(new_v)).second;
+            if (Value* const existing = find(std::as_const(key)))
+                return *existing = std::forward<V>(value);
+            else
+                return m_container.emplace_back(std::forward<K>(key), std::forward<V>(value)).second;
         }
 
         template <class K, class V>
-        constexpr auto add_new_or_abort(K&& new_k, V&& new_v, std::source_location const caller = std::source_location::current()) & -> Value&
+        constexpr auto add_new_or_abort(K&& key, V&& value, std::source_location const caller = std::source_location::current()) & -> Value&
             requires std::constructible_from<Key, K>
                   && std::constructible_from<Value, V>
-                  && std::is_invocable_r_v<bool, Key_equal&&, Key const&, decltype(std::as_const(new_k))>
+                  && std::is_invocable_r_v<bool, Key_equal&&, Key const&, decltype(std::as_const(key))>
         {
-            for (auto& [k, v] : m_container) {
-                if (std::invoke(Key_equal {}, std::as_const(k), std::as_const(new_k))) [[unlikely]]
-                    abort("utl::Flatmap::add_new_or_abort: key already present in flatmap", caller);
-            }
-            return m_container.emplace_back(std::forward<K>(new_k), std::forward<V>(new_v)).second;
+            if (find(std::as_const(key)) != nullptr)
+                abort("utl::Flatmap::add_new_or_abort: key already present in flatmap", caller);
+            return m_container.emplace_back(std::forward<K>(key), std::forward<V>(value)).second;
+        }
+
+        template <class K, class V>
+        constexpr auto add_new_unchecked(K&& key, V&& value) & -> Value&
+            requires std::constructible_from<Key, K>
+                  && std::constructible_from<Value, V>
+                  && (utl::compiling_in_release_mode || std::is_invocable_r_v<bool, Key_equal&&, Key const&, decltype(std::as_const(key))>)
+        {
+            assert(find(std::as_const(key)) == nullptr);
+            return m_container.emplace_back(std::forward<K>(key), std::forward<V>(value)).second;
         }
 
         template <class K> [[nodiscard]]

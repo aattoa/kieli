@@ -6,31 +6,28 @@
 namespace utl {
 
     class [[nodiscard]] Source {
-        std::string m_filename;
-        std::string m_contents;
+        std::filesystem::path m_file_path;
+        std::string           m_file_content;
     public:
-        struct Filename { std::string string; };
+        // Create a source with the given path and content
+        explicit Source(std::filesystem::path&&, std::string&&);
 
-        explicit Source(Filename&&);
-        explicit Source(Filename&&, std::string&& file_content);
+        // Create a source with the given path and read the content from that file
+        static auto read(std::filesystem::path&&) -> Source;
 
-        [[nodiscard]]
-        auto filename() const noexcept -> std::string_view;
-        [[nodiscard]]
-        auto string() const noexcept -> std::string_view;
+        [[nodiscard]] auto path() const noexcept -> std::filesystem::path const&;
+        [[nodiscard]] auto string() const noexcept -> std::string_view;
     };
-
 
     struct Source_position {
         Usize line   = 1;
         Usize column = 1;
 
-        auto increment_with(char) noexcept -> void;
+        auto advance_with(char) noexcept -> void;
 
         auto operator==(Source_position const&) const noexcept -> bool = default;
         auto operator<=>(Source_position const&) const noexcept -> std::strong_ordering = default;
     };
-
 
     struct [[nodiscard]] Source_view {
         std::string_view string;

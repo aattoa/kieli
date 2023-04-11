@@ -89,7 +89,7 @@ namespace {
                 erroneous_view = { view_begin, pointer->size() };
             }
 
-            utl::Source const fake_source { utl::Source::Filename { "[command line]" }, std::move(command_line_string) };
+            utl::Source const fake_source { "[command line]", std::move(command_line_string) };
 
             utl::diagnostics::Builder builder;
             builder.emit_simple_error(
