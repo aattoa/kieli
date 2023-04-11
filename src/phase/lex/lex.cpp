@@ -40,11 +40,11 @@ namespace {
         {
             utl::Source_position start_pos;
             for (char const* ptr = start; ptr != view.data(); ++ptr)
-                start_pos.increment_with(*ptr);
+                start_pos.advance_with(*ptr);
 
             utl::Source_position stop_pos = start_pos;
             for (char const c : view)
-                stop_pos.increment_with(c);
+                stop_pos.advance_with(c);
 
             return utl::Source_view { view, start_pos, stop_pos };
         }

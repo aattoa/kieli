@@ -31,6 +31,21 @@ namespace {
     }
 
 
+    auto print_mir_module(mir::Module const& module) -> void {
+        for (utl::wrapper auto const function : module.functions) {
+            fmt::print("{}\n\n", utl::get<mir::Function>(function->value));
+        }
+        for (utl::wrapper auto const function_template : module.function_templates) {
+            auto& f = utl::get<mir::Function_template>(function_template->value);
+            fmt::print("function template {}", f.definition.name);
+            for (utl::wrapper auto const instantiation : f.instantiations) {
+                fmt::print("\ninstantiation {}", utl::get<mir::Function>(instantiation->value));
+            }
+            fmt::print("\n\n");
+        }
+    }
+
+
     template <void(*f)(compiler::Lex_result&&)>
     auto generic_repl() {
         for (;;) {
@@ -42,7 +57,7 @@ namespace {
                 break;
 
             try {
-                f(compiler::lex({ .source = utl::Source { utl::Source::Filename { "[repl]" }, std::move(string) } }));
+                f(compiler::lex({ .source = utl::Source { "[repl]", std::move(string) } }));
             }
             catch (utl::diagnostics::Error const& error) {
                 std::cerr << error.what() << "\n\n";
@@ -83,10 +98,7 @@ namespace {
 
     constexpr auto resolution_repl = generic_repl<[](compiler::Lex_result&& lex_result) {
         auto resolve_result = compiler::resolve(compiler::desugar(compiler::parse(std::move(lex_result))));
-        for (utl::wrapper auto const wrapped_function : resolve_result.module.functions) {
-            mir::Function const& function = utl::get<mir::Function>(wrapped_function->value);
-            fmt::print("{}\n\n", function);
-        }
+        print_mir_module(resolve_result.module);
     }>;
 
     constexpr auto reification_repl = generic_repl<[](compiler::Lex_result&& lex_result) {
@@ -184,9 +196,8 @@ auto main(int argc, char const** argv) -> int try {
         using namespace compiler;
 
         auto const do_resolve = [&] {
-            auto const source_path = (std::filesystem::current_path().parent_path() / "sample-project" / "src" / "main.kieli");
-            utl::Source debug_source { utl::Source::Filename { source_path.string() } };
-            return resolve(desugar(parse(lex({ .source = std::move(debug_source) }))));
+            auto source_path = std::filesystem::current_path().parent_path() / "sample-project" / "src" / "types.kieli";
+            return resolve(desugar(parse(lex({ .source = utl::Source::read(std::move(source_path)) }))));
         };
 
         if (*phase == "low")
@@ -194,7 +205,7 @@ auto main(int argc, char const** argv) -> int try {
         else if (*phase == "rei")
             (void)reify(do_resolve());
         else if (*phase == "res")
-            do_resolve();
+            print_mir_module(do_resolve().module);
         else
             throw utl::exception("The phase must be one of low|rei|res, not '{}'", *phase);
 

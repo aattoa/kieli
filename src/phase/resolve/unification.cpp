@@ -323,8 +323,7 @@ namespace {
                 if (!context.pure_try_equate_types(*existing_solution, solution))
                     return unification_error();
 
-            solutions.types.add_new_or_abort(variable_tag, solution);
-
+            solutions.types.add_or_assign(variable_tag, solution);
             return true;
         }
 
