@@ -18,11 +18,11 @@ The following is a list of the required dependencies:
 * https://github.com/TartanLlama/optional
     * Will be replaced by the standard library header `<optional>`.
 
-The major 3 standard library implementations already provide some/all of these headers, but they do not yet support some of the features kieli needs.
+The major 3 standard library implementations already provide some/all of these headers, but they do not yet support some of the features Kieli needs.
 
-# Cloning kieli and its dependencies
+# Cloning Kieli and its dependencies
 
-To get all of the source code needed to build kieli, run these commands in a directory of your choosing:
+Requirements: git
 
 ```Shell
 git clone https://github.com/aattoa/kieli.git
@@ -36,11 +36,11 @@ git clone https://github.com/TartanLlama/optional.git
 cd ..
 ```
 
-# Building kieli on Linux
+# Building Kieli on Linux
 
 Requirements: CMake, make, any C++20 compliant C++ toolchain.
 
-This assumes that you have already cloned kieli and its dependencies as detailed above.
+This assumes that you have already cloned Kieli and its dependencies as detailed above.
 
 ```Shell
 cd kieli
@@ -50,10 +50,10 @@ cmake ..
 make -j8
 ```
 
-These build steps were tested with CMake `3.26.3`, GNU Make `4.4.1`, clang `16.0.0`, and GCC `12.2.1`.
+These build steps have been tested with CMake `3.26.3`, GNU Make `4.4.1`, clang `16.0.0`, and GCC `12.2.1`.
 
-# Building kieli on Windows
+# Building Kieli on Windows
 
 In principle, similar build steps should work on Windows, but this has not been tested.
 
-You may be able to build kieli on Windows as if you were on Linux by using the [Windows Subsystem for Linux](https://learn.microsoft.com/en-us/windows/wsl/install).
+Alternatively, you may be able to build Kieli on Windows as if you were on Linux by using the [Windows Subsystem for Linux](https://learn.microsoft.com/en-us/windows/wsl/install) and following the Linux build steps.
