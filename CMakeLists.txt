@@ -147,14 +147,17 @@ set(SOURCE_FILES
 
 add_executable(${PROJECT_NAME}
     ${SOURCE_FILES}
-    ${PROJECT_SOURCE_DIR}/dependencies/src/fmt/format.cc)
+    dependencies/fmt/src/format.cc)
 
 target_precompile_headers(${PROJECT_NAME}
     PRIVATE src/utl/utilities.hpp)
 
 target_include_directories(${PROJECT_NAME}
     PRIVATE src
-    PRIVATE dependencies/include)
+    PRIVATE dependencies/fmt/include
+    PRIVATE dependencies/range-v3/include
+    PRIVATE dependencies/expected/include
+    PRIVATE dependencies/optional/include)
 
 if (CMAKE_SYSTEM_NAME STREQUAL "Linux")
 	target_link_libraries(${PROJECT_NAME}
