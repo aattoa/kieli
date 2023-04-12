@@ -10,7 +10,7 @@ The project currently depends on several external libraries. This is only tempor
 The following is a list of the required dependencies:
 
 * https://github.com/fmtlib/fmt
-    * Will be replaced by the standard library header `<format>`.
+    * Will be replaced by the standard library headers `<format>` and `<print>`.
 * https://github.com/ericniebler/range-v3
     * Will be replaced by the standard library header `<ranges>`.
 * https://github.com/TartanLlama/expected
@@ -18,7 +18,7 @@ The following is a list of the required dependencies:
 * https://github.com/TartanLlama/optional
     * Will be replaced by the standard library header `<optional>`.
 
-The major 3 standard library implementations already provide some/all of these headers, but they do not yet support some of the features Kieli needs.
+The 3 major standard library implementations already provide some of these headers, but they do not yet support some of the features Kieli needs.
 
 # Cloning Kieli and its dependencies
 
