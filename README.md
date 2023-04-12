@@ -7,7 +7,7 @@ This is a work in progress, and can not be used for anything yet.
 
 The project currently depends on several external libraries. This is only temporary, as the features these libraries provide will be available in the C++23 standard library. The external dependencies are therefore only necessary until the major C++ standard library implementations start to provide support for these features.
 
-The following is a list of the required dependencies, and what they will be replaced by in the future:
+The following is a list of the required dependencies:
 
 * https://github.com/fmtlib/fmt
     * Will be replaced by the standard library header `<format>`.
@@ -18,22 +18,22 @@ The following is a list of the required dependencies, and what they will be repl
 * https://github.com/TartanLlama/optional
     * Will be replaced by the standard library header `<optional>`.
 
-The major 3 standard library implementations already provide some/all of these headers, but they do not yet support some of the C++23 features kieli needs, such as `std::format_string` and `std::ranges::to`.
+The major 3 standard library implementations already provide some/all of these headers, but they do not yet support some of the features kieli needs.
 
 # Cloning kieli and its dependencies
 
-To get all of the source code needed to build kieli, simply run these commands in a directory of your choosing:
+To get all of the source code needed to build kieli, run these commands in a directory of your choosing:
 
-```
-$ git clone https://github.com/aattoa/kieli.git
-$ cd kieli
-$ mkdir dependencies
-$ cd dependencies
-$ git clone https://github.com/fmtlib/fmt.git
-$ git clone https://github.com/ericniebler/range-v3.git
-$ git clone https://github.com/TartanLlama/expected.git
-$ git clone https://github.com/TartanLlama/optional.git
-$ cd ..
+```Shell
+git clone https://github.com/aattoa/kieli.git
+cd kieli
+mkdir dependencies
+cd dependencies
+git clone https://github.com/fmtlib/fmt.git
+git clone https://github.com/ericniebler/range-v3.git
+git clone https://github.com/TartanLlama/expected.git
+git clone https://github.com/TartanLlama/optional.git
+cd ..
 ```
 
 # Building kieli on Linux
@@ -42,18 +42,18 @@ Requirements: CMake, make, any C++20 compliant C++ toolchain.
 
 This assumes that you have already cloned kieli and its dependencies as detailed above.
 
+```Shell
+cd kieli
+mkdir build
+cd build
+cmake ..
+make -j8
 ```
-$ cd kieli
-$ mkdir build
-$ cd build
-$ cmake ..
-$ make -j8
-```
+
+These build steps were tested with CMake `3.26.3`, GNU Make `4.4.1`, clang `16.0.0`, and GCC `12.2.1`.
 
 # Building kieli on Windows
 
-Requirements: Microsoft Visual Studio C++ toolchain with CMake integration.
+In principle, similar build steps should work on Windows, but this has not been tested.
 
-This assumes that you have already cloned kieli and its dependencies as detailed above.
-
-Open the kieli directory in Visual Studio. The directory should automatically be recognized as a CMake project. Press the "build" button.
+You may be able to build kieli on Windows as if you were on Linux by using the [Windows Subsystem for Linux](https://learn.microsoft.com/en-us/windows/wsl/install).
