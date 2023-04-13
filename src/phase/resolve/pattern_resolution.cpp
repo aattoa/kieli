@@ -90,7 +90,7 @@ namespace {
             return {
                 .value = std::move(mir_tuple),
                 .type {
-                    .value       = wrap_type(std::move(mir_tuple_type)),
+                    .value       = context.wrap_type(std::move(mir_tuple_type)),
                     .source_view = this_pattern.source_view
                 },
                 .is_exhaustive_by_itself = is_exhaustive,
@@ -157,7 +157,7 @@ namespace {
 
                     return {
                         .value = mir::pattern::Enum_constructor {
-                            .payload_pattern = std::move(payload_pattern).transform(utl::wrap),
+                            .payload_pattern = std::move(payload_pattern).transform(context.wrap()),
                             .constructor     = constructor
                         },
                         .type                    = constructor.enum_type,
@@ -173,7 +173,7 @@ namespace {
                 return {
                     .value = mir::pattern::Slice {},
                     .type {
-                        .value = wrap_type(mir::type::Slice {
+                        .value = context.wrap_type(mir::type::Slice {
                             .element_type = context.fresh_general_unification_type_variable(this_pattern.source_view)
                         }),
                         .source_view = this_pattern.source_view
@@ -214,7 +214,7 @@ namespace {
                 return {
                     .value = std::move(mir_slice),
                     .type {
-                        .value       = wrap_type(mir::type::Slice { element_type }),
+                        .value       = context.wrap_type(mir::type::Slice { element_type }),
                         .source_view = this_pattern.source_view
                     },
                     .source_view = this_pattern.source_view
@@ -238,7 +238,7 @@ namespace {
 
             return {
                 .value = mir::pattern::Guarded {
-                    .guarded_pattern = utl::wrap(std::move(guarded_pattern)),
+                    .guarded_pattern = context.wrap(std::move(guarded_pattern)),
                     .guard           = std::move(guard)
                 },
                 .type        = pattern_type,

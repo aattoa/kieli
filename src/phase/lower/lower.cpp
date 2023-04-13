@@ -53,14 +53,15 @@ namespace {
 
     struct Expression_lowering_visitor {
         utl::diagnostics::Builder& diagnostics;
+        lir::Node_arena          & node_arena;
         utl::Source         const& source;
         cir::Expression     const& this_expression;
 
         auto recurse(cir::Expression const& expression) -> lir::Expression {
-            return std::visit(Expression_lowering_visitor { diagnostics, source, expression }, expression.value);
+            return std::visit(Expression_lowering_visitor { diagnostics, node_arena, source, expression }, expression.value);
         }
         auto recurse(utl::Wrapper<cir::Expression> const expression) -> utl::Wrapper<lir::Expression> {
-            return utl::wrap(recurse(*expression));
+            return node_arena.wrap(recurse(*expression));
         }
         [[nodiscard]]
         auto recurse() {
@@ -135,7 +136,7 @@ namespace {
 
 
 auto compiler::lower(Reify_result&& reify_result) -> Lower_result {
-    lir::Node_context          node_context;
+    lir::Node_arena node_arena;
     std::vector<lir::Function> functions;
 
     for (cir::Function& function : reify_result.functions) {
@@ -143,6 +144,7 @@ auto compiler::lower(Reify_result&& reify_result) -> Lower_result {
             .symbol = std::move(function.symbol),
             .body = std::visit(Expression_lowering_visitor {
                 reify_result.compilation_info.diagnostics,
+                node_arena,
                 reify_result.source,
                 function.body
             }, function.body.value)
@@ -152,7 +154,7 @@ auto compiler::lower(Reify_result&& reify_result) -> Lower_result {
     return Lower_result {
         .compilation_info = std::move(reify_result.compilation_info),
         .source           = std::move(reify_result.source),
-        .node_context     = std::move(node_context),
+        .node_arena       = std::move(node_arena),
         .functions        = std::move(functions),
     };
 }

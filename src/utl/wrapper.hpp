@@ -4,19 +4,22 @@
 
 
 namespace utl::dtl {
-    template <class T, Usize page_size>
-        requires (page_size != 0)
+    template <class T>
     class [[nodiscard]] Wrapper_arena_page {
-        T* m_buffer;
-        T* m_slot;
+        Usize m_page_size;
+        T*    m_buffer;
+        T*    m_slot;
+        static constexpr auto alignment = static_cast<std::align_val_t>(alignof(T));
     public:
-        Wrapper_arena_page() {
-            m_slot = m_buffer = static_cast<T*>(::operator new(sizeof(T) * page_size, static_cast<std::align_val_t>(alignof(T))));
-        }
+        explicit Wrapper_arena_page(Usize const page_size)
+            : m_page_size { page_size }
+            , m_buffer    { static_cast<T*>(::operator new(sizeof(T) * page_size, alignment)) }
+            , m_slot      { m_buffer } {}
 
         Wrapper_arena_page(Wrapper_arena_page&& other) noexcept
-            : m_buffer { std::exchange(other.m_buffer, nullptr) }
-            , m_slot   { std::exchange(other.m_slot, nullptr) } {}
+            : m_page_size { std::exchange(other.m_page_size, 0) }
+            , m_buffer    { std::exchange(other.m_buffer, nullptr) }
+            , m_slot      { std::exchange(other.m_slot, nullptr) } {}
 
         auto operator=(Wrapper_arena_page&& other) noexcept -> Wrapper_arena_page& {
             if (this != &other) {
@@ -29,45 +32,23 @@ namespace utl::dtl {
         ~Wrapper_arena_page() {
             if (!m_buffer) return;
             std::destroy(m_buffer, m_slot);
-            ::operator delete(static_cast<void*>(m_buffer), sizeof(T) * page_size, static_cast<std::align_val_t>(alignof(T)));
+            ::operator delete(m_buffer, sizeof(T) * m_page_size, alignment);
         }
 
+        Wrapper_arena_page(Wrapper_arena_page const&) = delete;
+        auto operator=    (Wrapper_arena_page const&) = delete;
+
+        [[nodiscard]]
+        auto is_at_capacity() const noexcept -> bool {
+            return m_slot == m_buffer + m_page_size;
+        }
         template <class... Args> [[nodiscard]]
         auto unsafe_emplace_arena_element(Args&&... args)
             noexcept(std::is_nothrow_constructible_v<T, Args&&...>) -> T*
         {
-            assert(m_slot != m_buffer + page_size);
+            assert(!is_at_capacity());
             std::construct_at(m_slot, std::forward<Args>(args)...);
             return m_slot++;
-
-            // The m_slot increment has to be done after the construct_at in case
-            // an exception is thrown, which would otherwise leave the slot with
-            // an unconstructed object in it, which would lead to UB upon destruction.
-        }
-    };
-
-    template <class T, Usize page_size>
-    class [[nodiscard]] Wrapper_arena {
-        using Page = Wrapper_arena_page<T, page_size>;
-        std::vector<Page> m_pages;
-        Usize             m_size = 0;
-    public:
-        explicit Wrapper_arena(Usize const initial_capacity) {
-            Usize pages_needed = initial_capacity / page_size;
-            if (initial_capacity % page_size != 0) ++pages_needed;
-            m_pages.reserve(pages_needed);
-            std::generate_n(std::back_inserter(m_pages), pages_needed, utl::make<Page>);
-        }
-        template <class... Args> [[nodiscard]]
-        auto make_arena_element(Args&&... args) -> T* {
-            // If all pages have been exhausted, append a fresh one.
-            if (m_size++ == page_size * m_pages.size())
-                m_pages.emplace_back();
-            return m_pages.back().unsafe_emplace_arena_element(std::forward<Args>(args)...);
-        }
-        [[nodiscard]]
-        auto size() const noexcept -> Usize {
-            return m_size;
         }
     };
 }
@@ -75,11 +56,57 @@ namespace utl::dtl {
 
 namespace utl {
 
-    inline constexpr Usize wrapper_arena_page_size                = 1024;
-    inline constexpr Usize default_wrapper_arena_initial_capacity = wrapper_arena_page_size;
-
+    template <class T>
+    class [[nodiscard]] Wrapper;
     template <class...>
-    class [[nodiscard]] Wrapper_context;
+    class [[nodiscard]] Wrapper_arena;
+
+    template <class T>
+    class [[nodiscard]] Wrapper_arena<T> {
+        using Page = dtl::Wrapper_arena_page<T>;
+        std::vector<Page> m_pages;
+        Usize             m_page_size;
+        Usize             m_size = 0;
+    public:
+        explicit Wrapper_arena(Usize const page_size = 1024) noexcept
+            : m_page_size { page_size } {}
+
+        template <class... Args>
+        auto wrap(Args&&... args) -> Wrapper<T> {
+            auto const it = ranges::find_if_not(m_pages, &Page::is_at_capacity);
+            Page& page = it != m_pages.end() ? *it : m_pages.emplace_back(m_page_size);
+            T* const element = page.unsafe_emplace_arena_element(std::forward<Args>(args)...);
+            ++m_size;
+            return Wrapper<T> { element };
+        }
+        auto merge_with(Wrapper_arena&& other) & -> void {
+            m_pages.insert(
+                m_pages.end(),
+                std::move_iterator { other.m_pages.begin() },
+                std::move_iterator { other.m_pages.end() });
+        }
+    };
+
+    template <class... Ts>
+    class [[nodiscard]] Wrapper_arena : Wrapper_arena<Ts>... {
+    public:
+        explicit Wrapper_arena(Usize const page_size = 1024) noexcept
+            : Wrapper_arena<Ts> { page_size }... {}
+
+        template <one_of<Ts...> T, class... Args>
+        auto wrap(Args&&... args) -> Wrapper<T> {
+            return Wrapper_arena<T>::wrap(std::forward<Args>(args)...);
+        }
+        template <class Arg>
+        auto wrap(Arg&& arg) -> utl::Wrapper<std::remove_cvref_t<Arg>>
+            requires utl::one_of<std::remove_cvref_t<Arg>, Ts...>
+        {
+            return Wrapper_arena<std::remove_cvref_t<Arg>>::wrap(std::forward<Arg>(arg));
+        }
+        auto merge_with(Wrapper_arena&& other) & -> void {
+            (Wrapper_arena<Ts>::merge_with(static_cast<Wrapper_arena<Ts>&&>(other)), ...);
+        }
+    };
 
 
     template <class T>
@@ -87,84 +114,24 @@ namespace utl {
         T* m_pointer;
         explicit Wrapper(T* const pointer) noexcept
             : m_pointer { pointer } {}
+        friend Wrapper_arena<T>;
     public:
-        template <class... Args>
-        static auto make(Args&&... args) -> Wrapper {
-            assert(context_pointer != nullptr);
-            return Wrapper { context_pointer->m_arena.make_arena_element(std::forward<Args>(args)...) };
-        }
         [[nodiscard]]
         auto operator*() const noexcept -> T& {
             APPLY_EXPLICIT_OBJECT_PARAMETER_HERE;
-            assert(context_pointer != nullptr);
             return *m_pointer;
         }
         [[nodiscard]]
         auto operator->() const noexcept -> T* {
             APPLY_EXPLICIT_OBJECT_PARAMETER_HERE;
-            assert(context_pointer != nullptr);
-            return m_pointer;
+            return std::addressof(**this);
         }
-    private:
-        inline static thread_local constinit Wrapper_context<T>* context_pointer = nullptr;
-        friend class Wrapper_context<T>;
-    };
-
-
-    template <class T>
-    class [[nodiscard]] Wrapper_context<T> {
-        dtl::Wrapper_arena<T, wrapper_arena_page_size> m_arena;
-        bool                                           m_is_responsible = true;
-    public:
-        explicit Wrapper_context(
-            Usize                const initial_capacity = default_wrapper_arena_initial_capacity,
-            std::source_location const caller = std::source_location::current())
-            : m_arena { initial_capacity }
-        {
-            if (std::exchange(Wrapper<T>::context_pointer, this))
-                abort("Attempted to reinitialize a wrapper arena", caller);
-        }
-        Wrapper_context(Wrapper_context&& other) noexcept
-            : m_arena { std::move(other.m_arena) }
-        {
-            always_assert(std::exchange(other.m_is_responsible, false));
-            Wrapper<T>::context_pointer = this;
-        }
-        ~Wrapper_context() {
-            if (m_is_responsible)
-                Wrapper<T>::context_pointer = nullptr;
-        }
-        [[nodiscard]]
-        auto arena_size() const noexcept -> Usize {
-            return m_arena.size();
-        }
-    private:
-        friend class Wrapper<T>;
-    };
-
-    template <class... Ts>
-    class [[nodiscard]] Wrapper_context : Wrapper_context<Ts>... {
-    public:
-        explicit Wrapper_context(Usize const initial_capacity = default_wrapper_arena_initial_capacity)
-            : Wrapper_context<Ts> { initial_capacity }... {}
-        explicit Wrapper_context(Wrapper_context<Ts>&&... children) noexcept
-            : Wrapper_context<Ts> { std::move(children) }... {}
-        template <one_of<Ts...> T> [[nodiscard]]
-        auto arena_size() const noexcept -> Usize {
-            return Wrapper_context<T>::arena_size();
-        }
-    };
-
-
-    inline constexpr auto wrap = []<class X>(X&& x) {
-        return Wrapper<std::decay_t<X>>::make(std::forward<X>(x));
     };
 
     template <class T>
     concept wrapper = instance_of<T, Wrapper>;
 
 }
-
 
 
 template <utl::hashable T>

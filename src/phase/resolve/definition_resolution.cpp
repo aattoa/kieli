@@ -60,12 +60,13 @@ namespace {
 
 
     auto make_function_signature(
+        Context&                               context,
         ast::Name                        const function_name,
         mir::Type                        const return_type,
         std::vector<mir::Function_parameter>&& parameters) -> mir::Function::Signature
     {
         mir::Type const function_type {
-            .value = wrap_type(mir::type::Function {
+            .value = context.wrap_type(mir::type::Function {
                 .parameter_types = utl::map(&mir::Function_parameter::type, parameters),
                 .return_type     = return_type
             }),
@@ -98,7 +99,7 @@ namespace {
                 context.resolve_type(*function.return_type, signature_scope, *info.home_namespace);
 
             info.value = Partially_resolved_function {
-                .resolved_signature = make_function_signature(info.name, return_type, std::move(parameters)),
+                .resolved_signature = make_function_signature(context, info.name, return_type, std::move(parameters)),
                 .signature_scope    = std::move(signature_scope),
                 .unresolved_body    = std::move(function.body),
                 .name               = function.name,
@@ -112,7 +113,7 @@ namespace {
             signature_scope.warn_about_unused_bindings();
 
             info.value = mir::Function {
-                .signature      = make_function_signature(info.name, return_type, std::move(parameters)),
+                .signature      = make_function_signature(context, info.name, return_type, std::move(parameters)),
                 .body           = std::move(body),
                 .name           = function.name,
                 .self_parameter = resolve_self_parameter(context, scope, function.self_parameter)
@@ -141,7 +142,7 @@ namespace {
 
             template_info.value = resolution::Partially_resolved_function_template {
                 .function {
-                    .resolved_signature = make_function_signature(template_info.name, return_type, std::move(function_parameters)),
+                    .resolved_signature = make_function_signature(context, template_info.name, return_type, std::move(function_parameters)),
                     .signature_scope    = std::move(signature_scope),
                     .unresolved_body    = std::move(function_template.definition.body),
                     .name               = function_template.definition.name,
@@ -158,7 +159,7 @@ namespace {
 
             template_info.value = mir::Function_template {
                 .definition {
-                    .signature      = make_function_signature(template_info.name, return_type, std::move(function_parameters)),
+                    .signature      = make_function_signature(context, template_info.name, return_type, std::move(function_parameters)),
                     .body           = std::move(body),
                     .name           = function_template.definition.name,
                     .self_parameter = resolve_self_parameter(context, signature_scope, function_template.definition.self_parameter)
@@ -204,12 +205,12 @@ namespace {
         hir::definition::Struct& structure,
         Context                & context,
         Scope                    scope,
-        utl::Wrapper<Namespace>   home_namespace) -> mir::Struct
+        utl::Wrapper<Namespace>  home_namespace) -> mir::Struct
     {
         mir::Struct mir_structure {
             .members              = utl::vector_with_capacity(structure.members.size()),
             .name                 = structure.name,
-            .associated_namespace = utl::wrap(Namespace { .parent = home_namespace })
+            .associated_namespace = context.wrap(Namespace { .parent = home_namespace })
         };
 
         for (hir::definition::Struct::Member& member : structure.members) {
@@ -225,16 +226,16 @@ namespace {
 
 
     auto resolve_enum_impl(
-        hir::definition::Enum& enumeration,
-        Context              & context,
-        Scope                  scope,
+        hir::definition::Enum & enumeration,
+        Context               & context,
+        Scope                   scope,
         utl::Wrapper<Namespace> home_namespace,
-        mir::Type              enumeration_type) -> mir::Enum
+        mir::Type               enumeration_type) -> mir::Enum
     {
         mir::Enum mir_enumeration {
             .constructors         = utl::vector_with_capacity(enumeration.constructors.size()),
             .name                 = enumeration.name,
-            .associated_namespace = utl::wrap(Namespace { .parent = home_namespace })
+            .associated_namespace = context.wrap(Namespace { .parent = home_namespace })
         };
 
         Scope constructor_scope = scope.make_child();
@@ -257,7 +258,7 @@ namespace {
                         .name          = hir_constructor.name,
                         .payload_type  = payload_type,
                         .function_type = mir::Type {
-                            .value = wrap_type(mir::type::Function {
+                            .value = context.wrap_type(mir::type::Function {
                                 .parameter_types = std::move(constructor_function_parameter_types),
                                 .return_type     = enumeration_type
                             }),
@@ -474,7 +475,7 @@ auto resolution::Context::resolve_implementation(utl::Wrapper<Implementation_inf
             utl::match(definition.value,
                 [&](hir::definition::Function& function) {
                     ast::Name const name = function.name;
-                    auto function_info = utl::wrap(Function_info {
+                    auto function_info = wrap(Function_info {
                         .value          = std::move(function),
                         .home_namespace = info.home_namespace,
                         .name           = name,
@@ -485,7 +486,7 @@ auto resolution::Context::resolve_implementation(utl::Wrapper<Implementation_inf
                 },
                 [&](hir::definition::Function_template& function_template) {
                     ast::Name const name = function_template.definition.name;
-                    auto function_template_info = utl::wrap(Function_template_info {
+                    auto function_template_info = wrap(Function_template_info {
                         .value          = std::move(function_template),
                         .home_namespace = info.home_namespace,
                         .name           = name
@@ -531,7 +532,7 @@ auto resolution::Context::resolve_instantiation(utl::Wrapper<Instantiation_info>
                     ast::Name const name = function.name;
                     definitions.functions.add_new_or_abort(
                         name.identifier,
-                        utl::wrap(Function_info {
+                        wrap(Function_info {
                             .value          = std::move(function),
                             .home_namespace = info.home_namespace,
                             .name           = name,
@@ -541,7 +542,7 @@ auto resolution::Context::resolve_instantiation(utl::Wrapper<Instantiation_info>
                     ast::Name const name = function_template.definition.name;
                     definitions.function_templates.add_new_or_abort(
                         name.identifier,
-                        utl::wrap(Function_template_info {
+                        wrap(Function_template_info {
                             .value          = std::move(function_template),
                             .home_namespace = info.home_namespace,
                             .name           = name

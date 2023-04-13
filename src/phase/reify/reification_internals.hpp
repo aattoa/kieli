@@ -8,36 +8,65 @@
 
 namespace reification {
 
-    // `wrap_type(x)` is shorthand for `utl::wrap(cir::Type::Variant { x })`
-    inline auto wrap_type(cir::Type::Variant&& value) -> utl::Wrapper<cir::Type::Variant> {
-        return utl::wrap(std::move(value));
-    }
-
     using Frame_offset = utl::Safe_integer<vm::Local_offset_type>;
 
-    class [[nodiscard]] Context {
-        utl::Wrapper<cir::Type::Variant> unit_type_value      = wrap_type(cir::type::Tuple {});
-        utl::Wrapper<cir::Type::Variant> boolean_type_value   = wrap_type(cir::type::Boolean {});
-        utl::Wrapper<cir::Type::Variant> string_type_value    = wrap_type(cir::type::String {});
-        utl::Wrapper<cir::Type::Variant> character_type_value = wrap_type(cir::type::Character {});
-        utl::Wrapper<cir::Type::Variant> i8_type_value        = wrap_type(cir::type::Integer::i8);
-        utl::Wrapper<cir::Type::Variant> i16_type_value       = wrap_type(cir::type::Integer::i16);
-        utl::Wrapper<cir::Type::Variant> i32_type_value       = wrap_type(cir::type::Integer::i32);
-        utl::Wrapper<cir::Type::Variant> i64_type_value       = wrap_type(cir::type::Integer::i64);
-        utl::Wrapper<cir::Type::Variant> u8_type_value        = wrap_type(cir::type::Integer::u8);
-        utl::Wrapper<cir::Type::Variant> u16_type_value       = wrap_type(cir::type::Integer::u16);
-        utl::Wrapper<cir::Type::Variant> u32_type_value       = wrap_type(cir::type::Integer::u32);
-        utl::Wrapper<cir::Type::Variant> u64_type_value       = wrap_type(cir::type::Integer::u64);
-        utl::Wrapper<cir::Type::Variant> floating_type_value  = wrap_type(cir::type::Floating {});
-    public:
+    struct Reification_constants {
+        utl::Wrapper<cir::Type::Variant> unit_type;
+        utl::Wrapper<cir::Type::Variant> boolean_type;
+        utl::Wrapper<cir::Type::Variant> string_type;
+        utl::Wrapper<cir::Type::Variant> character_type;
+        utl::Wrapper<cir::Type::Variant> i8_type;
+        utl::Wrapper<cir::Type::Variant> i16_type;
+        utl::Wrapper<cir::Type::Variant> i32_type;
+        utl::Wrapper<cir::Type::Variant> i64_type;
+        utl::Wrapper<cir::Type::Variant> u8_type;
+        utl::Wrapper<cir::Type::Variant> u16_type;
+        utl::Wrapper<cir::Type::Variant> u32_type;
+        utl::Wrapper<cir::Type::Variant> u64_type;
+        utl::Wrapper<cir::Type::Variant> floating_type;
+
+        explicit Reification_constants(cir::Node_arena&);
+    };
+
+    struct [[nodiscard]] Context {
         compiler::Compilation_info                          compilation_info;
+        cir::Node_arena                                     node_arena;
+        Reification_constants                               constants;
         utl::Source                                         source;
         utl::Flatmap<mir::Local_variable_tag, Frame_offset> variable_frame_offsets;
         Frame_offset                                        current_frame_offset;
 
-        explicit Context(utl::Source&& source, compiler::Compilation_info&& compilation_info) noexcept
+        explicit Context(
+            utl::Source               && source,
+            cir::Node_arena           && node_arena,
+            compiler::Compilation_info&& compilation_info) noexcept
             : compilation_info { std::move(compilation_info) }
+            , node_arena       { std::move(node_arena) }
+            , constants        { this->node_arena }
             , source           { std::move(source) } {}
+
+
+        template <class Node>
+        auto wrap(Node&& node) -> utl::Wrapper<Node>
+            requires requires { node_arena.wrap<Node>(std::move(node)); }
+                && (!std::is_reference_v<Node>)
+        {
+            return node_arena.wrap<Node>(std::move(node));
+        }
+        [[nodiscard]]
+        auto wrap() noexcept {
+            return [this]<class Arg>(Arg&& arg) -> utl::Wrapper<Arg>
+                requires requires { wrap(std::move(arg)); }
+                     && (!std::is_reference_v<Arg>)
+            {
+                return wrap(std::move(arg));
+            };
+        }
+
+        // `wrap_type(x)` is shorthand for `utl::wrap(cir::Type::Variant { x })`
+        auto wrap_type(cir::Type::Variant&& value) -> utl::Wrapper<cir::Type::Variant> {
+            return wrap(std::move(value));
+        }
 
         auto reify_expression(mir::Expression const&) -> cir::Expression;
         auto reify_pattern   (mir::Pattern    const&) -> cir::Pattern;

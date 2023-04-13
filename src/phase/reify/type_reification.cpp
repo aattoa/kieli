@@ -51,7 +51,7 @@ namespace {
             // names, which are different for reference and pointer nodes.
             auto [mutability, pointed_to_type] = pointer;
             return {
-                .value       = wrap_type(cir::type::Pointer { .pointed_to_type = context.reify_type(pointed_to_type) }),
+                .value       = context.wrap_type(cir::type::Pointer { .pointed_to_type = context.reify_type(pointed_to_type) }),
                 .size        = sizeof(void*),
                 .source_view = this_type.source_view
             };
@@ -71,7 +71,7 @@ namespace {
                     std::mem_fn(&cir::Type::size));
 
             return {
-                .value       = wrap_type(cir::type::Tuple { .field_types = std::move(field_types) }),
+                .value       = context.wrap_type(cir::type::Tuple { .field_types = std::move(field_types) }),
                 .size        = size,
                 .source_view = this_type.source_view
             };

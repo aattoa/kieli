@@ -9,10 +9,10 @@
 namespace compiler {
 
     struct Parse_result {
-        Compilation_info  compilation_info;
-        ast::Node_context node_context;
-        utl::Source       source;
-        ast::Module       module;
+        Compilation_info compilation_info;
+        ast::Node_arena  node_arena;
+        utl::Source      source;
+        ast::Module      module;
     };
 
     [[nodiscard]]

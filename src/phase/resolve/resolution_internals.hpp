@@ -125,8 +125,26 @@ namespace resolution {
     };
 
 
-    // `wrap_type(x)` is shorthand for `utl::wrap(mir::Type::Variant { x })`
-    auto wrap_type(mir::Type::Variant&&) -> utl::Wrapper<mir::Type::Variant>;
+    struct Resolution_constants {
+        utl::Wrapper<mir::Mutability::Variant> immut;
+        utl::Wrapper<mir::Mutability::Variant> mut;
+        utl::Wrapper<mir::Type::Variant> unit_type;
+        utl::Wrapper<mir::Type::Variant> i8_type;
+        utl::Wrapper<mir::Type::Variant> i16_type;
+        utl::Wrapper<mir::Type::Variant> i32_type;
+        utl::Wrapper<mir::Type::Variant> i64_type;
+        utl::Wrapper<mir::Type::Variant> u8_type;
+        utl::Wrapper<mir::Type::Variant> u16_type;
+        utl::Wrapper<mir::Type::Variant> u32_type;
+        utl::Wrapper<mir::Type::Variant> u64_type;
+        utl::Wrapper<mir::Type::Variant> floating_type;
+        utl::Wrapper<mir::Type::Variant> character_type;
+        utl::Wrapper<mir::Type::Variant> boolean_type;
+        utl::Wrapper<mir::Type::Variant> string_type;
+        utl::Wrapper<mir::Type::Variant> self_placeholder_type;
+
+        explicit Resolution_constants(mir::Node_arena&);
+    };
 
 
     class Context {
@@ -137,28 +155,11 @@ namespace resolution {
         Deferred_equality_constraints       deferred_equality_constraints;
         Unsolved_unification_type_variables unsolved_unification_type_variables;
         Unification_variable_solutions      unification_variable_solutions;
-
-        utl::Wrapper<mir::Mutability::Variant> immutability_value =
-            utl::wrap(mir::Mutability::Variant { mir::Mutability::Concrete { .is_mutable = false } });
-        utl::Wrapper<mir::Mutability::Variant> mutability_value =
-            utl::wrap(mir::Mutability::Variant { mir::Mutability::Concrete { .is_mutable = true } });
-
-        utl::Wrapper<mir::Type::Variant> unit_type_value             = wrap_type(mir::type::Tuple {});
-        utl::Wrapper<mir::Type::Variant> i8_type_value               = wrap_type(mir::type::Integer::i8);
-        utl::Wrapper<mir::Type::Variant> i16_type_value              = wrap_type(mir::type::Integer::i16);
-        utl::Wrapper<mir::Type::Variant> i32_type_value              = wrap_type(mir::type::Integer::i32);
-        utl::Wrapper<mir::Type::Variant> i64_type_value              = wrap_type(mir::type::Integer::i64);
-        utl::Wrapper<mir::Type::Variant> u8_type_value               = wrap_type(mir::type::Integer::u8);
-        utl::Wrapper<mir::Type::Variant> u16_type_value              = wrap_type(mir::type::Integer::u16);
-        utl::Wrapper<mir::Type::Variant> u32_type_value              = wrap_type(mir::type::Integer::u32);
-        utl::Wrapper<mir::Type::Variant> u64_type_value              = wrap_type(mir::type::Integer::u64);
-        utl::Wrapper<mir::Type::Variant> floating_type_value         = wrap_type(mir::type::Floating {});
-        utl::Wrapper<mir::Type::Variant> character_type_value        = wrap_type(mir::type::Character {});
-        utl::Wrapper<mir::Type::Variant> boolean_type_value          = wrap_type(mir::type::Boolean {});
-        utl::Wrapper<mir::Type::Variant> string_type_value           = wrap_type(mir::type::String {});
-        utl::Wrapper<mir::Type::Variant> self_placeholder_type_value = wrap_type(mir::type::Self_placeholder {});
     public:
         compiler::Compilation_info compilation_info;
+        mir::Node_arena            node_arena;
+        mir::Namespace_arena       namespace_arena;
+        Resolution_constants       constants;
         utl::Source                source;
         mir::Module                output_module;
         utl::Wrapper<Namespace>    global_namespace;
@@ -168,13 +169,50 @@ namespace resolution {
 
         compiler::Identifier self_variable_id = compilation_info.identifier_pool.make("self");
 
-        explicit Context(utl::Source&& source, compiler::Compilation_info&& compilation_info) noexcept
+        explicit Context(
+            utl::Source               && source,
+            mir::Node_arena           && node_arena,
+            mir::Namespace_arena      && namespace_arena,
+            compiler::Compilation_info&& compilation_info) noexcept
             : compilation_info { std::move(compilation_info) }
+            , node_arena       { std::move(node_arena) }
+            , namespace_arena  { std::move(namespace_arena) }
+            , constants        { this->node_arena }
             , source           { std::move(source) }
-            , global_namespace { utl::wrap(Namespace {}) } {}
+            , global_namespace { wrap(Namespace {}) } {}
 
         Context(Context const&) = delete;
         Context(Context&&) = default;
+
+
+        template <class Node>
+        auto wrap(Node&& node) -> utl::Wrapper<Node>
+            requires requires { node_arena.wrap<Node>(std::move(node)); }
+                && (!std::is_reference_v<Node>)
+        {
+            return node_arena.wrap<Node>(std::move(node));
+        }
+        template <class Entity>
+        auto wrap(Entity&& entity) -> utl::Wrapper<Entity>
+            requires requires { namespace_arena.wrap<Entity>(std::move(entity)); }
+                && (!std::is_reference_v<Entity>)
+        {
+            return namespace_arena.wrap<Entity>(std::move(entity));
+        }
+        [[nodiscard]]
+        auto wrap() noexcept {
+            return [this]<class Arg>(Arg&& arg) -> utl::Wrapper<Arg>
+                requires requires { wrap(std::move(arg)); }
+                    && (!std::is_reference_v<Arg>)
+            {
+                return wrap(std::move(arg));
+            };
+        }
+
+        // `wrap_type(x)` is shorthand for `wrap(mir::Type::Variant { x })`
+        auto wrap_type(mir::Type::Variant&& value) -> utl::Wrapper<mir::Type::Variant> {
+            return wrap(std::move(value));
+        }
 
 
         [[noreturn]]

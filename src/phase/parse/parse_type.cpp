@@ -57,8 +57,8 @@ namespace {
             if (context.try_consume(Token::Type::semicolon)) {
                 if (auto length = parse_expression(context)) {
                     return ast::type::Array {
-                        .element_type = utl::wrap(std::move(element_type)),
-                        .array_length = utl::wrap(std::move(*length))
+                        .element_type = context.wrap(std::move(element_type)),
+                        .array_length = context.wrap(std::move(*length))
                     };
                 }
                 else {
@@ -67,7 +67,7 @@ namespace {
             }
             else {
                 return ast::type::Slice {
-                    .element_type = utl::wrap(std::move(element_type))
+                    .element_type = context.wrap(std::move(element_type))
                 };
             }
         });
@@ -87,7 +87,7 @@ namespace {
                 if (auto return_type = parse_type(context)) {
                     return ast::type::Function {
                         std::move(argument_types),
-                        utl::wrap(std::move(*return_type))
+                        context.wrap(std::move(*return_type))
                     };
                 }
                 context.error_expected("the function return type");
@@ -103,7 +103,7 @@ namespace {
         if (context.try_consume(Token::Type::paren_open)) {
             auto expression = extract_expression(context);
             context.consume_required(Token::Type::paren_close);
-            return ast::type::Typeof { utl::wrap(std::move(expression)) };
+            return ast::type::Typeof { context.wrap(std::move(expression)) };
         }
         context.error_expected("a parenthesized expression");
     }
@@ -118,14 +118,14 @@ namespace {
         -> ast::Type::Variant
     {
         auto const mutability = extract_mutability(context);
-        return ast::type::Reference { utl::wrap(extract_type(context)), mutability };
+        return ast::type::Reference { context.wrap(extract_type(context)), mutability };
     }
 
     auto extract_pointer(Parse_context& context)
         -> ast::Type::Variant
     {
         auto mutability = extract_mutability(context);
-        return ast::type::Pointer { utl::wrap(extract_type(context)), std::move(mutability) };
+        return ast::type::Pointer { context.wrap(extract_type(context)), std::move(mutability) };
     }
 
 
@@ -181,7 +181,7 @@ auto parse_type(Parse_context& context) -> tl::optional<ast::Type> {
             auto name = extract_qualified({ ast::Root_qualifier::Global {} }, context);
 
             if (name.primary_name.is_upper) {
-                name.root_qualifier.value = utl::wrap(std::move(type));
+                name.root_qualifier.value = context.wrap(std::move(type));
                 auto template_arguments = parse_template_arguments(context);
 
                 type = ast::Type {

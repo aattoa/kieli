@@ -80,7 +80,10 @@ struct hir::Function_parameter {
 
 namespace hir {
 
-    using Node_context = utl::Wrapper_context<Expression, Type, Pattern>;
+    template <class T>
+    concept node = utl::one_of<T, Expression, Type, Pattern>;
+
+    using Node_arena = utl::Wrapper_arena<Expression, Type, Pattern>;
 
     struct Module {
         std::vector<Definition> definitions;

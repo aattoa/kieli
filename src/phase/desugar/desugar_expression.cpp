@@ -56,7 +56,7 @@ namespace {
                             .handler = context.desugar(conditional.true_branch)
                         },
                         {
-                            .pattern = utl::wrap(hir::Pattern {
+                            .pattern = context.wrap(hir::Pattern {
                                 .value       = hir::pattern::Wildcard {},
                                 .source_view = let->pattern->source_view
                             }),
@@ -112,7 +112,7 @@ namespace {
                 */
 
                 return hir::expression::Loop {
-                    .body = utl::wrap(hir::Expression {
+                    .body = context.wrap(hir::Expression {
                         .value = hir::expression::Match {
                             .cases = utl::to_vector<hir::expression::Match::Case>({
                                 {
@@ -121,7 +121,7 @@ namespace {
                                 },
                                 {
                                     .pattern = context.wildcard_pattern(this_expression.source_view),
-                                    .handler = utl::wrap(hir::Expression {
+                                    .handler = context.wrap(hir::Expression {
                                         .value = hir::expression::Break {
                                             .result = context.unit_value(this_expression.source_view)
                                         },
@@ -146,11 +146,11 @@ namespace {
             */
 
             return hir::expression::Loop {
-                .body = utl::wrap(hir::Expression {
+                .body = context.wrap(hir::Expression {
                     .value = hir::expression::Conditional {
                         .condition = context.desugar(loop.condition),
                         .true_branch = context.desugar(loop.body),
-                        .false_branch = utl::wrap(hir::Expression {
+                        .false_branch = context.wrap(hir::Expression {
                             .value = hir::expression::Break {
                                 .result = context.unit_value(this_expression.source_view)
                             },

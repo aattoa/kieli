@@ -12,8 +12,8 @@ namespace compiler {
     struct Resolve_result {
         compiler::Compilation_info compilation_info;
         utl::Source                source;
-        mir::Node_context          node_context;
-        mir::Namespace_context     namespace_context;
+        mir::Node_arena            node_arena;
+        mir::Namespace_arena       namespace_arena;
         mir::Module                module;
     };
 

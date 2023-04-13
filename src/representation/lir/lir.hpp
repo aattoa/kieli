@@ -104,6 +104,6 @@ namespace lir {
     };
 
 
-    using Node_context = utl::Wrapper_context<Expression>;
+    using Node_arena = utl::Wrapper_arena<Expression>;
 
 }

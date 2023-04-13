@@ -17,7 +17,7 @@ namespace {
     {
         if (auto member = parse_lower_name(context)) {
             context.consume_required(Token::Type::equals);
-            return utl::Pair { *member, utl::wrap(extract_expression(context)) };
+            return utl::Pair { *member, context.wrap(extract_expression(context)) };
         }
         return tl::nullopt;
     }
@@ -59,7 +59,7 @@ namespace {
 
         return ast::expression::Struct_initializer {
             .member_initializers = utl::Flatmap { std::move(initializers) },
-            .struct_type         = utl::wrap(std::move(type))
+            .struct_type         = context.wrap(std::move(type))
         };
     }
 
@@ -116,8 +116,8 @@ namespace {
 
             return {
                 .value = ast::expression::Conditional_let {
-                    .pattern     = utl::wrap(std::move(pattern)),
-                    .initializer = utl::wrap(extract_expression(context))
+                    .pattern     = context.wrap(std::move(pattern)),
+                    .initializer = context.wrap(extract_expression(context))
                 },
                 .source_view = make_source_view(anchor, context.pointer - 1)
             };
@@ -143,7 +143,7 @@ namespace {
         {
             return ast::expression::Infinite_loop {
                 .label = label,
-                .body  = utl::wrap(extract_loop_body(context))
+                .body  = context.wrap(extract_loop_body(context))
             };
         }
         case Token::Type::while_:
@@ -169,8 +169,8 @@ namespace {
 
             return ast::expression::While_loop {
                 .label     = label,
-                .condition = utl::wrap(std::move(condition)),
-                .body      = utl::wrap(extract_loop_body(context))
+                .condition = context.wrap(std::move(condition)),
+                .body      = context.wrap(extract_loop_body(context))
             };
         }
         case Token::Type::for_:
@@ -181,9 +181,9 @@ namespace {
 
             return ast::expression::For_loop {
                 .label    = label,
-                .iterator = utl::wrap(std::move(iterator)),
-                .iterable = utl::wrap(std::move(iterable)),
-                .body     = utl::wrap(extract_loop_body(context))
+                .iterator = context.wrap(std::move(iterator)),
+                .iterable = context.wrap(std::move(iterable)),
+                .body     = context.wrap(extract_loop_body(context))
             };
         }
         default:
@@ -237,7 +237,7 @@ namespace {
     auto extract_dereference(Parse_context& context)
         -> ast::Expression::Variant
     {
-        return ast::expression::Dereference { utl::wrap(extract_expression(context)) };
+        return ast::expression::Dereference { context.wrap(extract_expression(context)) };
     }
 
     auto extract_tuple(Parse_context& context)
@@ -282,13 +282,13 @@ namespace {
 
             if (context.try_consume(Token::Type::else_)) {
                 if (auto branch = parse_block_expression(context))
-                    false_branch = utl::wrap(std::move(*branch));
+                    false_branch = context.wrap(std::move(*branch));
                 else
                     context.error_expected("the false branch", help);
             }
             else if (context.try_consume(Token::Type::elif)) {
                 Token const* const anchor = context.pointer;
-                false_branch = utl::wrap(ast::Expression {
+                false_branch = context.wrap(ast::Expression {
                     .value       = extract_conditional(context),
                     .source_view = make_source_view(anchor - 1, context.pointer - 1)
                 });
@@ -321,8 +321,8 @@ namespace {
             }
 
             return ast::expression::Conditional {
-                utl::wrap(std::move(condition)),
-                utl::wrap(std::move(*true_branch)),
+                context.wrap(std::move(condition)),
+                context.wrap(std::move(*true_branch)),
                 std::move(false_branch)
             };
         }
@@ -336,13 +336,13 @@ namespace {
         
         tl::optional<utl::Wrapper<ast::Type>> type;
         if (context.try_consume(Token::Type::colon))
-            type = utl::wrap(extract_type(context));
+            type = context.wrap(extract_type(context));
 
         context.consume_required(Token::Type::equals);
 
         return ast::expression::Let_binding {
-            .pattern     = utl::wrap(std::move(pattern)),
-            .initializer = utl::wrap(extract_expression(context)),
+            .pattern     = context.wrap(std::move(pattern)),
+            .initializer = context.wrap(extract_expression(context)),
             .type        = type
         };
     }
@@ -354,7 +354,7 @@ namespace {
         context.consume_required(Token::Type::equals);
         return ast::expression::Local_type_alias {
             .identifier   = identifier,
-            .aliased_type = utl::wrap(extract_type(context))
+            .aliased_type = context.wrap(extract_type(context))
         };
     }
 
@@ -374,8 +374,8 @@ namespace {
             else if (auto pattern = parse_pattern(context)) {
                 context.consume_required(Token::Type::equals);
                 return Capture::By_pattern {
-                    .pattern    = utl::wrap(std::move(*pattern)),
-                    .expression = utl::wrap(extract_expression(context))
+                    .pattern    = context.wrap(std::move(*pattern)),
+                    .expression = context.wrap(extract_expression(context))
                 };
             }
             return tl::nullopt;
@@ -413,7 +413,7 @@ namespace {
         auto body = extract_expression(context);
 
         return ast::expression::Lambda {
-            .body              = utl::wrap(std::move(body)),
+            .body              = context.wrap(std::move(body)),
             .parameters        = std::move(parameters),
             .explicit_captures = std::move(captures)
         };
@@ -433,7 +433,7 @@ namespace {
         if (context.try_consume(Token::Type::paren_open)) {
             auto type = extract_type(context);
             context.consume_required(Token::Type::paren_close);
-            return ast::expression::Sizeof { utl::wrap(std::move(type)) };
+            return ast::expression::Sizeof { context.wrap(std::move(type)) };
         }
         context.error_expected("a parenthesized type");
     }
@@ -444,7 +444,7 @@ namespace {
         if (context.try_consume(Token::Type::paren_open)) {
             auto lvalue = extract_expression(context);
             context.consume_required(Token::Type::paren_close);
-            return ast::expression::Addressof { utl::wrap(std::move(lvalue)) };
+            return ast::expression::Addressof { context.wrap(std::move(lvalue)) };
         }
         context.error_expected("a parenthesized addressable expression");
     }
@@ -455,7 +455,7 @@ namespace {
         if (context.try_consume(Token::Type::paren_open)) {
             auto pointer = extract_expression(context);
             context.consume_required(Token::Type::paren_close);
-            return ast::expression::Unsafe_dereference { utl::wrap(std::move(pointer)) };
+            return ast::expression::Unsafe_dereference { context.wrap(std::move(pointer)) };
         }
         context.error_expected("a parenthesized pointer expression");
     }
@@ -467,8 +467,8 @@ namespace {
         if (auto pattern = parse_top_level_pattern(context)) {
             context.consume_required(Token::Type::right_arrow);
             return ast::expression::Match::Case {
-                utl::wrap(std::move(*pattern)),
-                utl::wrap(extract_expression(context))
+                context.wrap(std::move(*pattern)),
+                context.wrap(extract_expression(context))
             };
         }
         return tl::nullopt;
@@ -493,7 +493,7 @@ namespace {
 
         return ast::expression::Match {
             .cases              = std::move(cases),
-            .matched_expression = utl::wrap(std::move(expression))
+            .matched_expression = context.wrap(std::move(expression))
         };
     }
 
@@ -518,20 +518,20 @@ namespace {
 
         return ast::expression::Break {
             .label  = std::move(label),
-            .result = parse_expression(context).transform(utl::wrap)
+            .result = parse_expression(context).transform(context.wrap())
         };
     }
 
     auto extract_ret(Parse_context& context)
         -> ast::Expression::Variant
     {
-        return ast::expression::Ret { parse_expression(context).transform(utl::wrap) };
+        return ast::expression::Ret { parse_expression(context).transform(context.wrap()) };
     }
 
     auto extract_discard(Parse_context& context)
         -> ast::Expression::Variant
     {
-        return ast::expression::Discard { utl::wrap(extract_expression(context)) };
+        return ast::expression::Discard { context.wrap(extract_expression(context)) };
     }
 
     auto extract_reference(Parse_context& context)
@@ -540,14 +540,14 @@ namespace {
         auto mutability = extract_mutability(context);
         return ast::expression::Reference {
             .mutability            = std::move(mutability),
-            .referenced_expression = utl::wrap(extract_expression(context))
+            .referenced_expression = context.wrap(extract_expression(context))
         };
     }
 
     auto extract_move(Parse_context& context)
         -> ast::Expression::Variant
     {
-        return ast::expression::Move { utl::wrap(extract_expression(context)) };
+        return ast::expression::Move { context.wrap(extract_expression(context)) };
     }
 
     auto extract_meta(Parse_context& context)
@@ -556,7 +556,7 @@ namespace {
         if (context.try_consume(Token::Type::paren_open)) {
             auto expression = extract_expression(context);
             context.consume_required(Token::Type::paren_close);
-            return ast::expression::Meta { utl::wrap(std::move(expression)) };
+            return ast::expression::Meta { context.wrap(std::move(expression)) };
         }
         context.error_expected("a parenthesized expression");
     }
@@ -584,7 +584,7 @@ namespace {
 
         tl::optional<utl::Wrapper<ast::Expression>> result;
         if (!expressions.empty()) {
-            result = utl::wrap(std::move(expressions.back()));
+            result = context.wrap(std::move(expressions.back()));
             expressions.pop_back();
         }
 
@@ -604,7 +604,7 @@ namespace {
         if (auto type = parse_type(context)) {
             if (context.try_consume(Token::Type::double_colon)) {
                 return extract_qualified_lower_name_or_struct_initializer(
-                    ast::Root_qualifier { utl::wrap(std::move(*type)) },
+                    ast::Root_qualifier { context.wrap(std::move(*type)) },
                     context);
             }
             else if (context.try_consume(Token::Type::brace_open)) {
@@ -734,7 +734,7 @@ namespace {
                 *potential_invocable = ast::Expression {
                     .value = ast::expression::Invocation {
                         std::move(arguments),
-                        utl::wrap(std::move(*potential_invocable))
+                        context.wrap(std::move(*potential_invocable))
                     },
                     .source_view = make_source_view(anchor, context.pointer - 1)
                 };
@@ -762,7 +762,7 @@ namespace {
                             .value = ast::expression::Method_invocation {
                                 .arguments          = std::move(arguments),
                                 .template_arguments = std::move(template_arguments),
-                                .base_expression    = utl::wrap(std::move(*expression)),
+                                .base_expression    = context.wrap(std::move(*expression)),
                                 .method_name        = *field_name
                             },
                             .source_view = make_source_view(anchor, context.pointer-1)
@@ -774,7 +774,7 @@ namespace {
                     else {
                         *expression = ast::Expression {
                             .value = ast::expression::Struct_field_access {
-                                .base_expression = utl::wrap(std::move(*expression)),
+                                .base_expression = context.wrap(std::move(*expression)),
                                 .field_name      = *field_name
                             },
                             .source_view = make_source_view(anchor, context.pointer-1)
@@ -787,7 +787,7 @@ namespace {
                     Token const& field_index_token = context.extract();
                     *expression = ast::Expression {
                         .value = ast::expression::Tuple_field_access {
-                            .base_expression         = utl::wrap(std::move(*expression)),
+                            .base_expression         = context.wrap(std::move(*expression)),
                             .field_index             = field_index_token.as_unsigned_integer(),
                             .field_index_source_view = field_index_token.source_view
                         },
@@ -799,8 +799,8 @@ namespace {
                     context.consume_required(Token::Type::bracket_close);
                     *expression = ast::Expression {
                         .value = ast::expression::Array_index_access {
-                            .base_expression = utl::wrap(std::move(*expression)),
-                            .index_expression = utl::wrap(std::move(index_expression))
+                            .base_expression = context.wrap(std::move(*expression)),
+                            .index_expression = context.wrap(std::move(index_expression))
                         },
                         .source_view = make_source_view(anchor, context.pointer-1)
                     };
@@ -837,8 +837,8 @@ namespace {
                     auto type = extract_type(context);
                     *expression = ast::Expression {
                         .value = ast::expression::Type_cast {
-                            .expression  = utl::wrap(std::move(*expression)),
-                            .target_type = utl::wrap(std::move(type)),
+                            .expression  = context.wrap(std::move(*expression)),
+                            .target_type = context.wrap(std::move(type)),
                             .cast_kind   = cast_kind
                         },
                         .source_view = make_source_view(anchor, context.pointer - 1)
@@ -907,8 +907,8 @@ namespace {
                 if (auto right = recurse(context)) {
                     *left = ast::Expression {
                         .value = ast::expression::Binary_operator_invocation {
-                            utl::wrap(std::move(*left)),
-                            utl::wrap(std::move(*right)),
+                            context.wrap(std::move(*left)),
+                            context.wrap(std::move(*right)),
                             *op
                         },
                         .source_view = make_source_view(anchor, context.pointer - 1)
@@ -937,8 +937,8 @@ namespace {
         if (auto expression = parse_binary_operator_invocation_with_precedence<lowest_precedence>(context)) {
             if (context.try_consume(Token::Type::left_arrow)) {
                 return ast::expression::Placement_init {
-                    .lvalue      = utl::wrap(std::move(*expression)),
-                    .initializer = utl::wrap(extract_expression(context))
+                    .lvalue      = context.wrap(std::move(*expression)),
+                    .initializer = context.wrap(extract_expression(context))
                 };
             }
             return std::move(expression->value);

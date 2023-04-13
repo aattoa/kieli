@@ -14,7 +14,7 @@ namespace {
         if (parameter.is_reference) {
             self_type = hir::Type {
                 .value = hir::type::Reference {
-                    .referenced_type = utl::wrap(std::move(self_type)),
+                    .referenced_type = context.wrap(std::move(self_type)),
                     .mutability      = parameter.mutability
                 },
                 .source_view = parameter.source_view
@@ -62,7 +62,7 @@ namespace {
             hir::Expression function_body = context.desugar(function.body);
             if (!std::holds_alternative<hir::expression::Block>(function_body.value)) {
                 function_body.value = hir::expression::Block {
-                    .result_expression = utl::wrap(hir::Expression {
+                    .result_expression = context.wrap(hir::Expression {
                         .value       = std::move(function_body.value),
                         .source_view = function_body.source_view
                     })

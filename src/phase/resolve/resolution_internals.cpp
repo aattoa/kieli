@@ -36,9 +36,23 @@ resolution::Self_type_guard::~Self_type_guard() {
 }
 
 
-auto resolution::wrap_type(mir::Type::Variant&& value) -> utl::Wrapper<mir::Type::Variant> {
-    return utl::wrap(std::move(value));
-}
+resolution::Resolution_constants::Resolution_constants(mir::Node_arena& arena)
+    : immut                 { arena.wrap<mir::Mutability::Variant>(mir::Mutability::Concrete { .is_mutable = false }) }
+    , mut                   { arena.wrap<mir::Mutability::Variant>(mir::Mutability::Concrete { .is_mutable = true }) }
+    , unit_type             { arena.wrap<mir::Type::Variant>(mir::type::Tuple {}) }
+    , i8_type               { arena.wrap<mir::Type::Variant>(mir::type::Integer::i8) }
+    , i16_type              { arena.wrap<mir::Type::Variant>(mir::type::Integer::i16) }
+    , i32_type              { arena.wrap<mir::Type::Variant>(mir::type::Integer::i32) }
+    , i64_type              { arena.wrap<mir::Type::Variant>(mir::type::Integer::i64) }
+    , u8_type               { arena.wrap<mir::Type::Variant>(mir::type::Integer::u8) }
+    , u16_type              { arena.wrap<mir::Type::Variant>(mir::type::Integer::u16) }
+    , u32_type              { arena.wrap<mir::Type::Variant>(mir::type::Integer::u32) }
+    , u64_type              { arena.wrap<mir::Type::Variant>(mir::type::Integer::u64) }
+    , floating_type         { arena.wrap<mir::Type::Variant>(mir::type::Floating {}) }
+    , character_type        { arena.wrap<mir::Type::Variant>(mir::type::Character {}) }
+    , boolean_type          { arena.wrap<mir::Type::Variant>(mir::type::Boolean {}) }
+    , string_type           { arena.wrap<mir::Type::Variant>(mir::type::String {}) }
+    , self_placeholder_type { arena.wrap<mir::Type::Variant>(mir::type::Self_placeholder {}) } {}
 
 
 auto resolution::Context::error(
@@ -51,7 +65,7 @@ auto resolution::Context::error(
 
 auto resolution::Context::fresh_unification_mutability_variable(utl::Source_view const view) -> mir::Mutability {
     return {
-        .value = utl::wrap(mir::Mutability::Variant {
+        .value = wrap(mir::Mutability::Variant {
             mir::Mutability::Variable {
                 .tag = mir::Unification_variable_tag { current_unification_variable_tag++.get() }
             }
@@ -85,23 +99,23 @@ auto resolution::Context::fresh_local_variable_tag() -> mir::Local_variable_tag 
 }
 
 
-auto resolution::Context::immut_constant(utl::Source_view const view) -> mir::Mutability { return { immutability_value, view }; }
-auto resolution::Context::  mut_constant(utl::Source_view const view) -> mir::Mutability { return {   mutability_value, view }; }
+auto resolution::Context::immut_constant(utl::Source_view const view) -> mir::Mutability { return { constants.immut, view }; }
+auto resolution::Context::  mut_constant(utl::Source_view const view) -> mir::Mutability { return { constants.mut, view }; }
 
-auto resolution::Context::unit_type            (utl::Source_view const view) -> mir::Type { return { unit_type_value,             view }; }
-auto resolution::Context::i8_type              (utl::Source_view const view) -> mir::Type { return { i8_type_value,               view }; }
-auto resolution::Context::i16_type             (utl::Source_view const view) -> mir::Type { return { i16_type_value,              view }; }
-auto resolution::Context::i32_type             (utl::Source_view const view) -> mir::Type { return { i32_type_value,              view }; }
-auto resolution::Context::i64_type             (utl::Source_view const view) -> mir::Type { return { i64_type_value,              view }; }
-auto resolution::Context::u8_type              (utl::Source_view const view) -> mir::Type { return { u8_type_value,               view }; }
-auto resolution::Context::u16_type             (utl::Source_view const view) -> mir::Type { return { u16_type_value,              view }; }
-auto resolution::Context::u32_type             (utl::Source_view const view) -> mir::Type { return { u32_type_value,              view }; }
-auto resolution::Context::u64_type             (utl::Source_view const view) -> mir::Type { return { u64_type_value,              view }; }
-auto resolution::Context::floating_type        (utl::Source_view const view) -> mir::Type { return { floating_type_value,         view }; }
-auto resolution::Context::boolean_type         (utl::Source_view const view) -> mir::Type { return { boolean_type_value,          view }; }
-auto resolution::Context::character_type       (utl::Source_view const view) -> mir::Type { return { character_type_value,        view }; }
-auto resolution::Context::string_type          (utl::Source_view const view) -> mir::Type { return { string_type_value,           view }; }
-auto resolution::Context::self_placeholder_type(utl::Source_view const view) -> mir::Type { return { self_placeholder_type_value, view }; }
+auto resolution::Context::unit_type            (utl::Source_view const view) -> mir::Type { return { constants.unit_type,             view }; }
+auto resolution::Context::i8_type              (utl::Source_view const view) -> mir::Type { return { constants.i8_type,               view }; }
+auto resolution::Context::i16_type             (utl::Source_view const view) -> mir::Type { return { constants.i16_type,              view }; }
+auto resolution::Context::i32_type             (utl::Source_view const view) -> mir::Type { return { constants.i32_type,              view }; }
+auto resolution::Context::i64_type             (utl::Source_view const view) -> mir::Type { return { constants.i64_type,              view }; }
+auto resolution::Context::u8_type              (utl::Source_view const view) -> mir::Type { return { constants.u8_type,               view }; }
+auto resolution::Context::u16_type             (utl::Source_view const view) -> mir::Type { return { constants.u16_type,              view }; }
+auto resolution::Context::u32_type             (utl::Source_view const view) -> mir::Type { return { constants.u32_type,              view }; }
+auto resolution::Context::u64_type             (utl::Source_view const view) -> mir::Type { return { constants.u64_type,              view }; }
+auto resolution::Context::floating_type        (utl::Source_view const view) -> mir::Type { return { constants.floating_type,         view }; }
+auto resolution::Context::boolean_type         (utl::Source_view const view) -> mir::Type { return { constants.boolean_type,          view }; }
+auto resolution::Context::character_type       (utl::Source_view const view) -> mir::Type { return { constants.character_type,        view }; }
+auto resolution::Context::string_type          (utl::Source_view const view) -> mir::Type { return { constants.string_type,           view }; }
+auto resolution::Context::self_placeholder_type(utl::Source_view const view) -> mir::Type { return { constants.self_placeholder_type, view }; }
 auto resolution::Context::size_type            (utl::Source_view const view) -> mir::Type { return u64_type(view); }
 
 
@@ -294,7 +308,7 @@ auto resolution::Context::resolve_template_parameters(
             [&](hir::Template_parameter::Mutability_parameter&) {
                 parameter_scope.bind_mutability(parameter.name.identifier, {
                     .mutability {
-                        .value = utl::wrap(mir::Mutability::Variant {
+                        .value = wrap(mir::Mutability::Variant {
                             mir::Mutability::Parameterized {
                                 .identifier = parameter.name.identifier,
                                 .tag        = reference_tag

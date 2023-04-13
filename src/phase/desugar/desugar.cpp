@@ -140,16 +140,16 @@ auto Desugaring_context::desugar(ast::Type_template_signature const& signature) 
 
 
 auto Desugaring_context::unit_value(utl::Source_view const view) -> utl::Wrapper<hir::Expression> {
-    return utl::wrap(hir::Expression { .value = hir::expression::Tuple {}, .source_view = view });
+    return wrap(hir::Expression { .value = hir::expression::Tuple {}, .source_view = view });
 }
 auto Desugaring_context::wildcard_pattern(utl::Source_view const view) -> utl::Wrapper<hir::Pattern> {
-    return utl::wrap(hir::Pattern { .value = hir::pattern::Wildcard {}, .source_view = view});
+    return wrap(hir::Pattern { .value = hir::pattern::Wildcard {}, .source_view = view});
 }
 auto Desugaring_context::true_pattern(utl::Source_view const view) -> utl::Wrapper<hir::Pattern> {
-    return utl::wrap(hir::Pattern { .value = hir::pattern::Literal<compiler::Boolean> { true }, .source_view = view });
+    return wrap(hir::Pattern { .value = hir::pattern::Literal<compiler::Boolean> { true }, .source_view = view });
 }
 auto Desugaring_context::false_pattern(utl::Source_view const view) -> utl::Wrapper<hir::Pattern> {
-    return utl::wrap(hir::Pattern { .value = hir::pattern::Literal<compiler::Boolean> { false }, .source_view = view });
+    return wrap(hir::Pattern { .value = hir::pattern::Literal<compiler::Boolean> { false }, .source_view = view });
 }
 
 
@@ -162,18 +162,16 @@ auto Desugaring_context::error(
 
 
 auto compiler::desugar(Parse_result&& parse_result) -> Desugar_result {
-    hir::Node_context node_context {
-        utl::Wrapper_context<hir::Expression> { parse_result.node_context.arena_size<ast::Expression>() },
-        utl::Wrapper_context<hir::Type>       { parse_result.node_context.arena_size<ast::Type>      () },
-        utl::Wrapper_context<hir::Pattern>    { parse_result.node_context.arena_size<ast::Pattern>   () }
+    Desugaring_context context {
+        std::move(parse_result.source),
+        hir::Node_arena {},
+        std::move(parse_result.compilation_info)
     };
-
-    Desugaring_context context { std::move(parse_result.source), std::move(parse_result.compilation_info) };
     auto desugared_definitions = utl::map(context.desugar(), parse_result.module.definitions);
 
     return Desugar_result {
         .compilation_info = std::move(context.compilation_info),
-        .node_context     = std::move(node_context),
+        .node_arena       = std::move(context.node_arena),
         .source           = std::move(context.source),
         .module           { .definitions = std::move(desugared_definitions) }
     };

@@ -489,9 +489,8 @@ namespace {
 
 
 auto compiler::parse(Lex_result&& lex_result) -> Parse_result {
-    Parse_context context { std::move(lex_result) };
+    Parse_context context { std::move(lex_result), ast::Node_arena {} };
 
-    ast::Node_context              module_context;
     std::vector<compiler::String>  module_imports;
     tl::optional<compiler::String> module_name;
 
@@ -512,14 +511,12 @@ auto compiler::parse(Lex_result&& lex_result) -> Parse_result {
     auto definitions = extract_definition_sequence(context);
 
     if (!context.is_finished()) {
-        context.error_expected(
-            "a definition",
-            "'fn', 'struct', 'enum', 'alias', 'impl', 'inst', or 'class'");
+        context.error_expected("fn, struct, enum, alias, class, impl, inst, or namespace");
     }
 
     return Parse_result {
         .compilation_info = std::move(context.compilation_info),
-        .node_context     = std::move(module_context),
+        .node_arena       = std::move(context.node_arena),
         .source           = std::move(context.source),
         .module {
             .definitions = std::move(definitions),

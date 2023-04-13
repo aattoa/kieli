@@ -166,6 +166,6 @@ namespace cir {
     };
 
 
-    using Node_context = utl::Wrapper_context<Expression, Pattern, Type::Variant>;
+    using Node_arena = utl::Wrapper_arena<Expression, Pattern, Type::Variant>;
 
 }
