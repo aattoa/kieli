@@ -25,7 +25,7 @@ namespace hir {
         struct Loop {
             enum class Kind { plain_loop, while_loop, for_loop };
             utl::Wrapper<Expression> body;
-            Kind                     kind {};
+            utl::Strong<Kind>        kind;
         };
         struct Continue {};
         struct Break {
@@ -55,7 +55,7 @@ namespace hir {
         };
         struct Tuple_field_access {
             utl::Wrapper<Expression> base_expression;
-            utl::Usize               field_index {};
+            utl::Strong<utl::Usize>  field_index;
             utl::Source_view         field_index_source_view;
         };
         struct Array_index_access {
@@ -69,10 +69,12 @@ namespace hir {
             ast::Name                                    method_name;
         };
         struct Conditional {
+            enum class Kind { normal_conditional, while_loop_body };
             utl::Wrapper<Expression> condition;
             utl::Wrapper<Expression> true_branch;
             utl::Wrapper<Expression> false_branch;
-            bool                     has_explicit_false_branch {};
+            utl::Strong<Kind>        kind;
+            utl::Strong<bool>        has_explicit_false_branch;
         };
         struct Match {
             struct Case {

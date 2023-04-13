@@ -120,8 +120,8 @@ namespace resolution {
 
 
     struct [[nodiscard]] Loop_info {
-        tl::optional<mir::Type>     break_return_type;
-        hir::expression::Loop::Kind loop_kind {};
+        tl::optional<mir::Type>                  break_return_type;
+        utl::Strong<hir::expression::Loop::Kind> loop_kind;
     };
 
 

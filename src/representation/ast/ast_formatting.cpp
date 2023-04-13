@@ -332,7 +332,7 @@ DEFINE_FORMATTER_FOR(ast::Module) {
     if (value.name)
         out = fmt::format_to(out, "module {}\n", *value.name);
     for (auto const& import : value.imports)
-        out = fmt::format_to(out, "import \"{}\"", import.view());
+        out = fmt::format_to(out, "import \"{}\"\n", import.view());
 
     return fmt::format_to(out, "{}", utl::formatting::delimited_range(value.definitions, "\n\n"));
 }

@@ -134,7 +134,7 @@ namespace utl::inline literals {
     consteval auto operator"" _uz(unsigned long long const n) noexcept { return safe_cast<Usize>(n); }
     consteval auto operator"" _iz(unsigned long long const n) noexcept { return safe_cast<Isize>(n); }
 
-    consteval auto operator"" _format(char const* const s, unsigned long const n) noexcept {
+    consteval auto operator"" _format(char const* const s, Usize const n) noexcept {
         return [fmt = std::string_view(s, n)](auto const&... args) -> std::string {
             return fmt::vformat(fmt, fmt::make_format_args(args...));
         };
@@ -267,12 +267,12 @@ namespace utl {
         std::source_location const caller  = std::source_location::current()) -> void
     {
         fmt::print(
-            "[{}:{}:{}] utl::abort invoked in {}, with message: {}\n",
+            "[{}:{}:{}] utl::abort invoked with message: {}, in function {}\n",
             filename_without_path(caller.file_name()),
             caller.line(),
             caller.column(),
-            caller.function_name(),
-            message);
+            message,
+            caller.function_name());
         std::exit(EXIT_FAILURE);
     }
 
@@ -330,6 +330,28 @@ namespace utl {
     constexpr auto second = [](auto&& pair) noexcept -> decltype(auto) { return bootleg::forward_like<decltype(pair)>(pair.second); };
 
 
+    // Value wrapper that is used to disable default constructors
+    template <class T>
+    class [[nodiscard]] Strong {
+        T m_value;
+    public:
+        /*implicit*/ constexpr Strong(T const& value) // NOLINT
+            noexcept(std::is_nothrow_copy_constructible_v<T>)
+            requires std::is_copy_constructible_v<T>
+            : m_value { value } {}
+        /*implicit*/ constexpr Strong(T&& value) // NOLINT
+            noexcept(std::is_nothrow_move_constructible_v<T>)
+            requires std::is_move_constructible_v<T>
+            : m_value { std::move(value) } {}
+
+        APPLY_EXPLICIT_OBJECT_PARAMETER_HERE
+        [[nodiscard]] constexpr auto get() const & -> T const & { return m_value; }
+        [[nodiscard]] constexpr auto get()       & -> T       & { return m_value; }
+        [[nodiscard]] constexpr auto get() const&& -> T const&& { return std::move(m_value); }
+        [[nodiscard]] constexpr auto get()      && -> T      && { return std::move(m_value); }
+    };
+
+
     constexpr auto size = [](auto const& x)
         noexcept(noexcept(std::size(x))) -> Usize
     {
@@ -382,7 +404,7 @@ namespace utl {
     struct Alternative_index;
     template <class... Ts, class T>
     struct Alternative_index<std::variant<Ts...>, T>
-        : std::integral_constant<std::size_t, std::variant<Type<Ts>...> { Type<T> {} }.index()> {};
+        : std::integral_constant<Usize, std::variant<Type<Ts>...> { Type<T> {} }.index()> {};
     template <class Variant, class Alternative>
     constexpr Usize alternative_index = Alternative_index<Variant, Alternative>::value;
 
@@ -530,14 +552,14 @@ namespace utl {
     // Unlike `std::vector<T>::resize`, this does not require `T` to be default constructible.
     template <class T>
     constexpr auto resize_down_vector(std::vector<T>& vector, Usize const new_size) -> void {
-        assert(vector.size() >= new_size);
+        always_assert(vector.size() >= new_size);
         vector.erase(vector.begin() + safe_cast<typename std::vector<T>::iterator::difference_type>(new_size), vector.end());
     }
 
 
     [[nodiscard]]
     constexpr auto unsigned_distance(auto const start, auto const stop) noexcept -> Usize {
-        assert(start <= stop);
+        always_assert(start <= stop);
         return static_cast<Usize>(std::distance(start, stop));
     }
 
@@ -787,20 +809,27 @@ DEFINE_FORMATTER_FOR(utl::formatting::Integer_with_ordinal_indicator_formatter_c
 
     static constexpr auto suffixes = std::to_array<std::string_view>({ "th", "st", "nd", "rd" });
 
-    T x = value.integer % 100;
+    T n = value.integer % 100;
 
-    if (x == 11 || x == 12 || x == 13) {
-        x = 0;
+    if (n == 11 || n == 12 || n == 13) {
+        n = 0;
     }
     else {
-        x %= 10;
-        if (x > 3)
-            x = 0;
+        n %= 10;
+        if (n > 3)
+            n = 0;
     }
 
-    return format_to(context.out(), "{}{}", value.integer, suffixes[x]);
+    return format_to(context.out(), "{}{}", value.integer, suffixes.at(n));
 }
 
+
+template <class T>
+struct fmt::formatter<utl::Strong<T>> : formatter<T> {
+    auto format(utl::Strong<T> const& strong, auto& context) {
+        return formatter<T>::format(strong.get(), context);
+    }
+};
 
 template <>
 struct fmt::formatter<std::monostate> : utl::formatting::Formatter_base {
