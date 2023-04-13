@@ -11,6 +11,7 @@ using Token = compiler::Lexical_token;
 
 struct Parse_context {
     compiler::Compilation_info compilation_info;
+    ast::Node_arena            node_arena;
     std::vector<Token>         tokens;
     utl::Source                source;
     Token*                     start;
@@ -19,8 +20,9 @@ struct Parse_context {
     compiler::Identifier plus_id;
     compiler::Identifier asterisk_id;
 
-    explicit Parse_context(compiler::Lex_result&& lex_result) noexcept
+    explicit Parse_context(compiler::Lex_result&& lex_result, ast::Node_arena&& node_arena) noexcept
         : compilation_info { std::move(lex_result.compilation_info) }
+        , node_arena       { std::move(node_arena) }
         , tokens           { std::move(lex_result.tokens) }
         , source           { std::move(lex_result.source) }
         , start            { tokens.data() }
@@ -61,6 +63,17 @@ struct Parse_context {
     }
     auto retreat() noexcept -> void {
         --pointer;
+    }
+
+    template <ast::node Node>
+    auto wrap(Node&& node) -> utl::Wrapper<Node> {
+        return node_arena.wrap(std::move(node));
+    }
+    [[nodiscard]]
+    auto wrap() noexcept {
+        return [this]<ast::node Node>(Node&& node) -> utl::Wrapper<Node> {
+            return wrap(std::move(node));
+        };
     }
 
     [[noreturn]]

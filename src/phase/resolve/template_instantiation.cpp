@@ -62,7 +62,7 @@ namespace {
         }
         template <instantiable T>
         auto recurse(utl::Wrapper<T> const wrapper) const -> utl::Wrapper<T> {
-            return utl::wrap(recurse(*wrapper));
+            return resolution_context.wrap(recurse(*wrapper));
         }
         [[nodiscard]]
         auto recurse() const noexcept {
@@ -195,7 +195,7 @@ namespace {
             instantiate(function_template.definition.signature.return_type, substitution_context);
 
         mir::Type const concrete_function_type {
-            .value = wrap_type(mir::type::Function {
+            .value = resolution_context.wrap_type(mir::type::Function {
                 .parameter_types = utl::map(&mir::Function_parameter::type, concrete_function_parameters),
                 .return_type     = concrete_return_type
             }),
@@ -213,7 +213,7 @@ namespace {
             .self_parameter = std::move(concrete_self_parameter)
         };
 
-        auto const info = utl::wrap(Function_info {
+        auto const info = resolution_context.wrap(Function_info {
             .value          = std::move(concrete_function),
             .home_namespace = template_info->home_namespace,
             .state          = Definition_state::resolved,
@@ -230,12 +230,12 @@ namespace {
 
 
     auto instantiate_struct_template_application(
-        Context                               & resolution_context,
-        mir::Struct_template                  & struct_template,
+        Context                                & resolution_context,
+        mir::Struct_template                   & struct_template,
         utl::Wrapper<Struct_template_info> const template_info,
-        std::vector<mir::Template_argument>  && template_arguments,
-        Scope                                 & scope,
-        Namespace                             & space) -> utl::Wrapper<Struct_info>
+        std::vector<mir::Template_argument>   && template_arguments,
+        Scope                                  & scope,
+        Namespace                              & space) -> utl::Wrapper<Struct_info>
     {
         Substitutions substitutions { struct_template.parameters, template_arguments };
 
@@ -249,7 +249,7 @@ namespace {
         mir::Struct concrete_struct {
             .members              = utl::vector_with_capacity(struct_template.definition.members.size()),
             .name                 = template_info->name,
-            .associated_namespace = utl::wrap(Namespace {})
+            .associated_namespace = resolution_context.wrap(Namespace {})
         };
 
         for (mir::Struct::Member const& member : struct_template.definition.members) {
@@ -265,7 +265,7 @@ namespace {
         mir::Type concrete_type =
             resolution_context.temporary_placeholder_type(concrete_struct.name.source_view);
 
-        auto const concrete_info = utl::wrap(Struct_info {
+        auto const concrete_info = resolution_context.wrap(Struct_info {
             .value          = std::move(concrete_struct),
             .home_namespace = template_info->home_namespace,
             .structure_type = concrete_type,
@@ -307,7 +307,7 @@ namespace {
         mir::Enum concrete_enum {
             .constructors         = utl::vector_with_capacity(enum_template.definition.constructors.size()),
             .name                 = template_info->name,
-            .associated_namespace = utl::wrap(Namespace { .parent = template_info->home_namespace })
+            .associated_namespace = resolution_context.wrap(Namespace { .parent = template_info->home_namespace })
         };
 
         mir::Type concrete_type =
@@ -320,7 +320,7 @@ namespace {
                 .payload_type  = constructor.payload_type.transform(substitution_context.recurse()),
                 .function_type = constructor.function_type.transform([&](mir::Type const function_type) {
                     return mir::Type {
-                        .value = wrap_type(mir::type::Function {
+                        .value = resolution_context.wrap_type(mir::type::Function {
                             .parameter_types = utl::map(substitution_context.recurse(), utl::get<mir::type::Function>(*function_type.value).parameter_types),
                             .return_type     = concrete_type
                         }),
@@ -334,7 +334,7 @@ namespace {
             concrete_enum.associated_namespace->lower_table.add_new_or_abort(concrete_constructor.name.identifier, concrete_constructor);
         }
 
-        auto const concrete_info = utl::wrap(Enum_info {
+        auto const concrete_info = resolution_context.wrap(Enum_info {
             .value            = std::move(concrete_enum),
             .home_namespace   = template_info->home_namespace,
             .enumeration_type = concrete_type,
@@ -373,7 +373,7 @@ namespace {
             .space              = space,
         };
 
-        return utl::wrap(Alias_info {
+        return resolution_context.wrap(Alias_info {
             .value = mir::Alias {
                 .aliased_type = instantiate(alias_template.definition.aliased_type, substitution_context),
                 .name         = alias_template.definition.name
@@ -569,35 +569,35 @@ namespace {
         }
 
         auto operator()(mir::type::Tuple const& tuple) -> R {
-            return wrap_type(mir::type::Tuple {
+            return context.resolution_context.wrap_type(mir::type::Tuple {
                 .field_types = utl::map(context.recurse(), tuple.field_types)
             });
         }
         auto operator()(mir::type::Array const& array) -> R {
-            return wrap_type(mir::type::Array {
+            return context.resolution_context.wrap_type(mir::type::Array {
                 .element_type = context.recurse(array.element_type),
                 .array_length = context.recurse(array.array_length)
             });
         }
         auto operator()(mir::type::Slice const& slice) -> R {
-            return wrap_type(mir::type::Slice {
+            return context.resolution_context.wrap_type(mir::type::Slice {
                 .element_type = context.recurse(slice.element_type)
             });
         }
         auto operator()(mir::type::Function const& function) -> R {
-            return wrap_type(mir::type::Function {
+            return context.resolution_context.wrap_type(mir::type::Function {
                 .parameter_types = utl::map(context.recurse(), function.parameter_types),
                 .return_type     = context.recurse(function.return_type)
             });
         }
         auto operator()(mir::type::Reference const& reference) -> R {
-            return wrap_type(mir::type::Reference {
+            return context.resolution_context.wrap_type(mir::type::Reference {
                 .mutability      = context.recurse(reference.mutability),
                 .referenced_type = context.recurse(reference.referenced_type)
             });
         }
         auto operator()(mir::type::Pointer const& pointer) -> R {
-            return wrap_type(mir::type::Pointer {
+            return context.resolution_context.wrap_type(mir::type::Pointer {
                 .mutability      = context.recurse(pointer.mutability),
                 .pointed_to_type = context.recurse(pointer.pointed_to_type)
             });
@@ -607,7 +607,7 @@ namespace {
                 auto& instantiation_info =
                     utl::get(structure.info->template_instantiation_info);
 
-                return wrap_type(mir::type::Structure {
+                return context.resolution_context.wrap_type(mir::type::Structure {
                     .info = instantiate_struct_template_application(
                         context.resolution_context,
                         context.resolution_context.resolve_struct_template(instantiation_info.template_instantiated_from),
@@ -626,7 +626,7 @@ namespace {
                 auto& instantiation_info =
                     utl::get(enumeration.info->template_instantiation_info);
 
-                return wrap_type(mir::type::Enumeration {
+                return context.resolution_context.wrap_type(mir::type::Enumeration {
                     .info = instantiate_enum_template_application(
                         context.resolution_context,
                         context.resolution_context.resolve_enum_template(instantiation_info.template_instantiated_from),
@@ -680,8 +680,8 @@ namespace {
                 utl::unreachable();
             }
             return mir::pattern::Enum_constructor {
-                    .payload_pattern = pattern.payload_pattern.transform(context.recurse()),
-                    .constructor     = *it
+                .payload_pattern = pattern.payload_pattern.transform(context.recurse()),
+                .constructor     = *it
             };
         }
         auto operator()(mir::pattern::Guarded const& guarded) -> mir::Pattern::Variant {
@@ -796,8 +796,7 @@ auto resolution::Context::instantiate_function_template(
         template_info,
         resolve_template_arguments(*this, function_template.parameters, template_arguments, instantiation_view, scope, space),
         scope,
-        space
-    );
+        space);
 }
 
 
@@ -817,8 +816,7 @@ auto resolution::Context::instantiate_struct_template(
         template_info,
         resolve_template_arguments(*this, struct_template.parameters, template_arguments, instantiation_view, scope, space),
         scope,
-        space
-    );
+        space);
 }
 
 
@@ -838,8 +836,7 @@ auto resolution::Context::instantiate_enum_template(
         template_info,
         resolve_template_arguments(*this, enum_template.parameters, template_arguments, instantiation_view, scope, space),
         scope,
-        space
-    );
+        space);
 }
 
 
@@ -859,8 +856,7 @@ auto resolution::Context::instantiate_alias_template(
         template_info,
         resolve_template_arguments(*this, alias_template.parameters, template_arguments, instantiation_view, scope, space),
         scope,
-        space
-    );
+        space);
 }
 
 

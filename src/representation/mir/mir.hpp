@@ -176,14 +176,14 @@ struct mir::Function_parameter {
 
 namespace mir {
 
-    using Node_context = utl::Wrapper_context<
+    using Node_arena = utl::Wrapper_arena<
         Expression,
         Pattern,
         Type::Variant,
         Mutability::Variant
     >;
 
-    using Namespace_context = utl::Wrapper_context<
+    using Namespace_arena = utl::Wrapper_arena<
         resolution::Function_info,
         resolution::Struct_info,
         resolution::Enum_info,

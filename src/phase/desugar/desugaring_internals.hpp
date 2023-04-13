@@ -12,6 +12,7 @@ class Desugaring_context {
     utl::Usize      current_definition_kind = std::variant_size_v<ast::Definition::Variant>;
 public:
     compiler::Compilation_info compilation_info;
+    hir::Node_arena            node_arena;
     utl::Source                source;
 
     std::vector<hir::Implicit_template_parameter>* current_function_implicit_template_parameters = nullptr;
@@ -19,8 +20,10 @@ public:
 
     explicit Desugaring_context(
         utl::Source               && source,
+        hir::Node_arena           && node_arena,
         compiler::Compilation_info&& compilation_info) noexcept
         : compilation_info { std::move(compilation_info) }
+        , node_arena       { std::move(node_arena) }
         , source           { std::move(source) } {}
 
     [[nodiscard]]
@@ -28,6 +31,17 @@ public:
 
     [[nodiscard]]
     auto fresh_name_tag() -> utl::Usize;
+
+    template <hir::node Node>
+    auto wrap(Node&& node) -> utl::Wrapper<Node> {
+        return node_arena.wrap(std::move(node));
+    }
+    [[nodiscard]]
+    auto wrap() noexcept {
+        return [this]<hir::node Node>(Node&& node) -> utl::Wrapper<Node> {
+            return wrap(std::move(node));
+        };
+    }
 
     auto desugar(ast::Expression const&) -> hir::Expression;
     auto desugar(ast::Type       const&) -> hir::Type;
@@ -47,7 +61,7 @@ public:
     auto desugar(ast::Type_template_signature     const&) -> hir::Type_template_signature;
 
     auto desugar(utl::wrapper auto const node) {
-        return utl::wrap(desugar(*node));
+        return wrap(desugar(*node));
     }
 
     auto desugar() noexcept {

@@ -13,7 +13,7 @@ namespace {
     auto register_namespace(
         Context                        & context,
         std::span<hir::Definition> const definitions,
-        utl::Wrapper<Namespace>           space) -> void
+        utl::Wrapper<Namespace>          space) -> void
     {
         space->definitions_in_order.reserve(definitions.size());
 
@@ -29,7 +29,7 @@ namespace {
                     utl::always_assert(std::holds_alternative<hir::expression::Block>(function.body.value));
 
                     ast::Name const name = function.name;
-                    auto const info = utl::wrap(Function_info {
+                    auto const info = context.wrap(Function_info {
                         .value          = std::move(function),
                         .home_namespace = space,
                         .name           = name
@@ -39,7 +39,7 @@ namespace {
                 },
                 [&](hir::definition::Alias& alias) {
                     ast::Name const name = alias.name;
-                    add_definition(utl::wrap(Alias_info {
+                    add_definition(context.wrap(Alias_info {
                         .value          = std::move(alias),
                         .home_namespace = space,
                         .name           = name
@@ -47,7 +47,7 @@ namespace {
                 },
                 [&](hir::definition::Typeclass& typeclass) {
                     ast::Name const name = typeclass.name;
-                    add_definition(utl::wrap(resolution::Typeclass_info {
+                    add_definition(context.wrap(resolution::Typeclass_info {
                         .value          = std::move(typeclass),
                         .home_namespace = space,
                         .name           = name
@@ -58,7 +58,7 @@ namespace {
                         context.temporary_placeholder_type(structure.name.source_view);
                     ast::Name const name = structure.name;
 
-                    auto info = utl::wrap(Struct_info {
+                    auto info = context.wrap(Struct_info {
                         .value          = std::move(structure),
                         .home_namespace = space,
                         .structure_type = structure_type,
@@ -72,7 +72,7 @@ namespace {
                         context.temporary_placeholder_type(enumeration.name.source_view);
                     ast::Name const name = enumeration.name;
 
-                    auto info = utl::wrap(Enum_info{
+                    auto info = context.wrap(Enum_info{
                         .value            = std::move(enumeration),
                         .home_namespace   = space,
                         .enumeration_type = enumeration_type,
@@ -83,7 +83,7 @@ namespace {
                 },
 
                 [&](hir::definition::Namespace& hir_child) {
-                    utl::wrapper auto child = utl::wrap(Namespace {
+                    utl::wrapper auto child = context.wrap(Namespace {
                         .parent = space,
                         .name   = hir_child.name
                     });
@@ -96,7 +96,7 @@ namespace {
 
                 [&](hir::definition::Function_template& template_definition) {
                     ast::Name const name = template_definition.definition.name;
-                    auto const info = utl::wrap(Function_template_info {
+                    auto const info = context.wrap(Function_template_info {
                         .value = std::move(template_definition),
                         .home_namespace = space,
                         .name = name
@@ -107,7 +107,7 @@ namespace {
 
                 [&]<class T>(ast::definition::Template<T>&template_definition) {
                     ast::Name const name = template_definition.definition.name;
-                    add_definition(utl::wrap(Definition_info<ast::definition::Template<T>> {
+                    add_definition(context.wrap(Definition_info<ast::definition::Template<T>> {
                         .value                      = std::move(template_definition),
                         .home_namespace             = space,
                         .parameterized_type_of_this = context.temporary_placeholder_type(name.source_view),
@@ -118,7 +118,7 @@ namespace {
                 // TODO: reduce impl/inst duplication
 
                 [&](hir::definition::Implementation& implementation) {
-                    utl::wrapper auto const info = utl::wrap(Implementation_info {
+                    utl::wrapper auto const info = context.wrap(Implementation_info {
                         .value          = std::move(implementation),
                         .home_namespace = space
                     });
@@ -126,7 +126,7 @@ namespace {
                     context.nameless_entities.implementations.push_back(info);
                 },
                 [&](hir::definition::Instantiation& instantiation) {
-                    utl::wrapper auto const info = utl::wrap(Instantiation_info {
+                    utl::wrapper auto const info = context.wrap(Instantiation_info {
                         .value          = std::move(instantiation),
                         .home_namespace = space
                     });
@@ -134,7 +134,7 @@ namespace {
                     context.nameless_entities.instantiations.push_back(info);
                 },
                 [&](hir::definition::Implementation_template& implementation_template) {
-                    utl::wrapper auto const info = utl::wrap(Implementation_template_info {
+                    utl::wrapper auto const info = context.wrap(Implementation_template_info {
                         .value          = std::move(implementation_template),
                         .home_namespace = space
                     });
@@ -142,7 +142,7 @@ namespace {
                     context.nameless_entities.implementation_templates.push_back(info);
                 },
                 [&](hir::definition::Instantiation_template& instantiation_template) {
-                    utl::wrapper auto const info = utl::wrap(Instantiation_template_info {
+                    utl::wrapper auto const info = context.wrap(Instantiation_template_info {
                         .value          = std::move(instantiation_template),
                         .home_namespace = space
                     });
@@ -235,15 +235,12 @@ namespace {
 
 
 auto compiler::resolve(Desugar_result&& desugar_result) -> Resolve_result {
-    mir::Node_context node_context {
-        utl::Wrapper_context<mir::Expression>    { desugar_result.node_context.arena_size<hir::Expression>() },
-        utl::Wrapper_context<mir::Pattern>       { desugar_result.node_context.arena_size<hir::Pattern>() },
-        utl::Wrapper_context<mir::Type::Variant> { desugar_result.node_context.arena_size<hir::Type>() },
-        utl::Wrapper_context<mir::Mutability::Variant> {},
+    Context context {
+        std::move(desugar_result.source),
+        mir::Node_arena {},
+        mir::Namespace_arena {},
+        std::move(desugar_result.compilation_info)
     };
-    mir::Namespace_context namespace_context;
-
-    Context context { std::move(desugar_result.source), std::move(desugar_result.compilation_info) };
 
     register_namespace(context, desugar_result.module.definitions, context.global_namespace);
     resolve_signatures(context, context.global_namespace);
@@ -251,10 +248,10 @@ auto compiler::resolve(Desugar_result&& desugar_result) -> Resolve_result {
     context.solve_deferred_constraints();
 
     return Resolve_result {
-        .compilation_info  = std::move(context.compilation_info),
-        .source            = std::move(context.source),
-        .node_context      = std::move(node_context),
-        .namespace_context = std::move(namespace_context),
-        .module            = std::move(context.output_module),
+        .compilation_info = std::move(context.compilation_info),
+        .source           = std::move(context.source),
+        .node_arena       = std::move(context.node_arena),
+        .namespace_arena  = std::move(context.namespace_arena),
+        .module           = std::move(context.output_module),
     };
 }

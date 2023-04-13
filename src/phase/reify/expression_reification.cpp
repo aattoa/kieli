@@ -12,7 +12,7 @@ namespace {
             return context.reify_expression(expression);
         }
         auto recurse(utl::Wrapper<mir::Expression> const expression) -> utl::Wrapper<cir::Expression> {
-            return utl::wrap(recurse(*expression));
+            return context.wrap(recurse(*expression));
         }
         [[nodiscard]]
         auto recurse() noexcept {

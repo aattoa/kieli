@@ -24,9 +24,11 @@ namespace {
 
 
 auto compiler::reify(Resolve_result&& resolve_result) -> Reify_result {
-    cir::Node_context node_context;
-
-    reification::Context context { std::move(resolve_result.source), std::move(resolve_result.compilation_info) };
+    reification::Context context {
+        std::move(resolve_result.source),
+        cir::Node_arena {},
+        std::move(resolve_result.compilation_info)
+    };
 
     std::vector<cir::Function> functions;
     functions.reserve(resolve_result.module.functions.size());
@@ -40,7 +42,7 @@ auto compiler::reify(Resolve_result&& resolve_result) -> Reify_result {
     return Reify_result {
         .compilation_info = std::move(context.compilation_info),
         .source           = std::move(context.source),
-        .node_context     = std::move(node_context),
+        .node_arena       = std::move(context.node_arena),
         .functions        = std::move(functions),
     };
 }

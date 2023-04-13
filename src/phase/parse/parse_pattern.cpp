@@ -63,7 +63,7 @@ namespace {
                 return extract_qualified({ ast::Root_qualifier::Global {} }, context);
             default:
                 if (auto type = parse_type(context))
-                    return extract_qualified({ utl::wrap(std::move(*type)) }, context);
+                    return extract_qualified({ context.wrap(std::move(*type)) }, context);
                 else
                     return tl::nullopt;
             }
@@ -92,7 +92,7 @@ namespace {
                 if (!ctor_name->is_unqualified()) {
                     return ast::pattern::Constructor {
                         .constructor_name = std::move(*ctor_name),
-                        .payload_pattern  = parse_constructor_pattern(context).transform(utl::wrap)
+                        .payload_pattern  = parse_constructor_pattern(context).transform(context.wrap())
                     };
                 }
                 else {
@@ -118,7 +118,7 @@ namespace {
         if (auto name = parse_constructor_name(context)) {
             return ast::pattern::Constructor {
                 .constructor_name = std::move(*name),
-                .payload_pattern  = parse_constructor_pattern(context).transform(utl::wrap)
+                .payload_pattern  = parse_constructor_pattern(context).transform(context.wrap())
             };
         }
         utl::todo(); // Unreachable?
@@ -172,7 +172,7 @@ namespace {
                         .identifier = std::move(identifier),
                         .mutability = std::move(mutability)
                     },
-                    .aliased_pattern = utl::wrap(std::move(*pattern))
+                    .aliased_pattern = context.wrap(std::move(*pattern))
                 };
             }
             return std::move(pattern->value);
@@ -188,7 +188,7 @@ namespace {
             if (context.try_consume(Token::Type::if_)) {
                 if (auto guard = parse_expression(context)) {
                     return ast::pattern::Guarded {
-                        .guarded_pattern = utl::wrap(std::move(*pattern)),
+                        .guarded_pattern = context.wrap(std::move(*pattern)),
                         .guard           = std::move(*guard)
                     };
                 }

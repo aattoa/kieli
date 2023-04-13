@@ -192,12 +192,10 @@ auto ast::Basic_qualified_name<Configuration>::is_unqualified() const noexcept -
 
 namespace ast {
 
-    using Node_context = utl::Wrapper_context<
-        ast::Expression,
-        ast::Type,
-        ast::Pattern,
-        ast::Definition
-    >;
+    template <class T>
+    concept node = utl::one_of<T, Expression, Type, Pattern>;
+
+    using Node_arena = utl::Wrapper_arena<Expression, Type, Pattern>;
 
     struct [[nodiscard]] Module {
         std::vector<Definition>        definitions;

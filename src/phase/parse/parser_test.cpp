@@ -12,21 +12,20 @@ namespace {
         tl::optional<std::string> const& expected_string = tl::nullopt,
         std::source_location      const  caller = std::source_location::current()) -> void
     {
-        auto parse_context = std::invoke([&] {
-            return Parse_context {
-                compiler::lex(compiler::Lex_arguments {
-                    .compilation_info {
-                        .diagnostics = utl::diagnostics::Builder {
-                            utl::diagnostics::Builder::Configuration {
-                                .note_level    = utl::diagnostics::Level::suppress,
-                                .warning_level = utl::diagnostics::Level::suppress,
-                            }
-                        },
+        Parse_context parse_context {
+            compiler::lex(compiler::Lex_arguments {
+                .compilation_info {
+                    .diagnostics = utl::diagnostics::Builder {
+                        utl::diagnostics::Builder::Configuration {
+                            .note_level    = utl::diagnostics::Level::suppress,
+                            .warning_level = utl::diagnostics::Level::suppress,
+                        }
                     },
-                    .source = utl::Source { "[TEST]", std::string { node_string } }
-                })
-            };
-        });
+                },
+                .source = utl::Source { "[TEST]", std::string { node_string } }
+            }),
+            ast::Node_arena {}
+        };
 
         auto const extracted_node = extractor(parse_context);
         std::string const formatted_node = fmt::format("{}", extracted_node);
@@ -68,8 +67,6 @@ namespace {
     auto run_parser_tests() -> void {
         using namespace utl::literals;
         using namespace tests;
-
-        ast::Node_context node_context;
 
         "literal"_test = [] {
             expression("50");

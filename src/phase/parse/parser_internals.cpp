@@ -13,10 +13,10 @@ namespace {
             };
         }
         if (auto type = parse_type(context)) {
-            return ast::Template_argument { utl::wrap(std::move(*type)) };
+            return ast::Template_argument { context.wrap(std::move(*type)) };
         }
         else if (auto expression = parse_expression(context)) {
-            return ast::Template_argument { utl::wrap(std::move(*expression)) };
+            return ast::Template_argument { context.wrap(std::move(*expression)) };
         }
         else {
             tl::optional<ast::Mutability> mutability;
@@ -59,7 +59,7 @@ namespace {
                 if (context.try_consume(Token::Type::mut))
                     return template_parameter(*name, ast::Template_parameter::Mutability_parameter {});
                 else if (auto type = parse_type(context))
-                    return template_parameter(*name, ast::Template_parameter::Value_parameter { .type = utl::wrap(std::move(*type)) });
+                    return template_parameter(*name, ast::Template_parameter::Value_parameter { .type = context.wrap(std::move(*type)) });
                 else
                     context.error_expected("'mut' or a type");
             }
@@ -135,16 +135,14 @@ auto parse_top_level_pattern(Parse_context& context) -> tl::optional<ast::Patter
     return parse_comma_separated_one_or_more<parse_pattern, "a pattern">(context)
         .transform([](std::vector<ast::Pattern>&& patterns) -> ast::Pattern
     {
-        if (patterns.size() != 1) {
-            auto source_view = patterns.front().source_view + patterns.back().source_view;
-            return ast::Pattern {
-                .value = ast::pattern::Tuple { std::move(patterns) },
-                .source_view = std::move(source_view)
-            };
-        }
-        else {
+        if (patterns.size() == 1)
             return std::move(patterns.front());
-        }
+
+        auto source_view = patterns.front().source_view + patterns.back().source_view;
+        return ast::Pattern {
+            .value       = ast::pattern::Tuple { std::move(patterns) },
+            .source_view = source_view
+        };
     });
 }
 
@@ -160,9 +158,7 @@ auto parse_template_arguments(Parse_context& context)
         context.consume_required(Token::Type::bracket_close);
         return arguments;
     }
-    else {
-        return tl::nullopt;
-    }
+    return tl::nullopt;
 }
 
 
@@ -262,7 +258,7 @@ auto extract_qualified(ast::Root_qualifier&& root, Parse_context& context)
         return {
             .middle_qualifiers = std::move(qualifiers),
             .root_qualifier    = std::move(root),
-            .primary_name      = std::move(back.name)
+            .primary_name      = back.name
         };
     }
     else {
@@ -313,7 +309,7 @@ auto parse_class_reference(Parse_context& context)
 
     auto name = std::invoke([&]() -> tl::optional<ast::Qualified_name> {
         ast::Root_qualifier root;
-        auto* const anchor = context.pointer;
+        Token const* const anchor = context.pointer;
 
         if (context.try_consume(Token::Type::upper_name) || context.try_consume(Token::Type::lower_name))
             context.retreat();
@@ -324,14 +320,12 @@ auto parse_class_reference(Parse_context& context)
 
         auto name = extract_qualified(std::move(root), context);
 
-        if (name.primary_name.is_upper) {
+        if (name.primary_name.is_upper)
             return name;
-        }
-        else {
-            context.error(
-                { anchor, context.pointer },
-                "Expected a class name, but found a lowercase identifier");
-        }
+
+        context.error(
+            { anchor, context.pointer },
+            "Expected a class name, but found a lowercase identifier");
     });
 
     if (name.has_value()) {

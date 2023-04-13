@@ -136,10 +136,10 @@ namespace {
         return {
             .value = mir::expression::Reference {
                 .mutability            = requested_mutability,
-                .referenced_expression = utl::wrap(std::move(referenced_expression))
+                .referenced_expression = context.wrap(std::move(referenced_expression))
             },
             .type {
-                .value = wrap_type(mir::type::Reference {
+                .value = context.wrap_type(mir::type::Reference {
                     .mutability      = requested_mutability,
                     .referenced_type = referenced_type
                 }),
@@ -222,7 +222,7 @@ namespace {
 
             context.solve(constraint::Type_equality {
                 .constrainer_type {
-                    .value = wrap_type(mir::type::Function {
+                    .value = context.wrap_type(mir::type::Function {
                         .parameter_types = utl::map(&mir::Expression::type, arguments),
                         .return_type     = return_type
                     }),
@@ -242,7 +242,7 @@ namespace {
             return {
                 .value = mir::expression::Indirect_invocation {
                     .arguments = std::move(arguments),
-                    .invocable = utl::wrap(std::move(invocable))
+                    .invocable = context.wrap(std::move(invocable))
                 },
                 .type        = return_type,
                 .source_view = this_expression.source_view,
@@ -338,9 +338,9 @@ namespace {
             return {
                 .value = std::move(mir_array),
                 .type  = mir::Type {
-                    .value = wrap_type(mir::type::Array {
+                    .value = context.wrap_type(mir::type::Array {
                         .element_type = element_type,
-                        .array_length = utl::wrap(mir::Expression {
+                        .array_length = context.wrap(mir::Expression {
                             .value       = mir::expression::Literal<compiler::Unsigned_integer> { array_length },
                             .type        = context.size_type(this_expression.source_view),
                             .source_view = this_expression.source_view,
@@ -359,7 +359,7 @@ namespace {
             mir::Type const type   = lvalue.type;
             require_addressability(context, lvalue, "Temporaries are moved by default, and may not be explicitly moved");
             return {
-                .value       = mir::expression::Move { utl::wrap(std::move(lvalue)) },
+                .value       = mir::expression::Move { context.wrap(std::move(lvalue)) },
                 .type        = type,
                 .source_view = this_expression.source_view,
                 .mutability  = context.immut_constant(this_expression.source_view),
@@ -412,7 +412,7 @@ namespace {
             return {
                 .value = std::move(mir_tuple),
                 .type {
-                    .value       = wrap_type(std::move(mir_tuple_type)),
+                    .value       = context.wrap_type(std::move(mir_tuple_type)),
                     .source_view = this_expression.source_view
                 },
                 .source_view = this_expression.source_view,
@@ -427,7 +427,7 @@ namespace {
             Loop_info const loop_info = utl::get(context.current_loop_info);
             context.current_loop_info = old_loop_info;
             return {
-                .value = mir::expression::Loop { .body = utl::wrap(std::move(loop_body)) },
+                .value = mir::expression::Loop { .body = context.wrap(std::move(loop_body)) },
                 .type  = loop_info.break_return_type.has_value()
                     ? loop_info.break_return_type->with(this_expression.source_view)
                     : context.unit_type(this_expression.source_view),
@@ -477,7 +477,7 @@ namespace {
             }
 
             return {
-                .value       = mir::expression::Break { .result = utl::wrap(std::move(break_result)) },
+                .value       = mir::expression::Break { .result = context.wrap(std::move(break_result)) },
                 .type        = context.unit_type(this_expression.source_view),
                 .source_view = this_expression.source_view,
                 .mutability  = context.immut_constant(this_expression.source_view),
@@ -521,7 +521,7 @@ namespace {
             return {
                 .value = mir::expression::Block {
                     .side_effect_expressions = std::move(side_effects),
-                    .result_expression       = utl::wrap(std::move(block_result))
+                    .result_expression       = context.wrap(std::move(block_result))
                 },
                 .type        = result_type,
                 .source_view = this_expression.source_view,
@@ -590,9 +590,9 @@ namespace {
 
             return {
                 .value = mir::expression::Let_binding {
-                    .pattern     = utl::wrap(std::move(pattern)),
+                    .pattern     = context.wrap(std::move(pattern)),
                     .type        = type,
-                    .initializer = utl::wrap(std::move(initializer)),
+                    .initializer = context.wrap(std::move(initializer)),
                 },
                 .type        = context.unit_type(this_expression.source_view),
                 .source_view = this_expression.source_view,
@@ -664,9 +664,9 @@ namespace {
 
             return {
                 .value = mir::expression::Conditional {
-                    .condition    = utl::wrap(std::move(condition)),
-                    .true_branch  = utl::wrap(std::move(true_branch)),
-                    .false_branch = utl::wrap(std::move(false_branch))
+                    .condition    = context.wrap(std::move(condition)),
+                    .true_branch  = context.wrap(std::move(true_branch)),
+                    .false_branch = context.wrap(std::move(false_branch))
                 },
                 .type           = result_type.with(this_expression.source_view),
                 .source_view    = this_expression.source_view,
@@ -713,13 +713,13 @@ namespace {
                     }
                 });
 
-                cases.emplace_back(utl::wrap(std::move(pattern)), utl::wrap(std::move(handler)));
+                cases.emplace_back(context.wrap(std::move(pattern)), context.wrap(std::move(handler)));
             }
 
             return {
                 .value = mir::expression::Match {
                     .cases              = std::move(cases),
-                    .matched_expression = utl::wrap(std::move(matched_expression))
+                    .matched_expression = context.wrap(std::move(matched_expression))
                 },
                 .type        = utl::get(previous_case_result_type),
                 .source_view = this_expression.source_view,
@@ -892,7 +892,7 @@ namespace {
             });
             return {
                 .value = mir::expression::Struct_field_access {
-                    .base_expression = utl::wrap(std::move(base_expression)),
+                    .base_expression = context.wrap(std::move(base_expression)),
                     .field_name      = access.field_name,
                 },
                 .type           = field_type,
@@ -921,7 +921,7 @@ namespace {
             });
             return {
                 .value = mir::expression::Tuple_field_access {
-                    .base_expression         = utl::wrap(std::move(base_expression)),
+                    .base_expression         = context.wrap(std::move(base_expression)),
                     .field_index             = access.field_index.get(),
                     .field_index_source_view = access.field_index_source_view
                 },
@@ -960,7 +960,7 @@ namespace {
                 // be mir::type::Reference, there is no need to emit constraints.
 
                 return {
-                    .value          = mir::expression::Dereference { utl::wrap(std::move(dereferenced_expression)) },
+                    .value          = mir::expression::Dereference { context.wrap(std::move(dereferenced_expression)) },
                     .type           = reference->referenced_type,
                     .source_view    = this_expression.source_view,
                     .mutability     = reference->mutability,
@@ -972,7 +972,7 @@ namespace {
                 mir::Mutability const reference_mutability = context.fresh_unification_mutability_variable(this_expression.source_view);
 
                 mir::Type const reference_type {
-                    .value = wrap_type(mir::type::Reference {
+                    .value = context.wrap_type(mir::type::Reference {
                         .mutability      = reference_mutability,
                         .referenced_type = referenced_type
                     }),
@@ -993,7 +993,7 @@ namespace {
                 });
 
                 return {
-                    .value          = mir::expression::Dereference { utl::wrap(std::move(dereferenced_expression)) },
+                    .value          = mir::expression::Dereference { context.wrap(std::move(dereferenced_expression)) },
                     .type           = referenced_type,
                     .source_view    = this_expression.source_view,
                     .mutability     = reference_mutability,
@@ -1007,7 +1007,7 @@ namespace {
             require_addressability(context, lvalue, "The address of a temporary object can not be taken");
 
             mir::Type const pointer_type {
-                .value = wrap_type(mir::type::Pointer {
+                .value = context.wrap_type(mir::type::Pointer {
                     .mutability      = lvalue.mutability,
                     .pointed_to_type = lvalue.type
                 }),
@@ -1015,7 +1015,7 @@ namespace {
             };
 
             return {
-                .value       = mir::expression::Addressof { utl::wrap(std::move(lvalue)) },
+                .value       = mir::expression::Addressof { context.wrap(std::move(lvalue)) },
                 .type        = pointer_type,
                 .source_view = this_expression.source_view,
                 .mutability  = context.immut_constant(this_expression.source_view)
@@ -1029,7 +1029,7 @@ namespace {
             mir::Mutability const lvalue_mutability = context.fresh_unification_mutability_variable(this_expression.source_view);
 
             mir::Type const pointer_type {
-                .value = wrap_type(mir::type::Pointer {
+                .value = context.wrap_type(mir::type::Pointer {
                     .mutability      = lvalue_mutability,
                     .pointed_to_type = lvalue_type
                 }),
@@ -1050,7 +1050,7 @@ namespace {
             });
 
             return {
-                .value          = mir::expression::Unsafe_dereference { utl::wrap(std::move(pointer)) },
+                .value          = mir::expression::Unsafe_dereference { context.wrap(std::move(pointer)) },
                 .type           = lvalue_type,
                 .source_view    = this_expression.source_view,
                 .mutability     = lvalue_mutability,

@@ -56,8 +56,10 @@ namespace {
         }
 
         auto operator()(hir::type::Tuple& tuple) -> mir::Type {
+            if (tuple.field_types.empty())
+                return context.unit_type(this_type.source_view);
             return {
-                .value       = wrap_type(mir::type::Tuple { .field_types = utl::map(recurse(), tuple.field_types) }),
+                .value       = context.wrap_type(mir::type::Tuple { .field_types = utl::map(recurse(), tuple.field_types) }),
                 .source_view = this_type.source_view
             };
         }
@@ -76,9 +78,9 @@ namespace {
             });
 
             return {
-                .value = wrap_type(mir::type::Array {
+                .value = context.wrap_type(mir::type::Array {
                     .element_type = element_type,
-                    .array_length = utl::wrap(std::move(length))
+                    .array_length = context.wrap(std::move(length))
                 }),
                 .source_view = this_type.source_view
             };
@@ -112,7 +114,7 @@ namespace {
 
                 [this](utl::Wrapper<Struct_template_info> const info) -> mir::Type {
                     return {
-                        .value = wrap_type(mir::type::Structure {
+                        .value = context.wrap_type(mir::type::Structure {
                             .info           = context.instantiate_struct_template_with_synthetic_arguments(info, this_type.source_view),
                             .is_application = true
                         }),
@@ -121,7 +123,7 @@ namespace {
                 },
                 [this](utl::Wrapper<Enum_template_info> const info) -> mir::Type {
                     return {
-                        .value = wrap_type(mir::type::Enumeration {
+                        .value = context.wrap_type(mir::type::Enumeration {
                             .info           = context.instantiate_enum_template_with_synthetic_arguments(info, this_type.source_view),
                             .is_application = true
                         }),
@@ -145,7 +147,7 @@ namespace {
 
         auto operator()(hir::type::Reference& reference) -> mir::Type {
             return {
-                .value = wrap_type(mir::type::Reference {
+                .value = context.wrap_type(mir::type::Reference {
                     .mutability      = context.resolve_mutability(reference.mutability, scope),
                     .referenced_type = recurse(*reference.referenced_type)
                 }),
@@ -155,7 +157,7 @@ namespace {
 
         auto operator()(hir::type::Pointer& pointer) -> mir::Type {
             return {
-                .value = wrap_type(mir::type::Pointer {
+                .value = context.wrap_type(mir::type::Pointer {
                     .mutability      = context.resolve_mutability(pointer.mutability, scope),
                     .pointed_to_type = recurse(*pointer.pointed_to_type)
                 }),
@@ -165,7 +167,7 @@ namespace {
 
         auto operator()(hir::type::Function& function) -> mir::Type {
             return {
-                .value = wrap_type(mir::type::Function {
+                .value = context.wrap_type(mir::type::Function {
                     .parameter_types = utl::map(recurse(), function.argument_types),
                     .return_type     = recurse(*function.return_type)
                 }),
@@ -179,7 +181,7 @@ namespace {
 
                 [&](utl::Wrapper<Struct_template_info> const info) -> mir::Type {
                     return {
-                        .value = wrap_type(mir::type::Structure {
+                        .value = context.wrap_type(mir::type::Structure {
                             .info = context.instantiate_struct_template(
                                 info, application.arguments, this_type.source_view, scope, space),
                             .is_application = true
@@ -189,7 +191,7 @@ namespace {
                 },
                 [&](utl::Wrapper<Enum_template_info> info) -> mir::Type {
                     return {
-                        .value = wrap_type(mir::type::Enumeration {
+                        .value = context.wrap_type(mir::type::Enumeration {
                             .info = context.instantiate_enum_template(
                                 info, application.arguments, this_type.source_view, scope, space),
                             .is_application = true
