@@ -106,7 +106,7 @@ namespace {
                         "Can not acquire reference of parameterized mutability to immutable object",
                         {
                             "Immutable due to this",
-                            "Attempted to acquire of parameterized mutability here"
+                            "Attempted to acquire a reference of parameterized mutability here"
                         });
                 }
             },
@@ -445,7 +445,7 @@ namespace {
             mir::Expression break_result = recurse(*break_.result);
             Loop_info& loop_info = utl::get(context.current_loop_info);
 
-            if (loop_info.loop_kind == hir::expression::Loop::Kind::plain_loop) {
+            if (loop_info.loop_kind.get() == hir::expression::Loop::Kind::plain_loop) {
                 if (!loop_info.break_return_type.has_value()) {
                     loop_info.break_return_type = break_result.type;
                 }
@@ -608,26 +608,42 @@ namespace {
                 .constrained_type = condition.type,
                 .constrained_note {
                     condition.source_view,
-                    "This is of type {1}, but a condition should be of type {0}"
+                    "This should be of type {0}, not {1}"
                 }
             });
 
             mir::Expression true_branch  = recurse(*conditional.true_branch);
             mir::Expression false_branch = recurse(*conditional.false_branch);
 
-            if (conditional.has_explicit_false_branch) {
-                context.solve(constraint::Type_equality {
-                    .constrainer_type = true_branch.type,
-                    .constrained_type = false_branch.type,
-                    .constrainer_note = constraint::Explanation {
-                        true_branch.type.source_view,
-                        "The true branch is of type {0}"
-                    },
-                    .constrained_note {
-                        false_branch.type.source_view,
-                        "But the false branch is of type {1}"
-                    }
-                });
+            if (conditional.has_explicit_false_branch.get()) {
+                switch (conditional.kind.get()) {
+                case hir::expression::Conditional::Kind::normal_conditional:
+                    context.solve(constraint::Type_equality {
+                        .constrainer_type = true_branch.type,
+                        .constrained_type = false_branch.type,
+                        .constrainer_note = constraint::Explanation {
+                            true_branch.type.source_view,
+                            "The true branch is of type {0}"
+                        },
+                        .constrained_note {
+                            false_branch.type.source_view,
+                            "But the false branch is of type {1}"
+                        }
+                    });
+                    break;
+                case hir::expression::Conditional::Kind::while_loop_body:
+                    context.solve(constraint::Type_equality {
+                        .constrainer_type = context.unit_type(true_branch.source_view),
+                        .constrained_type = true_branch.type,
+                        .constrained_note = constraint::Explanation {
+                            true_branch.type.source_view,
+                            "The body of a while loop must be of the unit type, not {1}"
+                        }
+                    });
+                    break;
+                default:
+                    utl::unreachable();
+                }
             }
             else { // no explicit false branch
                 context.solve(constraint::Type_equality {
@@ -897,7 +913,7 @@ namespace {
             context.solve(constraint::Tuple_field {
                 .tuple_type  = base_expression.type,
                 .field_type  = field_type,
-                .field_index = access.field_index,
+                .field_index = access.field_index.get(),
                 .explanation {
                     access.field_index_source_view,
                     "Invalid indexed field access"
@@ -906,7 +922,7 @@ namespace {
             return {
                 .value = mir::expression::Tuple_field_access {
                     .base_expression         = utl::wrap(std::move(base_expression)),
-                    .field_index             = access.field_index,
+                    .field_index             = access.field_index.get(),
                     .field_index_source_view = access.field_index_source_view
                 },
                 .type           = field_type,

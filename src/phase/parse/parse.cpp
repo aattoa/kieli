@@ -477,6 +477,14 @@ namespace {
         }>(context);
     }
 
+
+    auto validate_module_name_or_path(Parse_context& context, Token const& token) -> compiler::String {
+        compiler::String const module_string = token.as_string();
+        if (module_string.view().find(".."sv) != std::string_view::npos)
+            context.error(token.source_view, { "A module name or path can not contain '..'" });
+        return module_string;
+    }
+
 }
 
 
@@ -489,14 +497,14 @@ auto compiler::parse(Lex_result&& lex_result) -> Parse_result {
 
     if (context.try_consume(Token::Type::module_)) {
         if (Token const* const name = context.try_extract(Token::Type::string))
-            module_name = name->as_string();
+            module_name = validate_module_name_or_path(context, *name);
         else
             context.error_expected("a module name");
     }
 
     while (context.try_consume(Token::Type::import_)) {
         if (Token const* const name = context.try_extract(Token::Type::string))
-            module_imports.push_back(name->as_string());
+            module_imports.push_back(validate_module_name_or_path(context, *name));
         else
             context.error_expected("a module path");
     }

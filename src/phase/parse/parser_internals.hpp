@@ -260,7 +260,7 @@ constexpr auto parse_upper_id = parse_id<Token::Type::upper_name>;
 template <Token::Type id_type>
 auto parse_name(Parse_context& context) -> tl::optional<ast::Name> {
     if (Token const* const token = context.try_extract(id_type)) {
-        return ast::Name{
+        return ast::Name {
             .identifier  = token->as_identifier(),
             .is_upper    = id_type == Token::Type::upper_name,
             .source_view = token->source_view
@@ -288,12 +288,11 @@ constexpr auto extract_upper_name = extract_name<Token::Type::upper_name>;
 inline auto make_source_view(Token const* const first, Token const* const last)
     noexcept -> utl::Source_view
 {
-    assert(first <= last);
     return first->source_view + last->source_view;
 }
 
 
-template <class Node, std::invocable<Parse_context&> auto parse>
+template <class Node, parser auto parse>
 auto parse_node(Parse_context& context) -> tl::optional<Node> {
     Token const* const anchor = context.pointer;
 
@@ -301,14 +300,4 @@ auto parse_node(Parse_context& context) -> tl::optional<Node> {
         return Node { std::move(*node_value), anchor->source_view + context.pointer[-1].source_view };
     else
         return tl::nullopt;
-}
-
-template <class Node, Node::Variant(*extract)(Parse_context&)>
-auto extract_node(Parse_context& context) -> Node {
-    Token const* const     anchor = context.pointer;
-    typename Node::Variant value  = extract(context);
-    return Node {
-        .value       = std::move(value),
-        .source_view = anchor->source_view + context.pointer[-1].source_view
-    };
 }

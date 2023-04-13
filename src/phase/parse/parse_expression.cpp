@@ -287,7 +287,11 @@ namespace {
                     context.error_expected("the false branch", help);
             }
             else if (context.try_consume(Token::Type::elif)) {
-                false_branch = utl::wrap(extract_node<ast::Expression, extract_conditional>(context));
+                Token const* const anchor = context.pointer;
+                false_branch = utl::wrap(ast::Expression {
+                    .value       = extract_conditional(context),
+                    .source_view = make_source_view(anchor - 1, context.pointer - 1)
+                });
             }
 
             if (auto* const literal = std::get_if<ast::expression::Literal<compiler::Boolean>>(&condition.value)) {
@@ -950,8 +954,12 @@ auto parse_expression(Parse_context& context) -> tl::optional<ast::Expression> {
 }
 
 auto parse_block_expression(Parse_context& context) -> tl::optional<ast::Expression> {
-    if (context.try_consume(Token::Type::brace_open))
-        return extract_node<ast::Expression, extract_block_expression>(context);
-    else
-        return tl::nullopt;
+    if (context.try_consume(Token::Type::brace_open)) {
+        Token const* const anchor = context.pointer;
+        return ast::Expression {
+            .value       = extract_block_expression(context),
+            .source_view = make_source_view(anchor - 1, context.pointer - 1)
+        };
+    }
+    return tl::nullopt;
 }

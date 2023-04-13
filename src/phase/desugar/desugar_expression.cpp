@@ -71,6 +71,7 @@ namespace {
                     .condition                 = context.desugar(conditional.condition),
                     .true_branch               = context.desugar(conditional.true_branch),
                     .false_branch              = false_branch,
+                    .kind                      = hir::expression::Conditional::Kind::normal_conditional,
                     .has_explicit_false_branch = conditional.false_branch.has_value()
                 };
             }
@@ -154,7 +155,9 @@ namespace {
                                 .result = context.unit_value(this_expression.source_view)
                             },
                             .source_view = this_expression.source_view
-                        })
+                        }),
+                        .kind                      = hir::expression::Conditional::Kind::while_loop_body,
+                        .has_explicit_false_branch = true
                     },
                     .source_view = loop.body->source_view
                 }),
