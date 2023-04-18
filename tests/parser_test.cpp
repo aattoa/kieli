@@ -1,5 +1,5 @@
 #include "utl/utilities.hpp"
-#include "parser_internals.hpp"
+#include "phase/parse/parser_internals.hpp"
 #include <catch2/catch_test_macros.hpp>
 
 

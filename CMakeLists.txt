@@ -184,10 +184,10 @@ endif ()
 # Configure the testing executable
 set(TEST_NAME tests)
 add_executable(${TEST_NAME}
-	src/utl/utl_test.cpp
-	src/phase/lex/lexer_test.cpp
-	src/phase/parse/parser_test.cpp
-	src/vm/vm_test.cpp
+	tests/utl_test.cpp
+	tests/lexer_test.cpp
+	tests/parser_test.cpp
+	tests/vm_test.cpp
 	${KIELI_UTL_SOURCE_FILES}
 	${KIELI_VM_SOURCE_FILES}
 	${KIELI_REPRESENTATION_SOURCE_FILES}
