@@ -34,14 +34,12 @@ cd ..
 
 This assumes that you have already cloned Kieli and its dependencies as detailed above.
 
-Run the following commands to build kieli:
+Run the following commands to build Kieli:
 
 ```Shell
 cd kieli
-mkdir build
-cd build
-cmake ..
-cmake --build . -j 8
+cmake -S . -B build
+cmake --build build -j 8
 ```
 
 These build steps have been tested with CMake `3.26.3`, GNU Make `4.4.1`, Ninja `1.11.1`, clang `16.0.0`, and GCC `12.2.1`.
