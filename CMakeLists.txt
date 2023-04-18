@@ -1,30 +1,67 @@
 cmake_minimum_required(VERSION 3.24)
 project(kieli)
+
+
+# Set the global C++ standard
 set(CMAKE_CXX_STANDARD 20)
 
+
+# Set global warning settings
 if (MSVC)
     add_compile_options("/W4")
 else ()
-    # Turn up warning levels
     add_compile_options("-Wall" "-Wextra" "-Wpedantic")
-    # Turn off unnecessary warnings
     add_compile_options("-Wno-missing-field-initializers"
                         "-Wno-switch")
 endif ()
 
+
+# Enable sized deallocation functions on Clang
 if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-  # Clang doesn't provide sized deallocation functions by default
   add_compile_options(-fsized-deallocation)
 endif ()
 
-set(SOURCE_FILES
-	src/main.cpp
 
+set(KIELI_CLI_SOURCE_FILES
 	src/cli/cli.hpp
-	src/cli/cli.cpp
-
-	src/compiler/compiler.hpp
-
+	src/cli/cli.cpp)
+set(KIELI_COMPILER_SOURCE_FILES
+	src/compiler/compiler.cpp
+	src/compiler/compiler.hpp)
+set(KIELI_PROJECT_SOURCE_FILES
+	src/project/project.cpp
+	src/project/project.hpp)
+set(KIELI_LANGUAGE_SOURCE_FILES
+	src/language/configuration.hpp)
+set(KIELI_UTL_SOURCE_FILES
+	src/utl/bytestack.hpp
+	src/utl/color.cpp
+	src/utl/color.hpp
+	src/utl/diagnostics.cpp
+	src/utl/diagnostics.hpp
+	src/utl/disable_unnecessary_warnings.hpp
+	src/utl/flatmap.hpp
+	src/utl/noisy.hpp
+	src/utl/pooled_string.hpp
+	src/utl/safe_integer.hpp
+	src/utl/source.cpp
+	src/utl/source.hpp
+	src/utl/timer.hpp
+	src/utl/utilities.hpp
+	src/utl/wrapper.hpp)
+set(KIELI_UTL_READLINE_SOURCE_FILES
+	src/utl/readline.cpp
+	src/utl/readline.hpp)
+set(KIELI_VM_SOURCE_FILES
+	src/vm/bytecode.hpp
+	src/vm/opcode.cpp
+	src/vm/opcode.hpp
+	src/vm/serializing.cpp
+	src/vm/virtual_machine.cpp
+	src/vm/virtual_machine.hpp
+	src/vm/vm_formatting.cpp
+	src/vm/vm_formatting.hpp)
+set(KIELI_REPRESENTATION_SOURCE_FILES
 	src/representation/ast/ast.hpp
 	src/representation/ast/ast_formatting.cpp
 	src/representation/ast/nodes/definition.hpp
@@ -48,9 +85,6 @@ set(SOURCE_FILES
 	src/representation/lir/lir_formatting.cpp
 	src/representation/lir/lir_formatting.hpp
 
-	src/representation/token/token.hpp
-	src/representation/token/token_formatting.cpp
-
 	src/representation/mir/mir.hpp
 	src/representation/mir/mir_formatting.cpp
 	src/representation/mir/nodes/definition.hpp
@@ -58,6 +92,9 @@ set(SOURCE_FILES
 	src/representation/mir/nodes/pattern.hpp
 	src/representation/mir/nodes/type.hpp
 
+	src/representation/token/token.hpp
+	src/representation/token/token_formatting.cpp)
+set(KIELI_PHASE_SOURCE_FILES
 	src/phase/codegen/codegen.cpp
 	src/phase/codegen/codegen.hpp
 
@@ -71,7 +108,6 @@ set(SOURCE_FILES
 
 	src/phase/lex/lex.cpp
 	src/phase/lex/lex.hpp
-	src/phase/lex/lexer_test.cpp
 
 	src/phase/lower/lower.hpp
 	src/phase/lower/lower.cpp
@@ -80,7 +116,6 @@ set(SOURCE_FILES
 	src/phase/parse/parse.hpp
 	src/phase/parse/parser_internals.cpp
 	src/phase/parse/parser_internals.hpp
-	src/phase/parse/parser_test.cpp
 	src/phase/parse/parse_expression.cpp
 	src/phase/parse/parse_pattern.cpp
 	src/phase/parse/parse_type.cpp
@@ -106,60 +141,67 @@ set(SOURCE_FILES
 	src/phase/resolve/scope.cpp
 	src/phase/resolve/template_instantiation.cpp
 	src/phase/resolve/type_resolution.cpp
-	src/phase/resolve/unification.cpp
+	src/phase/resolve/unification.cpp)
 
-	src/project/project.cpp
-	src/project/project.hpp
 
-	src/language/configuration.hpp
+set(DEPENDENCY_INCLUDE_DIRECTORIES
+	PRIVATE dependencies/fmt/include
+	PRIVATE dependencies/range-v3/include
+	PRIVATE dependencies/optional/include
+	PRIVATE dependencies/expected/include)
 
-	src/tests/tests.cpp
-	src/tests/tests.hpp
 
-	src/utl/utl_test.cpp
-	src/utl/bytestack.hpp
-	src/utl/color.cpp
-	src/utl/color.hpp
-	src/utl/diagnostics.cpp
-	src/utl/diagnostics.hpp
-	src/utl/disable_unnecessary_warnings.hpp
-	src/utl/flatmap.hpp
-	src/utl/noisy.hpp
-	src/utl/pooled_string.hpp
-	src/utl/readline.hpp
-	src/utl/readline.cpp
-	src/utl/safe_integer.hpp
-	src/utl/source.cpp
-	src/utl/source.hpp
-	src/utl/timer.hpp
-	src/utl/utilities.hpp
-	src/utl/wrapper.hpp
+# Libraries that require linking
+add_subdirectory(dependencies/Catch2)
+add_subdirectory(dependencies/fmt)
 
-	src/vm/bytecode.hpp
-	src/vm/opcode.cpp
-	src/vm/opcode.hpp
-	src/vm/serializing.cpp
-	src/vm/virtual_machine.cpp
-	src/vm/virtual_machine.hpp
-	src/vm/vm_formatting.cpp
-	src/vm/vm_formatting.hpp
-	src/vm/vm_test.cpp)
 
+# Configure the main executable
 add_executable(${PROJECT_NAME}
-    ${SOURCE_FILES}
-    dependencies/fmt/src/format.cc)
-
+	src/main.cpp
+	${KIELI_CLI_SOURCE_FILES}
+	${KIELI_COMPILER_SOURCE_FILES}
+	${KIELI_PROJECT_SOURCE_FILES}
+	${KIELI_LANGUAGE_SOURCE_FILES}
+	${KIELI_UTL_SOURCE_FILES}
+	${KIELI_UTL_READLINE_SOURCE_FILES}
+	${KIELI_VM_SOURCE_FILES}
+	${KIELI_REPRESENTATION_SOURCE_FILES}
+	${KIELI_PHASE_SOURCE_FILES})
 target_precompile_headers(${PROJECT_NAME}
     PRIVATE src/utl/utilities.hpp)
-
 target_include_directories(${PROJECT_NAME}
     PRIVATE src
-    PRIVATE dependencies/fmt/include
-    PRIVATE dependencies/range-v3/include
-    PRIVATE dependencies/expected/include
-    PRIVATE dependencies/optional/include)
-
+	${DEPENDENCY_INCLUDE_DIRECTORIES})
+target_link_libraries(${PROJECT_NAME}
+	PRIVATE fmt::fmt)
 if (CMAKE_SYSTEM_NAME STREQUAL "Linux")
 	target_link_libraries(${PROJECT_NAME}
 		PRIVATE readline)
 endif ()
+
+
+# Configure the testing executable
+set(TEST_NAME tests)
+add_executable(${TEST_NAME}
+	src/utl/utl_test.cpp
+	src/phase/lex/lexer_test.cpp
+	src/phase/parse/parser_test.cpp
+	src/vm/vm_test.cpp
+	${KIELI_UTL_SOURCE_FILES}
+	${KIELI_VM_SOURCE_FILES}
+	${KIELI_REPRESENTATION_SOURCE_FILES}
+	${KIELI_PHASE_SOURCE_FILES})
+target_include_directories(${TEST_NAME}
+	PRIVATE src
+	${DEPENDENCY_INCLUDE_DIRECTORIES})
+target_link_libraries(${TEST_NAME}
+	PRIVATE fmt::fmt
+    PRIVATE Catch2::Catch2WithMain)
+
+
+# Enable automatic CTest registration
+list(APPEND CMAKE_MODULE_PATH dependencies/Catch2/extras)
+include(CTest)
+include(Catch)
+catch_discover_tests(${TEST_NAME})

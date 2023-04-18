@@ -1,17 +1,11 @@
 #include "utl/utilities.hpp"
-#include "tests/tests.hpp"
-
 #include "parser_internals.hpp"
+#include <catch2/catch_test_macros.hpp>
 
 
 namespace {
-
-    template <auto extractor>
-    auto node_test(
-        std::string               const& node_string,
-        tl::optional<std::string> const& expected_string = tl::nullopt,
-        std::source_location      const  caller = std::source_location::current()) -> void
-    {
+    template<auto extractor>
+    auto make_node(std::string const& node_string) -> std::string {
         Parse_context parse_context {
             compiler::lex(compiler::Lex_arguments {
                 .compilation_info {
@@ -22,178 +16,130 @@ namespace {
                         }
                     },
                 },
-                .source = utl::Source { "[TEST]", std::string { node_string } }
+                .source = utl::Source { "[TEST]", std::string { node_string }}
             }),
             ast::Node_arena {}
         };
-
-        auto const extracted_node = extractor(parse_context);
-        std::string const formatted_node = fmt::format("{}", extracted_node);
-
-        static auto const remove_whitespace = [&](std::string copy) {
-            copy.erase(std::remove_if(begin(copy), end(copy), [](char const c) { return c == ' ' || c == '\t' || c == '\n'; }), end(copy));
-            return copy;
-        };
-
-        tests::assert_eq(
-            remove_whitespace(formatted_node),
-            remove_whitespace(expected_string.value_or(node_string)),
-            caller);
+        return fmt::format("{}", extractor(parse_context));
     }
 
-    auto expression(
-        std::string               const& expression_string,
-        tl::optional<std::string> const& expected_string = tl::nullopt,
-        std::source_location      const  caller = std::source_location::current()) -> void
-    {
-        node_test<extract_expression>(expression_string, expected_string, caller);
-    }
-    auto type(
-        std::string               const& type_string,
-        tl::optional<std::string> const& expected_string = tl::nullopt,
-        std::source_location      const  caller = std::source_location::current()) -> void
-    {
-        node_test<extract_type>(type_string, expected_string, caller);
-    }
-    auto pattern(
-        std::string               const& pattern_string,
-        tl::optional<std::string> const& expected_string = tl::nullopt,
-        std::source_location      const  caller = std::source_location::current()) -> void
-    {
-        node_test<extract_pattern>(pattern_string, expected_string, caller);
-    }
-
-
-    auto run_parser_tests() -> void {
-        using namespace utl::literals;
-        using namespace tests;
-
-        "literal"_test = [] {
-            expression("50");
-            expression("4.2e3", "4200");
-            expression("\"Hello, \"     \"world!\"", "\"Hello, world!\"");
-        };
-
-        "block"_test = [] {
-            expression("{}");
-            expression("{ {} }");
-            expression("{ {}; }");
-            expression("{ {}; {} }");
-        };
-
-        "conditional"_test = [] {
-            expression("if false { true; } else { 'a' }");
-        };
-
-        "conditional_elif"_test = [] {
-            expression(
-                "if true { 50 } elif false { 75 } else { 100 }",
-                "if true { 50 } else if false { 75 } else { 100 }");
-        };
-
-        "for_loop"_test = [] {
-            expression("outer for x in \"hello\" {}");
-        };
-
-        "operator_precedence"_test = [] {
-            expression(
-                "1 * 2 +$+ 3 + 4",
-                "((1*2) +$+ (3+4))");
-        };
-
-        "duplicate_initializer"_throwing_test = [] {
-            expression("S { a = ???, a = \"hello\" }");
-        };
-
-        "type_cast"_test = [] {
-            expression(
-                "'x' as U32 as Bool as Float + 3.14",
-                "(((('x' as U32) as Bool) as Float) + 3.14)");
-        };
-
-        "member_access"_test = [] {
-            expression("().1.2.[???].x.50.y.[0]");
-        };
-
-        "method"_test = [] {
-            expression("x.y.f()", "x.y.f()");
-        };
-
-        "let_binding"_test = [] {
-            expression("let _: std::Vector[Long]::Element = 5");
-        };
-
-        "implicit_tuple_let_binding"_test = [] {
-            expression(
-                "let a, mut b: (I64, Float) = (10, 20.5)",
-                "let (a, mut b): (I64, Float) = (10, 20.5)");
-        };
-
-        "caseless_match"_throwing_test = [] {
-            expression("match 0 {}");
-        };
-
-        "match"_test = [] {
-            expression("match x { 0 -> \"zero\" _ -> \"other\" }");
-        };
-
-        "implicit_tuple_case_match"_test = [] {
-            expression(
-                "match ??? { _, mut b, (c, _), [_] -> 1 }",
-                "match ??? { (_, mut b, (c, _), [_]) -> 1 }");
-        };
-
-        "scope_access_1"_throwing_test = [] {
-            expression("::");
-        };
-
-        "scope_access_2"_throwing_test = [] {
-            expression("test::");
-        };
-
-        "scope_access_3"_test = [] {
-            expression("::test");
-        };
-
-        "template_expression"_test = [] {
-            expression("std::Vector[Int, std::Allocator[Int]]::new()");
-            expression("hello[]::nested[]::function[T]()");
-        };
-
-
-        "tuple_type"_test = [] {
-            type("()");
-            type("(())", "()");
-            type("(typeof(5), T)");
-        };
-
-        "template_type"_test = [] {
-            type("Vec[Opt[typeof(sizeof(::Vec[Int]))]]");
-        };
-
-
-
-        "tuple_pattern"_test = [] {
-            pattern("()");
-            pattern("(())", "()");
-            pattern("(x, _)");
-        };
-
-        "enum_constructor_pattern"_test = [] {
-            pattern("Maybe::just(x)");
-        };
-
-        "enum_constructor_pattern"_throwing_test = [] {
-            pattern("Maybe::Just");
-        };
-
-        "as_pattern"_test = [] {
-            pattern("(_, _) as mut x");
-        };
-
-    }
-
+    constexpr auto expression = make_node<extract_expression>;
+    constexpr auto pattern = make_node<extract_pattern>;
+    constexpr auto type = make_node<extract_type>;
 }
 
 
-REGISTER_TEST(run_parser_tests);
+#define TEST(name) TEST_CASE(name, "[parse]")
+#define REQUIRE_SIMPLE_PARSE(kind, string) REQUIRE(kind(string) == string)
+#define REQUIRE_PARSE_FAILURE(...) REQUIRE_THROWS_AS((void)(__VA_ARGS__), utl::diagnostics::Error)
+
+
+TEST("literal") {
+    REQUIRE(expression("50") == "50");
+    REQUIRE(expression("4.2e3") == "4200");
+    REQUIRE(expression("\"Hello, \"     \"world!\"") == "\"Hello, world!\"");
+}
+
+TEST("block expression") {
+    REQUIRE_SIMPLE_PARSE(expression, "{ }");
+    REQUIRE_SIMPLE_PARSE(expression, "{ { } }");
+    REQUIRE_SIMPLE_PARSE(expression, "{ { }; }");
+    REQUIRE_SIMPLE_PARSE(expression, "{ { }; { } }");
+}
+
+TEST("conditional") {
+    REQUIRE_SIMPLE_PARSE(expression, "if false { true; } else { 'a' }");
+}
+
+TEST("elif shorthand syntax") {
+    REQUIRE(expression("if true { 50 } elif false { 75 } else { 100 }")
+        == "if true { 50 } else if false { 75 } else { 100 }");
+}
+
+TEST("for loop") {
+    REQUIRE_SIMPLE_PARSE(expression, "outer for x in \"hello\" { }");
+}
+
+TEST("operator precedence") {
+    REQUIRE(expression("1 * 2 +$+ 3 + 4") == "((1 * 2) +$+ (3 + 4))");
+}
+
+TEST("duplicate initializer") {
+    REQUIRE_PARSE_FAILURE(expression("S { a = ???, a = \"hello\" }"));
+}
+
+TEST("type cast") {
+    REQUIRE(expression("'x' as U32 as Bool as Float + 3.14")
+        == "(((('x' as U32) as Bool) as Float) + 3.14)");
+}
+
+TEST("member access") {
+    REQUIRE_SIMPLE_PARSE(expression, "().1.2.[???].x.50.y.[0]");
+}
+
+TEST("method") {
+    REQUIRE_SIMPLE_PARSE(expression, "x.y.f()");
+}
+
+TEST("let binding") {
+    REQUIRE_SIMPLE_PARSE(expression, "let _: std::Vector[Long]::Element = 5");
+}
+
+TEST("implicit tuple let binding") {
+    REQUIRE(expression("let a, mut b: (I64, Float) = (10, 20.5)")
+        == "let (a, mut b): (I64, Float) = (10, 20.5)");
+}
+
+TEST("caseless match") {
+    REQUIRE_PARSE_FAILURE(expression("match 0 {}"));
+}
+
+TEST("match") {
+    REQUIRE_SIMPLE_PARSE(expression, "match x { 0 -> \"zero\" _ -> \"other\" }");
+}
+
+TEST("implicit tuple case") {
+    REQUIRE(expression("match ??? { _, mut b, (c, _), [_] -> 1 }")
+        == "match ??? { (_, mut b, (c, _), [_]) -> 1 }");
+}
+
+TEST("missing qualified name") {
+    REQUIRE_PARSE_FAILURE(expression("::"));
+    REQUIRE_PARSE_FAILURE(expression("test::"));
+}
+
+TEST("namespace access") {
+    REQUIRE_SIMPLE_PARSE(expression, "::test");
+}
+
+TEST("template expression") {
+    REQUIRE_SIMPLE_PARSE(expression, "std::Vector[Int, std::Allocator[Int]]::new()");
+    REQUIRE_SIMPLE_PARSE(expression, "hello[]::nested[]::function[T]()");
+}
+
+TEST("tuple type") {
+    REQUIRE_SIMPLE_PARSE(type, "()");
+    REQUIRE_SIMPLE_PARSE(type, "(typeof(5), T)");
+    REQUIRE(type("((()))") == "()");
+    REQUIRE(type("(())") == "()");
+}
+
+TEST("type template instantiation") {
+    REQUIRE_SIMPLE_PARSE(type, "Vec[Opt[typeof(sizeof(::Vec[Int]))]]");
+}
+
+TEST("tuple pattern") {
+    REQUIRE_SIMPLE_PARSE(pattern, "()");
+    REQUIRE_SIMPLE_PARSE(pattern, "(x, _)");
+    REQUIRE(pattern("((()))") == "()");
+    REQUIRE(pattern("(())") == "()");
+}
+
+TEST("enum constructor pattern") {
+    REQUIRE_SIMPLE_PARSE(pattern, "Maybe::just(x)");
+    REQUIRE_PARSE_FAILURE(pattern("Maybe::Just"));
+}
+
+TEST("as pattern") {
+    REQUIRE_SIMPLE_PARSE(pattern, "(_, _) as mut x");
+}

@@ -5,7 +5,6 @@
 
 #include "language/configuration.hpp"
 #include "project/project.hpp"
-#include "tests/tests.hpp"
 #include "cli/cli.hpp"
 
 #include "phase/lex/lex.hpp"
@@ -132,8 +131,7 @@ auto main(int argc, char const** argv) -> int try {
         ("machine"                                                                     )
         ("debug"           , cli::string("phase to debug")                             )
         ("nocolor"         ,                               "Disable colored output"    )
-        ("time"            ,                               "Print the execution time"  )
-        ("test"            ,                               "Run all tests"             );
+        ("time"            ,                               "Print the execution time"  );
 
     cli::Options options = utl::expect(cli::parse_command_line(argc, argv, description));
 
@@ -159,10 +157,6 @@ auto main(int argc, char const** argv) -> int try {
 
     if (std::string_view const* const name = options["new"]) {
         project::initialize(*name);
-    }
-
-    if (options["test"]) {
-        tests::run_all_tests();
     }
 
     if (options["machine"]) {
@@ -194,9 +188,10 @@ auto main(int argc, char const** argv) -> int try {
     if (std::string_view const* const phase = options["debug"]) {
         using namespace compiler;
 
+        auto source_directory_path = std::filesystem::current_path().parent_path() / "sample-project" / "src";
+
         auto const do_resolve = [&] {
-            auto source_path = std::filesystem::current_path().parent_path() / "sample-project" / "src" / "types.kieli";
-            return resolve(desugar(parse(lex({ .source = utl::Source::read(std::move(source_path)) }))));
+            return resolve(desugar(parse(lex({ .source = utl::Source::read(source_directory_path / "types.kieli") }))));
         };
 
         if (*phase == "low")
