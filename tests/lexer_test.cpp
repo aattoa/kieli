@@ -1,5 +1,5 @@
 #include "utl/utilities.hpp"
-#include "lex.hpp"
+#include "phase/lex/lex.hpp"
 #include <catch2/catch_test_macros.hpp>
 
 
