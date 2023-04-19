@@ -56,7 +56,7 @@ namespace reification {
         [[nodiscard]]
         auto wrap() noexcept {
             return [this]<class Arg>(Arg&& arg) -> utl::Wrapper<Arg>
-                requires requires { wrap(std::move(arg)); }
+                requires requires { std::declval<Context&>().wrap(std::move(arg)); }
                      && (!std::is_reference_v<Arg>)
             {
                 return wrap(std::move(arg));
