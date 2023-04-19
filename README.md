@@ -30,9 +30,11 @@ git clone https://github.com/catchorg/Catch2.git
 cd ..
 ```
 
-# Building Kieli on Linux
+# Building Kieli
 
 This assumes that you have already cloned Kieli and its dependencies as detailed above.
+
+Requirements: CMake and any C++20 compliant C++ toolchain.
 
 Run the following commands to build Kieli:
 
@@ -42,10 +44,6 @@ cmake -S . -B build
 cmake --build build -j 8
 ```
 
-These build steps have been tested with CMake `3.26.3`, GNU Make `4.4.1`, Ninja `1.11.1`, clang `16.0.0`, and GCC `12.2.1`.
+On Linux, these build steps have been tested with CMake `3.26.3`, GNU Make `4.4.1`, Ninja `1.11.1`, clang `16.0.0`, and GCC `12.2.1`.
 
-# Building Kieli on Windows
-
-In principle, similar build steps should work on Windows, but this has not been tested.
-
-Alternatively, you may be able to build Kieli on Windows as if you were on Linux by using the [Windows Subsystem for Linux](https://learn.microsoft.com/en-us/windows/wsl/install) and following the Linux build steps.
+On Windows, these build steps have been tested with Visual Studio 2022 `17.5.4`.
