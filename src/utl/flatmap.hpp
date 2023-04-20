@@ -104,8 +104,8 @@ namespace utl {
         auto operator==(Flatmap const&) const noexcept -> bool = default;
     };
 
-    template <class Key, class Value, template <class...> class Container>
-    Flatmap(Container<Pair<Key, Value>>&&)
-        -> Flatmap<Key, Value, std::equal_to<void>, Container<Pair<Key, Value>>>;
+    template <class Key, class Value>
+    Flatmap(std::vector<Pair<Key, Value>>)
+        -> Flatmap<Key, Value, std::equal_to<void>, std::vector<Pair<Key, Value>>>;
 
 }

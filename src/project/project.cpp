@@ -133,7 +133,7 @@ auto project::read_configuration() -> Configuration {
             configuration.add_or_assign(
                 std::string(key),
                 value.empty()
-                    ? tl::optional(std::string(value))
+                    ? tl::make_optional(std::string(value))
                     : tl::nullopt);
         }
 

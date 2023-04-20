@@ -722,18 +722,18 @@ struct std::hash<utl::Pair<Fst, Snd>> {
 };
 
 
-#define DECLARE_FORMATTER_FOR_TEMPLATE(...)                        \
-struct fmt::formatter<__VA_ARGS__> : utl::formatting::Formatter_base {    \
-    [[nodiscard]] auto format(__VA_ARGS__ const&, format_context&) \
-        -> format_context::iterator;                               \
+#define DECLARE_FORMATTER_FOR_TEMPLATE(...)                                \
+struct fmt::formatter<__VA_ARGS__> : utl::formatting::Formatter_base {     \
+    [[nodiscard]] auto format(__VA_ARGS__ const&, fmt::format_context&) \
+        -> fmt::format_context::iterator;                                  \
 }
 
 #define DECLARE_FORMATTER_FOR(...) \
 template <> DECLARE_FORMATTER_FOR_TEMPLATE(__VA_ARGS__)
 
 #define DEFINE_FORMATTER_FOR(...) \
-auto fmt::formatter<__VA_ARGS__>::format(__VA_ARGS__ const& value, format_context& context) \
-    -> format_context::iterator
+auto fmt::formatter<__VA_ARGS__>::format(__VA_ARGS__ const& value, fmt::format_context& context) \
+    -> fmt::format_context::iterator
 
 #define DIRECTLY_DEFINE_FORMATTER_FOR(...) \
 DECLARE_FORMATTER_FOR(__VA_ARGS__);        \
@@ -755,12 +755,18 @@ DECLARE_FORMATTER_FOR_TEMPLATE(utl::formatting::Integer_with_ordinal_indicator_f
 
 
 template <class T>
-struct fmt::formatter<tl::optional<T>> : formatter<T> {
+struct fmt::formatter<tl::optional<T>> : fmt::formatter<T> {
     auto format(tl::optional<T> const& optional, auto& context) {
+<<<<<<< HEAD
         if (optional)
             return formatter<T>::format(*optional, context);
         else
             return context.out();
+=======
+        return optional
+            ? fmt::formatter<T>::format(*optional, context)
+            : context.out();
+>>>>>>> 5c89d6fec115daefad3d8b6c6da80285c1bd3769
     }
 };
 
@@ -768,32 +774,37 @@ struct fmt::formatter<tl::optional<T>> : formatter<T> {
 template <class... Ts>
 DEFINE_FORMATTER_FOR(std::variant<Ts...>) {
     return std::visit([&](auto const& alternative) {
-        return format_to(context.out(), "{}", alternative);
+        return fmt::format_to(context.out(), "{}", alternative);
     }, value);
 }
 
 template <class T, utl::Usize extent>
 DEFINE_FORMATTER_FOR(std::span<T, extent>) {
-    return format_to(context.out(), "{}", utl::formatting::delimited_range(value, ", "));
+    return fmt::format_to(context.out(), "{}", utl::formatting::delimited_range(value, ", "));
 }
 
 template <class T>
 DEFINE_FORMATTER_FOR(std::vector<T>) {
-    return format_to(context.out(), "{}", std::span { value });
+    return fmt::format_to(context.out(), "{}", std::span { value });
 }
 
 template <class F, class S>
 DEFINE_FORMATTER_FOR(utl::Pair<F, S>) {
-    return format_to(context.out(), "({}, {})", value.first, value.second);
+    return fmt::format_to(context.out(), "({}, {})", value.first, value.second);
 }
 
 template <class Range>
 DEFINE_FORMATTER_FOR(utl::formatting::Range_formatter_closure<Range>) {
     if (value.range->empty())
         return context.out();
+<<<<<<< HEAD
     auto out = format_to(context.out(), "{}", value.range->front());
+=======
+
+    auto out = fmt::format_to(context.out(), "{}", value.range->front());
+>>>>>>> 5c89d6fec115daefad3d8b6c6da80285c1bd3769
     for (auto& element : *value.range | ranges::views::drop(1))
-        out = format_to(out, "{}{}", value.delimiter, element);
+        out = fmt::format_to(out, "{}{}", value.delimiter, element);
     return out;
 }
 
@@ -814,20 +825,20 @@ DEFINE_FORMATTER_FOR(utl::formatting::Integer_with_ordinal_indicator_formatter_c
             n = 0;
     }
 
-    return format_to(context.out(), "{}{}", value.integer, suffixes.at(n));
+    return fmt::format_to(context.out(), "{}{}", value.integer, suffixes.at(n));
 }
 
 
 template <class T>
-struct fmt::formatter<utl::Strong<T>> : formatter<T> {
+struct fmt::formatter<utl::Strong<T>> : fmt::formatter<T> {
     auto format(utl::Strong<T> const& strong, auto& context) {
-        return formatter<T>::format(strong.get(), context);
+        return fmt::formatter<T>::format(strong.get(), context);
     }
 };
 
 template <>
 struct fmt::formatter<std::monostate> : utl::formatting::Formatter_base {
     auto format(std::monostate, auto& context) {
-        return format_to(context.out(), "std::monostate");
+        return fmt::format_to(context.out(), "std::monostate");
     }
 };
