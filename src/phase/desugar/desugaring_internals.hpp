@@ -18,8 +18,8 @@ public:
     compiler::Identifier                           self_variable_identifier = compilation_info.get()->identifier_pool.make("self");
 
     explicit Desugaring_context(
-        hir::Node_arena           && node_arena,
-        compiler::Compilation_info&& compilation_info) noexcept
+        compiler::Compilation_info&& compilation_info,
+        hir::Node_arena           && node_arena) noexcept
         : compilation_info { std::move(compilation_info) }
         , node_arena       { std::move(node_arena) } {}
 

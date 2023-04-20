@@ -12,7 +12,7 @@ namespace compiler {
 
     struct [[nodiscard]] Shared_compilation_info {
         utl::diagnostics::Builder       diagnostics;
-        utl::Wrapper_arena<utl::Source> source_arena { /*page_size=*/ 8 };
+        utl::Wrapper_arena<utl::Source> source_arena = utl::Wrapper_arena<utl::Source>::with_page_size(8);
         String::Pool                    string_literal_pool;
         Identifier::Pool                identifier_pool;
     };

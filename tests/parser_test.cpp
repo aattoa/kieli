@@ -10,7 +10,7 @@ namespace {
         utl::wrapper auto const test_source = test_info.get()->source_arena.wrap("[test]", std::move(node_string));
         Parse_context parse_context {
             compiler::lex(compiler::Lex_arguments { .compilation_info = std::move(test_info), .source = test_source }),
-            ast::Node_arena {}
+            ast::Node_arena::with_default_page_size()
         };
         return fmt::format("{}", extractor(parse_context));
     }

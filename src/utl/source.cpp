@@ -33,7 +33,7 @@ auto utl::Source_position::advance_with(char const c) noexcept -> void {
 }
 
 auto utl::Source_view::dummy() -> Source_view {
-    static Wrapper_arena<Source> dummy_source_arena { /*page_size=*/ 1 };
+    static auto dummy_source_arena = Wrapper_arena<Source>::with_page_size(1);
     static wrapper auto const dummy_source = dummy_source_arena.wrap("[dummy]", "");
     return Source_view { dummy_source, dummy_source->string(), {}, {} };
 }

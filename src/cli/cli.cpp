@@ -89,8 +89,8 @@ namespace {
                 erroneous_view = { view_begin, pointer->size() };
             }
 
-            utl::Wrapper_arena<utl::Source> fake_source_arena { /*page_size=*/ 1 };
-            utl::wrapper auto const fake_source = fake_source_arena.wrap("[command line]", std::move(command_line_string));
+            auto fake_source_arena = utl::Wrapper_arena<utl::Source>::with_page_size(1);
+            auto const fake_source = fake_source_arena.wrap("[command line]", std::move(command_line_string));
 
             utl::diagnostics::Builder builder;
             builder.emit_simple_error(

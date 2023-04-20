@@ -36,8 +36,8 @@ namespace reification {
         Frame_offset                                        current_frame_offset;
 
         explicit Context(
-            cir::Node_arena           && node_arena,
-            compiler::Compilation_info&& compilation_info) noexcept
+            compiler::Compilation_info&& compilation_info,
+            cir::Node_arena           && node_arena) noexcept
             : compilation_info { std::move(compilation_info) }
             , node_arena       { std::move(node_arena) }
             , constants        { this->node_arena } {}

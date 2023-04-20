@@ -489,7 +489,7 @@ namespace {
 
 
 auto compiler::parse(Lex_result&& lex_result) -> Parse_result {
-    Parse_context context { std::move(lex_result), ast::Node_arena {} };
+    Parse_context context { std::move(lex_result), ast::Node_arena::with_default_page_size() };
 
     std::vector<compiler::String>  module_imports;
     tl::optional<compiler::String> module_name;

@@ -24,7 +24,7 @@ namespace {
 
 
 auto compiler::reify(Resolve_result&& resolve_result) -> Reify_result {
-    reification::Context context { cir::Node_arena {}, std::move(resolve_result.compilation_info) };
+    reification::Context context { std::move(resolve_result.compilation_info), cir::Node_arena::with_default_page_size() };
 
     std::vector<cir::Function> functions;
     functions.reserve(resolve_result.module.functions.size());
