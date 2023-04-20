@@ -162,7 +162,7 @@ auto Desugaring_context::error(
 
 
 auto compiler::desugar(Parse_result&& parse_result) -> Desugar_result {
-    Desugaring_context context { hir::Node_arena {}, std::move(parse_result.compilation_info) };
+    Desugaring_context context { std::move(parse_result.compilation_info), hir::Node_arena::with_default_page_size() };
     auto desugared_definitions = utl::map(context.desugar(), parse_result.module.definitions);
 
     return Desugar_result {

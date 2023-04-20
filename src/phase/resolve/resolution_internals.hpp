@@ -169,9 +169,9 @@ namespace resolution {
         compiler::Identifier self_variable_id = compilation_info.get()->identifier_pool.make("self");
 
         explicit Context(
+            compiler::Compilation_info&& compilation_info,
             mir::Node_arena           && node_arena,
-            mir::Namespace_arena      && namespace_arena,
-            compiler::Compilation_info&& compilation_info) noexcept
+            mir::Namespace_arena      && namespace_arena) noexcept
             : compilation_info { std::move(compilation_info) }
             , node_arena       { std::move(node_arena) }
             , namespace_arena  { std::move(namespace_arena) }

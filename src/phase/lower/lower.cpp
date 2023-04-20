@@ -134,7 +134,7 @@ namespace {
 
 
 auto compiler::lower(Reify_result&& reify_result) -> Lower_result {
-    lir::Node_arena node_arena;
+    auto node_arena = lir::Node_arena::with_default_page_size();
     std::vector<lir::Function> functions;
 
     for (cir::Function& function : reify_result.functions) {

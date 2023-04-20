@@ -76,7 +76,7 @@ namespace {
     }>;
 
     constexpr auto expression_parser_repl = generic_repl<[](compiler::Lex_result&& lex_result) {
-        Parse_context context { std::move(lex_result), ast::Node_arena {} };
+        Parse_context context { std::move(lex_result), ast::Node_arena::with_default_page_size() };
 
         if (auto result = parse_expression(context)) {
             fmt::println("Result: {}", result);

@@ -234,9 +234,9 @@ namespace {
 
 auto compiler::resolve(Desugar_result&& desugar_result) -> Resolve_result {
     Context context {
-        mir::Node_arena {},
-        mir::Namespace_arena {},
-        std::move(desugar_result.compilation_info)
+        std::move(desugar_result.compilation_info),
+        mir::Node_arena::with_default_page_size(),
+        mir::Namespace_arena::with_default_page_size()
     };
 
     register_namespace(context, desugar_result.module.definitions, context.global_namespace);

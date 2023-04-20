@@ -67,10 +67,15 @@ namespace utl {
         std::vector<Page> m_pages;
         Usize             m_page_size;
         Usize             m_size = 0;
-    public:
-        explicit Wrapper_arena(Usize const page_size = 1024) noexcept
+        explicit Wrapper_arena(Usize const page_size) noexcept
             : m_page_size { page_size } {}
-
+    public:
+        static auto with_page_size(Usize const page_size) -> Wrapper_arena<T> {
+            return Wrapper_arena<T> { page_size };
+        }
+        static auto with_default_page_size() -> Wrapper_arena<T> {
+            return with_page_size(1024);
+        }
         template <class... Args>
         auto wrap(Args&&... args) -> Wrapper<T> {
             auto const it = ranges::find_if_not(m_pages, &Page::is_at_capacity);
@@ -90,10 +95,15 @@ namespace utl {
     template <class... Ts>
     class [[nodiscard]] Wrapper_arena : Wrapper_arena<Ts>... {
     public:
-        Wrapper_arena() = default;
+        explicit Wrapper_arena(Wrapper_arena<Ts>&&... arenas) noexcept
+            : Wrapper_arena<Ts> { std::move(arenas) }... {}
 
-        explicit Wrapper_arena(Usize const page_size) noexcept
-            : Wrapper_arena<Ts> { page_size }... {}
+        static auto with_page_size(Usize const page_size) -> Wrapper_arena {
+            return Wrapper_arena { Wrapper_arena<Ts>::with_page_size(page_size)... };
+        }
+        static auto with_default_page_size() -> Wrapper_arena {
+            return Wrapper_arena { Wrapper_arena<Ts>::with_default_page_size()... };
+        }
 
         template <one_of<Ts...> T, class... Args>
         auto wrap(Args&&... args) -> Wrapper<T> {
