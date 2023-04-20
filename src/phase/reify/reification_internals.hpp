@@ -32,18 +32,15 @@ namespace reification {
         compiler::Compilation_info                          compilation_info;
         cir::Node_arena                                     node_arena;
         Reification_constants                               constants;
-        utl::Source                                         source;
         utl::Flatmap<mir::Local_variable_tag, Frame_offset> variable_frame_offsets;
         Frame_offset                                        current_frame_offset;
 
         explicit Context(
-            utl::Source               && source,
             cir::Node_arena           && node_arena,
             compiler::Compilation_info&& compilation_info) noexcept
             : compilation_info { std::move(compilation_info) }
             , node_arena       { std::move(node_arena) }
-            , constants        { this->node_arena }
-            , source           { std::move(source) } {}
+            , constants        { this->node_arena } {}
 
 
         template <class Node>

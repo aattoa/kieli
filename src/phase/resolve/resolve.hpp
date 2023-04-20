@@ -10,11 +10,10 @@
 namespace compiler {
 
     struct Resolve_result {
-        compiler::Compilation_info compilation_info;
-        utl::Source                source;
-        mir::Node_arena            node_arena;
-        mir::Namespace_arena       namespace_arena;
-        mir::Module                module;
+        Compilation_info     compilation_info;
+        mir::Node_arena      node_arena;
+        mir::Namespace_arena namespace_arena;
+        mir::Module          module;
     };
 
     auto resolve(Desugar_result&&) -> Resolve_result;

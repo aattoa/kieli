@@ -41,16 +41,13 @@ namespace {
 
             if (!duplicates.empty()) {
                 duplicates.insert(duplicates.begin(), it->first.source_view);
-
                 auto const make_section = [&](utl::Source_view const source_view) {
                     return utl::diagnostics::Text_section {
                         .source_view = source_view,
-                        .source      = context.source,
                         .note_color  = utl::diagnostics::error_color,
                     };
                 };
-
-                context.compilation_info.diagnostics.emit_error({
+                context.compilation_info.get()->diagnostics.emit_error({
                     .sections = utl::map(make_section, duplicates),
                     .message  = "There are multiple initializers for the same field"
                 });
@@ -152,16 +149,14 @@ namespace {
 
             if (auto const* const literal = std::get_if<ast::expression::Literal<compiler::Boolean>>(&condition.value)) {
                 if (literal->value.value) {
-                    context.compilation_info.diagnostics.emit_simple_note({
+                    context.compilation_info.get()->diagnostics.emit_simple_note({
                         .erroneous_view = condition.source_view,
-                        .source         = context.source,
                         .message        = "Consider using 'loop' instead of 'while true'",
                     });
                 }
                 else {
-                    context.compilation_info.diagnostics.emit_simple_warning({
+                    context.compilation_info.get()->diagnostics.emit_simple_warning({
                         .erroneous_view = condition.source_view,
-                        .source         = context.source,
                         .message        = "Loop will never be run"
                     });
                 }
@@ -303,18 +298,16 @@ namespace {
                 std::vector<utl::diagnostics::Text_section> sections;
                 sections.push_back({
                     .source_view = condition.source_view,
-                    .source      = context.source,
                     .note        = selected_if(literal->value.value)
                 });
                 if (false_branch.has_value()) {
                     sections.push_back({
                         .source_view = else_token->source_view,
-                        .source      = context.source,
                         .note        = selected_if(!literal->value.value)
                     });
                 }
 
-                context.compilation_info.diagnostics.emit_warning({
+                context.compilation_info.get()->diagnostics.emit_warning({
                     .sections = std::move(sections),
                     .message  = "Boolean literal condition"
                 });

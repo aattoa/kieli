@@ -11,9 +11,9 @@ namespace {
 
     // Collect top-level name information
     auto register_namespace(
-        Context                        & context,
+        Context&                         context,
         std::span<hir::Definition> const definitions,
-        utl::Wrapper<Namespace>          space) -> void
+        utl::Wrapper<Namespace>    const space) -> void
     {
         space->definitions_in_order.reserve(definitions.size());
 
@@ -161,9 +161,7 @@ namespace {
     // Resolves all definitions in order, but only visits function bodies if their return types have been omitted
     auto resolve_signatures(Context& context, utl::Wrapper<Namespace> space) -> void {
         for (Definition_variant& definition : space->definitions_in_order) {
-            utl::match(
-                definition,
-
+            utl::match(definition,
                 [&](utl::Wrapper<Function_info> info) {
                     (void)context.resolve_function_signature(*info);
                 },
@@ -236,7 +234,6 @@ namespace {
 
 auto compiler::resolve(Desugar_result&& desugar_result) -> Resolve_result {
     Context context {
-        std::move(desugar_result.source),
         mir::Node_arena {},
         mir::Namespace_arena {},
         std::move(desugar_result.compilation_info)
@@ -249,7 +246,6 @@ auto compiler::resolve(Desugar_result&& desugar_result) -> Resolve_result {
 
     return Resolve_result {
         .compilation_info = std::move(context.compilation_info),
-        .source           = std::move(context.source),
         .node_arena       = std::move(context.node_arena),
         .namespace_arena  = std::move(context.namespace_arena),
         .module           = std::move(context.output_module),

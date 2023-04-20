@@ -18,10 +18,9 @@ namespace utl::diagnostics {
 
 
     struct Text_section {
-        Source_view                          source_view;
-        std::reference_wrapper<Source const> source;
-        std::string_view                     note = "here";
-        tl::optional<Color>                  note_color;
+        Source_view         source_view;
+        std::string_view    note = "here";
+        tl::optional<Color> note_color;
     };
 
 
@@ -36,7 +35,6 @@ namespace utl::diagnostics {
         };
         struct [[nodiscard]] Simple_emit_arguments {
             utl::Source_view               erroneous_view;
-            Source const&                  source;
             std::string_view               message;
             fmt::format_args               message_arguments;
             tl::optional<std::string_view> help_note;
@@ -52,8 +50,8 @@ namespace utl::diagnostics {
         bool          has_emitted_error;
     public:
         Builder() noexcept;
-        explicit Builder(Configuration) noexcept;
         Builder(Builder&&) noexcept;
+        explicit Builder(Configuration) noexcept;
 
         ~Builder();
 
@@ -77,7 +75,7 @@ namespace utl::diagnostics {
 
 
     // Thrown when an irrecoverable diagnostic error is emitted
-    struct Error : Exception {
+    struct [[nodiscard]] Error : Exception {
         using Exception::Exception;
         using Exception::operator=;
     };
@@ -89,7 +87,7 @@ namespace utl::diagnostics {
         tl::optional<std::string_view> help_note;
         fmt::format_args               help_note_arguments;
 
-        auto add_source_info(utl::Source const&, utl::Source_view) const
+        auto add_source_view(utl::Source_view) const
             -> Builder::Simple_emit_arguments;
     };
 

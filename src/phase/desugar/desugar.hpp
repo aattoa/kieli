@@ -12,7 +12,6 @@ namespace compiler {
     struct Desugar_result {
         Compilation_info  compilation_info;
         hir::Node_arena   node_arena;
-        utl::Source       source;
         hir::Module       module;
     };
 

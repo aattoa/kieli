@@ -5,19 +5,11 @@
 
 namespace {
     template<auto extractor>
-    auto make_node(std::string const& node_string) -> std::string {
+    auto make_node(std::string&& node_string) -> std::string {
+        compiler::Compilation_info test_info = compiler::mock_compilation_info();
+        utl::wrapper auto const test_source = test_info.get()->source_arena.wrap("[test]", std::move(node_string));
         Parse_context parse_context {
-            compiler::lex(compiler::Lex_arguments {
-                .compilation_info {
-                    .diagnostics = utl::diagnostics::Builder {
-                        utl::diagnostics::Builder::Configuration {
-                            .note_level    = utl::diagnostics::Level::suppress,
-                            .warning_level = utl::diagnostics::Level::suppress,
-                        }
-                    },
-                },
-                .source = utl::Source { "[TEST]", std::string { node_string }}
-            }),
+            compiler::lex(compiler::Lex_arguments { .compilation_info = std::move(test_info), .source = test_source }),
             ast::Node_arena {}
         };
         return fmt::format("{}", extractor(parse_context));

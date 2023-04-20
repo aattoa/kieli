@@ -10,7 +10,6 @@ namespace compiler {
 
     struct Reify_result {
         Compilation_info           compilation_info;
-        utl::Source                source;
         cir::Node_arena            node_arena;
         std::vector<cir::Function> functions;
     };

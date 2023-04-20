@@ -21,6 +21,8 @@
 #include "vm/virtual_machine.hpp"
 #include "vm/vm_formatting.hpp"
 
+#include "compiler/compiler.hpp"
+
 
 namespace {
 
@@ -56,7 +58,9 @@ namespace {
                 break;
 
             try {
-                f(compiler::lex({ .source = utl::Source { "[repl]", std::move(string) } }));
+                compiler::Compilation_info repl_info = compiler::mock_compilation_info();
+                utl::wrapper auto const repl_source = repl_info.get()->source_arena.wrap("[repl]", std::move(string));
+                f(compiler::lex({ .compilation_info = std::move(repl_info), .source = repl_source }));
             }
             catch (utl::diagnostics::Error const& error) {
                 std::cerr << error.what() << "\n\n";
@@ -191,7 +195,9 @@ auto main(int argc, char const** argv) -> int try {
         auto source_directory_path = std::filesystem::current_path().parent_path() / "sample-project" / "src";
 
         auto const do_resolve = [&] {
-            return resolve(desugar(parse(lex({ .source = utl::Source::read(source_directory_path / "types.kieli") }))));
+            compiler::Compilation_info repl_info = compiler::mock_compilation_info();
+            utl::wrapper auto const repl_source = repl_info.get()->source_arena.wrap(utl::Source::read(source_directory_path / "types.kieli"));
+            return resolve(desugar(parse(lex({ .compilation_info = std::move(repl_info), .source = repl_source }))));
         };
 
         if (*phase == "low")
@@ -200,22 +206,24 @@ auto main(int argc, char const** argv) -> int try {
             (void)reify(do_resolve());
         else if (*phase == "res")
             print_mir_module(do_resolve().module);
+        else if (*phase == "comp")
+            (void)compiler::compile({ .source_directory_path = std::move(source_directory_path), .main_file_name = "main.kieli" });
         else
-            throw utl::exception("The phase must be one of low|rei|res, not '{}'", *phase);
+            throw utl::exception("The phase must be one of low|rei|res|comp, not '{}'", *phase);
 
         fmt::println("Finished debugging phase {}", *phase);
     }
 
     if (std::string_view const* const name = options["repl"]) {
         utl::Flatmap<std::string_view, void(*)()> const repls { {
-            { "lex"    , lexer_repl             },
-            { "expr"   , expression_parser_repl },
-            { "prog"   , program_parser_repl    },
-            { "des"    , desugaring_repl        },
-            { "res"    , resolution_repl        },
-            { "rei"    , reification_repl       },
-            { "low"    , lowering_repl          },
-            { "gen"    , codegen_repl           },
+            { "lex" , lexer_repl             },
+            { "expr", expression_parser_repl },
+            { "prog", program_parser_repl    },
+            { "des" , desugaring_repl        },
+            { "res" , resolution_repl        },
+            { "rei" , reification_repl       },
+            { "low" , lowering_repl          },
+            { "gen" , codegen_repl           },
         } };
         if (auto const* const repl = repls.find(*name))
             (*repl)();

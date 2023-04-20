@@ -1,6 +1,7 @@
 #pragma once
 
 #include "utilities.hpp"
+#include "wrapper.hpp"
 
 
 namespace utl {
@@ -30,25 +31,26 @@ namespace utl {
     };
 
     struct [[nodiscard]] Source_view {
+        Wrapper<Source>  source;
         std::string_view string;
         Source_position  start_position;
         Source_position  stop_position;
 
-        explicit constexpr Source_view(
+        explicit Source_view(
+            Wrapper<Source>  const source,
             std::string_view const string,
             Source_position  const start,
             Source_position  const stop) noexcept
-            : string         { string }
+            : source         { source }
+            , string         { string }
             , start_position { start  }
             , stop_position  { stop   }
         {
-            assert(start_position <= stop_position);
+            always_assert(start_position <= stop_position);
         }
 
         // Dummy source view for mock purposes
-        static constexpr auto dummy() -> Source_view {
-            return Source_view { {}, {}, {} };
-        }
+        static auto dummy() -> Source_view;
 
         auto operator+(Source_view const&) const noexcept -> Source_view;
     };

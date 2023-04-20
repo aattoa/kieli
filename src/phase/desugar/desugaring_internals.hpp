@@ -13,18 +13,15 @@ class Desugaring_context {
 public:
     compiler::Compilation_info compilation_info;
     hir::Node_arena            node_arena;
-    utl::Source                source;
 
     std::vector<hir::Implicit_template_parameter>* current_function_implicit_template_parameters = nullptr;
-    compiler::Identifier                           self_variable_identifier = compilation_info.identifier_pool.make("self");
+    compiler::Identifier                           self_variable_identifier = compilation_info.get()->identifier_pool.make("self");
 
     explicit Desugaring_context(
-        utl::Source               && source,
         hir::Node_arena           && node_arena,
         compiler::Compilation_info&& compilation_info) noexcept
         : compilation_info { std::move(compilation_info) }
-        , node_arena       { std::move(node_arena) }
-        , source           { std::move(source) } {}
+        , node_arena       { std::move(node_arena) } {}
 
     [[nodiscard]]
     auto is_within_function() const noexcept -> bool;

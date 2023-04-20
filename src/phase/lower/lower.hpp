@@ -10,7 +10,6 @@ namespace compiler {
 
     struct Lower_result {
         Compilation_info           compilation_info;
-        utl::Source                source;
         lir::Node_arena            node_arena;
         std::vector<lir::Function> functions;
     };

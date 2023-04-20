@@ -517,7 +517,6 @@ auto compiler::parse(Lex_result&& lex_result) -> Parse_result {
     return Parse_result {
         .compilation_info = std::move(context.compilation_info),
         .node_arena       = std::move(context.node_arena),
-        .source           = std::move(context.source),
         .module {
             .definitions = std::move(definitions),
             .name        = std::move(module_name),
