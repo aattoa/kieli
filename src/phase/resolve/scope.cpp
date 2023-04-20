@@ -11,9 +11,8 @@ namespace {
     {
         for (auto& [name, binding] : bindings) {
             if (!binding.has_been_mentioned) {
-                context.compilation_info.diagnostics.emit_simple_warning({
+                context.compilation_info.get()->diagnostics.emit_simple_warning({
                     .erroneous_view      = binding.source_view,
-                    .source              = context.source,
                     .message             = "Unused local {}",
                     .message_arguments   = fmt::make_format_args(description),
                     .help_note           = "If this is intentional, prefix the {} with an underscore: _{}",
@@ -40,17 +39,15 @@ namespace {
         else {
             // The manual warning level check is not necessary because diagnostics.emit_warning performs the
             // same check internally, but this way the vector allocation can be skipped when warnings are suppressed.
-            if (!it->second.has_been_mentioned && context.compilation_info.diagnostics.warning_level() != utl::diagnostics::Level::suppress) {
-                context.compilation_info.diagnostics.emit_warning({
+            if (!it->second.has_been_mentioned && context.compilation_info.get()->diagnostics.warning_level() != utl::diagnostics::Level::suppress) {
+                context.compilation_info.get()->diagnostics.emit_warning({
                     .sections = utl::to_vector<utl::diagnostics::Text_section>({
                         {
                             .source_view = it->second.source_view,
-                            .source      = context.source,
                             .note        = "First declared here"
                         },
                         {
                             .source_view = binding.source_view,
-                            .source      = context.source,
                             .note        = "Later shadowed here"
                         }
                     }),

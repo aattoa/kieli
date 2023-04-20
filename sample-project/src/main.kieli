@@ -1,17 +1,5 @@
-alias Int = I64
-
-fn test(): I8 {
-  let x = 10;
-  x
-}
+import "int.kieli"
 
 fn main() {
-  let x = ???;
-  let (a, b): (Int, Int) = (x, x);
-  {
-      let _x: Int = a;
-      let _y: Int = b;
-  };
-  let _z: Bool = ???;
-  let _z: Bool = ???;
+    let _: Int = 5;
 }

@@ -529,7 +529,7 @@ auto resolution::Context::pure_try_equate_types(
     auto const try_unify = [&](utl::Wrapper<mir::Type::Variant> const l, utl::Wrapper<mir::Type::Variant> const r) {
         return unify_types({
             .constraint_to_be_tested {
-                .constrainer_type { l,  utl::Source_view::dummy() },
+                .constrainer_type { l, utl::Source_view::dummy() },
                 .constrained_type { r, utl::Source_view::dummy() },
                 .constrainer_note = constraint::Explanation { utl::Source_view::dummy() },
                 .constrained_note = constraint::Explanation { utl::Source_view::dummy() },

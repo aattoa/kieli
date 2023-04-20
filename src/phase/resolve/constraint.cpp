@@ -24,7 +24,6 @@ namespace {
         if (constrainer_note.has_value()) {
             sections.push_back(utl::diagnostics::Text_section{
                 .source_view = constraint.constrainer_note->source_view,
-                .source      = context.source,
                 .note        = *constrainer_note,
                 .note_color  = utl::diagnostics::warning_color
             });
@@ -32,12 +31,11 @@ namespace {
 
         sections.push_back(utl::diagnostics::Text_section{
             .source_view = constraint.constrained_note.source_view,
-            .source      = context.source,
             .note        = constrained_note,
             .note_color  = utl::diagnostics::error_color
         });
 
-        context.compilation_info.diagnostics.emit_error({
+        context.compilation_info.get()->diagnostics.emit_error({
             .sections          = std::move(sections),
             .message           = "Could not unify {} ~ {}",
             .message_arguments = fmt::make_format_args(left, right)
@@ -68,17 +66,15 @@ namespace {
         std::string const constrained_note =
             fmt::vformat(constraint.constrained_note.explanatory_note, fmt::make_format_args(left, right));
 
-        context.compilation_info.diagnostics.emit_error({
+        context.compilation_info.get()->diagnostics.emit_error({
             .sections = utl::to_vector<utl::diagnostics::Text_section>({
                 {
                     .source_view = constraint.constrainer_note.source_view,
-                    .source      = context.source,
                     .note        = constrainer_note,
                     .note_color  = utl::diagnostics::warning_color
                 },
                 {
                     .source_view = constraint.constrained_note.source_view,
-                    .source      = context.source,
                     .note        = constrained_note,
                     .note_color  = utl::diagnostics::error_color
                 }

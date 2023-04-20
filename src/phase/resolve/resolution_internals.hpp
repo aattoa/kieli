@@ -160,17 +160,15 @@ namespace resolution {
         mir::Node_arena            node_arena;
         mir::Namespace_arena       namespace_arena;
         Resolution_constants       constants;
-        utl::Source                source;
         mir::Module                output_module;
         utl::Wrapper<Namespace>    global_namespace;
         Nameless_entities          nameless_entities;
         tl::optional<mir::Type>    current_self_type;
         tl::optional<Loop_info>    current_loop_info;
 
-        compiler::Identifier self_variable_id = compilation_info.identifier_pool.make("self");
+        compiler::Identifier self_variable_id = compilation_info.get()->identifier_pool.make("self");
 
         explicit Context(
-            utl::Source               && source,
             mir::Node_arena           && node_arena,
             mir::Namespace_arena      && namespace_arena,
             compiler::Compilation_info&& compilation_info) noexcept
@@ -178,7 +176,6 @@ namespace resolution {
             , node_arena       { std::move(node_arena) }
             , namespace_arena  { std::move(namespace_arena) }
             , constants        { this->node_arena }
-            , source           { std::move(source) }
             , global_namespace { wrap(Namespace {}) } {}
 
         Context(Context const&) = delete;

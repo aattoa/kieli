@@ -145,7 +145,6 @@ set(KIELI_PHASE_SOURCE_FILES
 
 
 set(DEPENDENCY_INCLUDE_DIRECTORIES
-	PRIVATE dependencies/fmt/include
 	PRIVATE dependencies/range-v3/include
 	PRIVATE dependencies/optional/include
 	PRIVATE dependencies/expected/include)
@@ -188,6 +187,7 @@ add_executable(${TEST_NAME}
 	tests/lexer_test.cpp
 	tests/parser_test.cpp
 	tests/vm_test.cpp
+	${KIELI_COMPILER_SOURCE_FILES}
 	${KIELI_UTL_SOURCE_FILES}
 	${KIELI_VM_SOURCE_FILES}
 	${KIELI_REPRESENTATION_SOURCE_FILES}

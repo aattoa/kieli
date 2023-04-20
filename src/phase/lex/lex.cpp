@@ -10,7 +10,7 @@ namespace {
     struct Lex_context {
         compiler::Compilation_info compilation_info;
         std::vector<Token>         tokens;
-        utl::Source                source;
+        utl::Wrapper<utl::Source>  source;
         char const*                start;
         char const*                stop;
 
@@ -25,13 +25,10 @@ namespace {
         State state;
 
         auto update_location(char const c) noexcept -> void {
-            if (c == '\n') {
-                ++state.line;
-                state.column = 1;
-            }
-            else {
+            if (c == '\n')
+                ++state.line, state.column = 1;
+            else
                 ++state.column;
-            }
         }
 
         [[nodiscard]]
@@ -46,14 +43,16 @@ namespace {
             for (char const c : view)
                 stop_pos.advance_with(c);
 
-            return utl::Source_view { view, start_pos, stop_pos };
+            return utl::Source_view { source, view, start_pos, stop_pos };
         }
     public:
-        explicit Lex_context(utl::Source&& source, compiler::Compilation_info&& compilation_info) noexcept
+        explicit Lex_context(
+            utl::Wrapper<utl::Source> const source,
+            compiler::Compilation_info&& compilation_info) noexcept
             : compilation_info { std::move(compilation_info) }
-            , source           { std::move(source) }
-            , start            { this->source.string().data() }
-            , stop             { start + this->source.string().size() }
+            , source           { source }
+            , start            { source->string().data() }
+            , stop             { start + source->string().size() }
             , token_start      { .pointer = start }
             , state            { .pointer = start }
         {
@@ -130,6 +129,7 @@ namespace {
                 .value = value,
                 .type  = type,
                 .source_view = utl::Source_view {
+                    source,
                     std::string_view     { token_start.pointer, state      .pointer },
                     utl::Source_position { token_start.line   , token_start.column  },
                     utl::Source_position { state      .line   ,       state.column  }
@@ -139,13 +139,13 @@ namespace {
         }
 
         auto make_string(std::string_view const string) -> compiler::String {
-            return compilation_info.string_literal_pool.make(string);
+            return compilation_info.get()->string_literal_pool.make(string);
         }
         auto make_identifier(std::string_view const string) -> compiler::Identifier {
-            return compilation_info.identifier_pool.make(string);
+            return compilation_info.get()->identifier_pool.make(string);
         }
         auto make_new_identifier(std::string_view const string) -> compiler::Identifier {
-            return compilation_info.identifier_pool.make_guaranteed_new_string(string);
+            return compilation_info.get()->identifier_pool.make_guaranteed_new_string(string);
         }
 
         [[noreturn]]
@@ -153,7 +153,7 @@ namespace {
             std::string_view                    const view,
             utl::diagnostics::Message_arguments const arguments) -> void
         {
-            compilation_info.diagnostics.emit_simple_error(arguments.add_source_info(source, source_view_for(view)));
+            compilation_info.get()->diagnostics.emit_simple_error(arguments.add_source_view(source_view_for(view)));
         }
         [[noreturn]]
         auto error(
@@ -355,7 +355,7 @@ namespace {
             is_upper(view[view.find_first_not_of('_')])
                 ? Token::Type::upper_name
                 : Token::Type::lower_name,
-            context.compilation_info.identifier_pool.make(view)
+            context.compilation_info.get()->identifier_pool.make(view)
         );
     }
 
@@ -390,7 +390,7 @@ namespace {
                 return context.success(punctuation_type);
         }
 
-        return context.success(Token::Type::operator_name, context.compilation_info.identifier_pool.make(view));
+        return context.success(Token::Type::operator_name, context.compilation_info.get()->identifier_pool.make(view));
     }
 
     auto extract_punctuation(Lex_context& context) -> bool {
@@ -640,7 +640,7 @@ namespace {
                     string.insert(0, context.tokens.back().as_string().view());
                     context.tokens.pop_back(); // Pop the previous string
                 }
-                return context.success(Token::Type::string, context.compilation_info.string_literal_pool.make(string));
+                return context.success(Token::Type::string, context.compilation_info.get()->string_literal_pool.make(string));
             case '\\':
                 c = handle_escape_sequence(context);
                 [[fallthrough]];
@@ -654,19 +654,18 @@ namespace {
 
 
 auto compiler::lex(Lex_arguments&& lex_arguments) -> Lex_result {
-    if (lex_arguments.source.string().empty()) {
+    if (lex_arguments.source->string().empty()) {
         Token const end_of_input {
             .type        = Token::Type::end_of_input,
-            .source_view = utl::Source_view { lex_arguments.source.string(), { 0, 0 }, { 0, 0 } }
+            .source_view = utl::Source_view { lex_arguments.source, lex_arguments.source->string(), {}, {} }
         };
         return {
             .compilation_info = std::move(lex_arguments.compilation_info),
             .tokens           = std::vector { end_of_input },
-            .source           = std::move(lex_arguments.source),
         };
     }
 
-    Lex_context context { std::move(lex_arguments.source), std::move(lex_arguments.compilation_info) };
+    Lex_context context { lex_arguments.source, std::move(lex_arguments.compilation_info) };
 
     static constexpr auto extractors = std::to_array({
         extract_identifier,
@@ -700,6 +699,7 @@ auto compiler::lex(Lex_arguments&& lex_arguments) -> Lex_result {
         context.tokens.push_back(Token {
             .type        = Token::Type::end_of_input,
             .source_view = utl::Source_view {
+                lex_arguments.source,
                 std::string_view { context.stop, context.stop },
                 { state.line, state.column },
                 { state.line, state.column }
@@ -709,7 +709,6 @@ auto compiler::lex(Lex_arguments&& lex_arguments) -> Lex_result {
         return Lex_result {
             .compilation_info = std::move(context.compilation_info),
             .tokens           = std::move(context.tokens),
-            .source           = std::move(context.source),
         };
     }
 }

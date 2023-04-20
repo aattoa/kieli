@@ -13,7 +13,6 @@ struct Parse_context {
     compiler::Compilation_info compilation_info;
     ast::Node_arena            node_arena;
     std::vector<Token>         tokens;
-    utl::Source                source;
     Token*                     start;
     Token*                     pointer;
 
@@ -24,11 +23,10 @@ struct Parse_context {
         : compilation_info { std::move(lex_result.compilation_info) }
         , node_arena       { std::move(node_arena) }
         , tokens           { std::move(lex_result.tokens) }
-        , source           { std::move(lex_result.source) }
         , start            { tokens.data() }
         , pointer          { start }
-        , plus_id          { compilation_info.identifier_pool.make("+") }
-        , asterisk_id      { compilation_info.identifier_pool.make("*") }
+        , plus_id          { compilation_info.get()->identifier_pool.make("+") }
+        , asterisk_id      { compilation_info.get()->identifier_pool.make("*") }
     {
         // The end-of-input token should always be present
         utl::always_assert(!tokens.empty());
@@ -81,7 +79,7 @@ struct Parse_context {
         utl::Source_view                    const erroneous_view,
         utl::diagnostics::Message_arguments const arguments) -> void
     {
-        compilation_info.diagnostics.emit_simple_error(arguments.add_source_info(source, erroneous_view));
+        compilation_info.get()->diagnostics.emit_simple_error(arguments.add_source_view(erroneous_view));
     }
     [[noreturn]]
     auto error(

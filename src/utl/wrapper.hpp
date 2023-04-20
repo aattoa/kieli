@@ -90,7 +90,9 @@ namespace utl {
     template <class... Ts>
     class [[nodiscard]] Wrapper_arena : Wrapper_arena<Ts>... {
     public:
-        explicit Wrapper_arena(Usize const page_size = 1024) noexcept
+        Wrapper_arena() = default;
+
+        explicit Wrapper_arena(Usize const page_size) noexcept
             : Wrapper_arena<Ts> { page_size }... {}
 
         template <one_of<Ts...> T, class... Args>

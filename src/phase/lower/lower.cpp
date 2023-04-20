@@ -54,11 +54,10 @@ namespace {
     struct Expression_lowering_visitor {
         utl::diagnostics::Builder& diagnostics;
         lir::Node_arena          & node_arena;
-        utl::Source         const& source;
         cir::Expression     const& this_expression;
 
         auto recurse(cir::Expression const& expression) -> lir::Expression {
-            return std::visit(Expression_lowering_visitor { diagnostics, node_arena, source, expression }, expression.value);
+            return std::visit(Expression_lowering_visitor { diagnostics, node_arena, expression }, expression.value);
         }
         auto recurse(utl::Wrapper<cir::Expression> const expression) -> utl::Wrapper<lir::Expression> {
             return node_arena.wrap(recurse(*expression));
@@ -78,7 +77,6 @@ namespace {
                 auto const [min, max] = make_integer_range(type);
                 diagnostics.emit_simple_error({
                     .erroneous_view      = this_expression.source_view,
-                    .source              = source,
                     .message             = "The value of this integer literal is outside of the valid range for {}",
                     .message_arguments   = fmt::make_format_args(this_expression.type),
                     .help_note           = "The valid range for {} is {}..{}",
@@ -143,9 +141,8 @@ auto compiler::lower(Reify_result&& reify_result) -> Lower_result {
         functions.push_back(lir::Function {
             .symbol = std::move(function.symbol),
             .body = std::visit(Expression_lowering_visitor {
-                reify_result.compilation_info.diagnostics,
+                reify_result.compilation_info.get()->diagnostics,
                 node_arena,
-                reify_result.source,
                 function.body
             }, function.body.value)
         });
@@ -153,7 +150,6 @@ auto compiler::lower(Reify_result&& reify_result) -> Lower_result {
 
     return Lower_result {
         .compilation_info = std::move(reify_result.compilation_info),
-        .source           = std::move(reify_result.source),
         .node_arena       = std::move(node_arena),
         .functions        = std::move(functions),
     };

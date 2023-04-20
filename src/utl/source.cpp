@@ -32,7 +32,15 @@ auto utl::Source_position::advance_with(char const c) noexcept -> void {
         ++column;
 }
 
+auto utl::Source_view::dummy() -> Source_view {
+    static Wrapper_arena<Source> dummy_source_arena { /*page_size=*/ 1 };
+    static wrapper auto const dummy_source = dummy_source_arena.wrap("[dummy]", "");
+    return Source_view { dummy_source, dummy_source->string(), {}, {} };
+}
+
 auto utl::Source_view::operator+(Source_view const& other) const noexcept -> Source_view {
+    always_assert(std::to_address(source) == std::to_address(other.source));
+
     if (other.string.empty())
         return *this;
     if (string.empty())
@@ -40,6 +48,7 @@ auto utl::Source_view::operator+(Source_view const& other) const noexcept -> Sou
 
     always_assert(std::invoke(std::less_equal {}, &string.front(), &other.string.back()));
     return Source_view {
+        source,
         std::string_view { string.data(), other.string.data() + other.string.size() },
         start_position,
         other.stop_position

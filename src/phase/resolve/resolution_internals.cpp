@@ -59,7 +59,7 @@ auto resolution::Context::error(
     utl::Source_view                    const source_view,
     utl::diagnostics::Message_arguments const arguments) -> void
 {
-    compilation_info.diagnostics.emit_simple_error(arguments.add_source_info(source, source_view));
+    compilation_info.get()->diagnostics.emit_simple_error(arguments.add_source_view(source_view));
 }
 
 
@@ -160,17 +160,15 @@ namespace {
         auto                   get_name_from_variant) -> void
     {
         if (auto* const existing = (space.*table).find(name.identifier)) {
-            context.compilation_info.diagnostics.emit_error({
+            context.compilation_info.get()->diagnostics.emit_error({
                 .sections = utl::to_vector<utl::diagnostics::Text_section>({
                     {
                         .source_view = std::visit(get_name_from_variant, *existing).source_view,
-                        .source      = context.source,
                         .note        = "Originally defined here",
                         .note_color  = utl::diagnostics::warning_color
                     },
                     {
                         .source_view = name.source_view,
-                        .source      = context.source,
                         .note        = "Later defined here"
                     }
                 }),

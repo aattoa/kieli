@@ -157,22 +157,17 @@ auto Desugaring_context::error(
     utl::Source_view                    const erroneous_view,
     utl::diagnostics::Message_arguments const arguments) -> void
 {
-    compilation_info.diagnostics.emit_simple_error(arguments.add_source_info(source, erroneous_view));
+    compilation_info.get()->diagnostics.emit_simple_error(arguments.add_source_view(erroneous_view));
 }
 
 
 auto compiler::desugar(Parse_result&& parse_result) -> Desugar_result {
-    Desugaring_context context {
-        std::move(parse_result.source),
-        hir::Node_arena {},
-        std::move(parse_result.compilation_info)
-    };
+    Desugaring_context context { hir::Node_arena {}, std::move(parse_result.compilation_info) };
     auto desugared_definitions = utl::map(context.desugar(), parse_result.module.definitions);
 
     return Desugar_result {
         .compilation_info = std::move(context.compilation_info),
         .node_arena       = std::move(context.node_arena),
-        .source           = std::move(context.source),
         .module           { .definitions = std::move(desugared_definitions) }
     };
 }

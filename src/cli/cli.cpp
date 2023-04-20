@@ -89,16 +89,17 @@ namespace {
                 erroneous_view = { view_begin, pointer->size() };
             }
 
-            utl::Source const fake_source { "[command line]", std::move(command_line_string) };
+            utl::Wrapper_arena<utl::Source> fake_source_arena { /*page_size=*/ 1 };
+            utl::wrapper auto const fake_source = fake_source_arena.wrap("[command line]", std::move(command_line_string));
 
             utl::diagnostics::Builder builder;
             builder.emit_simple_error(
-                arguments.add_source_info(
-                    fake_source,
+                arguments.add_source_view(
                     utl::Source_view {
+                        fake_source,
                         erroneous_view,
                         utl::Source_position {},
-                        utl::Source_position { 1, 1 + utl::unsigned_distance(fake_source.string().data(), erroneous_view.data()) }
+                        utl::Source_position { 1, 1 + utl::unsigned_distance(fake_source->string().data(), erroneous_view.data()) }
                     }
                 ),
                 utl::diagnostics::Type::recoverable // Prevent exception

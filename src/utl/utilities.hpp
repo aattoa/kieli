@@ -237,6 +237,7 @@ namespace utl {
         };
         trim_if('\\');
         trim_if('/');
+        assert(!path.empty());
         return path;
     }
 
@@ -249,7 +250,6 @@ namespace utl {
     public:
         explicit Exception(std::string&& message) noexcept
             : message { std::move(message) } {}
-
         [[nodiscard]]
         auto what() const noexcept -> char const* override {
             return message.c_str();
@@ -266,8 +266,8 @@ namespace utl {
         std::string_view     const message = "no message",
         std::source_location const caller  = std::source_location::current()) -> void
     {
-        fmt::print(
-            "[{}:{}:{}] utl::abort invoked with message: {}, in function {}\n",
+        fmt::println(
+            "[{}:{}:{}] utl::abort invoked with message: {}, in function '{}'",
             filename_without_path(caller.file_name()),
             caller.line(),
             caller.column(),
@@ -287,8 +287,8 @@ namespace utl {
     inline auto trace(
         std::source_location const caller = std::source_location::current()) -> void
     {
-        fmt::print(
-            "utl::trace: Reached line {} in {}, in function {}\n",
+        fmt::println(
+            "utl::trace: Reached line {} in {}, in function '{}'",
             caller.line(),
             filename_without_path(caller.file_name()),
             caller.function_name());
@@ -476,7 +476,6 @@ namespace utl {
         explicit Scope_success_handler(Callback callback)
             : callback { std::move(callback) }
             , exception_count { std::uncaught_exceptions() } {}
-
         ~Scope_success_handler() noexcept(std::is_nothrow_invocable_v<Callback>) {
             if (exception_count == std::uncaught_exceptions())
                 std::invoke(callback);
@@ -491,8 +490,7 @@ namespace utl {
         Callback callback;
     public:
         explicit Scope_exit_handler(Callback callback)
-            : callback{ std::move(callback) } {}
-
+            : callback { std::move(callback) } {}
         ~Scope_exit_handler() noexcept(std::is_nothrow_invocable_v<Callback>) {
             std::invoke(callback);
         }
@@ -566,11 +564,7 @@ namespace utl {
     [[nodiscard]]
     constexpr auto digit_count(std::integral auto integer) noexcept -> Usize {
         Usize digits = 0;
-        do {
-            integer /= 10;
-            ++digits;
-        }
-        while (integer);
+        do { integer /= 10; ++digits; } while (integer != 0);
         return digits;
     }
 
@@ -763,9 +757,10 @@ DECLARE_FORMATTER_FOR_TEMPLATE(utl::formatting::Integer_with_ordinal_indicator_f
 template <class T>
 struct fmt::formatter<tl::optional<T>> : formatter<T> {
     auto format(tl::optional<T> const& optional, auto& context) {
-        return optional
-            ? formatter<T>::format(*optional, context)
-            : context.out();
+        if (optional)
+            return formatter<T>::format(*optional, context);
+        else
+            return context.out();
     }
 };
 
@@ -796,7 +791,6 @@ template <class Range>
 DEFINE_FORMATTER_FOR(utl::formatting::Range_formatter_closure<Range>) {
     if (value.range->empty())
         return context.out();
-
     auto out = format_to(context.out(), "{}", value.range->front());
     for (auto& element : *value.range | ranges::views::drop(1))
         out = format_to(out, "{}{}", value.delimiter, element);

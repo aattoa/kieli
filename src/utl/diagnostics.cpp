@@ -67,26 +67,23 @@ namespace {
     auto format_highlighted_section(
         std::back_insert_iterator<std::string> const  out,
         utl::Color                             const  title_color,
-        utl::diagnostics::Text_section         const& section,
-        tl::optional<std::string>              const& location_info) -> void
+        utl::diagnostics::Text_section         const& section) -> void
     {
-        auto const lines       = lines_of_occurrence(section.source.get().string(), section.source_view.string);
+        auto const lines       = lines_of_occurrence(section.source_view.source->string(), section.source_view.string);
         auto const digit_count = utl::digit_count(section.source_view.stop_position.line);
         auto       line_number = section.source_view.start_position.line;
 
+        fmt::format_to(
+            out,
+            "{}{} --> {}:{}-{}{}\n",
+            std::string(digit_count, ' '),
+            utl::diagnostics::line_info_color,
+            utl::filename_without_path(section.source_view.source->path().string()),
+            section.source_view.start_position,
+            section.source_view.stop_position,
+            utl::Color::white);
+
         utl::always_assert(!lines.empty());
-
-        if (location_info) {
-            std::string const whitespace(digit_count, ' ');
-            fmt::format_to(
-                out,
-                "{}{} --> {}{}\n",
-                whitespace,
-                utl::diagnostics::line_info_color,
-                *location_info,
-                utl::Color::white);
-        }
-
         utl::Usize const longest_line_length =
             ranges::max(lines | ranges::views::transform(utl::size));
 
@@ -193,23 +190,8 @@ namespace {
         if (!sections.empty())
             fmt::format_to(out, "\n\n");
 
-        utl::Source const* current_source = nullptr;
-
         for (auto const& section : sections) {
-            tl::optional<std::string> location_info;
-
-            if (current_source != &section.source.get()) {
-                current_source = &section.source.get();
-
-                location_info = fmt::format(
-                    "{}:{}-{}",
-                    utl::filename_without_path(current_source->path().string()),
-                    section.source_view.start_position,
-                    section.source_view.stop_position);
-            }
-
-            format_highlighted_section(out, title_color, section, location_info);
-
+            format_highlighted_section(out, title_color, section);
             if (&section != &sections.back())
                 fmt::format_to(out, "\n");
         }
@@ -232,7 +214,6 @@ namespace {
             .sections {
                 utl::diagnostics::Text_section {
                     .source_view = arguments.erroneous_view,
-                    .source      = arguments.source,
                     .note        = "here",
                     .note_color  = note_color
                 }
@@ -350,13 +331,11 @@ auto utl::diagnostics::Builder::emit_simple_error(Simple_emit_arguments const& a
 }
 
 
-auto utl::diagnostics::Message_arguments::add_source_info(
-    utl::Source      const& source,
-    utl::Source_view const  erroneous_view) const -> Builder::Simple_emit_arguments
+auto utl::diagnostics::Message_arguments::add_source_view(
+    utl::Source_view const erroneous_view) const -> Builder::Simple_emit_arguments
 {
     return {
         .erroneous_view      = erroneous_view,
-        .source              = source,
         .message             = message,
         .message_arguments   = message_arguments,
         .help_note           = help_note,

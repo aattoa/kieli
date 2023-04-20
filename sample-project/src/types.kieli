@@ -72,14 +72,13 @@ struct RefPair[A, B, a: mut = mut, b: mut = mut?a] = first: &mut?a A, second: &m
 fn mutability_test() = RefPair[Int, Float, _, _] { first = ??? : &Int, second = ??? : &mut Float }
 
 
-/* works
-fn get[T](option: Option[T]) {
+fn get_opt_value[T](option: Option[T]) {
   match option {
     Option::some(x) -> x
     Option::none -> ???
   }
 }
-fn test() = get(Option::some("hello")) */
+fn test_get_opt_value(): I32 = get_opt_value(Option::none)
 
 fn second[m: mut, A, B](pair: &mut (A, B)) = &mut?m ((*pair).1)
 fn second_test1(): &mut String = second(??? : &mut (Int, String))
