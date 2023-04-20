@@ -757,16 +757,10 @@ DECLARE_FORMATTER_FOR_TEMPLATE(utl::formatting::Integer_with_ordinal_indicator_f
 template <class T>
 struct fmt::formatter<tl::optional<T>> : fmt::formatter<T> {
     auto format(tl::optional<T> const& optional, auto& context) {
-<<<<<<< HEAD
         if (optional)
             return formatter<T>::format(*optional, context);
         else
             return context.out();
-=======
-        return optional
-            ? fmt::formatter<T>::format(*optional, context)
-            : context.out();
->>>>>>> 5c89d6fec115daefad3d8b6c6da80285c1bd3769
     }
 };
 
@@ -797,12 +791,7 @@ template <class Range>
 DEFINE_FORMATTER_FOR(utl::formatting::Range_formatter_closure<Range>) {
     if (value.range->empty())
         return context.out();
-<<<<<<< HEAD
-    auto out = format_to(context.out(), "{}", value.range->front());
-=======
-
     auto out = fmt::format_to(context.out(), "{}", value.range->front());
->>>>>>> 5c89d6fec115daefad3d8b6c6da80285c1bd3769
     for (auto& element : *value.range | ranges::views::drop(1))
         out = fmt::format_to(out, "{}{}", value.delimiter, element);
     return out;
