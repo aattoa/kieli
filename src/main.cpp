@@ -196,7 +196,7 @@ auto main(int argc, char const** argv) -> int try {
 
         auto const do_resolve = [&] {
             compiler::Compilation_info repl_info = compiler::mock_compilation_info();
-            utl::wrapper auto const repl_source = repl_info.get()->source_arena.wrap(utl::Source::read(source_directory_path / "types.kieli"));
+            utl::wrapper auto const repl_source = repl_info.get()->source_arena.wrap(utl::Source::read(source_directory_path / "main.kieli"));
             return resolve(desugar(parse(lex({ .compilation_info = std::move(repl_info), .source = repl_source }))));
         };
 
