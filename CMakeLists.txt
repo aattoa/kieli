@@ -187,6 +187,7 @@ add_executable(${TEST_NAME}
 	tests/lexer_test.cpp
 	tests/parser_test.cpp
 	tests/vm_test.cpp
+	tests/resolution_test.cpp
 	${KIELI_COMPILER_SOURCE_FILES}
 	${KIELI_UTL_SOURCE_FILES}
 	${KIELI_VM_SOURCE_FILES}

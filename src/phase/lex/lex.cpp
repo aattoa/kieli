@@ -370,19 +370,19 @@ namespace {
             return false;
 
         static constexpr auto clashing = std::to_array<utl::Pair<std::string_view, Token::Type>>({
-            { "."  , Token::Type::dot          },
-            { ":"  , Token::Type::colon        },
-            { "::" , Token::Type::double_colon },
-            { "|"  , Token::Type::pipe         },
-            { "="  , Token::Type::equals       },
-            { "&"  , Token::Type::ampersand    },
-            { "*"  , Token::Type::asterisk     },
-            { "+"  , Token::Type::plus         },
-            { "?"  , Token::Type::question     },
-            { "\\" , Token::Type::lambda       },
-            { "<-" , Token::Type::left_arrow   },
-            { "->" , Token::Type::right_arrow  },
-            { "???", Token::Type::hole         },
+            { "."     , Token::Type::dot          },
+            { ":"     , Token::Type::colon        },
+            { "::"    , Token::Type::double_colon },
+            { "|"     , Token::Type::pipe         },
+            { "="     , Token::Type::equals       },
+            { "&"     , Token::Type::ampersand    },
+            { "*"     , Token::Type::asterisk     },
+            { "+"     , Token::Type::plus         },
+            { "?"     , Token::Type::question     },
+            { "\\"    , Token::Type::lambda       },
+            { "<-"    , Token::Type::left_arrow   },
+            { "->"    , Token::Type::right_arrow  },
+            { "\?\?\?", Token::Type::hole         },
         });
 
         for (auto [punctuation, punctuation_type] : clashing) {

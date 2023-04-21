@@ -106,7 +106,7 @@ auto compiler::token_description(Lexical_token::Type const type)
 
 DEFINE_FORMATTER_FOR(compiler::Lexical_token::Type) {
     constexpr auto strings = std::to_array<std::string_view>({
-        ".", ",", ":", ";", "::", "&", "*", "+", "?", "=", "|", "\\", "<-", "->", "???", "(", ")", "{", "}", "[", "]",
+        ".", ",", ":", ";", "::", "&", "*", "+", "?", "=", "|", "\\", "<-", "->", "\?\?\?", "(", ")", "{", "}", "[", "]",
 
         "let", "mut", "immut", "if", "else", "elif", "for", "in", "while", "loop", "continue", "break",
         "match", "ret", "discard", "fn", "as", "enum", "struct", "class", "inst", "impl", "alias",
