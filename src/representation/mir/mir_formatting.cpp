@@ -12,7 +12,7 @@ DIRECTLY_DEFINE_FORMATTER_FOR(mir::Struct::Member) {
     return fmt::format_to(context.out(), "{}{}: {}", value.is_public ? "pub " : "", value.name, value.type);
 }
 DIRECTLY_DEFINE_FORMATTER_FOR(mir::Enum_constructor) {
-    return fmt::format_to(context.out(), "{}{}", value.name, value.payload_type.transform("({})"_format).value_or(""));
+    return fmt::format_to(context.out(), "{}::{}{}", value.enum_type, value.name, value.payload_type.transform("({})"_format).value_or(""));
 }
 DIRECTLY_DEFINE_FORMATTER_FOR(mir::expression::Match::Case) {
     return fmt::format_to(context.out(), "{} -> {}", value.pattern, value.handler);
@@ -130,7 +130,7 @@ namespace {
             return format("if {} {} else {}", conditional.condition, conditional.true_branch, conditional.false_branch);
         }
         auto operator()(mir::expression::Match const& match) {
-            return format("match {} {{ {} }}", match.matched_expression, match.cases);
+            return format("match {} {{ {} }}", match.matched_expression, utl::formatting::delimited_range(match.cases, " "));
         }
         auto operator()(mir::expression::Array_literal const& array) {
             return format("[{}]", array.elements);
@@ -155,7 +155,7 @@ namespace {
             return format("{}({})", invocation.invocable, invocation.arguments);
         }
         auto operator()(mir::expression::Enum_constructor_reference const& reference) {
-            return format("{}", reference.constructor.name);
+            return format("{}::{}", reference.constructor.enum_type, reference.constructor.name);
         }
         auto operator()(mir::expression::Direct_enum_constructor_invocation const& invocation) {
             return format("{}({})", invocation.constructor.name, invocation.arguments);
@@ -215,7 +215,8 @@ namespace {
         }
         auto operator()(mir::pattern::Enum_constructor const& ctor) {
             return format(
-                "{}{}",
+                "{}::{}{}",
+                ctor.constructor.enum_type,
                 ctor.constructor.name,
                 ctor.payload_pattern.transform("({})"_format).value_or(""));
         }
