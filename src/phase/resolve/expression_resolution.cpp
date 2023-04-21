@@ -733,6 +733,15 @@ namespace {
                 mir::Struct& structure = context.resolve_struct(structure_ptr->info);
                 auto initializers = utl::vector_with_capacity<mir::Expression>(structure.members.size());
 
+                for (auto const& [name, _] : struct_initializer.member_initializers) {
+                    if (!ranges::contains(structure.members, name, &mir::Struct::Member::name)) {
+                        context.error(name.source_view, {
+                            .message           = "{} does not have a member '{}'",
+                            .message_arguments = fmt::make_format_args(struct_type, name)
+                        });
+                    }
+                }
+
                 for (mir::Struct::Member& member : structure.members) {
                     if (utl::wrapper auto* const member_initializer_ptr = struct_initializer.member_initializers.find(member.name)) {
                         mir::Expression member_initializer = recurse(**member_initializer_ptr);
