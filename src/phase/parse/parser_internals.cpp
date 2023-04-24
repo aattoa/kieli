@@ -320,7 +320,7 @@ auto parse_class_reference(Parse_context& context)
 
         auto name = extract_qualified(std::move(root), context);
 
-        if (name.primary_name.is_upper)
+        if (name.primary_name.is_upper.get())
             return name;
 
         context.error(

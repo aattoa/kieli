@@ -183,7 +183,7 @@ namespace {
 }
 
 auto resolution::Context::add_to_namespace(Namespace& space, ast::Name const name, Lower_variant lower) -> void {
-    assert(!name.is_upper);
+    assert(!name.is_upper.get());
     add_to_namespace_impl<&Namespace::lower_table>(*this, space, name, std::move(lower), utl::Overload {
         [](utl::Wrapper<Namespace> const space) { return utl::get(space->name); },
         [](mir::Enum_constructor   const ctor)  { return ctor.name; },
@@ -191,7 +191,7 @@ auto resolution::Context::add_to_namespace(Namespace& space, ast::Name const nam
     });
 }
 auto resolution::Context::add_to_namespace(Namespace& space, ast::Name const name, Upper_variant upper) -> void {
-    assert(name.is_upper);
+    assert(name.is_upper.get());
     add_to_namespace_impl<&Namespace::upper_table>(*this, space, name, std::move(upper), [](auto const& info) { return info->name;  });
 }
 

@@ -19,9 +19,6 @@ namespace hir {
         struct Typename {
             Qualified_name name;
         };
-        struct Implicit_parameter_reference {
-            Implicit_template_parameter::Tag tag;
-        };
         struct Tuple {
             std::vector<Type> field_types;
         };
@@ -66,7 +63,6 @@ namespace hir {
             type::Wildcard,
             type::Self,
             type::Typename,
-            type::Implicit_parameter_reference,
             type::Tuple,
             type::Array,
             type::Slice,
@@ -75,9 +71,9 @@ namespace hir {
             type::Reference,
             type::Pointer,
             type::Instance_of,
-            type::Template_application
-        >;
-        Variant         value;
+            type::Template_application>;
+
+        Variant          value;
         utl::Source_view source_view;
     };
 

@@ -10,7 +10,7 @@ namespace {
         auto* const anchor = context.pointer;
         auto name = extract_qualified(std::move(root), context);
 
-        if (name.primary_name.is_upper) {
+        if (name.primary_name.is_upper.get()) {
             if (auto template_arguments = parse_template_arguments(context)) {
                 return ast::type::Template_application {
                     std::move(*template_arguments),
@@ -180,7 +180,7 @@ auto parse_type(Parse_context& context) -> tl::optional<ast::Type> {
         if (context.try_consume(Token::Type::double_colon)) {
             auto name = extract_qualified({ ast::Root_qualifier::Global {} }, context);
 
-            if (name.primary_name.is_upper) {
+            if (name.primary_name.is_upper.get()) {
                 name.root_qualifier.value = context.wrap(std::move(type));
                 auto template_arguments = parse_template_arguments(context);
 

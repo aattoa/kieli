@@ -21,12 +21,10 @@
 
 
 namespace hir {
-
     struct [[nodiscard]] Expression;
     struct [[nodiscard]] Type;
     struct [[nodiscard]] Pattern;
     struct [[nodiscard]] Definition;
-
 
     struct HIR_configuration {
         using Expression = hir::Expression;
@@ -35,28 +33,15 @@ namespace hir {
         using Definition = hir::Definition;
     };
 
-    using Template_argument  = ast::Basic_template_argument   <HIR_configuration>;
-    using Root_qualifier     = ast::Basic_root_qualifier      <HIR_configuration>;
-    using Qualifier          = ast::Basic_qualifier           <HIR_configuration>;
-    using Qualified_name     = ast::Basic_qualified_name      <HIR_configuration>;
-    using Class_reference    = ast::Basic_class_reference     <HIR_configuration>;
-    using Template_parameter = ast::Basic_template_parameter  <HIR_configuration>;
-
+    using Template_argument  = ast::Basic_template_argument  <HIR_configuration>;
+    using Root_qualifier     = ast::Basic_root_qualifier     <HIR_configuration>;
+    using Qualifier          = ast::Basic_qualifier          <HIR_configuration>;
+    using Qualified_name     = ast::Basic_qualified_name     <HIR_configuration>;
+    using Class_reference    = ast::Basic_class_reference    <HIR_configuration>;
+    using Template_parameter = ast::Basic_template_parameter <HIR_configuration>;
+    using Function_parameter = ast::Basic_function_parameter <HIR_configuration>;
 
     struct [[nodiscard]] Function_argument;
-    struct [[nodiscard]] Function_parameter;
-
-    struct Implicit_template_parameter {
-        struct Tag {
-            utl::Usize value;
-            explicit constexpr Tag(utl::Usize const value) noexcept
-                : value { value } {}
-        };
-
-        std::vector<Class_reference> classes;
-        Tag                          tag;
-    };
-
 }
 
 
@@ -71,15 +56,8 @@ struct hir::Function_argument {
     tl::optional<ast::Name> name;
 };
 
-struct hir::Function_parameter {
-    Pattern                   pattern;
-    Type                      type;
-    tl::optional<Expression> default_value;
-};
-
 
 namespace hir {
-
     template <class T>
     concept node = utl::one_of<T, Expression, Type, Pattern>;
 
@@ -88,7 +66,6 @@ namespace hir {
     struct Module {
         std::vector<Definition> definitions;
     };
-
 }
 
 
@@ -97,8 +74,6 @@ DECLARE_FORMATTER_FOR(hir::Type);
 DECLARE_FORMATTER_FOR(hir::Pattern);
 
 DECLARE_FORMATTER_FOR(hir::Function_parameter);
-DECLARE_FORMATTER_FOR(hir::Implicit_template_parameter);
-DECLARE_FORMATTER_FOR(hir::Implicit_template_parameter::Tag);
 
 
 template <>

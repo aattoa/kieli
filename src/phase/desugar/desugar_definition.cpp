@@ -11,7 +11,7 @@ namespace {
             .value       = hir::type::Self {},
             .source_view = parameter.source_view
         };
-        if (parameter.is_reference) {
+        if (parameter.is_reference.get()) {
             self_type = hir::Type {
                 .value = hir::type::Reference {
                     .referenced_type = context.wrap(std::move(self_type)),
@@ -24,7 +24,7 @@ namespace {
         hir::Pattern self_pattern {
             .value = hir::pattern::Name {
                 .identifier = context.self_variable_identifier,
-                .mutability = parameter.is_reference
+                .mutability = parameter.is_reference.get()
                     ? ast::Mutability { ast::Mutability::Concrete { .is_mutable = false }, parameter.source_view }
                     : parameter.mutability
             },
@@ -42,12 +42,6 @@ namespace {
         Desugaring_context& context;
 
         auto operator()(ast::definition::Function const& function) -> hir::definition::Function {
-            utl::always_assert(context.current_function_implicit_template_parameters == nullptr);
-            std::vector<hir::Implicit_template_parameter> implicit_template_parameters;
-            context.current_function_implicit_template_parameters = &implicit_template_parameters;
-
-            // The parameters must be desugared first in order to collect the implicit template parameters.
-
             std::vector<hir::Function_parameter> parameters;
             if (function.self_parameter.has_value())
                 parameters.push_back(desugar_self_parameter(*function.self_parameter, context));
@@ -55,8 +49,6 @@ namespace {
             ranges::move(
                 ranges::views::transform(function.parameters, context.desugar()),
                 std::back_inserter(parameters));
-
-            context.current_function_implicit_template_parameters = nullptr;
 
             // Convert function bodies defined with shorthand syntax into blocks
             hir::Expression function_body = context.desugar(function.body);
@@ -70,12 +62,11 @@ namespace {
             }
 
             return {
-                .implicit_template_parameters = std::move(implicit_template_parameters),
-                .parameters                   = std::move(parameters),
-                .return_type                  = function.return_type.transform(context.desugar()),
-                .body                         = std::move(function_body),
-                .name                         = function.name,
-                .self_parameter               = function.self_parameter
+                .body           = std::move(function_body),
+                .parameters     = std::move(parameters),
+                .name           = function.name,
+                .return_type    = function.return_type.transform(context.desugar()),
+                .self_parameter = function.self_parameter
             };
         }
 

@@ -69,7 +69,7 @@ namespace {
 
         auto template_arguments = parse_template_arguments(context);
 
-        if (!name.primary_name.is_upper) {
+        if (!name.primary_name.is_upper.get()) {
             if (template_arguments) {
                 return ast::expression::Template_application {
                     std::move(*template_arguments),

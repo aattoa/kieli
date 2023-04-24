@@ -64,12 +64,11 @@ namespace ast {
 
 
     struct [[nodiscard]] Function_argument;
-    struct [[nodiscard]] Function_parameter;
 
 
     struct Name {
         compiler::Identifier identifier;
-        bool                 is_upper = false;
+        utl::Strong<bool>    is_upper;
         utl::Source_view     source_view;
 
         constexpr auto operator==(Name const& other) const noexcept -> bool {
@@ -86,8 +85,7 @@ namespace ast {
             utl::Wrapper<typename Configuration::Type>,
             utl::Wrapper<typename Configuration::Expression>,
             Mutability,
-            Wildcard
-        >;
+            Wildcard>;
         Variant            value;
         tl::optional<Name> name;
     };
@@ -116,14 +114,17 @@ namespace ast {
         Name                                        primary_name;
 
         [[nodiscard]]
-        inline auto is_unqualified() const noexcept -> bool;
+        auto is_unqualified() const noexcept -> bool {
+            return middle_qualifiers.empty()
+                && std::holds_alternative<std::monostate>(root_qualifier.value);
+        }
     };
 
     template <tree_configuration Configuration>
     struct Basic_class_reference {
         tl::optional<std::vector<Basic_template_argument<Configuration>>> template_arguments;
-        Basic_qualified_name<Configuration>                                name;
-        utl::Source_view                                                    source_view;
+        Basic_qualified_name<Configuration>                               name;
+        utl::Source_view                                                  source_view;
     };
 
     template <tree_configuration Configuration>
@@ -148,6 +149,13 @@ namespace ast {
         utl::Source_view                                     source_view;
     };
 
+    template <tree_configuration Configuration>
+    struct Basic_function_parameter {
+        typename Configuration::Pattern                  pattern;
+        tl::optional<typename Configuration::Type>       type;
+        tl::optional<typename Configuration::Expression> default_argument;
+    };
+
 
     struct AST_configuration {
         using Expression  = ::ast::Expression;
@@ -156,12 +164,13 @@ namespace ast {
         using Definition  = ::ast::Definition;
     };
 
-    using Template_argument  = Basic_template_argument   <AST_configuration>;
-    using Qualifier          = Basic_qualifier           <AST_configuration>;
-    using Root_qualifier     = Basic_root_qualifier      <AST_configuration>;
-    using Qualified_name     = Basic_qualified_name      <AST_configuration>;
-    using Class_reference    = Basic_class_reference     <AST_configuration>;
-    using Template_parameter = Basic_template_parameter  <AST_configuration>;
+    using Template_argument  = Basic_template_argument  <AST_configuration>;
+    using Qualifier          = Basic_qualifier          <AST_configuration>;
+    using Root_qualifier     = Basic_root_qualifier     <AST_configuration>;
+    using Qualified_name     = Basic_qualified_name     <AST_configuration>;
+    using Class_reference    = Basic_class_reference    <AST_configuration>;
+    using Template_parameter = Basic_template_parameter <AST_configuration>;
+    using Function_parameter = Basic_function_parameter <AST_configuration>;
 
 }
 
@@ -177,21 +186,8 @@ struct ast::Function_argument {
     tl::optional<Name> name;
 };
 
-struct ast::Function_parameter {
-    Pattern                  pattern;
-    tl::optional<Type>       type;
-    tl::optional<Expression> default_value;
-};
-
-template <ast::tree_configuration Configuration>
-auto ast::Basic_qualified_name<Configuration>::is_unqualified() const noexcept -> bool {
-    return middle_qualifiers.empty()
-        && std::holds_alternative<std::monostate>(root_qualifier.value);
-}
-
 
 namespace ast {
-
     template <class T>
     concept node = utl::one_of<T, Expression, Type, Pattern>;
 
@@ -202,7 +198,6 @@ namespace ast {
         tl::optional<compiler::String> name;
         std::vector<compiler::String>  imports;
     };
-
 }
 
 

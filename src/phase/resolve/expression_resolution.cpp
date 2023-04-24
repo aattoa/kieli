@@ -858,7 +858,7 @@ namespace {
             arguments.insert(
                 arguments.begin(),
                 std::invoke([&] {
-                    if (!method.self_parameter.has_value() || !method.self_parameter->is_reference) {
+                    if (!method.self_parameter.has_value() || !method.self_parameter->is_reference.get()) {
                         return std::move(base_expression);
                     }
                     else {

@@ -19,11 +19,10 @@ namespace mir {
         std::vector<utl::Wrapper<resolution::Definition_info<To_HIR<Definition>>>> instantiations;
     };
 
-
     struct [[nodiscard]] Self_parameter {
-        mir::Mutability  mutability;
-        bool             is_reference = false;
-        utl::Source_view source_view;
+        mir::Mutability   mutability;
+        utl::Strong<bool> is_reference;
+        utl::Source_view  source_view;
     };
 
     struct Function {
@@ -32,18 +31,18 @@ namespace mir {
             mir::Type                            return_type;
             mir::Type                            function_type;
         };
-        Signature                     signature;
-        Expression                    body;
-        ast::Name                     name;
+        Signature                    signature;
+        Expression                   body;
+        ast::Name                    name;
         tl::optional<Self_parameter> self_parameter;
     };
     using Function_template = Template<Function>;
 
     struct Struct {
         struct Member {
-            ast::Name name;
-            Type      type;
-            bool      is_public;
+            ast::Name         name;
+            Type              type;
+            utl::Strong<bool> is_public;
         };
         std::vector<Member>                 members;
         ast::Name                           name;

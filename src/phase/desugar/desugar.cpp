@@ -19,23 +19,9 @@ auto Desugaring_context::desugar(ast::Function_argument const& argument) -> hir:
 
 auto Desugaring_context::desugar(ast::Function_parameter const& parameter) -> hir::Function_parameter {
     return hir::Function_parameter {
-        .pattern = desugar(parameter.pattern),
-        .type    = std::invoke([this, &parameter]() -> hir::Type {
-            if (parameter.type)
-                return desugar(*parameter.type);
-
-            utl::always_assert(current_function_implicit_template_parameters != nullptr);
-            auto const tag = fresh_name_tag();
-            current_function_implicit_template_parameters->push_back({
-                .tag = hir::Implicit_template_parameter::Tag { tag } });
-
-            return {
-                .value = hir::type::Implicit_parameter_reference {
-                    .tag = hir::Implicit_template_parameter::Tag { tag } },
-                .source_view = parameter.pattern.source_view
-            };
-        }),
-        .default_value = parameter.default_value.transform(desugar())
+        .pattern          = desugar(parameter.pattern),
+        .type             = parameter.type.transform(desugar()),
+        .default_argument = parameter.default_argument.transform(desugar())
     };
 }
 

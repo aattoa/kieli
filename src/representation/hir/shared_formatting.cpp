@@ -105,7 +105,7 @@ DEFINE_FORMATTER_FOR(ast::definition::Basic_struct_member<Configuration>) {
     return fmt::format_to(
         context.out(),
         "{}{}: {}",
-        value.is_public ? "pub " : "",
+        value.is_public.get() ? "pub " : "",
         value.name,
         value.type);
 }
@@ -148,7 +148,7 @@ namespace {
     struct Definition_body_formatting_visitor : utl::formatting::Visitor_base {
         auto format_self_parameter(tl::optional<ast::Self_parameter> const& parameter, bool const is_only_parameter) {
             if (parameter.has_value()) {
-                if (parameter->is_reference)
+                if (parameter->is_reference.get())
                     format("&");
                 format("{}self", parameter->mutability);
                 if (!is_only_parameter)
@@ -156,7 +156,8 @@ namespace {
             }
         }
 
-        auto operator()(ast::definition::Function const& function) {
+        template <utl::instance_of<ast::definition::Basic_function> Function>
+        auto operator()(Function const& function) {
             format("(");
             format_self_parameter(function.self_parameter, function.parameters.empty());
             format("{})", function.parameters);
@@ -164,18 +165,6 @@ namespace {
             if (function.return_type)
                 format(": {}", *function.return_type);
             return format(" = {}", function.body);
-        }
-        auto operator()(hir::definition::Function const& function) {
-            if (!function.implicit_template_parameters.empty())
-                format("[{}]", function.implicit_template_parameters);
-
-            format("(");
-            format_self_parameter(function.self_parameter, function.parameters.empty());
-            format("{})", function.parameters);
-
-            if (function.return_type)
-                format(": {}", *function.return_type);
-            return format(" {}", function.body);
         }
         template <utl::instance_of<ast::definition::Basic_struct> Structure>
         auto operator()(Structure const& structure) {
