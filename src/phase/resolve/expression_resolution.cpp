@@ -282,6 +282,7 @@ namespace {
                     .source_view    = this_expression.source_view,
                     .mutability     = binding->mutability,
                     .is_addressable = true,
+                    .is_pure        = true,
                 };
             }
             return tl::nullopt;
@@ -294,7 +295,8 @@ namespace {
                 .value       = mir::expression::Literal<T> { literal.value },
                 .type        = context.literal_type<T>(this_expression.source_view),
                 .source_view = this_expression.source_view,
-                .mutability  = context.immut_constant(this_expression.source_view)
+                .mutability  = context.immut_constant(this_expression.source_view),
+                .is_pure     = true,
             };
         }
 
@@ -332,6 +334,7 @@ namespace {
                 : mir_array.elements.front().type;
 
             auto const array_length = mir_array.elements.size();
+            bool const is_pure = ranges::all_of(mir_array.elements, &mir::Expression::is_pure);
 
             return {
                 .value = std::move(mir_array),
@@ -342,13 +345,15 @@ namespace {
                             .value       = mir::expression::Literal<compiler::Unsigned_integer> { array_length },
                             .type        = context.size_type(this_expression.source_view),
                             .source_view = this_expression.source_view,
-                            .mutability  = context.immut_constant(this_expression.source_view)
+                            .mutability  = context.immut_constant(this_expression.source_view),
+                            .is_pure     = true,
                         })
                     }),
                     .source_view = this_expression.source_view
                 },
                 .source_view = this_expression.source_view,
-                .mutability  = context.immut_constant(this_expression.source_view)
+                .mutability  = context.immut_constant(this_expression.source_view),
+                .is_pure     = is_pure,
             };
         }
 
@@ -375,7 +380,8 @@ namespace {
                     .value       = mir::expression::Function_reference { info, is_application },
                     .type        = context.resolve_function_signature(*info).function_type.with(this_expression.source_view),
                     .source_view = this_expression.source_view,
-                    .mutability  = context.immut_constant(this_expression.source_view)
+                    .mutability  = context.immut_constant(this_expression.source_view),
+                    .is_pure     = true,
                 };
             };
 
@@ -407,6 +413,7 @@ namespace {
                 .fields = utl::map(recurse(), tuple.fields) };
             mir::type::Tuple mir_tuple_type {
                 .field_types = utl::map(&mir::Expression::type, mir_tuple.fields) };
+            bool const is_pure = ranges::all_of(mir_tuple.fields, &mir::Expression::is_pure);
             return {
                 .value = std::move(mir_tuple),
                 .type {
@@ -414,7 +421,8 @@ namespace {
                     .source_view = this_expression.source_view
                 },
                 .source_view = this_expression.source_view,
-                .mutability  = context.immut_constant(this_expression.source_view)
+                .mutability  = context.immut_constant(this_expression.source_view),
+                .is_pure     = is_pure,
             };
         }
 
@@ -499,22 +507,33 @@ namespace {
             std::vector<mir::Expression> side_effects;
             side_effects.reserve(block.side_effect_expressions.size());
 
-            for (hir::Expression& side_effect : block.side_effect_expressions) {
-                side_effects.push_back(recurse(side_effect, &block_scope));
+            for (hir::Expression& hir_side_effect : block.side_effect_expressions) {
+                mir::Expression side_effect = recurse(hir_side_effect, &block_scope);
+                if (side_effect.is_pure) {
+                    context.compilation_info.get()->diagnostics.emit_simple_warning({
+                        .erroneous_view = side_effect.source_view,
+                        .message        = "This block side-effect expression is pure, so it does not have any side-effects",
+                        .help_note      = "Pure side effect-expressions have no effect on program execution, but they are still evaluated. This may lead to performance degradation."
+                    });
+                }
                 context.solve(constraint::Type_equality {
                     .constrainer_type = context.unit_type(this_expression.source_view),
-                    .constrained_type = side_effects.back().type,
+                    .constrained_type = side_effect.type,
                     .constrained_note {
                         side_effect.source_view,
                         "This expression is of type {1}, but side-effect expressions must be of the unit type"
                     }
                 });
+                side_effects.push_back(std::move(side_effect));
             }
 
             mir::Expression block_result = recurse(*block.result_expression, &block_scope);
             mir::Type const result_type  = block_result.type;
 
             block_scope.warn_about_unused_bindings();
+
+            bool const is_pure = block_result.is_pure
+                && ranges::all_of(side_effects, &mir::Expression::is_pure);
 
             return {
                 .value = mir::expression::Block {
@@ -523,7 +542,8 @@ namespace {
                 },
                 .type        = result_type,
                 .source_view = this_expression.source_view,
-                .mutability  = context.immut_constant(this_expression.source_view)
+                .mutability  = context.immut_constant(this_expression.source_view),
+                .is_pure     = is_pure,
             };
         }
 
@@ -534,17 +554,17 @@ namespace {
                 .source_view        = this_expression.source_view
             });
             return {
-                // TODO: mir::expression::No_op?
                 .value          = mir::expression::Tuple {},
                 .type           = context.unit_type(this_expression.source_view),
                 .source_view    = this_expression.source_view,
                 .mutability     = context.immut_constant(this_expression.source_view),
-                .is_addressable = false
+                .is_addressable = false,
+                .is_pure        = true,
             };
         }
 
         auto operator()(hir::expression::Let_binding& let) -> mir::Expression {
-            auto initializer = recurse(*let.initializer);
+            mir::Expression initializer = recurse(*let.initializer);
 
             tl::optional<mir::Type> explicit_type;
             if (let.type.has_value()) {
@@ -594,7 +614,7 @@ namespace {
                 },
                 .type        = context.unit_type(this_expression.source_view),
                 .source_view = this_expression.source_view,
-                .mutability  = context.immut_constant(this_expression.source_view)
+                .mutability  = context.immut_constant(this_expression.source_view),
             };
         }
 
@@ -659,6 +679,7 @@ namespace {
             }
 
             mir::Type const result_type = true_branch.type;
+            bool const is_pure = condition.is_pure && true_branch.is_pure && false_branch.is_pure;
 
             return {
                 .value = mir::expression::Conditional {
@@ -668,7 +689,8 @@ namespace {
                 },
                 .type           = result_type.with(this_expression.source_view),
                 .source_view    = this_expression.source_view,
-                .mutability     = context.immut_constant(this_expression.source_view)
+                .mutability     = context.immut_constant(this_expression.source_view),
+                .is_pure        = is_pure,
             };
         }
 
@@ -767,6 +789,8 @@ namespace {
                     }
                 }
 
+                bool const is_pure = ranges::all_of(initializers, &mir::Expression::is_pure);
+
                 return {
                     .value = mir::expression::Struct_initializer {
                         .initializers = std::move(initializers),
@@ -775,7 +799,7 @@ namespace {
                     .type           = struct_type,
                     .source_view    = this_expression.source_view,
                     .mutability     = context.immut_constant(this_expression.source_view),
-                    .is_addressable = false
+                    .is_pure        = is_pure,
                 };
             }
             else {
@@ -807,19 +831,16 @@ namespace {
         }
 
         auto operator()(hir::expression::Template_application& application) -> mir::Expression {
-            return utl::match(
-                context.find_lower(application.name, scope, space),
-
+            return utl::match(context.find_lower(application.name, scope, space),
                 [&](utl::Wrapper<Function_template_info> const info) -> mir::Expression {
                     utl::Wrapper<Function_info> const concrete =
                         context.instantiate_function_template(info, application.template_arguments, this_expression.source_view, scope, space);
-
                     return {
                         .value          = mir::expression::Function_reference { .info = concrete, .is_application = true },
                         .type           = context.resolve_function_signature(*concrete).function_type.with(this_expression.source_view),
                         .source_view    = this_expression.source_view,
                         .mutability     = context.immut_constant(this_expression.source_view),
-                        .is_addressable = false
+                        .is_pure        = true,
                     };
                 },
                 [&](utl::Wrapper<Function_info> const) -> mir::Expression {
@@ -884,6 +905,7 @@ namespace {
             mir::Expression       base_expression = recurse(*access.base_expression);
             mir::Mutability const mutability      = base_expression.mutability;
             bool            const is_addressable  = base_expression.is_addressable;
+            bool            const is_pure         = base_expression.is_pure;
 
             mir::Type const field_type = context.fresh_general_unification_type_variable(
                 this_expression.source_view);
@@ -906,6 +928,7 @@ namespace {
                 .source_view    = this_expression.source_view,
                 .mutability     = mutability,
                 .is_addressable = is_addressable,
+                .is_pure        = is_pure,
             };
         }
 
@@ -913,6 +936,7 @@ namespace {
             mir::Expression       base_expression = recurse(*access.base_expression);
             mir::Mutability const mutability      = base_expression.mutability;
             bool            const is_addressable  = base_expression.is_addressable;
+            bool            const is_pure         = base_expression.is_pure;
 
             mir::Type const field_type = context.fresh_general_unification_type_variable(
                 this_expression.source_view);
@@ -936,6 +960,7 @@ namespace {
                 .source_view    = this_expression.source_view,
                 .mutability     = mutability,
                 .is_addressable = is_addressable,
+                .is_pure        = is_pure,
             };
         }
 
@@ -947,7 +972,7 @@ namespace {
                 .type           = context.size_type(this_expression.source_view),
                 .source_view    = this_expression.source_view,
                 .mutability     = context.immut_constant(this_expression.source_view),
-                .is_addressable = false
+                .is_pure        = true,
             };
         }
 
@@ -961,17 +986,19 @@ namespace {
 
         auto operator()(hir::expression::Dereference& dereference) -> mir::Expression {
             mir::Expression dereferenced_expression = recurse(*dereference.dereferenced_expression);
+            bool const is_pure = dereferenced_expression.is_pure;
 
             if (auto const* const reference = std::get_if<mir::type::Reference>(&*dereferenced_expression.type.value)) {
                 // If the type of the dereferenced expression is already known to
-                // be mir::type::Reference, there is no need to emit constraints.
+                // be mir::type::Reference, there is no need to solve constraints.
 
                 return {
                     .value          = mir::expression::Dereference { context.wrap(std::move(dereferenced_expression)) },
                     .type           = reference->referenced_type,
                     .source_view    = this_expression.source_view,
                     .mutability     = reference->mutability,
-                    .is_addressable = true
+                    .is_addressable = true,
+                    .is_pure        = is_pure,
                 };
             }
             else {
@@ -1004,13 +1031,15 @@ namespace {
                     .type           = referenced_type,
                     .source_view    = this_expression.source_view,
                     .mutability     = reference_mutability,
-                    .is_addressable = true
+                    .is_addressable = true,
+                    .is_pure        = is_pure,
                 };
             }
         }
 
         auto operator()(hir::expression::Addressof& addressof) -> mir::Expression {
             mir::Expression lvalue = recurse(*addressof.lvalue);
+            bool const is_pure = lvalue.is_pure;
             require_addressability(context, lvalue, "The address of a temporary object can not be taken");
 
             mir::Type const pointer_type {
@@ -1025,12 +1054,14 @@ namespace {
                 .value       = mir::expression::Addressof { context.wrap(std::move(lvalue)) },
                 .type        = pointer_type,
                 .source_view = this_expression.source_view,
-                .mutability  = context.immut_constant(this_expression.source_view)
+                .mutability  = context.immut_constant(this_expression.source_view),
+                .is_pure     = is_pure,
             };
         }
 
         auto operator()(hir::expression::Unsafe_dereference& dereference) -> mir::Expression {
             mir::Expression pointer = recurse(*dereference.pointer);
+            bool const is_pure = pointer.is_pure;
 
             mir::Type       const lvalue_type       = context.fresh_general_unification_type_variable(this_expression.source_view);
             mir::Mutability const lvalue_mutability = context.fresh_unification_mutability_variable(this_expression.source_view);
@@ -1061,7 +1092,8 @@ namespace {
                 .type           = lvalue_type,
                 .source_view    = this_expression.source_view,
                 .mutability     = lvalue_mutability,
-                .is_addressable = true
+                .is_addressable = true,
+                .is_pure        = is_pure,
             };
         }
 
@@ -1079,7 +1111,8 @@ namespace {
                 .value       = mir::expression::Hole {},
                 .type        = context.fresh_general_unification_type_variable(this_expression.source_view),
                 .source_view = this_expression.source_view,
-                .mutability  = context.immut_constant(this_expression.source_view)
+                .mutability  = context.immut_constant(this_expression.source_view),
+                .is_pure     = true,
             };
         }
 
