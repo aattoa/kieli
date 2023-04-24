@@ -146,14 +146,14 @@ namespace mir {
             expression::Addressof,
             expression::Unsafe_dereference,
             expression::Move,
-            expression::Hole
-        >;
+            expression::Hole>;
 
         Variant          value;
         Type             type;
         utl::Source_view source_view;
         Mutability       mutability;
         bool             is_addressable = false;
+        bool             is_pure        = false;
     };
 
 }

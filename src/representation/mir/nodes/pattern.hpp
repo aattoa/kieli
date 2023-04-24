@@ -38,7 +38,6 @@ namespace mir {
         };
     }
 
-
     struct Pattern {
         using Variant = std::variant<
             pattern::Literal<compiler::Signed_integer>,
@@ -54,8 +53,8 @@ namespace mir {
             pattern::Slice,
             pattern::Enum_constructor,
             pattern::As,
-            pattern::Guarded
-        >;
+            pattern::Guarded>;
+
         Variant          value;
         Type             type;
         bool             is_exhaustive_by_itself = false;

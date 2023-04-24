@@ -216,7 +216,7 @@ namespace resolution {
         auto error(utl::Source_view, utl::diagnostics::Message_arguments) -> void;
 
 
-        [[nodiscard]] auto unify_types       (Type_unification_arguments)       -> bool;
+        [[nodiscard]] auto unify_types(Type_unification_arguments) -> bool;
         [[nodiscard]] auto unify_mutabilities(Mutability_unification_arguments) -> bool;
 
         [[nodiscard]] auto pure_try_equate_types(utl::Wrapper<mir::Type::Variant>, utl::Wrapper<mir::Type::Variant>) -> bool;
@@ -317,7 +317,6 @@ namespace resolution {
 
         template <class T>
         auto literal_type(utl::Source_view const view) -> mir::Type {
-            // TODO: fix known signed/unsigned integral unification variables
             if constexpr (utl::one_of<T, compiler::Signed_integer, compiler::Unsigned_integer, compiler::Integer_of_unknown_sign>)
                 return fresh_integral_unification_type_variable(view);
             else if constexpr (std::same_as<T, compiler::Floating>)
