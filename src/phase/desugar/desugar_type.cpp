@@ -3,7 +3,6 @@
 
 
 namespace {
-
     struct Type_desugaring_visitor {
         Desugaring_context& context;
         ast::Type    const& this_type;
@@ -64,28 +63,10 @@ namespace {
             };
         }
         auto operator()(ast::type::Instance_of const& instance_of) -> hir::Type::Variant {
-            if (context.current_function_implicit_template_parameters != nullptr) {
-                // Within a function's parameter list or return type, inst types
-                // are converted into references to implicit template parameters.
-
-                auto const tag = context.fresh_name_tag();
-
-                context.current_function_implicit_template_parameters->emplace_back(
-                    utl::map(context.desugar(), instance_of.classes),
-                    hir::Implicit_template_parameter::Tag { tag }
-                );
-
-                return hir::type::Implicit_parameter_reference {
-                    .tag = hir::Implicit_template_parameter::Tag { tag } };
-            }
-            else if (context.is_within_function()) {
-                // Within a function body, inst types are simply used for constraint collection.
-                return hir::type::Instance_of {
-                    .classes = utl::map(context.desugar(), instance_of.classes) };
-            }
-            else {
+            if (context.is_within_function())
+                return hir::type::Instance_of { .classes = utl::map(context.desugar(), instance_of.classes) };
+            else
                 context.error(this_type.source_view, { "'inst' types are only usable within functions" });
-            }
         }
         auto operator()(ast::type::Template_application const& application) -> hir::Type::Variant {
             return hir::type::Template_application {
@@ -94,7 +75,6 @@ namespace {
             };
         }
     };
-
 }
 
 

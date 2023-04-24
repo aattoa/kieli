@@ -14,8 +14,7 @@ public:
     compiler::Compilation_info compilation_info;
     hir::Node_arena            node_arena;
 
-    std::vector<hir::Implicit_template_parameter>* current_function_implicit_template_parameters = nullptr;
-    compiler::Identifier                           self_variable_identifier = compilation_info.get()->identifier_pool.make("self");
+    compiler::Identifier self_variable_identifier = compilation_info.get()->identifier_pool.make("self");
 
     explicit Desugaring_context(
         compiler::Compilation_info&& compilation_info,

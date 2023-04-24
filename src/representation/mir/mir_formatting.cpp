@@ -9,7 +9,7 @@ DIRECTLY_DEFINE_FORMATTER_FOR(mir::Function_parameter) {
     return fmt::format_to(context.out(), "{}: {}", value.pattern, value.type);
 }
 DIRECTLY_DEFINE_FORMATTER_FOR(mir::Struct::Member) {
-    return fmt::format_to(context.out(), "{}{}: {}", value.is_public ? "pub " : "", value.name, value.type);
+    return fmt::format_to(context.out(), "{}{}: {}", value.is_public.get() ? "pub " : "", value.name, value.type);
 }
 DIRECTLY_DEFINE_FORMATTER_FOR(mir::Enum_constructor) {
     return fmt::format_to(context.out(), "{}::{}{}", value.enum_type, value.name, value.payload_type.transform("({})"_format).value_or(""));

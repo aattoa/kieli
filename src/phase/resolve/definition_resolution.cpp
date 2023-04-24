@@ -17,8 +17,11 @@ namespace {
         mir_parameters.reserve(hir_parameters.size());
 
         for (hir::Function_parameter& parameter : hir_parameters) {
+            if (!parameter.type.has_value())
+                context.error(parameter.pattern.source_view, { "Implicit parameter types are not supported yet" });
+
             mir::Type const parameter_type =
-                context.resolve_type(parameter.type, signature_scope, home_namespace);
+                context.resolve_type(utl::get(parameter.type), signature_scope, home_namespace);
             mir::Pattern parameter_pattern =
                 context.resolve_pattern(parameter.pattern, signature_scope, home_namespace);
 
@@ -38,7 +41,7 @@ namespace {
                 }
             });
 
-            if (parameter.default_value.has_value())
+            if (parameter.default_argument.has_value())
                 utl::todo();
 
             mir_parameters.emplace_back(std::move(parameter_pattern), parameter_type);
@@ -87,9 +90,6 @@ namespace {
         Scope                      scope) -> void
     {
         Definition_state_guard const state_guard { context, info.state, function.name };
-
-        if (!function.implicit_template_parameters.empty())
-            utl::todo();
 
         auto [signature_scope, parameters] = // NOLINT
             resolve_function_parameters(context, std::move(scope), function.parameters, *info.home_namespace);

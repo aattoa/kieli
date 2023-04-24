@@ -32,7 +32,7 @@ DEFINE_FORMATTER_FOR(ast::Function_parameter) {
         "{}{}{}",
         value.pattern,
         value.type.transform(": {}"_format).value_or(""),
-        value.default_value.transform(" = {}"_format).value_or(""));
+        value.default_argument.transform(" = {}"_format).value_or(""));
 }
 
 DEFINE_FORMATTER_FOR(ast::Mutability) {
@@ -316,11 +316,9 @@ namespace {
 DEFINE_FORMATTER_FOR(ast::Expression) {
     return std::visit(Expression_format_visitor { { context.out() } }, value.value);
 }
-
 DEFINE_FORMATTER_FOR(ast::Pattern) {
     return std::visit(Pattern_format_visitor { { context.out() } }, value.value);
 }
-
 DEFINE_FORMATTER_FOR(ast::Type) {
     return std::visit(Type_format_visitor { { context.out() } }, value.value);
 }

@@ -9,32 +9,17 @@ DIRECTLY_DEFINE_FORMATTER_FOR(hir::Function_argument) {
     return fmt::format_to(out, "{}", value.expression);
 }
 
-
 DEFINE_FORMATTER_FOR(hir::Function_parameter) {
     return fmt::format_to(
         context.out(),
         "{}: {}{}",
         value.pattern,
         value.type,
-        value.default_value.transform(" = {}"_format).value_or(""));
-}
-
-DEFINE_FORMATTER_FOR(hir::Implicit_template_parameter::Tag) {
-    return fmt::format_to(context.out(), "X#{}", value.value);
-}
-
-DEFINE_FORMATTER_FOR(hir::Implicit_template_parameter) {
-    return fmt::vformat_to(
-        context.out(),
-        value.classes.empty() ? "{}" : "{}: {}",
-        fmt::make_format_args(
-            value.tag,
-            utl::formatting::delimited_range(value.classes, " + ")));
+        value.default_argument.transform(" = {}"_format).value_or(""));
 }
 
 
 namespace {
-
     struct Expression_format_visitor : utl::formatting::Visitor_base {
         template <class T>
         auto operator()(hir::expression::Literal<T> const& literal) {
@@ -158,7 +143,6 @@ namespace {
         }
     };
 
-
     struct Type_format_visitor : utl::formatting::Visitor_base {
         auto operator()(hir::type::Floating)  { return format("Float");  }
         auto operator()(hir::type::Character) { return format("Char");   }
@@ -182,9 +166,6 @@ namespace {
         }
         auto operator()(hir::type::Typename const& type) {
             return format("{}", type.name);
-        }
-        auto operator()(hir::type::Implicit_parameter_reference const& parameter) {
-            return format("{}", parameter.tag);
         }
         auto operator()(hir::type::Tuple const& tuple) {
             return format("({})", tuple.field_types);
@@ -214,7 +195,6 @@ namespace {
             return format("{}[{}]", application.name, application.arguments);
         }
     };
-
 
     struct Pattern_format_visitor : utl::formatting::Visitor_base {
         template <class T>
@@ -247,18 +227,15 @@ namespace {
             return format("{} if {}", guarded.guarded_pattern, guarded.guard);
         }
     };
-
 }
 
 
 DEFINE_FORMATTER_FOR(hir::Expression) {
     return std::visit(Expression_format_visitor { { context.out() } }, value.value);
 }
-
 DEFINE_FORMATTER_FOR(hir::Type) {
     return std::visit(Type_format_visitor { { context.out() } }, value.value);
 }
-
 DEFINE_FORMATTER_FOR(hir::Pattern) {
     return std::visit(Pattern_format_visitor { { context.out() } }, value.value);
 }

@@ -50,7 +50,7 @@ namespace {
         Namespace     & space,
         hir::Qualifier& qualifier) -> Namespace*
     {
-        if (qualifier.name.is_upper) {
+        if (qualifier.name.is_upper.get()) {
             if (auto* const item = space.upper_table.find(qualifier.name.identifier)) {
                 auto const error_if_arguments = [&] {
                     if (qualifier.template_arguments.has_value())
@@ -241,10 +241,10 @@ namespace {
 
 
 auto resolution::Context::find_lower(hir::Qualified_name& name, Scope& scope, Namespace& space) -> Lower_variant {
-    assert(!name.primary_name.is_upper);
+    assert(!name.primary_name.is_upper.get());
     return do_lookup<&Namespace::lower_table>(*this, scope, space, name);
 }
 auto resolution::Context::find_upper(hir::Qualified_name& name, Scope& scope, Namespace& space) -> Upper_variant {
-    assert(name.primary_name.is_upper);
+    assert(name.primary_name.is_upper.get());
     return do_lookup<&Namespace::upper_table>(*this, scope, space, name);
 }

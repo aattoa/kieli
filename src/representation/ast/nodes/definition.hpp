@@ -43,65 +43,51 @@ namespace ast {
 
 
     struct [[nodiscard]] Self_parameter {
-        Mutability      mutability;
-        bool            is_reference = false;
-        utl::Source_view source_view;
+        Mutability        mutability;
+        utl::Strong<bool> is_reference;
+        utl::Source_view  source_view;
     };
 
 
     namespace definition {
-
-        template <tree_configuration>
-        struct Basic_function;
-
-        template <>
-        struct Basic_function<AST_configuration> {
-            Expression                      body;
-            std::vector<Function_parameter> parameters;
-            Name                            name;
-            tl::optional<Type>             return_type;
-            tl::optional<Self_parameter>   self_parameter;
+        template <tree_configuration Configuration>
+        struct Basic_function {
+            typename Configuration::Expression                   body;
+            std::vector<Basic_function_parameter<Configuration>> parameters;
+            Name                                                 name;
+            tl::optional<typename Configuration::Type>           return_type;
+            tl::optional<Self_parameter>                         self_parameter;
         };
-
-
         template <tree_configuration Configuration>
         struct Basic_struct_member {
             Name                name;
             Configuration::Type type;
-            bool                is_public = false;
-            utl::Source_view     source_view;
+            utl::Strong<bool>   is_public;
+            utl::Source_view    source_view;
         };
-
         template <tree_configuration Configuration>
         struct Basic_struct {
             using Member = Basic_struct_member<Configuration>;
             std::vector<Member> members;
             Name                name;
         };
-
-
         template <tree_configuration Configuration>
         struct Basic_enum_constructor {
-            Name                                        name;
+            Name                                       name;
             tl::optional<typename Configuration::Type> payload_type;
-            utl::Source_view                             source_view;
+            utl::Source_view                           source_view;
         };
-
         template <tree_configuration Configuration>
         struct Basic_enum {
             using Constructor = Basic_enum_constructor<Configuration>;
             std::vector<Constructor> constructors;
             Name                     name;
         };
-
-
         template <tree_configuration Configuration>
         struct Basic_alias {
             Name                name;
             Configuration::Type type;
         };
-
-
         template <tree_configuration Configuration>
         struct Basic_typeclass {
             std::vector<Basic_function_signature         <Configuration>> function_signatures;
@@ -110,29 +96,22 @@ namespace ast {
             std::vector<Basic_type_template_signature    <Configuration>> type_template_signatures;
             Name                                                          name;
         };
-
-
         template <tree_configuration Configuration>
         struct Basic_implementation {
             Configuration::Type                             type;
             std::vector<typename Configuration::Definition> definitions;
         };
-
-
         template <tree_configuration Configuration>
         struct Basic_instantiation {
             Basic_class_reference<Configuration>            typeclass;
             Configuration::Type                             self_type;
             std::vector<typename Configuration::Definition> definitions;
         };
-
-
         template <tree_configuration Configuration>
         struct Basic_namespace {
             std::vector<typename Configuration::Definition> definitions;
             Name                                            name;
         };
-
 
         using Function       = Basic_function       <AST_configuration>;
         using Struct         = Basic_struct         <AST_configuration>;
@@ -142,7 +121,6 @@ namespace ast {
         using Implementation = Basic_implementation <AST_configuration>;
         using Instantiation  = Basic_instantiation  <AST_configuration>;
         using Namespace      = Basic_namespace      <AST_configuration>;
-
 
         template <class>
         struct Template;
@@ -161,7 +139,6 @@ namespace ast {
         using Implementation_template = Template<Implementation>;
         using Instantiation_template  = Template<Instantiation>;
         using Namespace_template      = Template<Namespace>;
-
     }
 
 
@@ -184,10 +161,9 @@ namespace ast {
             definition::Template<definition::Basic_typeclass      <Configuration>>,
             definition::Template<definition::Basic_implementation <Configuration>>,
             definition::Template<definition::Basic_instantiation  <Configuration>>,
-            definition::Template<definition::Basic_namespace      <Configuration>>
-        >;
+            definition::Template<definition::Basic_namespace      <Configuration>>>;
 
-        Variant         value;
+        Variant          value;
         utl::Source_view source_view;
 
         Basic_definition(Variant&& value, utl::Source_view const view) noexcept
