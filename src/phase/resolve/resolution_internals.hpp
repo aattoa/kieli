@@ -146,6 +146,11 @@ namespace resolution {
         explicit Resolution_constants(mir::Node_arena&);
     };
 
+    struct Predefinitions {
+        utl::Wrapper<Typeclass_info> copy_class;
+        utl::Wrapper<Typeclass_info> drop_class;
+    };
+
 
     class Context {
         utl::Safe_usize current_unification_variable_tag;
@@ -156,15 +161,16 @@ namespace resolution {
         Unsolved_unification_type_variables unsolved_unification_type_variables;
         Unification_variable_solutions      unification_variable_solutions;
     public:
-        compiler::Compilation_info compilation_info;
-        mir::Node_arena            node_arena;
-        mir::Namespace_arena       namespace_arena;
-        Resolution_constants       constants;
-        mir::Module                output_module;
-        utl::Wrapper<Namespace>    global_namespace;
-        Nameless_entities          nameless_entities;
-        tl::optional<mir::Type>    current_self_type;
-        tl::optional<Loop_info>    current_loop_info;
+        compiler::Compilation_info   compilation_info;
+        mir::Node_arena              node_arena;
+        mir::Namespace_arena         namespace_arena;
+        Resolution_constants         constants;
+        tl::optional<Predefinitions> predefinitions_value;
+        mir::Module                  output_module;
+        utl::Wrapper<Namespace>      global_namespace;
+        Nameless_entities            nameless_entities;
+        tl::optional<mir::Type>      current_self_type;
+        tl::optional<Loop_info>      current_loop_info;
 
         compiler::Identifier self_variable_id = compilation_info.get()->identifier_pool.make("self");
 
@@ -232,6 +238,7 @@ namespace resolution {
 
         auto solve_as_many_unsolved_unification_type_variables_as_possible() -> void;
 
+        [[nodiscard]] auto predefinitions() -> Predefinitions;
 
         // Returns a scope with local bindings for the template parameters and the MIR representations of the parameters themselves.
         [[nodiscard]] auto resolve_template_parameters(std::span<hir::Template_parameter>, Namespace&) -> utl::Pair<Scope, std::vector<mir::Template_parameter>>;

@@ -16,13 +16,14 @@ namespace compiler {
         String::Pool                    string_literal_pool;
         Identifier::Pool                identifier_pool;
     };
+    using Compilation_info = utl::Strong<std::shared_ptr<Shared_compilation_info>>;
 
     struct [[nodiscard]] Compile_arguments {
         std::filesystem::path source_directory_path;
         std::string           main_file_name;
     };
 
-    using Compilation_info = utl::Strong<std::shared_ptr<Shared_compilation_info>>;
+    auto predefinitions_source(Compilation_info&) -> utl::Wrapper<utl::Source>;
     auto mock_compilation_info() -> Compilation_info;
 
     struct [[nodiscard]] Compilation_result {};
