@@ -27,7 +27,8 @@ set(KIELI_CLI_SOURCE_FILES
 	src/cli/cli.cpp)
 set(KIELI_COMPILER_SOURCE_FILES
 	src/compiler/compiler.cpp
-	src/compiler/compiler.hpp)
+	src/compiler/compiler.hpp
+	src/compiler/predefinitions.cpp)
 set(KIELI_PROJECT_SOURCE_FILES
 	src/project/project.cpp
 	src/project/project.hpp)

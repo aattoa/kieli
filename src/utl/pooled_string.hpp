@@ -34,6 +34,15 @@ namespace utl {
         auto operator==(Pooled_string const&) const noexcept -> bool = default;
     };
 
+    template <class Tag> [[nodiscard]]
+    constexpr auto operator==(Pooled_string<Tag> const& left, std::string_view const right) -> bool {
+        return left.view() == right;
+    }
+    template <class Tag> [[nodiscard]]
+    constexpr auto operator==(std::string_view const left, Pooled_string<Tag> const& right) -> bool {
+        return left == right.view();
+    }
+
 
     template <class Tag>
     class [[nodiscard]] String_pool {

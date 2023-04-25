@@ -99,6 +99,14 @@ auto resolution::Context::fresh_local_variable_tag() -> mir::Local_variable_tag 
 }
 
 
+auto resolution::Context::predefinitions() -> Predefinitions {
+    if (predefinitions_value.has_value())
+        return *predefinitions_value;
+    else
+        utl::abort("missing resolution predefinitions");
+}
+
+
 auto resolution::Context::immut_constant(utl::Source_view const view) -> mir::Mutability { return { constants.immut, view }; }
 auto resolution::Context::  mut_constant(utl::Source_view const view) -> mir::Mutability { return { constants.mut, view }; }
 

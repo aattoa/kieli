@@ -399,6 +399,11 @@ namespace utl {
     template <class T>
     constexpr Type<T> type;
 
+    template <auto>
+    struct Value {};
+    template <auto x>
+    constexpr Value<x> value;
+
 
     template <class Variant, class Alternative>
     struct Alternative_index;

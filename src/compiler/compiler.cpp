@@ -45,6 +45,7 @@ auto compiler::mock_compilation_info() -> Compilation_info {
     });
 }
 
+
 auto compiler::compile(Compile_arguments&& compile_arguments) -> Compilation_result {
     Compilation_info compilation_info = std::make_shared<Shared_compilation_info>();
 
@@ -58,5 +59,25 @@ auto compiler::compile(Compile_arguments&& compile_arguments) -> Compilation_res
         compilation_info,
         { &main_file_name, 1 });
 
+    auto combined_desugar_result = desugar(parse(lex({
+        .compilation_info = compilation_info,
+        .source = predefinitions_source(compilation_info),
+    })));
+
+    combined_desugar_result.module.definitions.reserve(
+        ranges::fold_left(
+            module_map.container()
+                | ranges::views::transform([](auto& x) { return x.second.module.definitions.size(); }),
+            0_uz, std::plus {}));
+
+    for (auto& [_, desugar_result] : module_map) { // NOLINT
+        combined_desugar_result.node_arena.merge_with(std::move(desugar_result.node_arena));
+        ranges::move(
+            desugar_result.module.definitions.begin(),
+            desugar_result.module.definitions.end(),
+            std::back_inserter(combined_desugar_result.module.definitions));
+    }
+
+    (void)resolve(std::move(combined_desugar_result));
     utl::todo();
 }

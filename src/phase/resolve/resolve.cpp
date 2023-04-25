@@ -3,11 +3,10 @@
 #include "resolution_internals.hpp"
 #include "representation/lir/lir.hpp"
 
+using namespace resolution;
+
 
 namespace {
-
-    using namespace resolution;
-
 
     // Collect top-level name information
     auto register_namespace(
@@ -158,6 +157,26 @@ namespace {
     }
 
 
+    // Try to lookup predefinitions
+    auto set_predefinitions(Context& context) -> void {
+        struct Abort_predefinitions_lookup {};
+        auto const find = [&]<class T>(std::string_view const name, auto& table, utl::Type<T>) {
+            if (auto* const variant = table.find(name))
+                if (utl::wrapper auto const* const entity = std::get_if<utl::Wrapper<T>>(variant))
+                    return *entity;
+            throw Abort_predefinitions_lookup {}; // NOLINT
+        };
+        try {
+            utl::wrapper auto const space = find("std", context.global_namespace->lower_table, utl::type<Namespace>);
+            context.predefinitions_value = Predefinitions {
+                .copy_class = find("Copy", space->upper_table, utl::type<Typeclass_info>),
+                .drop_class = find("Drop", space->upper_table, utl::type<Typeclass_info>),
+            };
+        }
+        catch (Abort_predefinitions_lookup const&) {}
+    }
+
+
     // Resolves all definitions in order, but only visits function bodies if their return types have been omitted
     auto resolve_signatures(Context& context, utl::Wrapper<Namespace> space) -> void {
         for (Definition_variant& definition : space->definitions_in_order) {
@@ -240,6 +259,7 @@ auto compiler::resolve(Desugar_result&& desugar_result) -> Resolve_result {
     };
 
     register_namespace(context, desugar_result.module.definitions, context.global_namespace);
+    set_predefinitions(context);
     resolve_signatures(context, context.global_namespace);
     resolve_functions(context, context.global_namespace);
     context.solve_deferred_constraints();
