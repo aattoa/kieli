@@ -66,7 +66,6 @@ namespace utl {
         using Page = dtl::Wrapper_arena_page<T>;
         std::vector<Page> m_pages;
         Usize             m_page_size;
-        Usize             m_size = 0;
         explicit Wrapper_arena(Usize const page_size) noexcept
             : m_page_size { page_size } {}
     public:
@@ -80,9 +79,7 @@ namespace utl {
         auto wrap(Args&&... args) -> Wrapper<T> {
             auto const it = ranges::find_if_not(m_pages, &Page::is_at_capacity);
             Page& page = it != m_pages.end() ? *it : m_pages.emplace_back(m_page_size);
-            T* const element = page.unsafe_emplace_arena_element(std::forward<Args>(args)...);
-            ++m_size;
-            return Wrapper<T> { element };
+            return Wrapper<T> { page.unsafe_emplace_arena_element(std::forward<Args>(args)...) };
         }
         auto merge_with(Wrapper_arena&& other) & -> void {
             m_pages.insert(
