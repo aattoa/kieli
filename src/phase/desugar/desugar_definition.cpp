@@ -158,10 +158,8 @@ namespace {
 
 auto Desugaring_context::desugar(ast::Definition const& definition) -> hir::Definition {
     utl::always_assert(!definition.value.valueless_by_exception());
-
-    utl::Usize const old_kind = std::exchange(current_definition_kind, definition.value.index());
-    auto hir_definition = std::visit<hir::Definition::Variant>(Definition_desugaring_visitor { .context = *this }, definition.value);
-    current_definition_kind = old_kind;
-
-    return { std::move(hir_definition), definition.source_view };
+    return {
+        std::visit<hir::Definition::Variant>(Definition_desugaring_visitor { *this }, definition.value),
+        definition.source_view,
+    };
 }

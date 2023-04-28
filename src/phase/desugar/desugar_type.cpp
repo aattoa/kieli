@@ -63,10 +63,7 @@ namespace {
             };
         }
         auto operator()(ast::type::Instance_of const& instance_of) -> hir::Type::Variant {
-            if (context.is_within_function())
-                return hir::type::Instance_of { .classes = utl::map(context.desugar(), instance_of.classes) };
-            else
-                context.error(this_type.source_view, { "'inst' types are only usable within functions" });
+            return hir::type::Instance_of { .classes = utl::map(context.desugar(), instance_of.classes) };
         }
         auto operator()(ast::type::Template_application const& application) -> hir::Type::Variant {
             return hir::type::Template_application {
