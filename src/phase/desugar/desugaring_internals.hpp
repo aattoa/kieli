@@ -7,26 +7,16 @@
 #include "representation/hir/hir.hpp"
 
 
-class Desugaring_context {
-    utl::Safe_usize current_name_tag;
-    utl::Usize      current_definition_kind = std::variant_size_v<ast::Definition::Variant>;
-public:
+struct Desugaring_context {
     compiler::Compilation_info compilation_info;
     hir::Node_arena            node_arena;
-
-    compiler::Identifier self_variable_identifier = compilation_info.get()->identifier_pool.make("self");
+    compiler::Identifier       self_variable_identifier = compilation_info.get()->identifier_pool.make("self");
 
     explicit Desugaring_context(
         compiler::Compilation_info&& compilation_info,
         hir::Node_arena           && node_arena) noexcept
         : compilation_info { std::move(compilation_info) }
         , node_arena       { std::move(node_arena) } {}
-
-    [[nodiscard]]
-    auto is_within_function() const noexcept -> bool;
-
-    [[nodiscard]]
-    auto fresh_name_tag() -> utl::Usize;
 
     template <hir::node Node>
     auto wrap(Node&& node) -> utl::Wrapper<Node> {

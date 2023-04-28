@@ -3,16 +3,6 @@
 #include "desugaring_internals.hpp"
 
 
-auto Desugaring_context::is_within_function() const noexcept -> bool {
-    return current_definition_kind ==
-        utl::alternative_index<ast::Definition::Variant, ast::definition::Function>;
-}
-
-auto Desugaring_context::fresh_name_tag() -> utl::Usize {
-    return current_name_tag++.get();
-}
-
-
 auto Desugaring_context::desugar(ast::Function_argument const& argument) -> hir::Function_argument {
     return { .expression = desugar(argument.expression), .name = argument.name };
 }
@@ -79,8 +69,8 @@ auto Desugaring_context::desugar(ast::Qualified_name const& name) -> hir::Qualif
     return {
         .middle_qualifiers = utl::map(desugar(), name.middle_qualifiers),
         .root_qualifier = std::visit(utl::Overload {
-            [](std::monostate)                        -> hir::Root_qualifier { return {}; },
-            [](ast::Root_qualifier::Global)           -> hir::Root_qualifier { return { .value = hir::Root_qualifier::Global {} }; },
+            [](std::monostate)                         -> hir::Root_qualifier { return {}; },
+            [](ast::Root_qualifier::Global)            -> hir::Root_qualifier { return { .value = hir::Root_qualifier::Global {} }; },
             [this](utl::Wrapper<ast::Type> const type) -> hir::Root_qualifier { return { .value = desugar(type) }; }
         }, name.root_qualifier.value),
         .primary_name = name.primary_name,
@@ -150,7 +140,6 @@ auto Desugaring_context::error(
 auto compiler::desugar(Parse_result&& parse_result) -> Desugar_result {
     Desugaring_context context { std::move(parse_result.compilation_info), hir::Node_arena::with_default_page_size() };
     auto desugared_definitions = utl::map(context.desugar(), parse_result.module.definitions);
-
     return Desugar_result {
         .compilation_info = std::move(context.compilation_info),
         .node_arena       = std::move(context.node_arena),
