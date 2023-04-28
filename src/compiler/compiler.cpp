@@ -59,10 +59,10 @@ auto compiler::compile(Compile_arguments&& compile_arguments) -> Compilation_res
         compilation_info,
         { &main_file_name, 1 });
 
-    auto combined_desugar_result = desugar(parse(lex({
+    compiler::Desugar_result combined_desugar_result {
         .compilation_info = compilation_info,
-        .source = predefinitions_source(compilation_info),
-    })));
+        .node_arena = hir::Node_arena::with_default_page_size(),
+    };
 
     combined_desugar_result.module.definitions.reserve(
         ranges::fold_left(
