@@ -157,26 +157,6 @@ namespace {
     }
 
 
-    // Try to lookup predefinitions
-    auto set_predefinitions(Context& context) -> void {
-        struct Abort_predefinitions_lookup {};
-        auto const find = [&]<class T>(std::string_view const name, auto& table, utl::Type<T>) {
-            if (auto* const variant = table.find(name))
-                if (utl::wrapper auto const* const entity = std::get_if<utl::Wrapper<T>>(variant))
-                    return *entity;
-            throw Abort_predefinitions_lookup {}; // NOLINT
-        };
-        try {
-            utl::wrapper auto const space = find("std", context.global_namespace->lower_table, utl::type<Namespace>);
-            context.predefinitions_value = Predefinitions {
-                .copy_class = find("Copy", space->upper_table, utl::type<Typeclass_info>),
-                .drop_class = find("Drop", space->upper_table, utl::type<Typeclass_info>),
-            };
-        }
-        catch (Abort_predefinitions_lookup const&) {}
-    }
-
-
     // Resolves all definitions in order, but only visits function bodies if their return types have been omitted
     auto resolve_signatures(Context& context, utl::Wrapper<Namespace> space) -> void {
         for (Definition_variant& definition : space->definitions_in_order) {
@@ -248,6 +228,28 @@ namespace {
         }
     }
 
+
+    auto set_predefinitions(hir::Node_arena& output_hir_arena, Context& context) -> void {
+        auto desugar_result = desugar(parse(lex(compiler::Lex_arguments {
+            .compilation_info = context.compilation_info,
+            .source           = compiler::predefinitions_source(context.compilation_info),
+        })));
+        output_hir_arena.merge_with(std::move(desugar_result.node_arena));
+        register_namespace(context, desugar_result.module.definitions, context.global_namespace);
+
+        static constexpr auto find = []<class T>(std::string_view const name, auto& table, utl::Type<T>) {
+            if (auto* const variant = table.find(name))
+                if (utl::wrapper auto const* const entity = std::get_if<utl::Wrapper<T>>(variant))
+                    return *entity;
+            throw utl::exception("Definition of '{}' not found", name);
+        };
+        utl::wrapper auto const space = find("std", context.global_namespace->lower_table, utl::type<Namespace>);
+        context.predefinitions_value = Predefinitions {
+            .copy_class = find("Copy", space->upper_table, utl::type<Typeclass_info>),
+            .drop_class = find("Drop", space->upper_table, utl::type<Typeclass_info>),
+        };
+    }
+
 }
 
 
@@ -255,11 +257,11 @@ auto compiler::resolve(Desugar_result&& desugar_result) -> Resolve_result {
     Context context {
         std::move(desugar_result.compilation_info),
         mir::Node_arena::with_default_page_size(),
-        mir::Namespace_arena::with_default_page_size()
+        mir::Namespace_arena::with_default_page_size(),
     };
 
+    set_predefinitions(desugar_result.node_arena, context);
     register_namespace(context, desugar_result.module.definitions, context.global_namespace);
-    set_predefinitions(context);
     resolve_signatures(context, context.global_namespace);
     resolve_functions(context, context.global_namespace);
     context.solve_deferred_constraints();

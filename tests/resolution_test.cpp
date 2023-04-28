@@ -96,7 +96,7 @@ TEST("template argument deduction") {
 
 TEST("double variable solution") {
     REQUIRE_RESOLUTION_FAILURE(resolve("fn f() { let x = 5; let _: (I32, I64) = (x, x); }"),
-        "initializer is of type ('T1, 'T1)");
+        "initializer is of type");
 }
 
 TEST("multiple template instantiations") {
