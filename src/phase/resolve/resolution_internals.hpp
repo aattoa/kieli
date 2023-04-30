@@ -48,11 +48,11 @@ namespace resolution {
             compiler::Identifier field_identifier;
             Explanation          explanation;
         };
-        struct Tuple_field {
-            mir::Type   tuple_type;
-            mir::Type   field_type;
-            utl::Usize  field_index {};
-            Explanation explanation;
+        struct Tuple_field { //NOLINT
+            mir::Type               tuple_type;
+            mir::Type               field_type;
+            utl::Strong<utl::Usize> field_index;
+            Explanation             explanation;
         };
     };
 
@@ -76,30 +76,21 @@ namespace resolution {
     };
 
 
-    using Unsolved_unification_type_variables = std::vector<utl::Wrapper<mir::Type::Variant>>;
-
     struct [[nodiscard]] Deferred_equality_constraints {
         std::vector<constraint::Type_equality>       types;
         std::vector<constraint::Mutability_equality> mutabilities;
     };
 
-    struct [[nodiscard]] Unification_variable_solutions {
-        using Types        = utl::Flatmap<mir::Unification_variable_tag, utl::Wrapper<mir::Type      ::Variant>>;
-        using Mutabilities = utl::Flatmap<mir::Unification_variable_tag, utl::Wrapper<mir::Mutability::Variant>>;
-        Types        types;
-        Mutabilities mutabilities;
-    };
 
     // Passed to `Context::unify_types`
     struct [[nodiscard]] Type_unification_arguments {
         using Report_unification_failure_callback =
-            void (Context&, constraint::Type_equality original, utl::Wrapper<mir::Type::Variant> left, utl::Wrapper<mir::Type::Variant> right);
+            void (Context&, constraint::Type_equality original, mir::Type left, mir::Type right);
         using Report_recursion_error_callback =
-            void (Context&, constraint::Type_equality original, utl::Wrapper<mir::Type::Variant> variable, utl::Wrapper<mir::Type::Variant> solution);
+            void (Context&, constraint::Type_equality original, mir::Type variable, mir::Type solution);
 
         constraint::Type_equality            constraint_to_be_tested;
         Deferred_equality_constraints&       deferred_equality_constraints;
-        Unification_variable_solutions&      unification_variable_solutions;
         bool                                 allow_coercion             = false;
         bool                                 do_destructive_unification = false;
         Report_unification_failure_callback* report_unification_failure = nullptr;
@@ -110,12 +101,11 @@ namespace resolution {
         using Report_unification_failure_callback =
             void (Context&, constraint::Mutability_equality);
 
-        constraint::Mutability_equality               constraint_to_be_tested;
-        Deferred_equality_constraints&                deferred_equality_constraints;
-        Unification_variable_solutions::Mutabilities& unification_variable_solutions;
-        bool                                          allow_coercion             = false;
-        bool                                          do_destructive_unification = false;
-        Report_unification_failure_callback*          report_unification_failure = nullptr;
+        constraint::Mutability_equality      constraint_to_be_tested;
+        Deferred_equality_constraints&       deferred_equality_constraints;
+        bool                                 allow_coercion             = false;
+        bool                                 do_destructive_unification = false;
+        Report_unification_failure_callback* report_unification_failure = nullptr;
     };
 
 
@@ -156,21 +146,18 @@ namespace resolution {
         utl::Safe_usize current_unification_variable_tag;
         utl::Safe_usize current_template_parameter_tag;
         utl::Safe_usize current_local_variable_tag;
-
-        Deferred_equality_constraints       deferred_equality_constraints;
-        Unsolved_unification_type_variables unsolved_unification_type_variables;
-        Unification_variable_solutions      unification_variable_solutions;
     public:
-        compiler::Compilation_info   compilation_info;
-        mir::Node_arena              node_arena;
-        mir::Namespace_arena         namespace_arena;
-        Resolution_constants         constants;
-        tl::optional<Predefinitions> predefinitions_value;
-        mir::Module                  output_module;
-        utl::Wrapper<Namespace>      global_namespace;
-        Nameless_entities            nameless_entities;
-        tl::optional<mir::Type>      current_self_type;
-        tl::optional<Loop_info>      current_loop_info;
+        compiler::Compilation_info    compilation_info;
+        mir::Node_arena               node_arena;
+        mir::Namespace_arena          namespace_arena;
+        Resolution_constants          constants;
+        tl::optional<Predefinitions>  predefinitions_value;
+        Deferred_equality_constraints deferred_equality_constraints;
+        mir::Module                   output_module;
+        utl::Wrapper<Namespace>       global_namespace;
+        Nameless_entities             nameless_entities;
+        tl::optional<mir::Type>       current_self_type;
+        tl::optional<Loop_info>       current_loop_info;
 
         compiler::Identifier self_variable_id = compilation_info.get()->identifier_pool.make("self");
 
@@ -225,7 +212,7 @@ namespace resolution {
         [[nodiscard]] auto unify_types(Type_unification_arguments) -> bool;
         [[nodiscard]] auto unify_mutabilities(Mutability_unification_arguments) -> bool;
 
-        [[nodiscard]] auto pure_try_equate_types(utl::Wrapper<mir::Type::Variant>, utl::Wrapper<mir::Type::Variant>) -> bool;
+        [[nodiscard]] auto pure_try_equate_types(mir::Type, mir::Type) -> bool;
 
         auto solve(constraint::Type_equality       const&) -> void;
         auto solve(constraint::Mutability_equality const&) -> void;
@@ -235,8 +222,6 @@ namespace resolution {
 
         // Clears the deferred constraint vectors, and solves their contained constraints.
         auto solve_deferred_constraints() -> void;
-
-        auto solve_as_many_unsolved_unification_type_variables_as_possible() -> void;
 
         [[nodiscard]] auto predefinitions() -> Predefinitions;
 
@@ -283,10 +268,12 @@ namespace resolution {
         // Returns the associated namespace of the given type, or emits an error diagnostic if the type does not have one.
         auto associated_namespace(mir::Type) -> utl::Wrapper<Namespace>;
 
-        auto fresh_unification_mutability_variable(utl::Source_view) -> mir::Mutability;
+        auto fresh_unification_type_variable_state(mir::Unification_type_variable_kind) -> utl::Wrapper<mir::Unification_type_variable_state>;
+
         auto fresh_general_unification_type_variable(utl::Source_view) -> mir::Type;
         auto fresh_integral_unification_type_variable(utl::Source_view) -> mir::Type;
 
+        auto fresh_unification_mutability_variable(utl::Source_view) -> mir::Mutability;
         auto fresh_template_parameter_reference_tag() -> mir::Template_parameter_tag;
         auto fresh_local_variable_tag()               -> mir::Local_variable_tag;
 

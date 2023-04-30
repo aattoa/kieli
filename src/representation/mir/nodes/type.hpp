@@ -7,15 +7,23 @@
 
 namespace mir {
 
-    struct [[nodiscard]] Type {
+    class [[nodiscard]] Type {
+    public:
         struct Variant;
+    private:
+        utl::Wrapper<Variant> m_value;
+        utl::Source_view      m_source_view;
+    public:
+        explicit Type(utl::Wrapper<Variant>, utl::Source_view) noexcept;
 
-        utl::Wrapper<Variant> value;
-        utl::Source_view      source_view;
+        // Get the wrapped value, but flatten solved unification variables first
+        auto flattened_value() const -> utl::Wrapper<Variant>;
 
-        auto with(utl::Source_view const view) const noexcept -> Type {
-            return { .value = value, .source_view = view };
-        }
+        // Get the wrapped value without flattening solved unification variables
+        auto pure_value() const noexcept -> utl::Wrapper<Variant>;
+
+        auto source_view() const noexcept -> utl::Source_view;
+        auto with(utl::Source_view) const noexcept -> Type;
     };
 
 
@@ -58,11 +66,8 @@ namespace mir {
             utl::Wrapper<resolution::Enum_info> info;
             bool                                is_application = false;
         };
-        struct General_unification_variable {
-            Unification_variable_tag tag;
-        };
-        struct Integral_unification_variable {
-            Unification_variable_tag tag;
+        struct Unification_variable {
+            utl::Wrapper<Unification_type_variable_state> state;
         };
         struct Template_parameter_reference {
             // The identifier serves no purpose other than debuggability
@@ -87,8 +92,7 @@ namespace mir {
         type::Pointer,
         type::Structure,
         type::Enumeration,
-        type::General_unification_variable,
-        type::Integral_unification_variable,
+        type::Unification_variable,
         type::Template_parameter_reference>
     {
         using variant::variant;

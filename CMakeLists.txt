@@ -86,6 +86,7 @@ set(KIELI_REPRESENTATION_SOURCE_FILES
 	src/representation/lir/lir_formatting.cpp
 	src/representation/lir/lir_formatting.hpp
 
+	src/representation/mir/mir.cpp
 	src/representation/mir/mir.hpp
 	src/representation/mir/mir_formatting.cpp
 	src/representation/mir/nodes/definition.hpp

@@ -89,9 +89,9 @@ namespace {
 
             return {
                 .value = std::move(mir_tuple),
-                .type {
-                    .value       = context.wrap_type(std::move(mir_tuple_type)),
-                    .source_view = this_pattern.source_view
+                .type = mir::Type {
+                    context.wrap_type(std::move(mir_tuple_type)),
+                    this_pattern.source_view,
                 },
                 .is_exhaustive_by_itself = is_exhaustive,
                 .source_view             = this_pattern.source_view
@@ -102,7 +102,7 @@ namespace {
             mir::Pattern          aliased_pattern = recurse(*as.aliased_pattern);
             mir::Mutability const mutability      = context.resolve_mutability(as.alias.mutability, scope);
 
-            (void)scope.bind_variable(as.alias.identifier, {
+            scope.bind_variable(as.alias.identifier, {
                 .type               = aliased_pattern.type,
                 .mutability         = mutability,
                 .variable_tag       = context.fresh_local_variable_tag(),
@@ -113,9 +113,7 @@ namespace {
         }
 
         auto operator()(hir::pattern::Constructor& hir_constructor) -> mir::Pattern {
-            return utl::match(
-                context.find_lower(hir_constructor.constructor_name, scope, space),
-
+            return utl::match(context.find_lower(hir_constructor.constructor_name, scope, space),
                 [&, this](utl::Wrapper<resolution::Function_info>) -> mir::Pattern {
                     context.error(this_pattern.source_view, { "Expected a constructor, but found a function" });
                 },
@@ -135,7 +133,7 @@ namespace {
                                 .constrainer_type = *constructor.payload_type,
                                 .constrained_type = payload_pattern->type,
                                 .constrainer_note = constraint::Explanation {
-                                    constructor.payload_type->source_view,
+                                    constructor.payload_type->source_view(),
                                     "The constructor field is of type {0}"
                                 },
                                 .constrained_note {
@@ -153,7 +151,7 @@ namespace {
                     }
 
                     bool const is_exhaustive = (!payload_pattern || payload_pattern->is_exhaustive_by_itself)
-                        && utl::get<mir::type::Enumeration>(*constructor.enum_type.value).info->constructor_count() == 1;
+                        && utl::get<mir::type::Enumeration>(*constructor.enum_type.flattened_value()).info->constructor_count() == 1;
 
                     return {
                         .value = mir::pattern::Enum_constructor {
@@ -172,18 +170,18 @@ namespace {
             if (slice.element_patterns.empty()) {
                 return {
                     .value = mir::pattern::Slice {},
-                    .type {
-                        .value = context.wrap_type(mir::type::Slice {
+                    .type = mir::Type {
+                        context.wrap_type(mir::type::Slice {
                             .element_type = context.fresh_general_unification_type_variable(this_pattern.source_view)
                         }),
-                        .source_view = this_pattern.source_view
+                        this_pattern.source_view,
                     },
-                    .source_view = this_pattern.source_view
+                    .source_view = this_pattern.source_view,
                 };
             }
             else {
                 mir::pattern::Slice mir_slice {
-                    .element_patterns = utl::vector_with_capacity(slice.element_patterns.size())
+                    .element_patterns = utl::vector_with_capacity(slice.element_patterns.size()),
                 };
 
                 mir_slice.element_patterns.push_back(recurse(slice.element_patterns.front()));
@@ -199,7 +197,7 @@ namespace {
                         .constrainer_type = element_type,
                         .constrained_type = pattern.type,
                         .constrainer_note = constraint::Explanation {
-                            element_type.source_view + previous_pattern.source_view,
+                            element_type.source_view() + previous_pattern.source_view,
                             i == 1 ? "The previous pattern was of type {0}"
                                    : "The previous patterns were of type {0}"
                         },
@@ -213,9 +211,9 @@ namespace {
 
                 return {
                     .value = std::move(mir_slice),
-                    .type {
-                        .value       = context.wrap_type(mir::type::Slice { element_type }),
-                        .source_view = this_pattern.source_view
+                    .type = mir::Type {
+                        context.wrap_type(mir::type::Slice { element_type }),
+                        this_pattern.source_view,
                     },
                     .source_view = this_pattern.source_view
                 };

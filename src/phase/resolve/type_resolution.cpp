@@ -45,22 +45,19 @@ namespace {
         }
 
         auto operator()(hir::type::Self&) -> mir::Type {
-            if (context.current_self_type.has_value()) {
+            if (context.current_self_type.has_value())
                 return *context.current_self_type;
-            }
-            else {
-                context.error(this_type.source_view, {
-                    "The Self type is only accessible within classes, 'impl' blocks, or 'inst' blocks"
-                });
-            }
+            context.error(this_type.source_view, {
+                "The Self type is only accessible within classes, 'impl' blocks, or 'inst' blocks"
+            });
         }
 
         auto operator()(hir::type::Tuple& tuple) -> mir::Type {
             if (tuple.field_types.empty())
                 return context.unit_type(this_type.source_view);
-            return {
-                .value       = context.wrap_type(mir::type::Tuple { .field_types = utl::map(recurse(), tuple.field_types) }),
-                .source_view = this_type.source_view
+            return mir::Type {
+                context.wrap_type(mir::type::Tuple { .field_types = utl::map(recurse(), tuple.field_types) }),
+                this_type.source_view
             };
         }
 
@@ -77,12 +74,12 @@ namespace {
                 }
             });
 
-            return {
-                .value = context.wrap_type(mir::type::Array {
+            return mir::Type {
+                context.wrap_type(mir::type::Array {
                     .element_type = element_type,
                     .array_length = context.wrap(std::move(length))
                 }),
-                .source_view = this_type.source_view
+                this_type.source_view
             };
         }
 
@@ -99,9 +96,7 @@ namespace {
                 }
             }
 
-            return utl::match(
-                context.find_upper(type.name, scope, space),
-
+            return utl::match(context.find_upper(type.name, scope, space),
                 [this](utl::Wrapper<Struct_info> const info) -> mir::Type {
                     return info->structure_type.with(this_type.source_view);
                 },
@@ -113,21 +108,21 @@ namespace {
                 },
 
                 [this](utl::Wrapper<Struct_template_info> const info) -> mir::Type {
-                    return {
-                        .value = context.wrap_type(mir::type::Structure {
+                    return mir::Type {
+                        context.wrap_type(mir::type::Structure {
                             .info           = context.instantiate_struct_template_with_synthetic_arguments(info, this_type.source_view),
                             .is_application = true
                         }),
-                        .source_view = this_type.source_view
+                        this_type.source_view,
                     };
                 },
                 [this](utl::Wrapper<Enum_template_info> const info) -> mir::Type {
-                    return {
-                        .value = context.wrap_type(mir::type::Enumeration {
+                    return mir::Type {
+                        context.wrap_type(mir::type::Enumeration {
                             .info           = context.instantiate_enum_template_with_synthetic_arguments(info, this_type.source_view),
                             .is_application = true
                         }),
-                        .source_view = this_type.source_view
+                        this_type.source_view,
                     };
                 },
                 [&](utl::Wrapper<Alias_template_info> const info) -> mir::Type {
@@ -146,57 +141,55 @@ namespace {
         }
 
         auto operator()(hir::type::Reference& reference) -> mir::Type {
-            return {
-                .value = context.wrap_type(mir::type::Reference {
+            return mir::Type {
+                context.wrap_type(mir::type::Reference {
                     .mutability      = context.resolve_mutability(reference.mutability, scope),
                     .referenced_type = recurse(*reference.referenced_type)
                 }),
-                .source_view = this_type.source_view
+                this_type.source_view,
             };
         }
 
         auto operator()(hir::type::Pointer& pointer) -> mir::Type {
-            return {
-                .value = context.wrap_type(mir::type::Pointer {
+            return mir::Type {
+                context.wrap_type(mir::type::Pointer {
                     .mutability      = context.resolve_mutability(pointer.mutability, scope),
                     .pointed_to_type = recurse(*pointer.pointed_to_type)
                 }),
-                .source_view = this_type.source_view
+                this_type.source_view,
             };
         }
 
         auto operator()(hir::type::Function& function) -> mir::Type {
-            return {
-                .value = context.wrap_type(mir::type::Function {
+            return mir::Type {
+                context.wrap_type(mir::type::Function {
                     .parameter_types = utl::map(recurse(), function.argument_types),
                     .return_type     = recurse(*function.return_type)
                 }),
-                .source_view = this_type.source_view
+                this_type.source_view,
             };
         }
 
         auto operator()(hir::type::Template_application& application) -> mir::Type {
-            return utl::match(
-                context.find_upper(application.name, scope, space),
-
+            return utl::match(context.find_upper(application.name, scope, space),
                 [&](utl::Wrapper<Struct_template_info> const info) -> mir::Type {
-                    return {
-                        .value = context.wrap_type(mir::type::Structure {
+                    return mir::Type {
+                        context.wrap_type(mir::type::Structure {
                             .info = context.instantiate_struct_template(
                                 info, application.arguments, this_type.source_view, scope, space),
                             .is_application = true
                         }),
-                        .source_view = this_type.source_view
+                        this_type.source_view,
                     };
                 },
                 [&](utl::Wrapper<Enum_template_info> info) -> mir::Type {
-                    return {
-                        .value = context.wrap_type(mir::type::Enumeration {
+                    return mir::Type {
+                        context.wrap_type(mir::type::Enumeration {
                             .info = context.instantiate_enum_template(
                                 info, application.arguments, this_type.source_view, scope, space),
                             .is_application = true
                         }),
-                        .source_view = this_type.source_view
+                        this_type.source_view,
                     };
                 },
 

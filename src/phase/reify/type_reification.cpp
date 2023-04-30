@@ -16,10 +16,10 @@ namespace {
         }
 
 
-        auto operator()(mir::unification_variable auto const& variable) -> cir::Type {
-            context.error(this_type.source_view, {
+        auto operator()(mir::type::Unification_variable const& variable) -> cir::Type {
+            context.error(this_type.source_view(), {
                 .message           = "Found an unsolved type variable: {}",
-                .message_arguments = fmt::make_format_args(variable.tag)
+                .message_arguments = fmt::make_format_args(utl::get<mir::Unification_type_variable_state::Unsolved>(variable.state->value).tag),
             });
             utl::unreachable(); // silence buggy warning
         }
@@ -30,20 +30,20 @@ namespace {
                 &Context::u8_type, &Context::u16_type, &Context::u32_type, &Context::u64_type,
             });
             static_assert(types.size() == utl::enumerator_count<mir::type::Integer>);
-            return (context.*types[utl::as_index(integer)])(this_type.source_view);
+            return (context.*types[utl::as_index(integer)])(this_type.source_view());
         }
 
         auto operator()(mir::type::Boolean const&) -> cir::Type {
-            return context.boolean_type(this_type.source_view);
+            return context.boolean_type(this_type.source_view());
         }
         auto operator()(mir::type::Floating const&) -> cir::Type {
-            return context.floating_type(this_type.source_view);
+            return context.floating_type(this_type.source_view());
         }
         auto operator()(mir::type::String const&) -> cir::Type {
-            return context.string_type(this_type.source_view);
+            return context.string_type(this_type.source_view());
         }
         auto operator()(mir::type::Character const&) -> cir::Type {
-            return context.character_type(this_type.source_view);
+            return context.character_type(this_type.source_view());
         }
 
         auto operator()(utl::one_of<mir::type::Pointer, mir::type::Reference> auto const& pointer) -> cir::Type {
@@ -53,7 +53,7 @@ namespace {
             return {
                 .value       = context.wrap_type(cir::type::Pointer { .pointed_to_type = context.reify_type(pointed_to_type) }),
                 .size        = sizeof(void*),
-                .source_view = this_type.source_view
+                .source_view = this_type.source_view()
             };
         }
 
@@ -73,7 +73,7 @@ namespace {
             return {
                 .value       = context.wrap_type(cir::type::Tuple { .field_types = std::move(field_types) }),
                 .size        = size,
-                .source_view = this_type.source_view
+                .source_view = this_type.source_view()
             };
         }
 
@@ -104,5 +104,5 @@ namespace {
 
 
 auto reification::Context::reify_type(mir::Type type) -> cir::Type {
-    return std::visit(Type_reification_visitor { *this, type }, *type.value);
+    return std::visit(Type_reification_visitor { *this, type }, *type.flattened_value());
 }

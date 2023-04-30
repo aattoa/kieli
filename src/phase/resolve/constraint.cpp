@@ -7,16 +7,15 @@ namespace {
     auto report_type_unification_failure(
         resolution::Context&                        context,
         resolution::constraint::Type_equality const constraint,
-        utl::Wrapper<mir::Type::Variant>      const left,
-        utl::Wrapper<mir::Type::Variant>      const right) -> void
+        mir::Type                             const left,
+        mir::Type                             const right) -> void
     {
         auto sections = utl::vector_with_capacity<utl::diagnostics::Text_section>(2);
 
         tl::optional<std::string> const constrainer_note = constraint.constrainer_note.transform(
             [&](resolution::constraint::Explanation const explanation) {
                 return fmt::vformat(explanation.explanatory_note, fmt::make_format_args(constraint.constrainer_type, constraint.constrained_type));
-            }
-        );
+            });
 
         std::string const constrained_note =
             fmt::vformat(constraint.constrained_note.explanatory_note, fmt::make_format_args(constraint.constrainer_type, constraint.constrained_type));
@@ -45,10 +44,10 @@ namespace {
     auto report_recursive_type(
         resolution::Context&                        context,
         resolution::constraint::Type_equality const constraint,
-        utl::Wrapper<mir::Type::Variant>      const variable,
-        utl::Wrapper<mir::Type::Variant>      const solution) -> void
+        mir::Type                             const variable,
+        mir::Type                             const solution) -> void
     {
-        context.error(constraint.constrained_type.source_view, {
+        context.error(constraint.constrained_type.source_view(), {
             .message           = "Recursive type variable solution: {} = {}",
             .message_arguments = fmt::make_format_args(variable, solution)
         });
@@ -84,30 +83,17 @@ namespace {
         });
     }
 
-
-    auto try_get_variable_tag(mir::Type::Variant const& variant)
-        noexcept -> tl::optional<mir::Unification_variable_tag>
-    {
-        if (auto const* const general = std::get_if<mir::type::General_unification_variable>(&variant))
-            return general->tag;
-        else if (auto const* const integral = std::get_if<mir::type::Integral_unification_variable>(&variant))
-            return integral->tag;
-        else
-            return tl::nullopt;
-    }
-
 }
 
 
 auto resolution::Context::solve(constraint::Type_equality const& constraint) -> void {
     utl::always_assert(unify_types({
-        .constraint_to_be_tested        = constraint,
-        .deferred_equality_constraints  = deferred_equality_constraints,
-        .unification_variable_solutions = unification_variable_solutions,
-        .allow_coercion                 = true,
-        .do_destructive_unification     = true,
-        .report_unification_failure     = report_type_unification_failure,
-        .report_recursive_type          = report_recursive_type
+        .constraint_to_be_tested       = constraint,
+        .deferred_equality_constraints = deferred_equality_constraints,
+        .allow_coercion                = true,
+        .do_destructive_unification    = true,
+        .report_unification_failure    = report_type_unification_failure,
+        .report_recursive_type         = report_recursive_type
     }));
 }
 
@@ -116,7 +102,6 @@ auto resolution::Context::solve(constraint::Mutability_equality const& constrain
     utl::always_assert(unify_mutabilities({
         .constraint_to_be_tested        = constraint,
         .deferred_equality_constraints  = deferred_equality_constraints,
-        .unification_variable_solutions = unification_variable_solutions.mutabilities,
         .allow_coercion                 = true,
         .do_destructive_unification     = true,
         .report_unification_failure     = report_mutability_unification_failure
@@ -130,7 +115,7 @@ auto resolution::Context::solve(constraint::Instance const&) -> void {
 
 
 auto resolution::Context::solve(constraint::Struct_field const& constraint) -> void {
-    if (auto const* const type = std::get_if<mir::type::Structure>(&*constraint.struct_type.value)) {
+    if (auto const* const type = std::get_if<mir::type::Structure>(&*constraint.struct_type.flattened_value())) {
         mir::Struct const& structure = resolve_struct(type->info);
         for (mir::Struct::Member const& member : structure.members) {
             if (constraint.field_identifier == member.name.identifier) {
@@ -162,17 +147,17 @@ auto resolution::Context::solve(constraint::Struct_field const& constraint) -> v
 
 
 auto resolution::Context::solve(constraint::Tuple_field const& constraint) -> void {
-    if (auto const* const type = std::get_if<mir::type::Tuple>(&*constraint.tuple_type.value)) {
-        if (constraint.field_index >= type->field_types.size()) {
+    if (auto const* const type = std::get_if<mir::type::Tuple>(&*constraint.tuple_type.flattened_value())) {
+        if (constraint.field_index.get() >= type->field_types.size()) {
             error(constraint.explanation.source_view, {
                 .message             = constraint.explanation.explanatory_note,
                 .help_note           = "{} does not have a {} field",
-                .help_note_arguments = fmt::make_format_args(constraint.tuple_type, utl::formatting::integer_with_ordinal_indicator(constraint.field_index + 1))
+                .help_note_arguments = fmt::make_format_args(constraint.tuple_type, utl::formatting::integer_with_ordinal_indicator(constraint.field_index.get() + 1))
             });
         }
         solve(constraint::Type_equality {
             .constrainer_type = constraint.field_type,
-            .constrained_type = type->field_types[constraint.field_index],
+            .constrained_type = type->field_types[constraint.field_index.get()],
             .constrained_note {
                 constraint.explanation.source_view,
                 "(this message should never be visible)"
@@ -194,42 +179,8 @@ auto resolution::Context::solve_deferred_constraints() -> void {
         // This has to be be an index-based loop because solving a constraint may defer more constraints
         for (utl::Usize i = 0; i != constraints.size(); ++i)
             this->solve(std::as_const(constraints[i]));
-
         constraints.clear();
     };
-
     solve(deferred_equality_constraints.types);
     solve(deferred_equality_constraints.mutabilities);
-
-    solve_as_many_unsolved_unification_type_variables_as_possible();
-}
-
-
-auto resolution::Context::solve_as_many_unsolved_unification_type_variables_as_possible() -> void {
-    // TODO: does this need to detect existing solutions?
-
-    Unsolved_unification_type_variables still_unsolved_unification_type_variables;
-    for (utl::wrapper auto const variable : unsolved_unification_type_variables) {
-        while (tl::optional const tag = try_get_variable_tag(*variable)) {
-            if (utl::wrapper auto* const solution = unification_variable_solutions.types.find(*tag)) {
-                // Prevent infinite loop
-                if (tl::optional const solution_tag = try_get_variable_tag(**solution))
-                    if (*tag == *solution_tag)
-                        break;
-
-                // Solving an integral unification variable with a general unification variable would lose information
-                if (std::holds_alternative<mir::type::Integral_unification_variable>(*variable) &&
-                    std::holds_alternative<mir::type::General_unification_variable>(**solution))
-                    break;
-
-                // Apply solution
-                *variable = **solution;
-            }
-            else {
-                still_unsolved_unification_type_variables.push_back(variable);
-                break;
-            }
-        }
-    }
-    unsolved_unification_type_variables = std::move(still_unsolved_unification_type_variables);
 }

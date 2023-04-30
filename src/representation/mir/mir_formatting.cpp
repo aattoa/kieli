@@ -19,6 +19,37 @@ DIRECTLY_DEFINE_FORMATTER_FOR(mir::expression::Match::Case) {
 }
 
 
+DEFINE_FORMATTER_FOR(mir::Unification_type_variable_state) {
+    return utl::match(value.value,
+        [&](mir::Unification_type_variable_state::Solved const& solved) {
+            return fmt::format_to(context.out(), "{}", solved.solution);
+        },
+        [&](mir::Unification_type_variable_state::Unsolved const& unsolved) {
+            return fmt::format_to(
+                context.out(),
+                "'{}{}",
+                std::invoke([kind = unsolved.kind.get()] {
+                    switch (kind) {
+                    case mir::Unification_type_variable_kind::general: return "T";
+                    case mir::Unification_type_variable_kind::integral: return "I";
+                    default: utl::unreachable();
+                    }
+                }),
+                unsolved.tag.value);
+        });
+}
+
+DEFINE_FORMATTER_FOR(mir::Unification_mutability_variable_state) {
+    return utl::match(value.value,
+        [&](mir::Unification_mutability_variable_state::Solved const& solved) {
+            return fmt::format_to(context.out(), "{}", solved.solution);
+        },
+        [&](mir::Unification_mutability_variable_state::Unsolved const& unsolved) {
+            return fmt::format_to(context.out(), "mut{}", unsolved.tag);
+        });
+}
+
+
 DEFINE_FORMATTER_FOR(mir::Class_reference) {
     return fmt::format_to(context.out(), "{}", value.info->name);
 }
@@ -26,10 +57,10 @@ DEFINE_FORMATTER_FOR(mir::Class_reference) {
 DEFINE_FORMATTER_FOR(mir::Mutability::Variant) {
     return utl::match(value,
         [&](mir::Mutability::Concrete const concrete) {
-            return !concrete.is_mutable ? context.out() : fmt::format_to(context.out(), "mut ");
+            return !concrete.is_mutable.get() ? context.out() : fmt::format_to(context.out(), "mut ");
         },
         [&](mir::Mutability::Variable const variable) {
-            return fmt::format_to(context.out(), "'mut{} ", variable.tag.value);
+            return fmt::format_to(context.out(), "{}", *variable.state);
         },
         [&](mir::Mutability::Parameterized const parameterized) {
             return fmt::format_to(context.out(), "mut?'P{} {} ", parameterized.tag.value, parameterized.identifier);
@@ -37,7 +68,7 @@ DEFINE_FORMATTER_FOR(mir::Mutability::Variant) {
 }
 
 DEFINE_FORMATTER_FOR(mir::Mutability) {
-    return fmt::format_to(context.out(), "{}", *value.value);
+    return fmt::format_to(context.out(), "{}", *value.value());
 }
 
 DEFINE_FORMATTER_FOR(mir::Unification_variable_tag) {
@@ -51,12 +82,12 @@ DEFINE_FORMATTER_FOR(mir::Template_argument) {
 
     return utl::match(value.value,
         [&](mir::Mutability const mutability) {
-            return utl::match(*mutability.value,
+            return utl::match(*mutability.value(),
                 [&](mir::Mutability::Concrete const concrete) {
-                    return fmt::format_to(out, "{}", concrete.is_mutable ? "mut" : "immut");
+                    return fmt::format_to(out, "{}", concrete.is_mutable.get() ? "mut" : "immut");
                 },
                 [&](mir::Mutability::Variable const variable) {
-                    return fmt::format_to(context.out(), "'mut{}", variable.tag.value);
+                    return fmt::format_to(context.out(), "'mut{}", utl::get<mir::Unification_mutability_variable_state::Unsolved>(variable.state->value).tag);
                 },
                 [&](mir::Mutability::Parameterized const parameterized) {
                     return fmt::format_to(context.out(), "mut?'P{} {}", parameterized.tag.value, parameterized.identifier);
@@ -266,11 +297,8 @@ namespace {
             else
                 return format("{}", type.info->name);
         }
-        auto operator()(mir::type::General_unification_variable const& variable) {
-            return format("'T{}", variable.tag.value);
-        }
-        auto operator()(mir::type::Integral_unification_variable const& variable) {
-            return format("'I{}", variable.tag.value);
+        auto operator()(mir::type::Unification_variable const& variable) {
+            return format("{}", *variable.state);
         }
         auto operator()(mir::type::Template_parameter_reference const& reference) {
             return format("'P{} {}", reference.tag.value, reference.identifier);
@@ -295,7 +323,7 @@ DEFINE_FORMATTER_FOR(mir::Type::Variant) {
 }
 
 DEFINE_FORMATTER_FOR(mir::Type) {
-    return fmt::format_to(context.out(), "{}", *value.value);
+    return fmt::format_to(context.out(), "{}", *value.flattened_value());
 }
 
 
