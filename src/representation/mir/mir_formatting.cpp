@@ -87,7 +87,7 @@ DEFINE_FORMATTER_FOR(mir::Template_argument) {
                     return fmt::format_to(out, "{}", concrete.is_mutable.get() ? "mut" : "immut");
                 },
                 [&](mir::Mutability::Variable const variable) {
-                    return fmt::format_to(context.out(), "'mut{}", utl::get<mir::Unification_mutability_variable_state::Unsolved>(variable.state->value).tag);
+                    return fmt::format_to(context.out(), "'mut{}", variable.state->as_unsolved().tag);
                 },
                 [&](mir::Mutability::Parameterized const parameterized) {
                     return fmt::format_to(context.out(), "mut?'P{} {}", parameterized.tag.value, parameterized.identifier);

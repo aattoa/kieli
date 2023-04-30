@@ -212,7 +212,7 @@ namespace resolution {
         [[nodiscard]] auto unify_types(Type_unification_arguments) -> bool;
         [[nodiscard]] auto unify_mutabilities(Mutability_unification_arguments) -> bool;
 
-        [[nodiscard]] auto pure_try_equate_types(mir::Type, mir::Type) -> bool;
+        [[nodiscard]] auto pure_equality_compare(mir::Type, mir::Type) -> bool;
 
         auto solve(constraint::Type_equality       const&) -> void;
         auto solve(constraint::Mutability_equality const&) -> void;

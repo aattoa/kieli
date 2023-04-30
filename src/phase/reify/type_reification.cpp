@@ -19,7 +19,7 @@ namespace {
         auto operator()(mir::type::Unification_variable const& variable) -> cir::Type {
             context.error(this_type.source_view(), {
                 .message           = "Found an unsolved type variable: {}",
-                .message_arguments = fmt::make_format_args(utl::get<mir::Unification_type_variable_state::Unsolved>(variable.state->value).tag),
+                .message_arguments = fmt::make_format_args(variable.state->as_unsolved().tag),
             });
             utl::unreachable(); // silence buggy warning
         }

@@ -13,7 +13,7 @@ namespace {
         mir::Type const self,
         mir::Type const inspected) -> bool
     {
-        return context.pure_try_equate_types(self, inspected);
+        return context.pure_equality_compare(self, inspected);
     }
 
 

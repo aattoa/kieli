@@ -139,6 +139,10 @@ namespace utl {
         auto is(Wrapper const other) const noexcept -> bool {
             return m_pointer == other.m_pointer;
         }
+        [[nodiscard]]
+        auto is_not(Wrapper const other) const noexcept -> bool {
+            return m_pointer != other.m_pointer;
+        }
     };
 
     template <class T>
