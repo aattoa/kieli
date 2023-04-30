@@ -51,3 +51,26 @@ auto mir::Mutability::source_view() const noexcept -> utl::Source_view {
 auto mir::Mutability::with(utl::Source_view const source_view) const noexcept -> Mutability {
     return Mutability { m_value, source_view };
 }
+
+
+auto mir::Unification_type_variable_state::solve(Type const solution) -> void {
+    utl::always_assert(std::holds_alternative<Unsolved>(value));
+    value = Solved { .solution = solution };
+}
+auto mir::Unification_type_variable_state::as_unsolved(std::source_location const caller) noexcept -> Unsolved& {
+    return utl::get<Unsolved>(value, caller);
+}
+auto mir::Unification_type_variable_state::as_unsolved(std::source_location const caller) const noexcept -> Unsolved const& {
+    return utl::get<Unsolved>(value, caller);
+}
+
+auto mir::Unification_mutability_variable_state::solve(Mutability const solution) -> void {
+    utl::always_assert(std::holds_alternative<Unsolved>(value));
+    value = Solved { .solution = solution };
+}
+auto mir::Unification_mutability_variable_state::as_unsolved(std::source_location const caller) noexcept -> Unsolved& {
+    return utl::get<Unsolved>(value, caller);
+}
+auto mir::Unification_mutability_variable_state::as_unsolved(std::source_location const caller) const noexcept -> Unsolved const& {
+    return utl::get<Unsolved>(value, caller);
+}

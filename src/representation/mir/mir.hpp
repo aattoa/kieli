@@ -199,6 +199,10 @@ namespace mir {
             std::vector<Unification_type_variable_constraint> constraints;
         };
         std::variant<Solved, Unsolved> value;
+
+        auto solve(Type solution) -> void;
+        auto as_unsolved(std::source_location = std::source_location::current())       noexcept -> Unsolved      &;
+        auto as_unsolved(std::source_location = std::source_location::current()) const noexcept -> Unsolved const&;
     };
 
     struct Unification_mutability_variable_state {
@@ -209,6 +213,10 @@ namespace mir {
             Unification_variable_tag tag;
         };
         std::variant<Solved, Unsolved> value;
+
+        auto solve(Mutability solution) -> void;
+        auto as_unsolved(std::source_location = std::source_location::current())       noexcept -> Unsolved      &;
+        auto as_unsolved(std::source_location = std::source_location::current()) const noexcept -> Unsolved const&;
     };
 
 

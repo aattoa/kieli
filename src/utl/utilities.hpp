@@ -428,7 +428,7 @@ namespace utl {
         std::source_location const caller = std::source_location::current()) noexcept
         requires requires { std::get_if<T>(&variant); }
     {
-        if (T* const alternative = std::get_if<T>(&variant)) [[likely]]
+        if (auto* const alternative = std::get_if<T>(&variant)) [[likely]]
             return bootleg::forward_like<V>(*alternative);
         else [[unlikely]]
             abort("Bad variant access", caller);
