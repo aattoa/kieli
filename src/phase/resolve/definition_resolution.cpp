@@ -32,7 +32,7 @@ namespace {
                 .constrainer_type = parameter_type,
                 .constrained_type = parameter_pattern.type,
                 .constrainer_note = constraint::Explanation {
-                    parameter_type.source_view,
+                    parameter_type.source_view(),
                     "This parameter declared to be of type {0}"
                 },
                 .constrained_note {
@@ -69,11 +69,11 @@ namespace {
         std::vector<mir::Function_parameter>&& parameters) -> mir::Function::Signature
     {
         mir::Type const function_type {
-            .value = context.wrap_type(mir::type::Function {
+            context.wrap_type(mir::type::Function {
                 .parameter_types = utl::map(&mir::Function_parameter::type, parameters),
                 .return_type     = return_type
             }),
-            .source_view = function_name.source_view
+            function_name.source_view,
         };
         return {
             .parameters    = std::move(parameters),
@@ -183,11 +183,11 @@ namespace {
             .constrainer_type = function.resolved_signature.return_type,
             .constrained_type = body.type,
             .constrainer_note = constraint::Explanation {
-                function.resolved_signature.return_type.source_view,
+                function.resolved_signature.return_type.source_view(),
                 "The return type is specified to be {0}"
             },
             .constrained_note {
-                body.type.source_view,
+                body.type.source_view(),
                 "But the body is of type {1}"
             }
         });
@@ -196,7 +196,7 @@ namespace {
             .signature      = std::move(function.resolved_signature),
             .body           = std::move(body),
             .name           = function.name,
-            .self_parameter = function.self_parameter
+            .self_parameter = function.self_parameter,
         };
     }
 
@@ -246,7 +246,7 @@ namespace {
                     mir::Type payload_type = context.resolve_type(*hir_constructor.payload_type, constructor_scope, *home_namespace);
                     std::vector<mir::Type> constructor_function_parameter_types;
 
-                    if (auto* const tuple = std::get_if<mir::type::Tuple>(&*payload_type.value)) {
+                    if (auto* const tuple = std::get_if<mir::type::Tuple>(&*payload_type.flattened_value())) {
                         constructor_function_parameter_types = tuple->field_types;
                     }
                     else {
@@ -258,13 +258,13 @@ namespace {
                         .name          = hir_constructor.name,
                         .payload_type  = payload_type,
                         .function_type = mir::Type {
-                            .value = context.wrap_type(mir::type::Function {
+                            context.wrap_type(mir::type::Function {
                                 .parameter_types = std::move(constructor_function_parameter_types),
-                                .return_type     = enumeration_type
+                                .return_type     = enumeration_type,
                             }),
-                            .source_view = hir_constructor.source_view
+                            hir_constructor.source_view,
                         },
-                        .enum_type = enumeration_type
+                        .enum_type = enumeration_type,
                     };
                 }
                 else {
@@ -461,8 +461,7 @@ auto resolution::Context::resolve_implementation(utl::Wrapper<Implementation_inf
         utl::Wrapper<Namespace> self_type_associated_namespace = std::invoke([&] {
             if (auto space = associated_namespace_if(self_type))
                 return *space;
-
-            error(self_type.source_view, {
+            error(self_type.source_view(), {
                 .message           = "{} does not have an associated namespace, so it can not be the Self type in an implementation block",
                 .message_arguments = fmt::make_format_args(self_type)
             });

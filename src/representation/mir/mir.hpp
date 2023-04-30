@@ -78,7 +78,7 @@ template <> struct dtl::To_HIR_impl<name> : std::type_identity<hir::definition::
 
     struct [[nodiscard]] Expression;
     struct [[nodiscard]] Pattern;
-    struct [[nodiscard]] Type;
+    class  [[nodiscard]] Type;
 
     struct [[nodiscard]] Function_parameter;
     struct [[nodiscard]] Template_parameter;
@@ -112,27 +112,34 @@ template <> struct dtl::To_HIR_impl<name> : std::type_identity<hir::definition::
     };
 
 
-    struct [[nodiscard]] Mutability {
+
+
+    struct Unification_type_variable_state;
+    struct Unification_mutability_variable_state;
+
+    class [[nodiscard]] Mutability {
+    public:
         struct Concrete {
-            bool is_mutable = false;
+            utl::Strong<bool> is_mutable;
         };
         struct Variable {
-            Unification_variable_tag tag;
+            utl::Wrapper<Unification_mutability_variable_state> state;
         };
         struct Parameterized {
             // The identifier serves no purpose other than debuggability
             compiler::Identifier   identifier;
             Template_parameter_tag tag;
         };
-
         using Variant = std::variant<Concrete, Variable, Parameterized>;
+    private:
+        utl::Wrapper<Variant> m_value;
+        utl::Source_view      m_source_view;
+    public:
+        explicit Mutability(utl::Wrapper<Variant>, utl::Source_view) noexcept;
 
-        utl::Wrapper<Variant> value;
-        utl::Source_view      source_view;
-
-        auto with(utl::Source_view const view) const noexcept -> Mutability {
-            return { .value = value, .source_view = view };
-        }
+        auto value() const -> utl::Wrapper<Variant>;
+        auto source_view() const noexcept -> utl::Source_view;
+        auto with(utl::Source_view) const noexcept -> Mutability;
     };
 
 }
@@ -176,12 +183,42 @@ struct mir::Function_parameter {
 
 namespace mir {
 
+    struct Unification_type_variable_constraint {};
+
+    enum class Unification_type_variable_kind {
+        general, integral
+    };
+
+    struct Unification_type_variable_state {
+        struct Solved {
+            Type solution;
+        };
+        struct Unsolved {
+            Unification_variable_tag                          tag;
+            utl::Strong<Unification_type_variable_kind>       kind;
+            std::vector<Unification_type_variable_constraint> constraints;
+        };
+        std::variant<Solved, Unsolved> value;
+    };
+
+    struct Unification_mutability_variable_state {
+        struct Solved {
+            Mutability solution;
+        };
+        struct Unsolved {
+            Unification_variable_tag tag;
+        };
+        std::variant<Solved, Unsolved> value;
+    };
+
+
     using Node_arena = utl::Wrapper_arena<
         Expression,
         Pattern,
         Type::Variant,
-        Mutability::Variant
-    >;
+        Mutability::Variant,
+        Unification_type_variable_state,
+        Unification_mutability_variable_state>;
 
     using Namespace_arena = utl::Wrapper_arena<
         resolution::Function_info,
@@ -192,32 +229,18 @@ namespace mir {
         resolution::Namespace,
         resolution::Implementation_info,
         resolution::Instantiation_info,
-
         resolution::Function_template_info,
         resolution::Struct_template_info,
         resolution::Enum_template_info,
         resolution::Alias_template_info,
         resolution::Typeclass_template_info,
         resolution::Implementation_template_info,
-        resolution::Instantiation_template_info
-    >;
+        resolution::Instantiation_template_info>;
 
     struct Module {
         std::vector<utl::Wrapper<resolution::Function_info>>          functions;
         std::vector<utl::Wrapper<resolution::Function_template_info>> function_templates;
     };
-
-    inline auto is_unification_variable(Type::Variant const& variant) -> bool {
-        return std::holds_alternative<type::General_unification_variable>(variant)
-            || std::holds_alternative<type::Integral_unification_variable>(variant);
-    }
-    inline auto is_unification_variable(Mutability::Variant const& variant) -> bool {
-        return std::holds_alternative<Mutability::Variable>(variant);
-    }
-
-    template <class T>
-    concept unification_variable = std::same_as<T, mir::type::General_unification_variable>
-                                || std::same_as<T, mir::type::Integral_unification_variable>;
 
 }
 
@@ -227,7 +250,10 @@ DECLARE_FORMATTER_FOR(mir::Template_parameter);
 DECLARE_FORMATTER_FOR(mir::Class_reference);
 DECLARE_FORMATTER_FOR(mir::Mutability::Variant);
 DECLARE_FORMATTER_FOR(mir::Mutability);
+
 DECLARE_FORMATTER_FOR(mir::Unification_variable_tag);
+DECLARE_FORMATTER_FOR(mir::Unification_type_variable_state);
+DECLARE_FORMATTER_FOR(mir::Unification_mutability_variable_state);
 
 DECLARE_FORMATTER_FOR(mir::Expression);
 DECLARE_FORMATTER_FOR(mir::Pattern);
@@ -295,20 +321,17 @@ namespace resolution {
         utl::Wrapper<Namespace>,
         utl::Wrapper<Function_info>,
         utl::Wrapper<Function_template_info>,
-        mir::Enum_constructor
-    >;
+        mir::Enum_constructor>;
 
     using Upper_variant = std::variant<
         utl::Wrapper<Struct_info>,
         utl::Wrapper<Enum_info>,
         utl::Wrapper<Alias_info>,
         utl::Wrapper<Typeclass_info>,
-
         utl::Wrapper<Struct_template_info>,
         utl::Wrapper<Enum_template_info>,
         utl::Wrapper<Alias_template_info>,
-        utl::Wrapper<Typeclass_template_info>
-    >;
+        utl::Wrapper<Typeclass_template_info>>;
 
     using Definition_variant = std::variant<
         utl::Wrapper<Function_info>,
@@ -319,17 +342,13 @@ namespace resolution {
         utl::Wrapper<Namespace>,
         utl::Wrapper<Implementation_info>,
         utl::Wrapper<Instantiation_info>,
-
         utl::Wrapper<Function_template_info>,
         utl::Wrapper<Struct_template_info>,
         utl::Wrapper<Enum_template_info>,
         utl::Wrapper<Alias_template_info>,
         utl::Wrapper<Typeclass_template_info>,
-        // namespace template
-
         utl::Wrapper<Implementation_template_info>,
-        utl::Wrapper<Instantiation_template_info>
-    >;
+        utl::Wrapper<Instantiation_template_info>>;
 
 
     struct [[nodiscard]] Namespace {
@@ -373,12 +392,11 @@ namespace resolution {
     };
 
     template <template <ast::tree_configuration> class Definition>
-        requires requires { &Definition<hir::HIR_configuration>::name; }
+    requires requires { &Definition<hir::HIR_configuration>::name; }
     struct Definition_info<ast::definition::Template<Definition<hir::HIR_configuration>>> {
         using Variant = std::variant<
             ast::definition::Template<Definition<hir::HIR_configuration>>,
-            mir::From_HIR<ast::definition::Template<Definition<hir::HIR_configuration>>>
-        >;
+            mir::From_HIR<ast::definition::Template<Definition<hir::HIR_configuration>>>>;
 
         Variant                 value;
         utl::Wrapper<Namespace> home_namespace;
@@ -392,8 +410,7 @@ namespace resolution {
         using Variant = std::variant<
             hir::definition::Function_template,   // Fully unresolved
             Partially_resolved_function_template, // Signature resolved, body unresolved
-            mir::Function_template                // Fully resolved
-        >;
+            mir::Function_template>;              // Fully resolved
 
         Variant                 value;
         utl::Wrapper<Namespace> home_namespace;
@@ -413,8 +430,7 @@ namespace resolution {
         using Variant = std::variant<
             hir::definition::Function,   // Fully unresolved
             Partially_resolved_function, // Signature resolved, body unresolved
-            mir::Function                // Fully resolved
-        >;
+            mir::Function>;              // Fully resolved
 
         Variant                 value;
         utl::Wrapper<Namespace> home_namespace;
@@ -476,10 +492,9 @@ namespace resolution {
     struct Definition_info<ast::definition::Template<Definition<hir::HIR_configuration>>> {
         using Variant = std::variant<
             ast::definition::Template<Definition<hir::HIR_configuration>>,
-            mir::From_HIR<ast::definition::Template<Definition<hir::HIR_configuration>>>
-        >;
+            mir::From_HIR<ast::definition::Template<Definition<hir::HIR_configuration>>>>;
 
-        Variant                value;
+        Variant                 value;
         utl::Wrapper<Namespace> home_namespace;
         Definition_state        state = Definition_state::unresolved;
     };

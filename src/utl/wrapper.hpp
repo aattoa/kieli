@@ -135,6 +135,10 @@ namespace utl {
             APPLY_EXPLICIT_OBJECT_PARAMETER_HERE;
             return std::addressof(**this);
         }
+        [[nodiscard]]
+        auto is(Wrapper const other) const noexcept -> bool {
+            return m_pointer == other.m_pointer;
+        }
     };
 
     template <class T>

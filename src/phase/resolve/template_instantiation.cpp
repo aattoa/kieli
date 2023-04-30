@@ -195,11 +195,11 @@ namespace {
             instantiate(function_template.definition.signature.return_type, substitution_context);
 
         mir::Type const concrete_function_type {
-            .value = resolution_context.wrap_type(mir::type::Function {
+            resolution_context.wrap_type(mir::type::Function {
                 .parameter_types = utl::map(&mir::Function_parameter::type, concrete_function_parameters),
                 .return_type     = concrete_return_type
             }),
-            .source_view = template_info->name.source_view
+            template_info->name.source_view,
         };
 
         mir::Function concrete_function {
@@ -210,7 +210,7 @@ namespace {
             },
             .body           = instantiate(function_template.definition.body, substitution_context),
             .name           = function_template.definition.name,
-            .self_parameter = std::move(concrete_self_parameter)
+            .self_parameter = std::move(concrete_self_parameter),
         };
 
         auto const info = resolution_context.wrap(Function_info {
@@ -221,7 +221,7 @@ namespace {
             .template_instantiation_info = Template_instantiation_info<Function_template_info> {
                 template_info,
                 function_template.parameters,
-                std::move(template_arguments)
+                std::move(template_arguments),
             }
         });
         function_template.instantiations.push_back(info);
@@ -243,13 +243,13 @@ namespace {
             .substitutions      = substitutions,
             .resolution_context = resolution_context,
             .scope              = scope,
-            .space              = space
+            .space              = space,
         };
 
         mir::Struct concrete_struct {
             .members              = utl::vector_with_capacity(struct_template.definition.members.size()),
             .name                 = template_info->name,
-            .associated_namespace = resolution_context.wrap(Namespace {})
+            .associated_namespace = resolution_context.wrap(Namespace {}),
         };
 
         for (mir::Struct::Member const& member : struct_template.definition.members) {
@@ -262,7 +262,7 @@ namespace {
             );
         }
 
-        mir::Type concrete_type =
+        mir::Type const concrete_type =
             resolution_context.temporary_placeholder_type(concrete_struct.name.source_view);
 
         auto const concrete_info = resolution_context.wrap(Struct_info {
@@ -277,9 +277,9 @@ namespace {
                 std::move(template_arguments)
             }
         });
-        *concrete_type.value = mir::type::Structure {
+        *concrete_type.pure_value() = mir::type::Structure {
             .info           = concrete_info,
-            .is_application = true
+            .is_application = true,
         };
 
         struct_template.instantiations.push_back(concrete_info);
@@ -320,14 +320,14 @@ namespace {
                 .payload_type  = constructor.payload_type.transform(substitution_context.recurse()),
                 .function_type = constructor.function_type.transform([&](mir::Type const function_type) {
                     return mir::Type {
-                        .value = resolution_context.wrap_type(mir::type::Function {
-                            .parameter_types = utl::map(substitution_context.recurse(), utl::get<mir::type::Function>(*function_type.value).parameter_types),
-                            .return_type     = concrete_type
+                        resolution_context.wrap_type(mir::type::Function {
+                            .parameter_types = utl::map(substitution_context.recurse(), utl::get<mir::type::Function>(*function_type.flattened_value()).parameter_types),
+                            .return_type     = concrete_type,
                         }),
-                        .source_view = function_type.source_view
+                        function_type.source_view(),
                     };
                 }),
-                .enum_type = concrete_type
+                .enum_type = concrete_type,
             };
 
             concrete_enum.constructors.push_back(concrete_constructor);
@@ -343,12 +343,12 @@ namespace {
             .template_instantiation_info = Template_instantiation_info<Enum_template_info> {
                 template_info,
                 enum_template.parameters,
-                std::move(template_arguments)
+                std::move(template_arguments),
             }
         });
-        *concrete_type.value = mir::type::Enumeration {
+        *concrete_type.pure_value() = mir::type::Enumeration {
             .info           = concrete_info,
-            .is_application = true
+            .is_application = true,
         };
 
         enum_template.instantiations.push_back(concrete_info);
@@ -380,7 +380,7 @@ namespace {
             },
             .home_namespace = template_info->home_namespace,
             .state          = Definition_state::resolved,
-            .name           = alias_template.definition.name
+            .name           = alias_template.definition.name,
         });
     }
 
@@ -392,17 +392,17 @@ namespace {
 
         auto operator()(mir::expression::Tuple const& tuple) -> R {
             return mir::expression::Tuple {
-                .fields = utl::map(context.recurse(), tuple.fields)
+                .fields = utl::map(context.recurse(), tuple.fields),
             };
         }
         auto operator()(mir::expression::Loop const& loop) -> R {
             return mir::expression::Loop {
-                .body = context.recurse(loop.body)
+                .body = context.recurse(loop.body),
             };
         }
         auto operator()(mir::expression::Break const& break_) -> R {
             return mir::expression::Break {
-                .result = context.recurse(break_.result)
+                .result = context.recurse(break_.result),
             };
         }
         auto operator()(mir::expression::Continue const&) -> R {
@@ -410,90 +410,90 @@ namespace {
         }
         auto operator()(mir::expression::Array_literal const& literal) -> R {
             return mir::expression::Array_literal {
-                .elements = utl::map(context.recurse(), literal.elements)
+                .elements = utl::map(context.recurse(), literal.elements),
             };
         }
         auto operator()(mir::expression::Block const& block) -> R {
             return mir::expression::Block {
                 .side_effect_expressions = utl::map(context.recurse(), block.side_effect_expressions),
-                .result_expression       = context.recurse(block.result_expression)
+                .result_expression       = context.recurse(block.result_expression),
             };
         }
         auto operator()(mir::expression::Direct_invocation const& invocation) -> R {
             return mir::expression::Direct_invocation {
                 .function  = invocation.function,
-                .arguments = utl::map(context.recurse(), invocation.arguments)
+                .arguments = utl::map(context.recurse(), invocation.arguments),
             };
         }
         auto operator()(mir::expression::Indirect_invocation const& invocation) -> R {
             return mir::expression::Indirect_invocation {
                 .arguments = utl::map(context.recurse(), invocation.arguments),
-                .invocable = context.recurse(invocation.invocable)
+                .invocable = context.recurse(invocation.invocable),
             };
         }
         auto operator()(mir::expression::Direct_enum_constructor_invocation const& invocation) -> R {
             return mir::expression::Direct_enum_constructor_invocation {
                 .constructor = invocation.constructor,
-                .arguments   = utl::map(context.recurse(), invocation.arguments)
+                .arguments   = utl::map(context.recurse(), invocation.arguments),
             };
         }
         auto operator()(mir::expression::Let_binding const& binding) -> R {
             return mir::expression::Let_binding {
                 .pattern     = context.recurse(binding.pattern),
                 .type        = context.recurse(binding.type),
-                .initializer = context.recurse(binding.initializer)
+                .initializer = context.recurse(binding.initializer),
             };
         }
         auto operator()(mir::expression::Conditional const& conditional) -> R {
             return mir::expression::Conditional {
                 .condition    = context.recurse(conditional.condition),
                 .true_branch  = context.recurse(conditional.true_branch),
-                .false_branch = context.recurse(conditional.false_branch)
+                .false_branch = context.recurse(conditional.false_branch),
             };
         }
         auto operator()(mir::expression::Match const& match) -> R {
             auto const instantiate_case = [this](mir::expression::Match::Case const& match_case) {
                 return mir::expression::Match::Case {
                     .pattern = context.recurse(match_case.pattern),
-                    .handler = context.recurse(match_case.handler)
+                    .handler = context.recurse(match_case.handler),
                 };
             };
 
             return mir::expression::Match {
                 .cases              = utl::map(instantiate_case, match.cases),
-                .matched_expression = context.recurse(match.matched_expression)
+                .matched_expression = context.recurse(match.matched_expression),
             };
         }
         auto operator()(mir::expression::Sizeof const& sizeof_) -> R {
             return mir::expression::Sizeof {
-                .inspected_type = context.recurse(sizeof_.inspected_type)
+                .inspected_type = context.recurse(sizeof_.inspected_type),
             };
         }
         auto operator()(mir::expression::Reference const& reference) -> R {
             return mir::expression::Reference {
                 .mutability            = context.recurse(reference.mutability),
-                .referenced_expression = context.recurse(reference.referenced_expression)
+                .referenced_expression = context.recurse(reference.referenced_expression),
             };
         }
         auto operator()(mir::expression::Dereference const& dereference) -> R {
             return mir::expression::Dereference {
-                .dereferenced_expression = context.recurse(dereference.dereferenced_expression)
+                .dereferenced_expression = context.recurse(dereference.dereferenced_expression),
             };
         }
         auto operator()(mir::expression::Addressof const& addressof) -> R {
             return mir::expression::Addressof {
-                .lvalue = context.recurse(addressof.lvalue)
+                .lvalue = context.recurse(addressof.lvalue),
             };
         }
         auto operator()(mir::expression::Unsafe_dereference const& dereference) -> R {
             return mir::expression::Unsafe_dereference {
-                .pointer = context.recurse(dereference.pointer)
+                .pointer = context.recurse(dereference.pointer),
             };
         }
         auto operator()(mir::expression::Struct_initializer const& initializer) -> R {
             return mir::expression::Struct_initializer {
                 .initializers = utl::map(context.recurse(), initializer.initializers),
-                .struct_type  = context.recurse(initializer.struct_type)
+                .struct_type  = context.recurse(initializer.struct_type),
             };
         }
         auto operator()(mir::expression::Struct_field_access const& access) -> R {
@@ -506,7 +506,7 @@ namespace {
             return mir::expression::Tuple_field_access {
                 .base_expression         = context.recurse(access.base_expression),
                 .field_index             = access.field_index,
-                .field_index_source_view = access.field_index_source_view
+                .field_index_source_view = access.field_index_source_view,
             };
         }
         auto operator()(mir::expression::Move const& move) -> R {
@@ -531,9 +531,8 @@ namespace {
                         template_info,
                         utl::map(context.recurse(), instantiation_info.template_arguments),
                         context.scope,
-                        context.space
-                    ),
-                    .is_application = true
+                        context.space),
+                    .is_application = true,
                 };
             }
             return function;
@@ -541,13 +540,7 @@ namespace {
 
         template <class T>
         auto operator()(T const& terminal) -> R
-            requires utl::instance_of<T, mir::expression::Literal> ||
-                utl::one_of<
-                    T,
-                    mir::expression::Enum_constructor_reference,
-                    mir::expression::Local_variable_reference,
-                    mir::expression::Hole
-                >
+            requires utl::instance_of<T, mir::expression::Literal> || utl::one_of<T, mir::expression::Enum_constructor_reference, mir::expression::Local_variable_reference, mir::expression::Hole>
         {
             return terminal;
         }
@@ -563,43 +556,43 @@ namespace {
             if (mir::Type const* const substitution =
                 context.substitutions.type_substitutions.find(reference.tag))
             {
-                return context.recurse(*substitution).value;
+                return context.recurse(*substitution).flattened_value();
             }
-            return this_type.value;
+            return this_type.pure_value();
         }
 
         auto operator()(mir::type::Tuple const& tuple) -> R {
             return context.resolution_context.wrap_type(mir::type::Tuple {
-                .field_types = utl::map(context.recurse(), tuple.field_types)
+                .field_types = utl::map(context.recurse(), tuple.field_types),
             });
         }
         auto operator()(mir::type::Array const& array) -> R {
             return context.resolution_context.wrap_type(mir::type::Array {
                 .element_type = context.recurse(array.element_type),
-                .array_length = context.recurse(array.array_length)
+                .array_length = context.recurse(array.array_length),
             });
         }
         auto operator()(mir::type::Slice const& slice) -> R {
             return context.resolution_context.wrap_type(mir::type::Slice {
-                .element_type = context.recurse(slice.element_type)
+                .element_type = context.recurse(slice.element_type),
             });
         }
         auto operator()(mir::type::Function const& function) -> R {
             return context.resolution_context.wrap_type(mir::type::Function {
                 .parameter_types = utl::map(context.recurse(), function.parameter_types),
-                .return_type     = context.recurse(function.return_type)
+                .return_type     = context.recurse(function.return_type),
             });
         }
         auto operator()(mir::type::Reference const& reference) -> R {
             return context.resolution_context.wrap_type(mir::type::Reference {
                 .mutability      = context.recurse(reference.mutability),
-                .referenced_type = context.recurse(reference.referenced_type)
+                .referenced_type = context.recurse(reference.referenced_type),
             });
         }
         auto operator()(mir::type::Pointer const& pointer) -> R {
             return context.resolution_context.wrap_type(mir::type::Pointer {
                 .mutability      = context.recurse(pointer.mutability),
-                .pointed_to_type = context.recurse(pointer.pointed_to_type)
+                .pointed_to_type = context.recurse(pointer.pointed_to_type),
             });
         }
         auto operator()(mir::type::Structure const& structure) -> R {
@@ -614,12 +607,11 @@ namespace {
                         instantiation_info.template_instantiated_from,
                         utl::map(context.recurse(), instantiation_info.template_arguments),
                         context.scope,
-                        context.space
-                    ),
-                    .is_application = true
+                        context.space),
+                    .is_application = true,
                 });
             }
-            return this_type.value;
+            return this_type.pure_value();
         }
         auto operator()(mir::type::Enumeration const& enumeration) -> R {
             if (enumeration.is_application) {
@@ -633,12 +625,11 @@ namespace {
                         instantiation_info.template_instantiated_from,
                         utl::map(context.recurse(), instantiation_info.template_arguments),
                         context.scope,
-                        context.space
-                    ),
-                    .is_application = true
+                        context.space),
+                    .is_application = true,
                 });
             }
-            return this_type.value;
+            return this_type.pure_value();
         }
 
         auto operator()(
@@ -649,11 +640,10 @@ namespace {
                 mir::type::Boolean,
                 mir::type::String,
                 mir::type::Self_placeholder,
-                mir::type::General_unification_variable,
-                mir::type::Integral_unification_variable
+                mir::type::Unification_variable
             > auto const&) -> R
         {
-            return this_type.value;
+            return this_type.pure_value();
         }
     };
 
@@ -664,7 +654,7 @@ namespace {
         auto operator()(mir::pattern::As const& as) -> mir::Pattern::Variant {
             return mir::pattern::As {
                 .alias           = as.alias,
-                .aliased_pattern = context.recurse(as.aliased_pattern)
+                .aliased_pattern = context.recurse(as.aliased_pattern),
             };
         }
         auto operator()(mir::pattern::Enum_constructor const& pattern) -> mir::Pattern::Variant {
@@ -672,7 +662,7 @@ namespace {
                 context.recurse(pattern.constructor.enum_type);
 
             mir::Enum& enumeration =
-                context.resolution_context.resolve_enum(utl::get<mir::type::Enumeration>(*enum_type.value).info);
+                context.resolution_context.resolve_enum(utl::get<mir::type::Enumeration>(*enum_type.pure_value()).info);
 
             auto it = ranges::find(enumeration.constructors, pattern.constructor.name, &mir::Enum_constructor::name);
             if (it == enumeration.constructors.end()) {
@@ -681,13 +671,13 @@ namespace {
             }
             return mir::pattern::Enum_constructor {
                 .payload_pattern = pattern.payload_pattern.transform(context.recurse()),
-                .constructor     = *it
+                .constructor     = *it,
             };
         }
         auto operator()(mir::pattern::Guarded const& guarded) -> mir::Pattern::Variant {
             return mir::pattern::Guarded {
                 .guarded_pattern = context.recurse(guarded.guarded_pattern),
-                .guard           = context.recurse(guarded.guard)
+                .guard           = context.recurse(guarded.guard),
             };
         }
         auto operator()(mir::pattern::Tuple const& tuple) -> mir::Pattern::Variant {
@@ -719,18 +709,14 @@ namespace {
         };
     }
 
-    auto instantiate(mir::Type const& type, Substitution_context const context)
-        -> mir::Type
-    {
-        return {
-            .value       = std::visit(Type_instantiation_visitor { context, type }, *type.value),
-            .source_view = type.source_view
+    auto instantiate(mir::Type const& type, Substitution_context const context) -> mir::Type {
+        return mir::Type {
+            std::visit(Type_instantiation_visitor { context, type }, *type.flattened_value()),
+            type.source_view(),
         };
     }
 
-    auto instantiate(mir::Pattern const& pattern, Substitution_context const context)
-        -> mir::Pattern
-    {
+    auto instantiate(mir::Pattern const& pattern, Substitution_context const context) -> mir::Pattern {
         return {
             .value                   = std::visit(Pattern_instantiation_visitor { context }, pattern.value),
             .type                    = instantiate(pattern.type, context),
@@ -739,10 +725,8 @@ namespace {
         };
     }
 
-    auto instantiate(mir::Mutability const& mutability, Substitution_context const context)
-        -> mir::Mutability
-    {
-        if (auto const* parameterized = std::get_if<mir::Mutability::Parameterized>(&*mutability.value)) {
+    auto instantiate(mir::Mutability const& mutability, Substitution_context const context) -> mir::Mutability {
+        if (auto const* parameterized = std::get_if<mir::Mutability::Parameterized>(&*mutability.value())) {
             if (mir::Mutability const* const substitution =
                 context.substitutions.mutability_substitutions.find(parameterized->tag))
             {
@@ -752,18 +736,14 @@ namespace {
         return mutability;
     }
 
-    auto instantiate(mir::Template_argument const& argument, Substitution_context const context)
-        -> mir::Template_argument
-    {
+    auto instantiate(mir::Template_argument const& argument, Substitution_context const context) -> mir::Template_argument {
         return mir::Template_argument {
             .value = std::visit<mir::Template_argument::Variant>(context.recurse(), argument.value),
             .name  = argument.name
         };
     }
 
-    auto instantiate(mir::Self_parameter const& parameter, Substitution_context const context)
-        -> mir::Self_parameter
-    {
+    auto instantiate(mir::Self_parameter const& parameter, Substitution_context const context) -> mir::Self_parameter {
         return mir::Self_parameter {
             .mutability   = instantiate(parameter.mutability, context),
             .is_reference = parameter.is_reference,
@@ -801,9 +781,9 @@ auto resolution::Context::instantiate_function_template(
 
 
 auto resolution::Context::instantiate_struct_template(
-    utl::Wrapper<Struct_template_info>       const template_info,
+    utl::Wrapper<Struct_template_info>      const template_info,
     std::span<hir::Template_argument const> const template_arguments,
-    utl::Source_view                         const instantiation_view,
+    utl::Source_view                        const instantiation_view,
     Scope                                       & scope,
     Namespace                                   & space) -> utl::Wrapper<Struct_info>
 {

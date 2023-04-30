@@ -13,8 +13,7 @@ namespace {
         mir::Type const self,
         mir::Type const inspected) -> bool
     {
-        // TODO: treat template parameter references as variables to be matched against
-        return context.pure_try_equate_types(self.value, inspected.value);
+        return context.pure_try_equate_types(self, inspected);
     }
 
 

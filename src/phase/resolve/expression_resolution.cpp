@@ -35,12 +35,12 @@ namespace {
             context.compilation_info.get()->diagnostics.emit_error({
                 .sections = utl::to_vector<utl::diagnostics::Text_section>({
                     {
-                        .source_view = actual_mutability.source_view,
+                        .source_view = actual_mutability.source_view(),
                         .note        = notes.first,
                         .note_color  = utl::diagnostics::warning_color
                     },
                     {
-                        .source_view = requested_mutability.source_view,
+                        .source_view = requested_mutability.source_view(),
                         .note        = notes.second,
                         .note_color  = utl::diagnostics::error_color
                     }
@@ -54,11 +54,11 @@ namespace {
                 .constrainer_mutability = actual_mutability,
                 .constrained_mutability = requested_mutability,
                 .constrainer_note {
-                    requested_mutability.source_view,
+                    requested_mutability.source_view(),
                     "Requested mutability ({1})"
                 },
                 .constrained_note {
-                    actual_mutability.source_view,
+                    actual_mutability.source_view(),
                     "Actual mutability ({0})"
                 }
             });
@@ -69,7 +69,7 @@ namespace {
 
         std::visit(utl::Overload {
             [&](mir::Mutability::Concrete const actual, mir::Mutability::Concrete const requested) {
-                if (!actual.is_mutable && requested.is_mutable) {
+                if (!actual.is_mutable.get() && requested.is_mutable.get()) {
                     mutability_error(
                         "Can not acquire a mutable reference to an immutable object",
                         {
@@ -89,7 +89,7 @@ namespace {
                 }
             },
             [&](mir::Mutability::Parameterized, mir::Mutability::Concrete const requested) {
-                if (requested.is_mutable) {
+                if (requested.is_mutable.get()) {
                     mutability_error(
                         "Can not acquire mutable reference to object of parameterized mutability",
                         {
@@ -99,7 +99,7 @@ namespace {
                 }
             },
             [&](mir::Mutability::Concrete const actual, mir::Mutability::Parameterized) {
-                if (!actual.is_mutable) {
+                if (!actual.is_mutable.get()) {
                     mutability_error(
                         "Can not acquire reference of parameterized mutability to immutable object",
                         {
@@ -109,15 +109,15 @@ namespace {
                 }
             },
             [&](mir::Mutability::Variable const actual, mir::Mutability::Variable const requested) {
-                if (actual.tag != requested.tag)
+                if (!actual.state.is(requested.state))
                     solve_mutability_quality_constraint();
             },
             [&](mir::Mutability::Concrete const actual, auto) {
-                if (!actual.is_mutable)
+                if (!actual.is_mutable.get())
                     solve_mutability_quality_constraint();
             },
             [&](auto, mir::Mutability::Concrete const requested) {
-                if (requested.is_mutable) {
+                if (requested.is_mutable.get()) {
                     mutability_error(
                         "Unable to acquire mutable reference to object of unknown mutability",
                         {
@@ -129,22 +129,22 @@ namespace {
             [&](auto, auto) {
                 solve_mutability_quality_constraint();
             }
-        }, *actual_mutability.value, *requested_mutability.value);
+        }, *actual_mutability.value(), *requested_mutability.value());
 
         return {
             .value = mir::expression::Reference {
                 .mutability            = requested_mutability,
-                .referenced_expression = context.wrap(std::move(referenced_expression))
+                .referenced_expression = context.wrap(std::move(referenced_expression)),
             },
-            .type {
-                .value = context.wrap_type(mir::type::Reference {
+            .type = mir::Type {
+                context.wrap_type(mir::type::Reference {
                     .mutability      = requested_mutability,
-                    .referenced_type = referenced_type
+                    .referenced_type = referenced_type,
                 }),
-                .source_view = source_view
+                source_view,
             },
             .source_view = source_view,
-            .mutability  = context.immut_constant(source_view)
+            .mutability  = context.immut_constant(source_view),
         };
     }
 
@@ -190,7 +190,7 @@ namespace {
                     .constrainer_type = parameter.type,
                     .constrained_type = argument.type,
                     .constrainer_note = constraint::Explanation {
-                        parameter.type.source_view,
+                        parameter.type.source_view(),
                         "The parameter is specified to be of type {0}"
                     },
                     .constrained_note {
@@ -219,12 +219,12 @@ namespace {
                 context.fresh_general_unification_type_variable(this_expression.source_view);
 
             context.solve(constraint::Type_equality {
-                .constrainer_type {
-                    .value = context.wrap_type(mir::type::Function {
+                .constrainer_type = mir::Type {
+                    context.wrap_type(mir::type::Function {
                         .parameter_types = utl::map(&mir::Expression::type, arguments),
                         .return_type     = return_type
                     }),
-                    .source_view = this_expression.source_view
+                    this_expression.source_view,
                 },
                 .constrained_type = invocable.type,
                 .constrainer_note = constraint::Explanation {
@@ -339,7 +339,7 @@ namespace {
             return {
                 .value = std::move(mir_array),
                 .type  = mir::Type {
-                    .value = context.wrap_type(mir::type::Array {
+                    context.wrap_type(mir::type::Array {
                         .element_type = element_type,
                         .array_length = context.wrap(mir::Expression {
                             .value       = mir::expression::Literal<compiler::Unsigned_integer> { array_length },
@@ -349,7 +349,7 @@ namespace {
                             .is_pure     = true,
                         })
                     }),
-                    .source_view = this_expression.source_view
+                    this_expression.source_view,
                 },
                 .source_view = this_expression.source_view,
                 .mutability  = context.immut_constant(this_expression.source_view),
@@ -416,9 +416,9 @@ namespace {
             bool const is_pure = ranges::all_of(mir_tuple.fields, &mir::Expression::is_pure);
             return {
                 .value = std::move(mir_tuple),
-                .type {
-                    .value       = context.wrap_type(std::move(mir_tuple_type)),
-                    .source_view = this_expression.source_view
+                .type = mir::Type {
+                    context.wrap_type(std::move(mir_tuple_type)),
+                    this_expression.source_view,
                 },
                 .source_view = this_expression.source_view,
                 .mutability  = context.immut_constant(this_expression.source_view),
@@ -460,11 +460,11 @@ namespace {
                         .constrainer_type = *loop_info.break_return_type,
                         .constrained_type = break_result.type,
                         .constrainer_note = constraint::Explanation {
-                            loop_info.break_return_type->source_view,
+                            loop_info.break_return_type->source_view(),
                             "Previous break expressions had results of type {0}"
                         },
                         .constrained_note = constraint::Explanation {
-                            break_result.type.source_view,
+                            break_result.type.source_view(),
                             "But this break expressions's result is of type {1}"
                         }
                     });
@@ -597,7 +597,7 @@ namespace {
                 .constrainer_type = type,
                 .constrained_type = pattern.type,
                 .constrainer_note = constraint::Explanation {
-                    type.source_view,
+                    type.source_view(),
                     "This is of type {0}"
                 },
                 .constrained_note {
@@ -640,11 +640,11 @@ namespace {
                         .constrainer_type = true_branch.type,
                         .constrained_type = false_branch.type,
                         .constrainer_note = constraint::Explanation {
-                            true_branch.type.source_view,
+                            true_branch.type.source_view(),
                             "The true branch is of type {0}"
                         },
                         .constrained_note {
-                            false_branch.type.source_view,
+                            false_branch.type.source_view(),
                             "But the false branch is of type {1}"
                         }
                     });
@@ -654,7 +654,7 @@ namespace {
                         .constrainer_type = context.unit_type(true_branch.source_view),
                         .constrained_type = true_branch.type,
                         .constrained_note = constraint::Explanation {
-                            true_branch.type.source_view,
+                            true_branch.type.source_view(),
                             "The body of a while loop must be of the unit type, not {1}"
                         }
                     });
@@ -672,7 +672,7 @@ namespace {
                         "This `if` expression has no `else` block, so the true branch must be of the unit type"
                     },
                     .constrained_note = constraint::Explanation {
-                        true_branch.type.source_view,
+                        true_branch.type.source_view(),
                         "But the true branch is of type {1}"
                     }
                 });
@@ -751,7 +751,7 @@ namespace {
             mir::Type const struct_type =
                 context.resolve_type(*struct_initializer.struct_type, scope, space);
 
-            if (auto* const structure_ptr = std::get_if<mir::type::Structure>(&*struct_type.value)) {
+            if (auto* const structure_ptr = std::get_if<mir::type::Structure>(&*struct_type.flattened_value())) {
                 mir::Struct& structure = context.resolve_struct(structure_ptr->info);
                 auto initializers = utl::vector_with_capacity<mir::Expression>(structure.members.size());
 
@@ -822,7 +822,7 @@ namespace {
                         "But the actual type is {1}"
                     }
                 });
-                result.type.source_view = cast.target_type->source_view;
+                result.type = result.type.with(cast.target_type->source_view);
                 return result;
             }
             else {
@@ -988,7 +988,7 @@ namespace {
             mir::Expression dereferenced_expression = recurse(*dereference.dereferenced_expression);
             bool const is_pure = dereferenced_expression.is_pure;
 
-            if (auto const* const reference = std::get_if<mir::type::Reference>(&*dereferenced_expression.type.value)) {
+            if (auto const* const reference = std::get_if<mir::type::Reference>(&*dereferenced_expression.type.flattened_value())) {
                 // If the type of the dereferenced expression is already known to
                 // be mir::type::Reference, there is no need to solve constraints.
 
@@ -1006,11 +1006,11 @@ namespace {
                 mir::Mutability const reference_mutability = context.fresh_unification_mutability_variable(this_expression.source_view);
 
                 mir::Type const reference_type {
-                    .value = context.wrap_type(mir::type::Reference {
+                    context.wrap_type(mir::type::Reference {
                         .mutability      = reference_mutability,
                         .referenced_type = referenced_type
                     }),
-                    .source_view = referenced_type.source_view
+                    referenced_type.source_view(),
                 };
 
                 context.solve(constraint::Type_equality {
@@ -1043,11 +1043,11 @@ namespace {
             require_addressability(context, lvalue, "The address of a temporary object can not be taken");
 
             mir::Type const pointer_type {
-                .value = context.wrap_type(mir::type::Pointer {
+                context.wrap_type(mir::type::Pointer {
                     .mutability      = lvalue.mutability,
                     .pointed_to_type = lvalue.type
                 }),
-                .source_view = this_expression.source_view
+                this_expression.source_view,
             };
 
             return {
@@ -1067,11 +1067,11 @@ namespace {
             mir::Mutability const lvalue_mutability = context.fresh_unification_mutability_variable(this_expression.source_view);
 
             mir::Type const pointer_type {
-                .value = context.wrap_type(mir::type::Pointer {
+                context.wrap_type(mir::type::Pointer {
                     .mutability      = lvalue_mutability,
                     .pointed_to_type = lvalue_type
                 }),
-                .source_view = pointer.source_view
+                pointer.source_view,
             };
 
             context.solve(constraint::Type_equality {

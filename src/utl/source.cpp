@@ -39,7 +39,7 @@ auto utl::Source_view::dummy() -> Source_view {
 }
 
 auto utl::Source_view::operator+(Source_view const& other) const noexcept -> Source_view {
-    always_assert(std::to_address(source) == std::to_address(other.source));
+    always_assert(source.is(other.source));
 
     if (other.string.empty())
         return *this;
@@ -51,7 +51,7 @@ auto utl::Source_view::operator+(Source_view const& other) const noexcept -> Sou
         source,
         std::string_view { string.data(), other.string.data() + other.string.size() },
         start_position,
-        other.stop_position
+        other.stop_position,
     };
 }
 

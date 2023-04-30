@@ -63,7 +63,7 @@ namespace {
                         .structure_type = structure_type,
                         .name           = name
                     });
-                    *structure_type.value = mir::type::Structure { info };
+                    *structure_type.pure_value() = mir::type::Structure { info };
                     add_definition(info);
                 },
                 [&](hir::definition::Enum& enumeration) {
@@ -75,16 +75,16 @@ namespace {
                         .value            = std::move(enumeration),
                         .home_namespace   = space,
                         .enumeration_type = enumeration_type,
-                        .name             = name
+                        .name             = name,
                     });
-                    *enumeration_type.value = mir::type::Enumeration { info };
+                    *enumeration_type.pure_value() = mir::type::Enumeration { info };
                     add_definition(info);
                 },
 
                 [&](hir::definition::Namespace& hir_child) {
                     utl::wrapper auto child = context.wrap(Namespace {
                         .parent = space,
-                        .name   = hir_child.name
+                        .name   = hir_child.name,
                     });
 
                     space->definitions_in_order.emplace_back(child);
@@ -98,7 +98,7 @@ namespace {
                     auto const info = context.wrap(Function_template_info {
                         .value = std::move(template_definition),
                         .home_namespace = space,
-                        .name = name
+                        .name = name,
                     });
                     context.output_module.function_templates.push_back(info);
                     add_definition(info);
@@ -110,7 +110,7 @@ namespace {
                         .value                      = std::move(template_definition),
                         .home_namespace             = space,
                         .parameterized_type_of_this = context.temporary_placeholder_type(name.source_view),
-                        .name                       = name
+                        .name                       = name,
                     }));
                 },
                     
@@ -119,7 +119,7 @@ namespace {
                 [&](hir::definition::Implementation& implementation) {
                     utl::wrapper auto const info = context.wrap(Implementation_info {
                         .value          = std::move(implementation),
-                        .home_namespace = space
+                        .home_namespace = space,
                     });
                     space->definitions_in_order.emplace_back(info);
                     context.nameless_entities.implementations.push_back(info);
@@ -127,7 +127,7 @@ namespace {
                 [&](hir::definition::Instantiation& instantiation) {
                     utl::wrapper auto const info = context.wrap(Instantiation_info {
                         .value          = std::move(instantiation),
-                        .home_namespace = space
+                        .home_namespace = space,
                     });
                     space->definitions_in_order.emplace_back(info);
                     context.nameless_entities.instantiations.push_back(info);
@@ -135,7 +135,7 @@ namespace {
                 [&](hir::definition::Implementation_template& implementation_template) {
                     utl::wrapper auto const info = context.wrap(Implementation_template_info {
                         .value          = std::move(implementation_template),
-                        .home_namespace = space
+                        .home_namespace = space,
                     });
                     space->definitions_in_order.emplace_back(info);
                     context.nameless_entities.implementation_templates.push_back(info);
@@ -143,7 +143,7 @@ namespace {
                 [&](hir::definition::Instantiation_template& instantiation_template) {
                     utl::wrapper auto const info = context.wrap(Instantiation_template_info {
                         .value          = std::move(instantiation_template),
-                        .home_namespace = space
+                        .home_namespace = space,
                     });
                     space->definitions_in_order.emplace_back(info);
                     context.nameless_entities.instantiation_templates.push_back(info);
