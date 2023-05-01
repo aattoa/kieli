@@ -13,7 +13,7 @@ namespace {
 
     struct Wrapper_shallow_equality {
         template <class T> [[nodiscard]]
-        auto operator()(utl::Wrapper<T> const l, utl::Wrapper<T> const r) noexcept -> bool { return l.is(r); }
+        auto operator()(utl::Wrapper<T> const l, utl::Wrapper<T> const r) const noexcept -> bool { return l.is(r); }
     };
 
     struct [[nodiscard]] Unification_variable_solutions {
@@ -297,9 +297,7 @@ namespace {
                 auto& right_unsolved = right.state->as_unsolved();
                 if (right_unsolved.kind.get() == mir::Unification_type_variable_kind::integral)
                     left_unsolved.kind.get() = mir::Unification_type_variable_kind::integral;
-                ranges::move(
-                    right_unsolved.constraints,
-                    std::back_inserter(left_unsolved.constraints));
+                utl::append_vector(left_unsolved.constraints, std::move(right_unsolved.constraints));
                 return solution(right.state, current_left_type);
             }
             else {

@@ -82,10 +82,7 @@ namespace utl {
             return Wrapper<T> { page.unsafe_emplace_arena_element(std::forward<Args>(args)...) };
         }
         auto merge_with(Wrapper_arena&& other) & -> void {
-            m_pages.insert(
-                m_pages.end(),
-                std::move_iterator { other.m_pages.begin() },
-                std::move_iterator { other.m_pages.end() });
+            utl::append_vector(m_pages, std::move(other.m_pages));
         }
     };
 

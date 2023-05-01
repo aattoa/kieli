@@ -17,18 +17,18 @@ namespace {
         static_assert(suffix_length("test") == 0);
         static_assert(suffix_length("test  ") == 2);
 
+        utl::always_assert(!lines.empty());
         auto const shortest_prefix_length = ranges::min(lines | ranges::views::transform(prefix_length));
 
         for (auto& line : lines) {
-            if (line.empty())
-                continue;
+            if (line.empty()) continue;
             line.remove_prefix(shortest_prefix_length);
             line.remove_suffix(suffix_length(line));
         }
     }
 
 
-    auto lines_of_occurrence(std::string_view file, std::string_view view)
+    auto lines_of_occurrence(std::string_view const file, std::string_view const view)
         -> std::vector<std::string_view>
     {
         assert(view.data() == nullptr || view.size() <= std::strlen(view.data()));
@@ -182,9 +182,9 @@ namespace {
 
         if (!diagnostic_string.empty())
             // There are previous diagnostic messages, insert newlines to separate them
-            fmt::format_to(out, "\n\n\n\n");
+            fmt::format_to(out, "\n\n\n");
 
-        fmt::format_to(out, "{}{}{}: ", title_color, title, utl::Color::white);
+        fmt::format_to(out, "{}{}: {}", title_color, title, utl::Color::white);
         fmt::vformat_to(out, message, message_format_arguments);
 
         if (!sections.empty())
@@ -193,7 +193,7 @@ namespace {
         for (auto const& section : sections) {
             format_highlighted_section(out, title_color, section);
             if (&section != &sections.back())
-                fmt::format_to(out, "\n");
+                fmt::format_to(out, "\n\n");
         }
 
         if (help_note) {
