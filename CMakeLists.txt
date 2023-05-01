@@ -195,6 +195,8 @@ add_executable(${TEST_NAME}
 	${KIELI_VM_SOURCE_FILES}
 	${KIELI_REPRESENTATION_SOURCE_FILES}
 	${KIELI_PHASE_SOURCE_FILES})
+target_precompile_headers(${TEST_NAME}
+    PRIVATE src/utl/utilities.hpp)
 target_include_directories(${TEST_NAME}
 	PRIVATE src
 	${DEPENDENCY_INCLUDE_DIRECTORIES})
