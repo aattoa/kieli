@@ -72,10 +72,7 @@ auto compiler::compile(Compile_arguments&& compile_arguments) -> Compilation_res
 
     for (auto& [_, desugar_result] : module_map) { // NOLINT
         combined_desugar_result.node_arena.merge_with(std::move(desugar_result.node_arena));
-        ranges::move(
-            desugar_result.module.definitions.begin(),
-            desugar_result.module.definitions.end(),
-            std::back_inserter(combined_desugar_result.module.definitions));
+        utl::append_vector(combined_desugar_result.module.definitions, std::move(desugar_result.module.definitions));
     }
 
     (void)resolve(std::move(combined_desugar_result));

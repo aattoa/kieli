@@ -559,6 +559,13 @@ namespace utl {
         vector.erase(vector.begin() + safe_cast<typename std::vector<T>::iterator::difference_type>(new_size), vector.end());
     }
 
+    template <class T>
+    constexpr auto append_vector(std::vector<T>& to, std::vector<T>&& from) -> void {
+        assert(&to != &from);
+        to.insert(to.end(), std::move_iterator { from.begin() }, std::move_iterator { from.end() });
+        from.clear();
+    }
+
 
     [[nodiscard]]
     constexpr auto unsigned_distance(auto const start, auto const stop) noexcept -> Usize {
