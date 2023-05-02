@@ -109,7 +109,7 @@ namespace {
                 }
             },
             [&](mir::Mutability::Variable const actual, mir::Mutability::Variable const requested) {
-                if (!actual.state.is(requested.state))
+                if (actual.state.is_not(requested.state))
                     solve_mutability_quality_constraint();
             },
             [&](mir::Mutability::Concrete const actual, auto) {
@@ -129,7 +129,7 @@ namespace {
             [&](auto, auto) {
                 solve_mutability_quality_constraint();
             }
-        }, *actual_mutability.value(), *requested_mutability.value());
+        }, *actual_mutability.flattened_value(), *requested_mutability.flattened_value());
 
         return {
             .value = mir::expression::Reference {

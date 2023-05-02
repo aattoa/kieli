@@ -18,7 +18,6 @@ namespace mir {
 
         // Get the wrapped value, but flatten solved unification variables first
         auto flattened_value() const -> utl::Wrapper<Variant>;
-
         // Get the wrapped value without flattening solved unification variables
         auto pure_value() const noexcept -> utl::Wrapper<Variant>;
 

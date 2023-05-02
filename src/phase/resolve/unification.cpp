@@ -235,7 +235,8 @@ namespace {
                 .solutions = solutions.mutability_mappings,
                 .context   = context,
             };
-            return std::visit(visitor, *constrainer.value(), *constrained.value()) || unification_failure();
+            return std::visit(visitor, *constrainer.flattened_value(), *constrained.flattened_value())
+                || unification_failure();
         }
 
         [[nodiscard]]
@@ -407,7 +408,7 @@ auto resolution::Context::unify_mutabilities(Mutability_unification_arguments co
     };
     auto const constraint = arguments.constraint_to_be_tested;
 
-    if (std::visit(visitor, *constraint.constrainer_mutability.value(), *constraint.constrained_mutability.value())) {
+    if (std::visit(visitor, *constraint.constrainer_mutability.flattened_value(), *constraint.constrained_mutability.flattened_value())) {
         if (arguments.do_destructive_unification)
             solutions.destructively_apply();
         return true;
@@ -452,6 +453,10 @@ auto resolution::Context::unify_types(Type_unification_arguments const arguments
 auto resolution::Context::pure_equality_compare(mir::Type const left, mir::Type const right) -> bool {
     Deferred_equality_constraints temporary_deferred_constraints;
 
+    auto const constraint_guard = utl::on_scope_exit([&] {
+        utl::always_assert(temporary_deferred_constraints.mutabilities.empty());
+    });
+
     auto const try_unify = [&](mir::Type const left, mir::Type const right) {
         return unify_types({
             .constraint_to_be_tested {
@@ -468,10 +473,7 @@ auto resolution::Context::pure_equality_compare(mir::Type const left, mir::Type 
         });
     };
 
-    if (!try_unify(left, right)) return false;
-    utl::always_assert(temporary_deferred_constraints.mutabilities.empty());
-
-    return ranges::all_of(temporary_deferred_constraints.types, [&](auto const& constraint) {
+    return try_unify(left, right) && ranges::all_of(temporary_deferred_constraints.types, [&](auto const& constraint) {
         return try_unify(constraint.constrainer_type, constraint.constrained_type);
     });
 }

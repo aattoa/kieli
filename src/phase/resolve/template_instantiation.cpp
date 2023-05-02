@@ -726,7 +726,7 @@ namespace {
     }
 
     auto instantiate(mir::Mutability const& mutability, Substitution_context const context) -> mir::Mutability {
-        if (auto const* parameterized = std::get_if<mir::Mutability::Parameterized>(&*mutability.value())) {
+        if (auto const* parameterized = std::get_if<mir::Mutability::Parameterized>(&*mutability.flattened_value())) {
             if (mir::Mutability const* const substitution =
                 context.substitutions.mutability_substitutions.find(parameterized->tag))
             {
