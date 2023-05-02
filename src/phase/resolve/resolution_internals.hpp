@@ -19,7 +19,7 @@ namespace resolution {
 
     namespace constraint {
         struct Explanation {
-            utl::Source_view  source_view;
+            utl::Source_view source_view;
             std::string_view explanatory_note;
         };
 

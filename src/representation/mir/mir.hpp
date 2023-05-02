@@ -114,8 +114,8 @@ template <> struct dtl::To_HIR_impl<name> : std::type_identity<hir::definition::
 
 
 
-    struct Unification_type_variable_state;
-    struct Unification_mutability_variable_state;
+    class [[nodiscard]] Unification_type_variable_state;
+    class [[nodiscard]] Unification_mutability_variable_state;
 
     class [[nodiscard]] Mutability {
     public:
@@ -137,7 +137,11 @@ template <> struct dtl::To_HIR_impl<name> : std::type_identity<hir::definition::
     public:
         explicit Mutability(utl::Wrapper<Variant>, utl::Source_view) noexcept;
 
-        auto value() const -> utl::Wrapper<Variant>;
+        // Get the wrapped value, but flatten solved unification variables first
+        auto flattened_value() const -> utl::Wrapper<Variant>;
+        // Get the wrapped value without flattening solved unification variables
+        auto pure_value() const noexcept -> utl::Wrapper<Variant>;
+
         auto source_view() const noexcept -> utl::Source_view;
         auto with(utl::Source_view) const noexcept -> Mutability;
     };
@@ -189,7 +193,8 @@ namespace mir {
         general, integral
     };
 
-    struct Unification_type_variable_state {
+    class Unification_type_variable_state {
+    public:
         struct Solved {
             Type solution;
         };
@@ -198,25 +203,36 @@ namespace mir {
             utl::Strong<Unification_type_variable_kind>       kind;
             std::vector<Unification_type_variable_constraint> constraints;
         };
-        std::variant<Solved, Unsolved> value;
+    private:
+        std::variant<Solved, Unsolved> m_value;
+    public:
+        explicit Unification_type_variable_state(Unsolved&&) noexcept;
 
         auto solve(Type solution) -> void;
-        auto as_unsolved(std::source_location = std::source_location::current())       noexcept -> Unsolved      &;
-        auto as_unsolved(std::source_location = std::source_location::current()) const noexcept -> Unsolved const&;
+        [[nodiscard]] auto as_unsolved(std::source_location = std::source_location::current())       noexcept -> Unsolved      &;
+        [[nodiscard]] auto as_unsolved(std::source_location = std::source_location::current()) const noexcept -> Unsolved const&;
+        [[nodiscard]] auto as_solved_if()       noexcept -> Solved      *;
+        [[nodiscard]] auto as_solved_if() const noexcept -> Solved const*;
     };
 
-    struct Unification_mutability_variable_state {
+    class Unification_mutability_variable_state {
+    public:
         struct Solved {
             Mutability solution;
         };
         struct Unsolved {
             Unification_variable_tag tag;
         };
-        std::variant<Solved, Unsolved> value;
+    private:
+        std::variant<Solved, Unsolved> m_value;
+    public:
+        explicit Unification_mutability_variable_state(Unsolved&&) noexcept;
 
         auto solve(Mutability solution) -> void;
-        auto as_unsolved(std::source_location = std::source_location::current())       noexcept -> Unsolved      &;
-        auto as_unsolved(std::source_location = std::source_location::current()) const noexcept -> Unsolved const&;
+        [[nodiscard]] auto as_unsolved(std::source_location = std::source_location::current())       noexcept -> Unsolved      &;
+        [[nodiscard]] auto as_unsolved(std::source_location = std::source_location::current()) const noexcept -> Unsolved const&;
+        [[nodiscard]] auto as_solved_if()       noexcept -> Solved      *;
+        [[nodiscard]] auto as_solved_if() const noexcept -> Solved const*;
     };
 
 
@@ -256,16 +272,14 @@ namespace mir {
 DECLARE_FORMATTER_FOR(mir::Template_argument);
 DECLARE_FORMATTER_FOR(mir::Template_parameter);
 DECLARE_FORMATTER_FOR(mir::Class_reference);
-DECLARE_FORMATTER_FOR(mir::Mutability::Variant);
 DECLARE_FORMATTER_FOR(mir::Mutability);
 
 DECLARE_FORMATTER_FOR(mir::Unification_variable_tag);
-DECLARE_FORMATTER_FOR(mir::Unification_type_variable_state);
-DECLARE_FORMATTER_FOR(mir::Unification_mutability_variable_state);
+DECLARE_FORMATTER_FOR(mir::Unification_type_variable_state::Unsolved);
+DECLARE_FORMATTER_FOR(mir::Unification_mutability_variable_state::Unsolved);
 
 DECLARE_FORMATTER_FOR(mir::Expression);
 DECLARE_FORMATTER_FOR(mir::Pattern);
-DECLARE_FORMATTER_FOR(mir::Type::Variant);
 DECLARE_FORMATTER_FOR(mir::Type);
 
 DECLARE_FORMATTER_FOR(mir::Function);
