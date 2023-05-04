@@ -1107,8 +1107,13 @@ namespace {
         }
 
         auto operator()(hir::expression::Hole&) -> mir::Expression {
+            // Workaround for a bug in GCC 13.1.1.
+            // Directly constructing `mir::Expression::Variant` from a `mir::Expression::Hole` causes GCC to get stuck and its memory usage to grow without bound.
+
+            mir::Expression::Variant value;
+            value.emplace<mir::expression::Hole>();
             return {
-                .value       = mir::expression::Hole {},
+                .value       = std::move(value),
                 .type        = context.fresh_general_unification_type_variable(this_expression.source_view),
                 .source_view = this_expression.source_view,
                 .mutability  = context.immut_constant(this_expression.source_view),
