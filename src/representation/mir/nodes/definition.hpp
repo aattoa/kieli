@@ -6,7 +6,8 @@
 
 
 namespace resolution {
-    struct Namespace;
+    struct [[nodiscard]] Namespace;
+    class  [[nodiscard]] Scope;
 }
 
 
@@ -27,19 +28,22 @@ namespace mir {
 
     struct Function {
         struct Signature {
+            std::vector<mir::Template_parameter> template_parameters; // empty when not a template
             std::vector<mir::Function_parameter> parameters;
+            tl::optional<Self_parameter>         self_parameter;
+            ast::Name                            name;
             mir::Type                            return_type;
             mir::Type                            function_type;
+
+            [[nodiscard]] auto is_template() const noexcept -> bool;
         };
-        Signature                    signature;
-        Expression                   body;
-        ast::Name                    name;
-        tl::optional<Self_parameter> self_parameter;
+        Signature                                            signature;
+        Expression                                           body;
+        std::vector<utl::Wrapper<resolution::Function_info>> template_instantiations; // empty when not a template
     };
-    using Function_template = Template<Function>;
 
     struct Struct {
-        struct Member {
+        struct Member { // NOLINT
             ast::Name         name;
             Type              type;
             utl::Strong<bool> is_public;
@@ -64,14 +68,6 @@ namespace mir {
     using Alias_template = Template<Alias>;
 
     struct Typeclass {
-        struct Function_signature {
-            std::vector<mir::Type> parameters;
-            mir::Type              return_type;
-        };
-        struct Function_template_signature {
-            Function_signature                   function_signature;
-            std::vector<mir::Template_parameter> template_parameters;
-        };
         struct Type_signature {
             std::vector<Class_reference> classes;
         };
@@ -79,8 +75,7 @@ namespace mir {
             Type_signature                       type_signature;
             std::vector<mir::Template_parameter> template_parameters;
         };
-        utl::Flatmap<compiler::Identifier, Function_signature>          function_signatures;
-        utl::Flatmap<compiler::Identifier, Function_template_signature> function_template_signatures;
+        utl::Flatmap<compiler::Identifier, Function::Signature>         function_signatures;
         utl::Flatmap<compiler::Identifier, Type_signature>              type_signatures;
         utl::Flatmap<compiler::Identifier, Type_template_signature>     type_template_signatures;
         ast::Name                                                       name;
@@ -92,14 +87,13 @@ namespace mir {
         using Map = utl::Flatmap<compiler::Identifier, utl::Wrapper<Info>>;
 
         struct Definitions {
-            Map<resolution::Function_info>          functions;
-            Map<resolution::Function_template_info> function_templates;
-            Map<resolution::Struct_info>            structures;
-            Map<resolution::Struct_template_info>   structure_templates;
-            Map<resolution::Enum_info>              enumerations;
-            Map<resolution::Enum_template_info>     enumeration_templates;
-            Map<resolution::Alias_info>             aliases;
-            Map<resolution::Alias_template_info>    alias_templates;
+            Map<resolution::Function_info>        functions;
+            Map<resolution::Struct_info>          structures;
+            Map<resolution::Struct_template_info> structure_templates;
+            Map<resolution::Enum_info>            enumerations;
+            Map<resolution::Enum_template_info>   enumeration_templates;
+            Map<resolution::Alias_info>           aliases;
+            Map<resolution::Alias_template_info>  alias_templates;
         };
         Definitions definitions;
         Type        self_type;

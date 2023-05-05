@@ -53,7 +53,7 @@ auto mir::Mutability::with(utl::Source_view const source_view) const noexcept ->
 mir::Unification_type_variable_state::Unification_type_variable_state(Unsolved&& unsolved) noexcept
     : m_value { std::move(unsolved) } {}
 
-auto mir::Unification_type_variable_state::solve(Type const solution) -> void {
+auto mir::Unification_type_variable_state::solve_with(Type const solution) -> void {
     utl::always_assert(std::holds_alternative<Unsolved>(m_value));
     m_value = Solved { .solution = solution };
 }
@@ -73,7 +73,7 @@ auto mir::Unification_type_variable_state::as_solved_if() const noexcept -> Solv
 mir::Unification_mutability_variable_state::Unification_mutability_variable_state(Unsolved&& unsolved) noexcept
     : m_value { std::move(unsolved) } {}
 
-auto mir::Unification_mutability_variable_state::solve(Mutability const solution) -> void {
+auto mir::Unification_mutability_variable_state::solve_with(Mutability const solution) -> void {
     utl::always_assert(std::holds_alternative<Unsolved>(m_value));
     m_value = Solved { .solution = solution };
 }
@@ -88,4 +88,9 @@ auto mir::Unification_mutability_variable_state::as_solved_if() noexcept -> Solv
 }
 auto mir::Unification_mutability_variable_state::as_solved_if() const noexcept -> Solved const* {
     return std::get_if<Solved>(&m_value);
+}
+
+
+auto mir::Function::Signature::is_template() const noexcept -> bool {
+    return !template_parameters.empty();
 }

@@ -11,7 +11,36 @@ auto Desugaring_context::desugar(ast::Function_parameter const& parameter) -> hi
     return hir::Function_parameter {
         .pattern          = desugar(parameter.pattern),
         .type             = parameter.type.transform(desugar()),
-        .default_argument = parameter.default_argument.transform(desugar())
+        .default_argument = parameter.default_argument.transform(desugar()),
+    };
+}
+
+auto Desugaring_context::desugar(const ast::Self_parameter& self_parameter) -> hir::Function_parameter {
+    hir::Type self_type {
+        .value       = hir::type::Self {},
+        .source_view = self_parameter.source_view,
+    };
+    if (self_parameter.is_reference.get()) {
+        self_type = hir::Type {
+            .value = hir::type::Reference {
+                .referenced_type = wrap(std::move(self_type)),
+                .mutability      = self_parameter.mutability,
+            },
+            .source_view = self_parameter.source_view,
+        };
+    }
+    hir::Pattern self_pattern {
+        .value = hir::pattern::Name {
+            .identifier = self_variable_identifier,
+            .mutability = self_parameter.is_reference.get()
+                ? ast::Mutability { ast::Mutability::Concrete { .is_mutable = false }, self_parameter.source_view }
+                : self_parameter.mutability,
+        },
+        .source_view = self_parameter.source_view,
+    };
+    return hir::Function_parameter {
+        .pattern = std::move(self_pattern),
+        .type    = std::move(self_type),
     };
 }
 
@@ -53,7 +82,7 @@ auto Desugaring_context::desugar(ast::Template_parameter const& parameter) -> hi
         }, parameter.value),
         .name             = parameter.name,
         .default_argument = parameter.default_argument.transform(desugar()),
-        .source_view      = parameter.source_view
+        .source_view      = parameter.source_view,
     };
 }
 
@@ -61,7 +90,7 @@ auto Desugaring_context::desugar(ast::Qualifier const& qualifier) -> hir::Qualif
     return {
         .template_arguments = qualifier.template_arguments.transform(utl::map(desugar())),
         .name               = qualifier.name,
-        .source_view        = qualifier.source_view
+        .source_view        = qualifier.source_view,
     };
 }
 
@@ -87,9 +116,10 @@ auto Desugaring_context::desugar(ast::Class_reference const& reference) -> hir::
 
 auto Desugaring_context::desugar(ast::Function_signature const& signature) -> hir::Function_signature {
     return {
-        .parameter_types = utl::map(desugar(), signature.parameter_types),
-        .return_type     = desugar(signature.return_type),
-        .name            = signature.name,
+        .parameters     = utl::map(desugar(), signature.parameters),
+        .self_parameter = signature.self_parameter,
+        .return_type    = signature.return_type.transform(desugar()),
+        .name           = signature.name,
     };
 }
 
@@ -110,7 +140,7 @@ auto Desugaring_context::desugar(ast::Type_signature const& signature) -> hir::T
 auto Desugaring_context::desugar(ast::Type_template_signature const& signature) -> hir::Type_template_signature {
     return {
         .type_signature      = desugar(signature.type_signature),
-        .template_parameters = utl::map(desugar(), signature.template_parameters)
+        .template_parameters = utl::map(desugar(), signature.template_parameters),
     };
 }
 
@@ -143,6 +173,6 @@ auto compiler::desugar(Parse_result&& parse_result) -> Desugar_result {
     return Desugar_result {
         .compilation_info = std::move(context.compilation_info),
         .node_arena       = std::move(context.node_arena),
-        .module           { .definitions = std::move(desugared_definitions) }
+        .module           { .definitions = std::move(desugared_definitions) },
     };
 }

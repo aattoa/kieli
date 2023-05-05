@@ -28,14 +28,12 @@ namespace resolution {
             mir::Type                  constrained_type;
             tl::optional<Explanation> constrainer_note;
             Explanation                constrained_note;
-            bool                       is_deferred = false;
         };
         struct Mutability_equality {
             mir::Mutability constrainer_mutability;
             mir::Mutability constrained_mutability;
             Explanation     constrainer_note;
             Explanation     constrained_note;
-            bool            is_deferred = false;
         };
         struct Instance { // NOLINT
             mir::Type                    type;
@@ -76,12 +74,6 @@ namespace resolution {
     };
 
 
-    struct [[nodiscard]] Deferred_equality_constraints {
-        std::vector<constraint::Type_equality>       types;
-        std::vector<constraint::Mutability_equality> mutabilities;
-    };
-
-
     // Passed to `Context::unify_types`
     struct [[nodiscard]] Type_unification_arguments {
         using Report_unification_failure_callback =
@@ -90,7 +82,6 @@ namespace resolution {
             void (Context&, constraint::Type_equality original, mir::Type variable, mir::Type solution);
 
         constraint::Type_equality            constraint_to_be_tested;
-        Deferred_equality_constraints&       deferred_equality_constraints;
         bool                                 allow_coercion             = false;
         bool                                 do_destructive_unification = false;
         Report_unification_failure_callback* report_unification_failure = nullptr;
@@ -102,7 +93,6 @@ namespace resolution {
             void (Context&, constraint::Mutability_equality);
 
         constraint::Mutability_equality      constraint_to_be_tested;
-        Deferred_equality_constraints&       deferred_equality_constraints;
         bool                                 allow_coercion             = false;
         bool                                 do_destructive_unification = false;
         Report_unification_failure_callback* report_unification_failure = nullptr;
@@ -147,17 +137,16 @@ namespace resolution {
         utl::Safe_usize current_template_parameter_tag;
         utl::Safe_usize current_local_variable_tag;
     public:
-        compiler::Compilation_info    compilation_info;
-        mir::Node_arena               node_arena;
-        mir::Namespace_arena          namespace_arena;
-        Resolution_constants          constants;
-        tl::optional<Predefinitions>  predefinitions_value;
-        Deferred_equality_constraints deferred_equality_constraints;
-        mir::Module                   output_module;
-        utl::Wrapper<Namespace>       global_namespace;
-        Nameless_entities             nameless_entities;
-        tl::optional<mir::Type>       current_self_type;
-        tl::optional<Loop_info>       current_loop_info;
+        compiler::Compilation_info   compilation_info;
+        mir::Node_arena              node_arena;
+        mir::Namespace_arena         namespace_arena;
+        Resolution_constants         constants;
+        tl::optional<Predefinitions> predefinitions_value;
+        mir::Module                  output_module;
+        utl::Wrapper<Namespace>      global_namespace;
+        Nameless_entities            nameless_entities;
+        tl::optional<mir::Type>      current_self_type;
+        tl::optional<Loop_info>      current_loop_info;
 
         compiler::Identifier self_variable_id = compilation_info.get()->identifier_pool.make("self");
 
@@ -220,9 +209,6 @@ namespace resolution {
         auto solve(constraint::Struct_field        const&) -> void;
         auto solve(constraint::Tuple_field         const&) -> void;
 
-        // Clears the deferred constraint vectors, and solves their contained constraints.
-        auto solve_deferred_constraints() -> void;
-
         [[nodiscard]] auto predefinitions() -> Predefinitions;
 
         // Returns a scope with local bindings for the template parameters and the MIR representations of the parameters themselves.
@@ -230,6 +216,12 @@ namespace resolution {
 
         // Returns the signature of the function. Resolves the function body only if the return type is not explicitly specified.
         [[nodiscard]] auto resolve_function_signature(Function_info&) -> mir::Function::Signature&;
+
+        // Solve unsolved unification variables with implicit template parameters
+        auto generalize_to(mir::Type, std::vector<mir::Template_parameter>&) -> void;
+
+        // Emit an error diagnostic if the given type contains unsolved unification variables
+        auto ensure_non_generalizable(mir::Type, std::string_view type_description) -> void;
 
         [[nodiscard]] auto resolve_function      (utl::Wrapper<Function_info      >) -> mir::Function      &;
         [[nodiscard]] auto resolve_struct        (utl::Wrapper<Struct_info        >) -> mir::Struct        &;
@@ -239,7 +231,6 @@ namespace resolution {
         [[nodiscard]] auto resolve_implementation(utl::Wrapper<Implementation_info>) -> mir::Implementation&;
         [[nodiscard]] auto resolve_instantiation (utl::Wrapper<Instantiation_info >) -> mir::Instantiation &;
 
-        [[nodiscard]] auto resolve_function_template      (utl::Wrapper<Function_template_info      >) -> mir::Function_template      &;
         [[nodiscard]] auto resolve_struct_template        (utl::Wrapper<Struct_template_info        >) -> mir::Struct_template        &;
         [[nodiscard]] auto resolve_enum_template          (utl::Wrapper<Enum_template_info          >) -> mir::Enum_template          &;
         [[nodiscard]] auto resolve_alias_template         (utl::Wrapper<Alias_template_info         >) -> mir::Alias_template         &;
@@ -277,15 +268,15 @@ namespace resolution {
         auto fresh_template_parameter_reference_tag() -> mir::Template_parameter_tag;
         auto fresh_local_variable_tag()               -> mir::Local_variable_tag;
 
-        auto instantiate_function_template(utl::Wrapper<Function_template_info>, std::span<hir::Template_argument const>, utl::Source_view instantiation_view, Scope&, Namespace&) -> utl::Wrapper<Function_info>;
-        auto instantiate_struct_template  (utl::Wrapper<Struct_template_info>,   std::span<hir::Template_argument const>, utl::Source_view instantiation_view, Scope&, Namespace&) -> utl::Wrapper<Struct_info>;
-        auto instantiate_enum_template    (utl::Wrapper<Enum_template_info>,     std::span<hir::Template_argument const>, utl::Source_view instantiation_view, Scope&, Namespace&) -> utl::Wrapper<Enum_info>;
-        auto instantiate_alias_template   (utl::Wrapper<Alias_template_info>,    std::span<hir::Template_argument const>, utl::Source_view instantiation_view, Scope&, Namespace&) -> utl::Wrapper<Alias_info>;
+        auto instantiate_function_template(utl::Wrapper<Function_info>,        std::span<hir::Template_argument const>, utl::Source_view instantiation_view, Scope&, Namespace&) -> utl::Wrapper<Function_info>;
+        auto instantiate_struct_template  (utl::Wrapper<Struct_template_info>, std::span<hir::Template_argument const>, utl::Source_view instantiation_view, Scope&, Namespace&) -> utl::Wrapper<Struct_info>;
+        auto instantiate_enum_template    (utl::Wrapper<Enum_template_info>,   std::span<hir::Template_argument const>, utl::Source_view instantiation_view, Scope&, Namespace&) -> utl::Wrapper<Enum_info>;
+        auto instantiate_alias_template   (utl::Wrapper<Alias_template_info>,  std::span<hir::Template_argument const>, utl::Source_view instantiation_view, Scope&, Namespace&) -> utl::Wrapper<Alias_info>;
 
-        auto instantiate_function_template_with_synthetic_arguments(utl::Wrapper<Function_template_info>, utl::Source_view instantiation_view) -> utl::Wrapper<Function_info>;
-        auto instantiate_struct_template_with_synthetic_arguments  (utl::Wrapper<Struct_template_info>,   utl::Source_view instantiation_view) -> utl::Wrapper<Struct_info>;
-        auto instantiate_enum_template_with_synthetic_arguments    (utl::Wrapper<Enum_template_info>,     utl::Source_view instantiation_view) -> utl::Wrapper<Enum_info>;
-        auto instantiate_alias_template_with_synthetic_arguments   (utl::Wrapper<Alias_template_info>,    utl::Source_view instantiation_view) -> utl::Wrapper<Alias_info>;
+        auto instantiate_function_template_with_synthetic_arguments(utl::Wrapper<Function_info>,        utl::Source_view instantiation_view) -> utl::Wrapper<Function_info>;
+        auto instantiate_struct_template_with_synthetic_arguments  (utl::Wrapper<Struct_template_info>, utl::Source_view instantiation_view) -> utl::Wrapper<Struct_info>;
+        auto instantiate_enum_template_with_synthetic_arguments    (utl::Wrapper<Enum_template_info>,   utl::Source_view instantiation_view) -> utl::Wrapper<Enum_info>;
+        auto instantiate_alias_template_with_synthetic_arguments   (utl::Wrapper<Alias_template_info>,  utl::Source_view instantiation_view) -> utl::Wrapper<Alias_info>;
 
         auto   mut_constant(utl::Source_view) -> mir::Mutability;
         auto immut_constant(utl::Source_view) -> mir::Mutability;

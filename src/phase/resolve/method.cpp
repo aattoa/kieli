@@ -18,7 +18,7 @@ namespace {
 
 
     struct [[nodiscard]] Method_lookup_result {
-        std::variant<utl::Wrapper<Function_info      >, utl::Wrapper<Function_template_info      >> method_info;
+        utl::Wrapper<Function_info> method_info;
         std::variant<utl::Wrapper<Implementation_info>, utl::Wrapper<Implementation_template_info>> implementation_info;
     };
 
@@ -53,29 +53,21 @@ namespace {
             });
         };
 
-        static constexpr auto get_source_view =
-            [](utl::wrapper auto const info) { return info->name.source_view; };
-
         for (utl::wrapper auto const implementation_info : context.nameless_entities.implementations) {
             mir::Implementation& implementation = context.resolve_implementation(implementation_info);
             mir::Implementation::Definitions& definitions = implementation.definitions;
 
-            auto const try_set_return_value = [&](utl::wrapper auto method) {
-                if (is_implementation_for(context, implementation.self_type, inspected_type)) {
-                    if (return_value.has_value())
-                        emit_ambiguity_error({ std::visit(get_source_view, return_value->method_info), get_source_view(method) });
-                    else
-                        return_value = Method_lookup_result{ method, implementation_info };
-                }
-            };
-
             // Try to find a method with the given name first and only then check if the implementation
             // concerns the given type, because the former is a much cheaper operation than the latter.
 
-            if (utl::wrapper auto* const function = definitions.functions.find(method_name.identifier))
-                try_set_return_value(*function);
-            else if (utl::wrapper auto* const function_template = definitions.function_templates.find(method_name.identifier))
-                try_set_return_value(*function_template);
+            if (utl::wrapper auto* const function = definitions.functions.find(method_name.identifier)) {
+                if (is_implementation_for(context, implementation.self_type, inspected_type)) {
+                    if (return_value.has_value())
+                        emit_ambiguity_error({ return_value->method_info->name.source_view, (*function)->name.source_view });
+                    else
+                        return_value = Method_lookup_result { *function, implementation_info };
+                }
+            }
         }
 
         if (return_value.has_value())
@@ -97,21 +89,13 @@ auto resolution::Context::resolve_method(
     Scope                                                      & scope,
     Namespace                                                  & space) -> utl::Wrapper<Function_info>
 {
-    Method_lookup_result lookup_result = lookup_method(*this, method_name, type);
+    Method_lookup_result const lookup_result = lookup_method(*this, method_name, type);
 
-    return utl::match(
-        lookup_result.method_info,
-        [&](utl::Wrapper<Function_info> const info) {
-            if (template_arguments.has_value())
-                error(method_name.source_view, { "This method is not a template, but template arguments were supplied" });
-            else
-                return info;
-        },
-        [&](utl::Wrapper<Function_template_info> const info) {
-            if (template_arguments.has_value())
-                return instantiate_function_template(info, *template_arguments, method_name.source_view, scope, space);
-            else
-                return instantiate_function_template_with_synthetic_arguments(info, method_name.source_view);
-        }
-    );
+    if (template_arguments.has_value())
+        return instantiate_function_template(lookup_result.method_info, *template_arguments, method_name.source_view, scope, space);
+
+    if (resolve_function_signature(*lookup_result.method_info).is_template())
+        return instantiate_function_template_with_synthetic_arguments(lookup_result.method_info, method_name.source_view);
+    else
+        return lookup_result.method_info;
 }

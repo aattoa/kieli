@@ -79,7 +79,7 @@ namespace {
         Context                                      & context,
         std::span<mir::Template_parameter const> const parameters,
         std::span<hir::Template_argument  const> const arguments,
-        utl::Source_view                          const instantiation_view,
+        utl::Source_view                         const instantiation_view,
         Scope                                        & scope,
         Namespace                                    & space) -> std::vector<mir::Template_argument>
     {
@@ -162,55 +162,56 @@ namespace {
 
 
     auto instantiate_function_template_application(
-        Context                                 & resolution_context,
-        mir::Function_template                  & function_template,
-        utl::Wrapper<Function_template_info> const template_info,
-        std::vector<mir::Template_argument>    && template_arguments,
-        Scope                                   & scope,
-        Namespace                               & space) -> utl::Wrapper<Function_info>
+        Context                             & resolution_context,
+        mir::Function                       & function_template,
+        utl::Wrapper<Function_info>     const template_info,
+        std::vector<mir::Template_argument>&& template_arguments,
+        Scope                               & scope,
+        Namespace                           & space) -> utl::Wrapper<Function_info>
     {
-        Substitutions substitutions { function_template.parameters, template_arguments };
+        utl::always_assert(function_template.signature.is_template());
+        Substitutions substitutions { function_template.signature.template_parameters, template_arguments };
 
         Substitution_context substitution_context {
             .substitutions      = substitutions,
             .resolution_context = resolution_context,
             .scope              = scope,
-            .space              = space
+            .space              = space,
         };
 
         auto const instantiate_parameter = [=](mir::Function_parameter const& parameter) {
             return mir::Function_parameter {
                 .pattern = instantiate(parameter.pattern, substitution_context),
-                .type    = instantiate(parameter.type,    substitution_context)
+                .type    = instantiate(parameter.type,    substitution_context),
             };
         };
 
         tl::optional<mir::Self_parameter> concrete_self_parameter =
-            function_template.definition.self_parameter.transform(substitution_context.recurse());
+            function_template.signature.self_parameter.transform(substitution_context.recurse());
 
         std::vector<mir::Function_parameter> concrete_function_parameters =
-            utl::map(instantiate_parameter, function_template.definition.signature.parameters);
+            utl::map(instantiate_parameter, function_template.signature.parameters);
 
         mir::Type const concrete_return_type =
-            instantiate(function_template.definition.signature.return_type, substitution_context);
+            instantiate(function_template.signature.return_type, substitution_context);
 
         mir::Type const concrete_function_type {
             resolution_context.wrap_type(mir::type::Function {
                 .parameter_types = utl::map(&mir::Function_parameter::type, concrete_function_parameters),
-                .return_type     = concrete_return_type
+                .return_type     = concrete_return_type,
             }),
             template_info->name.source_view,
         };
 
         mir::Function concrete_function {
             .signature {
-                .parameters    = std::move(concrete_function_parameters),
-                .return_type   = concrete_return_type,
-                .function_type = concrete_function_type
+                .parameters     = std::move(concrete_function_parameters),
+                .self_parameter = std::move(concrete_self_parameter),
+                .name           = function_template.signature.name,
+                .return_type    = concrete_return_type,
+                .function_type  = concrete_function_type,
             },
-            .body           = instantiate(function_template.definition.body, substitution_context),
-            .name           = function_template.definition.name,
-            .self_parameter = std::move(concrete_self_parameter),
+            .body = instantiate(function_template.body, substitution_context),
         };
 
         auto const info = resolution_context.wrap(Function_info {
@@ -218,13 +219,13 @@ namespace {
             .home_namespace = template_info->home_namespace,
             .state          = Definition_state::resolved,
             .name           = template_info->name,
-            .template_instantiation_info = Template_instantiation_info<Function_template_info> {
+            .template_instantiation_info = Template_instantiation_info<Function_info> {
                 template_info,
-                function_template.parameters,
+                function_template.signature.template_parameters,
                 std::move(template_arguments),
             }
         });
-        function_template.instantiations.push_back(info);
+        function_template.template_instantiations.push_back(info);
         return info;
     }
 
@@ -517,12 +518,10 @@ namespace {
             if (function.is_application) {
                 auto const& instantiation_info =
                     utl::get(function.info->template_instantiation_info);
-
-                utl::Wrapper<Function_template_info> const template_info =
+                utl::Wrapper<Function_info> const template_info =
                     instantiation_info.template_instantiated_from;
-
-                mir::Function_template& function_template =
-                    context.resolution_context.resolve_function_template(template_info);
+                mir::Function& function_template =
+                    context.resolution_context.resolve_function(template_info);
 
                 return mir::expression::Function_reference {
                     .info = instantiate_function_template_application(
@@ -761,20 +760,24 @@ namespace {
 
 
 auto resolution::Context::instantiate_function_template(
-    utl::Wrapper<Function_template_info>     const template_info,
+    utl::Wrapper<Function_info>             const template_info,
     std::span<hir::Template_argument const> const template_arguments,
-    utl::Source_view                         const instantiation_view,
+    utl::Source_view                        const instantiation_view,
     Scope                                       & scope,
     Namespace                                   & space) -> utl::Wrapper<Function_info>
 {
-    mir::Function_template& function_template =
-        resolve_function_template(template_info);
-
+    mir::Function& function = resolve_function(template_info);
+    if (!function.signature.is_template()) {
+        error(instantiation_view, {
+            .message           = "{} is not a template, so template arguments can not be applied to it",
+            .message_arguments = fmt::make_format_args(function.signature.name),
+        });
+    }
     return instantiate_function_template_application(
         *this,
-        function_template,
+        function,
         template_info,
-        resolve_template_arguments(*this, function_template.parameters, template_arguments, instantiation_view, scope, space),
+        resolve_template_arguments(*this, function.signature.template_parameters, template_arguments, instantiation_view, scope, space),
         scope,
         space);
 }
@@ -787,9 +790,7 @@ auto resolution::Context::instantiate_struct_template(
     Scope                                       & scope,
     Namespace                                   & space) -> utl::Wrapper<Struct_info>
 {
-    mir::Struct_template& struct_template =
-        resolve_struct_template(template_info);
-
+    mir::Struct_template& struct_template = resolve_struct_template(template_info);
     return instantiate_struct_template_application(
         *this,
         struct_template,
@@ -807,9 +808,7 @@ auto resolution::Context::instantiate_enum_template(
     Scope                                       & scope,
     Namespace                                   & space) -> utl::Wrapper<Enum_info>
 {
-    mir::Enum_template& enum_template =
-        resolve_enum_template(template_info);
-
+    mir::Enum_template& enum_template = resolve_enum_template(template_info);
     return instantiate_enum_template_application(
         *this,
         enum_template,
@@ -827,9 +826,7 @@ auto resolution::Context::instantiate_alias_template(
     Scope                                       & scope,
     Namespace                                   & space) -> utl::Wrapper<Alias_info>
 {
-    mir::Alias_template& alias_template =
-        resolve_alias_template(template_info);
-
+    mir::Alias_template& alias_template = resolve_alias_template(template_info);
     return instantiate_alias_template_application(
         *this,
         alias_template,
@@ -841,10 +838,10 @@ auto resolution::Context::instantiate_alias_template(
 
 
 auto resolution::Context::instantiate_function_template_with_synthetic_arguments(
-    utl::Wrapper<Function_template_info> const template_info,
-    utl::Source_view                     const instantiation_view) -> utl::Wrapper<Function_info>
+    utl::Wrapper<Function_info> const template_info,
+    utl::Source_view            const instantiation_view) -> utl::Wrapper<Function_info>
 {
-    auto const arguments = synthetize_arguments(resolve_function_template(template_info).parameters.size(), instantiation_view);
+    auto const arguments = synthetize_arguments(resolve_function(template_info).signature.template_parameters.size(), instantiation_view);
     Scope instantiation_scope { *this };
     return instantiate_function_template(template_info, arguments, instantiation_view, instantiation_scope, *template_info->home_namespace);
 }

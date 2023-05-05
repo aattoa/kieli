@@ -156,14 +156,18 @@ namespace {
             }
         }
 
+        template <utl::instance_of<ast::Basic_function_signature> Signature>
+        auto format_function_signature(Signature const& signature) {
+            format("(");
+            format_self_parameter(signature.self_parameter, signature.parameters.empty());
+            format("{})", signature.parameters);
+            if (signature.return_type.has_value())
+                format(": {}", *signature.return_type);
+        }
+
         template <utl::instance_of<ast::definition::Basic_function> Function>
         auto operator()(Function const& function) {
-            format("(");
-            format_self_parameter(function.self_parameter, function.parameters.empty());
-            format("{})", function.parameters);
-            
-            if (function.return_type)
-                format(": {}", *function.return_type);
+            format_function_signature(function.signature);
             return format(" = {}", function.body);
         }
         template <utl::instance_of<ast::definition::Basic_struct> Structure>
@@ -185,19 +189,12 @@ namespace {
             // FIX
 
             for (auto& signature : typeclass.function_signatures) {
-                format(
-                    "fn {}({}): {}\n",
-                    signature.name,
-                    signature.parameter_types,
-                    signature.return_type);
+                format("fn {}", signature.name);
+                format_function_signature(signature);
             }
             for (auto& signature : typeclass.function_template_signatures) {
-                format(
-                    "fn {}{}({}): {}\n",
-                    signature.function_signature.name,
-                    signature.template_parameters,
-                    signature.function_signature.parameter_types,
-                    signature.function_signature.return_type);
+                format("fn {}[{}]", signature.function_signature.name, signature.template_parameters);
+                format_function_signature(signature.function_signature);
             }
             for (auto& signature : typeclass.type_signatures) {
                 format(

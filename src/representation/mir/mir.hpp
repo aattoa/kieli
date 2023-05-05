@@ -20,18 +20,17 @@ namespace resolution {
     template <class>
     struct Definition_info;
 
+    using Function_info = Definition_info<hir::definition::Function>;
+
 #define DEFINE_INFO_NAME(name) \
 using name##_info          = Definition_info<hir::definition::name>; \
 using name##_template_info = Definition_info<hir::definition::name##_template>
-
-    DEFINE_INFO_NAME(Function);
     DEFINE_INFO_NAME(Struct);
     DEFINE_INFO_NAME(Enum);
     DEFINE_INFO_NAME(Alias);
     DEFINE_INFO_NAME(Typeclass);
     DEFINE_INFO_NAME(Implementation);
     DEFINE_INFO_NAME(Instantiation);
-
 #undef DEFINE_INFO_NAME
 }
 
@@ -172,11 +171,11 @@ struct mir::Template_parameter {
 
     using Variant = std::variant<Type_parameter, Value_parameter, Mutability_parameter>;
 
-    Variant                          value;
-    ast::Name                        name;
-    tl::optional<Template_argument> default_argument;
-    Template_parameter_tag           reference_tag;
-    utl::Source_view                 source_view;
+    Variant                              value;
+    utl::Strong<tl::optional<ast::Name>> name; // nullopt for implicit template parameters
+    tl::optional<Template_argument>      default_argument;
+    Template_parameter_tag               reference_tag;
+    utl::Source_view                     source_view;
 };
 
 struct mir::Function_parameter {
@@ -186,8 +185,6 @@ struct mir::Function_parameter {
 
 
 namespace mir {
-
-    struct Unification_type_variable_constraint {};
 
     enum class Unification_type_variable_kind {
         general, integral
@@ -199,16 +196,16 @@ namespace mir {
             Type solution;
         };
         struct Unsolved {
-            Unification_variable_tag                          tag;
-            utl::Strong<Unification_type_variable_kind>       kind;
-            std::vector<Unification_type_variable_constraint> constraints;
+            Unification_variable_tag                    tag;
+            utl::Strong<Unification_type_variable_kind> kind;
+            std::vector<Class_reference>                classes;
         };
     private:
         std::variant<Solved, Unsolved> m_value;
     public:
         explicit Unification_type_variable_state(Unsolved&&) noexcept;
 
-        auto solve(Type solution) -> void;
+        auto solve_with(Type solution) -> void;
         [[nodiscard]] auto as_unsolved(std::source_location = std::source_location::current())       noexcept -> Unsolved      &;
         [[nodiscard]] auto as_unsolved(std::source_location = std::source_location::current()) const noexcept -> Unsolved const&;
         [[nodiscard]] auto as_solved_if()       noexcept -> Solved      *;
@@ -228,7 +225,7 @@ namespace mir {
     public:
         explicit Unification_mutability_variable_state(Unsolved&&) noexcept;
 
-        auto solve(Mutability solution) -> void;
+        auto solve_with(Mutability solution) -> void;
         [[nodiscard]] auto as_unsolved(std::source_location = std::source_location::current())       noexcept -> Unsolved      &;
         [[nodiscard]] auto as_unsolved(std::source_location = std::source_location::current()) const noexcept -> Unsolved const&;
         [[nodiscard]] auto as_solved_if()       noexcept -> Solved      *;
@@ -253,7 +250,6 @@ namespace mir {
         resolution::Namespace,
         resolution::Implementation_info,
         resolution::Instantiation_info,
-        resolution::Function_template_info,
         resolution::Struct_template_info,
         resolution::Enum_template_info,
         resolution::Alias_template_info,
@@ -262,8 +258,7 @@ namespace mir {
         resolution::Instantiation_template_info>;
 
     struct Module {
-        std::vector<utl::Wrapper<resolution::Function_info>>          functions;
-        std::vector<utl::Wrapper<resolution::Function_template_info>> function_templates;
+        std::vector<utl::Wrapper<resolution::Function_info>> functions;
     };
 
 }
@@ -342,7 +337,6 @@ namespace resolution {
     using Lower_variant = std::variant<
         utl::Wrapper<Namespace>,
         utl::Wrapper<Function_info>,
-        utl::Wrapper<Function_template_info>,
         mir::Enum_constructor>;
 
     using Upper_variant = std::variant<
@@ -364,7 +358,6 @@ namespace resolution {
         utl::Wrapper<Namespace>,
         utl::Wrapper<Implementation_info>,
         utl::Wrapper<Instantiation_info>,
-        utl::Wrapper<Function_template_info>,
         utl::Wrapper<Struct_template_info>,
         utl::Wrapper<Enum_template_info>,
         utl::Wrapper<Alias_template_info>,
@@ -374,7 +367,7 @@ namespace resolution {
 
 
     struct [[nodiscard]] Namespace {
-        std::vector<Definition_variant>                  definitions_in_order;
+        std::vector<Definition_variant>                   definitions_in_order;
         utl::Flatmap<compiler::Identifier, Lower_variant> lower_table;
         utl::Flatmap<compiler::Identifier, Upper_variant> upper_table;
         tl::optional<utl::Wrapper<Namespace>>            parent;
@@ -390,16 +383,10 @@ namespace resolution {
 
 
     struct Partially_resolved_function {
-        mir::Function::Signature           resolved_signature;
-        Scope                              signature_scope;
-        hir::Expression                    unresolved_body;
-        ast::Name                          name;
-        tl::optional<mir::Self_parameter> self_parameter;
-    };
-
-    struct Partially_resolved_function_template {
-        Partially_resolved_function          function;
-        std::vector<mir::Template_parameter> template_parameters;
+        mir::Function::Signature resolved_signature;
+        Scope                    signature_scope;
+        hir::Expression          unresolved_body;
+        ast::Name                name;
     };
 
 
@@ -427,19 +414,6 @@ namespace resolution {
         ast::Name               name;
     };
 
-    template <>
-    struct Definition_info<hir::definition::Function_template> {
-        using Variant = std::variant<
-            hir::definition::Function_template,   // Fully unresolved
-            Partially_resolved_function_template, // Signature resolved, body unresolved
-            mir::Function_template>;              // Fully resolved
-
-        Variant                 value;
-        utl::Wrapper<Namespace> home_namespace;
-        Definition_state        state = Definition_state::unresolved;
-        ast::Name               name;
-    };
-
     template <class Info>
     struct Template_instantiation_info {
         utl::Wrapper<Info>                   template_instantiated_from;
@@ -450,16 +424,17 @@ namespace resolution {
     template <>
     struct Definition_info<hir::definition::Function> {
         using Variant = std::variant<
-            hir::definition::Function,   // Fully unresolved
-            Partially_resolved_function, // Signature resolved, body unresolved
-            mir::Function>;              // Fully resolved
+            hir::definition::Function,          // Fully unresolved function
+            hir::definition::Function_template, // Fully unresolved function template
+            Partially_resolved_function,        // Signature resolved, body unresolved
+            mir::Function>;                     // Fully resolved
 
         Variant                 value;
         utl::Wrapper<Namespace> home_namespace;
         Definition_state        state = Definition_state::unresolved;
         ast::Name               name;
 
-        tl::optional<Template_instantiation_info<Function_template_info>> template_instantiation_info;
+        tl::optional<Template_instantiation_info<Function_info>> template_instantiation_info;
     };
 
     template <>
@@ -487,8 +462,7 @@ namespace resolution {
 
         tl::optional<Template_instantiation_info<Enum_template_info>> template_instantiation_info;
 
-        [[nodiscard]]
-        auto constructor_count() const noexcept -> utl::Usize;
+        [[nodiscard]] auto constructor_count() const noexcept -> utl::Usize;
     };
 
     template <>

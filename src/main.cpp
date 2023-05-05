@@ -33,17 +33,8 @@ namespace {
 
 
     auto print_mir_module(mir::Module const& module) -> void {
-        for (utl::wrapper auto const function : module.functions) {
+        for (utl::wrapper auto const function : module.functions)
             fmt::print("{}\n\n", utl::get<mir::Function>(function->value));
-        }
-        for (utl::wrapper auto const function_template : module.function_templates) {
-            auto& f = utl::get<mir::Function_template>(function_template->value);
-            fmt::print("function template {}", f.definition.name);
-            for (utl::wrapper auto const instantiation : f.instantiations) {
-                fmt::print("\ninstantiation {}", utl::get<mir::Function>(instantiation->value));
-            }
-            fmt::print("\n\n");
-        }
     }
 
 

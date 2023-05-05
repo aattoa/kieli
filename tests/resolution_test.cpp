@@ -14,8 +14,11 @@ namespace {
         auto resolve_result = compiler::resolve(compiler::desugar(compiler::parse(std::move(lex_result))));
 
         std::string output;
-        for (utl::wrapper auto const function : resolve_result.module.functions)
-            fmt::format_to(std::back_inserter(output), "{}", std::get<mir::Function>(function->value));
+        for (utl::wrapper auto const wrapper : resolve_result.module.functions) {
+            auto& function = utl::get<mir::Function>(wrapper->value);
+            if (function.signature.is_template()) continue;
+            fmt::format_to(std::back_inserter(output), "{}", function);
+        }
         return output;
     }
 }
@@ -122,7 +125,7 @@ TEST("deduce from invocation") {
         "fn new[T](): Option[T] = \?\?\? "
         "fn set[T](_: &mut Option[T], _: T) = ()"
         "fn f() { let mut x = new(); set(&mut x, 3.14); set(&mut x, ' '); }"),
-        "the argument is of type &mut Option[Float]");
+        "the argument is of type Char");
     REQUIRE(resolve(
         "enum Option[T] = none | some(T) "
         "fn new[T](): Option[T] = \?\?\? "
@@ -234,4 +237,29 @@ TEST("map option") {
         "fn f(o: Option[I32]): String = ({ "
             "(get[String]((map[I32, String]((o): Option[I32], (\?\?\?): fn(I32): String)): Option[String])): String"
         " }): String");
+}
+
+TEST("generalization") {
+    REQUIRE(resolve(
+        "fn f() = ??? "
+        "fn g(): String = f() "
+        "fn h(): I32 = f()")
+        ==
+        "fn g(): String = ({ (f[String]()): String }): String"
+        "fn h(): I32 = ({ (f[I32]()): I32 }): I32");
+
+    REQUIRE(resolve(
+        "fn f(x: _) = x "
+        "fn g() = f(5: U8) "
+        "fn h() = f(\"hello\")")
+        ==
+        "fn g(): U8 = ({ (f[U8]((5): U8)): U8 }): U8"
+        "fn h(): String = ({ (f[String]((\"hello\"): String)): String }): String");
+
+    REQUIRE_RESOLUTION_FAILURE(resolve("struct S = x: typeof(\?\?\?)"), "contains an unsolved");
+    REQUIRE_RESOLUTION_FAILURE(resolve("struct S = x: _"),              "contains an unsolved");
+    REQUIRE_RESOLUTION_FAILURE(resolve("enum E = e(_)"),                "contains an unsolved");
+    REQUIRE_RESOLUTION_FAILURE(resolve("alias A = _"),                  "contains an unsolved");
+    REQUIRE_RESOLUTION_FAILURE(resolve("class C { fn f(_: _): I32 }"),  "contains an unsolved");
+    REQUIRE_RESOLUTION_FAILURE(resolve("class C { fn f(_: I32): _ }"),  "contains an unsolved");
 }

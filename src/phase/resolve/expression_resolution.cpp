@@ -172,6 +172,7 @@ namespace {
             std::vector<mir::Expression>       && arguments) -> mir::Expression
         {
             mir::Function::Signature& signature = context.resolve_function_signature(*function.info);
+            utl::always_assert(!signature.is_template());
 
             utl::Usize const argument_count  = arguments.size();
             utl::Usize const parameter_count = signature.parameters.size();
@@ -387,12 +388,14 @@ namespace {
 
             return utl::match(context.find_lower(variable.name, scope, space),
                 [&](utl::Wrapper<resolution::Function_info> const info) -> mir::Expression {
-                    return handle_function_reference(info, false);
-                },
-                [&](utl::Wrapper<resolution::Function_template_info> const info) -> mir::Expression {
-                    return handle_function_reference(
-                        context.instantiate_function_template_with_synthetic_arguments(info, this_expression.source_view),
-                        true /*is_application*/);
+                    if (context.resolve_function_signature(*info).is_template()) {
+                        return handle_function_reference(
+                            context.instantiate_function_template_with_synthetic_arguments(info, this_expression.source_view),
+                            /*is_application=*/ true);
+                    }
+                    else {
+                        return handle_function_reference(info, /*is_application=*/ false);
+                    }
                 },
                 [this](mir::Enum_constructor const constructor) -> mir::Expression {
                     return {
@@ -733,7 +736,10 @@ namespace {
                     }
                 });
 
-                cases.emplace_back(context.wrap(std::move(pattern)), context.wrap(std::move(handler)));
+                cases.push_back(mir::expression::Match::Case {
+                    .pattern = context.wrap(std::move(pattern)),
+                    .handler = context.wrap(std::move(handler)),
+                });
             }
 
             return {
@@ -832,24 +838,25 @@ namespace {
 
         auto operator()(hir::expression::Template_application& application) -> mir::Expression {
             return utl::match(context.find_lower(application.name, scope, space),
-                [&](utl::Wrapper<Function_template_info> const info) -> mir::Expression {
+                [&](utl::Wrapper<Function_info> const info) -> mir::Expression {
+                    if (!context.resolve_function_signature(*info).is_template()) {
+                        context.error(application.name.primary_name.source_view, {
+                            .message             = "'{}' is a concrete function, not a function template",
+                            .message_arguments   = fmt::make_format_args(application.name),
+                            .help_note           = "If you did mean to refer to '{}', simply remove the template argument list",
+                            .help_note_arguments = fmt::make_format_args(application.name)
+                        });
+                    }
+
                     utl::Wrapper<Function_info> const concrete =
                         context.instantiate_function_template(info, application.template_arguments, this_expression.source_view, scope, space);
                     return {
-                        .value          = mir::expression::Function_reference { .info = concrete, .is_application = true },
-                        .type           = context.resolve_function_signature(*concrete).function_type.with(this_expression.source_view),
-                        .source_view    = this_expression.source_view,
-                        .mutability     = context.immut_constant(this_expression.source_view),
-                        .is_pure        = true,
+                        .value       = mir::expression::Function_reference { .info = concrete, .is_application = true },
+                        .type        = context.resolve_function_signature(*concrete).function_type.with(this_expression.source_view),
+                        .source_view = this_expression.source_view,
+                        .mutability  = context.immut_constant(this_expression.source_view),
+                        .is_pure     = true,
                     };
-                },
-                [&](utl::Wrapper<Function_info> const) -> mir::Expression {
-                    context.error(application.name.primary_name.source_view, {
-                        .message             = "'{}' is a concrete function, not a function template",
-                        .message_arguments   = fmt::make_format_args(application.name),
-                        .help_note           = "If you did mean to refer to '{}', simply remove the template argument list",
-                        .help_note_arguments = fmt::make_format_args(application.name)
-                    });
                 },
                 [](mir::Enum_constructor const) -> mir::Expression {
                     utl::todo();
@@ -879,7 +886,7 @@ namespace {
             arguments.insert(
                 arguments.begin(),
                 std::invoke([&] {
-                    if (!method.self_parameter.has_value() || !method.self_parameter->is_reference.get()) {
+                    if (!method.signature.self_parameter.has_value() || !method.signature.self_parameter->is_reference.get()) {
                         return std::move(base_expression);
                     }
                     else {
@@ -887,7 +894,7 @@ namespace {
                         return take_reference(
                             context,
                             std::move(base_expression),
-                            method.self_parameter->mutability.with(base_source_view),
+                            method.signature.self_parameter->mutability.with(base_source_view),
                             base_source_view);
                     }
                 })

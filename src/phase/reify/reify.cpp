@@ -14,7 +14,7 @@ namespace {
             std::bind_front(&reification::Context::reify_type, &context), &mir::Function_parameter::type);
 
         return cir::Function {
-            .symbol          = std::string(function.name.identifier.view()), // TODO: format function signature
+            .symbol          = std::string(function.signature.name.identifier.view()), // TODO: format function signature
             .parameter_types = utl::map(reify_parameter_type, function.signature.parameters),
             .body            = context.reify_expression(function.body)
         };
@@ -31,9 +31,6 @@ auto compiler::reify(Resolve_result&& resolve_result) -> Reify_result {
 
     for (utl::wrapper auto const wrapped_function : resolve_result.module.functions)
         functions.push_back(reify_function(context, *wrapped_function));
-    for (utl::wrapper auto const function_template : resolve_result.module.function_templates)
-        for (utl::wrapper auto const instantiation : utl::get<mir::Function_template>(function_template->value).instantiations)
-            functions.push_back(reify_function(context, *instantiation));
 
     return Reify_result {
         .compilation_info = std::move(context.compilation_info),

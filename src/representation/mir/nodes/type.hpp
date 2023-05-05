@@ -70,8 +70,8 @@ namespace mir {
         };
         struct Template_parameter_reference {
             // The identifier serves no purpose other than debuggability
-            compiler::Identifier   identifier;
-            Template_parameter_tag tag;
+            utl::Strong<tl::optional<compiler::Identifier>> identifier;
+            Template_parameter_tag                          tag;
         };
     }
 

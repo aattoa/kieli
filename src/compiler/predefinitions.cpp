@@ -5,8 +5,8 @@
 namespace {
     constexpr std::string_view source_string = R"(
         namespace std {
-            class Copy { fn copy(&Self): Self }
-            class Drop { fn drop(&Self): () }
+            class Copy { fn copy(&self): Self }
+            class Drop { fn drop(&self): () }
             fn id[X](x: X) = x
         }
     )";

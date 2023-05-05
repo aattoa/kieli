@@ -36,6 +36,7 @@ struct Desugaring_context {
 
     auto desugar(ast::Function_argument           const&) -> hir::Function_argument;
     auto desugar(ast::Function_parameter          const&) -> hir::Function_parameter;
+    auto desugar(ast::Self_parameter              const&) -> hir::Function_parameter;
     auto desugar(ast::Template_argument           const&) -> hir::Template_argument;
     auto desugar(ast::Template_parameter          const&) -> hir::Template_parameter;
     auto desugar(ast::Qualifier                   const&) -> hir::Qualifier;

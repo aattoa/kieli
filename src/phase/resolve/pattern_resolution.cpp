@@ -117,9 +117,6 @@ namespace {
                 [&, this](utl::Wrapper<resolution::Function_info>) -> mir::Pattern {
                     context.error(this_pattern.source_view, { "Expected a constructor, but found a function" });
                 },
-                [&, this](utl::Wrapper<resolution::Function_template_info>) -> mir::Pattern {
-                    context.error(this_pattern.source_view, { "Expected a constructor, but found a function template" });
-                },
                 [&, this](utl::Wrapper<resolution::Namespace>) -> mir::Pattern {
                     context.error(this_pattern.source_view, { "Expected a constructor, but found a namespace" });
                 },
