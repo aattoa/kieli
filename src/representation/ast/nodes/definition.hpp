@@ -11,11 +11,19 @@ namespace hir {
 
 namespace ast {
 
+    struct [[nodiscard]] Self_parameter {
+        Mutability        mutability;
+        utl::Strong<bool> is_reference;
+        utl::Source_view  source_view;
+    };
+
+
     template <tree_configuration Configuration>
     struct Basic_function_signature {
-        std::vector<typename Configuration::Type> parameter_types;
-        Configuration::Type                       return_type;
-        Name                                      name;
+        std::vector<Basic_function_parameter<Configuration>> parameters;
+        tl::optional<Self_parameter>                         self_parameter;
+        tl::optional<typename Configuration::Type>           return_type;
+        Name                                                 name;
     };
 
     template <tree_configuration Configuration>
@@ -42,21 +50,11 @@ namespace ast {
     using Type_template_signature     = Basic_type_template_signature     <AST_configuration>;
 
 
-    struct [[nodiscard]] Self_parameter {
-        Mutability        mutability;
-        utl::Strong<bool> is_reference;
-        utl::Source_view  source_view;
-    };
-
-
     namespace definition {
         template <tree_configuration Configuration>
         struct Basic_function {
-            typename Configuration::Expression                   body;
-            std::vector<Basic_function_parameter<Configuration>> parameters;
-            Name                                                 name;
-            tl::optional<typename Configuration::Type>           return_type;
-            tl::optional<Self_parameter>                         self_parameter;
+            Basic_function_signature<Configuration> signature;
+            typename Configuration::Expression      body;
         };
         template <tree_configuration Configuration>
         struct Basic_struct_member {

@@ -1,9 +1,9 @@
 cmake_minimum_required(VERSION 3.24)
 project(kieli)
 
-
 # Set the global C++ standard
 set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 
 # Set global warning settings
@@ -133,6 +133,7 @@ set(KIELI_PHASE_SOURCE_FILES
 	src/phase/resolve/constraint.cpp
 	src/phase/resolve/definition_resolution.cpp
 	src/phase/resolve/expression_resolution.cpp
+	src/phase/resolve/generalization.cpp
 	src/phase/resolve/method.cpp
 	src/phase/resolve/namespace_lookup.cpp
 	src/phase/resolve/pattern_resolution.cpp

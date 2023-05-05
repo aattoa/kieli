@@ -231,7 +231,7 @@ auto resolution::Context::resolve_mutability(ast::Mutability const mutability, S
             }
             else {
                 error(mutability.source_view, {
-                    .message           = "No mutability parameter '{}' in scope",
+                    .message           = "No mutability parameter '{}: mut' in scope",
                     .message_arguments = fmt::make_format_args(parameterized.identifier)
                 });
             }
@@ -296,7 +296,7 @@ auto resolution::Context::resolve_template_parameters(
 
             parameters.push_back(mir::Template_parameter {
                 .value            = std::move(value),
-                .name             = parameter.name,
+                .name             = { parameter.name },
                 .default_argument = std::move(default_argument),
                 .reference_tag    = reference_tag,
                 .source_view      = parameter.source_view,
@@ -308,7 +308,7 @@ auto resolution::Context::resolve_template_parameters(
                 parameter_scope.bind_type(parameter.name.identifier, {
                     .type = mir::Type {
                         wrap_type(mir::type::Template_parameter_reference {
-                            .identifier = parameter.name.identifier,
+                            .identifier = { parameter.name.identifier },
                             .tag        = reference_tag,
                         }),
                         parameter.name.source_view,

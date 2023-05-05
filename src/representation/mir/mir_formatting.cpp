@@ -20,8 +20,7 @@ DIRECTLY_DEFINE_FORMATTER_FOR(mir::expression::Match::Case) {
 
 
 DEFINE_FORMATTER_FOR(mir::Unification_type_variable_state::Unsolved) {
-    utl::always_assert(value.constraints.empty());
-    return fmt::format_to(
+    auto out = fmt::format_to(
         context.out(),
         "'{}{}",
         std::invoke([kind = value.kind.get()] {
@@ -32,6 +31,14 @@ DEFINE_FORMATTER_FOR(mir::Unification_type_variable_state::Unsolved) {
             }
         }),
         value.tag.value);
+
+    if (value.classes.empty())
+        return out;
+
+    return fmt::format_to(
+        out,
+        ": {}",
+        utl::formatting::delimited_range(value.classes, " + "));
 }
 
 DEFINE_FORMATTER_FOR(mir::Unification_mutability_variable_state::Unsolved) {
@@ -286,7 +293,12 @@ namespace {
             return format("{}", variable.state->as_unsolved());
         }
         auto operator()(mir::type::Template_parameter_reference const& reference) {
-            return format("'P{} {}", reference.tag.value, reference.identifier);
+            return format(
+                "'P{} {}",
+                reference.tag.value,
+                reference.identifier.get().has_value()
+                    ? reference.identifier.get()->view()
+                    : "implicit");
         }
     };
 
@@ -312,7 +324,7 @@ DEFINE_FORMATTER_FOR(mir::Function) {
     return fmt::format_to(
         context.out(),
         "fn {}({}): {} = {}",
-        value.name,
+        value.signature.name,
         value.signature.parameters,
         value.signature.return_type,
         value.body);

@@ -25,25 +25,9 @@ namespace {
 
         auto destructively_apply() -> void {
             for (auto const& [variable_state, solution] : type_mappings)
-                variable_state->solve(solution);
+                variable_state->solve_with(solution);
             for (auto const& [variable_state, solution] : mutability_mappings)
-                variable_state->solve(solution);
-        }
-    };
-
-    struct Unification_state {
-        resolution::Deferred_equality_constraints& deferred_equality_constraints;
-        utl::Usize original_deferred_mutability_equality_constraint_count;
-        utl::Usize original_deferred_type_equality_constraint_count;
-
-        explicit Unification_state(resolution::Deferred_equality_constraints& deferred_equality_constraints) noexcept
-            : deferred_equality_constraints                          { deferred_equality_constraints }
-            , original_deferred_mutability_equality_constraint_count { deferred_equality_constraints.mutabilities.size() }
-            , original_deferred_type_equality_constraint_count       { deferred_equality_constraints.types.size() } {}
-
-        auto restore() -> void {
-            utl::resize_down_vector(deferred_equality_constraints.types,        original_deferred_type_equality_constraint_count);
-            utl::resize_down_vector(deferred_equality_constraints.mutabilities, original_deferred_mutability_equality_constraint_count);
+                variable_state->solve_with(solution);
         }
     };
 
@@ -171,19 +155,9 @@ namespace {
             if (left.state.is(right.state))
                 return true;
 
-            auto const& constraint = unification_arguments.constraint_to_be_tested;
-
-            if (constraint.is_deferred) {
-                // Solve with default value of `immut`
-                return solution(left.state, context.immut_constant(left_mutability().source_view()))
-                    && solution(right.state, context.immut_constant(right_mutability().source_view()));
-            }
-            else {
-                auto constraint_copy = constraint;
-                constraint_copy.is_deferred = true;
-                unification_arguments.deferred_equality_constraints.mutabilities.push_back(constraint_copy);
-                return true;
-            }
+            // Solve with default value of `immut`
+            return solution(left.state, context.immut_constant(left_mutability().source_view()))
+                && solution(right.state, context.immut_constant(right_mutability().source_view()));
         }
         auto operator()(auto, auto) -> bool {
             return unification_failure();
@@ -227,10 +201,9 @@ namespace {
                         .constrainer_note { .source_view = constrainer.source_view() },
                         .constrained_note { .source_view = constrained.source_view() },
                     },
-                    .deferred_equality_constraints  = unification_arguments.deferred_equality_constraints,
-                    .allow_coercion                 = unification_arguments.allow_coercion,
-                    .do_destructive_unification     = unification_arguments.do_destructive_unification,
-                    .report_unification_failure     = nullptr, // Handled below
+                    .allow_coercion             = unification_arguments.allow_coercion,
+                    .do_destructive_unification = unification_arguments.do_destructive_unification,
+                    .report_unification_failure = nullptr, // Handled below
                 },
                 .solutions = solutions.mutability_mappings,
                 .context   = context,
@@ -261,19 +234,13 @@ namespace {
             utl::Wrapper<mir::Unification_type_variable_state> const variable_state,
             mir::Type                                          const solution) -> bool
         {
-            UNIFICATION_LOG("adding solution: {} -> {}\n", variable_state, solution);
+            // UNIFICATION_LOG("adding solution: {} -> {}\n", variable_state, solution);
 
             if (mir::Type const* const existing_solution = solutions.type_mappings.find(variable_state))
                 if (!context.pure_equality_compare(*existing_solution, solution))
                     return unification_failure();
 
             solutions.type_mappings.add_or_assign(variable_state, solution);
-            return true;
-        }
-
-        auto defer(resolution::constraint::Type_equality constraint) -> bool {
-            constraint.is_deferred = true;
-            unification_arguments.deferred_equality_constraints.types.push_back(constraint);
             return true;
         }
 
@@ -290,25 +257,20 @@ namespace {
         }
 
         auto operator()(mir::type::Unification_variable const left, mir::type::Unification_variable const right) -> bool {
-            if (left.state.is(right.state)) {
-                return true;
-            }
-            else if (original_constraint.is_deferred) {
-                auto& left_unsolved = left.state->as_unsolved();
-                auto& right_unsolved = right.state->as_unsolved();
-                if (right_unsolved.kind.get() == mir::Unification_type_variable_kind::integral)
-                    left_unsolved.kind.get() = mir::Unification_type_variable_kind::integral;
-                utl::append_vector(left_unsolved.constraints, std::move(right_unsolved.constraints));
-                return solution(right.state, current_left_type);
-            }
-            else {
-                return defer(original_constraint);
-            }
+            if (left.state.is(right.state)) return true;
+
+            auto& left_unsolved = left.state->as_unsolved();
+            auto& right_unsolved = right.state->as_unsolved();
+
+            if (right_unsolved.kind.get() == mir::Unification_type_variable_kind::integral)
+                left_unsolved.kind.get() = mir::Unification_type_variable_kind::integral;
+            utl::append_vector(left_unsolved.classes, std::move(right_unsolved.classes));
+            return solution(right.state, current_left_type);
         }
 
         auto operator()(mir::type::Unification_variable const left, auto&) -> bool {
             auto const& unsolved = left.state->as_unsolved();
-            utl::always_assert(unsolved.constraints.empty());
+            utl::always_assert(unsolved.classes.empty());
 
             if (unsolved.kind.get() == mir::Unification_type_variable_kind::integral)
                 if (!std::holds_alternative<mir::type::Integer>(*current_right_type.pure_value()))
@@ -321,7 +283,7 @@ namespace {
         }
         auto operator()(auto&, mir::type::Unification_variable const right) -> bool {
             auto const& unsolved = right.state->as_unsolved();
-            utl::always_assert(unsolved.constraints.empty());
+            utl::always_assert(unsolved.classes.empty());
 
             if (unsolved.kind.get() == mir::Unification_type_variable_kind::integral)
                 if (!std::holds_alternative<mir::type::Integer>(*current_left_type.pure_value()))
@@ -399,24 +361,19 @@ namespace {
 auto resolution::Context::unify_mutabilities(Mutability_unification_arguments const arguments) -> bool {
     Unification_variable_solutions solutions;
 
-    Unification_state unification_state { arguments.deferred_equality_constraints };
-
     Mutability_unification_visitor visitor {
         .unification_arguments = arguments,
         .solutions             = solutions.mutability_mappings,
         .context               = *this,
     };
-    auto const constraint = arguments.constraint_to_be_tested;
+    bool const result = std::visit(
+        visitor,
+        *arguments.constraint_to_be_tested.constrainer_mutability.flattened_value(),
+        *arguments.constraint_to_be_tested.constrained_mutability.flattened_value());
 
-    if (std::visit(visitor, *constraint.constrainer_mutability.flattened_value(), *constraint.constrained_mutability.flattened_value())) {
-        if (arguments.do_destructive_unification)
-            solutions.destructively_apply();
-        return true;
-    }
-    else {
-        unification_state.restore();
-        return false;
-    }
+    if (result && arguments.do_destructive_unification)
+        solutions.destructively_apply();
+    return result;
 }
 
 
@@ -427,53 +384,37 @@ auto resolution::Context::unify_types(Type_unification_arguments const arguments
         arguments.constraint_to_be_tested.constrained_type);
 
     Unification_variable_solutions solutions;
-    Unification_state unification_state { arguments.deferred_equality_constraints };
-    constraint::Type_equality const& constraint = arguments.constraint_to_be_tested;
 
     Type_unification_visitor visitor {
-        .current_left_type     = constraint.constrainer_type,
-        .current_right_type    = constraint.constrained_type,
-        .original_constraint   = constraint,
+        .current_left_type     = arguments.constraint_to_be_tested.constrainer_type,
+        .current_right_type    = arguments.constraint_to_be_tested.constrained_type,
+        .original_constraint   = arguments.constraint_to_be_tested,
         .unification_arguments = arguments,
         .solutions             = solutions,
         .context               = *this,
     };
+    bool const result = std::visit(
+        visitor,
+        *arguments.constraint_to_be_tested.constrainer_type.flattened_value(),
+        *arguments.constraint_to_be_tested.constrained_type.flattened_value());
 
-    if (std::visit(visitor, *constraint.constrainer_type.flattened_value(), *constraint.constrained_type.flattened_value())) {
-        if (arguments.do_destructive_unification)
-            solutions.destructively_apply();
-        return true;
-    }
-    else {
-        unification_state.restore();
-        return false;
-    }
+    if (result && arguments.do_destructive_unification)
+        solutions.destructively_apply();
+    return result;
 }
 
+
 auto resolution::Context::pure_equality_compare(mir::Type const left, mir::Type const right) -> bool {
-    Deferred_equality_constraints temporary_deferred_constraints;
-
-    auto const constraint_guard = utl::on_scope_exit([&] {
-        utl::always_assert(temporary_deferred_constraints.mutabilities.empty());
-    });
-
-    auto const try_unify = [&](mir::Type const left, mir::Type const right) {
-        return unify_types({
-            .constraint_to_be_tested {
-                .constrainer_type = left,
-                .constrained_type = right,
-                .constrainer_note = constraint::Explanation { utl::Source_view::dummy() },
-                .constrained_note = constraint::Explanation { utl::Source_view::dummy() },
-            },
-            .deferred_equality_constraints = temporary_deferred_constraints,
-            .allow_coercion                = false,
-            .do_destructive_unification    = false,
-            .report_unification_failure    = nullptr,
-            .report_recursive_type         = nullptr,
-        });
-    };
-
-    return try_unify(left, right) && ranges::all_of(temporary_deferred_constraints.types, [&](auto const& constraint) {
-        return try_unify(constraint.constrainer_type, constraint.constrained_type);
+    return unify_types({
+        .constraint_to_be_tested {
+            .constrainer_type = left,
+            .constrained_type = right,
+            .constrainer_note = constraint::Explanation { left.source_view() },
+            .constrained_note = constraint::Explanation { right.source_view() },
+        },
+        .allow_coercion             = false,
+        .do_destructive_unification = false,
+        .report_unification_failure = nullptr,
+        .report_recursive_type      = nullptr,
     });
 }

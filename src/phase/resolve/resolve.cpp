@@ -27,11 +27,24 @@ namespace {
                     // compiler::desugar should convert all function bodies to block form
                     utl::always_assert(std::holds_alternative<hir::expression::Block>(function.body.value));
 
-                    ast::Name const name = function.name;
+                    ast::Name const name = function.signature.name;
                     auto const info = context.wrap(Function_info {
                         .value          = std::move(function),
                         .home_namespace = space,
-                        .name           = name
+                        .name           = name,
+                    });
+                    context.output_module.functions.push_back(info);
+                    add_definition(info);
+                },
+                [&](hir::definition::Function_template& function_template) {
+                    // compiler::desugar should convert all function bodies to block form
+                    utl::always_assert(std::holds_alternative<hir::expression::Block>(function_template.definition.body.value));
+
+                    ast::Name const name = function_template.definition.signature.name;
+                    auto const info = context.wrap(Function_info {
+                        .value          = std::move(function_template),
+                        .home_namespace = space,
+                        .name           = name,
                     });
                     context.output_module.functions.push_back(info);
                     add_definition(info);
@@ -41,7 +54,7 @@ namespace {
                     add_definition(context.wrap(Alias_info {
                         .value          = std::move(alias),
                         .home_namespace = space,
-                        .name           = name
+                        .name           = name,
                     }));
                 },
                 [&](hir::definition::Typeclass& typeclass) {
@@ -49,7 +62,7 @@ namespace {
                     add_definition(context.wrap(resolution::Typeclass_info {
                         .value          = std::move(typeclass),
                         .home_namespace = space,
-                        .name           = name
+                        .name           = name,
                     }));
                 },
                 [&](hir::definition::Struct& structure) {
@@ -61,7 +74,7 @@ namespace {
                         .value          = std::move(structure),
                         .home_namespace = space,
                         .structure_type = structure_type,
-                        .name           = name
+                        .name           = name,
                     });
                     *structure_type.pure_value() = mir::type::Structure { info };
                     add_definition(info);
@@ -93,18 +106,7 @@ namespace {
                     register_namespace(context, hir_child.definitions, child);
                 },
 
-                [&](hir::definition::Function_template& template_definition) {
-                    ast::Name const name = template_definition.definition.name;
-                    auto const info = context.wrap(Function_template_info {
-                        .value = std::move(template_definition),
-                        .home_namespace = space,
-                        .name = name,
-                    });
-                    context.output_module.function_templates.push_back(info);
-                    add_definition(info);
-                },
-
-                [&]<class T>(ast::definition::Template<T>&template_definition) {
+                [&]<class T>(ast::definition::Template<T>& template_definition) {
                     ast::Name const name = template_definition.definition.name;
                     add_definition(context.wrap(Definition_info<ast::definition::Template<T>> {
                         .value                      = std::move(template_definition),
@@ -158,7 +160,7 @@ namespace {
 
 
     // Resolves all definitions in order, but only visits function bodies if their return types have been omitted
-    auto resolve_signatures(Context& context, utl::Wrapper<Namespace> space) -> void {
+    auto resolve_signatures(Context& context, utl::Wrapper<Namespace> const space) -> void {
         for (Definition_variant& definition : space->definitions_in_order) {
             utl::match(definition,
                 [&](utl::Wrapper<Function_info> info) {
@@ -185,10 +187,6 @@ namespace {
                 [&](utl::Wrapper<Instantiation_info> info) {
                     (void)context.resolve_instantiation(info);
                 },
-
-                [&](utl::Wrapper<Function_template_info> info) {
-                    (void)context.resolve_function_template(info);
-                },
                 [&](utl::Wrapper<Struct_template_info> info) {
                     (void)context.resolve_struct_template(info);
                 },
@@ -208,9 +206,6 @@ namespace {
                     (void)context.resolve_instantiation_template(info);
                 }
             );
-
-            // Ensure function signatures are fully typechecked
-            context.solve_deferred_constraints();
         }
     }
 
@@ -220,7 +215,6 @@ namespace {
         for (Definition_variant& definition : space->definitions_in_order) {
             if (utl::wrapper auto* const info = std::get_if<utl::Wrapper<Function_info>>(&definition)) {
                 (void)context.resolve_function(*info);
-                context.solve_deferred_constraints();
             }
             else if (utl::wrapper auto* const child = std::get_if<utl::Wrapper<Namespace>>(&definition)) {
                 resolve_functions(context, *child);
@@ -264,7 +258,6 @@ auto compiler::resolve(Desugar_result&& desugar_result) -> Resolve_result {
     register_namespace(context, desugar_result.module.definitions, context.global_namespace);
     resolve_signatures(context, context.global_namespace);
     resolve_functions(context, context.global_namespace);
-    context.solve_deferred_constraints();
 
     return Resolve_result {
         .compilation_info = std::move(context.compilation_info),

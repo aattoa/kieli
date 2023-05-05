@@ -88,23 +88,21 @@ namespace {
 
 auto resolution::Context::solve(constraint::Type_equality const& constraint) -> void {
     utl::always_assert(unify_types({
-        .constraint_to_be_tested       = constraint,
-        .deferred_equality_constraints = deferred_equality_constraints,
-        .allow_coercion                = true,
-        .do_destructive_unification    = true,
-        .report_unification_failure    = report_type_unification_failure,
-        .report_recursive_type         = report_recursive_type
+        .constraint_to_be_tested    = constraint,
+        .allow_coercion             = true,
+        .do_destructive_unification = true,
+        .report_unification_failure = report_type_unification_failure,
+        .report_recursive_type      = report_recursive_type,
     }));
 }
 
 
 auto resolution::Context::solve(constraint::Mutability_equality const& constraint) -> void {
     utl::always_assert(unify_mutabilities({
-        .constraint_to_be_tested        = constraint,
-        .deferred_equality_constraints  = deferred_equality_constraints,
-        .allow_coercion                 = true,
-        .do_destructive_unification     = true,
-        .report_unification_failure     = report_mutability_unification_failure
+        .constraint_to_be_tested    = constraint,
+        .allow_coercion             = true,
+        .do_destructive_unification = true,
+        .report_unification_failure = report_mutability_unification_failure,
     }));
 }
 
@@ -171,16 +169,4 @@ auto resolution::Context::solve(constraint::Tuple_field const& constraint) -> vo
             .help_note_arguments = fmt::make_format_args(constraint.tuple_type)
         });
     }
-}
-
-
-auto resolution::Context::solve_deferred_constraints() -> void {
-    auto const solve = [this](auto& constraints) {
-        // This has to be be an index-based loop because solving a constraint may defer more constraints
-        for (utl::Usize i = 0; i != constraints.size(); ++i)
-            this->solve(std::as_const(constraints[i]));
-        constraints.clear();
-    };
-    solve(deferred_equality_constraints.types);
-    solve(deferred_equality_constraints.mutabilities);
 }

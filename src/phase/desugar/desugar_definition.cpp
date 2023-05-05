@@ -4,50 +4,16 @@
 
 namespace {
 
-    auto desugar_self_parameter(ast::Self_parameter const& parameter, Desugaring_context& context)
-        -> hir::Function_parameter
-    {
-        hir::Type self_type {
-            .value       = hir::type::Self {},
-            .source_view = parameter.source_view
-        };
-        if (parameter.is_reference.get()) {
-            self_type = hir::Type {
-                .value = hir::type::Reference {
-                    .referenced_type = context.wrap(std::move(self_type)),
-                    .mutability      = parameter.mutability
-                },
-                .source_view = parameter.source_view
-            };
-        }
-
-        hir::Pattern self_pattern {
-            .value = hir::pattern::Name {
-                .identifier = context.self_variable_identifier,
-                .mutability = parameter.is_reference.get()
-                    ? ast::Mutability { ast::Mutability::Concrete { .is_mutable = false }, parameter.source_view }
-                    : parameter.mutability
-            },
-            .source_view = parameter.source_view
-        };
-
-        return hir::Function_parameter {
-            .pattern = std::move(self_pattern),
-            .type    = std::move(self_type)
-        };
-    }
-
-
     struct Definition_desugaring_visitor {
         Desugaring_context& context;
 
         auto operator()(ast::definition::Function const& function) -> hir::definition::Function {
             std::vector<hir::Function_parameter> parameters;
-            if (function.self_parameter.has_value())
-                parameters.push_back(desugar_self_parameter(*function.self_parameter, context));
+            if (function.signature.self_parameter.has_value())
+                parameters.push_back(context.desugar(*function.signature.self_parameter));
 
             ranges::move(
-                ranges::views::transform(function.parameters, context.desugar()),
+                ranges::views::transform(function.signature.parameters, context.desugar()),
                 std::back_inserter(parameters));
 
             // Convert function bodies defined with shorthand syntax into blocks
@@ -56,17 +22,19 @@ namespace {
                 function_body.value = hir::expression::Block {
                     .result_expression = context.wrap(hir::Expression {
                         .value       = std::move(function_body.value),
-                        .source_view = function_body.source_view
+                        .source_view = function_body.source_view,
                     })
                 };
             }
 
             return {
-                .body           = std::move(function_body),
-                .parameters     = std::move(parameters),
-                .name           = function.name,
-                .return_type    = function.return_type.transform(context.desugar()),
-                .self_parameter = function.self_parameter
+                .signature {
+                    .parameters = std::move(parameters),
+                    .self_parameter = function.signature.self_parameter,
+                    .return_type    = function.signature.return_type.transform(context.desugar()),
+                    .name           = function.signature.name,
+                },
+                .body = std::move(function_body),
             };
         }
 

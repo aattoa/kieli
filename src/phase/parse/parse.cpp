@@ -69,48 +69,61 @@ namespace {
     }
 
 
+    auto extract_function_signature(Parse_context& context)
+        -> utl::Pair<ast::Function_signature, tl::optional<std::vector<ast::Template_parameter>>>
+    {
+        auto name = extract_lower_name(context, "a function name");
+        auto template_parameters = parse_template_parameters(context);
+
+        if (!context.try_consume(Token::Type::paren_open))
+            context.error_expected("a parenthesized list of function parameters");
+
+        auto self_parameter = parse_self_parameter(context);
+
+        std::vector<ast::Function_parameter> parameters;
+        if (!self_parameter.has_value() || context.try_consume(Token::Type::comma))
+            parameters = extract_function_parameters(context);
+
+        context.consume_required(Token::Type::paren_close);
+
+        tl::optional<ast::Type> return_type;
+        if (context.try_consume(Token::Type::colon))
+            return_type = extract_type(context);
+
+        if (context.try_consume(Token::Type::where))
+            utl::todo(); // TODO: add support for where clauses
+
+        return {
+            ast::Function_signature {
+                .parameters     = std::move(parameters),
+                .self_parameter = std::move(self_parameter),
+                .return_type    = return_type,
+                .name           = std::move(name),
+            },
+            std::move(template_parameters),
+        };
+    }
+
     auto extract_function(Parse_context& context)
         -> ast::Definition::Variant
     {
-        auto name                = extract_lower_name(context, "a function name");
-        auto template_parameters = parse_template_parameters(context);
+        auto [signature, template_parameters] = extract_function_signature(context);
 
-        if (context.try_consume(Token::Type::paren_open)) {
-            auto self_parameter = parse_self_parameter(context);
+        auto body = std::invoke([&] {
+            if (auto expression = parse_block_expression(context))
+                return std::move(*expression);
+            else if (context.try_consume(Token::Type::equals))
+                return extract_expression(context);
+            else
+                context.error_expected("the function body", "'=' or '{{'");
+        });
 
-            std::vector<ast::Function_parameter> parameters;
-            if (!self_parameter.has_value() || context.try_consume(Token::Type::comma))
-                parameters = extract_function_parameters(context);
-
-            context.consume_required(Token::Type::paren_close);
-
-            tl::optional<ast::Type> return_type;
-            if (context.try_consume(Token::Type::colon))
-                return_type = extract_type(context);
-
-            if (context.try_consume(Token::Type::where))
-                utl::todo(); // TODO: add support for where clauses
-
-            auto body = std::invoke([&] {
-                if (auto expression = parse_block_expression(context))
-                    return std::move(*expression);
-                else if (context.try_consume(Token::Type::equals))
-                    return extract_expression(context);
-                else
-                    context.error_expected("the function body", "'=' or '{{'");
+        return definition(
+            std::move(template_parameters),
+            ast::definition::Function {
+                .signature = std::move(signature),
+                .body      = std::move(body),
             });
-
-            return definition(
-                std::move(template_parameters),
-                ast::definition::Function {
-                    std::move(body),
-                    std::move(parameters),
-                    std::move(name),
-                    std::move(return_type),
-                    std::move(self_parameter)
-                });
-        }
-        context.error_expected("a parenthesized list of function parameters");
     };
 
 
@@ -121,16 +134,25 @@ namespace {
         std::string_view    const  description) -> void
     {
         for (auto it = range.cbegin(); it != range.cend(); ++it) {
-            auto found = ranges::find(range.cbegin(), it, it->name, &Member::name);
+            auto const found = ranges::find(range.cbegin(), it, it->name, &Member::name);
+            if (found == it) continue;
 
-            if (found != it) {
-                context.error(it->source_view, {
-                    .message = "A {} with this name has already been defined",
-                    .message_arguments = fmt::make_format_args(description)
-                });
-
-                // TODO: add more info to the error message
-            }
+            context.compilation_info.get()->diagnostics.emit_error({
+                .sections = utl::to_vector({
+                    utl::diagnostics::Text_section {
+                        .source_view = found->source_view,
+                        .note        = "Previously defined here",
+                        .note_color  = utl::diagnostics::warning_color,
+                    },
+                    utl::diagnostics::Text_section {
+                        .source_view = it->source_view,
+                        .note        = "Later defined here",
+                        .note_color  = utl::diagnostics::error_color,
+                    },
+                }),
+                .message           = "Duplicate definition of {} {}",
+                .message_arguments = fmt::make_format_args(description, it->name),
+            });
         }
     }
 
@@ -329,20 +351,10 @@ namespace {
         std::output_iterator<ast::Function_template_signature> auto template_out,
         std::output_iterator<ast::Function_signature>          auto nontemplate_out) -> void
     {
-        auto name                = extract_lower_name(context, "a function name");
-        auto template_parameters = parse_template_parameters(context);
+        auto [signature, template_parameters] = extract_function_signature(context);
 
-        context.consume_required(Token::Type::paren_open);
-        auto parameters = extract_type_sequence(context);
-        context.consume_required(Token::Type::paren_close);
-
-        context.consume_required(Token::Type::colon);
-
-        ast::Function_signature signature {
-            .parameter_types = std::move(parameters),
-            .return_type     = extract_type(context),
-            .name            = std::move(name)
-        };
+        if (!signature.return_type.has_value())
+            context.error(signature.name.source_view, { "Function signature return type missing" });
 
         if (template_parameters.has_value()) {
             *template_out = ast::Function_template_signature {
