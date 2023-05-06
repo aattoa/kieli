@@ -116,16 +116,6 @@ namespace {
                 if (!actual.is_mutable.get())
                     solve_mutability_quality_constraint();
             },
-            [&](auto, mir::Mutability::Concrete const requested) {
-                if (requested.is_mutable.get()) {
-                    mutability_error(
-                        "Unable to acquire mutable reference to object of unknown mutability",
-                        {
-                            "Mutability is unknown due to this",
-                            "Attempted to acquire mutable reference here"
-                        });
-                }
-            },
             [&](auto, auto) {
                 solve_mutability_quality_constraint();
             }
