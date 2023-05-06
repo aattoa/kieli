@@ -52,8 +52,8 @@ namespace mir {
         template <class> struct From_HIR_impl;
         template <class> struct To_HIR_impl;
     }
-    template <class T> using From_HIR = dtl::From_HIR_impl<T>::type;
-    template <class T> using To_HIR = dtl::To_HIR_impl<T>::type;
+    template <class T> using From_HIR = typename dtl::From_HIR_impl<T>::type;
+    template <class T> using To_HIR = typename dtl::To_HIR_impl<T>::type;
 
 #define IMPL_TO_FROM_HIR(name) \
 template <> struct dtl::From_HIR_impl<hir::definition::name> : std::type_identity<name> {}; \
@@ -67,7 +67,7 @@ template <> struct dtl::To_HIR_impl<name> : std::type_identity<hir::definition::
     IMPL_TO_FROM_HIR(Instantiation);
 #undef IMPL_TO_FROM_HIR
 
-    template <template <ast::tree_configuration> class Definition>
+    template <template <class> class Definition>
     struct dtl::From_HIR_impl<ast::definition::Template<Definition<hir::HIR_configuration>>>
         : std::type_identity<Template<From_HIR<Definition<hir::HIR_configuration>>>> {};
     template <class Definition>
@@ -111,8 +111,6 @@ template <> struct dtl::To_HIR_impl<name> : std::type_identity<hir::definition::
     };
 
 
-
-
     class [[nodiscard]] Unification_type_variable_state;
     class [[nodiscard]] Unification_mutability_variable_state;
 
@@ -154,37 +152,37 @@ template <> struct dtl::To_HIR_impl<name> : std::type_identity<hir::definition::
 #include "representation/mir/nodes/pattern.hpp"
 
 
-struct mir::Template_argument {
-    using Variant = std::variant<Type, Expression, Mutability>;
-    Variant                  value;
-    tl::optional<ast::Name> name;
-};
-
-struct mir::Template_parameter {
-    struct Type_parameter {
-        std::vector<Class_reference> classes;
-    };
-    struct Value_parameter {
-        Type type;
-    };
-    struct Mutability_parameter {};
-
-    using Variant = std::variant<Type_parameter, Value_parameter, Mutability_parameter>;
-
-    Variant                              value;
-    utl::Strong<tl::optional<ast::Name>> name; // nullopt for implicit template parameters
-    tl::optional<Template_argument>      default_argument;
-    Template_parameter_tag               reference_tag;
-    utl::Source_view                     source_view;
-};
-
-struct mir::Function_parameter {
-    Pattern pattern;
-    Type    type;
-};
-
-
 namespace mir {
+
+    struct Template_argument {
+        using Variant = std::variant<Type, Expression, Mutability>;
+        Variant                  value;
+        tl::optional<ast::Name> name;
+    };
+
+    struct Template_parameter {
+        struct Type_parameter {
+            std::vector<Class_reference> classes;
+        };
+        struct Value_parameter {
+            Type type;
+        };
+        struct Mutability_parameter {};
+
+        using Variant = std::variant<Type_parameter, Value_parameter, Mutability_parameter>;
+
+        Variant                              value;
+        utl::Strong<tl::optional<ast::Name>> name; // nullopt for implicit template parameters
+        tl::optional<Template_argument>      default_argument;
+        Template_parameter_tag               reference_tag;
+        utl::Source_view                     source_view;
+    };
+
+    struct Function_parameter {
+        Pattern pattern;
+        Type    type;
+    };
+
 
     enum class Unification_type_variable_kind {
         general, integral
@@ -400,7 +398,7 @@ namespace resolution {
         ast::Name               name;
     };
 
-    template <template <ast::tree_configuration> class Definition>
+    template <template <class> class Definition>
     requires requires { &Definition<hir::HIR_configuration>::name; }
     struct Definition_info<ast::definition::Template<Definition<hir::HIR_configuration>>> {
         using Variant = std::variant<
@@ -483,7 +481,7 @@ namespace resolution {
         Definition_state        state = Definition_state::unresolved;
     };
 
-    template <template <ast::tree_configuration> class Definition>
+    template <template <class> class Definition>
     requires (!requires { &Definition<hir::HIR_configuration>::name; })
     struct Definition_info<ast::definition::Template<Definition<hir::HIR_configuration>>> {
         using Variant = std::variant<

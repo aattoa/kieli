@@ -44,6 +44,12 @@ cmake -S . -B build
 cmake --build build -j 8
 ```
 
-On Linux, these build steps have been tested with CMake `3.26.3`, GNU Make `4.4.1`, Ninja `1.11.1`, clang `16.0.0`, and GCC `12.2.1`.
+On Linux, these build steps have been tested with the following:
+
+* CMake `3.26.3`
+* GNU Make `4.4.1`
+* Ninja `1.11.1`
+* clang `15.0.7`, `16.0.0`
+* GCC `12.2.1`, `13.1.1`
 
 On Windows, these build steps have been tested with Visual Studio 2022 `17.5.4`.

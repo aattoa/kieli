@@ -33,7 +33,9 @@ namespace {
                     mutability = mut;
             }
 
-            return mutability.transform(utl::make<ast::Template_argument>);
+            if (mutability.has_value())
+                return ast::Template_argument { std::move(*mutability) };
+            return tl::nullopt;
         }
     }
 

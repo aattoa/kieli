@@ -58,10 +58,10 @@ namespace ast {
         };
         template <tree_configuration Configuration>
         struct Basic_struct_member {
-            Name                name;
-            Configuration::Type type;
-            utl::Strong<bool>   is_public;
-            utl::Source_view    source_view;
+            Name                         name;
+            typename Configuration::Type type;
+            utl::Strong<bool>            is_public;
+            utl::Source_view             source_view;
         };
         template <tree_configuration Configuration>
         struct Basic_struct {
@@ -83,8 +83,8 @@ namespace ast {
         };
         template <tree_configuration Configuration>
         struct Basic_alias {
-            Name                name;
-            Configuration::Type type;
+            Name                         name;
+            typename Configuration::Type type;
         };
         template <tree_configuration Configuration>
         struct Basic_typeclass {
@@ -96,13 +96,13 @@ namespace ast {
         };
         template <tree_configuration Configuration>
         struct Basic_implementation {
-            Configuration::Type                             type;
+            typename Configuration::Type                    type;
             std::vector<typename Configuration::Definition> definitions;
         };
         template <tree_configuration Configuration>
         struct Basic_instantiation {
             Basic_class_reference<Configuration>            typeclass;
-            Configuration::Type                             self_type;
+            typename Configuration::Type                    self_type;
             std::vector<typename Configuration::Definition> definitions;
         };
         template <tree_configuration Configuration>

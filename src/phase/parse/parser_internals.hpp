@@ -127,7 +127,7 @@ concept parser = requires (P p, Parse_context context) {
 };
 
 template <parser auto p>
-using Parse_result = std::invoke_result_t<decltype(p), Parse_context&>::value_type;
+using Parse_result = typename std::invoke_result_t<decltype(p), Parse_context&>::value_type;
 
 
 template <parser auto p, utl::Metastring description>
