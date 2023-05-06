@@ -35,11 +35,11 @@ namespace {
 
 
     struct Parse_context {
-        std::string_view* pointer;
-        std::string_view* start;
-        std::string_view* stop;
+        std::string_view const* pointer;
+        std::string_view const* start;
+        std::string_view const* stop;
 
-        explicit Parse_context(std::span<std::string_view> const span) noexcept
+        explicit Parse_context(std::span<std::string_view const> const span) noexcept
             : pointer { span.data()         }
             , start   { pointer             }
             , stop    { start + span.size() } {}
@@ -49,11 +49,11 @@ namespace {
             return pointer == stop;
         }
         [[nodiscard]]
-        auto current() const noexcept -> std::string_view& {
+        auto current() const noexcept -> std::string_view {
             return *pointer;
         }
         [[nodiscard]]
-        auto extract() noexcept -> std::string_view& {
+        auto extract() noexcept -> std::string_view {
             return *pointer++;
         }
         auto advance() noexcept -> void {
@@ -251,7 +251,7 @@ auto cli::parse_command_line(
     char const* const*  const  argv,
     Options_description const& description) -> tl::expected<Options, Unrecognized_option>
 {
-    std::vector<std::string_view> command_line(argv + 1, argv + argc);
+    std::vector<std::string_view> const command_line(argv + 1, argv + argc);
     Options options { .program_name_as_invoked = *argv };
 
     Parse_context context { command_line };
@@ -293,17 +293,17 @@ auto cli::parse_command_line(
             }
         }
 
-        if (name) {
+        if (name.has_value()) {
             auto it = ranges::find(
                 description.parameters,
                 name,
-                utl::compose(&Parameter::Name::long_form, &Parameter::name)
-            );
+                utl::compose(&Parameter::Name::long_form, &Parameter::name));
 
             if (it != description.parameters.end()) {
-                options.named_arguments.emplace_back(
-                    std::move(*name),
-                    extract_arguments(context, *it));
+                options.named_arguments.push_back(Named_argument {
+                    .name   = std::move(*name),
+                    .values = extract_arguments(context, *it),
+                });
             }
             else {
                 context.retreat();
@@ -326,9 +326,10 @@ auto cli::parse_command_line(
                 }, value);
             }
 
-            options.named_arguments.emplace_back(
-                parameter.name.long_form,
-                std::move(arguments));
+            options.named_arguments.push_back(Named_argument {
+                .name   = parameter.name.long_form,
+                .values = std::move(arguments),
+            });
         }
     }
 
@@ -430,11 +431,12 @@ auto cli::Options_description::Option_adder::operator()(
             utl::always_assert(ranges::none_of(rest, has_default));
     }
 
-    self->parameters.emplace_back(
-        std::move(name),
-        std::move(values),
-        description,
-        is_defaulted);
+    self->parameters.push_back(Parameter {
+        .name        = std::move(name),
+        .values      = std::move(values),
+        .description = description,
+        .defaulted   = is_defaulted,
+    });
     return *this;
 }
 

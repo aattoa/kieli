@@ -88,7 +88,8 @@ namespace {
         auto operator()(utl::one_of<mir::type::Template_parameter_reference, mir::type::Self_placeholder, mir::type::Integer> auto const&) const {
             return false;
         }
-        auto operator()(utl::instance_of<ast::type::Primitive> auto const&) const {
+        template <class T>
+        auto operator()(ast::type::Primitive<T> const&) const {
             return false;
         }
     };

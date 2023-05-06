@@ -125,17 +125,17 @@ namespace {
             std::visit(utl::Overload {
                 [&](mir::Template_parameter::Type_parameter const& type_parameter, utl::Wrapper<hir::Type> const type_argument) {
                     if (!type_parameter.classes.empty()) { utl::todo(); }
-                    mir_arguments.emplace_back(context.resolve_type(*type_argument, scope, space));
+                    mir_arguments.push_back(mir::Template_argument { context.resolve_type(*type_argument, scope, space) });
                 },
                 [&](mir::Template_parameter::Type_parameter const& type_parameter, hir::Template_argument::Wildcard const wildcard) {
                     if (!type_parameter.classes.empty()) { utl::todo(); }
-                    mir_arguments.emplace_back(context.fresh_general_unification_type_variable(wildcard.source_view));
+                    mir_arguments.push_back(mir::Template_argument { context.fresh_general_unification_type_variable(wildcard.source_view) });
                 },
                 [&](mir::Template_parameter::Mutability_parameter, ast::Mutability const mutability_argument) {
-                    mir_arguments.emplace_back(context.resolve_mutability(mutability_argument, scope));
+                    mir_arguments.push_back(mir::Template_argument { context.resolve_mutability(mutability_argument, scope) });
                 },
                 [&](mir::Template_parameter::Mutability_parameter, hir::Template_argument::Wildcard const wildcard) {
-                    mir_arguments.emplace_back(context.fresh_unification_mutability_variable(wildcard.source_view));
+                    mir_arguments.push_back(mir::Template_argument { context.fresh_unification_mutability_variable(wildcard.source_view) });
                 },
                 [&](auto const&, auto const&) {
                     context.error(instantiation_view, {

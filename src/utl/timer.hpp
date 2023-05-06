@@ -11,9 +11,9 @@ namespace utl {
         using Clock    = Clock_type;
         using Duration = Duration_type;
 
-        Clock::time_point start = Clock::now();
+        typename Clock::time_point start = Clock::now();
 
-        auto restart(Clock::time_point const new_start = Clock::now()) noexcept -> void {
+        auto restart(typename Clock::time_point const new_start = Clock::now()) noexcept -> void {
             start = new_start;
         }
         auto elapsed() const noexcept -> Duration {

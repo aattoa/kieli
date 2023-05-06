@@ -21,7 +21,7 @@ DEFINE_FORMATTER_FOR(ast::Basic_template_argument<Configuration>) {
                     return fmt::format_to(context.out(), "mut?{}", parameterized.identifier);
                 });
         },
-        [&](ast::Basic_template_argument<Configuration>::Wildcard) {
+        [&](typename ast::Basic_template_argument<Configuration>::Wildcard) {
             return fmt::format_to(context.out(), "_");
         },
         [&](auto const& argument) {
@@ -40,9 +40,9 @@ DEFINE_FORMATTER_FOR(ast::Basic_qualified_name<Configuration>) {
     auto out = context.out();
 
     std::visit(utl::Overload {
-        [   ](std::monostate)                                   {},
-        [out](ast::Basic_root_qualifier<Configuration>::Global) { fmt::format_to(out, "::"        ); },
-        [out](auto const& root)                                { fmt::format_to(out, "{}::", root); }
+        [   ](std::monostate)                                            {},
+        [out](typename ast::Basic_root_qualifier<Configuration>::Global) { fmt::format_to(out, "::"        ); },
+        [out](auto const& root)                                          { fmt::format_to(out, "{}::", root); }
         }, value.root_qualifier.value);
 
     for (auto& qualifier : value.middle_qualifiers) {
@@ -78,15 +78,15 @@ DEFINE_FORMATTER_FOR(ast::Basic_template_parameter<Configuration>) {
     auto out = fmt::format_to(context.out(), "{}", value.name);
 
     utl::match(value.value,
-        [&](ast::Basic_template_parameter<Configuration>::Type_parameter const& parameter) {
+        [&](typename ast::Basic_template_parameter<Configuration>::Type_parameter const& parameter) {
             if (!parameter.classes.empty())
                 out = fmt::format_to(out, ": {}", utl::formatting::delimited_range(parameter.classes, " + "));
         },
-        [&](ast::Basic_template_parameter<Configuration>::Value_parameter const& parameter) {
+        [&](typename ast::Basic_template_parameter<Configuration>::Value_parameter const& parameter) {
             if (parameter.type.has_value())
                 out = fmt::format_to(out, ": {}", *parameter.type);
         },
-        [&](ast::Basic_template_parameter<Configuration>::Mutability_parameter const&) {
+        [&](typename ast::Basic_template_parameter<Configuration>::Mutability_parameter const&) {
             out = fmt::format_to(out, ": mut");
         });
 
