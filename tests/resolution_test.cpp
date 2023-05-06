@@ -23,11 +23,11 @@ namespace {
     }
 }
 
-#define TEST(name) TEST_CASE(name, "[resolve]")
-#define REQUIRE_RESOLUTION_SUCCESS(expression) REQUIRE_NOTHROW((void)expression)
-#define REQUIRE_RESOLUTION_FAILURE(expression, errorstring) \
-    REQUIRE_THROWS_MATCHES((void)expression, utl::diagnostics::Error, \
-    Catch::Matchers::MessageMatches(Catch::Matchers::ContainsSubstring(errorstring, Catch::CaseSensitive::No)))
+#define TEST(name) TEST_CASE(name, "[resolve]") // NOLINT
+#define REQUIRE_RESOLUTION_SUCCESS(expression) REQUIRE_NOTHROW((void)(expression))
+#define REQUIRE_RESOLUTION_FAILURE(expression, error_string) \
+    REQUIRE_THROWS_MATCHES((void)(expression), utl::diagnostics::Error, \
+    Catch::Matchers::MessageMatches(Catch::Matchers::ContainsSubstring((error_string), Catch::CaseSensitive::No)))
 
 
 TEST("name resolution") {
@@ -37,9 +37,40 @@ TEST("name resolution") {
 
 TEST("mutability") {
     REQUIRE_RESOLUTION_SUCCESS(resolve("fn f() { let mut x = ' '; &mut x }"));
-    REQUIRE_RESOLUTION_FAILURE(resolve("fn f() { let x = ' '; &mut x }"), "mutable reference");
     REQUIRE_RESOLUTION_SUCCESS(resolve("fn f[m: mut]() { let mut?m x = ' '; &mut?m x }"));
-    REQUIRE_RESOLUTION_FAILURE(resolve("fn f[m: mut]() { let mut?m x = ' '; &mut x }"), "mutable reference");
+    REQUIRE_RESOLUTION_FAILURE(resolve("fn f() { let x = ' '; &mut x }"), "acquire mutable reference");
+    REQUIRE_RESOLUTION_FAILURE(resolve("fn f[m: mut]() { let mut?m x = ' '; &mut x }"), "acquire mutable reference");
+
+    REQUIRE(resolve(
+        "fn f() {"
+            "let x = 3.14;"
+            "let y = &x;"
+            "let _ = &(*y)"
+        "}")
+        ==
+        "fn f(): () = ({ "
+            "(let x: Float = (3.14): Float): (); "
+            "(let y: &Float = (&(x): Float): &Float): (); "
+            "(let _: &Float = (&(*(y): &Float): Float): &Float): () "
+        "}): ()");
+
+    REQUIRE_RESOLUTION_FAILURE(resolve(
+        "fn f() {"
+            "let x = 3.14;"
+            "let y = &x;"
+            "let _ = &mut (*y)"
+        "}"),
+        "acquire mutable reference");
+
+    REQUIRE(resolve(
+        "fn f() { let a = \?\?\?; let _: &I32 = &(*a); }") ==
+        "fn f(): () = ({ (let a: &I32 = (\?\?\?): &I32): (); (let _: &I32 = (&(*(a): &I32): I32): &I32): (); (()): () }): ()");
+    REQUIRE(resolve(
+        "fn f() { let a = \?\?\?; let _: &mut I32 = &mut (*a); }") ==
+        "fn f(): () = ({ (let a: &mut I32 = (\?\?\?): &mut I32): (); (let _: &mut I32 = (&mut (*(a): &mut I32): I32): &mut I32): (); (()): () }): ()");
+    REQUIRE(resolve(
+        "fn f() { let a = \?\?\?; let b = &mut *a; let _: Char = *b; }") ==
+        "fn f(): () = ({ (let a: &mut Char = (\?\?\?): &mut Char): (); (let b: &mut Char = (&mut (*(a): &mut Char): Char): &mut Char): (); (let _: Char = (*(b): &mut Char): Char): (); (()): () }): ()");
 }
 
 TEST("return type deduction") {
@@ -83,6 +114,13 @@ TEST("pointer unification") {
     " }): Char");
 }
 
+TEST("reference mutability coercion") {
+    REQUIRE(resolve("fn f() { let mut x: U8 = 5; let _: &mut U8 = &mut x; }") ==
+        "fn f(): () = ({ (let mut x: U8 = (5): U8): (); (let _: &mut U8 = (&mut (x): U8): &mut U8): (); (()): () }): ()");
+    REQUIRE(resolve("fn f() { let mut x: U8 = 5; let _: &U8 = &mut x; }") ==
+        "fn f(): () = ({ (let mut x: U8 = (5): U8): (); (let _: &U8 = (&mut (x): U8): &mut U8): (); (()): () }): ()");
+}
+
 TEST("template argument deduction") {
     REQUIRE(resolve(
         "fn f[T](c: Bool, a: T, b: T) = if c { a } else { b }"
@@ -98,8 +136,8 @@ TEST("template argument deduction") {
 }
 
 TEST("double variable solution") {
-    REQUIRE_RESOLUTION_FAILURE(resolve("fn f() { let x = 5; let _: (I32, I64) = (x, x); }"),
-        "initializer is of type");
+    REQUIRE_RESOLUTION_FAILURE(resolve("fn f() { let x = 5; let _: (I32, I64) = (x, x); }"),        "initializer is of type");
+    REQUIRE_RESOLUTION_FAILURE(resolve("fn f() { let x = \?\?\?; let _: (String, I8) = (x, x); }"), "initializer is of type");
 }
 
 TEST("multiple template instantiations") {
@@ -196,7 +234,7 @@ TEST("wildcard template arguments") {
         " }): S[I32, String]");
 }
 
-TEST("method") {
+TEST("method lookup") {
     REQUIRE(resolve(
         "struct S = x: Char "
         "impl S { "
@@ -255,6 +293,27 @@ TEST("generalization") {
         ==
         "fn g(): U8 = ({ (f[U8]((5): U8)): U8 }): U8"
         "fn h(): String = ({ (f[String]((\"hello\"): String)): String }): String");
+
+    REQUIRE(resolve(
+        "fn f(x: _, y: typeof(x)) = (x, y)"
+        "fn g() = f(\?\?\?, 3.14)")
+        ==
+        "fn g(): (Float, Float) = ({ "
+            "(f[Float]((\?\?\?): Float, (3.14): Float)): (Float, Float)"
+        " }): (Float, Float)");
+
+    REQUIRE(resolve(
+        "fn f(x: _, y: typeof(x)) = (x, y)"
+        "fn g(): (String, String) = f(\?\?\?, \?\?\?)")
+        ==
+        "fn g(): (String, String) = ({ "
+            "(f[String]((\?\?\?): String, (\?\?\?): String)): (String, String)"
+        " }): (String, String)");
+
+    REQUIRE_RESOLUTION_FAILURE(resolve(
+        "fn f(x: _, y: typeof(x)) = (x, y)"
+        "fn g() = f(5: U8, 3.14)"),
+        "but the argument is of type Float");
 
     REQUIRE_RESOLUTION_FAILURE(resolve("struct S = x: typeof(\?\?\?)"), "contains an unsolved");
     REQUIRE_RESOLUTION_FAILURE(resolve("struct S = x: _"),              "contains an unsolved");
