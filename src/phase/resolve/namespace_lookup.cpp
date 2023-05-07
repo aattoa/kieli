@@ -7,16 +7,29 @@ namespace {
     using namespace resolution;
 
 
-    enum class Lookup_strategy {
-        relative,
-        absolute,
-    };
+    enum class Lookup_strategy { relative, absolute };
 
-    // TODO: improve
+
+    [[nodiscard]]
     auto namespace_name(Namespace const& space) -> std::string_view {
         return space.parent
             ? space.name ? space.name->identifier.view() : "<unnamed>"
             : "The global namespace";
+    }
+
+    [[noreturn]]
+    auto error_no_definition_in_scope(Context& context, ast::Name const erroneous_name) -> void {
+        context.error(erroneous_name.source_view, {
+            .message           = "No definition for '{}' in scope",
+            .message_arguments = fmt::make_format_args(erroneous_name),
+        });
+    }
+    [[noreturn]]
+    auto error_space_does_not_contain(Context& context, std::string_view const space_name, ast::Name const erroneous_name) -> void {
+        context.error(erroneous_name.source_view, {
+            .message           = "{} does not contain a definition for '{}'",
+            .message_arguments = fmt::make_format_args(space_name, erroneous_name),
+        });
     }
 
 
@@ -57,8 +70,6 @@ namespace {
                         context.error(qualifier.source_view, { "Template arguments applied to non-template entity" });
                 };
 
-                // TODO: simplify
-
                 return utl::match(*item,
                     [&](utl::Wrapper<Struct_info> const info) -> Namespace* {
                         error_if_arguments();
@@ -71,8 +82,7 @@ namespace {
                     [&](utl::Wrapper<Alias_info> const info) -> Namespace* {
                         error_if_arguments();
                         return &*context.associated_namespace(
-                            context.resolve_alias(info).aliased_type.with(qualifier.source_view)
-                        );
+                            context.resolve_alias(info).aliased_type.with(qualifier.source_view));
                     },
                     [&](utl::Wrapper<Typeclass_info>) -> Namespace* {
                         error_if_arguments();
@@ -86,8 +96,7 @@ namespace {
                                     return context.instantiate_struct_template(info, *qualifier.template_arguments, qualifier.source_view, scope, space);
                                 else
                                     return context.instantiate_struct_template_with_synthetic_arguments(info, qualifier.source_view);
-                            })
-                        ).associated_namespace;
+                            })).associated_namespace;
                     },
                     [&](utl::Wrapper<Enum_template_info> const info) -> Namespace* {
                         return &*context.resolve_enum(
@@ -96,8 +105,7 @@ namespace {
                                     return context.instantiate_enum_template(info, *qualifier.template_arguments, qualifier.source_view, scope, space);
                                 else
                                     return context.instantiate_enum_template_with_synthetic_arguments(info, qualifier.source_view);
-                            })
-                        ).associated_namespace;
+                            })).associated_namespace;
                     },
                     [&](utl::Wrapper<Alias_template_info> const info) -> Namespace* {
                         return &*context.associated_namespace(
@@ -107,14 +115,12 @@ namespace {
                                         return context.instantiate_alias_template(info, *qualifier.template_arguments, qualifier.source_view, scope, space);
                                     else
                                         return context.instantiate_alias_template_with_synthetic_arguments(info, qualifier.source_view);
-                                })
-                            ).aliased_type
+                                })).aliased_type
                         );
                     },
                     [](utl::Wrapper<Typeclass_template_info>) -> Namespace* {
                         utl::todo();
-                    }
-                );
+                    });
             }
         }
         else {
@@ -140,20 +146,13 @@ namespace {
         hir::Qualifier& qualifier) -> Namespace*
     {
         Namespace* target = &space;
-
         for (;;) {
-            if (Namespace* const new_space = apply_qualifier(context, scope, *target, qualifier)) {
+            if (Namespace* const new_space = apply_qualifier(context, scope, *target, qualifier))
                 return new_space;
-            }
-            else if (target->parent) {
+            else if (target->parent)
                 target = &**target->parent;
-            }
-            else {
-                context.error(qualifier.source_view, {
-                    .message           = "{} does not contain a definition for this name",
-                    .message_arguments = fmt::make_format_args(namespace_name(*target))
-                });
-            }
+            else
+                error_no_definition_in_scope(context, qualifier.name);
         }
     }
 
@@ -165,19 +164,12 @@ namespace {
         std::span<hir::Qualifier> const qualifiers) -> Namespace*
     {
         Namespace* target = &space;
-
         for (hir::Qualifier& qualifier : qualifiers) {
-            if (Namespace* const new_target = apply_qualifier(context, scope, *target, qualifier)) {
+            if (Namespace* const new_target = apply_qualifier(context, scope, *target, qualifier))
                 target = new_target;
-            }
-            else {
-                context.error(qualifier.source_view, {
-                    .message           = "{} contains no definition for this name",
-                    .message_arguments = fmt::make_format_args(namespace_name(*target))
-                });
-            }
+            else
+                error_space_does_not_contain(context, namespace_name(*target), qualifier.name);
         }
-
         return target;
     }
 
@@ -199,25 +191,17 @@ namespace {
         if (lookup_strategy == Lookup_strategy::relative) {
             if (qualifiers.empty()) {
                 // Perform relative lookup with just the primary name
-
                 for (;;) {
-                    if (auto* const item = (root->*table).find(primary.identifier)) {
+                    if (auto* const item = (root->*table).find(primary.identifier))
                         return *item;
-                    }
-                    else if (root->parent) {
+                    else if (root->parent)
                         root = &**root->parent;
-                    }
-                    else {
-                        context.error(primary.source_view, {
-                            .message           = "{} contains no definition for this name",
-                            .message_arguments = fmt::make_format_args(namespace_name(space))
-                        });
-                    }
+                    else
+                        error_no_definition_in_scope(context, primary);
                 }
             }
             else {
                 // Perform relative lookup with the first qualifier
-
                 root = apply_relative_qualifier(context, scope, *root, qualifiers.front());
                 qualifiers = qualifiers.subspan<1>(); // Remove prefix
             }
@@ -226,15 +210,10 @@ namespace {
         Namespace* const target_space =
             apply_middle_qualifiers(context, scope, *root, qualifiers);
 
-        if (utl::trivially_copyable auto const* const item = (target_space->*table).find(primary.identifier)) {
+        if (utl::trivially_copyable auto const* const item = (target_space->*table).find(primary.identifier))
             return *item;
-        }
-        else {
-            context.error(primary.source_view, {
-                .message           = "{} contains no definition for this name",
-                .message_arguments = fmt::make_format_args(namespace_name(*target_space))
-            });
-        }
+        else
+            error_space_does_not_contain(context, namespace_name(*target_space), primary);
     }
 
 }
