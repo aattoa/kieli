@@ -91,6 +91,9 @@ auto mir::Unification_mutability_variable_state::as_solved_if() const noexcept -
 }
 
 
+auto mir::Template_parameter::is_implicit() const noexcept -> bool {
+    return !name.get().has_value();
+}
 auto mir::Function::Signature::is_template() const noexcept -> bool {
     return !template_parameters.empty();
 }

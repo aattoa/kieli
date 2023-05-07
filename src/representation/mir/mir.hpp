@@ -176,6 +176,8 @@ namespace mir {
         tl::optional<Template_argument>      default_argument;
         Template_parameter_tag               reference_tag;
         utl::Source_view                     source_view;
+
+        [[nodiscard]] auto is_implicit() const noexcept -> bool;
     };
 
     struct Function_parameter {

@@ -73,8 +73,7 @@ namespace {
         auto operator()(utl::one_of<mir::type::Structure, mir::type::Enumeration> auto const& user_defined) const {
             if (user_defined.is_application) {
                 auto const check_template_argument = [this](mir::Template_argument const& argument) {
-                    return utl::match(
-                        argument.value,
+                    return utl::match(argument.value,
                         [*this](mir::Type       const  type)       { return recurse(type); },
                         [*this](mir::Expression const& expression) { return recurse(expression.type); },
                         []     (mir::Mutability)                   { return false; }

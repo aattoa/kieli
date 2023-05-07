@@ -184,13 +184,10 @@ namespace utl {
 
     template <class T, template <class...> class F>
     concept instance_of = dtl::Is_instance_of<T, F>::value;
-
     template <class T, class... Ts>
     concept one_of = std::disjunction_v<std::is_same<T, Ts>...>;
-
     template <class T>
     concept trivial = std::is_trivial_v<T>;
-
     template <class T>
     concept trivially_copyable = std::is_trivially_copyable_v<T>;
 
@@ -241,7 +238,7 @@ namespace utl {
         return path;
     }
 
-    static_assert(filename_without_path("aaa/bbb/ccc")   == "ccc");
+    static_assert(filename_without_path("aaa/bbb/ccc") == "ccc");
     static_assert(filename_without_path("aaa\\bbb\\ccc") == "ccc");
 
 
@@ -262,12 +259,9 @@ namespace utl {
     }
 
     [[noreturn]]
-    inline auto abort(
-        std::string_view     const message = "no message",
-        std::source_location const caller  = std::source_location::current()) -> void
-    {
+    inline auto abort(std::string_view const message = "Invoked utl::abort", std::source_location const caller = std::source_location::current()) -> void {
         fmt::println(
-            "[{}:{}:{}] utl::abort invoked with message: {}, in function '{}'",
+            "[{}:{}:{}] {}, in function '{}'",
             filename_without_path(caller.file_name()),
             caller.line(),
             caller.column(),
@@ -276,25 +270,6 @@ namespace utl {
         std::exit(EXIT_FAILURE);
     }
 
-    inline auto always_assert(
-        bool                 const assertion,
-        std::source_location const caller = std::source_location::current()) -> void
-    {
-        if (!assertion) [[unlikely]]
-            abort("Assertion failed", caller);
-    }
-
-    inline auto trace(
-        std::source_location const caller = std::source_location::current()) -> void
-    {
-        fmt::println(
-            "utl::trace: Reached line {} in {}, in function '{}'",
-            caller.line(),
-            filename_without_path(caller.file_name()),
-            caller.function_name());
-    }
-
-
     [[noreturn]]
     inline auto todo(std::source_location const caller = std::source_location::current()) -> void {
         abort("Unimplemented branch reached", caller);
@@ -302,6 +277,17 @@ namespace utl {
     [[noreturn]]
     inline auto unreachable(std::source_location const caller = std::source_location::current()) -> void {
         abort("Unreachable branch reached", caller);
+    }
+    inline auto always_assert(bool const condition, std::source_location const caller = std::source_location::current()) -> void {
+        if (!condition) [[unlikely]] abort("Assertion failed", caller);
+    }
+
+    inline auto trace(std::source_location const caller = std::source_location::current()) -> void {
+        fmt::println(
+            "utl::trace: Reached line {} in {}, in function '{}'",
+            caller.line(),
+            filename_without_path(caller.file_name()),
+            caller.function_name());
     }
 
 
@@ -423,9 +409,7 @@ namespace utl {
 
 
     template <class T, class V> [[nodiscard]]
-    constexpr decltype(auto) get(
-        V&&                        variant,
-        std::source_location const caller = std::source_location::current()) noexcept
+    constexpr decltype(auto) get(V&& variant, std::source_location const caller = std::source_location::current()) noexcept
         requires requires { std::get_if<T>(&variant); }
     {
         if (auto* const alternative = std::get_if<T>(&variant)) [[likely]]
@@ -435,18 +419,14 @@ namespace utl {
     }
 
     template <Usize n, class V> [[nodiscard]]
-    constexpr decltype(auto) get(
-        V&&                        variant,
-        std::source_location const caller = std::source_location::current()) noexcept
+    constexpr decltype(auto) get(V&& variant, std::source_location const caller = std::source_location::current()) noexcept
         requires requires { std::get_if<n>(&variant); }
     {
         return ::utl::get<std::variant_alternative_t<n, std::remove_cvref_t<V>>>(std::forward<V>(variant), caller);
     }
 
     template <class O> [[nodiscard]]
-    constexpr decltype(auto) get(
-        O&&                        optional,
-        std::source_location const caller = std::source_location::current()) noexcept
+    constexpr decltype(auto) get(O&& optional, std::source_location const caller = std::source_location::current()) noexcept
         requires requires { optional.has_value(); }
     {
         if (optional.has_value()) [[likely]]
@@ -561,15 +541,15 @@ namespace utl {
 
     template <class T>
     constexpr auto append_vector(std::vector<T>& to, std::vector<T>&& from) -> void {
-        assert(&to != &from);
+        always_assert(&to != &from);
         to.insert(to.end(), std::move_iterator { from.begin() }, std::move_iterator { from.end() });
         from.clear();
     }
 
 
     [[nodiscard]]
-    constexpr auto unsigned_distance(auto const start, auto const stop) noexcept -> Usize {
-        always_assert(start <= stop);
+    constexpr auto unsigned_distance(auto const start, auto const stop, std::source_location const caller = std::source_location::current()) noexcept -> Usize {
+        always_assert(std::less_equal()(start, stop), caller);
         return static_cast<Usize>(std::distance(start, stop));
     }
 
