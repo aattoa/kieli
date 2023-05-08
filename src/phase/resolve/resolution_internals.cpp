@@ -260,7 +260,7 @@ auto resolution::Context::resolve_template_parameters(
     std::span<hir::Template_parameter> const hir_parameters,
     Namespace                              & space) -> utl::Pair<Scope, std::vector<mir::Template_parameter>>
 {
-    Scope parameter_scope { *this };
+    Scope parameter_scope;
     auto  parameters = utl::vector_with_capacity<mir::Template_parameter>(hir_parameters.size());
 
     for (hir::Template_parameter& parameter : hir_parameters) {
@@ -284,7 +284,7 @@ auto resolution::Context::resolve_template_parameters(
 
         utl::match(parameter.value,
             [&](hir::Template_parameter::Type_parameter& type_parameter) {
-                parameter_scope.bind_type(parameter.name.identifier, {
+                parameter_scope.bind_type(*this, parameter.name.identifier, {
                     .type = mir::Type {
                         wrap_type(mir::type::Template_parameter_reference {
                             .identifier = { parameter.name.identifier },
@@ -302,7 +302,7 @@ auto resolution::Context::resolve_template_parameters(
                 });
             },
             [&](hir::Template_parameter::Mutability_parameter&) {
-                parameter_scope.bind_mutability(parameter.name.identifier, {
+                parameter_scope.bind_mutability(*this, parameter.name.identifier, {
                     .mutability = mir::Mutability {
                         wrap(mir::Mutability::Variant {
                             mir::Mutability::Parameterized {

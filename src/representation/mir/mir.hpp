@@ -319,14 +319,11 @@ namespace resolution {
         utl::Flatmap<compiler::Identifier, Variable_binding>   variable_bindings;
         utl::Flatmap<compiler::Identifier, Type_binding>       type_bindings;
         utl::Flatmap<compiler::Identifier, Mutability_binding> mutability_bindings;
-        Context*                                               context;
         Scope*                                                 parent = nullptr;
     public:
-        explicit Scope(Context&) noexcept;
-
-        auto bind_variable  (compiler::Identifier, Variable_binding  &&) -> void;
-        auto bind_type      (compiler::Identifier, Type_binding      &&) -> void;
-        auto bind_mutability(compiler::Identifier, Mutability_binding&&) -> void;
+        auto bind_variable  (Context&, compiler::Identifier, Variable_binding  &&) -> void;
+        auto bind_type      (Context&, compiler::Identifier, Type_binding      &&) -> void;
+        auto bind_mutability(Context&, compiler::Identifier, Mutability_binding&&) -> void;
 
         auto find_variable  (compiler::Identifier) noexcept -> Variable_binding*;
         auto find_type      (compiler::Identifier) noexcept -> Type_binding*;
@@ -334,7 +331,7 @@ namespace resolution {
 
         auto make_child() noexcept -> Scope;
 
-        auto warn_about_unused_bindings() -> void;
+        auto warn_about_unused_bindings(Context&) -> void;
     };
 
 
