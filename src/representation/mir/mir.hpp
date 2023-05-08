@@ -160,6 +160,11 @@ namespace mir {
         tl::optional<ast::Name> name;
     };
 
+    struct Template_default_argument {
+        hir::Template_argument             argument;
+        std::shared_ptr<resolution::Scope> scope;
+    };
+
     struct Template_parameter {
         struct Type_parameter {
             std::vector<Class_reference> classes;
@@ -171,11 +176,11 @@ namespace mir {
 
         using Variant = std::variant<Type_parameter, Value_parameter, Mutability_parameter>;
 
-        Variant                              value;
-        utl::Strong<tl::optional<ast::Name>> name; // nullopt for implicit template parameters
-        tl::optional<Template_argument>      default_argument;
-        Template_parameter_tag               reference_tag;
-        utl::Source_view                     source_view;
+        Variant                                 value;
+        utl::Strong<tl::optional<ast::Name>>    name; // nullopt for implicit template parameters
+        tl::optional<Template_default_argument> default_argument;
+        Template_parameter_tag                  reference_tag;
+        utl::Source_view                        source_view;
 
         [[nodiscard]] auto is_implicit() const noexcept -> bool;
     };
@@ -294,12 +299,11 @@ namespace resolution {
     class [[nodiscard]] Scope {
     public:
         struct Variable_binding {
-            mir::Type                      type;
-            mir::Mutability                mutability;
-            mir::Local_variable_tag        variable_tag;
-            bool                           has_been_mentioned = false;
-            tl::optional<utl::Source_view> moved_at;
-            utl::Source_view               source_view;
+            mir::Type               type;
+            mir::Mutability         mutability;
+            mir::Local_variable_tag variable_tag;
+            bool                    has_been_mentioned = false;
+            utl::Source_view        source_view;
         };
         struct Type_binding {
             mir::Type        type;

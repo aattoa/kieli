@@ -74,26 +74,6 @@ namespace {
     };
 
 
-    auto wildcard_template_argument_for(
-        Context                      & context,
-        mir::Template_parameter const& parameter,
-        utl::Source_view        const  argument_source_view) -> mir::Template_argument
-    {
-        return utl::match(parameter.value,
-            [&](mir::Template_parameter::Type_parameter const& type_parameter) -> mir::Template_argument {
-                utl::wrapper auto const state = context.fresh_unification_type_variable_state(mir::Unification_type_variable_kind::general);
-                state->as_unsolved().classes = type_parameter.classes;
-                return { mir::Type { context.wrap_type(mir::type::Unification_variable { .state = state }), argument_source_view } };
-            },
-            [&](mir::Template_parameter::Mutability_parameter const&) -> mir::Template_argument {
-                return { context.fresh_unification_mutability_variable(argument_source_view) };
-            },
-            [](mir::Template_parameter::Value_parameter const&) -> mir::Template_argument {
-                utl::todo();
-            });
-    }
-
-
     auto validate_template_argument_count(
         Context              & context,
         utl::Source_view const instantiation_view,
@@ -135,10 +115,44 @@ namespace {
                         maximum_argument_count,
                         maximum_argument_count == 1 ? "parameter" : "parameters",
                         actual_argument_count,
-                        actual_argument_count == 1 ? "was" : "were")
+                        actual_argument_count == 1 ? "argument was" : "arguments were")
                 });
             }
         }
+    }
+
+    auto resolve_single_template_argument(
+        Context                      & context,
+        Scope                        & scope,
+        Namespace                    & space,
+        mir::Template_parameter const& parameter,
+        hir::Template_argument  const& argument,
+        utl::Source_view        const  instantiation_view) -> mir::Template_argument
+    {
+        return std::visit(utl::Overload {
+            [&](mir::Template_parameter::Type_parameter const& type_parameter, utl::Wrapper<hir::Type> const type_argument) {
+                if (!type_parameter.classes.empty()) { utl::todo(); }
+                return mir::Template_argument { context.resolve_type(*type_argument, scope, space) };
+            },
+            [&](mir::Template_parameter::Type_parameter const& type_parameter, hir::Template_argument::Wildcard const wildcard) {
+                utl::wrapper auto const state = context.fresh_unification_type_variable_state(mir::Unification_type_variable_kind::general);
+                state->as_unsolved().classes = type_parameter.classes;
+                return mir::Template_argument { mir::Type { context.wrap_type(mir::type::Unification_variable { .state = state }), wildcard.source_view } };
+            },
+            [&](mir::Template_parameter::Mutability_parameter, ast::Mutability const mutability_argument) {
+                return mir::Template_argument { context.resolve_mutability(mutability_argument, scope) };
+            },
+            [&](mir::Template_parameter::Mutability_parameter, hir::Template_argument::Wildcard const wildcard) {
+                return mir::Template_argument { context.fresh_unification_mutability_variable(wildcard.source_view) };
+            },
+            [&](auto const&, auto const&) -> mir::Template_argument {
+                context.error(instantiation_view, {
+                    // TODO: better message
+                    .message           = "Argument {} is incompatible with parameter {}",
+                    .message_arguments = fmt::make_format_args(argument, parameter)
+                });
+            },
+        }, parameter.value, argument.value);
     }
 
     auto resolve_explicit_template_arguments(
@@ -146,79 +160,55 @@ namespace {
         Scope                                        & scope,
         Namespace                                    & space,
         std::vector<mir::Template_argument>          & output_arguments,
-        utl::Source_view                         const instantiation_view,
         std::span<mir::Template_parameter const> const parameters,
-        std::span<hir::Template_argument  const> const arguments) -> void
+        std::span<hir::Template_argument  const> const arguments,
+        utl::Source_view                         const instantiation_view) -> void
     {
         utl::always_assert(parameters.size() == arguments.size());
-        for (auto const& [parameter, argument] : ranges::views::zip(parameters, arguments)) {
-            utl::always_assert(parameter.name.get().has_value());
-
-            if (auto const* const wildcard = std::get_if<hir::Template_argument::Wildcard>(&argument.value)) {
-                output_arguments.push_back(wildcard_template_argument_for(context, parameter, wildcard->source_view));
-                continue;
-            }
-            std::visit(utl::Overload {
-                [&](mir::Template_parameter::Type_parameter const& type_parameter, utl::Wrapper<hir::Type> const type_argument) {
-                    if (!type_parameter.classes.empty()) { utl::todo(); }
-                    output_arguments.push_back(mir::Template_argument { context.resolve_type(*type_argument, scope, space) });
-                },
-                [&](mir::Template_parameter::Mutability_parameter, ast::Mutability const mutability_argument) {
-                    output_arguments.push_back(mir::Template_argument { context.resolve_mutability(mutability_argument, scope) });
-                },
-                [&, &argument=argument, &parameter=parameter](auto const&, auto const&) {
-                    context.error(instantiation_view, {
-                        // TODO: better message
-                        .message           = "Argument {} is incompatible with parameter {}",
-                        .message_arguments = fmt::make_format_args(argument, parameter)
-                    });
-                }
-            }, parameter.value, argument.value);
-        }
+        for (auto const& [parameter, argument] : ranges::views::zip(parameters, arguments))
+            output_arguments.push_back(resolve_single_template_argument(context, scope, space, parameter, argument, instantiation_view));
     }
 
-    auto resolve_default_template_arguments(
+    auto resolve_defaulted_template_arguments(
+        Context                                      & context,
+        Namespace                                    & template_space,
         std::vector<mir::Template_argument>          & output_arguments,
         Substitutions                                & substitutions,
         Substitution_context                     const substitution_context,
-        std::span<mir::Template_parameter const> const parameters) -> void
+        std::span<mir::Template_parameter const> const parameters,
+        utl::Source_view                         const instantiation_view) -> void
     {
+        Scope empty_scope { context };
         for (mir::Template_parameter const& parameter : parameters) {
-            utl::always_assert(parameter.name.get().has_value());
             utl::always_assert(parameter.default_argument.has_value());
-
-            mir::Template_argument default_argument = instantiate(*parameter.default_argument, substitution_context);
+            mir::Template_argument default_argument = substitution_context.recurse(
+                resolve_single_template_argument(
+                    context,
+                    parameter.default_argument->scope
+                        ? *parameter.default_argument->scope
+                        : empty_scope,
+                    template_space,
+                    parameter,
+                    parameter.default_argument->argument,
+                    instantiation_view));
             substitutions.add_substitution(parameter, default_argument);
             output_arguments.push_back(std::move(default_argument));
-        }
-    }
-
-    auto resolve_implicit_template_arguments(
-        Context                                      & context,
-        std::vector<mir::Template_argument>          & output_arguments,
-        utl::Source_view                         const instantiation_view,
-        std::span<mir::Template_parameter const> const parameters) -> void
-    {
-        for (mir::Template_parameter const& parameter : parameters) {
-            utl::always_assert(parameter.is_implicit());
-            utl::always_assert(!parameter.default_argument.has_value());
-            output_arguments.push_back(wildcard_template_argument_for(context, parameter, instantiation_view));
         }
     }
 
     auto resolve_template_arguments(
         Context                                      & context,
         Scope                                        & scope,
-        Namespace                                    & space,
+        Namespace                                    & instantiation_space,
+        Namespace                                    & template_space,
         std::span<mir::Template_parameter const> const parameters,
         std::span<hir::Template_argument  const> const arguments,
         utl::Source_view                         const instantiation_view) -> std::vector<mir::Template_argument>
     {
         auto const first_defaulted = ranges::find_if(parameters, [](auto const& parameter) { return parameter.default_argument.has_value(); });
         auto const first_implicit  = ranges::find_if(parameters, &mir::Template_parameter::is_implicit);
-        auto const first_omittable = std::min(first_defaulted, first_implicit);
 
-        utl::Usize const minimum_required_argument_count  = utl::unsigned_distance(parameters.begin(), first_omittable);
+        utl::Usize const minimum_required_argument_count  = utl::unsigned_distance(parameters.begin(), first_defaulted);
         utl::Usize const maximum_permitted_argument_count = utl::unsigned_distance(parameters.begin(), first_implicit);
 
         validate_template_argument_count(
@@ -228,10 +218,8 @@ namespace {
             maximum_permitted_argument_count,
             arguments.size());
 
-        utl::Usize const defaulted_argument_count = utl::unsigned_distance(first_omittable, first_implicit);
-        utl::Usize const implicit_parameter_count = utl::unsigned_distance(first_implicit, parameters.end());
-        utl::always_assert(maximum_permitted_argument_count == minimum_required_argument_count + defaulted_argument_count);
-        utl::always_assert(parameters.size() == maximum_permitted_argument_count + implicit_parameter_count);
+        utl::Usize const defaulted_argument_count = utl::unsigned_distance(first_defaulted, parameters.end());
+        utl::always_assert(parameters.size() == minimum_required_argument_count + defaulted_argument_count);
 
         std::vector<mir::Template_argument> mir_arguments;
         mir_arguments.reserve(parameters.size());
@@ -239,26 +227,23 @@ namespace {
         resolve_explicit_template_arguments(
             context,
             scope,
-            space,
+            instantiation_space,
             mir_arguments,
-            instantiation_view,
             parameters.subspan(0, arguments.size()),
-            arguments);
+            arguments,
+            instantiation_view);
 
         Substitutions default_argument_substitutions { parameters.subspan(0, arguments.size()), mir_arguments };
-        Substitution_context const default_argument_substitution_context { default_argument_substitutions, context, scope, space };
+        Substitution_context const default_argument_substitution_context { default_argument_substitutions, context, scope, instantiation_space };
 
-        resolve_default_template_arguments(
+        resolve_defaulted_template_arguments(
+            context,
+            template_space,
             mir_arguments,
             default_argument_substitutions,
             default_argument_substitution_context,
-            parameters.subspan(arguments.size(), maximum_permitted_argument_count - arguments.size()));
-
-        resolve_implicit_template_arguments(
-            context,
-            mir_arguments,
-            instantiation_view,
-            parameters.subspan(maximum_permitted_argument_count));
+            parameters.subspan(arguments.size()),
+            instantiation_view);
 
         return mir_arguments;
     }
@@ -275,7 +260,7 @@ namespace {
         utl::always_assert(function_template.signature.is_template());
         Substitutions substitutions { function_template.signature.template_parameters, template_arguments };
 
-        Substitution_context substitution_context {
+        Substitution_context const substitution_context {
             .substitutions      = substitutions,
             .resolution_context = resolution_context,
             .scope              = scope,
@@ -343,7 +328,7 @@ namespace {
     {
         Substitutions substitutions { struct_template.parameters, template_arguments };
 
-        Substitution_context substitution_context {
+        Substitution_context const substitution_context {
             .substitutions      = substitutions,
             .resolution_context = resolution_context,
             .scope              = scope,
@@ -401,7 +386,7 @@ namespace {
     {
         Substitutions substitutions { enum_template.parameters, template_arguments };
 
-        Substitution_context substitution_context {
+        Substitution_context const substitution_context {
             .substitutions      = substitutions,
             .resolution_context = resolution_context,
             .scope              = scope,
@@ -470,7 +455,7 @@ namespace {
     {
         Substitutions substitutions { alias_template.parameters, template_arguments };
 
-        Substitution_context substitution_context {
+        Substitution_context const substitution_context {
             .substitutions      = substitutions,
             .resolution_context = resolution_context,
             .scope              = scope,
@@ -885,7 +870,7 @@ auto resolution::Context::instantiate_function_template(
         *this,
         function,
         template_info,
-        resolve_template_arguments(*this, scope, space, function.signature.template_parameters, template_arguments, instantiation_view),
+        resolve_template_arguments(*this, scope, space, *template_info->home_namespace, function.signature.template_parameters, template_arguments, instantiation_view),
         scope,
         space);
 }
@@ -903,7 +888,7 @@ auto resolution::Context::instantiate_struct_template(
         *this,
         struct_template,
         template_info,
-        resolve_template_arguments(*this, scope, space, struct_template.parameters, template_arguments, instantiation_view),
+        resolve_template_arguments(*this, scope, space, *template_info->home_namespace, struct_template.parameters, template_arguments, instantiation_view),
         scope,
         space);
 }
@@ -921,7 +906,7 @@ auto resolution::Context::instantiate_enum_template(
         *this,
         enum_template,
         template_info,
-        resolve_template_arguments(*this, scope, space, enum_template.parameters, template_arguments, instantiation_view),
+        resolve_template_arguments(*this, scope, space, *template_info->home_namespace, enum_template.parameters, template_arguments, instantiation_view),
         scope,
         space);
 }
@@ -939,7 +924,7 @@ auto resolution::Context::instantiate_alias_template(
         *this,
         alias_template,
         template_info,
-        resolve_template_arguments(*this, scope, space, alias_template.parameters, template_arguments, instantiation_view),
+        resolve_template_arguments(*this, scope, space, *template_info->home_namespace, alias_template.parameters, template_arguments, instantiation_view),
         scope,
         space);
 }

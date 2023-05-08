@@ -5,7 +5,7 @@
 namespace {
     struct Generalization_type_visitor {
         using Unification_variable_handler =
-            std::function<void(mir::Type, mir::Unification_type_variable_state&)>;
+            std::function<void(mir::Type variable, mir::Unification_type_variable_state&)>;
 
         resolution::Context&          context;
         mir::Type                     this_type;
@@ -72,12 +72,12 @@ auto resolution::Context::generalize_to(mir::Type const type, std::vector<mir::T
         auto const tag = fresh_template_parameter_reference_tag();
 
         output.push_back(mir::Template_parameter {
-            .value         = mir::Template_parameter::Type_parameter { .classes = std::move(unsolved.classes) },
-            .name          = { tl::nullopt },
-            .reference_tag = tag,
-            .source_view   = type.source_view(),
+            .value            = mir::Template_parameter::Type_parameter { .classes = std::move(unsolved.classes) },
+            .name             = { tl::nullopt },
+            .default_argument = mir::Template_default_argument { .argument = { hir::Template_argument::Wildcard { type.source_view() } } },
+            .reference_tag    = tag,
+            .source_view      = type.source_view(),
         });
-
         state.solve_with(mir::Type {
             wrap_type(mir::type::Template_parameter_reference {
                 .identifier = { tl::nullopt },
@@ -90,10 +90,7 @@ auto resolution::Context::generalize_to(mir::Type const type, std::vector<mir::T
 }
 
 
-auto resolution::Context::ensure_non_generalizable(
-    mir::Type        const type,
-    std::string_view const type_description) -> void
-{
+auto resolution::Context::ensure_non_generalizable(mir::Type const type, std::string_view const type_description) -> void {
     std::function handler = [&](mir::Type const type, mir::Unification_type_variable_state&) {
         error(type.source_view(), {
             .message           = "{}'s type contains an unsolved unification type variable: {}",

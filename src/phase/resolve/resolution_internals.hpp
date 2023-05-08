@@ -166,23 +166,20 @@ namespace resolution {
 
         template <class Node>
         auto wrap(Node&& node) -> utl::Wrapper<Node>
-            requires requires { node_arena.wrap<Node>(std::move(node)); }
-                && (!std::is_reference_v<Node>)
+            requires requires { node_arena.wrap<Node>(std::move(node)); } && (!std::is_reference_v<Node>)
         {
             return node_arena.wrap<Node>(std::move(node));
         }
         template <class Entity>
         auto wrap(Entity&& entity) -> utl::Wrapper<Entity>
-            requires requires { namespace_arena.wrap<Entity>(std::move(entity)); }
-                && (!std::is_reference_v<Entity>)
+            requires requires { namespace_arena.wrap<Entity>(std::move(entity)); } && (!std::is_reference_v<Entity>)
         {
             return namespace_arena.wrap<Entity>(std::move(entity));
         }
         [[nodiscard]]
         auto wrap() noexcept {
             return [this]<class Arg>(Arg&& arg) -> utl::Wrapper<Arg>
-                requires requires { std::declval<Context&>().wrap(std::move(arg)); }
-                    && (!std::is_reference_v<Arg>)
+                requires requires (Context context) { context.wrap(std::move(arg)); } && (!std::is_reference_v<Arg>)
             {
                 return wrap(std::move(arg));
             };

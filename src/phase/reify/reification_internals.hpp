@@ -45,16 +45,14 @@ namespace reification {
 
         template <class Node>
         auto wrap(Node&& node) -> utl::Wrapper<Node>
-            requires requires { node_arena.wrap<Node>(std::move(node)); }
-                && (!std::is_reference_v<Node>)
+            requires requires { node_arena.wrap<Node>(std::move(node)); } && (!std::is_reference_v<Node>)
         {
             return node_arena.wrap<Node>(std::move(node));
         }
         [[nodiscard]]
         auto wrap() noexcept {
             return [this]<class Arg>(Arg&& arg) -> utl::Wrapper<Arg>
-                requires requires { std::declval<Context&>().wrap(std::move(arg)); }
-                     && (!std::is_reference_v<Arg>)
+                requires requires (Context context) { context.wrap(std::move(arg)); } && (!std::is_reference_v<Arg>)
             {
                 return wrap(std::move(arg));
             };
