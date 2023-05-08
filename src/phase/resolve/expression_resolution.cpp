@@ -32,7 +32,7 @@ namespace {
         mir::Mutability const actual_mutability = referenced_expression.mutability;
 
         auto const mutability_error = [&](std::string_view const message, utl::Pair<std::string_view> const notes) {
-            context.compilation_info.get()->diagnostics.emit_error({
+            context.diagnostics().emit_error({
                 .sections = utl::to_vector<utl::diagnostics::Text_section>({
                     {
                         .source_view = actual_mutability.source_view(),
@@ -503,7 +503,7 @@ namespace {
             for (hir::Expression& hir_side_effect : block.side_effect_expressions) {
                 mir::Expression side_effect = recurse(hir_side_effect, &block_scope);
                 if (side_effect.is_pure) {
-                    context.compilation_info.get()->diagnostics.emit_simple_warning({
+                    context.diagnostics().emit_simple_warning({
                         .erroneous_view = side_effect.source_view,
                         .message        = "This block side-effect expression is pure, so it does not have any side-effects",
                         .help_note      = "Pure side effect-expressions have no effect on program execution, but they are still evaluated. This may lead to performance degradation."

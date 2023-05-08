@@ -55,11 +55,12 @@ resolution::Resolution_constants::Resolution_constants(mir::Node_arena& arena)
     , self_placeholder_type { arena.wrap<mir::Type::Variant>(mir::type::Self_placeholder {}) } {}
 
 
-auto resolution::Context::error(
-    utl::Source_view                    const source_view,
-    utl::diagnostics::Message_arguments const arguments) -> void
-{
-    compilation_info.get()->diagnostics.emit_simple_error(arguments.add_source_view(source_view));
+auto resolution::Context::error(utl::Source_view const source_view, utl::diagnostics::Message_arguments const arguments) -> void {
+    diagnostics().emit_simple_error(arguments.add_source_view(source_view));
+}
+
+auto resolution::Context::diagnostics() -> utl::diagnostics::Builder& {
+    return compilation_info.get()->diagnostics;
 }
 
 
@@ -179,7 +180,7 @@ namespace {
         auto                   get_name_from_variant) -> void
     {
         if (auto* const existing = (space.*table).find(name.identifier)) {
-            context.compilation_info.get()->diagnostics.emit_error({
+            context.diagnostics().emit_error({
                 .sections = utl::to_vector<utl::diagnostics::Text_section>({
                     {
                         .source_view = std::visit(get_name_from_variant, *existing).source_view,

@@ -33,13 +33,10 @@ namespace {
 }
 
 
-auto compiler::mock_compilation_info() -> Compilation_info {
+auto compiler::mock_compilation_info(utl::diagnostics::Level const level) -> Compilation_info {
     return std::make_shared<compiler::Shared_compilation_info>(compiler::Shared_compilation_info {
         .diagnostics = utl::diagnostics::Builder {
-            utl::diagnostics::Builder::Configuration {
-                .note_level    = utl::diagnostics::Level::suppress,
-                .warning_level = utl::diagnostics::Level::suppress,
-            }
+            utl::diagnostics::Builder::Configuration { .note_level = level, .warning_level = level, }
         },
         .source_arena = utl::Wrapper_arena<utl::Source>::with_page_size(1)
     });
