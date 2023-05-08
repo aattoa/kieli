@@ -263,6 +263,7 @@ auto compiler::resolve(Desugar_result&& desugar_result) -> Resolve_result {
         .compilation_info = std::move(context.compilation_info),
         .node_arena       = std::move(context.node_arena),
         .namespace_arena  = std::move(context.namespace_arena),
+        .hir_node_arena   = std::move(desugar_result.node_arena),
         .module           = std::move(context.output_module),
     };
 }

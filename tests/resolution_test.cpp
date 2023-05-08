@@ -31,8 +31,27 @@ namespace {
 
 
 TEST("name resolution") {
-    REQUIRE_RESOLUTION_FAILURE(resolve("fn f() = x"), "no definition for");
-    // TODO: namespace access
+    REQUIRE_RESOLUTION_FAILURE(resolve("fn f() = x"),                           "no definition for 'x' in scope");
+    REQUIRE_RESOLUTION_FAILURE(resolve("fn f() = test::f()"),                   "no definition for 'test' in scope");
+    REQUIRE_RESOLUTION_FAILURE(resolve("namespace test {} fn f() = test::f()"), "test does not contain a definition for 'f'");
+    REQUIRE(resolve(
+        "namespace a {"
+            "namespace b { fn f() = g() }"
+            "fn g() = 5: I64"
+        "}")
+        ==
+        "fn f(): I64 = ({ (g()): I64 }): I64"
+        "fn g(): I64 = ({ (5): I64 }): I64");
+    REQUIRE(resolve(
+        "namespace test { fn f(): I32 = ??? } fn f() = (test::f(), ())")
+        ==
+        "fn f(): I32 = ({ (\?\?\?): I32 }): I32"
+        "fn f(): (I32, ()) = ({ (((f()): I32, (()): ())): (I32, ()) }): (I32, ())");
+}
+
+TEST("circular dependency") {
+    REQUIRE_RESOLUTION_FAILURE(resolve("fn f() = f()"), "circular dependency");
+    REQUIRE_RESOLUTION_SUCCESS(resolve("fn f(): I32 = f()"));
 }
 
 TEST("mutability") {
@@ -121,6 +140,33 @@ TEST("reference mutability coercion") {
         "fn f(): () = ({ (let mut x: U8 = (5): U8): (); (let _: &U8 = (&mut (x): U8): &mut U8): (); (()): () }): ()");
 }
 
+TEST("double variable solution") {
+    REQUIRE_RESOLUTION_FAILURE(resolve("fn f() { let x = 5; let _: (I32, I64) = (x, x); }"),        "initializer is of type");
+    REQUIRE_RESOLUTION_FAILURE(resolve("fn f() { let x = \?\?\?; let _: (String, I8) = (x, x); }"), "initializer is of type");
+}
+
+TEST("struct initializer") {
+    REQUIRE(resolve("struct S = a: I32, b: I64 fn f() = S { a = 10, b = 5 }")
+        == "fn f(): S = ({ (S { (10): I32, (5): I64 }): S }): S");
+    REQUIRE(resolve("struct S = a: I32, b: I64 fn f() = S { b = 10, a = 5 }")
+        == "fn f(): S = ({ (S { (5): I32, (10): I64 }): S }): S");
+    REQUIRE_RESOLUTION_FAILURE(resolve("struct S = a: I32, b: I64 fn f() = S { a = ' ' }"),             "initializer is of type Char");
+    REQUIRE_RESOLUTION_FAILURE(resolve("struct S = a: I32, b: I64 fn f() = S { a = 10 }"),              "'b' is not initialized");
+    REQUIRE_RESOLUTION_FAILURE(resolve("struct S = a: I32, b: I64 fn f() = S { b = 10 }"),              "'a' is not initialized");
+    REQUIRE_RESOLUTION_FAILURE(resolve("struct S = a: I32, b: I64 fn f() = S { a = 0, b = 0, c = 0 }"), "S does not have");
+}
+
+TEST("template argument resolution") {
+    REQUIRE_RESOLUTION_FAILURE(resolve("fn f[T](): T = ??? fn g() = f[]()"),                         "requires exactly 1 argument, but 0 were supplied");
+    REQUIRE_RESOLUTION_FAILURE(resolve("fn f[A, B](): (A, B) = ??? fn g() = f[I8]()"),               "requires exactly 2 arguments, but 1 was supplied");
+    REQUIRE_RESOLUTION_FAILURE(resolve("fn f[A, B](): (A, B) = ??? fn g() = f[I8, I16, I32]()"),     "requires exactly 2 arguments, but 3 were supplied");
+    REQUIRE_RESOLUTION_FAILURE(resolve("fn f[A, B=I64](): (A, B) = ??? fn g() = f[I8, I16, I32]()"), "has only 2 parameters, but 3 arguments were supplied");
+    REQUIRE_RESOLUTION_FAILURE(resolve("fn f[A, B, C=B](): (A, B, C) = ??? fn g() = f[I8]()"),       "requires at least 2 arguments, but 1 was supplied");
+    REQUIRE_RESOLUTION_SUCCESS(resolve("fn f[A, B=I64](): (A, B) = ??? fn g() = f[I8]()"));
+    REQUIRE_RESOLUTION_SUCCESS(resolve("fn f[A, B=A](): (A, B) = ??? fn g() = f[I8]()"));
+    REQUIRE_RESOLUTION_SUCCESS(resolve("namespace test { struct S = s: I64 fn f[A, B=S](): (A, B) = ??? } fn g() = test::f[I8]()"));
+}
+
 TEST("template argument deduction") {
     REQUIRE(resolve(
         "fn f[T](c: Bool, a: T, b: T) = if c { a } else { b }"
@@ -133,11 +179,6 @@ TEST("template argument deduction") {
         "fn h(): I32 = ({ "
             "(f[I32]((false): Bool, (10): I32, (20): I32)): I32"
         " }): I32");
-}
-
-TEST("double variable solution") {
-    REQUIRE_RESOLUTION_FAILURE(resolve("fn f() { let x = 5; let _: (I32, I64) = (x, x); }"),        "initializer is of type");
-    REQUIRE_RESOLUTION_FAILURE(resolve("fn f() { let x = \?\?\?; let _: (String, I8) = (x, x); }"), "initializer is of type");
 }
 
 TEST("multiple template instantiations") {
@@ -177,21 +218,6 @@ TEST("deduce from invocation") {
         " }): Option[Float]");
 }
 
-TEST("struct initializer") {
-    REQUIRE(resolve("struct S = a: I32, b: I64 fn f() = S { a = 10, b = 5 }")
-        == "fn f(): S = ({ (S { (10): I32, (5): I64 }): S }): S");
-    REQUIRE(resolve("struct S = a: I32, b: I64 fn f() = S { b = 10, a = 5 }")
-        == "fn f(): S = ({ (S { (5): I32, (10): I64 }): S }): S");
-    REQUIRE_RESOLUTION_FAILURE(resolve("struct S = a: I32, b: I64 fn f() = S { a = ' ' }"),
-        "the given initializer is of type Char");
-    REQUIRE_RESOLUTION_FAILURE(resolve("struct S = a: I32, b: I64 fn f() = S { a = 10 }"),
-        "'b' is not initialized");
-    REQUIRE_RESOLUTION_FAILURE(resolve("struct S = a: I32, b: I64 fn f() = S { b = 10 }"),
-        "'a' is not initialized");
-    REQUIRE_RESOLUTION_FAILURE(resolve("struct S = a: I32, b: I64 fn f() = S { a = 0, b = 0, c = 0 }"),
-        "S does not have");
-}
-
 TEST("default template arguments") {
     REQUIRE(resolve(
         "struct Triple[A, B = A, C = B] = a: A, b: B, c: C "
@@ -224,7 +250,7 @@ TEST("wildcard template arguments") {
     REQUIRE(resolve(
         "struct S[A = _, B = _] = a: A, b: B "
         "fn f() = S[] { a = \"aaa\", b = 2.74 } "
-        "fn g() = S[I32, String] { a = 3, b = \"bbb\" }") // FIXME: remove explicit template arguments
+        "fn g() = S[] { a = 3: I32, b = \"bbb\" }")
         ==
         "fn f(): S[String, Float] = ({ "
             "(S[String, Float] { (\"aaa\"): String, (2.74): Float }): S[String, Float]"

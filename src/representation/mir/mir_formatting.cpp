@@ -92,21 +92,26 @@ DEFINE_FORMATTER_FOR(mir::Template_argument) {
 }
 
 DEFINE_FORMATTER_FOR(mir::Template_parameter) {
-    auto out = context.out();
+    auto out = fmt::format_to(
+        context.out(),
+        "{}",
+        value.name.get().has_value()
+            ? value.name.get()->identifier.view()
+            : "implicit");
 
     utl::match(value.value,
         [&](mir::Template_parameter::Type_parameter const& parameter) {
-            out = fmt::format_to(context.out(), "'P{} {}", value.reference_tag.value, value.name);
+            out = fmt::format_to(context.out(), " 'P{}", value.reference_tag.value);
             out = parameter.classes.empty() ? out : fmt::format_to(out, ": {}", utl::formatting::delimited_range(parameter.classes, " + "));
         },
         [&](mir::Template_parameter::Value_parameter const& parameter) {
-            out = fmt::format_to(out, "{}: {}", value.name, parameter.type);
+            out = fmt::format_to(out, ": {}", value.name, parameter.type);
         },
         [&](mir::Template_parameter::Mutability_parameter const&){
-            out = fmt::format_to(out, "{}: mut", value.name);
+            out = fmt::format_to(out, ": mut");
         });
 
-    return value.default_argument.has_value() ? fmt::format_to(out, " = {}", *value.default_argument) : out;
+    return value.default_argument.has_value() ? fmt::format_to(out, " = {}", value.default_argument->argument) : out;
 }
 
 
@@ -323,8 +328,9 @@ DEFINE_FORMATTER_FOR(mir::Type) {
 DEFINE_FORMATTER_FOR(mir::Function) {
     return fmt::format_to(
         context.out(),
-        "fn {}({}): {} = {}",
+        "fn {}{}({}): {} = {}",
         value.signature.name,
+        value.signature.is_template() ? "[{}]"_format(value.signature.template_parameters) : "",
         value.signature.parameters,
         value.signature.return_type,
         value.body);

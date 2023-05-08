@@ -263,41 +263,20 @@ auto resolution::Context::resolve_template_parameters(
     Scope parameter_scope { *this };
     auto  parameters = utl::vector_with_capacity<mir::Template_parameter>(hir_parameters.size());
 
-    auto const resolve_default_argument = [&](mir::Template_parameter::Variant const& parameter_value, hir::Template_argument const& argument) {
-        return mir::Template_argument {
-            .value = std::visit<mir::Template_argument::Variant>(utl::Overload {
-                [&](mir::Template_parameter::Type_parameter const& type_parameter, utl::Wrapper<hir::Type> const type_argument) {
-                    if (!type_parameter.classes.empty()) { utl::todo(); }
-                    return resolve_type(*type_argument, parameter_scope, space);
-                },
-                [&](mir::Template_parameter::Mutability_parameter const&, ast::Mutability const mutability) {
-                    return resolve_mutability(mutability, parameter_scope);
-                },
-                [&](mir::Template_parameter::Type_parameter const& type_parameter, hir::Template_argument::Wildcard const wildcard) {
-                    if (!type_parameter.classes.empty()) { utl::todo(); }
-                    return fresh_general_unification_type_variable(wildcard.source_view);
-                },
-                [&](mir::Template_parameter::Mutability_parameter, hir::Template_argument::Wildcard const wildcard) {
-                    return fresh_unification_mutability_variable(wildcard.source_view);
-                },
-                [&](auto const&, auto const&) -> mir::Template_argument::Variant {
-                    utl::todo();
-                }
-            }, parameter_value, argument.value),
-            .name = argument.name
-        };
-    };
-
     for (hir::Template_parameter& parameter : hir_parameters) {
         auto const reference_tag = fresh_template_parameter_reference_tag();
 
         auto const add_parameter = [&](mir::Template_parameter::Variant&& value) {
-            auto default_argument = parameter.default_argument.transform(std::bind_front(resolve_default_argument, std::cref(value)));
-
+            auto const make_default_argument = [&](hir::Template_argument&& default_argument) {
+                return mir::Template_default_argument {
+                    .argument = std::move(default_argument),
+                    .scope    = std::make_unique<Scope>(parameter_scope),
+                };
+            };
             parameters.push_back(mir::Template_parameter {
                 .value            = std::move(value),
                 .name             = { parameter.name },
-                .default_argument = std::move(default_argument),
+                .default_argument = std::move(parameter.default_argument).transform(make_default_argument),
                 .reference_tag    = reference_tag,
                 .source_view      = parameter.source_view,
             });
