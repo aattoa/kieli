@@ -7,12 +7,14 @@
 
 
 namespace {
-    auto resolve(std::string&& string) -> std::string {
-        compiler::Compilation_info test_info = compiler::mock_compilation_info();
+    auto do_resolve(std::string&& string, utl::diagnostics::Level const diagnostics_level) -> compiler::Resolve_result {
+        compiler::Compilation_info test_info = compiler::mock_compilation_info(diagnostics_level);
         utl::wrapper auto const test_source = test_info.get()->source_arena.wrap("[test]", std::move(string));
         auto lex_result = compiler::lex({ .compilation_info = std::move(test_info), .source = test_source });
-        auto resolve_result = compiler::resolve(compiler::desugar(compiler::parse(std::move(lex_result))));
-
+        return compiler::resolve(compiler::desugar(compiler::parse(std::move(lex_result))));
+    }
+    auto resolve(std::string&& string) -> std::string {
+        auto resolve_result = do_resolve(std::move(string), utl::diagnostics::Level::suppress);
         std::string output;
         for (utl::wrapper auto const wrapper : resolve_result.module.functions) {
             auto& function = utl::get<mir::Function>(wrapper->value);
@@ -21,19 +23,26 @@ namespace {
         }
         return output;
     }
+    auto resolution_diagnostics(std::string&& string) -> std::string {
+        auto resolve_result = do_resolve(std::move(string), utl::diagnostics::Level::normal);
+        return std::move(resolve_result.compilation_info.get()->diagnostics).string();
+    }
+    auto contains(std::string const& string) {
+        return Catch::Matchers::ContainsSubstring(string, Catch::CaseSensitive::No);
+    }
 }
 
 #define TEST(name) TEST_CASE(name, "[resolve]") // NOLINT
 #define REQUIRE_RESOLUTION_SUCCESS(expression) REQUIRE_NOTHROW((void)(expression))
 #define REQUIRE_RESOLUTION_FAILURE(expression, error_string) \
-    REQUIRE_THROWS_MATCHES((void)(expression), utl::diagnostics::Error, \
-    Catch::Matchers::MessageMatches(Catch::Matchers::ContainsSubstring((error_string), Catch::CaseSensitive::No)))
+    REQUIRE_THROWS_MATCHES((void)(expression), utl::diagnostics::Error, Catch::Matchers::MessageMatches(contains(error_string)))
 
 
 TEST("name resolution") {
     REQUIRE_RESOLUTION_FAILURE(resolve("fn f() = x"),                           "no definition for 'x' in scope");
     REQUIRE_RESOLUTION_FAILURE(resolve("fn f() = test::f()"),                   "no definition for 'test' in scope");
     REQUIRE_RESOLUTION_FAILURE(resolve("namespace test {} fn f() = test::f()"), "test does not contain a definition for 'f'");
+    REQUIRE_RESOLUTION_FAILURE(resolve("fn f() = ::g()"),                       "the global namespace does not contain a definition for 'g'");
     REQUIRE(resolve(
         "namespace a {"
             "namespace b { fn f() = g() }"
@@ -49,15 +58,28 @@ TEST("name resolution") {
         "fn f(): (I32, ()) = ({ (((f()): I32, (()): ())): (I32, ()) }): (I32, ())");
 }
 
-TEST("circular dependency") {
-    REQUIRE_RESOLUTION_FAILURE(resolve("fn f() = f()"), "circular dependency");
-    REQUIRE_RESOLUTION_SUCCESS(resolve("fn f(): I32 = f()"));
+TEST("scope") {
+    REQUIRE_THAT(resolution_diagnostics("fn f() { let x = \?\?\?; }"),                 contains("unused local variable"));
+    REQUIRE_THAT(resolution_diagnostics("fn f() { let x = \?\?\?; let x = \?\?\?; }"), contains("shadows an unused local variable"));
+    REQUIRE(resolve(
+        "fn f() {"
+            "let x = 3.14;"
+            "let x = \"hello\";"
+            "let x = (x, x);"
+        "}")
+        ==
+        "fn f(): () = ({ "
+            "(let x: Float = (3.14): Float): (); "
+            "(let x: String = (\"hello\"): String): (); "
+            "(let x: (String, String) = (((x): String, (x): String)): (String, String)): (); "
+            "(()): () "
+        "}): ()");
 }
 
 TEST("mutability") {
     REQUIRE_RESOLUTION_SUCCESS(resolve("fn f() { let mut x = ' '; &mut x }"));
     REQUIRE_RESOLUTION_SUCCESS(resolve("fn f[m: mut]() { let mut?m x = ' '; &mut?m x }"));
-    REQUIRE_RESOLUTION_FAILURE(resolve("fn f() { let x = ' '; &mut x }"), "acquire mutable reference");
+    REQUIRE_RESOLUTION_FAILURE(resolve("fn f() { let x = ' '; &mut x }"),               "acquire mutable reference");
     REQUIRE_RESOLUTION_FAILURE(resolve("fn f[m: mut]() { let mut?m x = ' '; &mut x }"), "acquire mutable reference");
 
     REQUIRE(resolve(
@@ -92,13 +114,12 @@ TEST("mutability") {
         "fn f(): () = ({ (let a: &mut Char = (\?\?\?): &mut Char): (); (let b: &mut Char = (&mut (*(a): &mut Char): Char): &mut Char): (); (let _: Char = (*(b): &mut Char): Char): (); (()): () }): ()");
 }
 
-TEST("return type deduction") {
+TEST("return type resolution") {
     REQUIRE(resolve("fn f() = 5: I32") == "fn f(): I32 = ({ (5): I32 }): I32");
     REQUIRE(resolve("fn g() = \"hello\"") == "fn g(): String = ({ (\"hello\"): String }): String");
-}
-
-TEST("return type unification") {
     REQUIRE(resolve("fn f(): U8 = 5") == "fn f(): U8 = ({ (5): U8 }): U8");
+    REQUIRE_RESOLUTION_SUCCESS(resolve("fn f(): I32 = f()"));
+    REQUIRE_RESOLUTION_FAILURE(resolve("fn f() = f()"), "circular dependency");
     REQUIRE_RESOLUTION_FAILURE(resolve("fn f(): U8 = 5: I8"), "the body is of type I8");
 }
 
@@ -154,6 +175,26 @@ TEST("struct initializer") {
     REQUIRE_RESOLUTION_FAILURE(resolve("struct S = a: I32, b: I64 fn f() = S { a = 10 }"),              "'b' is not initialized");
     REQUIRE_RESOLUTION_FAILURE(resolve("struct S = a: I32, b: I64 fn f() = S { b = 10 }"),              "'a' is not initialized");
     REQUIRE_RESOLUTION_FAILURE(resolve("struct S = a: I32, b: I64 fn f() = S { a = 0, b = 0, c = 0 }"), "S does not have");
+}
+
+TEST("loop resolution") {
+    REQUIRE_RESOLUTION_SUCCESS(resolve("fn f() { loop { break; } }"));
+    REQUIRE_RESOLUTION_SUCCESS(resolve("fn f() { loop { continue; } }"));
+    REQUIRE_RESOLUTION_FAILURE(resolve("fn f() { break; }"),    "can not appear outside of a loop");
+    REQUIRE_RESOLUTION_FAILURE(resolve("fn f() { continue; }"), "can not appear outside of a loop");
+    REQUIRE_RESOLUTION_FAILURE(resolve("fn f() { while \?\?\? { break \"\"; } }"),  "non-unit type");
+    REQUIRE_RESOLUTION_FAILURE(resolve("fn f() { loop { break \"\"; break 5; } }"), "previous break expressions had results of type String");
+
+    REQUIRE_THAT(resolution_diagnostics("fn f() = while true {}"),  contains("'loop' instead of 'while true'"));
+    REQUIRE_THAT(resolution_diagnostics("fn f() = while false {}"), contains("will never be run"));
+
+    REQUIRE(resolve("fn f() = while \?\?\? {}") ==
+        "fn f(): () = ({ "
+            "(loop (if (\?\?\?): Bool "
+                "({ (()): () }): () "
+            "else "
+                "(break (()): ()): ()): ()): ()"
+        " }): ()");
 }
 
 TEST("template argument resolution") {
@@ -260,7 +301,7 @@ TEST("wildcard template arguments") {
         " }): S[I32, String]");
 }
 
-TEST("method lookup") {
+TEST("simple method lookup") {
     REQUIRE(resolve(
         "struct S = x: Char "
         "impl S { "
@@ -303,7 +344,7 @@ TEST("map option") {
         " }): String");
 }
 
-TEST("generalization") {
+TEST("function generalization") {
     REQUIRE(resolve(
         "fn f() = ??? "
         "fn g(): String = f() "
