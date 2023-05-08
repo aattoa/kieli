@@ -45,9 +45,9 @@ namespace utl::diagnostics {
             Level warning_level = Level::normal;
         };
     private:
-        std::string   diagnostic_string;
-        Configuration configuration;
-        bool          has_emitted_error;
+        std::string   m_diagnostic_string;
+        Configuration m_configuration;
+        bool          m_has_emitted_error;
     public:
         Builder() noexcept;
         Builder(Builder&&) noexcept;
@@ -67,10 +67,10 @@ namespace utl::diagnostics {
         auto emit_error       (Emit_arguments        const&, Type) -> void;
         auto emit_simple_error(Simple_emit_arguments const&, Type) -> void;
 
-        [[nodiscard]] auto string() &&           noexcept -> std::string;
-        [[nodiscard]] auto error()         const noexcept -> bool;
-        [[nodiscard]] auto note_level()    const noexcept -> Level;
-        [[nodiscard]] auto warning_level() const noexcept -> Level;
+        [[nodiscard]] auto string() &&               noexcept -> std::string;
+        [[nodiscard]] auto has_emitted_error() const noexcept -> bool;
+        [[nodiscard]] auto note_level()        const noexcept -> Level;
+        [[nodiscard]] auto warning_level()     const noexcept -> Level;
     };
 
 

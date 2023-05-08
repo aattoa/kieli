@@ -24,7 +24,7 @@ namespace compiler {
     };
 
     auto predefinitions_source(Compilation_info&) -> utl::Wrapper<utl::Source>;
-    auto mock_compilation_info() -> Compilation_info;
+    auto mock_compilation_info(utl::diagnostics::Level = utl::diagnostics::Level::suppress) -> Compilation_info;
 
     struct [[nodiscard]] Compilation_result {};
 

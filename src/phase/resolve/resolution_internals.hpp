@@ -191,8 +191,9 @@ namespace resolution {
         }
 
 
-        [[noreturn]]
-        auto error(utl::Source_view, utl::diagnostics::Message_arguments) -> void;
+        [[noreturn]] auto error(utl::Source_view, utl::diagnostics::Message_arguments) -> void;
+
+        [[nodiscard]] auto diagnostics() -> utl::diagnostics::Builder&;
 
 
         [[nodiscard]] auto unify_types(Type_unification_arguments) -> bool;
