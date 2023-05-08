@@ -111,7 +111,7 @@ namespace {
             if (hir_template_parameters.has_value())
                 return context.resolve_template_parameters(*hir_template_parameters, space);
             else
-                return utl::Pair { Scope { context }, std::vector<mir::Template_parameter> {} };
+                return utl::Pair { Scope {}, std::vector<mir::Template_parameter> {} };
         });
 
         auto self_parameter =
@@ -167,7 +167,7 @@ namespace {
             signature.return_type = function_body.type;
             context.generalize_to(signature.return_type, signature.template_parameters);
 
-            signature_scope.warn_about_unused_bindings();
+            signature_scope.warn_about_unused_bindings(context);
 
             function_info.value = mir::Function {
                 .signature = std::move(signature),
@@ -183,7 +183,7 @@ namespace {
         utl::Wrapper<Namespace>      home_namespace) -> mir::Function
     {
         mir::Expression body = context.resolve_expression(function.unresolved_body, function.signature_scope, *home_namespace);
-        function.signature_scope.warn_about_unused_bindings();
+        function.signature_scope.warn_about_unused_bindings(context);
 
         context.solve(constraint::Type_equality {
             .constrainer_type = function.resolved_signature.return_type,
@@ -330,7 +330,7 @@ auto resolution::Context::resolve_struct(utl::Wrapper<Struct_info> const wrapped
 
     if (auto* const structure = std::get_if<hir::definition::Struct>(&info.value)) {
         Definition_state_guard const state_guard { *this, info.state, structure->name };
-        info.value = resolve_struct_impl(*structure, *this, Scope { *this }, info.home_namespace);
+        info.value = resolve_struct_impl(*structure, *this, Scope {}, info.home_namespace);
     }
     
     return utl::get<mir::Struct>(info.value);
@@ -342,7 +342,7 @@ auto resolution::Context::resolve_enum(utl::Wrapper<Enum_info> const wrapped_inf
 
     if (auto* const enumeration = std::get_if<hir::definition::Enum>(&info.value)) {
         Definition_state_guard const state_guard { *this, info.state, enumeration->name };
-        info.value = resolve_enum_impl(*enumeration, *this, Scope { *this }, info.home_namespace, info.enumeration_type);
+        info.value = resolve_enum_impl(*enumeration, *this, Scope {}, info.home_namespace, info.enumeration_type);
     }
     
     return utl::get<mir::Enum>(info.value);
@@ -354,7 +354,7 @@ auto resolution::Context::resolve_alias(utl::Wrapper<Alias_info> const wrapped_i
 
     if (auto* const alias = std::get_if<hir::definition::Alias>(&info.value)) {
         Definition_state_guard const state_guard { *this, info.state, alias->name };
-        Scope scope { *this };
+        Scope scope;
         mir::Type const aliased_type = resolve_type(alias->type, scope, *info.home_namespace);
         ensure_non_generalizable(aliased_type, "An aliased type");
         info.value = mir::Alias { .aliased_type = aliased_type, .name = alias->name, };
@@ -381,7 +381,7 @@ auto resolution::Context::resolve_typeclass(utl::Wrapper<Typeclass_info> const w
 
             auto [signature_scope, mir_signature] =
                 resolve_function_signature_only(*this, *info.home_namespace, std::move(signature), std::move(template_parameters), Allow_generalization::no);
-            signature_scope.warn_about_unused_bindings();
+            signature_scope.warn_about_unused_bindings(*this);
 
             ensure_non_generalizable(mir_signature.function_type, "A class function signature");
 
@@ -407,7 +407,7 @@ auto resolution::Context::resolve_implementation(utl::Wrapper<Implementation_inf
     if (auto* const implementation = std::get_if<hir::definition::Implementation>(&info.value)) {
         // Definition_state_guard is not needed because an implementation block can not be referred to
 
-        Scope scope { *this };
+        Scope scope;
         mir::Type const self_type = resolve_type(implementation->type, scope, *info.home_namespace);
 
         utl::Wrapper<Namespace> self_type_associated_namespace = std::invoke([&] {

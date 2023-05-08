@@ -523,7 +523,7 @@ namespace {
             mir::Expression block_result = recurse(*block.result_expression, &block_scope);
             mir::Type const result_type  = block_result.type;
 
-            block_scope.warn_about_unused_bindings();
+            block_scope.warn_about_unused_bindings(context);
 
             bool const is_pure = block_result.is_pure
                 && ranges::all_of(side_effects, &mir::Expression::is_pure);
@@ -541,7 +541,7 @@ namespace {
         }
 
         auto operator()(hir::expression::Local_type_alias& alias) -> mir::Expression {
-            scope.bind_type(alias.identifier, {
+            scope.bind_type(context, alias.identifier, {
                 .type               = context.resolve_type(*alias.aliased_type, scope, space),
                 .has_been_mentioned = false,
                 .source_view        = this_expression.source_view

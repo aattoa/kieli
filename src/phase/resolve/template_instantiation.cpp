@@ -178,7 +178,7 @@ namespace {
         std::span<mir::Template_parameter const> const parameters,
         utl::Source_view                         const instantiation_view) -> void
     {
-        Scope empty_scope { context };
+        Scope empty_scope;
         for (mir::Template_parameter const& parameter : parameters) {
             utl::always_assert(parameter.default_argument.has_value());
             mir::Template_argument default_argument = substitution_context.recurse(
@@ -935,7 +935,7 @@ auto resolution::Context::instantiate_function_template_with_synthetic_arguments
     utl::Source_view            const instantiation_view) -> utl::Wrapper<Function_info>
 {
     auto const arguments = synthetize_arguments_for(resolve_function(template_info).signature.template_parameters, instantiation_view);
-    Scope instantiation_scope { *this };
+    Scope instantiation_scope;
     return instantiate_function_template(template_info, arguments, instantiation_view, instantiation_scope, *template_info->home_namespace);
 }
 
@@ -944,7 +944,7 @@ auto resolution::Context::instantiate_struct_template_with_synthetic_arguments(
     utl::Source_view                   const instantiation_view) -> utl::Wrapper<Struct_info>
 {
     auto const arguments = synthetize_arguments_for(resolve_struct_template(template_info).parameters, instantiation_view);
-    Scope instantiation_scope { *this };
+    Scope instantiation_scope;
     return instantiate_struct_template(template_info, arguments, instantiation_view, instantiation_scope, *template_info->home_namespace);
 }
 
@@ -953,7 +953,7 @@ auto resolution::Context::instantiate_enum_template_with_synthetic_arguments(
     utl::Source_view                 const instantiation_view) -> utl::Wrapper<Enum_info>
 {
     auto const arguments = synthetize_arguments_for(resolve_enum_template(template_info).parameters, instantiation_view);
-    Scope instantiation_scope { *this };
+    Scope instantiation_scope;
     return instantiate_enum_template(template_info, arguments, instantiation_view, instantiation_scope, *template_info->home_namespace);
 }
 
@@ -962,6 +962,6 @@ auto resolution::Context::instantiate_alias_template_with_synthetic_arguments(
     utl::Source_view                  const instantiation_view) -> utl::Wrapper<Alias_info>
 {
     auto const arguments = synthetize_arguments_for(resolve_alias_template(template_info).parameters, instantiation_view);
-    Scope instantiation_scope { *this };
+    Scope instantiation_scope;
     return instantiate_alias_template(template_info, arguments, instantiation_view, instantiation_scope, *template_info->home_namespace);
 }

@@ -65,18 +65,14 @@ namespace {
 }
 
 
-resolution::Scope::Scope(Context& context) noexcept
-    : context { &context } {}
-
-
-auto resolution::Scope::bind_variable(compiler::Identifier const identifier, Variable_binding&& binding) -> void {
-    add_binding(*context, variable_bindings.container(), identifier, binding, "variable");
+auto resolution::Scope::bind_variable(Context& context, compiler::Identifier const identifier, Variable_binding&& binding) -> void {
+    add_binding(context, variable_bindings.container(), identifier, binding, "variable");
 }
-auto resolution::Scope::bind_type(compiler::Identifier const identifier, Type_binding&& binding) -> void {
-    add_binding(*context, type_bindings.container(), identifier, binding, "type alias");
+auto resolution::Scope::bind_type(Context& context, compiler::Identifier const identifier, Type_binding&& binding) -> void {
+    add_binding(context, type_bindings.container(), identifier, binding, "type binding");
 }
-auto resolution::Scope::bind_mutability(compiler::Identifier const identifier, Mutability_binding&& binding) -> void {
-    add_binding(*context, mutability_bindings.container(), identifier, binding, "mutability binding");
+auto resolution::Scope::bind_mutability(Context& context, compiler::Identifier const identifier, Mutability_binding&& binding) -> void {
+    add_binding(context, mutability_bindings.container(), identifier, binding, "mutability binding");
 }
 
 
@@ -101,14 +97,12 @@ auto resolution::Scope::find_mutability(compiler::Identifier const identifier) n
 
 
 auto resolution::Scope::make_child() noexcept -> Scope {
-    Scope child { *context };
-    child.parent = this;
-    return child;
+    Scope child; child.parent = this; return child;
 }
 
-
-auto resolution::Scope::warn_about_unused_bindings() -> void {
-    warn_about_unused_bindings_impl(*context, variable_bindings.container(), "variable");
-    warn_about_unused_bindings_impl(*context, type_bindings.container(), "type alias");
-    warn_about_unused_bindings_impl(*context, mutability_bindings.container(), "mutability binding");
+auto resolution::Scope::warn_about_unused_bindings(Context& context) -> void {
+    if (context.compilation_info.get()->diagnostics.warning_level() == utl::diagnostics::Level::suppress) return;
+    warn_about_unused_bindings_impl(context, variable_bindings.container(), "variable");
+    warn_about_unused_bindings_impl(context, type_bindings.container(), "type alias");
+    warn_about_unused_bindings_impl(context, mutability_bindings.container(), "mutability binding");
 }

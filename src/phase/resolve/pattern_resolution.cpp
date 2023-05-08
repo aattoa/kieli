@@ -47,7 +47,7 @@ namespace {
 
             auto const variable_tag = context.fresh_local_variable_tag();
 
-            scope.bind_variable(name.identifier, {
+            scope.bind_variable(context, name.identifier, {
                 .type               = type,
                 .mutability         = mutability,
                 .variable_tag       = variable_tag,
@@ -102,7 +102,7 @@ namespace {
             mir::Pattern          aliased_pattern = recurse(*as.aliased_pattern);
             mir::Mutability const mutability      = context.resolve_mutability(as.alias.mutability, scope);
 
-            scope.bind_variable(as.alias.identifier, {
+            scope.bind_variable(context, as.alias.identifier, {
                 .type               = aliased_pattern.type,
                 .mutability         = mutability,
                 .variable_tag       = context.fresh_local_variable_tag(),
