@@ -24,21 +24,21 @@ endif ()
 
 # Set globally visible include directories
 include_directories(
-    kieli/libutl-common
-    kieli/libutl-readline
-    kieli/libutl-source
-    kieli/libutl-color
-    kieli/libutl-cli
-    kieli/libutl-diagnostics
-    kieli/liblex
-    kieli/libparse
-    kieli/libdesugar
-    kieli/libresolve
-    kieli/libreify
-    kieli/liblower
-    kieli/libvm
-    kieli/libcompiler-pipeline
-    kieli/compiler
+    src/libutl-common
+    src/libutl-readline
+    src/libutl-source
+    src/libutl-color
+    src/libutl-cli
+    src/libutl-diagnostics
+    src/liblex
+    src/libparse
+    src/libdesugar
+    src/libresolve
+    src/libreify
+    src/liblower
+    src/libvm
+    src/libcompiler-pipeline
+    src/compiler
     dependencies/range-v3/include
     dependencies/optional/include
     dependencies/expected/include)
@@ -46,21 +46,21 @@ include_directories(
 
 add_subdirectory(dependencies/fmt)
 add_subdirectory(dependencies/Catch2)
-add_subdirectory(kieli/libutl-common)
-add_subdirectory(kieli/libutl-readline)
-add_subdirectory(kieli/libutl-source)
-add_subdirectory(kieli/libutl-color)
-add_subdirectory(kieli/libutl-cli)
-add_subdirectory(kieli/libutl-diagnostics)
-add_subdirectory(kieli/liblex)
-add_subdirectory(kieli/libparse)
-add_subdirectory(kieli/libdesugar)
-add_subdirectory(kieli/libresolve)
-add_subdirectory(kieli/libreify)
-add_subdirectory(kieli/liblower)
-add_subdirectory(kieli/libvm)
-add_subdirectory(kieli/libcompiler-pipeline)
-add_subdirectory(kieli/compiler)
+add_subdirectory(src/libutl-common)
+add_subdirectory(src/libutl-readline)
+add_subdirectory(src/libutl-source)
+add_subdirectory(src/libutl-color)
+add_subdirectory(src/libutl-cli)
+add_subdirectory(src/libutl-diagnostics)
+add_subdirectory(src/liblex)
+add_subdirectory(src/libparse)
+add_subdirectory(src/libdesugar)
+add_subdirectory(src/libresolve)
+add_subdirectory(src/libreify)
+add_subdirectory(src/liblower)
+add_subdirectory(src/libvm)
+add_subdirectory(src/libcompiler-pipeline)
+add_subdirectory(src/compiler)
 
 
 # Configure the testing executable
