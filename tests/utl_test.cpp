@@ -1,6 +1,6 @@
-#include "utl/utilities.hpp"
-#include "utl/safe_integer.hpp"
-#include "utl/flatmap.hpp"
+#include <libutl/common/utilities.hpp>
+#include <libutl/common/safe_integer.hpp>
+#include <libutl/common/flatmap.hpp>
 #include <catch2/catch_test_macros.hpp>
 
 #define TEST(name) TEST_CASE(name, "[utl]")
