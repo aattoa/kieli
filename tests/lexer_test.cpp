@@ -1,5 +1,5 @@
-#include "utl/utilities.hpp"
-#include "phase/lex/lex.hpp"
+#include <libutl/common/utilities.hpp>
+#include <liblex/lex.hpp>
 #include <catch2/catch_test_macros.hpp>
 
 using Token = compiler::Lexical_token;

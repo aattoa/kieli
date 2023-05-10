@@ -1,6 +1,6 @@
-#include "utl/utilities.hpp"
-#include "vm/opcode.hpp"
-#include "vm/virtual_machine.hpp"
+#include <libutl/common/utilities.hpp>
+#include <libvm/virtual_machine.hpp>
+#include <libvm/opcode.hpp>
 #include <catch2/catch_test_macros.hpp>
 
 
