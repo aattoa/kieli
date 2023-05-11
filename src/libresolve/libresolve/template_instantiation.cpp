@@ -76,6 +76,7 @@ namespace {
 
     auto validate_template_argument_count(
         Context              & context,
+        std::string_view const template_name,
         utl::Source_view const instantiation_view,
         utl::Usize       const minimum_argument_count,
         utl::Usize       const maximum_argument_count,
@@ -84,14 +85,26 @@ namespace {
         if (minimum_argument_count == maximum_argument_count) {
             // There are no parameters with default arguments
             if (actual_argument_count != minimum_argument_count) {
-                context.error(instantiation_view, {
-                    .message = "The template requires exactly {} {}, but {} {} supplied",
-                    .message_arguments = fmt::make_format_args(
-                        minimum_argument_count,
-                        minimum_argument_count == 1 ? "argument" : "arguments",
-                        actual_argument_count,
-                        actual_argument_count == 1 ? "was" : "were")
-                });
+                if (maximum_argument_count == 0) {
+                    context.error(instantiation_view, {
+                        .message = "{} has no explicit template parameters, but {} explicit template {} supplied",
+                        .message_arguments = fmt::make_format_args(
+                            template_name,
+                            actual_argument_count,
+                            actual_argument_count == 1 ? "argument was" : "arguments were")
+                    });
+                }
+                else {
+                    context.error(instantiation_view, {
+                        .message = "{} requires exactly {} template {}, but {} {} supplied",
+                        .message_arguments = fmt::make_format_args(
+                            template_name,
+                            minimum_argument_count,
+                            minimum_argument_count == 1 ? "argument" : "arguments",
+                            actual_argument_count,
+                            actual_argument_count == 1 ? "was" : "were")
+                    });
+                }
             }
         }
         else {
@@ -99,8 +112,9 @@ namespace {
             if (actual_argument_count < minimum_argument_count) {
                 // Too few arguments
                 context.error(instantiation_view, {
-                    .message = "The template requires at least {} {}, but {} {} supplied",
+                    .message = "{} requires at least {} template {}, but {} {} supplied",
                     .message_arguments = fmt::make_format_args(
+                        template_name,
                         minimum_argument_count,
                         minimum_argument_count == 1 ? "argument" : "arguments",
                         actual_argument_count,
@@ -110,8 +124,9 @@ namespace {
             else if (actual_argument_count > maximum_argument_count) {
                 // Too many arguments
                 context.error(instantiation_view, {
-                    .message = "The template has only {} {}, but {} {} supplied",
+                    .message = "{} has only {} template {}, but {} template {} supplied",
                     .message_arguments = fmt::make_format_args(
+                        template_name,
                         maximum_argument_count,
                         maximum_argument_count == 1 ? "parameter" : "parameters",
                         actual_argument_count,
@@ -203,6 +218,7 @@ namespace {
         Namespace                                    & template_space,
         std::span<mir::Template_parameter const> const parameters,
         std::span<hir::Template_argument  const> const arguments,
+        std::string_view                         const template_name,
         utl::Source_view                         const instantiation_view) -> std::vector<mir::Template_argument>
     {
         auto const first_defaulted = ranges::find_if(parameters, [](auto const& parameter) { return parameter.default_argument.has_value(); });
@@ -213,6 +229,7 @@ namespace {
 
         validate_template_argument_count(
             context,
+            template_name,
             instantiation_view,
             minimum_required_argument_count,
             maximum_permitted_argument_count,
@@ -843,9 +860,8 @@ namespace {
     auto synthetize_arguments_for(std::span<mir::Template_parameter const> const parameters, utl::Source_view const argument_view)
         -> std::vector<hir::Template_argument>
     {
-        auto const first_implicit = ranges::find_if(parameters, &mir::Template_parameter::is_implicit);
         return std::vector(
-            utl::unsigned_distance(parameters.begin(), first_implicit),
+            ranges::count_if(parameters, std::not_fn(&mir::Template_parameter::is_implicit)),
             hir::Template_argument { hir::Template_argument::Wildcard { argument_view } });
     }
 
@@ -870,7 +886,15 @@ auto resolution::Context::instantiate_function_template(
         *this,
         function,
         template_info,
-        resolve_template_arguments(*this, scope, space, *template_info->home_namespace, function.signature.template_parameters, template_arguments, instantiation_view),
+        resolve_template_arguments(
+            *this,
+            scope,
+            space,
+            *template_info->home_namespace,
+            function.signature.template_parameters,
+            template_arguments,
+            function.signature.name.identifier.view(),
+            instantiation_view),
         scope,
         space);
 }
@@ -888,7 +912,15 @@ auto resolution::Context::instantiate_struct_template(
         *this,
         struct_template,
         template_info,
-        resolve_template_arguments(*this, scope, space, *template_info->home_namespace, struct_template.parameters, template_arguments, instantiation_view),
+        resolve_template_arguments(
+            *this,
+            scope,
+            space,
+            *template_info->home_namespace,
+            struct_template.parameters,
+            template_arguments,
+            struct_template.definition.name.identifier.view(),
+            instantiation_view),
         scope,
         space);
 }
@@ -906,7 +938,15 @@ auto resolution::Context::instantiate_enum_template(
         *this,
         enum_template,
         template_info,
-        resolve_template_arguments(*this, scope, space, *template_info->home_namespace, enum_template.parameters, template_arguments, instantiation_view),
+        resolve_template_arguments(
+            *this,
+            scope,
+            space,
+            *template_info->home_namespace,
+            enum_template.parameters,
+            template_arguments,
+            enum_template.definition.name.identifier.view(),
+            instantiation_view),
         scope,
         space);
 }
@@ -924,7 +964,15 @@ auto resolution::Context::instantiate_alias_template(
         *this,
         alias_template,
         template_info,
-        resolve_template_arguments(*this, scope, space, *template_info->home_namespace, alias_template.parameters, template_arguments, instantiation_view),
+        resolve_template_arguments(
+            *this,
+            scope,
+            space,
+            *template_info->home_namespace,
+            alias_template.parameters,
+            template_arguments,
+            alias_template.definition.name.identifier.view(),
+            instantiation_view),
         scope,
         space);
 }

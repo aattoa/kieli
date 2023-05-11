@@ -198,11 +198,11 @@ TEST("loop resolution") {
 }
 
 TEST("template argument resolution") {
-    REQUIRE_RESOLUTION_FAILURE(resolve("fn f[T](): T = ??? fn g() = f[]()"),                         "requires exactly 1 argument, but 0 were supplied");
-    REQUIRE_RESOLUTION_FAILURE(resolve("fn f[A, B](): (A, B) = ??? fn g() = f[I8]()"),               "requires exactly 2 arguments, but 1 was supplied");
-    REQUIRE_RESOLUTION_FAILURE(resolve("fn f[A, B](): (A, B) = ??? fn g() = f[I8, I16, I32]()"),     "requires exactly 2 arguments, but 3 were supplied");
-    REQUIRE_RESOLUTION_FAILURE(resolve("fn f[A, B=I64](): (A, B) = ??? fn g() = f[I8, I16, I32]()"), "has only 2 parameters, but 3 arguments were supplied");
-    REQUIRE_RESOLUTION_FAILURE(resolve("fn f[A, B, C=B](): (A, B, C) = ??? fn g() = f[I8]()"),       "requires at least 2 arguments, but 1 was supplied");
+    REQUIRE_RESOLUTION_FAILURE(resolve("fn f[T](): T = ??? fn g() = f[]()"),                         "requires exactly 1 template argument, but 0 were supplied");
+    REQUIRE_RESOLUTION_FAILURE(resolve("fn f[A, B](): (A, B) = ??? fn g() = f[I8]()"),               "requires exactly 2 template arguments, but 1 was supplied");
+    REQUIRE_RESOLUTION_FAILURE(resolve("fn f[A, B](): (A, B) = ??? fn g() = f[I8, I16, I32]()"),     "requires exactly 2 template arguments, but 3 were supplied");
+    REQUIRE_RESOLUTION_FAILURE(resolve("fn f[A, B=I64](): (A, B) = ??? fn g() = f[I8, I16, I32]()"), "has only 2 template parameters, but 3 template arguments were supplied");
+    REQUIRE_RESOLUTION_FAILURE(resolve("fn f[A, B, C=B](): (A, B, C) = ??? fn g() = f[I8]()"),       "requires at least 2 template arguments, but 1 was supplied");
     REQUIRE_RESOLUTION_SUCCESS(resolve("fn f[A, B=I64](): (A, B) = ??? fn g() = f[I8]()"));
     REQUIRE_RESOLUTION_SUCCESS(resolve("fn f[A, B=A](): (A, B) = ??? fn g() = f[I8]()"));
     REQUIRE_RESOLUTION_SUCCESS(resolve("namespace test { struct S = s: I64 fn f[A, B=S](): (A, B) = ??? } fn g() = test::f[I8]()"));
