@@ -40,7 +40,7 @@ namespace {
                 .constrained_type = parameter_pattern.type,
                 .constrainer_note = constraint::Explanation {
                     parameter_type.source_view(),
-                    "This parameter declared to be of type {0}"
+                    "This parameter is declared to be of type {0}"
                 },
                 .constrained_note {
                     parameter_pattern.source_view,

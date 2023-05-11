@@ -269,6 +269,12 @@ auto resolution::Context::resolve_template_parameters(
 
         auto const add_parameter = [&](mir::Template_parameter::Variant&& value) {
             auto const make_default_argument = [&](hir::Template_argument&& default_argument) {
+                // Validate the default argument by resolving it here, but discard the result
+                utl::match(default_argument.value,
+                        [&](utl::Wrapper<hir::Type>       const type_argument)       { (void)resolve_type(*type_argument, parameter_scope, space); },
+                        [&](utl::Wrapper<hir::Expression> const value_argument)      { (void)resolve_expression(*value_argument, parameter_scope, space); },
+                        [&](ast::Mutability               const mutability_argument) { (void)resolve_mutability(mutability_argument, parameter_scope); },
+                        [&](hir::Template_argument::Wildcard) {});
                 return mir::Template_default_argument {
                     .argument = std::move(default_argument),
                     .scope    = std::make_unique<Scope>(parameter_scope),
