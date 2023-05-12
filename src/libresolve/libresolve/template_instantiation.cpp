@@ -546,7 +546,6 @@ namespace {
         auto operator()(mir::expression::Let_binding const& binding) -> R {
             return mir::expression::Let_binding {
                 .pattern     = context.recurse(binding.pattern),
-                .type        = context.recurse(binding.type),
                 .initializer = context.recurse(binding.initializer),
             };
         }
