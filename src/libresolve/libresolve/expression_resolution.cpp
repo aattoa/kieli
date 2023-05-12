@@ -558,51 +558,52 @@ namespace {
 
         auto operator()(hir::expression::Let_binding& let) -> mir::Expression {
             mir::Expression initializer = recurse(*let.initializer);
+            mir::Pattern pattern = context.resolve_pattern(*let.pattern, scope, space);
 
-            tl::optional<mir::Type> explicit_type;
-            if (let.type.has_value()) {
-                explicit_type = context.resolve_type(**let.type, scope, space);
+            mir::Type const type = std::invoke([&] {
+                if (!let.type.has_value())
+                    return pattern.type;
+                mir::Type const explicit_type = context.resolve_type(**let.type, scope, space);
                 context.solve(constraint::Type_equality {
-                    .constrainer_type = *explicit_type,
-                    .constrained_type = initializer.type,
+                    .constrainer_type = explicit_type,
+                    .constrained_type = pattern.type,
                     .constrainer_note = constraint::Explanation {
-                        (*let.type)->source_view,
-                        "The variable is specified to be of type {0}"
+                        explicit_type.source_view(),
+                        "The explicitly specified type is {0}",
                     },
-                    .constrained_note {
-                        let.initializer->source_view,
-                        "But its initializer is of type {1}"
-                    }
+                    .constrained_note = constraint::Explanation {
+                        pattern.source_view,
+                        "But the pattern is of type {1}",
+                    },
                 });
-            }
+                return explicit_type;
+            });
 
-            mir::Pattern    pattern = context.resolve_pattern(*let.pattern, scope, space);
-            mir::Type const type    = explicit_type.value_or(initializer.type);
+            context.solve(constraint::Type_equality {
+                .constrainer_type = type,
+                .constrained_type = initializer.type,
+                .constrainer_note = constraint::Explanation {
+                    type.source_view(),
+                    let.type.has_value()
+                        ? "The explicitly specified type is {0}"
+                        : "The pattern is of type {0}",
+                },
+                .constrained_note = constraint::Explanation {
+                    initializer.type.source_view(),
+                    "But the initializer is of type {1}",
+                },
+            });
 
             if (!pattern.is_exhaustive_by_itself) {
                 context.error(pattern.source_view, {
                     .message   = "An inexhaustive pattern can not be used in a let-binding",
-                    .help_note = "If you wish to conditionally bind the expression when the pattern matches, use `if let`",
+                    .help_note = "If you wish to conditionally bind the expression when the pattern matches, use 'if let'",
                 });
             }
-
-            context.solve(constraint::Type_equality {
-                .constrainer_type = type,
-                .constrained_type = pattern.type,
-                .constrainer_note = constraint::Explanation {
-                    type.source_view(),
-                    "This is of type {0}"
-                },
-                .constrained_note {
-                    pattern.source_view,
-                    "So it can not be bound to a pattern of type {1}"
-                }
-            });
 
             return {
                 .value = mir::expression::Let_binding {
                     .pattern     = context.wrap(std::move(pattern)),
-                    .type        = type,
                     .initializer = context.wrap(std::move(initializer)),
                 },
                 .type        = context.unit_type(this_expression.source_view),

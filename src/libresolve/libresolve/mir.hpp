@@ -17,6 +17,9 @@
 
 
 namespace resolution {
+    struct [[nodiscard]] Namespace;
+    class  [[nodiscard]] Scope;
+
     template <class>
     struct Definition_info;
 
@@ -35,7 +38,9 @@ using name##_template_info = Definition_info<hir::definition::name##_template>
 }
 
 
+
 namespace mir {
+
     struct Function;
     struct Struct;
     struct Enum;
@@ -46,7 +51,6 @@ namespace mir {
 
     template <class>
     struct Template;
-
 
     namespace dtl {
         template <class> struct From_HIR_impl;
@@ -143,12 +147,6 @@ template <> struct dtl::To_HIR_impl<name> : std::type_identity<hir::definition::
         auto with(utl::Source_view) const noexcept -> Mutability;
     };
 
-}
-
-
-
-namespace mir {
-
     class [[nodiscard]] Type {
     public:
         struct Variant;
@@ -240,10 +238,6 @@ namespace mir {
         using variant::operator=;
     };
 
-}
-
-
-namespace mir {
 
     struct Enum_constructor {
         ast::Name          name;
@@ -276,7 +270,6 @@ namespace mir {
         };
         struct Let_binding {
             utl::Wrapper<Pattern>    pattern;
-            Type                     type; // TODO: is this field necessary?
             utl::Wrapper<Expression> initializer;
         };
         struct Conditional {
@@ -394,16 +387,7 @@ namespace mir {
         bool             is_pure        = false;
     };
 
-}
 
-
-namespace resolution {
-    struct [[nodiscard]] Namespace;
-    class  [[nodiscard]] Scope;
-}
-
-
-namespace mir {
 
     template <class Definition>
     struct Template {
@@ -500,10 +484,7 @@ namespace mir {
     };
     using Instantiation_template = Template<Instantiation>;
 
-}
 
-
-namespace mir {
 
     namespace pattern {
         struct Wildcard {};
@@ -559,11 +540,7 @@ namespace mir {
         utl::Source_view source_view;
     };
 
-}
 
-
-
-namespace mir {
 
     struct Template_argument {
         using Variant = std::variant<Type, Expression, Mutability>;
@@ -602,9 +579,8 @@ namespace mir {
     };
 
 
-    enum class Unification_type_variable_kind {
-        general, integral
-    };
+
+    enum class Unification_type_variable_kind { general, integral };
 
     class Unification_type_variable_state {
     public:

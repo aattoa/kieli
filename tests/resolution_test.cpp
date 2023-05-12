@@ -58,6 +58,35 @@ TEST("name resolution") {
         "fn f(): (I32, ()) = ({ (((f()): I32, (()): ())): (I32, ()) }): (I32, ())");
 }
 
+TEST("pattern exhaustiveness checking") {
+    REQUIRE_RESOLUTION_FAILURE(resolve("fn f(5: I32) {}"),                        "inexhaustive");
+    REQUIRE_RESOLUTION_FAILURE(resolve("fn f() { let 5: I32 = ???; }"),           "inexhaustive");
+    REQUIRE_RESOLUTION_FAILURE(resolve("fn f() { let ((a, b), (5, d)) = ???; }"), "inexhaustive");
+    REQUIRE_RESOLUTION_SUCCESS(resolve("fn f() { let ((a, b), (c, d)) = ???; }"));
+}
+
+TEST("let binding resolution") {
+    REQUIRE_RESOLUTION_SUCCESS(resolve("fn f() { if let 5 = ??? {}; }"));
+    REQUIRE_RESOLUTION_FAILURE(resolve("fn f() { let x = x; }"), "no definition for 'x' in scope");
+    REQUIRE_RESOLUTION_SUCCESS(resolve("fn f() { let x = ???; }"));
+    REQUIRE_RESOLUTION_SUCCESS(resolve("fn f() { let x: _ = ???; }"));
+    REQUIRE_RESOLUTION_SUCCESS(resolve("fn f() { let x: typeof(x) = ???; }"));
+    REQUIRE(resolve("fn f() { let x: typeof(x) = ???; }") == resolve("fn f() { let x = ???; }"));
+    REQUIRE_RESOLUTION_FAILURE(resolve("fn f() { let x: typeof((x, x)) = ???; }"), "recursive unification variable solution");
+    REQUIRE_RESOLUTION_FAILURE(resolve(
+        "enum Option[T] = none | some(T)"
+        "fn f() { let _: Option[I32] = 5: I32; }"),
+        "Could not unify Option[I32] ~ I32");
+    REQUIRE_RESOLUTION_FAILURE(resolve(
+        "enum Option[T] = none | some(T)"
+        "fn f() { let Option[I32]::none = 5: I32; }"),
+        "Could not unify Option[I32] ~ I32");
+    REQUIRE_RESOLUTION_FAILURE(resolve(
+        "enum Option[T] = none | some(T)"
+        "fn f() { let Option[I32]::none = Option[I32]::some(5: I32); }"),
+        "inexhaustive");
+}
+
 TEST("scope") {
     REQUIRE_THAT(resolution_diagnostics("fn f() { let x = \?\?\?; }"),                 contains("unused local variable"));
     REQUIRE_THAT(resolution_diagnostics("fn f() { let x = \?\?\?; let x = \?\?\?; }"), contains("shadows an unused local variable"));
@@ -81,7 +110,6 @@ TEST("mutability") {
     REQUIRE_RESOLUTION_SUCCESS(resolve("fn f[m: mut]() { let mut?m x = ' '; &mut?m x }"));
     REQUIRE_RESOLUTION_FAILURE(resolve("fn f() { let x = ' '; &mut x }"),               "acquire mutable reference");
     REQUIRE_RESOLUTION_FAILURE(resolve("fn f[m: mut]() { let mut?m x = ' '; &mut x }"), "acquire mutable reference");
-
     REQUIRE(resolve(
         "fn f() {"
             "let x = 3.14;"
@@ -94,7 +122,6 @@ TEST("mutability") {
             "(let y: &Float = (&(x): Float): &Float): (); "
             "(let _: &Float = (&(*(y): &Float): Float): &Float): () "
         "}): ()");
-
     REQUIRE_RESOLUTION_FAILURE(resolve(
         "fn f() {"
             "let x = 3.14;"
@@ -102,16 +129,15 @@ TEST("mutability") {
             "let _ = &mut (*y)"
         "}"),
         "acquire mutable reference");
-
     REQUIRE(resolve(
-        "fn f() { let a = \?\?\?; let _: &I32 = &(*a); }") ==
-        "fn f(): () = ({ (let a: &I32 = (\?\?\?): &I32): (); (let _: &I32 = (&(*(a): &I32): I32): &I32): (); (()): () }): ()");
+        "fn f() { let a = \?\?\?; let b: &I32 = &(*a); b }") ==
+        "fn f(): &I32 = ({ (let a: &I32 = (\?\?\?): &I32): (); (let b: &I32 = (&(*(a): &I32): I32): &I32): (); (b): &I32 }): &I32");
     REQUIRE(resolve(
-        "fn f() { let a = \?\?\?; let _: &mut I32 = &mut (*a); }") ==
-        "fn f(): () = ({ (let a: &mut I32 = (\?\?\?): &mut I32): (); (let _: &mut I32 = (&mut (*(a): &mut I32): I32): &mut I32): (); (()): () }): ()");
+        "fn f() { let a = \?\?\?; let b: &mut I32 = &mut (*a); b }") ==
+        "fn f(): &mut I32 = ({ (let a: &mut I32 = (\?\?\?): &mut I32): (); (let b: &mut I32 = (&mut (*(a): &mut I32): I32): &mut I32): (); (b): &mut I32 }): &mut I32");
     REQUIRE(resolve(
-        "fn f() { let a = \?\?\?; let b = &mut *a; let _: Char = *b; }") ==
-        "fn f(): () = ({ (let a: &mut Char = (\?\?\?): &mut Char): (); (let b: &mut Char = (&mut (*(a): &mut Char): Char): &mut Char): (); (let _: Char = (*(b): &mut Char): Char): (); (()): () }): ()");
+        "fn f() { let a = \?\?\?; let b = &mut *a; let b: Char = *b; b }") ==
+        "fn f(): Char = ({ (let a: &mut Char = (\?\?\?): &mut Char): (); (let b: &mut Char = (&mut (*(a): &mut Char): Char): &mut Char): (); (let b: Char = (*(b): &mut Char): Char): (); (b): Char }): Char");
 }
 
 TEST("return type resolution") {
@@ -146,12 +172,13 @@ TEST("match case unification") {
 }
 
 TEST("pointer unification") {
-    REQUIRE(resolve("fn f(): Char { let x = \?\?\?; unsafe_dereference(addressof(x)) }")
-    ==
-    "fn f(): Char = ({ "
-        "(let x: Char = (\?\?\?): Char): (); "
-        "(unsafe_dereference((addressof((x): Char)): *Char)): Char"
-    " }): Char");
+    REQUIRE(resolve(
+        "fn f(): Char { let x = \?\?\?; unsafe_dereference(addressof(x)) }")
+        ==
+        "fn f(): Char = ({ "
+            "(let x: Char = (\?\?\?): Char): (); "
+            "(unsafe_dereference((addressof((x): Char)): *Char)): Char"
+        " }): Char");
 }
 
 TEST("reference mutability coercion") {
@@ -184,10 +211,8 @@ TEST("loop resolution") {
     REQUIRE_RESOLUTION_FAILURE(resolve("fn f() { continue; }"), "can not appear outside of a loop");
     REQUIRE_RESOLUTION_FAILURE(resolve("fn f() { while \?\?\? { break \"\"; } }"),  "non-unit type");
     REQUIRE_RESOLUTION_FAILURE(resolve("fn f() { loop { break \"\"; break 5; } }"), "previous break expressions had results of type String");
-
     REQUIRE_THAT(resolution_diagnostics("fn f() = while true {}"),  contains("'loop' instead of 'while true'"));
     REQUIRE_THAT(resolution_diagnostics("fn f() = while false {}"), contains("will never be run"));
-
     REQUIRE(resolve("fn f() = while \?\?\? {}") ==
         "fn f(): () = ({ "
             "(loop (if (\?\?\?): Bool "
@@ -220,6 +245,8 @@ TEST("template argument deduction") {
         "fn h(): I32 = ({ "
             "(f[I32]((false): Bool, (10): I32, (20): I32)): I32"
         " }): I32");
+    REQUIRE(resolve("enum Option[T] = none | some(T) fn f() { let _: Option[I32] = Option[I32]::some(5: I32) }")
+         == resolve("enum Option[T] = none | some(T) fn f() { let _ = Option::some(5: I32) }"));
 }
 
 TEST("multiple template instantiations") {
@@ -352,7 +379,6 @@ TEST("function generalization") {
         ==
         "fn g(): String = ({ (f[String]()): String }): String"
         "fn h(): I32 = ({ (f[I32]()): I32 }): I32");
-
     REQUIRE(resolve(
         "fn f(x: _) = x "
         "fn g() = f(5: U8) "
@@ -360,7 +386,6 @@ TEST("function generalization") {
         ==
         "fn g(): U8 = ({ (f[U8]((5): U8)): U8 }): U8"
         "fn h(): String = ({ (f[String]((\"hello\"): String)): String }): String");
-
     REQUIRE(resolve(
         "fn f(x: _, y: typeof(x)) = (x, y)"
         "fn g() = f(\?\?\?, 3.14)")
@@ -368,7 +393,6 @@ TEST("function generalization") {
         "fn g(): (Float, Float) = ({ "
             "(f[Float]((\?\?\?): Float, (3.14): Float)): (Float, Float)"
         " }): (Float, Float)");
-
     REQUIRE(resolve(
         "fn f(x: _, y: typeof(x)) = (x, y)"
         "fn g(): (String, String) = f(\?\?\?, \?\?\?)")
@@ -376,12 +400,10 @@ TEST("function generalization") {
         "fn g(): (String, String) = ({ "
             "(f[String]((\?\?\?): String, (\?\?\?): String)): (String, String)"
         " }): (String, String)");
-
     REQUIRE_RESOLUTION_FAILURE(resolve(
         "fn f(x: _, y: typeof(x)) = (x, y)"
         "fn g() = f(5: U8, 3.14)"),
         "but the argument is of type Float");
-
     REQUIRE_RESOLUTION_FAILURE(resolve("struct S = x: typeof(\?\?\?)"), "contains an unsolved");
     REQUIRE_RESOLUTION_FAILURE(resolve("struct S = x: _"),              "contains an unsolved");
     REQUIRE_RESOLUTION_FAILURE(resolve("enum E = e(_)"),                "contains an unsolved");

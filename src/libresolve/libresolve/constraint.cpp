@@ -48,7 +48,7 @@ namespace {
         mir::Type                             const solution) -> void
     {
         context.error(constraint.constrained_type.source_view(), {
-            .message           = "Recursive type variable solution: {} = {}",
+            .message           = "Recursive unification variable solution: {} = {}",
             .message_arguments = fmt::make_format_args(variable, solution)
         });
     }
