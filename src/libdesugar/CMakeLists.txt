@@ -17,4 +17,3 @@ target_precompile_headers(libdesugar
 
 target_link_libraries(libdesugar
     PRIVATE fmt::fmt)
-

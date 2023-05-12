@@ -11,4 +11,3 @@ target_precompile_headers(liblex
 
 target_link_libraries(liblex
     PRIVATE fmt::fmt)
-

@@ -22,4 +22,3 @@ target_link_libraries(kieli
     PRIVATE liblower
     PRIVATE libcompiler-pipeline
     PRIVATE fmt::fmt)
-

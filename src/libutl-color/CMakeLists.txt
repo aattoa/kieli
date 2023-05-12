@@ -9,4 +9,3 @@ target_precompile_headers(libutl-color
 
 target_link_libraries(libutl-color
     PRIVATE fmt::fmt)
-

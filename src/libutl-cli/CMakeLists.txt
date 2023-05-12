@@ -10,4 +10,3 @@ target_precompile_headers(libutl-cli
 target_link_libraries(libutl-cli
     PRIVATE libutl-diagnostics
     PRIVATE fmt::fmt)
-

@@ -25,4 +25,3 @@ target_precompile_headers(libresolve
 
 target_link_libraries(libresolve
     PRIVATE fmt::fmt)
-

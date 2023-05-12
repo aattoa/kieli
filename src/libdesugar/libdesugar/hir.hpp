@@ -32,6 +32,7 @@ namespace hir {
         using Type       = hir::Type;
         using Definition = hir::Definition;
     };
+    static_assert(ast::tree_configuration<HIR_configuration>);
 
     using Template_argument  = ast::Basic_template_argument  <HIR_configuration>;
     using Root_qualifier     = ast::Basic_root_qualifier     <HIR_configuration>;
@@ -42,11 +43,8 @@ namespace hir {
     using Function_parameter = ast::Basic_function_parameter <HIR_configuration>;
 
     struct [[nodiscard]] Function_argument;
-}
 
 
-
-namespace hir {
 
     namespace expression {
         template <class T>
@@ -214,17 +212,13 @@ namespace hir {
             expression::Placement_init,
             expression::Move,
             expression::Meta,
-            expression::Hole
-        >;
+            expression::Hole>;
 
         Variant          value;
         utl::Source_view source_view;
     };
 
-}
 
-
-namespace hir {
 
     namespace pattern {
         using ast::pattern::Literal;
@@ -265,16 +259,13 @@ namespace hir {
             pattern::Tuple,
             pattern::Slice,
             pattern::As,
-            pattern::Guarded
-        >;
+            pattern::Guarded>;
+
         Variant         value;
         utl::Source_view source_view;
     };
 
-}
 
-
-namespace hir {
 
     namespace type {
         using ast::type::Primitive;
@@ -346,10 +337,8 @@ namespace hir {
         utl::Source_view source_view;
     };
 
-}
 
 
-namespace hir {
     using Function_signature          = ast::Basic_function_signature          <HIR_configuration>;
     using Function_template_signature = ast::Basic_function_template_signature <HIR_configuration>;
     using Type_signature              = ast::Basic_type_signature              <HIR_configuration>;
@@ -379,17 +368,14 @@ namespace hir {
         using Basic_definition::Basic_definition;
         using Basic_definition::operator=;
     };
-}
 
 
+    struct Function_argument {
+        Expression               expression;
+        tl::optional<ast::Name> name;
+    };
 
-struct hir::Function_argument {
-    Expression               expression;
-    tl::optional<ast::Name> name;
-};
 
-
-namespace hir {
     template <class T>
     concept node = utl::one_of<T, Expression, Type, Pattern>;
 
@@ -398,13 +384,13 @@ namespace hir {
     struct Module {
         std::vector<Definition> definitions;
     };
+
 }
 
 
 DECLARE_FORMATTER_FOR(hir::Expression);
 DECLARE_FORMATTER_FOR(hir::Type);
 DECLARE_FORMATTER_FOR(hir::Pattern);
-
 DECLARE_FORMATTER_FOR(hir::Function_parameter);
 
 

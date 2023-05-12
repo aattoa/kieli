@@ -16,4 +16,3 @@ target_precompile_headers(libreify
 
 target_link_libraries(libreify
     PRIVATE fmt::fmt)
-

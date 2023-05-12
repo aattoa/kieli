@@ -151,8 +151,8 @@ namespace cir {
             expression::Let_binding,
             expression::Local_variable_reference,
             expression::Conditional,
-            expression::Hole
-        >;
+            expression::Hole>;
+
         Variant          value;
         Type             type;
         utl::Source_view source_view;
