@@ -11,4 +11,3 @@ target_link_libraries(libutl-diagnostics
     PRIVATE libutl-source
     PRIVATE libutl-color
     PRIVATE fmt::fmt)
-

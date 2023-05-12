@@ -9,4 +9,3 @@ target_precompile_headers(libutl-source
 
 target_link_libraries(libutl-source
     PRIVATE fmt::fmt)
-

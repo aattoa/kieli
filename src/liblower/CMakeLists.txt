@@ -12,4 +12,3 @@ target_precompile_headers(liblower
 target_link_libraries(liblower
     PRIVATE libreify
     PRIVATE fmt::fmt)
-

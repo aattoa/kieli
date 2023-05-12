@@ -13,4 +13,3 @@ target_precompile_headers(libvm
 
 target_link_libraries(libvm
     PRIVATE fmt::fmt)
-

@@ -9,4 +9,3 @@ target_precompile_headers(libcompiler-pipeline
 
 target_link_libraries(libcompiler-pipeline
     PRIVATE fmt::fmt)
-

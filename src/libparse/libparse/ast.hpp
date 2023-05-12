@@ -60,6 +60,7 @@ namespace ast {
         typename T::Pattern;
         typename T::Type;
         typename T::Definition;
+        requires std::is_empty_v<T>;
     };
 
 
@@ -100,11 +101,11 @@ namespace ast {
     template <tree_configuration Configuration>
     struct Basic_root_qualifier {
         struct Global {};
-        std::variant<
-            std::monostate,                            // id, id::id
-            Global,                                    // ::id
-            utl::Wrapper<typename Configuration::Type> // Type::id
-        > value;
+        using Variant = std::variant<
+            std::monostate,                             // id, id::id
+            Global,                                     // ::id
+            utl::Wrapper<typename Configuration::Type>>; // Type::id
+        Variant value;
     };
 
     template <tree_configuration Configuration>
@@ -140,8 +141,7 @@ namespace ast {
         using Variant = std::variant<
             Type_parameter,
             Value_parameter,
-            Mutability_parameter
-        >;
+            Mutability_parameter>;
 
         Variant                                              value;
         Name                                                 name;
@@ -158,11 +158,12 @@ namespace ast {
 
 
     struct AST_configuration {
-        using Expression  = ::ast::Expression;
-        using Pattern     = ::ast::Pattern;
-        using Type        = ::ast::Type;
-        using Definition  = ::ast::Definition;
+        using Expression  = ast::Expression;
+        using Pattern     = ast::Pattern;
+        using Type        = ast::Type;
+        using Definition  = ast::Definition;
     };
+    static_assert(tree_configuration<AST_configuration>);
 
     using Template_argument  = Basic_template_argument  <AST_configuration>;
     using Qualifier          = Basic_qualifier          <AST_configuration>;
@@ -172,10 +173,7 @@ namespace ast {
     using Template_parameter = Basic_template_parameter <AST_configuration>;
     using Function_parameter = Basic_function_parameter <AST_configuration>;
 
-}
 
-
-namespace ast {
 
     namespace expression {
         template <class T>
@@ -211,7 +209,7 @@ namespace ast {
         struct Binary_operator_invocation {
             utl::Wrapper<Expression> left;
             utl::Wrapper<Expression> right;
-            compiler::Identifier    op;
+            compiler::Identifier     op;
         };
         struct Struct_field_access {
             utl::Wrapper<Expression> base_expression;
@@ -385,15 +383,13 @@ namespace ast {
             expression::Placement_init,
             expression::Move,
             expression::Meta,
-            expression::Hole
-        >;
+            expression::Hole>;
+
         Variant          value;
         utl::Source_view source_view;
     };
 
-}
 
-namespace ast {
 
     namespace pattern {
         template <class T>
@@ -439,15 +435,13 @@ namespace ast {
             pattern::Tuple,
             pattern::Slice,
             pattern::As,
-            pattern::Guarded
-        >;
-        Variant         value;
+            pattern::Guarded>;
+
+        Variant          value;
         utl::Source_view source_view;
     };
 
-}
 
-namespace ast {
 
     namespace type {
         enum class Integer {
@@ -519,19 +513,13 @@ namespace ast {
             type::Instance_of,
             type::Reference,
             type::Pointer,
-            type::Template_application
-        >;
-        Variant         value;
+            type::Template_application>;
+
+        Variant          value;
         utl::Source_view source_view;
     };
 
-}
 
-namespace hir {
-    struct HIR_configuration;
-}
-
-namespace ast {
 
     struct [[nodiscard]] Self_parameter {
         Mutability        mutability;
@@ -696,16 +684,13 @@ namespace ast {
         using Basic_definition::operator=;
     };
 
-}
+
+    struct Function_argument {
+        Expression         expression;
+        tl::optional<Name> name;
+    };
 
 
-struct ast::Function_argument {
-    Expression         expression;
-    tl::optional<Name> name;
-};
-
-
-namespace ast {
     template <class T>
     concept node = utl::one_of<T, Expression, Type, Pattern>;
 
@@ -716,6 +701,7 @@ namespace ast {
         tl::optional<compiler::String> name;
         std::vector<compiler::String>  imports;
     };
+
 }
 
 

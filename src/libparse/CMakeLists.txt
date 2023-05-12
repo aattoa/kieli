@@ -14,4 +14,3 @@ target_precompile_headers(libparse
 
 target_link_libraries(libparse
     PRIVATE fmt::fmt)
-
