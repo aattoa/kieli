@@ -153,7 +153,7 @@ namespace {
             std::string_view                    const view,
             utl::diagnostics::Message_arguments const arguments) -> void
         {
-            compilation_info.get()->diagnostics.emit_simple_error(arguments.add_source_view(source_view_for(view)));
+            compilation_info.get()->diagnostics.emit_error(arguments.add_source_view(source_view_for(view)));
         }
         [[noreturn]]
         auto error(
@@ -500,11 +500,8 @@ namespace {
             }
             else {
                 context.error(
-                    { state.pointer, 2 }, // view of the base specifier
-                    {
-                        .message = "Expected an integer literal after the base-{} specifier",
-                        .message_arguments = fmt::make_format_args(base)
-                    });
+                    std::string_view { state.pointer, 2 }, // view of the base specifier
+                    { "Expected an integer literal after the base-{} specifier"_format(base) });
             }
         }
         else if (integer.is_too_large()) {

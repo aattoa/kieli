@@ -190,7 +190,7 @@ namespace resolution {
         }
 
 
-        [[noreturn]] auto error(utl::Source_view, utl::diagnostics::Message_arguments) -> void;
+        [[noreturn]] auto error(utl::Source_view, utl::diagnostics::Message_arguments const&) -> void;
 
         [[nodiscard]] auto diagnostics() -> utl::diagnostics::Builder&;
 

@@ -55,8 +55,8 @@ resolution::Resolution_constants::Resolution_constants(mir::Node_arena& arena)
     , self_placeholder_type { arena.wrap<mir::Type::Variant>(mir::type::Self_placeholder {}) } {}
 
 
-auto resolution::Context::error(utl::Source_view const source_view, utl::diagnostics::Message_arguments const arguments) -> void {
-    diagnostics().emit_simple_error(arguments.add_source_view(source_view));
+auto resolution::Context::error(utl::Source_view const source_view, utl::diagnostics::Message_arguments const& arguments) -> void {
+    diagnostics().emit_error(arguments.add_source_view(source_view));
 }
 
 auto resolution::Context::diagnostics() -> utl::diagnostics::Builder& {
@@ -163,10 +163,7 @@ auto resolution::Context::associated_namespace(mir::Type type)
 {
     if (tl::optional space = associated_namespace_if(type))
         return *space;
-    error(type.source_view(), {
-        .message           = "{} does not have an associated namespace",
-        .message_arguments = fmt::make_format_args(type)
-    });
+    error(type.source_view(), { "{} does not have an associated namespace"_format(type) });
 }
 
 
@@ -192,8 +189,7 @@ namespace {
                         .note        = "Later defined here"
                     }
                 }),
-                .message           = "{} erroneously redefined",
-                .message_arguments = fmt::make_format_args(name)
+                .message = "{} erroneously redefined"_format(name),
             });
         }
         else {
@@ -230,12 +226,7 @@ auto resolution::Context::resolve_mutability(ast::Mutability const mutability, S
                 mutability_binding->has_been_mentioned = true;
                 return mutability_binding->mutability.with(mutability.source_view);
             }
-            else {
-                error(mutability.source_view, {
-                    .message           = "No mutability parameter '{}: mut' in scope",
-                    .message_arguments = fmt::make_format_args(parameterized.identifier)
-                });
-            }
+            error(mutability.source_view, { "No mutability parameter '{}: mut' in scope"_format(parameterized.identifier) });
         }
     );
 }

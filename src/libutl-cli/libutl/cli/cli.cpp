@@ -75,35 +75,32 @@ namespace {
             utl::disable_short_string_optimization(command_line_string);
 
             // The erroneous view must be a view into command_line_string
-            std::string_view erroneous_view;
-
-            if (pointer == stop) {
-                auto const* const end = command_line_string.data() + command_line_string.size();
-                erroneous_view = { end - 1, end };
-            }
-            else {
-                char const* view_begin = command_line_string.data();
-                for (auto const* view = start; view != pointer; ++view) {
-                    view_begin += view->size() + 1; // +1 for the whitespace delimiter
+            std::string_view const erroneous_view = std::invoke([&] {
+                if (pointer == stop) {
+                    char const* const end = command_line_string.data() + command_line_string.size();
+                    return std::string_view { end - 1, end };
                 }
-                erroneous_view = { view_begin, pointer->size() };
-            }
+                else {
+                    char const* view_begin = command_line_string.data();
+                    for (auto const* view = start; view != pointer; ++view)
+                        view_begin += view->size() + 1; // +1 for the whitespace delimiter
+                    return std::string_view { view_begin, pointer->size() };
+                }
+            });
 
             auto fake_source_arena = utl::Wrapper_arena<utl::Source>::with_page_size(1);
             auto const fake_source = fake_source_arena.wrap("[command line]", std::move(command_line_string));
 
             utl::diagnostics::Builder builder;
-            builder.emit_simple_error(
+            builder.emit_error(
                 arguments.add_source_view(
                     utl::Source_view {
                         fake_source,
                         erroneous_view,
                         utl::Source_position {},
                         utl::Source_position { 1, 1 + utl::unsigned_distance(fake_source->string().data(), erroneous_view.data()) }
-                    }
-                ),
-                utl::diagnostics::Type::recoverable // Prevent exception
-            );
+                    }),
+                utl::diagnostics::Type::recoverable); // Prevent exception
             return builder;
         }
 
@@ -114,10 +111,7 @@ namespace {
 
         [[noreturn]]
         auto expected(std::string_view const expectation) const -> void {
-            error({
-                .message           = "Expected {}",
-                .message_arguments = fmt::make_format_args(expectation)
-            });
+            error({ fmt::format("Expected {}", expectation) });
         }
 
         [[nodiscard]]
@@ -132,11 +126,11 @@ namespace {
         if (context.is_finished())
             return tl::nullopt;
 
-        auto const view = context.extract();
+        std::string_view const view = context.extract();
 
         if constexpr (utl::one_of<T, cli::types::Int, cli::types::Float>) {
-            auto const* const start = view.data();
-            auto const* const stop  = start + view.size();
+            char const* const start = view.data();
+            char const* const stop  = start + view.size();
 
             T value;
             auto [ptr, ec] = std::from_chars(start, stop, value);
@@ -144,23 +138,17 @@ namespace {
             switch (ec) {
             case std::errc {}:
             {
-                if (ptr == stop) {
-                    return value;
-                }
-                else {
-                    context.retreat();
-                    context.error({
-                        .message           = "Unexpected suffix: '{}'",
-                        .message_arguments = fmt::make_format_args(std::string_view { ptr, stop })
-                    });
-                }
+                if (ptr == stop) return value;
+                context.retreat();
+                context.error({ fmt::format("Unexpected suffix: '{}'", std::string_view { ptr, stop }) });
             }
             case std::errc::result_out_of_range:
             {
                 context.retreat();
                 context.error({
-                    .message           = "The given value is too large to be represented by a {}-bit value",
-                    .message_arguments = fmt::make_format_args(sizeof(T) * CHAR_BIT)
+                    fmt::format(
+                        "The given value is too large to be represented by a {}-bit value",
+                        sizeof(T) * CHAR_BIT)
                 });
             }
             case std::errc::invalid_argument:
@@ -172,7 +160,6 @@ namespace {
                 utl::todo();
             }
         }
-
         else if constexpr (std::same_as<T, cli::types::Bool>) {
             std::string input;
             input.reserve(view.size());
@@ -193,7 +180,6 @@ namespace {
                 return tl::nullopt;
             }
         }
-
         else {
             static_assert(std::same_as<T, cli::types::Str>);
             return view;
@@ -209,30 +195,19 @@ namespace {
         for (auto const& value : parameter.values) {
             std::visit([&]<class T>(cli::Value<T> const& value) {
                 auto argument = extract_value<T>(context);
-
-                if (!argument) {
-                    context.error({
-                        .message           = "Expected an argument [{}]",
-                        .message_arguments = fmt::make_format_args(type_description<T>())
-                    });
-                }
+                if (!argument)
+                    context.error({ fmt::format("Expected an argument [{}]", type_description<T>()) });
 
                 if (value.minimum_value) {
                     if (*argument < *value.minimum_value) {
                         context.retreat();
-                        context.error({
-                            .message           = "The minimum allowed value is {}",
-                            .message_arguments = fmt::make_format_args(*value.minimum_value)
-                        });
+                        context.error({ fmt::format("The minimum allowed value is {}", *value.minimum_value) });
                     }
                 }
                 if (value.maximum_value) {
                     if (*argument > *value.maximum_value) {
                         context.retreat();
-                        context.error({
-                            .message = "The maximum allowed value is {}",
-                            .message_arguments = fmt::make_format_args(*value.maximum_value)
-                        });
+                        context.error({ fmt::format("The maximum allowed value is {}", *value.maximum_value) });
                     }
                 }
 
@@ -260,7 +235,7 @@ auto cli::parse_command_line(
         tl::optional<std::string> name;
 
         {
-            auto view = context.extract();
+            std::string_view view = context.extract();
 
             if (view.starts_with("--")) {
                 view.remove_prefix(2);
@@ -321,9 +296,9 @@ auto cli::parse_command_line(
             std::vector<Named_argument::Variant> arguments;
 
             for (auto const& value : parameter.values) {
-                std::visit([&]<class T>(Value<T> const& value) {
+                utl::match(value, [&](auto const& value) {
                     arguments.push_back(value.default_value.value());
-                }, value);
+                });
             }
 
             options.named_arguments.push_back(Named_argument {

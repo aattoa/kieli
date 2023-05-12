@@ -97,8 +97,8 @@ namespace {
                 context);
         }
         context.error(
-            { anchor, context.pointer },
-            "Expected an expression, but found a type");
+            make_source_view(anchor, context.pointer),
+            { "Expected an expression, but found a type" });
     }
 
 
@@ -148,24 +148,16 @@ namespace {
             auto condition = extract_condition(context);
 
             if (auto const* const literal = std::get_if<ast::expression::Literal<compiler::Boolean>>(&condition.value)) {
-                if (literal->value.value) {
-                    context.compilation_info.get()->diagnostics.emit_simple_note({
-                        .erroneous_view = condition.source_view,
-                        .message        = "Consider using 'loop' instead of 'while true'",
-                    });
-                }
-                else {
-                    context.compilation_info.get()->diagnostics.emit_simple_warning({
-                        .erroneous_view = condition.source_view,
-                        .message        = "Loop will never be run"
-                    });
-                }
+                if (literal->value.value)
+                    context.diagnostics().emit_note(condition.source_view, { "Consider using 'loop' instead of 'while true'" });
+                else
+                    context.diagnostics().emit_note(condition.source_view, { "Loop will never be run" });
             }
 
             return ast::expression::While_loop {
                 .label     = label,
                 .condition = context.wrap(std::move(condition)),
-                .body      = context.wrap(extract_loop_body(context))
+                .body      = context.wrap(extract_loop_body(context)),
             };
         }
         case Token::Type::for_:
@@ -178,7 +170,7 @@ namespace {
                 .label    = label,
                 .iterator = context.wrap(std::move(iterator)),
                 .iterable = context.wrap(std::move(iterable)),
-                .body     = context.wrap(extract_loop_body(context))
+                .body     = context.wrap(extract_loop_body(context)),
             };
         }
         default:
@@ -604,7 +596,9 @@ namespace {
                 return extract_struct_initializer(std::move(*type), context);
             }
 
-            context.error({ anchor, context.pointer }, "Expected an expression, but found a type");
+            context.error(
+                make_source_view(anchor, context.pointer),
+                { "Expected an expression, but found a type" });
         }
         return tl::nullopt;
     }

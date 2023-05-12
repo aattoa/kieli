@@ -1,8 +1,8 @@
 #pragma once
 
 #include <libutl/common/utilities.hpp>
-#include <compiler/compiler.hpp>
 #include <libutl/source/source.hpp>
+#include <libcompiler-pipeline/compiler-pipeline.hpp>
 
 
 namespace compiler {
@@ -10,7 +10,6 @@ namespace compiler {
     struct Signed_integer          { utl::Isize value {}; };
     struct Unsigned_integer        { utl::Usize value {}; };
     struct Integer_of_unknown_sign { utl::Isize value {}; };
-
     struct Floating                { utl::Float value {}; };
     struct Boolean                 { bool       value {}; };
     struct Character               { char       value {}; };
@@ -26,8 +25,7 @@ namespace compiler {
             Character,
             Boolean,
             String,
-            Identifier
-        >;
+            Identifier>;
 
         enum class Type {
             dot,
@@ -139,33 +137,16 @@ namespace compiler {
                 utl::abort();
         }
 
-        [[nodiscard]] auto as_floating  () const noexcept { return value_as<Floating>().value; }
-        [[nodiscard]] auto as_character () const noexcept { return value_as<Character>().value; }
-        [[nodiscard]] auto as_boolean   () const noexcept { return value_as<Boolean>().value; }
-        [[nodiscard]] auto as_string    () const noexcept { return value_as<String>(); }
-        [[nodiscard]] auto as_identifier() const noexcept { return value_as<Identifier>(); }
-
-        [[nodiscard]]
-        auto as_signed_integer() const noexcept -> utl::Isize {
-            if (auto const* const integer = std::get_if<Integer_of_unknown_sign>(&value))
-                return integer->value;
-            else
-                return value_as<Signed_integer>().value;
-        }
-        [[nodiscard]]
-        auto as_unsigned_integer() const noexcept -> utl::Usize {
-            if (auto const* const integer = std::get_if<Integer_of_unknown_sign>(&value)) {
-                assert(std::in_range<utl::Usize>(integer->value));
-                return static_cast<utl::Usize>(integer->value);
-            }
-            else {
-                return value_as<Unsigned_integer>().value;
-            }
-        }
+        [[nodiscard]] auto as_floating        () const noexcept -> decltype(Floating::value);
+        [[nodiscard]] auto as_character       () const noexcept -> decltype(Character::value);
+        [[nodiscard]] auto as_boolean         () const noexcept -> decltype(Boolean::value);
+        [[nodiscard]] auto as_string          () const noexcept -> String;
+        [[nodiscard]] auto as_identifier      () const noexcept -> Identifier;
+        [[nodiscard]] auto as_signed_integer  () const noexcept -> utl::Isize;
+        [[nodiscard]] auto as_unsigned_integer() const noexcept -> utl::Usize;
     };
 
     static_assert(std::is_trivially_copyable_v<Lexical_token>);
-
 
     auto token_description(Lexical_token::Type) noexcept -> std::string_view;
 

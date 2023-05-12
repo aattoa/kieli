@@ -204,4 +204,3 @@ catch (...) {
     error_stream() << "Caught unrecognized exception\n";
     throw;
 }
-

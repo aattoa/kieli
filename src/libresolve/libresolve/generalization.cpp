@@ -93,9 +93,8 @@ auto resolution::Context::generalize_to(mir::Type const type, std::vector<mir::T
 auto resolution::Context::ensure_non_generalizable(mir::Type const type, std::string_view const type_description) -> void {
     std::function handler = [&](mir::Type const type, mir::Unification_type_variable_state&) {
         error(type.source_view(), {
-            .message           = "{}'s type contains an unsolved unification type variable: {}",
-            .message_arguments = fmt::make_format_args(type_description, type),
-            .help_note         = "This can most likely be fixed by providing explicit type annotations",
+            .message   = "{}'s type contains an unsolved unification type variable: {}"_format(type_description, type),
+            .help_note = "This can most likely be fixed by providing explicit type annotations",
         });
     };
     std::visit(Generalization_type_visitor { *this, type, handler }, *type.flattened_value());

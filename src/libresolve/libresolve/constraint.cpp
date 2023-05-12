@@ -35,9 +35,8 @@ namespace {
         });
 
         context.diagnostics().emit_error({
-            .sections          = std::move(sections),
-            .message           = "Could not unify {} ~ {}",
-            .message_arguments = fmt::make_format_args(left, right)
+            .sections = std::move(sections),
+            .message  = "Could not unify {} ~ {}"_format(left, right),
         });
     }
 
@@ -47,10 +46,8 @@ namespace {
         mir::Type                             const variable,
         mir::Type                             const solution) -> void
     {
-        context.error(constraint.constrained_type.source_view(), {
-            .message           = "Recursive unification variable solution: {} = {}",
-            .message_arguments = fmt::make_format_args(variable, solution)
-        });
+        context.error(constraint.constrained_type.source_view(),
+            { "Recursive unification variable solution: {} = {}"_format(variable, solution) });
     }
 
     auto report_mutability_unification_failure(
@@ -66,20 +63,19 @@ namespace {
             fmt::vformat(constraint.constrained_note.explanatory_note, fmt::make_format_args(left, right));
 
         context.diagnostics().emit_error({
-            .sections = utl::to_vector<utl::diagnostics::Text_section>({
-                {
+            .sections = utl::to_vector({
+                utl::diagnostics::Text_section {
                     .source_view = constraint.constrainer_note.source_view,
                     .note        = constrainer_note,
-                    .note_color  = utl::diagnostics::warning_color
+                    .note_color  = utl::diagnostics::warning_color,
                 },
-                {
+                utl::diagnostics::Text_section {
                     .source_view = constraint.constrained_note.source_view,
                     .note        = constrained_note,
-                    .note_color  = utl::diagnostics::error_color
-                }
+                    .note_color  = utl::diagnostics::error_color,
+                },
             }),
-            .message           = "Could not unify {} ~ {}",
-            .message_arguments = fmt::make_format_args(left, right)
+            .message = "Could not unify {} ~ {}"_format(left, right),
         });
     }
 
@@ -122,23 +118,21 @@ auto resolution::Context::solve(constraint::Struct_field const& constraint) -> v
                     .constrained_type = constraint.field_type,
                     .constrained_note {
                         constraint.explanation.source_view,
-                        "(this message should never be visible)"
+                        "(this message should never be visible)",
                     }
                 });
                 return;
             }
         }
         error(constraint.explanation.source_view, {
-            .message             = constraint.explanation.explanatory_note,
-            .help_note           = "{} does not have a member '{}'",
-            .help_note_arguments = fmt::make_format_args(constraint.struct_type, constraint.field_identifier)
+            .message   = constraint.explanation.explanatory_note,
+            .help_note = "{} does not have a member '{}'"_format(constraint.struct_type, constraint.field_identifier),
         });
     }
     else {
         error(constraint.explanation.source_view, {
-            .message             = constraint.explanation.explanatory_note,
-            .help_note           = "{} is not a struct type, so it does not have named fields",
-            .help_note_arguments = fmt::make_format_args(constraint.struct_type)
+            .message   = constraint.explanation.explanatory_note,
+            .help_note = "{} is not a struct type, so it does not have named fields"_format(constraint.struct_type),
         });
     }
 }
@@ -148,9 +142,8 @@ auto resolution::Context::solve(constraint::Tuple_field const& constraint) -> vo
     if (auto const* const type = std::get_if<mir::type::Tuple>(&*constraint.tuple_type.flattened_value())) {
         if (constraint.field_index.get() >= type->field_types.size()) {
             error(constraint.explanation.source_view, {
-                .message             = constraint.explanation.explanatory_note,
-                .help_note           = "{} does not have a {} field",
-                .help_note_arguments = fmt::make_format_args(constraint.tuple_type, utl::formatting::integer_with_ordinal_indicator(constraint.field_index.get() + 1))
+                .message   = constraint.explanation.explanatory_note,
+                .help_note = "{} does not have a {} field"_format(constraint.tuple_type, utl::formatting::integer_with_ordinal_indicator(constraint.field_index.get() + 1)),
             });
         }
         solve(constraint::Type_equality {
@@ -158,15 +151,14 @@ auto resolution::Context::solve(constraint::Tuple_field const& constraint) -> vo
             .constrained_type = type->field_types[constraint.field_index.get()],
             .constrained_note {
                 constraint.explanation.source_view,
-                "(this message should never be visible)"
+                "(this message should never be visible)",
             }
         });
     }
     else {
         error(constraint.explanation.source_view, {
-            .message             = constraint.explanation.explanatory_note,
-            .help_note           = "{} is not a tuple type, so it does not have indexed fields",
-            .help_note_arguments = fmt::make_format_args(constraint.tuple_type)
+            .message   = constraint.explanation.explanatory_note,
+            .help_note = "{} is not a tuple type, so it does not have indexed fields"_format(constraint.tuple_type),
         });
     }
 }

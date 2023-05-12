@@ -18,18 +18,12 @@ namespace {
     }
 
     [[noreturn]]
-    auto error_no_definition_in_scope(Context& context, ast::Name const erroneous_name) -> void {
-        context.error(erroneous_name.source_view, {
-            .message           = "No definition for '{}' in scope",
-            .message_arguments = fmt::make_format_args(erroneous_name),
-        });
+    auto relative_lookup_error(Context& context, ast::Name const erroneous_name) -> void {
+        context.error(erroneous_name.source_view, { "No definition for '{}' in scope"_format(erroneous_name) });
     }
     [[noreturn]]
-    auto error_space_does_not_contain(Context& context, std::string_view const space_name, ast::Name const erroneous_name) -> void {
-        context.error(erroneous_name.source_view, {
-            .message           = "{} does not contain a definition for '{}'",
-            .message_arguments = fmt::make_format_args(space_name, erroneous_name),
-        });
+    auto absolute_lookup_error(Context& context, std::string_view const space_name, ast::Name const erroneous_name) -> void {
+        context.error(erroneous_name.source_view, { "{} does not contain a definition for '{}'"_format(space_name, erroneous_name) });
     }
 
 
@@ -152,7 +146,7 @@ namespace {
             else if (target->parent)
                 target = &**target->parent;
             else
-                error_no_definition_in_scope(context, qualifier.name);
+                relative_lookup_error(context, qualifier.name);
         }
     }
 
@@ -168,7 +162,7 @@ namespace {
             if (Namespace* const new_target = apply_qualifier(context, scope, *target, qualifier))
                 target = new_target;
             else
-                error_space_does_not_contain(context, namespace_name(*target), qualifier.name);
+                absolute_lookup_error(context, namespace_name(*target), qualifier.name);
         }
         return target;
     }
@@ -197,7 +191,7 @@ namespace {
                     else if (root->parent)
                         root = &**root->parent;
                     else
-                        error_no_definition_in_scope(context, primary);
+                        relative_lookup_error(context, primary);
                 }
             }
             else {
@@ -213,7 +207,7 @@ namespace {
         if (utl::trivially_copyable auto const* const item = (target_space->*table).find(primary.identifier))
             return *item;
         else
-            error_space_does_not_contain(context, namespace_name(*target_space), primary);
+            absolute_lookup_error(context, namespace_name(*target_space), primary);
     }
 
 }

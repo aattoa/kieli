@@ -194,13 +194,13 @@ namespace {
                         .constrainer_type = element_type,
                         .constrained_type = pattern.type,
                         .constrainer_note = constraint::Explanation {
-                            element_type.source_view() + previous_pattern.source_view,
+                            element_type.source_view().combine_with(previous_pattern.source_view),
                             i == 1 ? "The previous pattern was of type {0}"
-                                   : "The previous patterns were of type {0}"
+                                   : "The previous patterns were of type {0}",
                         },
                         .constrained_note {
                             current_pattern.source_view,
-                            "But this pattern is of type {1}"
+                            "But this pattern is of type {1}",
                         }
                     });
                     mir_slice.element_patterns.push_back(std::move(pattern));
@@ -212,7 +212,7 @@ namespace {
                         context.wrap_type(mir::type::Slice { element_type }),
                         this_pattern.source_view,
                     },
-                    .source_view = this_pattern.source_view
+                    .source_view = this_pattern.source_view,
                 };
             }
         }
@@ -227,17 +227,17 @@ namespace {
                 .constrained_type = guard.type,
                 .constrained_note {
                     guard.source_view,
-                    "The pattern guard expression must be of type Bool, but found {1}"
+                    "The pattern guard expression must be of type Bool, but found {1}",
                 }
             });
 
             return {
                 .value = mir::pattern::Guarded {
                     .guarded_pattern = context.wrap(std::move(guarded_pattern)),
-                    .guard           = std::move(guard)
+                    .guard           = std::move(guard),
                 },
                 .type        = pattern_type,
-                .source_view = this_pattern.source_view
+                .source_view = this_pattern.source_view,
             };
         }
     };
@@ -245,17 +245,6 @@ namespace {
 }
 
 
-auto resolution::Context::resolve_pattern(
-    hir::Pattern& pattern,
-    Scope       & scope,
-    Namespace   & space) -> mir::Pattern
-{
-    return std::visit(
-        Pattern_resolution_visitor {
-            .context      = *this,
-            .scope        = scope,
-            .space        = space,
-            .this_pattern = pattern
-        },
-        pattern.value);
+auto resolution::Context::resolve_pattern(hir::Pattern& pattern, Scope& scope, Namespace& space) -> mir::Pattern {
+    return std::visit(Pattern_resolution_visitor { *this, scope, space, pattern, }, pattern.value);
 }

@@ -13,4 +13,5 @@ target_precompile_headers(libparse
     REUSE_FROM libutl-common)
 
 target_link_libraries(libparse
+    PRIVATE liblex
     PRIVATE fmt::fmt)

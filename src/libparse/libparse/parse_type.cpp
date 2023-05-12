@@ -20,8 +20,8 @@ namespace {
             return ast::type::Typename { std::move(name) };
         }
         context.error(
-            { anchor, context.pointer },
-            "Expected a typename, but found a lowercase identifier");
+            make_source_view(anchor, context.pointer),
+            { "Expected a typename, but found a lowercase identifier" });
     }
 
     auto extract_typename(Parse_context& context)

@@ -38,7 +38,7 @@ auto utl::Source_view::dummy() -> Source_view {
     return Source_view { dummy_source, dummy_source->string(), {}, {} };
 }
 
-auto utl::Source_view::operator+(Source_view const& other) const noexcept -> Source_view {
+auto utl::Source_view::combine_with(Source_view const& other) const noexcept -> Source_view {
     always_assert(source.is(other.source));
 
     if (other.string.empty())
