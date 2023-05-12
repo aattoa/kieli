@@ -4,8 +4,6 @@
 // This file is intended to be included by every single translation unit in the project
 
 
-#include <libutl/common/disable_unnecessary_warnings.hpp>
-
 #include <cstdlib>
 #include <cstddef>
 #include <cstdint>
