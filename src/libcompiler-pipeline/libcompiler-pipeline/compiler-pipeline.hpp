@@ -1,3 +1,5 @@
+#pragma once
+
 #include <libutl/common/wrapper.hpp>
 #include <libutl/common/pooled_string.hpp>
 #include <libutl/diagnostics/diagnostics.hpp>

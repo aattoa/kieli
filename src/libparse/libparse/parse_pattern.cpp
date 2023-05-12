@@ -71,8 +71,8 @@ namespace {
 
         if (name && name->primary_name.is_upper.get()) {
             context.error(
-                { anchor, context.pointer },
-                "Expected an enum constructor name, but found a capitalized identifier");
+                make_source_view(anchor, context.pointer),
+                { "Expected an enum constructor name, but found a capitalized identifier" });
         }
 
         return name;

@@ -163,7 +163,7 @@ auto Desugaring_context::error(
     utl::Source_view                    const erroneous_view,
     utl::diagnostics::Message_arguments const arguments) -> void
 {
-    compilation_info.get()->diagnostics.emit_simple_error(arguments.add_source_view(erroneous_view));
+    compilation_info.get()->diagnostics.emit_error(arguments.add_source_view(erroneous_view));
 }
 
 

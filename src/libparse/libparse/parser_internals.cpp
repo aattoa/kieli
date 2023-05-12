@@ -96,19 +96,14 @@ namespace {
                         parameter.value,
                         [](ast::Template_parameter::Type_parameter       const&) { return "type"; },
                         [](ast::Template_parameter::Mutability_parameter const&) { return "mutability"; },
-                        [](ast::Template_parameter::Value_parameter      const&) { return "value"; }
-                    );
-                    std::string_view const argument_description = utl::match(
-                        argument.value,
-                        [](utl::Wrapper<ast::Type>           const&) { return "type"; },
+                        [](ast::Template_parameter::Value_parameter      const&) { return "value"; });
+                    std::string_view const argument_description = utl::match(argument.value,
+                        [](utl::Wrapper<ast::Type>          const&) { return "type"; },
                         [](ast::Mutability                  const&) { return "mutability"; },
-                        [](utl::Wrapper<ast::Expression>     const&) { return "value"; },
-                        [](ast::Template_argument::Wildcard const&) { return "wildcard"; }
-                    );
-                    context.error(parameter.source_view, {
-                        .message = "Invalid default template argument: {} parameter's default argument is a {} argument",
-                        .message_arguments = fmt::make_format_args(parameter_description, argument_description)
-                    });
+                        [](utl::Wrapper<ast::Expression>    const&) { return "value"; },
+                        [](ast::Template_argument::Wildcard const&) { return "wildcard"; });
+                    context.error(parameter.source_view,
+                        { "Invalid default template argument: {} parameter's default argument is a {} argument"_format(parameter_description, argument_description) });
                 };
 
                 std::visit(utl::Overload {
@@ -139,11 +134,11 @@ auto parse_top_level_pattern(Parse_context& context) -> tl::optional<ast::Patter
     {
         if (patterns.size() == 1)
             return std::move(patterns.front());
-
-        auto source_view = patterns.front().source_view + patterns.back().source_view;
+        auto const source_view =
+            patterns.front().source_view.combine_with(patterns.back().source_view);
         return ast::Pattern {
             .value       = ast::pattern::Tuple { std::move(patterns) },
-            .source_view = source_view
+            .source_view = source_view,
         };
     });
 }
@@ -246,9 +241,8 @@ auto extract_qualified(ast::Root_qualifier&& root, Parse_context& context)
 
     if (extract_qualifier()) {
         while (context.try_consume(Token::Type::double_colon)) {
-            if (!extract_qualifier()) {
+            if (!extract_qualifier())
                 context.error_expected("an identifier");
-            }
         }
 
         auto back = std::move(qualifiers.back());
@@ -260,7 +254,7 @@ auto extract_qualified(ast::Root_qualifier&& root, Parse_context& context)
         return {
             .middle_qualifiers = std::move(qualifiers),
             .root_qualifier    = std::move(root),
-            .primary_name      = back.name
+            .primary_name      = back.name,
         };
     }
     else {
@@ -326,8 +320,8 @@ auto parse_class_reference(Parse_context& context)
             return name;
 
         context.error(
-            { anchor, context.pointer },
-            "Expected a class name, but found a lowercase identifier");
+            make_source_view(anchor, context.pointer),
+            { "Expected a class name, but found a lowercase identifier" });
     });
 
     if (name.has_value()) {
@@ -355,4 +349,27 @@ auto extract_class_references(Parse_context& context)
         context.error_expected("one or more class names");
     else
         return classes;
+}
+
+
+auto Parse_context::diagnostics() noexcept -> utl::diagnostics::Builder& {
+    return compilation_info.get()->diagnostics;
+}
+auto Parse_context::error(utl::Source_view const erroneous_view, utl::diagnostics::Message_arguments const& arguments) -> void {
+    compilation_info.get()->diagnostics.emit_error(arguments.add_source_view(erroneous_view));
+}
+auto Parse_context::error(utl::diagnostics::Message_arguments const& arguments) -> void {
+    error(make_source_view(pointer, pointer + 1), arguments);
+}
+auto Parse_context::error_expected(utl::Source_view const erroneous_view, std::string_view const expectation, tl::optional<std::string_view> const help) -> void {
+    error(erroneous_view, {
+        .message = fmt::format(
+            "Expected {}, but found {}",
+            expectation,
+            compiler::token_description(pointer->type)),
+        .help_note = help,
+    });
+}
+auto Parse_context::error_expected(std::string_view const expectation, tl::optional<std::string_view> const help) -> void {
+    error_expected(pointer->source_view, expectation, help);
 }

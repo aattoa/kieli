@@ -52,7 +52,7 @@ namespace utl {
         // Dummy source view for mock purposes
         static auto dummy() -> Source_view;
 
-        auto operator+(Source_view const&) const noexcept -> Source_view;
+        auto combine_with(Source_view const&) const noexcept -> Source_view;
     };
 
 }

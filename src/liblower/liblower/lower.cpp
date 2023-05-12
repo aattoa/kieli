@@ -74,12 +74,10 @@ namespace {
             }
             catch (utl::Safe_cast_invalid_argument const&) {
                 auto const [min, max] = make_integer_range(type);
-                diagnostics.emit_simple_error({
-                    .erroneous_view      = this_expression.source_view,
-                    .message             = "The value of this integer literal is outside of the valid range for {}",
-                    .message_arguments   = fmt::make_format_args(this_expression.type),
-                    .help_note           = "The valid range for {} is {}..{}",
-                    .help_note_arguments = fmt::make_format_args(this_expression.type, min, max),
+                diagnostics.emit_error({
+                    .sections  = utl::to_vector({ utl::diagnostics::Text_section { .source_view = this_expression.source_view } }),
+                    .message   = "The value of this integer literal is outside of the valid range for {}"_format(this_expression.type),
+                    .help_note = "The valid range for {} is {}..{}"_format(this_expression.type, min, max),
                 });
             }
         }

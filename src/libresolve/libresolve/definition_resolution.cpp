@@ -412,10 +412,7 @@ auto resolution::Context::resolve_implementation(utl::Wrapper<Implementation_inf
 
         utl::Wrapper<Namespace> self_type_associated_namespace = std::invoke([&] {
             if (tl::optional space = associated_namespace_if(self_type)) return *space;
-            error(self_type.source_view(), {
-                .message           = "{} does not have an associated namespace, so it can not be the Self type in an implementation block",
-                .message_arguments = fmt::make_format_args(self_type)
-            });
+            error(self_type.source_view(), { "{} does not have an associated namespace, so it can not be the Self type in an implementation block"_format(self_type) });
         });
 
         Self_type_guard const self_type_guard { *this, self_type };

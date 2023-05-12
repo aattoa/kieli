@@ -9,6 +9,12 @@
 using Token = compiler::Lexical_token;
 
 
+inline auto make_source_view(Token const* const first, Token const* const last) noexcept -> utl::Source_view {
+    utl::always_assert(first && last);
+    return first->source_view.combine_with(last->source_view);
+}
+
+
 struct Parse_context {
     compiler::Compilation_info compilation_info;
     ast::Node_arena            node_arena;
@@ -74,50 +80,12 @@ struct Parse_context {
         };
     }
 
-    [[noreturn]]
-    auto error(
-        utl::Source_view                    const erroneous_view,
-        utl::diagnostics::Message_arguments const arguments) -> void
-    {
-        compilation_info.get()->diagnostics.emit_simple_error(arguments.add_source_view(erroneous_view));
-    }
-    [[noreturn]]
-    auto error(
-        std::span<Token const>              const span,
-        utl::diagnostics::Message_arguments const arguments) -> void
-    {
-        error(span.front().source_view + span.back().source_view, arguments);
-    }
-    [[noreturn]]
-    auto error(
-        std::span<Token const> const span,
-        std::string_view       const message) -> void
-    {
-        error(span, { .message = message });
-    }
-    [[noreturn]]
-    auto error(utl::diagnostics::Message_arguments const arguments) -> void {
-        error({ pointer, pointer + 1 }, arguments);
-    }
-    [[noreturn]]
-    auto error_expected(
-        std::span<Token const>          const span,
-        std::string_view                const expectation,
-        tl::optional<std::string_view> const help = tl::nullopt) -> void
-    {
-        error(span, {
-            .message           = "Expected {}, but found {}",
-            .message_arguments = fmt::make_format_args(expectation, compiler::token_description(pointer->type)),
-            .help_note         = help
-        });
-    }
-    [[noreturn]]
-    auto error_expected(
-        std::string_view                const expectation,
-        tl::optional<std::string_view> const help = tl::nullopt) -> void
-    {
-        error_expected({ pointer, pointer + 1 }, expectation, help);
-    }
+    [[nodiscard]] auto diagnostics() noexcept -> utl::diagnostics::Builder&;
+
+    [[noreturn]] auto error(utl::Source_view, utl::diagnostics::Message_arguments const&) -> void;
+    [[noreturn]] auto error(utl::diagnostics::Message_arguments const&) -> void;
+    [[noreturn]] auto error_expected(utl::Source_view, std::string_view const expectation, tl::optional<std::string_view> const help = tl::nullopt) -> void;
+    [[noreturn]] auto error_expected(std::string_view const expectation, tl::optional<std::string_view> const help = tl::nullopt) -> void;
 };
 
 
@@ -274,7 +242,7 @@ auto parse_name(Parse_context& context) -> tl::optional<ast::Name> {
         return ast::Name {
             .identifier  = token->as_identifier(),
             .is_upper    = id_type == Token::Type::upper_name,
-            .source_view = token->source_view
+            .source_view = token->source_view,
         };
     }
     return tl::nullopt;
@@ -296,19 +264,12 @@ constexpr auto extract_lower_name = extract_name<Token::Type::lower_name>;
 constexpr auto extract_upper_name = extract_name<Token::Type::upper_name>;
 
 
-inline auto make_source_view(Token const* const first, Token const* const last)
-    noexcept -> utl::Source_view
-{
-    return first->source_view + last->source_view;
-}
-
-
 template <class Node, parser auto parse>
 auto parse_node(Parse_context& context) -> tl::optional<Node> {
     Token const* const anchor = context.pointer;
 
     if (auto node_value = parse(context))
-        return Node { std::move(*node_value), anchor->source_view + context.pointer[-1].source_view };
+        return Node { std::move(*node_value), make_source_view(anchor, context.pointer -1) };
     else
         return tl::nullopt;
 }

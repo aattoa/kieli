@@ -150,8 +150,7 @@ namespace {
                         .note_color  = utl::diagnostics::error_color,
                     },
                 }),
-                .message           = "Duplicate definition of {} {}",
-                .message_arguments = fmt::make_format_args(description, it->name),
+                .message = "Duplicate definition of {} {}"_format(description, it->name),
             });
         }
     }
@@ -209,7 +208,7 @@ namespace {
     auto parse_enum_constructor(Parse_context& context)
         -> tl::optional<ast::definition::Enum::Constructor>
     {
-        auto* const anchor = context.pointer;
+        Token const* const anchor = context.pointer;
 
         if (auto name = parse_lower_name(context)) {
             tl::optional<ast::Type> payload_type;
@@ -225,10 +224,11 @@ namespace {
                     break;
                 default:
                 {
-                    utl::Source_view const view = types.front().source_view + types.back().source_view;
+                    utl::Source_view const payload_view =
+                        types.front().source_view.combine_with(types.back().source_view);
                     payload_type = ast::Type {
                         .value       = ast::type::Tuple { std::move(types) },
-                        .source_view = view
+                        .source_view = payload_view,
                     };
                 }
                 }
@@ -239,7 +239,7 @@ namespace {
             return ast::definition::Enum::Constructor {
                 .name         = *name,
                 .payload_type = std::move(payload_type),
-                .source_view  = make_source_view(anchor, context.pointer - 1)
+                .source_view  = make_source_view(anchor, context.pointer - 1),
             };
         }
         return tl::nullopt;
@@ -265,26 +265,20 @@ namespace {
 
             if (constructors->size() > max) {
                 // This allows the tag to always be a single byte
-                context.error(
-                    { anchor - 1, anchor + 1 },
-                    {
-                        .message =
-                            "An enum-definition must not define more "
-                            "than {} constructors, but {} defines {}",
-                        .message_arguments = fmt::make_format_args(max, name, constructors->size()),
-                        .help_note =
-                            "If this is truly necessary, consider categorizing "
-                            "the constructors under several simpler types"
-                    }
-                );
+                context.error(make_source_view(anchor - 1, anchor + 1), {
+                    .message = fmt::format(
+                        "An enum-definition must not define more "
+                        "than {} constructors, but {} defines {}",
+                        max, name, constructors->size()),
+                    .help_note =
+                        "If this is truly necessary, consider categorizing "
+                        "the constructors under several simpler types"
+                });
             }
 
             return definition(
                 std::move(template_parameters),
-                ast::definition::Enum {
-                    std::move(*constructors),
-                    std::move(name)
-                });
+                ast::definition::Enum { std::move(*constructors), std::move(name) });
         }
         context.error_expected("one or more enum constructors");
     };

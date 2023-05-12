@@ -10,12 +10,10 @@ namespace {
     {
         for (auto& [name, binding] : bindings) {
             if (binding.has_been_mentioned) continue;
-            context.diagnostics().emit_simple_warning({
-                .erroneous_view      = binding.source_view,
-                .message             = "Unused local {}",
-                .message_arguments   = fmt::make_format_args(description),
-                .help_note           = "If this is intentional, prefix the {} with an underscore: _{}",
-                .help_note_arguments = fmt::make_format_args(description, name),
+            context.diagnostics().emit_warning({
+                .sections  = utl::to_vector({ utl::diagnostics::Text_section { .source_view = binding.source_view } }),
+                .message   = "Unused local {}"_format(description),
+                .help_note = "If this is intentional, prefix the {} with an underscore: _{}"_format(description, name),
             });
         }
     }
@@ -49,10 +47,8 @@ namespace {
                             .note        = "Later shadowed here",
                         }
                     }),
-                    .message             = "Local {} shadows an unused local {}",
-                    .message_arguments   = fmt::make_format_args(description, description),
-                    .help_note           = "If this is intentional, prefix the first {} with an underscore: _{}",
-                    .help_note_arguments = fmt::make_format_args(description, it->first),
+                    .message   = "Local {} shadows an unused local {}"_format(description, description),
+                    .help_note = "If this is intentional, prefix the first {} with an underscore: _{}"_format(description, it->first),
                 });
                 it->second.has_been_mentioned = true; // Prevent a second warning about the same variable
             }

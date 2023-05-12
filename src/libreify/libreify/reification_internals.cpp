@@ -38,5 +38,6 @@ auto reification::Context::error(
     utl::Source_view                    const source_view,
     utl::diagnostics::Message_arguments const message_arguments) -> void
 {
-    compilation_info.get()->diagnostics.emit_simple_error(message_arguments.add_source_view(source_view));
+    compilation_info.get()->diagnostics.emit_error(
+        message_arguments.add_source_view(source_view));
 }

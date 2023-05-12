@@ -169,10 +169,8 @@ namespace {
 
             if (argument_count != parameter_count) {
                 context.error(this_expression.source_view, {
-                    .message             = "The function has {} parameters, but {} arguments were supplied",
-                    .message_arguments   = fmt::make_format_args(parameter_count, argument_count),
-                    .help_note           = "The function is of type {}",
-                    .help_note_arguments = fmt::make_format_args(signature.function_type)
+                    .message   = "The function has {} parameters, but {} arguments were supplied"_format(parameter_count, argument_count),
+                    .help_note = "The function is of type {}"_format(signature.function_type),
                 });
             }
 
@@ -182,18 +180,18 @@ namespace {
                     .constrained_type = argument.type,
                     .constrainer_note = constraint::Explanation {
                         parameter.type.source_view(),
-                        "The parameter is specified to be of type {0}"
+                        "The parameter is specified to be of type {0}",
                     },
-                    .constrained_note {
+                    .constrained_note = constraint::Explanation {
                         argument.source_view,
-                        "But the argument is of type {1}"
-                    }
+                        "But the argument is of type {1}",
+                    },
                 });
             }
 
             return {
                 .value = mir::expression::Direct_invocation {
-                    .function  { .info = function.info },
+                    .function  = { .info = function.info },
                     .arguments = std::move(arguments)
                 },
                 .type        = signature.return_type.with(this_expression.source_view),
@@ -213,18 +211,18 @@ namespace {
                 .constrainer_type = mir::Type {
                     context.wrap_type(mir::type::Function {
                         .parameter_types = utl::map(&mir::Expression::type, arguments),
-                        .return_type     = return_type
+                        .return_type     = return_type,
                     }),
                     this_expression.source_view,
                 },
                 .constrained_type = invocable.type,
                 .constrainer_note = constraint::Explanation {
                     this_expression.source_view,
-                    "The invocable should be of type {0}"
+                    "The invocable should be of type {0}",
                 },
                 .constrained_note {
                     invocable.source_view,
-                    "But it is of type {1}"
+                    "But it is of type {1}",
                 }
             });
 
@@ -308,13 +306,13 @@ namespace {
                         .constrainer_type = mir_array.elements.front().type,
                         .constrained_type = mir_array.elements.back().type,
                         .constrainer_note = constraint::Explanation {
-                            array.elements.front().source_view + previous_element.source_view,
+                            array.elements.front().source_view.combine_with(previous_element.source_view),
                             i == 1 ? "The previous element was of type {0}"
-                                   : "The previous elements were of type {0}"
+                                   : "The previous elements were of type {0}",
                         },
                         .constrained_note {
                             current_element.source_view,
-                            "But this element is of type {1}"
+                            "But this element is of type {1}",
                         }
                     });
                 }
@@ -503,16 +501,15 @@ namespace {
             for (hir::Expression& hir_side_effect : block.side_effect_expressions) {
                 mir::Expression side_effect = recurse(hir_side_effect, &block_scope);
                 if (side_effect.is_pure) {
-                    context.diagnostics().emit_simple_warning({
-                        .erroneous_view = side_effect.source_view,
-                        .message        = "This block side-effect expression is pure, so it does not have any side-effects",
-                        .help_note      = "Pure side effect-expressions have no effect on program execution, but they are still evaluated. This may lead to performance degradation."
+                    context.diagnostics().emit_warning(side_effect.source_view, {
+                        .message   = "This block side-effect expression is pure, so it does not have any side-effects",
+                        .help_note = "Pure side effect-expressions have no effect on program execution, but they are still evaluated. This may lead to performance degradation."
                     });
                 }
                 context.solve(constraint::Type_equality {
                     .constrainer_type = context.unit_type(this_expression.source_view),
                     .constrained_type = side_effect.type,
-                    .constrained_note {
+                    .constrained_note = constraint::Explanation {
                         side_effect.source_view,
                         "This expression is of type {1}, but side-effect expressions must be of the unit type"
                     }
@@ -753,12 +750,8 @@ namespace {
                 auto initializers = utl::vector_with_capacity<mir::Expression>(structure.members.size());
 
                 for (auto const& [name, _] : struct_initializer.member_initializers) {
-                    if (!ranges::contains(structure.members, name, &mir::Struct::Member::name)) {
-                        context.error(name.source_view, {
-                            .message           = "{} does not have a member '{}'",
-                            .message_arguments = fmt::make_format_args(struct_type, name)
-                        });
-                    }
+                    if (!ranges::contains(structure.members, name, &mir::Struct::Member::name))
+                        context.error(name.source_view, { "{} does not have a member '{}'"_format(struct_type, name) });
                 }
 
                 for (mir::Struct::Member& member : structure.members) {
@@ -769,20 +762,17 @@ namespace {
                             .constrained_type = member_initializer.type,
                             .constrainer_note = constraint::Explanation {
                                 member.name.source_view,
-                                "This member is of type {0}"
+                                "This member is of type {0}",
                             },
                             .constrained_note {
                                 member_initializer.source_view,
-                                "But the given initializer is of type {1}"
+                                "But the given initializer is of type {1}",
                             }
                         });
                         initializers.push_back(std::move(member_initializer));
                     }
                     else {
-                        context.error(this_expression.source_view, {
-                            .message           = "Field '{}' is not initialized",
-                            .message_arguments = fmt::make_format_args(member.name)
-                        });
+                        context.error(this_expression.source_view, { "Field '{}' is not initialized"_format(member.name) });
                     }
                 }
 
@@ -791,12 +781,12 @@ namespace {
                 return {
                     .value = mir::expression::Struct_initializer {
                         .initializers = std::move(initializers),
-                        .struct_type  = struct_type
+                        .struct_type  = struct_type,
                     },
-                    .type           = struct_type,
-                    .source_view    = this_expression.source_view,
-                    .mutability     = context.immut_constant(this_expression.source_view),
-                    .is_pure        = is_pure,
+                    .type        = struct_type,
+                    .source_view = this_expression.source_view,
+                    .mutability  = context.immut_constant(this_expression.source_view),
+                    .is_pure     = is_pure,
                 };
             }
             else {
@@ -832,13 +822,10 @@ namespace {
                 [&](utl::Wrapper<Function_info> const info) -> mir::Expression {
                     if (!context.resolve_function_signature(*info).is_template()) {
                         context.error(application.name.primary_name.source_view, {
-                            .message             = "'{}' is a concrete function, not a function template",
-                            .message_arguments   = fmt::make_format_args(application.name),
-                            .help_note           = "If you did mean to refer to '{}', simply remove the template argument list",
-                            .help_note_arguments = fmt::make_format_args(application.name)
+                            .message   = "'{}' is a concrete function, not a function template"_format(application.name),
+                            .help_note = "If you did mean to refer to '{}', simply remove the template argument list"_format(application.name),
                         });
                     }
-
                     utl::Wrapper<Function_info> const concrete =
                         context.instantiate_function_template(info, application.template_arguments, this_expression.source_view, scope, space);
                     return {

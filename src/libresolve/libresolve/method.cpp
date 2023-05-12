@@ -48,8 +48,7 @@ namespace {
                         .note_color  = utl::diagnostics::warning_color
                     }
                 }),
-                .message           = "Ambiguous method: {}",
-                .message_arguments = fmt::make_format_args(method_name)
+                .message = "Ambiguous method: {}"_format(method_name),
             });
         };
 
@@ -73,10 +72,7 @@ namespace {
         if (return_value.has_value())
             return *return_value;
 
-        context.error(method_name.source_view, {
-            .message           = "No appropriate method '{}' in scope",
-            .message_arguments = fmt::make_format_args(method_name)
-        });
+        context.error(method_name.source_view, { "No appropriate method '{}' in scope"_format(method_name) });
     }
 
 }
