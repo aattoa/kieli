@@ -8,10 +8,13 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # Set global warning settings
 if (MSVC)
-    add_compile_options("/W4")
+    add_compile_options("/W4"
+                        "/wd4127"  # Conditional expression is constant
+                        "/wd4459"  # Declaration hides global declaration
+                        "/wd4063") # Invalid value for switch
 else ()
-    add_compile_options("-Wall" "-Wextra" "-Wpedantic")
-    add_compile_options("-Wno-missing-field-initializers"
+    add_compile_options("-Wall" "-Wextra" "-Wpedantic"
+                        "-Wno-missing-field-initializers"
                         "-Wno-switch")
 endif ()
 

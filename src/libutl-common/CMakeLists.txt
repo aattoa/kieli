@@ -2,7 +2,6 @@ add_library(libutl-common STATIC)
 
 target_sources(libutl-common
     PRIVATE libutl/common/bytestack.hpp
-    PRIVATE libutl/common/disable_unnecessary_warnings.hpp
     PRIVATE libutl/common/flatmap.hpp
     PRIVATE libutl/common/libutl-common.cpp
     PRIVATE libutl/common/noisy.hpp

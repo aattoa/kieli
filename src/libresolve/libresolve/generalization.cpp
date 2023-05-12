@@ -74,9 +74,12 @@ auto resolution::Context::generalize_to(mir::Type const type, std::vector<mir::T
         output.push_back(mir::Template_parameter {
             .value            = mir::Template_parameter::Type_parameter { .classes = std::move(unsolved.classes) },
             .name             = { tl::nullopt },
-            .default_argument = mir::Template_default_argument { .argument = { hir::Template_argument::Wildcard { type.source_view() } } },
-            .reference_tag    = tag,
-            .source_view      = type.source_view(),
+            .default_argument = mir::Template_default_argument {
+                .argument = { hir::Template_argument::Wildcard { type.source_view() } },
+                .scope    = nullptr, // Wildcard arguments need no scope
+            },
+            .reference_tag = tag,
+            .source_view   = type.source_view(),
         });
         state.solve_with(mir::Type {
             wrap_type(mir::type::Template_parameter_reference {
