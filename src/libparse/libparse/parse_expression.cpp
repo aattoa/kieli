@@ -178,10 +178,6 @@ namespace {
         }
     }
 
-    auto extract_loop(Parse_context& context) -> ast::Expression::Variant {
-        return extract_any_loop(context);
-    }
-
 
     auto extract_identifier(Parse_context& context)
         -> ast::Expression::Variant
@@ -212,7 +208,8 @@ namespace {
     auto extract_global_identifier(Parse_context& context)
         -> ast::Expression::Variant
     {
-        return extract_qualified_lower_name_or_struct_initializer({ ast::Root_qualifier::Global {} }, context);
+        context.consume_required(Token::Type::double_colon);
+        return extract_qualified_lower_name_or_struct_initializer({ ast::Global_root_qualifier {} }, context);
     }
 
     auto extract_self(Parse_context&)
@@ -575,7 +572,7 @@ namespace {
 
         return ast::expression::Block {
             .side_effect_expressions = std::move(expressions),
-            .result_expression       = std::move(result)
+            .result_expression       = std::move(result),
         };
     }
 
@@ -627,7 +624,7 @@ namespace {
             return extract_identifier(context);
         case Token::Type::lower_self:
             return extract_self(context);
-        case Token::Type::double_colon:
+        case Token::Type::global:
             return extract_global_identifier(context);
         case Token::Type::asterisk:
             return extract_dereference(context);
@@ -648,7 +645,7 @@ namespace {
         case Token::Type::loop:
         case Token::Type::while_:
         case Token::Type::for_:
-            return extract_loop(context);
+            return extract_any_loop(context);
         case Token::Type::sizeof_:
             return extract_sizeof(context);
         case Token::Type::addressof:
@@ -896,7 +893,7 @@ namespace {
                         .value = ast::expression::Binary_operator_invocation {
                             context.wrap(std::move(*left)),
                             context.wrap(std::move(*right)),
-                            *op
+                            *op,
                         },
                         .source_view = make_source_view(anchor, context.pointer - 1)
                     };

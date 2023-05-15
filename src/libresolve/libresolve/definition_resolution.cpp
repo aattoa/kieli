@@ -30,23 +30,10 @@ namespace {
             mir::Type const parameter_type =
                 context.resolve_type(utl::get(parameter.type), signature_scope, home_namespace);
             mir::Pattern parameter_pattern =
-                context.resolve_pattern(parameter.pattern, signature_scope, home_namespace);
+                context.resolve_pattern(parameter.pattern, parameter_type, signature_scope, home_namespace);
 
             if (!parameter_pattern.is_exhaustive_by_itself)
                 context.error(parameter_pattern.source_view, { "Inexhaustive function parameter pattern" });
-
-            context.solve(constraint::Type_equality {
-                .constrainer_type = parameter_type,
-                .constrained_type = parameter_pattern.type,
-                .constrainer_note = constraint::Explanation {
-                    parameter_type.source_view(),
-                    "This parameter is declared to be of type {0}"
-                },
-                .constrained_note {
-                    parameter_pattern.source_view,
-                    "But its pattern is of type {1}"
-                }
-            });
 
             if (allow_generalization == Allow_generalization::yes)
                 context.generalize_to(parameter_type, template_parameters);

@@ -228,6 +228,10 @@ namespace hir {
             Qualified_name                      constructor_name;
             tl::optional<utl::Wrapper<Pattern>> payload_pattern;
         };
+        struct Abbreviated_constructor {
+            ast::Name                           constructor_name;
+            tl::optional<utl::Wrapper<Pattern>> payload_pattern;
+        };
         struct Tuple {
             std::vector<Pattern> field_patterns;
         };
@@ -235,12 +239,12 @@ namespace hir {
             std::vector<Pattern> element_patterns;
         };
         struct As {
-            Name                 alias;
+            Name                  alias;
             utl::Wrapper<Pattern> aliased_pattern;
         };
         struct Guarded {
             utl::Wrapper<Pattern> guarded_pattern;
-            Expression           guard;
+            Expression            guard;
         };
     }
 
@@ -256,6 +260,7 @@ namespace hir {
             pattern::Wildcard,
             pattern::Name,
             pattern::Constructor,
+            pattern::Abbreviated_constructor,
             pattern::Tuple,
             pattern::Slice,
             pattern::As,

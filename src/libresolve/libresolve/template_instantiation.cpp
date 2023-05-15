@@ -547,6 +547,7 @@ namespace {
         auto operator()(mir::expression::Let_binding const& binding) -> R {
             return mir::expression::Let_binding {
                 .pattern     = context.recurse(binding.pattern),
+                .type        = context.recurse(binding.type),
                 .initializer = context.recurse(binding.initializer),
             };
         }
@@ -823,7 +824,6 @@ namespace {
     auto instantiate(mir::Pattern const& pattern, Substitution_context const context) -> mir::Pattern {
         return {
             .value                   = std::visit(Pattern_instantiation_visitor { context }, pattern.value),
-            .type                    = instantiate(pattern.type, context),
             .is_exhaustive_by_itself = pattern.is_exhaustive_by_itself,
             .source_view             = pattern.source_view,
         };

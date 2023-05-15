@@ -40,9 +40,9 @@ DEFINE_FORMATTER_FOR(ast::Basic_qualified_name<Configuration>) {
     auto out = context.out();
 
     std::visit(utl::Overload {
-        [   ](std::monostate)                                            {},
-        [out](typename ast::Basic_root_qualifier<Configuration>::Global) { fmt::format_to(out, "::"        ); },
-        [out](auto const& root)                                          { fmt::format_to(out, "{}::", root); }
+        [   ](std::monostate)             {},
+        [out](ast::Global_root_qualifier) { fmt::format_to(out, "global::"); },
+        [out](auto const& root)           { fmt::format_to(out, "{}::", root); }
         }, value.root_qualifier.value);
 
     for (auto& qualifier : value.middle_qualifiers) {

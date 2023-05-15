@@ -99,7 +99,7 @@ auto Desugaring_context::desugar(ast::Qualified_name const& name) -> hir::Qualif
         .middle_qualifiers = utl::map(desugar(), name.middle_qualifiers),
         .root_qualifier = std::visit(utl::Overload {
             [](std::monostate)                         -> hir::Root_qualifier { return {}; },
-            [](ast::Root_qualifier::Global)            -> hir::Root_qualifier { return { .value = hir::Root_qualifier::Global {} }; },
+            [](ast::Global_root_qualifier)             -> hir::Root_qualifier { return { .value = ast::Global_root_qualifier {} }; },
             [this](utl::Wrapper<ast::Type> const type) -> hir::Root_qualifier { return { .value = desugar(type) }; }
         }, name.root_qualifier.value),
         .primary_name = name.primary_name,

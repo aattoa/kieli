@@ -555,15 +555,15 @@ namespace {
 
         auto operator()(hir::expression::Let_binding& let) -> mir::Expression {
             mir::Expression initializer = recurse(*let.initializer);
-            mir::Pattern pattern = context.resolve_pattern(*let.pattern, scope, space);
+            mir::Pattern pattern = context.resolve_pattern(*let.pattern, initializer.type, scope, space);
 
             mir::Type const type = std::invoke([&] {
                 if (!let.type.has_value())
-                    return pattern.type;
+                    return initializer.type;
                 mir::Type const explicit_type = context.resolve_type(**let.type, scope, space);
                 context.solve(constraint::Type_equality {
                     .constrainer_type = explicit_type,
-                    .constrained_type = pattern.type,
+                    .constrained_type = initializer.type,
                     .constrainer_note = constraint::Explanation {
                         explicit_type.source_view(),
                         "The explicitly specified type is {0}",
@@ -601,6 +601,7 @@ namespace {
             return {
                 .value = mir::expression::Let_binding {
                     .pattern     = context.wrap(std::move(pattern)),
+                    .type        = type,
                     .initializer = context.wrap(std::move(initializer)),
                 },
                 .type        = context.unit_type(this_expression.source_view),
@@ -696,7 +697,7 @@ namespace {
             for (hir::expression::Match::Case& match_case : match.cases) {
                 resolution::Scope case_scope = scope.make_child();
 
-                mir::Pattern    pattern = context.resolve_pattern(*match_case.pattern, case_scope, space);
+                mir::Pattern    pattern = context.resolve_pattern(*match_case.pattern, matched_expression.type, case_scope, space);
                 mir::Expression handler = recurse(*match_case.handler, &case_scope);
 
                 if (previous_case_result_type.has_value()) {
@@ -710,19 +711,6 @@ namespace {
                     });
                 }
                 previous_case_result_type = handler.type;
-
-                context.solve(constraint::Type_equality {
-                    .constrainer_type = matched_expression.type,
-                    .constrained_type = pattern.type,
-                    .constrainer_note = constraint::Explanation {
-                        matched_expression.source_view,
-                        "This expression is of type {0}"
-                    },
-                    .constrained_note {
-                        pattern.source_view,
-                        "But this pattern is of type {1}"
-                    }
-                });
 
                 cases.push_back(mir::expression::Match::Case {
                     .pattern = context.wrap(std::move(pattern)),

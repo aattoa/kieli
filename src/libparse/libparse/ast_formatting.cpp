@@ -235,6 +235,11 @@ namespace {
                 ? format("{}({})", ctor.constructor_name, ctor.payload_pattern)
                 : format("{}", ctor.constructor_name);
         }
+        auto operator()(ast::pattern::Abbreviated_constructor const& ctor) {
+            return ctor.payload_pattern.has_value()
+                   ? format("::{}({})", ctor.constructor_name, ctor.payload_pattern)
+                   : format("::{}", ctor.constructor_name);
+        }
         auto operator()(ast::pattern::Tuple const& tuple) {
             return format("({})", tuple.field_patterns);
         }

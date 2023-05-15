@@ -60,6 +60,7 @@ auto resolution::Context::error(utl::Source_view const source_view, utl::diagnos
 }
 
 auto resolution::Context::diagnostics() -> utl::diagnostics::Builder& {
+    utl::always_assert(compilation_info.get() != nullptr);
     return compilation_info.get()->diagnostics;
 }
 

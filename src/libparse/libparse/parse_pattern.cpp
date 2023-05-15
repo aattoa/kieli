@@ -46,7 +46,7 @@ namespace {
     };
 
 
-    constexpr tl::optional<ast::Pattern> (*parse_constructor_pattern)(Parse_context&) =
+    constexpr auto parse_constructor_pattern =
         parenthesized<parse_top_level_pattern, "a pattern">;
 
 
@@ -58,9 +58,10 @@ namespace {
             case Token::Type::lower_name:
             case Token::Type::upper_name:
                 return extract_qualified({}, context);
-            case Token::Type::double_colon:
+            case Token::Type::global:
                 ++context.pointer;
-                return extract_qualified({ ast::Root_qualifier::Global {} }, context);
+                context.consume_required(Token::Type::double_colon);
+                return extract_qualified({ ast::Global_root_qualifier {} }, context);
             default:
                 if (auto type = parse_type(context))
                     return extract_qualified({ context.wrap(std::move(*type)) }, context);
@@ -106,7 +107,7 @@ namespace {
 
         return ast::pattern::Name {
             .identifier = std::move(*identifier),
-            .mutability = std::move(mutability)
+            .mutability = std::move(mutability),
         };
     };
 
@@ -114,15 +115,23 @@ namespace {
         -> ast::Pattern::Variant
     {
         context.retreat();
-
         if (auto name = parse_constructor_name(context)) {
             return ast::pattern::Constructor {
                 .constructor_name = std::move(*name),
-                .payload_pattern  = parse_constructor_pattern(context).transform(context.wrap())
+                .payload_pattern  = parse_constructor_pattern(context).transform(context.wrap()),
             };
         }
-        utl::todo(); // Unreachable?
+        utl::unreachable();
     };
+
+    auto extract_abbreviated_constructor(Parse_context& context)
+        -> ast::Pattern::Variant
+    {
+        return ast::pattern::Abbreviated_constructor {
+            .constructor_name = extract_lower_name(context, "a constructor name"),
+            .payload_pattern  = parse_constructor_pattern(context).transform(context.wrap()),
+        };
+    }
 
 
     auto parse_normal_pattern(Parse_context& context) -> tl::optional<ast::Pattern::Variant> {
@@ -152,6 +161,8 @@ namespace {
             return extract_name(context);
         case Token::Type::upper_name:
             return extract_qualified_constructor(context);
+        case Token::Type::double_colon:
+            return extract_abbreviated_constructor(context);
         default:
             context.retreat();
             return tl::nullopt;

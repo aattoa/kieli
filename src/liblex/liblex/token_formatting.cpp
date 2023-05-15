@@ -66,6 +66,7 @@ auto compiler::token_description(Lexical_token::Type const type)
     case dyn:
     case pub:
     case macro:
+    case global:
     case lower_self:
     case upper_self:
         return "a keyword";
@@ -110,7 +111,7 @@ DEFINE_FORMATTER_FOR(compiler::Lexical_token::Type) {
 
         "let", "mut", "immut", "if", "else", "elif", "for", "in", "while", "loop", "continue", "break",
         "match", "ret", "discard", "fn", "as", "enum", "struct", "class", "inst", "impl", "alias",
-        "namespace", "import", "export", "module", "sizeof", "typeof_", "addressof", "unsafe_dereference", "mov", "meta", "where", "dyn", "pub", "macro",
+        "namespace", "import", "export", "module", "sizeof", "typeof_", "addressof", "unsafe_dereference", "mov", "meta", "where", "dyn", "pub", "macro", "global",
 
         "underscore", "lower", "upper", "op",
 

@@ -34,7 +34,8 @@ namespace {
     auto extract_global_typename(Parse_context& context)
         -> ast::Type::Variant
     {
-        return extract_qualified_upper_name({ ast::Root_qualifier::Global{} }, context);
+        context.consume_required(Token::Type::double_colon);
+        return extract_qualified_upper_name({ ast::Global_root_qualifier {} }, context);
     }
 
     auto extract_tuple(Parse_context& context)
@@ -61,15 +62,11 @@ namespace {
                         .array_length = context.wrap(std::move(*length))
                     };
                 }
-                else {
-                    context.error_expected("the array length", "Remove the ';' if a slice type was intended");
-                }
+                context.error_expected("the array length", "Remove the ';' if a slice type was intended");
             }
-            else {
-                return ast::type::Slice {
-                    .element_type = context.wrap(std::move(element_type))
-                };
-            }
+            return ast::type::Slice {
+                .element_type = context.wrap(std::move(element_type))
+            };
         });
 
         context.consume_required(Token::Type::bracket_close);
@@ -155,7 +152,7 @@ namespace {
         case Token::Type::asterisk:       return extract_pointer(context);
         case Token::Type::upper_name:
         case Token::Type::lower_name:     return extract_typename(context);
-        case Token::Type::double_colon:   return extract_global_typename(context);
+        case Token::Type::global:         return extract_global_typename(context);
 
         default:
             context.retreat();
@@ -178,7 +175,7 @@ auto parse_type(Parse_context& context) -> tl::optional<ast::Type> {
         Token* const anchor = context.pointer;
 
         if (context.try_consume(Token::Type::double_colon)) {
-            auto name = extract_qualified({ ast::Root_qualifier::Global {} }, context);
+            auto name = extract_qualified({ ast::Global_root_qualifier {} }, context);
 
             if (name.primary_name.is_upper.get()) {
                 name.root_qualifier.value = context.wrap(std::move(type));

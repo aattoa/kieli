@@ -42,7 +42,7 @@ TEST("name resolution") {
     REQUIRE_RESOLUTION_FAILURE(resolve("fn f() = x"),                           "no definition for 'x' in scope");
     REQUIRE_RESOLUTION_FAILURE(resolve("fn f() = test::f()"),                   "no definition for 'test' in scope");
     REQUIRE_RESOLUTION_FAILURE(resolve("namespace test {} fn f() = test::f()"), "test does not contain a definition for 'f'");
-    REQUIRE_RESOLUTION_FAILURE(resolve("fn f() = ::g()"),                       "the global namespace does not contain a definition for 'g'");
+    REQUIRE_RESOLUTION_FAILURE(resolve("fn f() = global::g()"),                 "the global namespace does not contain a definition for 'g'");
     REQUIRE(resolve(
         "namespace a {"
             "namespace b { fn f() = g() }"
@@ -78,9 +78,9 @@ TEST("let binding resolution") {
         "fn f() { let _: Option[I32] = 5: I32; }"),
         "Could not unify Option[I32] ~ I32");
     REQUIRE_RESOLUTION_FAILURE(resolve(
-        "enum Option[T] = none | some(T)"
-        "fn f() { let Option[I32]::none = 5: I32; }"),
-        "Could not unify Option[I32] ~ I32");
+        "enum Test[T] = test "
+        "fn f() { let Test[I32]::test = 5: I32; }"),
+        "Could not unify Test[I32] ~ I32");
     REQUIRE_RESOLUTION_FAILURE(resolve(
         "enum Option[T] = none | some(T)"
         "fn f() { let Option[I32]::none = Option[I32]::some(5: I32); }"),
@@ -171,6 +171,34 @@ TEST("match case unification") {
         " }): String");
 }
 
+TEST("abbreviated constructor pattern") {
+    REQUIRE(resolve(
+        "enum Option[T] = none | some(T) "
+        "fn f(a: Option[I32]) = match a { "
+            "::some(b) -> b "
+            "_ -> \?\?\?"
+        "}")
+        ==
+        "fn f(a: Option[I32]): I32 = ({ "
+            "(match (a): Option[I32] { "
+                "Option[I32]::some(b) -> (b): I32 "
+                "_ -> (\?\?\?): I32 "
+            "}): I32"
+        " }): I32");
+    REQUIRE_RESOLUTION_FAILURE(resolve(
+        "enum Option[T] = none | some(T) "
+        "fn f(a: Option[I32]) = match a { ::wasd(x) -> x }"),
+        "Option[I32] does not have a constructor 'wasd'");
+    REQUIRE_RESOLUTION_FAILURE(resolve(
+        "enum Option[T] = none | some(T) "
+        "fn f() = match \"\" { ::wasd(x) -> x }"),
+        "abbreviated constructor pattern used with non-enum type String");
+    REQUIRE_RESOLUTION_FAILURE(resolve(
+        "enum Option[T] = none | some(T) "
+        "fn f() = match \?\?\? { ::wasd(x) -> x }"),
+        "abbreviated constructor pattern used with an unsolved unification type variable");
+}
+
 TEST("pointer unification") {
     REQUIRE(resolve(
         "fn f(): Char { let x = \?\?\?; unsafe_dereference(addressof(x)) }")
@@ -189,8 +217,8 @@ TEST("reference mutability coercion") {
 }
 
 TEST("double variable solution") {
-    REQUIRE_RESOLUTION_FAILURE(resolve("fn f() { let x = 5; let _: (I32, I64) = (x, x); }"),        "initializer is of type");
-    REQUIRE_RESOLUTION_FAILURE(resolve("fn f() { let x = \?\?\?; let _: (String, I8) = (x, x); }"), "initializer is of type");
+    REQUIRE_RESOLUTION_FAILURE(resolve("fn f() { let x = 5; let _: (I32, I64) = (x, x); }"),        "the explicitly specified type is");
+    REQUIRE_RESOLUTION_FAILURE(resolve("fn f() { let x = \?\?\?; let _: (String, I8) = (x, x); }"), "the explicitly specified type is");
 }
 
 TEST("struct initializer") {

@@ -50,11 +50,8 @@ struct Desugaring_context {
     auto desugar(utl::wrapper auto const node) {
         return wrap(desugar(*node));
     }
-
     auto desugar() noexcept {
-        return [this](auto const& node) {
-            return desugar(node);
-        };
+        return [this](auto const& node) { return desugar(node); };
     }
 
     auto unit_value      (utl::Source_view) -> utl::Wrapper<hir::Expression>;

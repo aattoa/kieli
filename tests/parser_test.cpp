@@ -101,7 +101,7 @@ TEST("missing qualified name") {
 }
 
 TEST("namespace access") {
-    REQUIRE_SIMPLE_PARSE(expression, "::test");
+    REQUIRE_SIMPLE_PARSE(expression, "global::test");
 }
 
 TEST("template expression") {
@@ -117,7 +117,7 @@ TEST("tuple type") {
 }
 
 TEST("type template instantiation") {
-    REQUIRE_SIMPLE_PARSE(type, "Vec[Opt[typeof(sizeof(::Vec[Int]))]]");
+    REQUIRE_SIMPLE_PARSE(type, "Vec[Opt[typeof(sizeof(global::Vec[Int]))]]");
 }
 
 TEST("tuple pattern") {
