@@ -6,6 +6,7 @@
 namespace utl {
     [[nodiscard]]
     auto readline(std::string const& prompt) -> std::string;
+    auto add_to_readline_history(std::string const&) -> void;
 
     /* The ideal prompt string type would be std::string_view, but
      * the underlying readline C API expects a null-terminated raw

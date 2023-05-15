@@ -45,7 +45,6 @@ namespace {
         std::string line;
         while (std::getline(file, line)) {
             ::add_history(line.c_str());
-
             // `line` is cleared when getline fails, so this has to be done every time.
             previous_readline_input = line;
         }
@@ -70,21 +69,16 @@ auto utl::readline(std::string const& prompt) -> std::string {
     static auto const history_reader =
         (read_history_file_to_current_history(), 0);
 
-    char* const raw_input   = ::readline(prompt.c_str());
-    auto  const input_guard = on_scope_exit([=] { std::free(raw_input); });
+    char* const raw_input = ::readline(prompt.c_str());
+    auto const input_guard = on_scope_exit([=] { std::free(raw_input); });
+    return raw_input ? raw_input : std::string {};
+}
 
-    if (!raw_input || !*raw_input)
-        return {};
-
-    std::string input = raw_input;
-
-    if (previous_readline_input != input) {
-        ::add_history(input.c_str());
-        add_line_to_history_file(input);
-        previous_readline_input = input;
-    }
-
-    return input;
+auto utl::add_to_readline_history(std::string const& string) -> void {
+    if (previous_readline_input == string) return;
+    ::add_history(string.c_str());
+    add_line_to_history_file(string);
+    previous_readline_input = string;
 }
 
 
@@ -97,6 +91,8 @@ auto utl::readline(std::string const& prompt) -> std::string {
     std::getline(std::cin, input);
     return input;
 }
+
+auto utl::add_to_readline_history(std::string const&) -> void {}
 
 
 #endif

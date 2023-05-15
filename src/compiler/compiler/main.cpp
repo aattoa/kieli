@@ -41,6 +41,8 @@ namespace {
             else if (string == "q")
                 break;
 
+            utl::add_to_readline_history(string);
+
             try {
                 compiler::Compilation_info repl_info = std::make_shared<compiler::Shared_compilation_info>(compiler::Shared_compilation_info {
                     .source_arena = utl::Wrapper_arena<utl::Source>::with_page_size(1)
