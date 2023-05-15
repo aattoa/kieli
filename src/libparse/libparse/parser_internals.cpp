@@ -310,7 +310,7 @@ auto parse_class_reference(Parse_context& context)
         if (context.try_consume(Token::Type::upper_name) || context.try_consume(Token::Type::lower_name))
             context.retreat();
         else if (context.try_consume(Token::Type::double_colon))
-            root.value = ast::Root_qualifier::Global{};
+            root.value = ast::Global_root_qualifier {};
         else
             return tl::nullopt;
 

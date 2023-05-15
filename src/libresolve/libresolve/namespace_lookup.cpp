@@ -37,7 +37,7 @@ namespace {
             [&](std::monostate) {
                 return utl::Pair { Lookup_strategy::relative, &space };
             },
-            [&](hir::Root_qualifier::Global) {
+            [&](ast::Global_root_qualifier) {
                 return utl::Pair { Lookup_strategy::absolute, &*context.global_namespace };
             },
             [&](utl::Wrapper<hir::Type> type) {

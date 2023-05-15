@@ -334,6 +334,7 @@ namespace {
             { "dyn"                , Token::Type::dyn                },
             { "pub"                , Token::Type::pub                },
             { "macro"              , Token::Type::macro              },
+            { "global"             , Token::Type::global             },
         });
 
         std::string_view const view = context.extract(is_identifier);
@@ -355,15 +356,13 @@ namespace {
             is_upper(view[view.find_first_not_of('_')])
                 ? Token::Type::upper_name
                 : Token::Type::lower_name,
-            context.compilation_info.get()->identifier_pool.make(view)
-        );
+            context.compilation_info.get()->identifier_pool.make(view));
     }
 
     auto extract_operator(Lex_context& context) -> bool {
         static constexpr auto is_operator = is_one_of<
             '+', '-', '*', '/', '.', '|', '<', '=', '>', ':',
-            '!', '?', '#', '%', '&', '^', '~', '$', '@', '\\'
-        >;
+            '!', '?', '#', '%', '&', '^', '~', '$', '@', '\\'>;
         
         std::string_view const view = context.extract(is_operator);
         if (view.empty())
@@ -699,7 +698,7 @@ auto compiler::lex(Lex_arguments&& lex_arguments) -> Lex_result {
                 lex_arguments.source,
                 std::string_view { context.stop, context.stop },
                 { state.line, state.column },
-                { state.line, state.column }
+                { state.line, state.column },
             }
         });
 

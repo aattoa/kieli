@@ -89,6 +89,7 @@ namespace compiler {
             dyn,
             pub,
             macro,
+            global,
 
             underscore,
             lower_name,
@@ -146,8 +147,7 @@ namespace compiler {
         [[nodiscard]] auto as_unsigned_integer() const noexcept -> utl::Usize;
     };
 
-    static_assert(std::is_trivially_copyable_v<Lexical_token>);
-
+    [[nodiscard]]
     auto token_description(Lexical_token::Type) noexcept -> std::string_view;
 
 }

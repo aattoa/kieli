@@ -236,8 +236,9 @@ namespace resolution {
         [[nodiscard]] auto resolve_instantiation_template (utl::Wrapper<Instantiation_template_info >) -> mir::Instantiation_template &;
 
         [[nodiscard]] auto resolve_type      (hir::Type      &, Scope&, Namespace&) -> mir::Type;
-        [[nodiscard]] auto resolve_pattern   (hir::Pattern   &, Scope&, Namespace&) -> mir::Pattern;
         [[nodiscard]] auto resolve_expression(hir::Expression&, Scope&, Namespace&) -> mir::Expression;
+
+        [[nodiscard]] auto resolve_pattern(hir::Pattern&, mir::Type, Scope&, Namespace&) -> mir::Pattern;
 
         [[nodiscard]] auto resolve_mutability(ast::Mutability, Scope&) -> mir::Mutability;
 

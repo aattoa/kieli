@@ -270,6 +270,7 @@ template <> struct dtl::To_HIR_impl<name> : std::type_identity<hir::definition::
         };
         struct Let_binding {
             utl::Wrapper<Pattern>    pattern;
+            mir::Type                type;
             utl::Wrapper<Expression> initializer;
         };
         struct Conditional {
@@ -513,7 +514,7 @@ template <> struct dtl::To_HIR_impl<name> : std::type_identity<hir::definition::
         };
         struct Guarded {
             utl::Wrapper<Pattern> guarded_pattern;
-            Expression           guard;
+            Expression            guard;
         };
     }
 
@@ -535,7 +536,6 @@ template <> struct dtl::To_HIR_impl<name> : std::type_identity<hir::definition::
             pattern::Guarded>;
 
         Variant          value;
-        Type             type;
         bool             is_exhaustive_by_itself = false;
         utl::Source_view source_view;
     };

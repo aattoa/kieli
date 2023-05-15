@@ -208,10 +208,14 @@ namespace {
             return format("{}{}", name.mutability, name.identifier);
         }
         auto operator()(hir::pattern::Constructor const& ctor) {
-            format("ctor {}", ctor.constructor_name);
-            if (ctor.payload_pattern.has_value())
-                format("({})", *ctor.payload_pattern);
-            return out;
+            return ctor.payload_pattern.has_value()
+                   ? format("{}({})", ctor.constructor_name, ctor.payload_pattern)
+                   : format("{}", ctor.constructor_name);
+        }
+        auto operator()(hir::pattern::Abbreviated_constructor const& ctor) {
+            return ctor.payload_pattern.has_value()
+                   ? format("::{}({})", ctor.constructor_name, ctor.payload_pattern)
+                   : format("::{}", ctor.constructor_name);
         }
         auto operator()(hir::pattern::Tuple const& tuple) {
             return format("({})", tuple.field_patterns);

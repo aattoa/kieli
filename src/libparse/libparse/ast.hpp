@@ -34,17 +34,12 @@ namespace ast {
         struct Parameterized {
             compiler::Identifier identifier;
         };
-
         using Variant = std::variant<Concrete, Parameterized>;
 
         Variant          value;
         utl::Source_view source_view;
 
-        [[nodiscard]]
-        constexpr auto was_explicitly_specified() const noexcept -> bool {
-            auto const* const concrete = std::get_if<Concrete>(&value);
-            return !concrete || concrete->is_mutable;
-        }
+        [[nodiscard]] auto was_explicitly_specified() const noexcept -> bool;
     };
 
 
@@ -72,9 +67,7 @@ namespace ast {
         utl::Strong<bool>    is_upper;
         utl::Source_view     source_view;
 
-        constexpr auto operator==(Name const& other) const noexcept -> bool {
-            return identifier == other.identifier;
-        }
+        [[nodiscard]] auto operator==(Name const&) const noexcept -> bool;
     };
 
     template <tree_configuration Configuration>
@@ -98,12 +91,13 @@ namespace ast {
         utl::Source_view                                                  source_view;
     };
 
+    struct Global_root_qualifier {};
+
     template <tree_configuration Configuration>
     struct Basic_root_qualifier {
-        struct Global {};
         using Variant = std::variant<
-            std::monostate,                             // id, id::id
-            Global,                                     // ::id
+            std::monostate,                              // id, id::id
+            Global_root_qualifier,                       // global::id
             utl::Wrapper<typename Configuration::Type>>; // Type::id
         Variant value;
     };
@@ -403,6 +397,10 @@ namespace ast {
             Qualified_name                      constructor_name;
             tl::optional<utl::Wrapper<Pattern>> payload_pattern;
         };
+        struct Abbreviated_constructor {
+            ast::Name                           constructor_name;
+            tl::optional<utl::Wrapper<Pattern>> payload_pattern;
+        };
         struct Tuple {
             std::vector<Pattern> field_patterns;
         };
@@ -410,12 +408,12 @@ namespace ast {
             std::vector<Pattern> element_patterns;
         };
         struct As {
-            Name                 alias;
+            Name                  alias;
             utl::Wrapper<Pattern> aliased_pattern;  
         };
         struct Guarded {
             utl::Wrapper<Pattern> guarded_pattern;
-            Expression           guard;
+            Expression            guard;
         };
     }
 
@@ -432,6 +430,7 @@ namespace ast {
             pattern::Wildcard,
             pattern::Name,
             pattern::Constructor,
+            pattern::Abbreviated_constructor,
             pattern::Tuple,
             pattern::Slice,
             pattern::As,
@@ -447,7 +446,7 @@ namespace ast {
         enum class Integer {
             i8, i16, i32, i64,
             u8, u16, u32, u64,
-            _enumerator_count
+            _enumerator_count,
         };
         template <class>
         struct Primitive {};
@@ -471,7 +470,7 @@ namespace ast {
             utl::Wrapper<Type> element_type;
         };
         struct Function {
-            std::vector<Type> argument_types;
+            std::vector<Type>  argument_types;
             utl::Wrapper<Type> return_type;
         };
         struct Typeof {
@@ -479,11 +478,11 @@ namespace ast {
         };
         struct Reference {
             utl::Wrapper<Type> referenced_type;
-            Mutability        mutability;
+            Mutability         mutability;
         };
         struct Pointer {
             utl::Wrapper<Type> pointed_to_type;
-            Mutability        mutability;
+            Mutability         mutability;
         };
         struct Instance_of {
             std::vector<Class_reference> classes;

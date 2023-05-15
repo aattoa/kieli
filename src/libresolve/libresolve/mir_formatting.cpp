@@ -151,7 +151,7 @@ namespace {
             return format("{} }}", block.result_expression);
         }
         auto operator()(mir::expression::Let_binding const& let) {
-            return format("let {}: {} = {}", let.pattern, let.pattern->type, let.initializer);
+            return format("let {}: {} = {}", let.pattern, let.type, let.initializer);
         }
         auto operator()(mir::expression::Conditional const& conditional) {
             return format("if {} {} else {}", conditional.condition, conditional.true_branch, conditional.false_branch);
