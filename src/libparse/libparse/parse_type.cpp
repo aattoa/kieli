@@ -4,6 +4,8 @@
 
 namespace {
 
+    using namespace libparse;
+
     auto extract_qualified_upper_name(ast::Root_qualifier&& root, Parse_context& context)
         -> ast::Type::Variant
     {
@@ -163,7 +165,7 @@ namespace {
 }
 
 
-auto parse_type(Parse_context& context) -> tl::optional<ast::Type> {
+auto libparse::parse_type(Parse_context& context) -> tl::optional<ast::Type> {
     Token const* const type_anchor = context.pointer;
 
     if (auto type_value = parse_normal_type(context)) {

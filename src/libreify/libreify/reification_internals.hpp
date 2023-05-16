@@ -6,7 +6,7 @@
 #include <libreify/cir.hpp>
 
 
-namespace reification {
+namespace libreify {
 
     using Frame_offset = utl::Safe_integer<vm::Local_offset_type>;
 

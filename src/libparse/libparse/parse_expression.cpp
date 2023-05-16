@@ -4,6 +4,8 @@
 
 namespace {
 
+    using namespace libparse;
+
     template <class T>
     auto extract_literal(Parse_context& context)
         -> ast::Expression::Variant
@@ -147,7 +149,7 @@ namespace {
         {
             auto condition = extract_condition(context);
 
-            if (auto const* const literal = std::get_if<ast::expression::Literal<compiler::Boolean>>(&condition.value)) {
+            if (auto const* const literal = std::get_if<ast::expression::Literal<kieli::Boolean>>(&condition.value)) {
                 if (literal->value.value)
                     context.diagnostics().emit_note(condition.source_view, { "Consider using 'loop' instead of 'while true'" });
                 else
@@ -278,7 +280,7 @@ namespace {
                 });
             }
 
-            if (auto* const literal = std::get_if<ast::expression::Literal<compiler::Boolean>>(&condition.value)) {
+            if (auto* const literal = std::get_if<ast::expression::Literal<kieli::Boolean>>(&condition.value)) {
                 static constexpr auto selected_if = [](bool const x) noexcept {
                     return x ? "This branch will always be selected"
                              : "This branch will never be selected";
@@ -606,17 +608,17 @@ namespace {
     {
         switch (context.extract().type) {
         case Token::Type::signed_integer:
-            return extract_literal<compiler::Signed_integer>(context);
+            return extract_literal<kieli::Signed_integer>(context);
         case Token::Type::unsigned_integer:
-            return extract_literal<compiler::Unsigned_integer>(context);
+            return extract_literal<kieli::Unsigned_integer>(context);
         case Token::Type::integer_of_unknown_sign:
-            return extract_literal<compiler::Integer_of_unknown_sign>(context);
+            return extract_literal<kieli::Integer_of_unknown_sign>(context);
         case Token::Type::floating:
-            return extract_literal<compiler::Floating>(context);
+            return extract_literal<kieli::Floating>(context);
         case Token::Type::character:
-            return extract_literal<compiler::Character>(context);
+            return extract_literal<kieli::Character>(context);
         case Token::Type::boolean:
-            return extract_literal<compiler::Boolean>(context);
+            return extract_literal<kieli::Boolean>(context);
         case Token::Type::string:
             return extract_literal<compiler::String>(context);
         case Token::Type::lower_name:
@@ -933,11 +935,11 @@ namespace {
 }
 
 
-auto parse_expression(Parse_context& context) -> tl::optional<ast::Expression> {
+auto libparse::parse_expression(Parse_context& context) -> tl::optional<ast::Expression> {
     return parse_node<ast::Expression, parse_potential_placement_init>(context);
 }
 
-auto parse_block_expression(Parse_context& context) -> tl::optional<ast::Expression> {
+auto libparse::parse_block_expression(Parse_context& context) -> tl::optional<ast::Expression> {
     if (context.try_consume(Token::Type::brace_open)) {
         Token const* const anchor = context.pointer;
         return ast::Expression {

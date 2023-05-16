@@ -1,7 +1,9 @@
 #include <libutl/common/utilities.hpp>
 #include <libreify/reification_internals.hpp>
 
+using namespace libreify;
 
-auto reification::Context::reify_pattern(mir::Pattern const&) -> cir::Pattern {
+
+auto libreify::Context::reify_pattern(mir::Pattern const&) -> cir::Pattern {
     utl::todo();
 }

@@ -1,11 +1,10 @@
 #include <libutl/common/utilities.hpp>
 #include <libresolve/resolution_internals.hpp>
 
+using namespace libresolve;
+
 
 namespace {
-
-    using namespace resolution;
-
 
     [[nodiscard]]
     auto is_implementation_for(
@@ -78,7 +77,7 @@ namespace {
 }
 
 
-auto resolution::Context::resolve_method(
+auto libresolve::Context::resolve_method(
     ast::Name                                              const method_name,
     tl::optional<std::span<hir::Template_argument const>> const template_arguments,
     mir::Type                                              const type,

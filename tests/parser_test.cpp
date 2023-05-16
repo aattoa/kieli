@@ -8,16 +8,16 @@ namespace {
     auto make_node(std::string&& node_string) -> std::string {
         compiler::Compilation_info test_info = compiler::mock_compilation_info();
         utl::wrapper auto const test_source = test_info.get()->source_arena.wrap("[test]", std::move(node_string));
-        Parse_context parse_context {
-            compiler::lex(compiler::Lex_arguments { .compilation_info = std::move(test_info), .source = test_source }),
+        libparse::Parse_context parse_context {
+            lex(kieli::Lex_arguments { .compilation_info = std::move(test_info), .source = test_source }),
             ast::Node_arena::with_default_page_size()
         };
         return fmt::format("{}", extractor(parse_context));
     }
 
-    constexpr auto expression = make_node<extract_expression>;
-    constexpr auto pattern = make_node<extract_pattern>;
-    constexpr auto type = make_node<extract_type>;
+    constexpr auto expression = make_node<libparse::extract_expression>;
+    constexpr auto pattern = make_node<libparse::extract_pattern>;
+    constexpr auto type = make_node<libparse::extract_type>;
 }
 
 

@@ -1,10 +1,12 @@
 #include <libutl/common/utilities.hpp>
 #include <libdesugar/desugaring_internals.hpp>
 
+using namespace libdesugar;
+
 
 namespace {
     struct Pattern_desugaring_visitor {
-        Desugaring_context& context;
+        Desugar_context& context;
 
         template <class T>
         auto operator()(ast::pattern::Literal<T> const& literal) -> hir::Pattern::Variant {
@@ -16,7 +18,7 @@ namespace {
         auto operator()(ast::pattern::Name const& name) -> hir::Pattern::Variant {
             return hir::pattern::Name {
                 .identifier = name.identifier,
-                .mutability = name.mutability
+                .mutability = name.mutability,
             };
         }
         auto operator()(ast::pattern::Tuple const& tuple) -> hir::Pattern::Variant {
@@ -57,9 +59,9 @@ namespace {
 }
 
 
-auto Desugaring_context::desugar(ast::Pattern const& pattern) -> hir::Pattern {
+auto libdesugar::Desugar_context::desugar(ast::Pattern const& pattern) -> hir::Pattern {
     return {
         .value = std::visit(Pattern_desugaring_visitor { *this }, pattern.value),
-        .source_view = pattern.source_view
+        .source_view = pattern.source_view,
     };
 }

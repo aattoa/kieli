@@ -2,13 +2,13 @@
 #include <liblex/lex.hpp>
 #include <catch2/catch_test_macros.hpp>
 
-using Token = compiler::Lexical_token;
+using Token = kieli::Lexical_token;
 
 namespace {
     auto lex(std::string&& string) -> std::vector<Token::Type> {
         compiler::Compilation_info test_info = compiler::mock_compilation_info();
         utl::wrapper auto const test_source = test_info.get()->source_arena.wrap("[test]", std::move(string));
-        return utl::map(&Token::type, compiler::lex({ .compilation_info = std::move(test_info), .source = test_source}).tokens);
+        return utl::map(&Token::type, kieli::lex({ .compilation_info = std::move(test_info), .source = test_source}).tokens);
     }
     auto types(std::vector<Token::Type> vector) -> std::vector<Token::Type> {
         vector.push_back(Token::Type::end_of_input);

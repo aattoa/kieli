@@ -1,14 +1,11 @@
 #include <libutl/common/utilities.hpp>
 #include <libresolve/resolution_internals.hpp>
 
+using namespace libresolve;
+
 
 namespace {
-
-    using namespace resolution;
-
-
     enum class Lookup_strategy { relative, absolute };
-
 
     [[nodiscard]]
     auto namespace_name(Namespace const& space) -> std::string_view {
@@ -209,15 +206,14 @@ namespace {
         else
             absolute_lookup_error(context, namespace_name(*target_space), primary);
     }
-
 }
 
 
-auto resolution::Context::find_lower(hir::Qualified_name& name, Scope& scope, Namespace& space) -> Lower_variant {
+auto libresolve::Context::find_lower(hir::Qualified_name& name, Scope& scope, Namespace& space) -> Lower_variant {
     assert(!name.primary_name.is_upper.get());
     return do_lookup<&Namespace::lower_table>(*this, scope, space, name);
 }
-auto resolution::Context::find_upper(hir::Qualified_name& name, Scope& scope, Namespace& space) -> Upper_variant {
+auto libresolve::Context::find_upper(hir::Qualified_name& name, Scope& scope, Namespace& space) -> Upper_variant {
     assert(name.primary_name.is_upper.get());
     return do_lookup<&Namespace::upper_table>(*this, scope, space, name);
 }

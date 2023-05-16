@@ -1,20 +1,19 @@
 #pragma once
 
 #include <libutl/common/utilities.hpp>
-#include <compiler/compiler.hpp>
+#include <libcompiler-pipeline/compiler-pipeline.hpp>
 #include <liblex/lex.hpp>
 #include <libparse/ast.hpp>
 
 
-namespace compiler {
+namespace kieli {
 
-    struct Parse_result {
-        Compilation_info compilation_info;
-        ast::Node_arena  node_arena;
-        ast::Module      module;
+    struct [[nodiscard]] Parse_result {
+        compiler::Compilation_info compilation_info;
+        ast::Node_arena            node_arena;
+        ast::Module                module;
     };
 
-    [[nodiscard]]
     auto parse(Lex_result&&) -> Parse_result;
 
 }

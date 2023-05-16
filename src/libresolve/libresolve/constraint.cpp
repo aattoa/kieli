@@ -5,15 +5,15 @@
 namespace {
 
     auto report_type_unification_failure(
-        resolution::Context&                        context,
-        resolution::constraint::Type_equality const constraint,
+        libresolve::Context&                        context,
+        libresolve::constraint::Type_equality const constraint,
         mir::Type                             const left,
         mir::Type                             const right) -> void
     {
         auto sections = utl::vector_with_capacity<utl::diagnostics::Text_section>(2);
 
         tl::optional<std::string> const constrainer_note = constraint.constrainer_note.transform(
-            [&](resolution::constraint::Explanation const explanation) {
+            [&](libresolve::constraint::Explanation const explanation) {
                 return fmt::vformat(explanation.explanatory_note, fmt::make_format_args(constraint.constrainer_type, constraint.constrained_type));
             });
 
@@ -41,8 +41,8 @@ namespace {
     }
 
     auto report_recursive_type(
-        resolution::Context&                        context,
-        resolution::constraint::Type_equality const constraint,
+        libresolve::Context&                        context,
+        libresolve::constraint::Type_equality const constraint,
         mir::Type                             const variable,
         mir::Type                             const solution) -> void
     {
@@ -51,8 +51,8 @@ namespace {
     }
 
     auto report_mutability_unification_failure(
-        resolution::Context&                              context,
-        resolution::constraint::Mutability_equality const constraint) -> void
+        libresolve::Context&                              context,
+        libresolve::constraint::Mutability_equality const constraint) -> void
     {
         mir::Mutability const left  = constraint.constrainer_mutability;
         mir::Mutability const right = constraint.constrained_mutability;
@@ -82,7 +82,7 @@ namespace {
 }
 
 
-auto resolution::Context::solve(constraint::Type_equality const& constraint) -> void {
+auto libresolve::Context::solve(constraint::Type_equality const& constraint) -> void {
     utl::always_assert(unify_types({
         .constraint_to_be_tested    = constraint,
         .allow_coercion             = true,
@@ -93,7 +93,7 @@ auto resolution::Context::solve(constraint::Type_equality const& constraint) -> 
 }
 
 
-auto resolution::Context::solve(constraint::Mutability_equality const& constraint) -> void {
+auto libresolve::Context::solve(constraint::Mutability_equality const& constraint) -> void {
     utl::always_assert(unify_mutabilities({
         .constraint_to_be_tested    = constraint,
         .allow_coercion             = true,
@@ -103,12 +103,12 @@ auto resolution::Context::solve(constraint::Mutability_equality const& constrain
 }
 
 
-auto resolution::Context::solve(constraint::Instance const&) -> void {
+auto libresolve::Context::solve(constraint::Instance const&) -> void {
     utl::todo();
 }
 
 
-auto resolution::Context::solve(constraint::Struct_field const& constraint) -> void {
+auto libresolve::Context::solve(constraint::Struct_field const& constraint) -> void {
     if (auto const* const type = std::get_if<mir::type::Structure>(&*constraint.struct_type.flattened_value())) {
         mir::Struct const& structure = resolve_struct(type->info);
         for (mir::Struct::Member const& member : structure.members) {
@@ -138,7 +138,7 @@ auto resolution::Context::solve(constraint::Struct_field const& constraint) -> v
 }
 
 
-auto resolution::Context::solve(constraint::Tuple_field const& constraint) -> void {
+auto libresolve::Context::solve(constraint::Tuple_field const& constraint) -> void {
     if (auto const* const type = std::get_if<mir::type::Tuple>(&*constraint.tuple_type.flattened_value())) {
         if (constraint.field_index.get() >= type->field_types.size()) {
             error(constraint.explanation.source_view, {

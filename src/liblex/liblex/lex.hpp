@@ -2,19 +2,19 @@
 
 #include <libutl/common/utilities.hpp>
 #include <libutl/source/source.hpp>
-#include <compiler/compiler.hpp>
+#include <libcompiler-pipeline/compiler-pipeline.hpp>
 #include <liblex/token.hpp>
 
 
-namespace compiler {
+namespace kieli {
 
     struct [[nodiscard]] Lex_arguments {
-        Compilation_info          compilation_info = std::make_shared<Shared_compilation_info>();
-        utl::Wrapper<utl::Source> source;
+        compiler::Compilation_info compilation_info = std::make_shared<compiler::Shared_compilation_info>();
+        utl::Wrapper<utl::Source>  source;
     };
 
     struct [[nodiscard]] Lex_result {
-        Compilation_info           compilation_info;
+        compiler::Compilation_info compilation_info;
         std::vector<Lexical_token> tokens;
     };
 

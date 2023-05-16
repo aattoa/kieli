@@ -5,7 +5,7 @@
 
 namespace {
 
-    using Token = compiler::Lexical_token;
+    using Token = kieli::Lexical_token;
 
     struct Lex_context {
         compiler::Compilation_info compilation_info;
@@ -343,9 +343,9 @@ namespace {
             return context.success(Token::Type::underscore);
 
         if (view == "true")
-            return context.success(Token::Type::boolean, compiler::Boolean { true });
+            return context.success(Token::Type::boolean, kieli::Boolean { true });
         else if (view == "false")
-            return context.success(Token::Type::boolean, compiler::Boolean { false });
+            return context.success(Token::Type::boolean, kieli::Boolean { false });
 
         for (auto const [keyword, keyword_type] : options) { // NOLINT
             if (view == keyword)
@@ -541,7 +541,7 @@ namespace {
             }
             else {
                 context.advance(utl::unsigned_distance(context.current_pointer(), floating.result.ptr));
-                return context.success(Token::Type::floating, compiler::Floating { floating.get() });
+                return context.success(Token::Type::floating, kieli::Floating { floating.get() });
             }
         }
 
@@ -555,17 +555,17 @@ namespace {
             if (negative)
                 return context.success(
                     Token::Type::signed_integer,
-                    compiler::Signed_integer { -1 * signed_representation });
+                    kieli::Signed_integer { -1 * signed_representation });
             else
                 return context.success(
                     Token::Type::integer_of_unknown_sign,
-                    compiler::Integer_of_unknown_sign { signed_representation });
+                    kieli::Integer_of_unknown_sign { signed_representation });
         }
         else {
             if (!negative)
                 return context.success(
                     Token::Type::unsigned_integer,
-                    compiler::Unsigned_integer { result });
+                    kieli::Unsigned_integer { result });
             else
                 context.error(
                     { state.pointer, integer.result.ptr },
@@ -607,7 +607,7 @@ namespace {
                 c = handle_escape_sequence(context);
 
             if (context.try_consume('\''))
-                return context.success(Token::Type::character, compiler::Character { c });
+                return context.success(Token::Type::character, kieli::Character { c });
             else
                 context.error(context.current_pointer(), { "Expected a closing single-quote" });
         }
@@ -649,7 +649,7 @@ namespace {
 }
 
 
-auto compiler::lex(Lex_arguments&& lex_arguments) -> Lex_result {
+auto kieli::lex(Lex_arguments&& lex_arguments) -> Lex_result {
     if (lex_arguments.source->string().empty()) {
         Token const end_of_input {
             .type        = Token::Type::end_of_input,

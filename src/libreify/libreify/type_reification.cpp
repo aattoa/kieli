@@ -1,10 +1,10 @@
 #include <libutl/common/utilities.hpp>
 #include <libreify/reification_internals.hpp>
 
+using namespace libreify;
+
 
 namespace {
-
-    using namespace reification;
 
     struct Type_reification_visitor {
         Context&  context;
@@ -103,6 +103,6 @@ namespace {
 }
 
 
-auto reification::Context::reify_type(mir::Type type) -> cir::Type {
+auto libreify::Context::reify_type(mir::Type type) -> cir::Type {
     return std::visit(Type_reification_visitor { *this, type }, *type.flattened_value());
 }

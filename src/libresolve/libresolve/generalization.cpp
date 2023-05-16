@@ -1,15 +1,17 @@
 #include <libutl/common/utilities.hpp>
 #include <libresolve/resolution_internals.hpp>
 
+using namespace libresolve;
+
 
 namespace {
     struct Generalization_type_visitor {
         using Unification_variable_handler =
             std::function<void(mir::Type variable, mir::Unification_type_variable_state&)>;
 
-        resolution::Context&          context;
-        mir::Type                     this_type;
+        Context                     & context;
         Unification_variable_handler& unification_variable_handler;
+        mir::Type                     this_type;
 
         auto recurse() noexcept {
             return [*this](mir::Type const type) mutable -> void {
@@ -66,7 +68,7 @@ namespace {
 }
 
 
-auto resolution::Context::generalize_to(mir::Type const type, std::vector<mir::Template_parameter>& output) -> void {
+auto libresolve::Context::generalize_to(mir::Type const type, std::vector<mir::Template_parameter>& output) -> void {
     std::function handler = [&](mir::Type const type, mir::Unification_type_variable_state& state) {
         auto& unsolved = state.as_unsolved();
         auto const tag = fresh_template_parameter_reference_tag();
@@ -89,16 +91,16 @@ auto resolution::Context::generalize_to(mir::Type const type, std::vector<mir::T
             type.source_view(),
         });
     };
-    std::visit(Generalization_type_visitor { *this, type, handler }, *type.flattened_value());
+    std::visit(Generalization_type_visitor { *this, handler, type }, *type.flattened_value());
 }
 
 
-auto resolution::Context::ensure_non_generalizable(mir::Type const type, std::string_view const type_description) -> void {
+auto libresolve::Context::ensure_non_generalizable(mir::Type const type, std::string_view const type_description) -> void {
     std::function handler = [&](mir::Type const type, mir::Unification_type_variable_state&) {
         error(type.source_view(), {
             .message   = "{}'s type contains an unsolved unification type variable: {}"_format(type_description, type),
             .help_note = "This can most likely be fixed by providing explicit type annotations",
         });
     };
-    std::visit(Generalization_type_visitor { *this, type, handler }, *type.flattened_value());
+    std::visit(Generalization_type_visitor { *this, handler, type }, *type.flattened_value());
 }

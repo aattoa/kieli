@@ -66,7 +66,7 @@ namespace {
             return [this](auto const& expression) { return recurse(expression); };
         }
 
-        template <utl::one_of<compiler::Signed_integer, compiler::Unsigned_integer, compiler::Integer_of_unknown_sign> T>
+        template <utl::one_of<kieli::Signed_integer, kieli::Unsigned_integer, kieli::Integer_of_unknown_sign> T>
         auto operator()(cir::expression::Literal<T> const& integer_literal) -> lir::Expression {
             auto const type = utl::get<cir::type::Integer>(*this_expression.type.value);
             try {
@@ -130,7 +130,7 @@ namespace {
 }
 
 
-auto compiler::lower(Reify_result&& reify_result) -> Lower_result {
+auto kieli::lower(Reify_result&& reify_result) -> Lower_result {
     auto node_arena = lir::Node_arena::with_default_page_size();
     std::vector<lir::Function> functions;
 

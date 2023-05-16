@@ -2,7 +2,7 @@
 #include <liblex/token.hpp>
 
 
-auto compiler::token_description(Lexical_token::Type const type)
+auto kieli::token_description(Lexical_token::Type const type)
     noexcept -> std::string_view
 {
     using enum Lexical_token::Type;
@@ -105,7 +105,7 @@ auto compiler::token_description(Lexical_token::Type const type)
 }
 
 
-DEFINE_FORMATTER_FOR(compiler::Lexical_token::Type) {
+DEFINE_FORMATTER_FOR(kieli::Lexical_token::Type) {
     constexpr auto strings = std::to_array<std::string_view>({
         ".", ",", ":", ";", "::", "&", "*", "+", "?", "=", "|", "\\", "<-", "->", "\?\?\?", "(", ")", "{", "}", "[", "]",
 
@@ -124,12 +124,12 @@ DEFINE_FORMATTER_FOR(compiler::Lexical_token::Type) {
 
         "end of input"
     });
-    static_assert(strings.size() == utl::enumerator_count<compiler::Lexical_token::Type>);
+    static_assert(strings.size() == utl::enumerator_count<kieli::Lexical_token::Type>);
     return fmt::format_to(context.out(), "{}", strings[utl::as_index(value)]);
 }
 
 
-DEFINE_FORMATTER_FOR(compiler::Lexical_token) {
+DEFINE_FORMATTER_FOR(kieli::Lexical_token) {
     if (std::holds_alternative<std::monostate>(value.value))
         return fmt::format_to(context.out(), "'{}'", value.type);
     else

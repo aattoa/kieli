@@ -31,7 +31,7 @@ namespace {
     }
 
 
-    template <void(*f)(compiler::Lex_result&&)>
+    template <void(*f)(kieli::Lex_result&&)>
     auto generic_repl() {
         for (;;) {
             std::string string = utl::readline(">>> ");
@@ -48,7 +48,7 @@ namespace {
                     .source_arena = utl::Wrapper_arena<utl::Source>::with_page_size(1)
                 });
                 utl::wrapper auto const repl_source = repl_info.get()->source_arena.wrap("[repl]", std::move(string));
-                f(compiler::lex({ .compilation_info = std::move(repl_info), .source = repl_source }));
+                f(kieli::lex({ .compilation_info = std::move(repl_info), .source = repl_source }));
             }
             catch (utl::diagnostics::Error const& error) {
                 std::cerr << error.what() << "\n\n";
@@ -59,12 +59,12 @@ namespace {
         }
     }
 
-    constexpr auto lexer_repl = generic_repl<[](compiler::Lex_result&& lex_result) {
+    constexpr auto lexer_repl = generic_repl<[](kieli::Lex_result&& lex_result) {
         fmt::print("Tokens: {}\n", lex_result.tokens);
     }>;
 
-    constexpr auto expression_parser_repl = generic_repl<[](compiler::Lex_result&& lex_result) {
-        Parse_context context { std::move(lex_result), ast::Node_arena::with_default_page_size() };
+    constexpr auto expression_parser_repl = generic_repl<[](kieli::Lex_result&& lex_result) {
+        libparse::Parse_context context { std::move(lex_result), ast::Node_arena::with_default_page_size() };
 
         if (auto result = parse_expression(context)) {
             fmt::println("Result: {}", result);
@@ -76,28 +76,27 @@ namespace {
         }
     }>;
 
-    constexpr auto program_parser_repl = generic_repl<[](compiler::Lex_result&& lex_result) {
-        auto parse_result = compiler::parse(std::move(lex_result));
+    constexpr auto program_parser_repl = generic_repl<[](kieli::Lex_result&& lex_result) {
+        auto parse_result = parse(std::move(lex_result));
         fmt::println("{}", parse_result.module);
     }>;
 
-    constexpr auto desugaring_repl = generic_repl<[](compiler::Lex_result&& lex_result) {
-        auto desugar_result = compiler::desugar(compiler::parse(std::move(lex_result)));
+    constexpr auto desugaring_repl = generic_repl<[](kieli::Lex_result&& lex_result) {
+        auto desugar_result = desugar(parse(std::move(lex_result)));
         fmt::print("{}\n\n", utl::formatting::delimited_range(desugar_result.module.definitions, "\n\n"));
     }>;
 
-    constexpr auto resolution_repl = generic_repl<[](compiler::Lex_result&& lex_result) {
-        auto resolve_result = compiler::resolve(compiler::desugar(compiler::parse(std::move(lex_result))));
+    constexpr auto resolution_repl = generic_repl<[](kieli::Lex_result&& lex_result) {
+        auto resolve_result = resolve(desugar(parse(std::move(lex_result))));
         print_mir_module(resolve_result.module);
     }>;
 
-    constexpr auto reification_repl = generic_repl<[](compiler::Lex_result&& lex_result) {
-        (void)compiler::reify(compiler::resolve(compiler::desugar(compiler::parse(std::move(lex_result)))));
+    constexpr auto reification_repl = generic_repl<[](kieli::Lex_result&& lex_result) {
+        (void)reify(resolve(desugar(parse(std::move(lex_result)))));
     }>;
 
-    constexpr auto lowering_repl = generic_repl<[](compiler::Lex_result&& lex_result) {
-        using namespace compiler;
-        auto lowering_result = lower(reify(resolve(desugar(parse(std::move(lex_result))))));
+    constexpr auto lowering_repl = generic_repl<[](kieli::Lex_result&& lex_result) {
+        auto lowering_result = lower(reify(resolve(desugar(kieli::parse(std::move(lex_result))))));
         for (lir::Function const& function : lowering_result.functions)
             fmt::println("{}: {}", function.symbol, function.body);
     }>;
@@ -154,7 +153,7 @@ auto main(int argc, char const** argv) -> int try {
         auto const do_resolve = [&] {
             compiler::Compilation_info repl_info = compiler::mock_compilation_info();
             utl::wrapper auto const repl_source = repl_info.get()->source_arena.wrap(utl::Source::read(source_directory_path / "main.kieli"));
-            return resolve(desugar(parse(lex({ .compilation_info = std::move(repl_info), .source = repl_source }))));
+            return kieli::resolve(kieli::desugar(kieli::parse(kieli::lex({ .compilation_info = std::move(repl_info), .source = repl_source }))));
         };
 
         if (*phase == "low")
