@@ -6,12 +6,12 @@
 #include <libparse/parse.hpp>
 
 
-namespace compiler {
+namespace kieli {
 
-    struct Desugar_result {
-        Compilation_info  compilation_info;
-        hir::Node_arena   node_arena;
-        hir::Module       module;
+    struct [[nodiscard]] Desugar_result {
+        compiler::Compilation_info compilation_info;
+        hir::Node_arena            node_arena;
+        hir::Module                module;
     };
 
     auto desugar(Parse_result&&) -> Desugar_result;

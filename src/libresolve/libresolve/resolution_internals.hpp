@@ -6,7 +6,7 @@
 #include <libresolve/mir.hpp>
 
 
-namespace resolution {
+namespace libresolve {
 
     struct Nameless_entities {
         std::vector<utl::Wrapper<Implementation_info>>          implementations;
@@ -300,13 +300,13 @@ namespace resolution {
 
         template <class T>
         auto literal_type(utl::Source_view const view) -> mir::Type {
-            if constexpr (utl::one_of<T, compiler::Signed_integer, compiler::Unsigned_integer, compiler::Integer_of_unknown_sign>)
+            if constexpr (utl::one_of<T, kieli::Signed_integer, kieli::Unsigned_integer, kieli::Integer_of_unknown_sign>)
                 return fresh_integral_unification_type_variable(view);
-            else if constexpr (std::same_as<T, compiler::Floating>)
+            else if constexpr (std::same_as<T, kieli::Floating>)
                 return floating_type(view);
-            else if constexpr (std::same_as<T, compiler::Character>)
+            else if constexpr (std::same_as<T, kieli::Character>)
                 return character_type(view);
-            else if constexpr (std::same_as<T, compiler::Boolean>)
+            else if constexpr (std::same_as<T, kieli::Boolean>)
                 return boolean_type(view);
             else if constexpr (std::same_as<T, compiler::String>)
                 return string_type(view);
@@ -318,8 +318,8 @@ namespace resolution {
 }
 
 
-DECLARE_FORMATTER_FOR(resolution::constraint::Type_equality);
-DECLARE_FORMATTER_FOR(resolution::constraint::Mutability_equality);
-DECLARE_FORMATTER_FOR(resolution::constraint::Instance);
-DECLARE_FORMATTER_FOR(resolution::constraint::Struct_field);
-DECLARE_FORMATTER_FOR(resolution::constraint::Tuple_field);
+DECLARE_FORMATTER_FOR(libresolve::constraint::Type_equality);
+DECLARE_FORMATTER_FOR(libresolve::constraint::Mutability_equality);
+DECLARE_FORMATTER_FOR(libresolve::constraint::Instance);
+DECLARE_FORMATTER_FOR(libresolve::constraint::Struct_field);
+DECLARE_FORMATTER_FOR(libresolve::constraint::Tuple_field);

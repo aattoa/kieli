@@ -7,11 +7,11 @@
 
 
 namespace {
-    auto do_resolve(std::string&& string, utl::diagnostics::Level const diagnostics_level) -> compiler::Resolve_result {
+    auto do_resolve(std::string&& string, utl::diagnostics::Level const diagnostics_level) -> kieli::Resolve_result {
         compiler::Compilation_info test_info = compiler::mock_compilation_info(diagnostics_level);
         utl::wrapper auto const test_source = test_info.get()->source_arena.wrap("[test]", std::move(string));
-        auto lex_result = compiler::lex({ .compilation_info = std::move(test_info), .source = test_source });
-        return compiler::resolve(compiler::desugar(compiler::parse(std::move(lex_result))));
+        auto lex_result = kieli::lex({ .compilation_info = std::move(test_info), .source = test_source });
+        return resolve(desugar(parse(std::move(lex_result))));
     }
     auto resolve(std::string&& string) -> std::string {
         auto resolve_result = do_resolve(std::move(string), utl::diagnostics::Level::suppress);

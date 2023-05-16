@@ -1,11 +1,12 @@
 #include <libutl/common/utilities.hpp>
 #include <libdesugar/desugaring_internals.hpp>
 
+using namespace libdesugar;
+
 
 namespace {
-
     struct Definition_desugaring_visitor {
-        Desugaring_context& context;
+        Desugar_context& context;
 
         auto operator()(ast::definition::Function const& function) -> hir::definition::Function {
             std::vector<hir::Function_parameter> parameters;
@@ -120,11 +121,10 @@ namespace {
             };
         }
     };
-
 }
 
 
-auto Desugaring_context::desugar(ast::Definition const& definition) -> hir::Definition {
+auto libdesugar::Desugar_context::desugar(ast::Definition const& definition) -> hir::Definition {
     utl::always_assert(!definition.value.valueless_by_exception());
     return {
         std::visit<hir::Definition::Variant>(Definition_desugaring_visitor { *this }, definition.value),

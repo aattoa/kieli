@@ -1,11 +1,12 @@
 #include <libutl/common/utilities.hpp>
 #include <libreify/reification_internals.hpp>
 
+using namespace libreify;
+
 
 namespace {
-
     struct Expression_reification_visitor {
-        reification::Context & context;
+        libreify::Context    & context;
         mir::Expression const& this_expression;
 
         auto recurse(mir::Expression const& expression) -> cir::Expression {
@@ -26,7 +27,7 @@ namespace {
 
         auto operator()(mir::expression::Sizeof const& sizeof_) -> cir::Expression::Variant {
             cir::Type const inspected_type = context.reify_type(sizeof_.inspected_type);
-            return cir::expression::Literal<compiler::Unsigned_integer> { inspected_type.size.get() };
+            return cir::expression::Literal<kieli::Unsigned_integer> { inspected_type.size.get() };
         }
 
         auto operator()(mir::expression::Block const& block) -> cir::Expression::Variant {
@@ -97,11 +98,10 @@ namespace {
             utl::todo();
         }
     };
-
 }
 
 
-auto reification::Context::reify_expression(mir::Expression const& expression) -> cir::Expression {
+auto libreify::Context::reify_expression(mir::Expression const& expression) -> cir::Expression {
     return {
         .value       = std::visit(Expression_reification_visitor { *this, expression }, expression.value),
         .type        = reify_type(expression.type),

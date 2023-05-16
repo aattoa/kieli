@@ -5,10 +5,10 @@
 #include <liblower/lir.hpp>
 
 
-namespace compiler {
+namespace kieli {
 
-    struct Lower_result {
-        Compilation_info           compilation_info;
+    struct [[nodiscard]] Lower_result {
+        compiler::Compilation_info compilation_info;
         lir::Node_arena            node_arena;
         std::vector<lir::Function> functions;
     };

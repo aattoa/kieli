@@ -2,7 +2,7 @@
 #include <libresolve/resolve.hpp>
 #include <libresolve/resolution_internals.hpp>
 
-using namespace resolution;
+using namespace libresolve;
 
 
 namespace {
@@ -58,7 +58,7 @@ namespace {
                 },
                 [&](hir::definition::Typeclass& typeclass) {
                     ast::Name const name = typeclass.name;
-                    add_definition(context.wrap(resolution::Typeclass_info {
+                    add_definition(context.wrap(Typeclass_info {
                         .value          = std::move(typeclass),
                         .home_namespace = space,
                         .name           = name,
@@ -223,7 +223,7 @@ namespace {
 
 
     auto set_predefinitions(hir::Node_arena& output_hir_arena, Context& context) -> void {
-        auto desugar_result = desugar(parse(lex(compiler::Lex_arguments {
+        auto desugar_result = desugar(parse(lex(kieli::Lex_arguments {
             .compilation_info = context.compilation_info,
             .source           = compiler::predefinitions_source(context.compilation_info),
         })));
@@ -246,7 +246,7 @@ namespace {
 }
 
 
-auto compiler::resolve(Desugar_result&& desugar_result) -> Resolve_result {
+auto kieli::resolve(Desugar_result&& desugar_result) -> Resolve_result {
     Context context {
         std::move(desugar_result.compilation_info),
         mir::Node_arena::with_default_page_size(),

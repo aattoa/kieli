@@ -16,7 +16,7 @@
 */
 
 
-namespace resolution {
+namespace libresolve {
     struct [[nodiscard]] Namespace;
     class  [[nodiscard]] Scope;
 
@@ -89,7 +89,7 @@ template <> struct dtl::To_HIR_impl<name> : std::type_identity<hir::definition::
 
 
     struct [[nodiscard]] Class_reference {
-        utl::Wrapper<resolution::Typeclass_info> info;
+        utl::Wrapper<libresolve::Typeclass_info> info;
         utl::Source_view                         source_view;
     };
 
@@ -198,11 +198,11 @@ template <> struct dtl::To_HIR_impl<name> : std::type_identity<hir::definition::
             Type       pointed_to_type;
         };
         struct Structure {
-            utl::Wrapper<resolution::Struct_info> info;
+            utl::Wrapper<libresolve::Struct_info> info;
             bool                                  is_application = false;
         };
         struct Enumeration {
-            utl::Wrapper<resolution::Enum_info> info;
+            utl::Wrapper<libresolve::Enum_info> info;
             bool                                is_application = false;
         };
         struct Unification_variable {
@@ -304,7 +304,7 @@ template <> struct dtl::To_HIR_impl<name> : std::type_identity<hir::definition::
             utl::Source_view         field_index_source_view;
         };
         struct Function_reference {
-            utl::Wrapper<resolution::Function_info> info;
+            utl::Wrapper<libresolve::Function_info> info;
             bool                                   is_application = false;
         };
         struct Direct_invocation {
@@ -347,12 +347,12 @@ template <> struct dtl::To_HIR_impl<name> : std::type_identity<hir::definition::
 
     struct Expression {
         using Variant = std::variant<
-            expression::Literal<compiler::Signed_integer>,
-            expression::Literal<compiler::Unsigned_integer>,
-            expression::Literal<compiler::Integer_of_unknown_sign>,
-            expression::Literal<compiler::Floating>,
-            expression::Literal<compiler::Character>,
-            expression::Literal<compiler::Boolean>,
+            expression::Literal<kieli::Signed_integer>,
+            expression::Literal<kieli::Unsigned_integer>,
+            expression::Literal<kieli::Integer_of_unknown_sign>,
+            expression::Literal<kieli::Floating>,
+            expression::Literal<kieli::Character>,
+            expression::Literal<kieli::Boolean>,
             expression::Literal<compiler::String>,
             expression::Array_literal,
             expression::Tuple,
@@ -394,7 +394,7 @@ template <> struct dtl::To_HIR_impl<name> : std::type_identity<hir::definition::
     struct Template {
         Definition                                                                 definition;
         std::vector<Template_parameter>                                            parameters;
-        std::vector<utl::Wrapper<resolution::Definition_info<To_HIR<Definition>>>> instantiations;
+        std::vector<utl::Wrapper<libresolve::Definition_info<To_HIR<Definition>>>> instantiations;
     };
 
     struct [[nodiscard]] Self_parameter {
@@ -416,7 +416,7 @@ template <> struct dtl::To_HIR_impl<name> : std::type_identity<hir::definition::
         };
         Signature                                            signature;
         Expression                                           body;
-        std::vector<utl::Wrapper<resolution::Function_info>> template_instantiations; // empty when not a template
+        std::vector<utl::Wrapper<libresolve::Function_info>> template_instantiations; // empty when not a template
     };
 
     struct Struct {
@@ -427,14 +427,14 @@ template <> struct dtl::To_HIR_impl<name> : std::type_identity<hir::definition::
         };
         std::vector<Member>                 members;
         ast::Name                           name;
-        utl::Wrapper<resolution::Namespace> associated_namespace;
+        utl::Wrapper<libresolve::Namespace> associated_namespace;
     };
     using Struct_template = Template<Struct>;
 
     struct Enum {
         std::vector<Enum_constructor>       constructors;
         ast::Name                           name;
-        utl::Wrapper<resolution::Namespace> associated_namespace;
+        utl::Wrapper<libresolve::Namespace> associated_namespace;
     };
     using Enum_template = Template<Enum>;
 
@@ -460,17 +460,17 @@ template <> struct dtl::To_HIR_impl<name> : std::type_identity<hir::definition::
     using Typeclass_template = Template<Typeclass>;
 
     struct Implementation {
-        template <utl::instance_of<resolution::Definition_info> Info>
+        template <utl::instance_of<libresolve::Definition_info> Info>
         using Map = utl::Flatmap<compiler::Identifier, utl::Wrapper<Info>>;
 
         struct Definitions {
-            Map<resolution::Function_info>        functions;
-            Map<resolution::Struct_info>          structures;
-            Map<resolution::Struct_template_info> structure_templates;
-            Map<resolution::Enum_info>            enumerations;
-            Map<resolution::Enum_template_info>   enumeration_templates;
-            Map<resolution::Alias_info>           aliases;
-            Map<resolution::Alias_template_info>  alias_templates;
+            Map<libresolve::Function_info>        functions;
+            Map<libresolve::Struct_info>          structures;
+            Map<libresolve::Struct_template_info> structure_templates;
+            Map<libresolve::Enum_info>            enumerations;
+            Map<libresolve::Enum_template_info>   enumeration_templates;
+            Map<libresolve::Alias_info>           aliases;
+            Map<libresolve::Alias_template_info>  alias_templates;
         };
         Definitions definitions;
         Type        self_type;
@@ -520,12 +520,12 @@ template <> struct dtl::To_HIR_impl<name> : std::type_identity<hir::definition::
 
     struct Pattern {
         using Variant = std::variant<
-            pattern::Literal<compiler::Signed_integer>,
-            pattern::Literal<compiler::Unsigned_integer>,
-            pattern::Literal<compiler::Integer_of_unknown_sign>,
-            pattern::Literal<compiler::Floating>,
-            pattern::Literal<compiler::Character>,
-            pattern::Literal<compiler::Boolean>,
+            pattern::Literal<kieli::Signed_integer>,
+            pattern::Literal<kieli::Unsigned_integer>,
+            pattern::Literal<kieli::Integer_of_unknown_sign>,
+            pattern::Literal<kieli::Floating>,
+            pattern::Literal<kieli::Character>,
+            pattern::Literal<kieli::Boolean>,
             pattern::Literal<compiler::String>,
             pattern::Wildcard,
             pattern::Name,
@@ -550,7 +550,7 @@ template <> struct dtl::To_HIR_impl<name> : std::type_identity<hir::definition::
 
     struct Template_default_argument {
         hir::Template_argument             argument;
-        std::shared_ptr<resolution::Scope> scope;
+        std::shared_ptr<libresolve::Scope> scope;
     };
 
     struct Template_parameter {
@@ -634,23 +634,23 @@ template <> struct dtl::To_HIR_impl<name> : std::type_identity<hir::definition::
         Unification_mutability_variable_state>;
 
     using Namespace_arena = utl::Wrapper_arena<
-        resolution::Function_info,
-        resolution::Struct_info,
-        resolution::Enum_info,
-        resolution::Alias_info,
-        resolution::Typeclass_info,
-        resolution::Namespace,
-        resolution::Implementation_info,
-        resolution::Instantiation_info,
-        resolution::Struct_template_info,
-        resolution::Enum_template_info,
-        resolution::Alias_template_info,
-        resolution::Typeclass_template_info,
-        resolution::Implementation_template_info,
-        resolution::Instantiation_template_info>;
+        libresolve::Function_info,
+        libresolve::Struct_info,
+        libresolve::Enum_info,
+        libresolve::Alias_info,
+        libresolve::Typeclass_info,
+        libresolve::Namespace,
+        libresolve::Implementation_info,
+        libresolve::Instantiation_info,
+        libresolve::Struct_template_info,
+        libresolve::Enum_template_info,
+        libresolve::Alias_template_info,
+        libresolve::Typeclass_template_info,
+        libresolve::Implementation_template_info,
+        libresolve::Instantiation_template_info>;
 
     struct Module {
-        std::vector<utl::Wrapper<resolution::Function_info>> functions;
+        std::vector<utl::Wrapper<libresolve::Function_info>> functions;
     };
 
 }
@@ -678,7 +678,7 @@ DECLARE_FORMATTER_FOR(mir::Implementation);
 DECLARE_FORMATTER_FOR(mir::Instantiation);
 
 
-namespace resolution {
+namespace libresolve {
 
     class [[nodiscard]] Context;
 

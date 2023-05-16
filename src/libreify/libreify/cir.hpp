@@ -80,16 +80,16 @@ namespace cir {
 
     struct Pattern {
         using Variant = std::variant<
-            pattern::Literal<compiler::Signed_integer>,
-            pattern::Literal<compiler::Unsigned_integer>,
-            pattern::Literal<compiler::Integer_of_unknown_sign>,
-            pattern::Literal<compiler::Floating>,
-            pattern::Literal<compiler::Character>,
-            pattern::Literal<compiler::Boolean>,
+            pattern::Literal<kieli::Signed_integer>,
+            pattern::Literal<kieli::Unsigned_integer>,
+            pattern::Literal<kieli::Integer_of_unknown_sign>,
+            pattern::Literal<kieli::Floating>,
+            pattern::Literal<kieli::Character>,
+            pattern::Literal<kieli::Boolean>,
             pattern::Literal<compiler::String>,
             pattern::Tuple,
-            pattern::Exhaustive
-        >;
+            pattern::Exhaustive>;
+
         Variant          value;
         Type             type; // TODO: is this field necessary?
         utl::Source_view source_view;
@@ -136,12 +136,12 @@ namespace cir {
 
     struct [[nodiscard]] Expression {
         using Variant = std::variant<
-            expression::Literal<compiler::Signed_integer>,
-            expression::Literal<compiler::Unsigned_integer>,
-            expression::Literal<compiler::Integer_of_unknown_sign>,
-            expression::Literal<compiler::Floating>,
-            expression::Literal<compiler::Character>,
-            expression::Literal<compiler::Boolean>,
+            expression::Literal<kieli::Signed_integer>,
+            expression::Literal<kieli::Unsigned_integer>,
+            expression::Literal<kieli::Integer_of_unknown_sign>,
+            expression::Literal<kieli::Floating>,
+            expression::Literal<kieli::Character>,
+            expression::Literal<kieli::Boolean>,
             expression::Literal<compiler::String>,
             expression::Block,
             expression::Tuple,

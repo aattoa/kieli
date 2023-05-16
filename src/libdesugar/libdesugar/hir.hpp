@@ -175,12 +175,12 @@ namespace hir {
 
     struct Expression {
         using Variant = std::variant<
-            expression::Literal<compiler::Signed_integer>,
-            expression::Literal<compiler::Unsigned_integer>,
-            expression::Literal<compiler::Integer_of_unknown_sign>,
-            expression::Literal<compiler::Floating>,
-            expression::Literal<compiler::Character>,
-            expression::Literal<compiler::Boolean>,
+            expression::Literal<kieli::Signed_integer>,
+            expression::Literal<kieli::Unsigned_integer>,
+            expression::Literal<kieli::Integer_of_unknown_sign>,
+            expression::Literal<kieli::Floating>,
+            expression::Literal<kieli::Character>,
+            expression::Literal<kieli::Boolean>,
             expression::Literal<compiler::String>,
             expression::Array_literal,
             expression::Self,
@@ -250,12 +250,12 @@ namespace hir {
 
     struct Pattern {
         using Variant = std::variant<
-            pattern::Literal<compiler::Signed_integer>,
-            pattern::Literal<compiler::Unsigned_integer>,
-            pattern::Literal<compiler::Integer_of_unknown_sign>,
-            pattern::Literal<compiler::Floating>,
-            pattern::Literal<compiler::Character>,
-            pattern::Literal<compiler::Boolean>,
+            pattern::Literal<kieli::Signed_integer>,
+            pattern::Literal<kieli::Unsigned_integer>,
+            pattern::Literal<kieli::Integer_of_unknown_sign>,
+            pattern::Literal<kieli::Floating>,
+            pattern::Literal<kieli::Character>,
+            pattern::Literal<kieli::Boolean>,
             pattern::Literal<compiler::String>,
             pattern::Wildcard,
             pattern::Name,

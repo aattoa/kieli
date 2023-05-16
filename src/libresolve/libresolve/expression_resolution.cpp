@@ -1,11 +1,10 @@
 #include <libutl/common/utilities.hpp>
 #include <libresolve/resolution_internals.hpp>
 
+using namespace libresolve;
+
 
 namespace {
-
-    using namespace resolution;
-
 
     auto require_addressability(
         Context               & context,
@@ -145,7 +144,7 @@ namespace {
         Namespace      & space;
         hir::Expression& this_expression;
 
-        auto recurse(hir::Expression& expression, resolution::Scope* const new_scope = nullptr) {
+        auto recurse(hir::Expression& expression, Scope* const new_scope = nullptr) {
             return context.resolve_expression(expression, new_scope != nullptr ? *new_scope : scope, space);
         }
 
@@ -331,7 +330,7 @@ namespace {
                     context.wrap_type(mir::type::Array {
                         .element_type = element_type,
                         .array_length = context.wrap(mir::Expression {
-                            .value       = mir::expression::Literal<compiler::Unsigned_integer> { array_length },
+                            .value       = mir::expression::Literal<kieli::Unsigned_integer> { array_length },
                             .type        = context.size_type(this_expression.source_view),
                             .source_view = this_expression.source_view,
                             .mutability  = context.immut_constant(this_expression.source_view),
@@ -375,7 +374,7 @@ namespace {
             };
 
             return utl::match(context.find_lower(variable.name, scope, space),
-                [&](utl::Wrapper<resolution::Function_info> const info) -> mir::Expression {
+                [&](utl::Wrapper<Function_info> const info) -> mir::Expression {
                     if (context.resolve_function_signature(*info).is_template()) {
                         return handle_function_reference(
                             context.instantiate_function_template_with_synthetic_arguments(info, this_expression.source_view),
@@ -393,7 +392,7 @@ namespace {
                         .mutability  = context.immut_constant(this_expression.source_view)
                     };
                 },
-                [this](utl::Wrapper<resolution::Namespace>) -> mir::Expression {
+                [this](utl::Wrapper<Namespace>) -> mir::Expression {
                     context.error(this_expression.source_view, { "Expected an expression, but found a namespace" });
                 }
             );
@@ -493,7 +492,7 @@ namespace {
         }
 
         auto operator()(hir::expression::Block& block) -> mir::Expression {
-            resolution::Scope block_scope = scope.make_child();
+            Scope block_scope = scope.make_child();
 
             std::vector<mir::Expression> side_effects;
             side_effects.reserve(block.side_effect_expressions.size());
@@ -695,7 +694,7 @@ namespace {
             tl::optional<mir::Type> previous_case_result_type;
 
             for (hir::expression::Match::Case& match_case : match.cases) {
-                resolution::Scope case_scope = scope.make_child();
+                Scope case_scope = scope.make_child();
 
                 mir::Pattern    pattern = context.resolve_pattern(*match_case.pattern, matched_expression.type, case_scope, space);
                 mir::Expression handler = recurse(*match_case.handler, &case_scope);
@@ -1115,6 +1114,6 @@ namespace {
 }
 
 
-auto resolution::Context::resolve_expression(hir::Expression& expression, Scope& scope, Namespace& space) -> mir::Expression {
+auto libresolve::Context::resolve_expression(hir::Expression& expression, Scope& scope, Namespace& space) -> mir::Expression {
     return std::visit(Expression_resolution_visitor { *this, scope, space, expression }, expression.value);
 }

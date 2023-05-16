@@ -5,7 +5,7 @@
 #include <libcompiler-pipeline/compiler-pipeline.hpp>
 
 
-namespace compiler {
+namespace kieli {
 
     struct Signed_integer          { utl::Isize value {}; };
     struct Unsigned_integer        { utl::Usize value {}; };
@@ -24,8 +24,8 @@ namespace compiler {
             Floating,
             Character,
             Boolean,
-            String,
-            Identifier>;
+            compiler::String,
+            compiler::Identifier>;
 
         enum class Type {
             dot,
@@ -141,8 +141,8 @@ namespace compiler {
         [[nodiscard]] auto as_floating        () const noexcept -> decltype(Floating::value);
         [[nodiscard]] auto as_character       () const noexcept -> decltype(Character::value);
         [[nodiscard]] auto as_boolean         () const noexcept -> decltype(Boolean::value);
-        [[nodiscard]] auto as_string          () const noexcept -> String;
-        [[nodiscard]] auto as_identifier      () const noexcept -> Identifier;
+        [[nodiscard]] auto as_string          () const noexcept -> compiler::String;
+        [[nodiscard]] auto as_identifier      () const noexcept -> compiler::Identifier;
         [[nodiscard]] auto as_signed_integer  () const noexcept -> utl::Isize;
         [[nodiscard]] auto as_unsigned_integer() const noexcept -> utl::Usize;
     };
@@ -153,17 +153,17 @@ namespace compiler {
 }
 
 
-DECLARE_FORMATTER_FOR(compiler::Lexical_token::Type);
-DECLARE_FORMATTER_FOR(compiler::Lexical_token);
+DECLARE_FORMATTER_FOR(kieli::Lexical_token::Type);
+DECLARE_FORMATTER_FOR(kieli::Lexical_token);
 
 
 template <utl::one_of<
-    compiler::Signed_integer,
-    compiler::Unsigned_integer,
-    compiler::Integer_of_unknown_sign,
-    compiler::Floating,
-    compiler::Boolean,
-    compiler::Character> T>
+    kieli::Signed_integer,
+    kieli::Unsigned_integer,
+    kieli::Integer_of_unknown_sign,
+    kieli::Floating,
+    kieli::Boolean,
+    kieli::Character> T>
 struct fmt::formatter<T> : fmt::formatter<decltype(T::value)> {
     auto format(T const value_wrapper, auto& context) {
         return fmt::formatter<decltype(T::value)>::format(value_wrapper.value, context);

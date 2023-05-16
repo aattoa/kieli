@@ -1,11 +1,10 @@
 #include <libutl/common/utilities.hpp>
 #include <libresolve/resolution_internals.hpp>
 
+using namespace libresolve;
+
 
 namespace {
-
-    using namespace resolution;
-
 
     struct [[nodiscard]] Substitutions {
         utl::Flatmap<mir::Template_parameter_tag, mir::Type>       type_substitutions;
@@ -868,7 +867,7 @@ namespace {
 }
 
 
-auto resolution::Context::instantiate_function_template(
+auto libresolve::Context::instantiate_function_template(
     utl::Wrapper<Function_info>             const template_info,
     std::span<hir::Template_argument const> const template_arguments,
     utl::Source_view                        const instantiation_view,
@@ -901,7 +900,7 @@ auto resolution::Context::instantiate_function_template(
 }
 
 
-auto resolution::Context::instantiate_struct_template(
+auto libresolve::Context::instantiate_struct_template(
     utl::Wrapper<Struct_template_info>      const template_info,
     std::span<hir::Template_argument const> const template_arguments,
     utl::Source_view                        const instantiation_view,
@@ -927,7 +926,7 @@ auto resolution::Context::instantiate_struct_template(
 }
 
 
-auto resolution::Context::instantiate_enum_template(
+auto libresolve::Context::instantiate_enum_template(
     utl::Wrapper<Enum_template_info>        const template_info,
     std::span<hir::Template_argument const> const template_arguments,
     utl::Source_view                        const instantiation_view,
@@ -953,7 +952,7 @@ auto resolution::Context::instantiate_enum_template(
 }
 
 
-auto resolution::Context::instantiate_alias_template(
+auto libresolve::Context::instantiate_alias_template(
     utl::Wrapper<Alias_template_info>       const template_info,
     std::span<hir::Template_argument const> const template_arguments,
     utl::Source_view                        const instantiation_view,
@@ -979,7 +978,7 @@ auto resolution::Context::instantiate_alias_template(
 }
 
 
-auto resolution::Context::instantiate_function_template_with_synthetic_arguments(
+auto libresolve::Context::instantiate_function_template_with_synthetic_arguments(
     utl::Wrapper<Function_info> const template_info,
     utl::Source_view            const instantiation_view) -> utl::Wrapper<Function_info>
 {
@@ -988,7 +987,7 @@ auto resolution::Context::instantiate_function_template_with_synthetic_arguments
     return instantiate_function_template(template_info, arguments, instantiation_view, instantiation_scope, *template_info->home_namespace);
 }
 
-auto resolution::Context::instantiate_struct_template_with_synthetic_arguments(
+auto libresolve::Context::instantiate_struct_template_with_synthetic_arguments(
     utl::Wrapper<Struct_template_info> const template_info,
     utl::Source_view                   const instantiation_view) -> utl::Wrapper<Struct_info>
 {
@@ -997,7 +996,7 @@ auto resolution::Context::instantiate_struct_template_with_synthetic_arguments(
     return instantiate_struct_template(template_info, arguments, instantiation_view, instantiation_scope, *template_info->home_namespace);
 }
 
-auto resolution::Context::instantiate_enum_template_with_synthetic_arguments(
+auto libresolve::Context::instantiate_enum_template_with_synthetic_arguments(
     utl::Wrapper<Enum_template_info> const template_info,
     utl::Source_view                 const instantiation_view) -> utl::Wrapper<Enum_info>
 {
@@ -1006,7 +1005,7 @@ auto resolution::Context::instantiate_enum_template_with_synthetic_arguments(
     return instantiate_enum_template(template_info, arguments, instantiation_view, instantiation_scope, *template_info->home_namespace);
 }
 
-auto resolution::Context::instantiate_alias_template_with_synthetic_arguments(
+auto libresolve::Context::instantiate_alias_template_with_synthetic_arguments(
     utl::Wrapper<Alias_template_info> const template_info,
     utl::Source_view                  const instantiation_view) -> utl::Wrapper<Alias_info>
 {

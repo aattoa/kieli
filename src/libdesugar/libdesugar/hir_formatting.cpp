@@ -25,7 +25,7 @@ namespace {
         auto operator()(hir::expression::Literal<T> const& literal) {
             if constexpr (std::same_as<T, compiler::String>)
                 return format("\"{}\"", literal.value);
-            if constexpr (std::same_as<T, compiler::Character>)
+            if constexpr (std::same_as<T, kieli::Character>)
                 return format("'{}'", literal.value);
             else
                 return format("{}", literal.value);

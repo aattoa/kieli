@@ -1,11 +1,13 @@
 #include <libutl/common/utilities.hpp>
 #include <libresolve/resolution_internals.hpp>
 
+using namespace libresolve;
+
 
 #if 0
 #define UNIFICATION_LOG(...) fmt::println("[UNIFICATION LOG] " __VA_ARGS__)
 #else
-#define UNIFICATION_LOG(...) ((void)0)
+#define UNIFICATION_LOG(...) static_assert(requires { fmt::println(__VA_ARGS__); })
 #endif
 
 
@@ -100,9 +102,9 @@ namespace {
 
 
     struct Mutability_unification_visitor {
-        resolution::Mutability_unification_arguments         unification_arguments;
+        libresolve::Mutability_unification_arguments         unification_arguments;
         Unification_variable_solutions::Mutability_mappings& solutions;
-        resolution::Context&                                 context;
+        libresolve::Context&                                 context;
 
         auto unification_failure() -> bool {
             if (auto* const callback = unification_arguments.report_unification_failure) {
@@ -168,10 +170,10 @@ namespace {
     struct Type_unification_visitor {
         mir::Type                                        current_left_type;
         mir::Type                                        current_right_type;
-        resolution::constraint::Type_equality     const& original_constraint;
-        resolution::Type_unification_arguments    const& unification_arguments;
+        libresolve::constraint::Type_equality     const& original_constraint;
+        libresolve::Type_unification_arguments    const& unification_arguments;
         Unification_variable_solutions                 & solutions;
-        resolution::Context                            & context;
+        libresolve::Context                            & context;
 
         [[nodiscard]]
         auto recurse(mir::Type const constrainer, mir::Type const constrained) -> bool {
@@ -358,7 +360,7 @@ namespace {
 
 
 
-auto resolution::Context::unify_mutabilities(Mutability_unification_arguments const arguments) -> bool {
+auto libresolve::Context::unify_mutabilities(Mutability_unification_arguments const arguments) -> bool {
     Unification_variable_solutions solutions;
 
     Mutability_unification_visitor visitor {
@@ -377,7 +379,7 @@ auto resolution::Context::unify_mutabilities(Mutability_unification_arguments co
 }
 
 
-auto resolution::Context::unify_types(Type_unification_arguments const arguments) -> bool {
+auto libresolve::Context::unify_types(Type_unification_arguments const arguments) -> bool {
     UNIFICATION_LOG(
         "unifying {} ~ {}\n",
         arguments.constraint_to_be_tested.constrainer_type,
@@ -404,7 +406,7 @@ auto resolution::Context::unify_types(Type_unification_arguments const arguments
 }
 
 
-auto resolution::Context::pure_equality_compare(mir::Type const left, mir::Type const right) -> bool {
+auto libresolve::Context::pure_equality_compare(mir::Type const left, mir::Type const right) -> bool {
     return unify_types({
         .constraint_to_be_tested {
             .constrainer_type = left,

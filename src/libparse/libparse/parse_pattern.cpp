@@ -4,6 +4,8 @@
 
 namespace {
 
+    using namespace libparse;
+
     auto extract_wildcard(Parse_context&)
         -> ast::Pattern::Variant
     {
@@ -139,17 +141,17 @@ namespace {
         case Token::Type::underscore:
             return extract_wildcard(context);
         case Token::Type::signed_integer:
-            return extract_literal<compiler::Signed_integer>(context);
+            return extract_literal<kieli::Signed_integer>(context);
         case Token::Type::unsigned_integer:
-            return extract_literal<compiler::Unsigned_integer>(context);
+            return extract_literal<kieli::Unsigned_integer>(context);
         case Token::Type::integer_of_unknown_sign:
-            return extract_literal<compiler::Integer_of_unknown_sign>(context);
+            return extract_literal<kieli::Integer_of_unknown_sign>(context);
         case Token::Type::floating:
-            return extract_literal<compiler::Floating>(context);
+            return extract_literal<kieli::Floating>(context);
         case Token::Type::character:
-            return extract_literal<compiler::Character>(context);
+            return extract_literal<kieli::Character>(context);
         case Token::Type::boolean:
-            return extract_literal<compiler::Boolean>(context);
+            return extract_literal<kieli::Boolean>(context);
         case Token::Type::string:
             return extract_literal<compiler::String>(context);
         case Token::Type::paren_open:
@@ -213,6 +215,6 @@ namespace {
 }
 
 
-auto parse_pattern(Parse_context& context) -> tl::optional<ast::Pattern> {
+auto libparse::parse_pattern(Parse_context& context) -> tl::optional<ast::Pattern> {
     return parse_node<ast::Pattern, parse_potentially_guarded_pattern>(context);
 }

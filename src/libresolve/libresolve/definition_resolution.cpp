@@ -1,11 +1,10 @@
 #include <libutl/common/utilities.hpp>
 #include <libresolve/resolution_internals.hpp>
 
+using namespace libresolve;
+
 
 namespace {
-
-    using namespace resolution;
-
 
     enum class Allow_generalization { yes, no };
 
@@ -282,7 +281,7 @@ namespace {
 }
 
 
-auto resolution::Context::resolve_function_signature(Function_info& info)
+auto libresolve::Context::resolve_function_signature(Function_info& info)
     -> mir::Function::Signature&
 {
     if (auto* const function = std::get_if<hir::definition::Function>(&info.value))
@@ -297,7 +296,7 @@ auto resolution::Context::resolve_function_signature(Function_info& info)
 }
 
 
-auto resolution::Context::resolve_function(utl::Wrapper<Function_info> const wrapped_info)
+auto libresolve::Context::resolve_function(utl::Wrapper<Function_info> const wrapped_info)
     -> mir::Function&
 {
     Function_info& info = *wrapped_info;
@@ -312,7 +311,7 @@ auto resolution::Context::resolve_function(utl::Wrapper<Function_info> const wra
 }
 
 
-auto resolution::Context::resolve_struct(utl::Wrapper<Struct_info> const wrapped_info) -> mir::Struct& {
+auto libresolve::Context::resolve_struct(utl::Wrapper<Struct_info> const wrapped_info) -> mir::Struct& {
     Struct_info& info = *wrapped_info;
 
     if (auto* const structure = std::get_if<hir::definition::Struct>(&info.value)) {
@@ -324,7 +323,7 @@ auto resolution::Context::resolve_struct(utl::Wrapper<Struct_info> const wrapped
 }
 
 
-auto resolution::Context::resolve_enum(utl::Wrapper<Enum_info> const wrapped_info) -> mir::Enum& {
+auto libresolve::Context::resolve_enum(utl::Wrapper<Enum_info> const wrapped_info) -> mir::Enum& {
     Enum_info& info = *wrapped_info;
 
     if (auto* const enumeration = std::get_if<hir::definition::Enum>(&info.value)) {
@@ -336,7 +335,7 @@ auto resolution::Context::resolve_enum(utl::Wrapper<Enum_info> const wrapped_inf
 }
 
 
-auto resolution::Context::resolve_alias(utl::Wrapper<Alias_info> const wrapped_info) -> mir::Alias& {
+auto libresolve::Context::resolve_alias(utl::Wrapper<Alias_info> const wrapped_info) -> mir::Alias& {
     Alias_info& info = *wrapped_info;
 
     if (auto* const alias = std::get_if<hir::definition::Alias>(&info.value)) {
@@ -351,7 +350,7 @@ auto resolution::Context::resolve_alias(utl::Wrapper<Alias_info> const wrapped_i
 }
 
 
-auto resolution::Context::resolve_typeclass(utl::Wrapper<Typeclass_info> const wrapped_info) -> mir::Typeclass& {
+auto libresolve::Context::resolve_typeclass(utl::Wrapper<Typeclass_info> const wrapped_info) -> mir::Typeclass& {
     Typeclass_info& info = *wrapped_info;
 
     if (auto* const hir_typeclass = std::get_if<hir::definition::Typeclass>(&info.value)) {
@@ -388,7 +387,7 @@ auto resolution::Context::resolve_typeclass(utl::Wrapper<Typeclass_info> const w
 }
 
 
-auto resolution::Context::resolve_implementation(utl::Wrapper<Implementation_info> const wrapped_info) -> mir::Implementation& {
+auto libresolve::Context::resolve_implementation(utl::Wrapper<Implementation_info> const wrapped_info) -> mir::Implementation& {
     Implementation_info& info = *wrapped_info;
 
     if (auto* const implementation = std::get_if<hir::definition::Implementation>(&info.value)) {
@@ -447,13 +446,13 @@ auto resolution::Context::resolve_implementation(utl::Wrapper<Implementation_inf
 }
 
 
-auto resolution::Context::resolve_instantiation(utl::Wrapper<Instantiation_info> const wrapped_info) -> mir::Instantiation& {
+auto libresolve::Context::resolve_instantiation(utl::Wrapper<Instantiation_info> const wrapped_info) -> mir::Instantiation& {
     (void)wrapped_info;
     utl::todo();
 }
 
 
-auto resolution::Context::resolve_struct_template(utl::Wrapper<Struct_template_info> const wrapped_info)
+auto libresolve::Context::resolve_struct_template(utl::Wrapper<Struct_template_info> const wrapped_info)
     -> mir::Struct_template&
 {
     Struct_template_info& info = *wrapped_info;
@@ -477,7 +476,7 @@ auto resolution::Context::resolve_struct_template(utl::Wrapper<Struct_template_i
 }
 
 
-auto resolution::Context::resolve_enum_template(utl::Wrapper<Enum_template_info> const wrapped_info)
+auto libresolve::Context::resolve_enum_template(utl::Wrapper<Enum_template_info> const wrapped_info)
     -> mir::Enum_template&
 {
     Enum_template_info& info = *wrapped_info;
@@ -503,7 +502,7 @@ auto resolution::Context::resolve_enum_template(utl::Wrapper<Enum_template_info>
 }
 
 
-auto resolution::Context::resolve_alias_template(utl::Wrapper<Alias_template_info> const wrapped_info)
+auto libresolve::Context::resolve_alias_template(utl::Wrapper<Alias_template_info> const wrapped_info)
     -> mir::Alias_template&
 {
     Alias_template_info& info = *wrapped_info;
@@ -527,18 +526,18 @@ auto resolution::Context::resolve_alias_template(utl::Wrapper<Alias_template_inf
 }
 
 
-auto resolution::Context::resolve_typeclass_template(utl::Wrapper<Typeclass_template_info>)
+auto libresolve::Context::resolve_typeclass_template(utl::Wrapper<Typeclass_template_info>)
     -> mir::Typeclass_template&
 {
     utl::todo();
 }
 
 
-auto resolution::Context::resolve_implementation_template(utl::Wrapper<Implementation_template_info>) -> mir::Implementation_template& {
+auto libresolve::Context::resolve_implementation_template(utl::Wrapper<Implementation_template_info>) -> mir::Implementation_template& {
     utl::todo();
 }
 
 
-auto resolution::Context::resolve_instantiation_template(utl::Wrapper<Instantiation_template_info>) -> mir::Instantiation_template& {
+auto libresolve::Context::resolve_instantiation_template(utl::Wrapper<Instantiation_template_info>) -> mir::Instantiation_template& {
     utl::todo();
 }

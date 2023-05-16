@@ -1,18 +1,18 @@
 #pragma once
 
-#include <compiler/compiler.hpp>
+#include <libcompiler-pipeline/compiler-pipeline.hpp>
 #include <libresolve/resolve.hpp>
 #include <libreify/cir.hpp>
 
 
-namespace compiler {
+namespace kieli {
 
-    struct Reify_result {
-        Compilation_info           compilation_info;
+    struct [[nodiscard]] Reify_result {
+        compiler::Compilation_info compilation_info;
         cir::Node_arena            node_arena;
         std::vector<cir::Function> functions;
     };
 
-    auto reify(compiler::Resolve_result&&) -> Reify_result;
+    auto reify(Resolve_result&&) -> Reify_result;
 
 }

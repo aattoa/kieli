@@ -1,12 +1,10 @@
 #include <libutl/common/utilities.hpp>
 #include <libresolve/resolution_internals.hpp>
 
+using namespace libresolve;
+
 
 namespace {
-
-    using namespace resolution;
-
-
     struct Pattern_resolution_visitor {
         Context     & context;
         Scope       & scope;
@@ -161,10 +159,10 @@ namespace {
 
         auto operator()(hir::pattern::Constructor& hir_constructor) -> mir::Pattern {
             return utl::match(context.find_lower(hir_constructor.constructor_name, scope, space),
-                [&](utl::Wrapper<resolution::Function_info>) -> mir::Pattern {
+                [&](utl::Wrapper<Function_info>) -> mir::Pattern {
                     context.error(this_pattern.source_view, { "Expected a constructor, but found a function" });
                 },
-                [&](utl::Wrapper<resolution::Namespace>) -> mir::Pattern {
+                [&](utl::Wrapper<Namespace>) -> mir::Pattern {
                     context.error(this_pattern.source_view, { "Expected a constructor, but found a namespace" });
                 },
                 [&](mir::Enum_constructor constructor) -> mir::Pattern {
@@ -242,10 +240,9 @@ namespace {
             };
         }
     };
-
 }
 
 
-auto resolution::Context::resolve_pattern(hir::Pattern& pattern, mir::Type const type, Scope& scope, Namespace& space) -> mir::Pattern {
+auto libresolve::Context::resolve_pattern(hir::Pattern& pattern, mir::Type const type, Scope& scope, Namespace& space) -> mir::Pattern {
     return std::visit(Pattern_resolution_visitor { *this, scope, space, pattern, type }, pattern.value);
 }

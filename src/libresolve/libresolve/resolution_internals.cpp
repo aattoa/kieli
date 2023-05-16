@@ -2,7 +2,7 @@
 #include <libresolve/resolution_internals.hpp>
 
 
-resolution::Definition_state_guard::Definition_state_guard(
+libresolve::Definition_state_guard::Definition_state_guard(
     Context         & context,
     Definition_state& state,
     ast::Name   const name)
@@ -15,7 +15,7 @@ resolution::Definition_state_guard::Definition_state_guard(
         state = Definition_state::currently_on_resolution_stack;
 }
 
-resolution::Definition_state_guard::~Definition_state_guard() {
+libresolve::Definition_state_guard::~Definition_state_guard() {
     // If the destructor is called due to an uncaught exception
     // in definition resolution code, don't modify the state.
 
@@ -24,19 +24,19 @@ resolution::Definition_state_guard::~Definition_state_guard() {
 }
 
 
-resolution::Self_type_guard::Self_type_guard(Context& context, mir::Type new_self_type)
+libresolve::Self_type_guard::Self_type_guard(Context& context, mir::Type new_self_type)
     : current_self_type  { context.current_self_type }
     , previous_self_type { current_self_type }
 {
     current_self_type = new_self_type;
 }
 
-resolution::Self_type_guard::~Self_type_guard() {
+libresolve::Self_type_guard::~Self_type_guard() {
     current_self_type = previous_self_type;
 }
 
 
-resolution::Resolution_constants::Resolution_constants(mir::Node_arena& arena)
+libresolve::Resolution_constants::Resolution_constants(mir::Node_arena& arena)
     : immut                 { arena.wrap<mir::Mutability::Variant>(mir::Mutability::Concrete { .is_mutable = false }) }
     , mut                   { arena.wrap<mir::Mutability::Variant>(mir::Mutability::Concrete { .is_mutable = true }) }
     , unit_type             { arena.wrap<mir::Type::Variant>(mir::type::Tuple {}) }
@@ -55,17 +55,17 @@ resolution::Resolution_constants::Resolution_constants(mir::Node_arena& arena)
     , self_placeholder_type { arena.wrap<mir::Type::Variant>(mir::type::Self_placeholder {}) } {}
 
 
-auto resolution::Context::error(utl::Source_view const source_view, utl::diagnostics::Message_arguments const& arguments) -> void {
+auto libresolve::Context::error(utl::Source_view const source_view, utl::diagnostics::Message_arguments const& arguments) -> void {
     diagnostics().emit_error(arguments.add_source_view(source_view));
 }
 
-auto resolution::Context::diagnostics() -> utl::diagnostics::Builder& {
+auto libresolve::Context::diagnostics() -> utl::diagnostics::Builder& {
     utl::always_assert(compilation_info.get() != nullptr);
     return compilation_info.get()->diagnostics;
 }
 
 
-auto resolution::Context::fresh_unification_mutability_variable(utl::Source_view const source_view) -> mir::Mutability {
+auto libresolve::Context::fresh_unification_mutability_variable(utl::Source_view const source_view) -> mir::Mutability {
     return mir::Mutability {
         wrap(mir::Mutability::Variant {
             mir::Mutability::Variable {
@@ -79,7 +79,7 @@ auto resolution::Context::fresh_unification_mutability_variable(utl::Source_view
 }
 
 
-auto resolution::Context::fresh_unification_type_variable_state(
+auto libresolve::Context::fresh_unification_type_variable_state(
     mir::Unification_type_variable_kind const variable_kind) -> utl::Wrapper<mir::Unification_type_variable_state>
 {
     return node_arena.wrap(mir::Unification_type_variable_state { mir::Unification_type_variable_state::Unsolved {
@@ -89,7 +89,7 @@ auto resolution::Context::fresh_unification_type_variable_state(
 }
 
 
-auto resolution::Context::fresh_general_unification_type_variable(utl::Source_view const source_view) -> mir::Type {
+auto libresolve::Context::fresh_general_unification_type_variable(utl::Source_view const source_view) -> mir::Type {
     return mir::Type {
         wrap_type(mir::type::Unification_variable {
             .state = fresh_unification_type_variable_state(mir::Unification_type_variable_kind::general)
@@ -97,7 +97,7 @@ auto resolution::Context::fresh_general_unification_type_variable(utl::Source_vi
         source_view,
     };
 }
-auto resolution::Context::fresh_integral_unification_type_variable(utl::Source_view const source_view) -> mir::Type {
+auto libresolve::Context::fresh_integral_unification_type_variable(utl::Source_view const source_view) -> mir::Type {
     return mir::Type {
         wrap_type(mir::type::Unification_variable {
             fresh_unification_type_variable_state(mir::Unification_type_variable_kind::integral)
@@ -106,15 +106,15 @@ auto resolution::Context::fresh_integral_unification_type_variable(utl::Source_v
     };
 }
 
-auto resolution::Context::fresh_template_parameter_reference_tag() -> mir::Template_parameter_tag {
+auto libresolve::Context::fresh_template_parameter_reference_tag() -> mir::Template_parameter_tag {
     return mir::Template_parameter_tag { current_template_parameter_tag++.get() };
 }
-auto resolution::Context::fresh_local_variable_tag() -> mir::Local_variable_tag {
+auto libresolve::Context::fresh_local_variable_tag() -> mir::Local_variable_tag {
     return mir::Local_variable_tag { current_local_variable_tag++.get() };
 }
 
 
-auto resolution::Context::predefinitions() -> Predefinitions {
+auto libresolve::Context::predefinitions() -> Predefinitions {
     if (predefinitions_value.has_value())
         return *predefinitions_value;
     else
@@ -122,32 +122,32 @@ auto resolution::Context::predefinitions() -> Predefinitions {
 }
 
 
-auto resolution::Context::immut_constant(utl::Source_view const view) -> mir::Mutability { return mir::Mutability { constants.immut, view }; }
-auto resolution::Context::  mut_constant(utl::Source_view const view) -> mir::Mutability { return mir::Mutability { constants.mut, view }; }
+auto libresolve::Context::immut_constant(utl::Source_view const view) -> mir::Mutability { return mir::Mutability { constants.immut, view }; }
+auto libresolve::Context::  mut_constant(utl::Source_view const view) -> mir::Mutability { return mir::Mutability { constants.mut, view }; }
 
-auto resolution::Context::unit_type            (utl::Source_view const view) -> mir::Type { return mir::Type { constants.unit_type,             view }; }
-auto resolution::Context::i8_type              (utl::Source_view const view) -> mir::Type { return mir::Type { constants.i8_type,               view }; }
-auto resolution::Context::i16_type             (utl::Source_view const view) -> mir::Type { return mir::Type { constants.i16_type,              view }; }
-auto resolution::Context::i32_type             (utl::Source_view const view) -> mir::Type { return mir::Type { constants.i32_type,              view }; }
-auto resolution::Context::i64_type             (utl::Source_view const view) -> mir::Type { return mir::Type { constants.i64_type,              view }; }
-auto resolution::Context::u8_type              (utl::Source_view const view) -> mir::Type { return mir::Type { constants.u8_type,               view }; }
-auto resolution::Context::u16_type             (utl::Source_view const view) -> mir::Type { return mir::Type { constants.u16_type,              view }; }
-auto resolution::Context::u32_type             (utl::Source_view const view) -> mir::Type { return mir::Type { constants.u32_type,              view }; }
-auto resolution::Context::u64_type             (utl::Source_view const view) -> mir::Type { return mir::Type { constants.u64_type,              view }; }
-auto resolution::Context::floating_type        (utl::Source_view const view) -> mir::Type { return mir::Type { constants.floating_type,         view }; }
-auto resolution::Context::boolean_type         (utl::Source_view const view) -> mir::Type { return mir::Type { constants.boolean_type,          view }; }
-auto resolution::Context::character_type       (utl::Source_view const view) -> mir::Type { return mir::Type { constants.character_type,        view }; }
-auto resolution::Context::string_type          (utl::Source_view const view) -> mir::Type { return mir::Type { constants.string_type,           view }; }
-auto resolution::Context::self_placeholder_type(utl::Source_view const view) -> mir::Type { return mir::Type { constants.self_placeholder_type, view }; }
-auto resolution::Context::size_type            (utl::Source_view const view) -> mir::Type { return u64_type(view); }
+auto libresolve::Context::unit_type            (utl::Source_view const view) -> mir::Type { return mir::Type { constants.unit_type,             view }; }
+auto libresolve::Context::i8_type              (utl::Source_view const view) -> mir::Type { return mir::Type { constants.i8_type,               view }; }
+auto libresolve::Context::i16_type             (utl::Source_view const view) -> mir::Type { return mir::Type { constants.i16_type,              view }; }
+auto libresolve::Context::i32_type             (utl::Source_view const view) -> mir::Type { return mir::Type { constants.i32_type,              view }; }
+auto libresolve::Context::i64_type             (utl::Source_view const view) -> mir::Type { return mir::Type { constants.i64_type,              view }; }
+auto libresolve::Context::u8_type              (utl::Source_view const view) -> mir::Type { return mir::Type { constants.u8_type,               view }; }
+auto libresolve::Context::u16_type             (utl::Source_view const view) -> mir::Type { return mir::Type { constants.u16_type,              view }; }
+auto libresolve::Context::u32_type             (utl::Source_view const view) -> mir::Type { return mir::Type { constants.u32_type,              view }; }
+auto libresolve::Context::u64_type             (utl::Source_view const view) -> mir::Type { return mir::Type { constants.u64_type,              view }; }
+auto libresolve::Context::floating_type        (utl::Source_view const view) -> mir::Type { return mir::Type { constants.floating_type,         view }; }
+auto libresolve::Context::boolean_type         (utl::Source_view const view) -> mir::Type { return mir::Type { constants.boolean_type,          view }; }
+auto libresolve::Context::character_type       (utl::Source_view const view) -> mir::Type { return mir::Type { constants.character_type,        view }; }
+auto libresolve::Context::string_type          (utl::Source_view const view) -> mir::Type { return mir::Type { constants.string_type,           view }; }
+auto libresolve::Context::self_placeholder_type(utl::Source_view const view) -> mir::Type { return mir::Type { constants.self_placeholder_type, view }; }
+auto libresolve::Context::size_type            (utl::Source_view const view) -> mir::Type { return u64_type(view); }
 
 
-auto resolution::Context::temporary_placeholder_type(utl::Source_view const view) -> mir::Type {
+auto libresolve::Context::temporary_placeholder_type(utl::Source_view const view) -> mir::Type {
     return mir::Type { wrap_type(mir::type::Tuple {}), view };
 }
 
 
-auto resolution::Context::associated_namespace_if(mir::Type const type)
+auto libresolve::Context::associated_namespace_if(mir::Type const type)
     -> tl::optional<utl::Wrapper<Namespace>>
 {
     auto const& value = *type.flattened_value();
@@ -159,7 +159,7 @@ auto resolution::Context::associated_namespace_if(mir::Type const type)
         return tl::nullopt;
 }
 
-auto resolution::Context::associated_namespace(mir::Type type)
+auto libresolve::Context::associated_namespace(mir::Type type)
     -> utl::Wrapper<Namespace>
 {
     if (tl::optional space = associated_namespace_if(type))
@@ -169,10 +169,10 @@ auto resolution::Context::associated_namespace(mir::Type type)
 
 
 namespace {
-    template <auto resolution::Namespace::* table>
+    template <auto libresolve::Namespace::* table>
     auto add_to_namespace_impl(
-        resolution::Context  & context,
-        resolution::Namespace& space,
+        libresolve::Context  & context,
+        libresolve::Namespace& space,
         ast::Name        const name,
         auto                   variant,
         auto                   get_name_from_variant) -> void
@@ -199,7 +199,7 @@ namespace {
     }
 }
 
-auto resolution::Context::add_to_namespace(Namespace& space, ast::Name const name, Lower_variant lower) -> void {
+auto libresolve::Context::add_to_namespace(Namespace& space, ast::Name const name, Lower_variant lower) -> void {
     assert(!name.is_upper.get());
     add_to_namespace_impl<&Namespace::lower_table>(*this, space, name, std::move(lower), utl::Overload {
         [](utl::Wrapper<Namespace> const space) { return utl::get(space->name); },
@@ -207,13 +207,13 @@ auto resolution::Context::add_to_namespace(Namespace& space, ast::Name const nam
         [](utl::wrapper auto       const info)  { return info->name; }
     });
 }
-auto resolution::Context::add_to_namespace(Namespace& space, ast::Name const name, Upper_variant upper) -> void {
+auto libresolve::Context::add_to_namespace(Namespace& space, ast::Name const name, Upper_variant upper) -> void {
     assert(name.is_upper.get());
     add_to_namespace_impl<&Namespace::upper_table>(*this, space, name, std::move(upper), [](auto const& info) { return info->name;  });
 }
 
 
-auto resolution::Context::resolve_mutability(ast::Mutability const mutability, Scope& scope)
+auto libresolve::Context::resolve_mutability(ast::Mutability const mutability, Scope& scope)
     -> mir::Mutability
 {
     return utl::match(mutability.value,
@@ -233,7 +233,7 @@ auto resolution::Context::resolve_mutability(ast::Mutability const mutability, S
 }
 
 
-auto resolution::Context::resolve_class_reference(
+auto libresolve::Context::resolve_class_reference(
     hir::Class_reference& reference,
     Scope               & scope,
     Namespace           & space) -> mir::Class_reference
@@ -249,7 +249,7 @@ auto resolution::Context::resolve_class_reference(
 }
 
 
-auto resolution::Context::resolve_template_parameters(
+auto libresolve::Context::resolve_template_parameters(
     std::span<hir::Template_parameter> const hir_parameters,
     Namespace                              & space) -> utl::Pair<Scope, std::vector<mir::Template_parameter>>
 {
@@ -325,23 +325,23 @@ auto resolution::Context::resolve_template_parameters(
 }
 
 
-auto resolution::Enum_info::constructor_count() const noexcept -> utl::Usize {
+auto libresolve::Enum_info::constructor_count() const noexcept -> utl::Usize {
     return utl::match(value, [](auto const& enumeration) { return enumeration.constructors.size(); });
 }
 
 
-DEFINE_FORMATTER_FOR(resolution::constraint::Type_equality) {
+DEFINE_FORMATTER_FOR(libresolve::constraint::Type_equality) {
     return fmt::format_to(context.out(), "{} ~ {}", value.constrainer_type, value.constrained_type);
 }
-DEFINE_FORMATTER_FOR(resolution::constraint::Mutability_equality) {
+DEFINE_FORMATTER_FOR(libresolve::constraint::Mutability_equality) {
     return fmt::format_to(context.out(), "{} ~ {}", value.constrainer_mutability, value.constrained_mutability);
 }
-DEFINE_FORMATTER_FOR(resolution::constraint::Instance) {
+DEFINE_FORMATTER_FOR(libresolve::constraint::Instance) {
     return fmt::format_to(context.out(), "{}: {}", value.type, value.typeclass->name);
 }
-DEFINE_FORMATTER_FOR(resolution::constraint::Struct_field) {
+DEFINE_FORMATTER_FOR(libresolve::constraint::Struct_field) {
     return fmt::format_to(context.out(), "({}.{}): {}", value.struct_type, value.field_identifier, value.field_type);
 }
-DEFINE_FORMATTER_FOR(resolution::constraint::Tuple_field) {
+DEFINE_FORMATTER_FOR(libresolve::constraint::Tuple_field) {
     return fmt::format_to(context.out(), "({}.{}): {}", value.tuple_type, value.field_index, value.field_type);
 }

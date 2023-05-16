@@ -1,12 +1,10 @@
 #include <libutl/common/utilities.hpp>
 #include <libresolve/resolution_internals.hpp>
 
+using namespace libresolve;
+
 
 namespace {
-
-    using namespace resolution;
-
-
     struct Type_resolution_visitor {
         Context  & context;
         Scope    & scope;
@@ -216,10 +214,9 @@ namespace {
             context.error(this_type.source_view, { "This type can not be resolved yet" });
         }
     };
-
 }
 
 
-auto resolution::Context::resolve_type(hir::Type& type, Scope& scope, Namespace& space) -> mir::Type {
+auto libresolve::Context::resolve_type(hir::Type& type, Scope& scope, Namespace& space) -> mir::Type {
     return std::visit(Type_resolution_visitor { *this, scope, space, type }, type.value);
 }

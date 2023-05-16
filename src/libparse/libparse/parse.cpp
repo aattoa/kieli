@@ -5,6 +5,8 @@
 
 namespace {
 
+    using namespace libparse;
+
     auto parse_definition(Parse_context&) -> tl::optional<ast::Definition>;
 
 
@@ -40,11 +42,10 @@ namespace {
 
     auto parse_self_parameter(Parse_context& context) -> tl::optional<ast::Self_parameter> {
         Token* const anchor = context.pointer;
-        using Self = ast::Self_parameter;
 
         ast::Mutability mutability = extract_mutability(context);
-        if (Token* const self = context.try_extract(Token::Type::lower_self)) {
-            return Self {
+        if (Token const* const self = context.try_extract(Token::Type::lower_self)) {
+            return ast::Self_parameter {
                 .mutability   = std::move(mutability),
                 .is_reference = false,
                 .source_view  = self->source_view
@@ -55,8 +56,8 @@ namespace {
                 context.error(mutability.source_view, { "A mutability specifier can not appear here" });
 
             ast::Mutability reference_mutability = extract_mutability(context);
-            if (Token* const self = context.try_extract(Token::Type::lower_self)) {
-                return Self {
+            if (Token const* const self = context.try_extract(Token::Type::lower_self)) {
+                return ast::Self_parameter {
                     .mutability   = std::move(reference_mutability),
                     .is_reference = true,
                     .source_view  = self->source_view
@@ -159,8 +160,8 @@ namespace {
     auto parse_struct_member(Parse_context& context)
         -> tl::optional<ast::definition::Struct::Member>
     {
-        auto* const anchor    = context.pointer;
-        bool  const is_public = context.try_consume(Token::Type::pub);
+        Token const* const anchor = context.pointer;
+        bool const is_public = context.try_consume(Token::Type::pub);
 
         if (auto name = parse_lower_name(context)) {
             context.consume_required(Token::Type::colon);
@@ -174,6 +175,7 @@ namespace {
                 .source_view = make_source_view(anchor, context.pointer - 1)
             };
         }
+
         if (is_public)
             context.error_expected("a struct member name");
         else
@@ -251,7 +253,7 @@ namespace {
         static constexpr auto parse_constructors =
             parse_separated_one_or_more<parse_enum_constructor, Token::Type::pipe, "an enum constructor">;
 
-        auto* anchor = context.pointer;
+        Token const* const anchor = context.pointer;
 
         auto name                = extract_upper_name(context, "an enum name");
         auto template_parameters = parse_template_parameters(context);
@@ -296,7 +298,7 @@ namespace {
             std::move(template_parameters),
             ast::definition::Alias {
                 name,
-                extract_type(context)
+                extract_type(context),
             });
     };
 
@@ -341,7 +343,7 @@ namespace {
 
 
     auto extract_function_signature(
-        Parse_context                                             & context,
+        Parse_context&                                              context,
         std::output_iterator<ast::Function_template_signature> auto template_out,
         std::output_iterator<ast::Function_signature>          auto nontemplate_out) -> void
     {
@@ -362,7 +364,7 @@ namespace {
     }
 
     auto extract_type_signature(
-        Parse_context                                         & context,
+        Parse_context&                                          context,
         std::output_iterator<ast::Type_template_signature> auto template_out,
         std::output_iterator<ast::Type_signature>          auto nontemplate_out) -> void
     {
@@ -494,10 +496,10 @@ namespace {
 }
 
 
-auto compiler::parse(Lex_result&& lex_result) -> Parse_result {
+auto kieli::parse(Lex_result&& lex_result) -> Parse_result {
     Parse_context context { std::move(lex_result), ast::Node_arena::with_default_page_size() };
 
-    std::vector<compiler::String>  module_imports;
+    std::vector<compiler::String> module_imports;
     tl::optional<compiler::String> module_name;
 
     if (context.try_consume(Token::Type::module_)) {

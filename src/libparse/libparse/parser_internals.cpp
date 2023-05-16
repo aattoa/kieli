@@ -4,6 +4,8 @@
 
 namespace {
 
+    using namespace libparse;
+
     auto parse_template_argument(Parse_context& context)
         -> tl::optional<ast::Template_argument>
     {
@@ -125,10 +127,29 @@ namespace {
         }
     }
 
+    auto parse_function_parameter(Parse_context& context) -> tl::optional<ast::Function_parameter> {
+        if (auto pattern = parse_pattern(context)) {
+            tl::optional<ast::Type> type;
+            if (context.try_consume(Token::Type::colon))
+                type = extract_type(context);
+
+            tl::optional<ast::Expression> default_value;
+            if (context.try_consume(Token::Type::equals))
+                default_value = extract_expression(context);
+
+            return ast::Function_parameter {
+                std::move(*pattern),
+                std::move(type),
+                std::move(default_value)
+            };
+        }
+        return tl::nullopt;
+    }
+
 }
 
 
-auto parse_top_level_pattern(Parse_context& context) -> tl::optional<ast::Pattern> {
+auto libparse::parse_top_level_pattern(Parse_context& context) -> tl::optional<ast::Pattern> {
     return parse_comma_separated_one_or_more<parse_pattern, "a pattern">(context)
         .transform([](std::vector<ast::Pattern>&& patterns) -> ast::Pattern
     {
@@ -144,7 +165,7 @@ auto parse_top_level_pattern(Parse_context& context) -> tl::optional<ast::Patter
 }
 
 
-auto parse_template_arguments(Parse_context& context)
+auto libparse::parse_template_arguments(Parse_context& context)
     -> tl::optional<std::vector<ast::Template_argument>>
 {
     static constexpr auto extract_arguments =
@@ -159,7 +180,7 @@ auto parse_template_arguments(Parse_context& context)
 }
 
 
-auto parse_template_parameters(Parse_context& context)
+auto libparse::parse_template_parameters(Parse_context& context)
     -> tl::optional<std::vector<ast::Template_parameter>>
 {
     static constexpr auto extract_parameters =
@@ -177,36 +198,14 @@ auto parse_template_parameters(Parse_context& context)
 }
 
 
-auto extract_function_parameters(Parse_context& context)
+auto libparse::extract_function_parameters(Parse_context& context)
     -> std::vector<ast::Function_parameter>
 {
-    return extract_comma_separated_zero_or_more<
-        [](Parse_context& context)
-            -> tl::optional<ast::Function_parameter>
-        {
-            if (auto pattern = parse_pattern(context)) {
-                tl::optional<ast::Type> type;
-                if (context.try_consume(Token::Type::colon))
-                    type = extract_type(context);
-
-                tl::optional<ast::Expression> default_value;
-                if (context.try_consume(Token::Type::equals))
-                    default_value = extract_expression(context);
-
-                return ast::Function_parameter {
-                    std::move(*pattern),
-                    std::move(type),
-                    std::move(default_value)
-                };
-            }
-            return tl::nullopt;
-        },
-        "a function parameter"
-    >(context);
+    return extract_comma_separated_zero_or_more<parse_function_parameter, "a function parameter">(context);
 }
 
 
-auto extract_qualified(ast::Root_qualifier&& root, Parse_context& context)
+auto libparse::extract_qualified(ast::Root_qualifier&& root, Parse_context& context)
     -> ast::Qualified_name
 {
     std::vector<ast::Qualifier> qualifiers;
@@ -264,7 +263,7 @@ auto extract_qualified(ast::Root_qualifier&& root, Parse_context& context)
 }
 
 
-auto extract_mutability(Parse_context& context) -> ast::Mutability {
+auto libparse::extract_mutability(Parse_context& context) -> ast::Mutability {
     auto const get_source_view = [&, anchor = context.pointer] {
         return context.pointer == anchor
             ? anchor->source_view
@@ -298,7 +297,7 @@ auto extract_mutability(Parse_context& context) -> ast::Mutability {
 }
 
 
-auto parse_class_reference(Parse_context& context)
+auto libparse::parse_class_reference(Parse_context& context)
     -> tl::optional<ast::Class_reference>
 {
     auto* const anchor = context.pointer;
@@ -337,7 +336,7 @@ auto parse_class_reference(Parse_context& context)
 }
 
 
-auto extract_class_references(Parse_context& context)
+auto libparse::extract_class_references(Parse_context& context)
     -> std::vector<ast::Class_reference>
 {
     static constexpr auto extract_classes =
@@ -352,24 +351,68 @@ auto extract_class_references(Parse_context& context)
 }
 
 
-auto Parse_context::diagnostics() noexcept -> utl::diagnostics::Builder& {
+
+auto libparse::make_source_view(Token const* const first, Token const* const last) noexcept -> utl::Source_view {
+    utl::always_assert(first && last);
+    return first->source_view.combine_with(last->source_view);
+}
+
+libparse::Parse_context::Parse_context(kieli::Lex_result&& lex_result, ast::Node_arena&& node_arena) noexcept
+    : compilation_info { std::move(lex_result.compilation_info) }, node_arena { std::move(node_arena) }
+    , tokens { std::move(lex_result.tokens) }, start { tokens.data() }, pointer { start }
+    , plus_id { compilation_info.get()->identifier_pool.make("+") }
+    , asterisk_id { compilation_info.get()->identifier_pool.make("*") }
+{
+    // The end-of-input token should always be present
+    utl::always_assert(!tokens.empty());
+}
+
+auto libparse::Parse_context::is_finished() const noexcept -> bool {
+    return pointer->type == Token::Type::end_of_input;
+}
+auto libparse::Parse_context::try_extract(Token::Type const type) noexcept -> Token const* {
+    return pointer->type == type ? pointer++ : nullptr;
+}
+auto libparse::Parse_context::extract() noexcept -> Token const& {
+    return *pointer++;
+}
+auto libparse::Parse_context::previous() const noexcept -> Token const& {
+    assert(pointer && pointer != start);
+    return pointer[-1];
+}
+auto libparse::Parse_context::consume_required(Token::Type const type) -> void {
+    if (pointer->type == type)
+        ++pointer;
+    else
+        error_expected("'{}'"_format(type));
+}
+auto libparse::Parse_context::try_consume(Token::Type const type) noexcept -> bool {
+    bool const eq = pointer->type == type;
+    if (eq) ++pointer;
+    return eq;
+}
+auto libparse::Parse_context::retreat() noexcept -> void {
+    --pointer;
+}
+
+auto libparse::Parse_context::diagnostics() noexcept -> utl::diagnostics::Builder& {
     return compilation_info.get()->diagnostics;
 }
-auto Parse_context::error(utl::Source_view const erroneous_view, utl::diagnostics::Message_arguments const& arguments) -> void {
+auto libparse::Parse_context::error(utl::Source_view const erroneous_view, utl::diagnostics::Message_arguments const& arguments) -> void {
     compilation_info.get()->diagnostics.emit_error(arguments.add_source_view(erroneous_view));
 }
-auto Parse_context::error(utl::diagnostics::Message_arguments const& arguments) -> void {
+auto libparse::Parse_context::error(utl::diagnostics::Message_arguments const& arguments) -> void {
     error(make_source_view(pointer, pointer + 1), arguments);
 }
-auto Parse_context::error_expected(utl::Source_view const erroneous_view, std::string_view const expectation, tl::optional<std::string_view> const help) -> void {
+auto libparse::Parse_context::error_expected(utl::Source_view const erroneous_view, std::string_view const expectation, tl::optional<std::string_view> const help) -> void {
     error(erroneous_view, {
         .message = fmt::format(
             "Expected {}, but found {}",
             expectation,
-            compiler::token_description(pointer->type)),
+            kieli::token_description(pointer->type)),
         .help_note = help,
     });
 }
-auto Parse_context::error_expected(std::string_view const expectation, tl::optional<std::string_view> const help) -> void {
+auto libparse::Parse_context::error_expected(std::string_view const expectation, tl::optional<std::string_view> const help) -> void {
     error_expected(pointer->source_view, expectation, help);
 }

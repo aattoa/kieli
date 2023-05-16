@@ -7,26 +7,26 @@
 #include <compiler/compiler.hpp>
 
 
-using Module_map = utl::Flatmap<std::filesystem::path, compiler::Desugar_result>;
+using Module_map = utl::Flatmap<std::filesystem::path, kieli::Desugar_result>;
 
 namespace {
     auto read_modules_to(
-        Module_map&                             module_map,
-        std::filesystem::path const&            source_directory,
-        compiler::Compilation_info const&       compilation_info,
-        std::span<compiler::String const> const imports) -> void
+        Module_map                             & module_map,
+        std::filesystem::path             const& source_directory,
+        compiler::Compilation_info        const& compilation_info,
+        std::span<compiler::String const> const  imports) -> void
     {
         for (compiler::String const import : imports) {
             auto path = source_directory / import.view();
             if (module_map.find(path))
                 continue;
 
-            auto parse_result = compiler::parse(compiler::lex({
+            auto parse_result = kieli::parse(kieli::lex({
                 .compilation_info = compilation_info,
                 .source = compilation_info.get()->source_arena.wrap(utl::Source::read(std::filesystem::path { path })),
             }));
             read_modules_to(module_map, source_directory, compilation_info, parse_result.module.imports);
-            module_map.add_new_unchecked(std::move(path), compiler::desugar(std::move(parse_result)));
+            module_map.add_new_unchecked(std::move(path), kieli::desugar(std::move(parse_result)));
         }
     }
 }
@@ -45,7 +45,7 @@ auto compiler::compile(Compile_arguments&& compile_arguments) -> Compilation_res
         compilation_info,
         { &main_file_name, 1 });
 
-    compiler::Desugar_result combined_desugar_result {
+    kieli::Desugar_result combined_desugar_result {
         .compilation_info = compilation_info,
         .node_arena = hir::Node_arena::with_default_page_size(),
     };
