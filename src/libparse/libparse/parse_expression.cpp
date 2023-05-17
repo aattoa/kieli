@@ -692,10 +692,9 @@ namespace {
                 context.retreat();
             }
         }
-        static constexpr auto mk_arg = [](ast::Expression&& expression) {
+        return parse_expression(context).transform([](ast::Expression&& expression) {
             return ast::Function_argument { .expression = std::move(expression) };
-        };
-        return parse_expression(context).transform(mk_arg);
+        });
     }
 
     auto extract_arguments(Parse_context& context)
@@ -734,8 +733,8 @@ namespace {
     auto parse_potential_member_access(Parse_context& context)
         -> tl::optional<ast::Expression>
     {
-        auto* const anchor     = context.pointer;
-        auto        expression = parse_potential_invocation(context);
+        Token const* const anchor = context.pointer;
+        tl::optional expression = parse_potential_invocation(context);
 
         if (expression) {
             while (context.try_consume(Token::Type::dot)) {
@@ -849,7 +848,7 @@ namespace {
         std::to_array<std::string_view>({ "?=", "!=" }),
         std::to_array<std::string_view>({ "<", "<=", ">=", ">" }),
         std::to_array<std::string_view>({ "&&", "||" }),
-        std::to_array<std::string_view>({ ":=", "+=", "*=", "/=", "%=" })
+        std::to_array<std::string_view>({ ":=", "+=", "*=", "/=", "%=" }),
     };
 
     constexpr utl::Usize lowest_precedence = std::tuple_size_v<decltype(precedence_table)> - 1;

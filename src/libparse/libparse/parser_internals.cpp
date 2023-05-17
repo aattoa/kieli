@@ -45,8 +45,9 @@ namespace {
         -> tl::optional<ast::Template_parameter>
     {
         auto const template_parameter = [&, anchor = context.pointer](ast::Name const name, ast::Template_parameter::Variant&& value) {
-            tl::optional<ast::Template_argument> default_argument;
+            auto const source_view = make_source_view(anchor, context.pointer - 1);
 
+            tl::optional<ast::Template_argument> default_argument;
             if (context.try_consume(Token::Type::equals))
                 default_argument = extract_required<parse_template_argument, "a default template argument">(context);
 
@@ -54,7 +55,7 @@ namespace {
                 .value            = std::move(value),
                 .name             = name,
                 .default_argument = std::move(default_argument),
-                .source_view      = make_source_view(anchor, context.pointer - 1)
+                .source_view      = source_view,
             };
         };
 
@@ -120,9 +121,8 @@ namespace {
                 }, parameter.value, argument.value);
             }
             else if (last_defaulted_parameter != nullptr) {
-                context.error(last_defaulted_parameter->source_view, {
-                    "Template parameters with default arguments must appear at the end of the parameter list"
-                });
+                context.error(last_defaulted_parameter->source_view,
+                    { "Template parameters with default arguments must appear at the end of the parameter list" });
             }
         }
     }
@@ -300,7 +300,7 @@ auto libparse::extract_mutability(Parse_context& context) -> ast::Mutability {
 auto libparse::parse_class_reference(Parse_context& context)
     -> tl::optional<ast::Class_reference>
 {
-    auto* const anchor = context.pointer;
+    Token const* const anchor = context.pointer;
 
     auto name = std::invoke([&]() -> tl::optional<ast::Qualified_name> {
         ast::Root_qualifier root;
