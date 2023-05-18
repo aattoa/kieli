@@ -21,7 +21,7 @@ endif ()
 
 # Enable sized deallocation functions on Clang
 if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-  add_compile_options(-fsized-deallocation)
+    add_compile_options(-fsized-deallocation)
 endif ()
 
 
@@ -46,9 +46,9 @@ include_directories(
     dependencies/optional/include
     dependencies/expected/include)
 
-
 add_subdirectory(dependencies/fmt)
 add_subdirectory(dependencies/Catch2)
+
 add_subdirectory(src/libutl-common)
 add_subdirectory(src/libutl-readline)
 add_subdirectory(src/libutl-source)
@@ -65,35 +65,8 @@ add_subdirectory(src/libvm)
 add_subdirectory(src/libcompiler-pipeline)
 add_subdirectory(src/compiler)
 
-
-# Configure the testing executable
-add_executable(tests
-    tests/utl_test.cpp
-    tests/lexer_test.cpp
-    tests/parser_test.cpp
-    tests/vm_test.cpp
-    tests/resolution_test.cpp)
-
-target_precompile_headers(tests
-    REUSE_FROM libutl-common)
-
-target_link_libraries(tests
-    PRIVATE libutl-common
-    PRIVATE libutl-source
-    PRIVATE libutl-color
-    PRIVATE libutl-diagnostics
-    PRIVATE liblex
-    PRIVATE libparse
-    PRIVATE libdesugar
-    PRIVATE libresolve
-    PRIVATE libvm
-    PRIVATE libcompiler-pipeline
-    PRIVATE fmt::fmt
-    PRIVATE Catch2::Catch2WithMain)
-
-# Enable CTest registration
 list(APPEND CMAKE_MODULE_PATH dependencies/Catch2/extras)
 include(CTest)
 include(Catch)
-catch_discover_tests(tests)
+add_subdirectory(tests)
 
