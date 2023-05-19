@@ -1,20 +1,18 @@
-add_library(libparse STATIC)
-
-target_sources(libparse
-    PRIVATE libparse/ast.cpp
-    PRIVATE libparse/ast.hpp
-    PRIVATE libparse/ast_formatting.cpp
-    PRIVATE libparse/parse.cpp
-    PRIVATE libparse/parse.hpp
-    PRIVATE libparse/parse_expression.cpp
-    PRIVATE libparse/parse_pattern.cpp
-    PRIVATE libparse/parse_type.cpp
-    PRIVATE libparse/parser_internals.cpp
-    PRIVATE libparse/parser_internals.hpp)
-
+add_library(libparse STATIC
+    libparse/ast.cpp
+    libparse/ast.hpp
+    libparse/ast_formatting.cpp
+    libparse/parse.cpp
+    libparse/parse.hpp
+    libparse/parse_expression.cpp
+    libparse/parse_pattern.cpp
+    libparse/parse_type.cpp
+    libparse/parser_internals.cpp
+    libparse/parser_internals.hpp)
 target_precompile_headers(libparse
     REUSE_FROM libutl-common)
-
 target_link_libraries(libparse
-    PRIVATE liblex
-    PRIVATE fmt::fmt)
+    PUBLIC libdesugar # FIXME
+    PUBLIC liblex)
+
+add_kieli_test(libparse)
