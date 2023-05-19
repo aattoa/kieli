@@ -8,6 +8,167 @@
 
 namespace libresolve {
 
+    using Lower_variant = std::variant<
+        utl::Wrapper<Namespace>,
+        utl::Wrapper<Function_info>,
+        mir::Enum_constructor>;
+
+    using Upper_variant = std::variant<
+        utl::Wrapper<Struct_info>,
+        utl::Wrapper<Enum_info>,
+        utl::Wrapper<Alias_info>,
+        utl::Wrapper<Typeclass_info>,
+        utl::Wrapper<Struct_template_info>,
+        utl::Wrapper<Enum_template_info>,
+        utl::Wrapper<Alias_template_info>,
+        utl::Wrapper<Typeclass_template_info>>;
+
+    using Definition_variant = std::variant<
+        utl::Wrapper<Function_info>,
+        utl::Wrapper<Struct_info>,
+        utl::Wrapper<Enum_info>,
+        utl::Wrapper<Alias_info>,
+        utl::Wrapper<Typeclass_info>,
+        utl::Wrapper<Namespace>,
+        utl::Wrapper<Implementation_info>,
+        utl::Wrapper<Instantiation_info>,
+        utl::Wrapper<Struct_template_info>,
+        utl::Wrapper<Enum_template_info>,
+        utl::Wrapper<Alias_template_info>,
+        utl::Wrapper<Typeclass_template_info>,
+        utl::Wrapper<Implementation_template_info>,
+        utl::Wrapper<Instantiation_template_info>>;
+
+
+    struct [[nodiscard]] Namespace {
+        std::vector<Definition_variant>                   definitions_in_order;
+        utl::Flatmap<compiler::Identifier, Lower_variant> lower_table;
+        utl::Flatmap<compiler::Identifier, Upper_variant> upper_table;
+        tl::optional<utl::Wrapper<Namespace>>             parent;
+        tl::optional<ast::Name>                           name;
+    };
+
+
+    enum class Definition_state {
+        unresolved,
+        resolved,
+        currently_on_resolution_stack,
+    };
+
+
+    struct Partially_resolved_function {
+        mir::Function::Signature resolved_signature;
+        Scope                    signature_scope;
+        hir::Expression          unresolved_body;
+        ast::Name                name;
+    };
+
+
+    template <class HIR_representation>
+    struct Definition_info {
+        using Variant = std::variant<HIR_representation, mir::From_HIR<HIR_representation>>;
+
+        Variant                 value;
+        utl::Wrapper<Namespace> home_namespace;
+        Definition_state        state = Definition_state::unresolved;
+        ast::Name               name;
+    };
+
+    template <template <class> class Definition>
+    requires requires { &Definition<hir::HIR_configuration>::name; }
+    struct Definition_info<ast::definition::Template<Definition<hir::HIR_configuration>>> {
+        using Variant = std::variant<
+            ast::definition::Template<Definition<hir::HIR_configuration>>,
+            mir::From_HIR<ast::definition::Template<Definition<hir::HIR_configuration>>>>;
+
+        Variant                 value;
+        utl::Wrapper<Namespace> home_namespace;
+        mir::Type               parameterized_type_of_this; // One of mir::type::{Structure, Enumeration
+        Definition_state        state = Definition_state::unresolved;
+        ast::Name               name;
+    };
+
+    template <class Info>
+    struct Template_instantiation_info {
+        utl::Wrapper<Info>                   template_instantiated_from;
+        std::vector<mir::Template_parameter> template_parameters;
+        std::vector<mir::Template_argument>  template_arguments;
+    };
+
+    template <>
+    struct Definition_info<hir::definition::Function> {
+        using Variant = std::variant<
+            hir::definition::Function,          // Fully unresolved function
+            hir::definition::Function_template, // Fully unresolved function template
+            Partially_resolved_function,        // Signature resolved, body unresolved
+            mir::Function>;                     // Fully resolved
+
+        Variant                 value;
+        utl::Wrapper<Namespace> home_namespace;
+        Definition_state        state = Definition_state::unresolved;
+        ast::Name               name;
+
+        tl::optional<Template_instantiation_info<Function_info>> template_instantiation_info;
+    };
+
+    template <>
+    struct Definition_info<hir::definition::Struct> {
+        using Variant = std::variant<hir::definition::Struct, mir::Struct>;
+
+        Variant                 value;
+        utl::Wrapper<Namespace> home_namespace;
+        mir::Type               structure_type;
+        Definition_state        state = Definition_state::unresolved;
+        ast::Name               name;
+
+        tl::optional<Template_instantiation_info<Struct_template_info>> template_instantiation_info;
+    };
+
+    template <>
+    struct Definition_info<hir::definition::Enum> {
+        using Variant = std::variant<hir::definition::Enum, mir::Enum>;
+
+        Variant                 value;
+        utl::Wrapper<Namespace> home_namespace;
+        mir::Type               enumeration_type;
+        Definition_state        state = Definition_state::unresolved;
+        ast::Name               name;
+
+        tl::optional<Template_instantiation_info<Enum_template_info>> template_instantiation_info;
+
+        [[nodiscard]] auto constructor_count() const noexcept -> utl::Usize;
+    };
+
+    template <>
+    struct Definition_info<hir::definition::Implementation> {
+        using Variant = std::variant<hir::definition::Implementation, mir::Implementation>;
+
+        Variant                 value;
+        utl::Wrapper<Namespace> home_namespace;
+        Definition_state        state = Definition_state::unresolved;
+    };
+
+    template <>
+    struct Definition_info<hir::definition::Instantiation> {
+        using Variant = std::variant<hir::definition::Instantiation, mir::Instantiation>;
+
+        Variant                 value;
+        utl::Wrapper<Namespace> home_namespace;
+        Definition_state        state = Definition_state::unresolved;
+    };
+
+    template <template <class> class Definition>
+    requires (!requires { &Definition<hir::HIR_configuration>::name; })
+    struct Definition_info<ast::definition::Template<Definition<hir::HIR_configuration>>> {
+        using Variant = std::variant<
+            ast::definition::Template<Definition<hir::HIR_configuration>>,
+            mir::From_HIR<ast::definition::Template<Definition<hir::HIR_configuration>>>>;
+
+        Variant                 value;
+        utl::Wrapper<Namespace> home_namespace;
+        Definition_state        state = Definition_state::unresolved;
+    };
+
     struct Nameless_entities {
         std::vector<utl::Wrapper<Implementation_info>>          implementations;
         std::vector<utl::Wrapper<Implementation_template_info>> implementation_templates;
@@ -122,11 +283,12 @@ namespace libresolve {
         mir::Namespace_arena         namespace_arena;
         Resolution_constants         constants;
         tl::optional<Predefinitions> predefinitions_value;
-        mir::Module                  output_module;
         utl::Wrapper<Namespace>      global_namespace;
         Nameless_entities            nameless_entities;
         tl::optional<mir::Type>      current_self_type;
         tl::optional<Loop_info>      current_loop_info;
+
+        std::vector<utl::Wrapper<Function_info>> output_functions;
 
         compiler::Identifier self_variable_id = compilation_info.get()->identifier_pool.make("self");
 

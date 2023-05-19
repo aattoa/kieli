@@ -10,6 +10,7 @@
 #include <libparse/parser_internals.hpp>
 #include <libdesugar/desugar.hpp>
 #include <libresolve/resolve.hpp>
+#include <libresolve/resolution_internals.hpp>
 #include <libreify/reify.hpp>
 #include <liblower/lower.hpp>
 
@@ -22,12 +23,6 @@ namespace {
     [[nodiscard]]
     auto error_stream() -> std::ostream& {
         return std::cerr << utl::Color::red << "Error: " << utl::Color::white;
-    }
-
-
-    auto print_mir_module(mir::Module const& module) -> void {
-        for (utl::wrapper auto const function : module.functions)
-            fmt::print("{}\n\n", utl::get<mir::Function>(function->value));
     }
 
 
@@ -88,7 +83,7 @@ namespace {
 
     constexpr auto resolution_repl = generic_repl<[](kieli::Lex_result&& lex_result) {
         auto resolve_result = resolve(desugar(parse(std::move(lex_result))));
-        print_mir_module(resolve_result.module);
+        fmt::println("{}", utl::formatting::delimited_range(resolve_result.functions, "\n\n"));
     }>;
 
     constexpr auto reification_repl = generic_repl<[](kieli::Lex_result&& lex_result) {
@@ -161,7 +156,7 @@ auto main(int argc, char const** argv) -> int try {
         else if (*phase == "rei")
             (void)reify(do_resolve());
         else if (*phase == "res")
-            print_mir_module(do_resolve().module);
+            fmt::println("{}", utl::formatting::delimited_range(do_resolve().functions, "\n\n"));
         else if (*phase == "comp")
             (void)compiler::compile({ .source_directory_path = std::move(source_directory_path), .main_file_name = "main.kieli" });
         else

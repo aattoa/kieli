@@ -1,5 +1,6 @@
 #include <libutl/common/utilities.hpp>
 #include <libresolve/resolve.hpp>
+#include <libresolve/resolution_internals.hpp>
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers.hpp>
 #include <catch2/matchers/catch_matchers_string.hpp>
@@ -16,8 +17,7 @@ namespace {
     auto resolve(std::string&& string) -> std::string {
         auto resolve_result = do_resolve(std::move(string), utl::diagnostics::Level::suppress);
         std::string output;
-        for (utl::wrapper auto const wrapper : resolve_result.module.functions) {
-            auto& function = utl::get<mir::Function>(wrapper->value);
+        for (mir::Function const& function : resolve_result.functions) {
             if (function.signature.is_template()) continue;
             fmt::format_to(std::back_inserter(output), "{}", function);
         }
