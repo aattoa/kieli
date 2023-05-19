@@ -32,7 +32,7 @@ namespace {
                         .home_namespace = space,
                         .name           = name,
                     });
-                    context.output_module.functions.push_back(info);
+                    context.output_functions.push_back(info);
                     add_definition(info);
                 },
                 [&](hir::definition::Function_template& function_template) {
@@ -45,7 +45,7 @@ namespace {
                         .home_namespace = space,
                         .name           = name,
                     });
-                    context.output_module.functions.push_back(info);
+                    context.output_functions.push_back(info);
                     add_definition(info);
                 },
                 [&](hir::definition::Alias& alias) {
@@ -258,11 +258,18 @@ auto kieli::resolve(Desugar_result&& desugar_result) -> Resolve_result {
     resolve_signatures(context, context.global_namespace);
     resolve_functions(context, context.global_namespace);
 
+    std::vector<mir::Function> output_functions;
+    for (utl::wrapper auto const function_info : context.output_functions) {
+        mir::Function& function = utl::get<mir::Function>(function_info->value);
+        if (!function.signature.is_template())
+            output_functions.push_back(std::move(function));
+    }
+
     return Resolve_result {
         .compilation_info = std::move(context.compilation_info),
         .node_arena       = std::move(context.node_arena),
         .namespace_arena  = std::move(context.namespace_arena),
         .hir_node_arena   = std::move(desugar_result.node_arena),
-        .module           = std::move(context.output_module),
+        .functions        = std::move(output_functions),
     };
 }

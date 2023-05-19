@@ -4,6 +4,7 @@
 #include <libparse/parse.hpp>
 #include <libdesugar/desugar.hpp>
 #include <libresolve/resolve.hpp>
+#include <libresolve/resolution_internals.hpp>
 #include <compiler/compiler.hpp>
 
 

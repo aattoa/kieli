@@ -4,20 +4,15 @@
 
 
 namespace {
-
-    auto reify_function(libreify::Context& context, libresolve::Function_info& info) -> cir::Function {
-        mir::Function& function = utl::get<mir::Function>(info.value);
-
+    auto reify_function(libreify::Context& context, mir::Function const& function) -> cir::Function {
         auto const reify_parameter_type = utl::compose(
             std::bind_front(&libreify::Context::reify_type, &context), &mir::Function_parameter::type);
-
         return cir::Function {
             .symbol          = std::string(function.signature.name.identifier.view()), // TODO: format function signature
             .parameter_types = utl::map(reify_parameter_type, function.signature.parameters),
             .body            = context.reify_expression(function.body)
         };
     }
-
 }
 
 
@@ -27,11 +22,9 @@ auto kieli::reify(Resolve_result&& resolve_result) -> Reify_result {
         cir::Node_arena::with_default_page_size(),
     };
 
-    std::vector<cir::Function> functions;
-    functions.reserve(resolve_result.module.functions.size());
-
-    for (utl::wrapper auto const wrapped_function : resolve_result.module.functions)
-        functions.push_back(reify_function(context, *wrapped_function));
+    std::vector<cir::Function> functions = utl::map(
+        std::bind_front(&reify_function, std::ref(context)),
+        resolve_result.functions);
 
     return Reify_result {
         .compilation_info = std::move(context.compilation_info),
