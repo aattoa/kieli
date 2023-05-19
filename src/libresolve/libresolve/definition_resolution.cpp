@@ -6,6 +6,45 @@ using namespace libresolve;
 
 namespace {
 
+    // Prevents unresolvable circular dependencies
+    class Definition_state_guard {
+        Definition_state& definition_state;
+        int               initial_exception_count;
+    public:
+        Definition_state_guard(Context& context, Definition_state& state, ast::Name const name)
+            : definition_state        { state }
+            , initial_exception_count { std::uncaught_exceptions() }
+        {
+            if (state == Definition_state::currently_on_resolution_stack)
+                context.error(name.source_view, { "Unable to resolve circular dependency" });
+            else
+                state = Definition_state::currently_on_resolution_stack;
+        }
+        ~Definition_state_guard() {
+            // If the destructor is called due to an uncaught exception
+            // in definition resolution code, don't modify the state.
+            if (std::uncaught_exceptions() == initial_exception_count)
+                definition_state = Definition_state::resolved;
+        }
+    };
+
+    // Sets and resets the Self type within classes and impl/inst blocks
+    class Self_type_guard {
+        tl::optional<mir::Type>& current_self_type;
+        tl::optional<mir::Type>  previous_self_type;
+    public:
+        Self_type_guard(Context& context, mir::Type new_self_type)
+            : current_self_type  { context.current_self_type }
+            , previous_self_type { current_self_type }
+        {
+            current_self_type = new_self_type;
+        }
+        ~Self_type_guard() {
+            current_self_type = previous_self_type;
+        }
+    };
+
+
     enum class Allow_generalization { yes, no };
 
 
