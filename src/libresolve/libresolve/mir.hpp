@@ -550,7 +550,7 @@ template <> struct dtl::To_HIR_impl<name> : std::type_identity<hir::definition::
 
     struct Template_default_argument {
         hir::Template_argument             argument;
-        std::shared_ptr<libresolve::Scope> scope;
+        std::shared_ptr<libresolve::Scope> scope; // FIXME: shared ptr used just for copyability
     };
 
     struct Template_parameter {
@@ -758,8 +758,8 @@ namespace libresolve {
         std::vector<Definition_variant>                   definitions_in_order;
         utl::Flatmap<compiler::Identifier, Lower_variant> lower_table;
         utl::Flatmap<compiler::Identifier, Upper_variant> upper_table;
-        tl::optional<utl::Wrapper<Namespace>>            parent;
-        tl::optional<ast::Name>                          name;
+        tl::optional<utl::Wrapper<Namespace>>             parent;
+        tl::optional<ast::Name>                           name;
     };
 
 

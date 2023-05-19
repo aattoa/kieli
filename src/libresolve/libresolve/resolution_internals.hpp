@@ -54,25 +54,6 @@ namespace libresolve {
     };
 
 
-    // Prevents unresolvable circular dependencies
-    class Definition_state_guard {
-        Definition_state& definition_state;
-        int               initial_exception_count;
-    public:
-        Definition_state_guard(Context&, Definition_state&, ast::Name);
-        ~Definition_state_guard();
-    };
-
-    // Sets and resets the Self type within classes and impl/inst blocks
-    class Self_type_guard {
-        tl::optional<mir::Type>& current_self_type;
-        tl::optional<mir::Type>  previous_self_type;
-    public:
-        Self_type_guard(Context&, mir::Type new_self_type);
-        ~Self_type_guard();
-    };
-
-
     // Passed to `Context::unify_types`
     struct [[nodiscard]] Type_unification_arguments {
         using Report_unification_failure_callback =

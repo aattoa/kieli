@@ -2,40 +2,6 @@
 #include <libresolve/resolution_internals.hpp>
 
 
-libresolve::Definition_state_guard::Definition_state_guard(
-    Context         & context,
-    Definition_state& state,
-    ast::Name   const name)
-    : definition_state        { state }
-    , initial_exception_count { std::uncaught_exceptions() }
-{
-    if (state == Definition_state::currently_on_resolution_stack)
-        context.error(name.source_view, { "Unable to resolve circular dependency" });
-    else
-        state = Definition_state::currently_on_resolution_stack;
-}
-
-libresolve::Definition_state_guard::~Definition_state_guard() {
-    // If the destructor is called due to an uncaught exception
-    // in definition resolution code, don't modify the state.
-
-    if (std::uncaught_exceptions() == initial_exception_count)
-        definition_state = Definition_state::resolved;
-}
-
-
-libresolve::Self_type_guard::Self_type_guard(Context& context, mir::Type new_self_type)
-    : current_self_type  { context.current_self_type }
-    , previous_self_type { current_self_type }
-{
-    current_self_type = new_self_type;
-}
-
-libresolve::Self_type_guard::~Self_type_guard() {
-    current_self_type = previous_self_type;
-}
-
-
 libresolve::Resolution_constants::Resolution_constants(mir::Node_arena& arena)
     : immut                 { arena.wrap<mir::Mutability::Variant>(mir::Mutability::Concrete { .is_mutable = false }) }
     , mut                   { arena.wrap<mir::Mutability::Variant>(mir::Mutability::Concrete { .is_mutable = true }) }
