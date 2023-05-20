@@ -13,4 +13,4 @@ target_precompile_headers(libutl-common
 target_link_libraries(libutl-common
     PUBLIC fmt::fmt)
 
-add_kieli_test(libutl-common)
+add_kieli_tests(libutl-common "utilities;flatmap;safe_integer;pooled_string")
