@@ -52,15 +52,23 @@ include(CTest)
 include(Catch)
 
 # Convenience function for registering Kieli component tests
+function (add_kieli_tests component subcomponents)
+    foreach (subcomponent IN LISTS subcomponents)
+        set(executable ${component}-test-${subcomponent})
+        add_executable(${executable}
+            ${CMAKE_CURRENT_SOURCE_DIR}/tests/${subcomponent}.test.cpp)
+        target_precompile_headers(${executable}
+            REUSE_FROM libutl-common)
+        target_link_libraries(${executable}
+            PRIVATE ${component}
+            PRIVATE Catch2::Catch2WithMain)
+        catch_discover_tests(${executable})
+        message(STATUS "<KIELI> Added test ${executable}")
+    endforeach ()
+endfunction ()
+
 function (add_kieli_test component)
-    add_executable(${component}-test
-        tests/${component}.test.cpp)
-    target_precompile_headers(${component}-test
-        REUSE_FROM libutl-common)
-    target_link_libraries(${component}-test
-        PRIVATE ${component}
-        PRIVATE Catch2::Catch2WithMain)
-    catch_discover_tests(${component}-test)
+    add_kieli_tests(${component} ${component})
 endfunction ()
 
 add_subdirectory(src/libutl-common)

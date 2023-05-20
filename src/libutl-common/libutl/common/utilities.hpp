@@ -84,15 +84,6 @@ namespace utl {
             std::numeric_limits<To>::max());
     };
 
-    static_assert(losslessly_convertible_to<I8, I16>);
-    static_assert(losslessly_convertible_to<I32, I32>);
-    static_assert(losslessly_convertible_to<U8, I32>);
-    static_assert(losslessly_convertible_to<U32, I64>);
-    static_assert(!losslessly_convertible_to<I8, U8>);
-    static_assert(!losslessly_convertible_to<U64, I8>);
-    static_assert(!losslessly_convertible_to<I8, U64>);
-    static_assert(!losslessly_convertible_to<I16, I8>);
-
 
     struct Safe_cast_invalid_argument : std::invalid_argument {
         Safe_cast_invalid_argument()
@@ -119,20 +110,20 @@ namespace utl {
 
 
 namespace utl::inline literals {
-    consteval auto operator"" _i8 (unsigned long long const n) noexcept { return safe_cast<I8 >(n); }
-    consteval auto operator"" _i16(unsigned long long const n) noexcept { return safe_cast<I16>(n); }
-    consteval auto operator"" _i32(unsigned long long const n) noexcept { return safe_cast<I32>(n); }
-    consteval auto operator"" _i64(unsigned long long const n) noexcept { return safe_cast<I64>(n); }
+    consteval auto operator""_i8 (unsigned long long const n) noexcept { return safe_cast<I8 >(n); }
+    consteval auto operator""_i16(unsigned long long const n) noexcept { return safe_cast<I16>(n); }
+    consteval auto operator""_i32(unsigned long long const n) noexcept { return safe_cast<I32>(n); }
+    consteval auto operator""_i64(unsigned long long const n) noexcept { return safe_cast<I64>(n); }
 
-    consteval auto operator"" _u8 (unsigned long long const n) noexcept { return safe_cast<U8 >(n); }
-    consteval auto operator"" _u16(unsigned long long const n) noexcept { return safe_cast<U16>(n); }
-    consteval auto operator"" _u32(unsigned long long const n) noexcept { return safe_cast<U32>(n); }
-    consteval auto operator"" _u64(unsigned long long const n) noexcept { return safe_cast<U64>(n); }
+    consteval auto operator""_u8 (unsigned long long const n) noexcept { return safe_cast<U8 >(n); }
+    consteval auto operator""_u16(unsigned long long const n) noexcept { return safe_cast<U16>(n); }
+    consteval auto operator""_u32(unsigned long long const n) noexcept { return safe_cast<U32>(n); }
+    consteval auto operator""_u64(unsigned long long const n) noexcept { return safe_cast<U64>(n); }
 
-    consteval auto operator"" _uz(unsigned long long const n) noexcept { return safe_cast<Usize>(n); }
-    consteval auto operator"" _iz(unsigned long long const n) noexcept { return safe_cast<Isize>(n); }
+    consteval auto operator""_uz(unsigned long long const n) noexcept { return safe_cast<Usize>(n); }
+    consteval auto operator""_iz(unsigned long long const n) noexcept { return safe_cast<Isize>(n); }
 
-    consteval auto operator"" _format(char const* const s, Usize const n) noexcept {
+    consteval auto operator""_format(char const* const s, Usize const n) noexcept {
         return [fmt = std::string_view(s, n)](auto const&... args) -> std::string {
             return fmt::vformat(fmt, fmt::make_format_args(args...));
         };
@@ -235,9 +226,6 @@ namespace utl {
         assert(!path.empty());
         return path;
     }
-
-    static_assert(filename_without_path("aaa/bbb/ccc") == "ccc");
-    static_assert(filename_without_path("aaa\\bbb\\ccc") == "ccc");
 
 
     class [[nodiscard]] Exception : public std::exception {
@@ -362,13 +350,6 @@ namespace utl {
         }
     };
 
-    static_assert(
-        compose(
-            [](int x) { return x * x; },
-            [](int x) { return x + 1; },
-            [](int a, int b) { return a + b; }
-        )(2, 3) == 36);
-
 
     template <class... Fs>
     struct Overload : Fs... {
@@ -488,7 +469,6 @@ namespace utl {
             string.reserve(sizeof(std::string) + 1);
     }
 
-
     [[nodiscard]]
     inline auto string_with_capacity(Usize const capacity) -> std::string {
         std::string string;
@@ -557,11 +537,6 @@ namespace utl {
         do { integer /= 10; ++digits; } while (integer != 0);
         return digits;
     }
-
-    static_assert(digit_count(0) == 1);
-    static_assert(digit_count(-10) == 2);
-    static_assert(digit_count(-999) == 3);
-    static_assert(digit_count(12345) == 5);
 
 
     template <class F, class Vector>

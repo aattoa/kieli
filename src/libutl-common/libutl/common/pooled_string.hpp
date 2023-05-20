@@ -90,4 +90,3 @@ struct std::hash<utl::Pooled_string<Tag>> {
         return string.m_index;
     }
 };
-

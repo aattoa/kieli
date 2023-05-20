@@ -8,6 +8,6 @@ add_library(libvm STATIC
 target_precompile_headers(libvm
     REUSE_FROM libutl-common)
 target_link_libraries(libvm
-    PRIVATE fmt::fmt)
+    PUBLIC libutl-common)
 
 add_kieli_test(libvm)
