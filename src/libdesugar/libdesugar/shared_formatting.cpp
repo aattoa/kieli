@@ -248,6 +248,8 @@ DEFINE_FORMATTER_FOR(ast::Basic_definition<Configuration>) {
     return std::visit([&]<class Definition>(Definition const& definition) {
         auto out = fmt::format_to(context.out(), header_name<Definition>);
 
+        if constexpr (requires { definition.signature.name; })
+            out = fmt::format_to(out, " {}", definition.signature.name);
         if constexpr (requires { definition.name; })
             out = fmt::format_to(out, " {}", definition.name);
         if constexpr (requires { definition.template_parameters; })

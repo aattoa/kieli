@@ -7,9 +7,6 @@ target_sources(kieli
     PRIVATE compiler/project.cpp
     PRIVATE compiler/project.hpp)
 
-target_precompile_headers(kieli
-    REUSE_FROM libutl-common)
-
 target_link_libraries(kieli
     PRIVATE libutl-cli
     PRIVATE libutl-color
@@ -19,6 +16,6 @@ target_link_libraries(kieli
     PRIVATE libdesugar
     PRIVATE libresolve
     PRIVATE libreify
-    PRIVATE liblower
-    PRIVATE libcompiler-pipeline
-    PRIVATE fmt::fmt)
+    PRIVATE liblower)
+
+kieli_consume_libutl_common(kieli)

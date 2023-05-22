@@ -16,7 +16,7 @@ namespace {
 
         auto operator==(Move_only const&) const -> bool = default;
     };
-    consteval auto operator""_mov(unsigned long long const value) -> Move_only {
+    constexpr auto operator""_mov(unsigned long long const value) -> Move_only {
         return Move_only { utl::safe_cast<int>(value) };
     }
     static_assert(std::movable<Move_only> && !std::copyable<Move_only>);

@@ -10,6 +10,8 @@ namespace utl {
         std::filesystem::path m_file_path;
         std::string           m_file_content;
     public:
+        using Arena = utl::Wrapper_arena<Source>;
+
         // Create a source with the given path and content
         explicit Source(std::filesystem::path&&, std::string&&);
 
@@ -37,17 +39,10 @@ namespace utl {
         Source_position  stop_position;
 
         explicit Source_view(
-            Wrapper<Source>  const source,
-            std::string_view const string,
-            Source_position  const start,
-            Source_position  const stop) noexcept
-            : source         { source }
-            , string         { string }
-            , start_position { start  }
-            , stop_position  { stop   }
-        {
-            always_assert(start_position <= stop_position);
-        }
+            Wrapper<Source>  source,
+            std::string_view string,
+            Source_position  start,
+            Source_position  stop) noexcept;
 
         // Dummy source view for mock purposes
         static auto dummy() -> Source_view;

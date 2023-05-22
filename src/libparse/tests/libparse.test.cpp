@@ -21,7 +21,7 @@ namespace {
 }
 
 
-#define TEST(name) TEST_CASE(name, "[parse]")
+#define TEST(name) TEST_CASE(name, "[libparse]")
 #define REQUIRE_SIMPLE_PARSE(kind, string) REQUIRE(kind(string) == string)
 #define REQUIRE_PARSE_FAILURE(...) REQUIRE_THROWS_AS((void)(__VA_ARGS__), utl::diagnostics::Error)
 
