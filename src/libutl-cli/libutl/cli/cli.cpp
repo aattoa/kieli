@@ -88,7 +88,7 @@ namespace {
                 }
             });
 
-            auto fake_source_arena = utl::Wrapper_arena<utl::Source>::with_page_size(1);
+            auto fake_source_arena = utl::Source::Arena::with_page_size(1);
             auto const fake_source = fake_source_arena.wrap("[command line]", std::move(command_line_string));
 
             utl::diagnostics::Builder builder;

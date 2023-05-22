@@ -16,7 +16,7 @@ namespace {
     }
 }
 
-#define TEST(name) TEST_CASE(name, "[lex]")
+#define TEST(name) TEST_CASE(name, "[liblex]")
 
 
 TEST("whitespace") {

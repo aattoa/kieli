@@ -32,9 +32,22 @@ auto utl::Source_position::advance_with(char const c) noexcept -> void {
         ++column;
 }
 
+utl::Source_view::Source_view(
+    Wrapper<Source>  const source,
+    std::string_view const string,
+    Source_position  const start,
+    Source_position  const stop) noexcept
+    : source         { source }
+    , string         { string }
+    , start_position { start  }
+    , stop_position  { stop   }
+{
+    always_assert(start_position <= stop_position);
+}
+
 auto utl::Source_view::dummy() -> Source_view {
-    static auto dummy_source_arena = Wrapper_arena<Source>::with_page_size(1);
-    static wrapper auto const dummy_source = dummy_source_arena.wrap("[dummy]", "");
+    static auto dummy_source_arena = Source::Arena::with_page_size(1);
+    static wrapper auto const dummy_source = dummy_source_arena.wrap("[dummy]", "dummy file content");
     return Source_view { dummy_source, dummy_source->string(), {}, {} };
 }
 
@@ -55,11 +68,6 @@ auto utl::Source_view::combine_with(Source_view const& other) const noexcept -> 
     };
 }
 
-static_assert(std::is_trivially_copyable_v<utl::Source_view>);
-static_assert(std::is_trivially_copyable_v<utl::Source_position>);
-static_assert(utl::Source_position { 4, 5 } < utl::Source_position { 9, 2 });
-static_assert(utl::Source_position { 5, 2 } < utl::Source_position { 5, 3 });
-static_assert(utl::Source_position { 3, 2 } > utl::Source_position { 2, 3 });
 
 DEFINE_FORMATTER_FOR(utl::Source_position) {
     return fmt::format_to(context.out(), "{}:{}", value.line, value.column);

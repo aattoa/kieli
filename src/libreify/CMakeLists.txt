@@ -11,8 +11,4 @@ target_sources(libreify
     PRIVATE libreify/reify.hpp
     PRIVATE libreify/type_reification.cpp)
 
-target_precompile_headers(libreify
-    REUSE_FROM libutl-common)
-
-target_link_libraries(libreify
-    PRIVATE fmt::fmt)
+kieli_consume_libutl_common(libreify)

@@ -12,7 +12,7 @@ namespace utl {
     template <class Tag>
     class [[nodiscard]] Pooled_string {
     public:
-        friend class std::hash<Pooled_string<Tag>>;
+        friend struct std::hash<Pooled_string<Tag>>;
         friend class String_pool<Tag>;
         using Pool = String_pool<Tag>;
     private:
@@ -52,7 +52,7 @@ namespace utl {
         explicit constexpr String_pool(Usize const initial_capacity)
             : m_string { std::make_unique<std::string>() }
         {
-            m_string->reserve(std::max(initial_capacity, sizeof(std::string)));
+            m_string->reserve(std::max(initial_capacity, sizeof(std::string) + 1));
         }
 
         constexpr String_pool()

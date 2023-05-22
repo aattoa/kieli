@@ -40,7 +40,7 @@ namespace {
 
             try {
                 compiler::Compilation_info repl_info = std::make_shared<compiler::Shared_compilation_info>(compiler::Shared_compilation_info {
-                    .source_arena = utl::Wrapper_arena<utl::Source>::with_page_size(1)
+                    .source_arena = utl::Source::Arena::with_page_size(1)
                 });
                 utl::wrapper auto const repl_source = repl_info.get()->source_arena.wrap("[repl]", std::move(string));
                 f(kieli::lex({ .compilation_info = std::move(repl_info), .source = repl_source }));

@@ -1,13 +1,12 @@
-add_library(libvm STATIC
-    libvm/bytecode.hpp
-    libvm/opcode.cpp
-    libvm/opcode.hpp
-    libvm/virtual_machine.cpp
-    libvm/virtual_machine.hpp
-    libvm/vm_formatting.cpp)
-target_precompile_headers(libvm
-    REUSE_FROM libutl-common)
-target_link_libraries(libvm
-    PUBLIC libutl-common)
+add_library(libvm STATIC)
 
-add_kieli_test(libvm)
+target_sources(libvm
+    PRIVATE libvm/bytecode.hpp
+    PRIVATE libvm/opcode.cpp
+    PRIVATE libvm/opcode.hpp
+    PRIVATE libvm/virtual_machine.cpp
+    PRIVATE libvm/virtual_machine.hpp
+    PRIVATE libvm/vm_formatting.cpp)
+
+kieli_consume_libutl_common(libvm)
+kieli_add_tests(libvm TESTS libvm)

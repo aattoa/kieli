@@ -23,7 +23,7 @@ auto compiler::mock_compilation_info(utl::diagnostics::Level const level) -> Com
         .diagnostics = utl::diagnostics::Builder {
             utl::diagnostics::Builder::Configuration { .note_level = level, .warning_level = level, }
         },
-        .source_arena = utl::Wrapper_arena<utl::Source>::with_page_size(1)
+        .source_arena = utl::Source::Arena::with_page_size(1),
     });
 }
 
