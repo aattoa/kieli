@@ -612,14 +612,14 @@ namespace utl {
 
     template <Usize length>
     struct [[nodiscard]] Metastring {
-        char string[length];
+        char characters[length];
 
         /*implicit*/ consteval Metastring(char const* pointer) noexcept { // NOLINT
-            std::copy_n(pointer, length, string);
+            std::copy_n(pointer, length, characters);
         }
         [[nodiscard]]
         consteval auto view() const noexcept -> std::string_view {
-            return { string, length - 1 };
+            return { characters, length - 1 };
         }
     };
 

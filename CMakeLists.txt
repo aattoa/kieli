@@ -53,11 +53,15 @@ include(Catch)
 
 # Convenience function for registering Kieli component tests
 function (kieli_add_tests component)
-    cmake_parse_arguments(PARSE_ARGV 1 "" "" "" "LINK;TESTS")
+    cmake_parse_arguments(PARSE_ARGV 1 "" "" "" "EXTRA_SOURCES;LINK;TESTS")
     foreach (test IN LISTS _TESTS)
         set(executable ${component}-test-${test})
         add_executable(${executable}
             ${CMAKE_CURRENT_SOURCE_DIR}/tests/${test}.test.cpp)
+        foreach (source IN LISTS _EXTRA_SOURCES)
+            target_sources(${executable}
+                PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/tests/${source})
+        endforeach ()
         kieli_consume_libutl_common(${executable})
         target_link_libraries(${executable}
             PRIVATE ${component}
