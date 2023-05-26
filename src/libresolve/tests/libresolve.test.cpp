@@ -1,41 +1,29 @@
 #include <libutl/common/utilities.hpp>
-#include <libresolve/resolve.hpp>
-#include <libresolve/resolution_internals.hpp>
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers.hpp>
 #include <catch2/matchers/catch_matchers_string.hpp>
 #include <catch2/matchers/catch_matchers_exception.hpp>
 
+#include "resolution_test.hpp"
+
 
 namespace {
-    auto do_resolve(std::string&& string, utl::diagnostics::Level const diagnostics_level) -> kieli::Resolve_result {
-        compiler::Compilation_info test_info = compiler::mock_compilation_info(diagnostics_level);
-        utl::wrapper auto const test_source = test_info.get()->source_arena.wrap("[test]", std::move(string));
-        auto lex_result = kieli::lex({ .compilation_info = std::move(test_info), .source = test_source });
-        return resolve(desugar(parse(std::move(lex_result))));
-    }
-    auto resolve(std::string&& string) -> std::string {
-        auto resolve_result = do_resolve(std::move(string), utl::diagnostics::Level::suppress);
-        std::string output;
-        for (mir::Function const& function : resolve_result.functions) {
-            if (function.signature.is_template()) continue;
-            fmt::format_to(std::back_inserter(output), "{}", function);
-        }
-        return output;
-    }
-    auto resolution_diagnostics(std::string&& string) -> std::string {
-        auto resolve_result = do_resolve(std::move(string), utl::diagnostics::Level::normal);
-        return std::move(resolve_result.compilation_info.get()->diagnostics).string();
-    }
     auto contains(std::string const& string) {
         return Catch::Matchers::ContainsSubstring(string, Catch::CaseSensitive::No);
     }
+    auto resolve(std::string&& string) -> std::string {
+        return libresolve::do_test_resolve(std::move(string)).formatted_mir_functions;
+    }
+    auto resolution_diagnostics(std::string&& string) -> std::string {
+        return libresolve::do_test_resolve(std::move(string)).diagnostics_messages;
+    }
 }
+
 
 #define TEST(name) TEST_CASE(name, "[resolve]") // NOLINT
 #define REQUIRE_RESOLUTION_SUCCESS(expression) REQUIRE_NOTHROW((void)(expression))
 #define REQUIRE_RESOLUTION_FAILURE(expression, error_string) \
-    REQUIRE_THROWS_MATCHES((void)(expression), utl::diagnostics::Error, Catch::Matchers::MessageMatches(contains(error_string)))
+    REQUIRE_THROWS_MATCHES((void)(expression), std::exception, Catch::Matchers::MessageMatches(contains(error_string)))
 
 
 TEST("name resolution") {

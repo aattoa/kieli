@@ -26,5 +26,6 @@ target_link_libraries(libresolve
 kieli_consume_libutl_common(libresolve)
 
 kieli_add_tests(libresolve
+    EXTRA_SOURCES resolution_test.hpp resolution_test.cpp
     LINK libcompiler-pipeline liblex libparse libdesugar
     TESTS libresolve)
