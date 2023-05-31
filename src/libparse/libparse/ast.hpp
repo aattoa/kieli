@@ -310,18 +310,21 @@ namespace ast {
             Mutability               mutability;
             utl::Wrapper<Expression> referenced_expression;
         };
-        struct Dereference {
-            utl::Wrapper<Expression> dereferenced_expression;
-        };
         struct Addressof {
             utl::Wrapper<Expression> lvalue;
         };
-        struct Unsafe_dereference {
+        struct Reference_dereference {
+            utl::Wrapper<Expression> dereferenced_expression;
+        };
+        struct Pointer_dereference {
             utl::Wrapper<Expression> pointer;
         };
         struct Placement_init {
             utl::Wrapper<Expression> lvalue;
             utl::Wrapper<Expression> initializer;
+        };
+        struct Unsafe {
+            utl::Wrapper<Expression> expression;
         };
         struct Move {
             utl::Wrapper<Expression> lvalue;
@@ -369,10 +372,11 @@ namespace ast {
             expression::Ret,
             expression::Sizeof,
             expression::Reference,
-            expression::Dereference,
             expression::Addressof,
-            expression::Unsafe_dereference,
+            expression::Reference_dereference,
+            expression::Pointer_dereference,
             expression::Placement_init,
+            expression::Unsafe,
             expression::Move,
             expression::Meta,
             expression::Hole>;

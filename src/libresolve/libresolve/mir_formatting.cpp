@@ -200,7 +200,7 @@ namespace {
             return format("addressof({})", addressof.lvalue);
         }
         auto operator()(mir::expression::Unsafe_dereference const& dereference) {
-            return format("unsafe_dereference({})", dereference.pointer);
+            return format("dereference({})", dereference.pointer);
         }
         auto operator()(mir::expression::Move const& move) {
             return format("mov {}", move.lvalue);

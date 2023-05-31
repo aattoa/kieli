@@ -236,10 +236,10 @@ namespace {
         return ast::expression::Self {};
     }
 
-    auto extract_dereference(Parse_context& context)
+    auto extract_reference_dereference(Parse_context& context)
         -> ast::Expression::Variant
     {
-        return ast::expression::Dereference { context.wrap(extract_expression(context)) };
+        return ast::expression::Reference_dereference { context.wrap(extract_expression(context)) };
     }
 
     auto extract_tuple(Parse_context& context)
@@ -449,13 +449,13 @@ namespace {
         context.error_expected("a parenthesized addressable expression");
     }
 
-    auto extract_unsafe_dereference(Parse_context& context)
+    auto extract_pointer_dereference(Parse_context& context)
         -> ast::Expression::Variant
     {
         if (context.try_consume(Token::Type::paren_open)) {
             auto pointer = extract_expression(context);
             context.consume_required(Token::Type::paren_close);
-            return ast::expression::Unsafe_dereference { context.wrap(std::move(pointer)) };
+            return ast::expression::Pointer_dereference { context.wrap(std::move(pointer)) };
         }
         context.error_expected("a parenthesized pointer expression");
     }
@@ -542,6 +542,15 @@ namespace {
             .mutability            = std::move(mutability),
             .referenced_expression = context.wrap(extract_expression(context))
         };
+    }
+
+    auto extract_unsafe_block(Parse_context& context)
+        -> ast::Expression::Variant
+    {
+        if (auto block = parse_block_expression(context))
+            return ast::expression::Unsafe { context.wrap(std::move(*block)) };
+        else
+            context.error_expected("an unsafe block expression");
     }
 
     auto extract_move(Parse_context& context)
@@ -641,7 +650,7 @@ namespace {
         case Token::Type::global:
             return extract_global_identifier(context);
         case Token::Type::asterisk:
-            return extract_dereference(context);
+            return extract_reference_dereference(context);
         case Token::Type::paren_open:
             return extract_tuple(context);
         case Token::Type::bracket_open:
@@ -664,8 +673,10 @@ namespace {
             return extract_sizeof(context);
         case Token::Type::addressof:
             return extract_addressof(context);
-        case Token::Type::unsafe_dereference:
-            return extract_unsafe_dereference(context);
+        case Token::Type::dereference:
+            return extract_pointer_dereference(context);
+        case Token::Type::unsafe:
+            return extract_unsafe_block(context);
         case Token::Type::match:
             return extract_match(context);
         case Token::Type::continue_:

@@ -70,7 +70,8 @@ auto kieli::Lexical_token::description(Type const type)
     case Type::sizeof_:
     case Type::typeof_:
     case Type::addressof:
-    case Type::unsafe_dereference:
+    case Type::dereference:
+    case Type::unsafe:
     case Type::mov:
     case Type::meta:
     case Type::where:
@@ -156,7 +157,8 @@ DEFINE_FORMATTER_FOR(kieli::Lexical_token::Type) {
         "sizeof",
         "typeof",
         "addressof",
-        "unsafe_dereference",
+        "dereference",
+        "unsafe",
         "mov",
         "meta",
         "where",

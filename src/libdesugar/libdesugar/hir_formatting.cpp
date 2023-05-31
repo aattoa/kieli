@@ -120,17 +120,20 @@ namespace {
         auto operator()(hir::expression::Addressof const& addressof) {
             return format("addressof({})", addressof.lvalue);
         }
-        auto operator()(hir::expression::Unsafe_dereference const& dereference) {
-            return format("unsafe_dereference({})", dereference.pointer);
+        auto operator()(hir::expression::Reference_dereference const& dereference) {
+            return format("(*{})", dereference.dereferenced_expression);
+        }
+        auto operator()(hir::expression::Pointer_dereference const& dereference) {
+            return format("dereference({})", dereference.pointer);
         }
         auto operator()(hir::expression::Reference const& reference) {
             return format("&{}{}", reference.mutability, reference.referenced_expression);
         }
-        auto operator()(hir::expression::Dereference const& dereference) {
-            return format("(*{})", dereference.dereferenced_expression);
-        }
         auto operator()(hir::expression::Placement_init const& init) {
             return format("{} <- {}", init.lvalue, init.initializer);
+        }
+        auto operator()(hir::expression::Unsafe const& unsafe) {
+            return format("unsafe {}", unsafe.expression);
         }
         auto operator()(hir::expression::Move const& move) {
             return format("mov {}", move.lvalue);

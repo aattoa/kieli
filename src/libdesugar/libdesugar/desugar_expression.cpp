@@ -296,27 +296,29 @@ namespace {
                 .referenced_expression = context.desugar(reference.referenced_expression),
             };
         }
-        auto operator()(ast::expression::Dereference const& dereference) -> hir::Expression::Variant {
-            return hir::expression::Dereference {
-                .dereferenced_expression = context.desugar(dereference.dereferenced_expression),
-            };
-        }
         auto operator()(ast::expression::Addressof const& addressof) -> hir::Expression::Variant {
             return hir::expression::Addressof {
                 .lvalue = context.desugar(addressof.lvalue),
             };
         }
-        auto operator()(ast::expression::Unsafe_dereference const& dereference) -> hir::Expression::Variant {
-            return hir::expression::Unsafe_dereference {
+        auto operator()(ast::expression::Reference_dereference const& dereference) -> hir::Expression::Variant {
+            return hir::expression::Reference_dereference {
+                .dereferenced_expression = context.desugar(dereference.dereferenced_expression),
+            };
+        }
+        auto operator()(ast::expression::Pointer_dereference const& dereference) -> hir::Expression::Variant {
+            return hir::expression::Pointer_dereference {
                 .pointer = context.desugar(dereference.pointer),
             };
         }
-
         auto operator()(ast::expression::Placement_init const& init) -> hir::Expression::Variant {
             return hir::expression::Placement_init {
                 .lvalue      = context.desugar(init.lvalue),
                 .initializer = context.desugar(init.initializer),
             };
+        }
+        auto operator()(ast::expression::Unsafe const& unsafe) -> hir::Expression::Variant {
+            return hir::expression::Unsafe { .expression = context.desugar(unsafe.expression) };
         }
         auto operator()(ast::expression::Move const& move) -> hir::Expression::Variant {
             return hir::expression::Move { .lvalue = context.desugar(move.lvalue) };

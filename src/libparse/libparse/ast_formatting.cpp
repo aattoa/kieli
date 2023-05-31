@@ -195,17 +195,20 @@ namespace {
         auto operator()(ast::expression::Reference const& reference) {
             return format("&{}{}", reference.mutability, reference.referenced_expression);
         }
-        auto operator()(ast::expression::Dereference const& dereference) {
+        auto operator()(ast::expression::Reference_dereference const& dereference) {
             return format("*{}", dereference.dereferenced_expression);
+        }
+        auto operator()(ast::expression::Pointer_dereference const& dereference) {
+            return format("dereference({})", dereference.pointer);
         }
         auto operator()(ast::expression::Addressof const& addressof) {
             return format("addressof({})", addressof.lvalue);
         }
-        auto operator()(ast::expression::Unsafe_dereference const& dereference) {
-            return format("unsafe_dereference({})", dereference.pointer);
-        }
         auto operator()(ast::expression::Placement_init const& init) {
             return format("{} <- {}", init.lvalue, init.initializer);
+        }
+        auto operator()(ast::expression::Unsafe const& unsafe) {
+            return format("unsafe {}", unsafe.expression);
         }
         auto operator()(ast::expression::Move const& move) {
             return format("mov {}", move.lvalue);

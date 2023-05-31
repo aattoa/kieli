@@ -277,12 +277,6 @@ namespace libresolve {
     };
 
 
-    struct [[nodiscard]] Loop_info {
-        tl::optional<mir::Type>                  break_return_type;
-        utl::Strong<hir::expression::Loop::Kind> loop_kind;
-    };
-
-
     struct Resolution_constants {
         utl::Wrapper<mir::Mutability::Variant> immut;
         utl::Wrapper<mir::Mutability::Variant> mut;
@@ -323,7 +317,6 @@ namespace libresolve {
         utl::Wrapper<Namespace>      global_namespace;
         Nameless_entities            nameless_entities;
         tl::optional<mir::Type>      current_self_type;
-        tl::optional<Loop_info>      current_loop_info;
 
         std::vector<utl::Wrapper<Function_info>> output_functions;
 

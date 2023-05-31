@@ -93,6 +93,15 @@ TEST("scope") {
         "}): ()");
 }
 
+TEST("safety status") {
+    REQUIRE_RESOLUTION_FAILURE(resolve("fn f(x: *I32): I32 { dereference(x) }"),
+        "may not appear within safe context");
+    REQUIRE(resolve("fn f(x: *I32): I32 { unsafe { dereference(x) } }") ==
+        "fn f(x: *I32): I32 = ({ "
+            "({ (dereference((x): *I32)): I32 }): I32"
+        " }): I32");
+}
+
 TEST("mutability") {
     REQUIRE_RESOLUTION_SUCCESS(resolve("fn f() { let mut x = ' '; &mut x }"));
     REQUIRE_RESOLUTION_SUCCESS(resolve("fn f[m: mut]() { let mut?m x = ' '; &mut?m x }"));
@@ -189,11 +198,11 @@ TEST("abbreviated constructor pattern") {
 
 TEST("pointer unification") {
     REQUIRE(resolve(
-        "fn f(): Char { let x = \?\?\?; unsafe_dereference(addressof(x)) }")
+        "fn f(): Char { let x = \?\?\?; unsafe { dereference(addressof(x)) } }")
         ==
         "fn f(): Char = ({ "
             "(let x: Char = (\?\?\?): Char): (); "
-            "(unsafe_dereference((addressof((x): Char)): *Char)): Char"
+            "({ (dereference((addressof((x): Char)): *Char)): Char }): Char"
         " }): Char");
 }
 
