@@ -360,8 +360,8 @@ auto libparse::make_source_view(Token const* const first, Token const* const las
 libparse::Parse_context::Parse_context(kieli::Lex_result&& lex_result, ast::Node_arena&& node_arena) noexcept
     : compilation_info { std::move(lex_result.compilation_info) }, node_arena { std::move(node_arena) }
     , tokens { std::move(lex_result.tokens) }, start { tokens.data() }, pointer { start }
-    , plus_id { compilation_info.get()->identifier_pool.make("+") }
-    , asterisk_id { compilation_info.get()->identifier_pool.make("*") }
+    , plus_id { compilation_info.get()->operator_pool.make("+") }
+    , asterisk_id { compilation_info.get()->operator_pool.make("*") }
 {
     // The end-of-input token should always be present
     utl::always_assert(!tokens.empty());
@@ -409,7 +409,7 @@ auto libparse::Parse_context::error_expected(utl::Source_view const erroneous_vi
         .message = fmt::format(
             "Expected {}, but found {}",
             expectation,
-            kieli::token_description(pointer->type)),
+            kieli::Lexical_token::description(pointer->type)),
         .help_note = help,
     });
 }

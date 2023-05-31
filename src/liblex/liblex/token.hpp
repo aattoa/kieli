@@ -6,51 +6,48 @@
 
 
 namespace kieli {
-
-    struct Signed_integer          { utl::Isize value {}; };
-    struct Unsigned_integer        { utl::Usize value {}; };
-    struct Integer_of_unknown_sign { utl::Isize value {}; };
-    struct Floating                { utl::Float value {}; };
-    struct Boolean                 { bool       value {}; };
-    struct Character               { char       value {}; };
-
+    struct Integer   { utl::Usize value {}; };
+    struct Floating  { utl::Float value {}; };
+    struct Boolean   { bool       value {}; };
+    struct Character { char       value {}; };
 
     struct [[nodiscard]] Lexical_token {
         using Variant = std::variant<
             std::monostate,
-            Signed_integer,
-            Unsigned_integer,
-            Integer_of_unknown_sign,
+            Integer,
             Floating,
             Character,
             Boolean,
             compiler::String,
+            compiler::Operator,
             compiler::Identifier>;
 
         enum class Type {
-            dot,
-            comma,
-            colon,
-            semicolon,
-            double_colon,
+            error,
 
-            ampersand,
-            asterisk,
-            plus,
-            question,
-            equals,
-            pipe,
-            lambda,
-            left_arrow,
-            right_arrow,
-            hole,
+            dot,          // .
+            comma,        // ,
+            colon,        // :
+            semicolon,    // ;
+            double_colon, // ::
 
-            paren_open,
-            paren_close,
-            brace_open,
-            brace_close,
-            bracket_open,
-            bracket_close,
+            ampersand,   // &
+            asterisk,    // *
+            plus,        // +
+            question,    // ?
+            equals,      // =
+            pipe,        // |
+            lambda,      // backslash
+            left_arrow,  // <-
+            right_arrow, // ->
+            hole,        // ???
+
+            paren_open,    // (
+            paren_close,   // )
+            brace_open,    // {
+            brace_close,   // }
+            bracket_open,  // [
+            bracket_close, // ]
 
             let,
             mut,
@@ -96,14 +93,11 @@ namespace kieli {
             upper_name,
             operator_name,
 
-            string,
-            floating,
-            character,
-            boolean,
-
-            signed_integer,
-            unsigned_integer,
-            integer_of_unknown_sign,
+            integer_literal,
+            floating_literal,
+            string_literal,
+            character_literal,
+            boolean_literal,
 
             string_type,
             floating_type,
@@ -118,8 +112,8 @@ namespace kieli {
             u32_type,
             u64_type,
 
-            lower_self,
-            upper_self,
+            lower_self, // self
+            upper_self, // Self
 
             end_of_input,
 
@@ -128,6 +122,7 @@ namespace kieli {
 
         Variant          value;
         Type             type;
+        std::string_view preceding_trivia;
         utl::Source_view source_view;
 
         template <class T> [[nodiscard]]
@@ -138,18 +133,16 @@ namespace kieli {
                 utl::abort();
         }
 
-        [[nodiscard]] auto as_floating        () const noexcept -> decltype(Floating::value);
-        [[nodiscard]] auto as_character       () const noexcept -> decltype(Character::value);
-        [[nodiscard]] auto as_boolean         () const noexcept -> decltype(Boolean::value);
-        [[nodiscard]] auto as_string          () const noexcept -> compiler::String;
-        [[nodiscard]] auto as_identifier      () const noexcept -> compiler::Identifier;
-        [[nodiscard]] auto as_signed_integer  () const noexcept -> utl::Isize;
-        [[nodiscard]] auto as_unsigned_integer() const noexcept -> utl::Usize;
+        [[nodiscard]] auto as_integer    () const noexcept -> decltype(Integer::value);
+        [[nodiscard]] auto as_floating   () const noexcept -> decltype(Floating::value);
+        [[nodiscard]] auto as_character  () const noexcept -> decltype(Character::value);
+        [[nodiscard]] auto as_boolean    () const noexcept -> decltype(Boolean::value);
+        [[nodiscard]] auto as_string     () const noexcept -> compiler::String;
+        [[nodiscard]] auto as_operator   () const noexcept -> compiler::Operator;
+        [[nodiscard]] auto as_identifier () const noexcept -> compiler::Identifier;
+
+        [[nodiscard]] static auto description(Type) noexcept -> std::string_view;
     };
-
-    [[nodiscard]]
-    auto token_description(Lexical_token::Type) noexcept -> std::string_view;
-
 }
 
 
@@ -157,13 +150,7 @@ DECLARE_FORMATTER_FOR(kieli::Lexical_token::Type);
 DECLARE_FORMATTER_FOR(kieli::Lexical_token);
 
 
-template <utl::one_of<
-    kieli::Signed_integer,
-    kieli::Unsigned_integer,
-    kieli::Integer_of_unknown_sign,
-    kieli::Floating,
-    kieli::Boolean,
-    kieli::Character> T>
+template <utl::one_of<kieli::Integer, kieli::Floating, kieli::Boolean, kieli::Character> T>
 struct fmt::formatter<T> : fmt::formatter<decltype(T::value)> {
     auto format(T const value_wrapper, auto& context) {
         return fmt::formatter<decltype(T::value)>::format(value_wrapper.value, context);

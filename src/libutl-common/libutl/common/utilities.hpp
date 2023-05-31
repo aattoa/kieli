@@ -556,16 +556,6 @@ namespace utl {
     }
 
 
-    template <class T> requires std::is_arithmetic_v<T> [[nodiscard]]
-    constexpr auto try_parse(std::string_view const string) noexcept -> tl::optional<T> {
-        if (string.empty())
-            return tl::nullopt;
-        T value;
-        auto const [ptr, ec] = std::from_chars(string.data(), string.data() + string.size(), value);
-        return ec == std::errc {} ? tl::optional<T> { value } : tl::nullopt;
-    }
-
-
     template <class T>
     concept hashable = requires {
         requires std::is_default_constructible_v<std::hash<T>>;

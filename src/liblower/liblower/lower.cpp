@@ -66,8 +66,7 @@ namespace {
             return [this](auto const& expression) { return recurse(expression); };
         }
 
-        template <utl::one_of<kieli::Signed_integer, kieli::Unsigned_integer, kieli::Integer_of_unknown_sign> T>
-        auto operator()(cir::expression::Literal<T> const& integer_literal) -> lir::Expression {
+        auto operator()(cir::expression::Literal<kieli::Integer> const& integer_literal) -> lir::Expression {
             auto const type = utl::get<cir::type::Integer>(*this_expression.type.value);
             try {
                 return make_integer_constant(type, integer_literal.value.value);

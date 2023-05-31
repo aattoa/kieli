@@ -13,6 +13,22 @@ namespace {
         return ast::expression::Literal<T> { context.previous().value_as<T>() };
     }
 
+    auto extract_string_literal(Parse_context& context)
+        -> ast::Expression::Variant
+    {
+        auto const first_string = context.previous().as_string();
+        if (context.pointer->type != Token::Type::string_literal) {
+            return ast::expression::Literal<compiler::String> { first_string };
+        }
+        std::string combined_string { first_string.view() };
+        while (Token const* const token = context.try_extract(Token::Type::string_literal)) {
+            combined_string += token->as_string().view();
+        }
+        return ast::expression::Literal<compiler::String> {
+            context.compilation_info.get()->string_literal_pool.make(combined_string)
+        };
+    }
+
 
     auto parse_struct_member_initializer(Parse_context& context)
         -> tl::optional<utl::Pair<ast::Name, utl::Wrapper<ast::Expression>>>
@@ -607,20 +623,16 @@ namespace {
         -> tl::optional<ast::Expression::Variant>
     {
         switch (context.extract().type) {
-        case Token::Type::signed_integer:
-            return extract_literal<kieli::Signed_integer>(context);
-        case Token::Type::unsigned_integer:
-            return extract_literal<kieli::Unsigned_integer>(context);
-        case Token::Type::integer_of_unknown_sign:
-            return extract_literal<kieli::Integer_of_unknown_sign>(context);
-        case Token::Type::floating:
+        case Token::Type::integer_literal:
+            return extract_literal<kieli::Integer>(context);
+        case Token::Type::floating_literal:
             return extract_literal<kieli::Floating>(context);
-        case Token::Type::character:
+        case Token::Type::character_literal:
             return extract_literal<kieli::Character>(context);
-        case Token::Type::boolean:
+        case Token::Type::boolean_literal:
             return extract_literal<kieli::Boolean>(context);
-        case Token::Type::string:
-            return extract_literal<compiler::String>(context);
+        case Token::Type::string_literal:
+            return extract_string_literal(context);
         case Token::Type::lower_name:
         case Token::Type::upper_name:
             return extract_identifier(context);
@@ -766,14 +778,12 @@ namespace {
                         };
                     }
                 }
-                else if (context.pointer->type == Token::Type::integer_of_unknown_sign
-                      || context.pointer->type == Token::Type::unsigned_integer)
-                {
+                else if (context.pointer->type == Token::Type::integer_literal) {
                     Token const& field_index_token = context.extract();
                     *expression = ast::Expression {
                         .value = ast::expression::Tuple_field_access {
                             .base_expression         = context.wrap(std::move(*expression)),
-                            .field_index             = field_index_token.as_unsigned_integer(),
+                            .field_index             = field_index_token.as_integer(),
                             .field_index_source_view = field_index_token.source_view
                         },
                         .source_view = make_source_view(anchor, context.pointer-1)
@@ -855,11 +865,11 @@ namespace {
 
 
     auto parse_operator(Parse_context& context)
-        -> tl::optional<compiler::Identifier>
+        -> tl::optional<compiler::Operator>
     {
         switch (context.extract().type) {
         case Token::Type::operator_name:
-            return context.previous().as_identifier();
+            return context.previous().as_operator();
         case Token::Type::asterisk:
             return context.asterisk_id;
         case Token::Type::plus:
