@@ -11,6 +11,7 @@ namespace utl {
         std::string           m_file_content;
     public:
         using Arena = utl::Wrapper_arena<Source>;
+        using Wrapper = utl::Wrapper<Source>;
 
         // Create a source with the given path and content
         explicit Source(std::filesystem::path&&, std::string&&);

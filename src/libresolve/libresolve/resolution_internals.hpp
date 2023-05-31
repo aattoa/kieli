@@ -480,7 +480,7 @@ namespace libresolve {
 
         template <class T>
         auto literal_type(utl::Source_view const view) -> mir::Type {
-            if constexpr (utl::one_of<T, kieli::Signed_integer, kieli::Unsigned_integer, kieli::Integer_of_unknown_sign>)
+            if constexpr (std::same_as<T, kieli::Integer>)
                 return fresh_integral_unification_type_variable(view);
             else if constexpr (std::same_as<T, kieli::Floating>)
                 return floating_type(view);

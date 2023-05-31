@@ -503,14 +503,14 @@ auto kieli::parse(Lex_result&& lex_result) -> Parse_result {
     tl::optional<compiler::String> module_name;
 
     if (context.try_consume(Token::Type::module_)) {
-        if (Token const* const name = context.try_extract(Token::Type::string))
+        if (Token const* const name = context.try_extract(Token::Type::string_literal))
             module_name = validate_module_name_or_path(context, *name);
         else
             context.error_expected("a module name");
     }
 
     while (context.try_consume(Token::Type::import_)) {
-        if (Token const* const name = context.try_extract(Token::Type::string))
+        if (Token const* const name = context.try_extract(Token::Type::string_literal))
             module_imports.push_back(validate_module_name_or_path(context, *name));
         else
             context.error_expected("a module path");

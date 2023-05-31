@@ -20,8 +20,8 @@ namespace libparse {
         Token*                     start;
         Token*                     pointer;
 
-        compiler::Identifier plus_id;
-        compiler::Identifier asterisk_id;
+        compiler::Operator plus_id;
+        compiler::Operator asterisk_id;
 
         explicit Parse_context(kieli::Lex_result&&, ast::Node_arena&&) noexcept;
 

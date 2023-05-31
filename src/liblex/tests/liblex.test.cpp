@@ -1,5 +1,6 @@
 #include <libutl/common/utilities.hpp>
 #include <liblex/lex.hpp>
+#include <liblex/context.hpp>
 #include <catch2/catch_test_macros.hpp>
 
 using Token = kieli::Lexical_token;
@@ -30,32 +31,35 @@ TEST("whitespace") {
 
 
 TEST("numeric") {
-    REQUIRE(lex("23.4 1.") == types(
-        { Token::Type::floating
-        , Token::Type::floating }));
+    REQUIRE(lex("23.4 1.0") == types(
+        { Token::Type::floating_literal
+        , Token::Type::floating_literal }));
 
     REQUIRE(lex("50 0xdeadbeef -3 3e3 18446744073709551615") == types(
-        { Token::Type::integer_of_unknown_sign
-        , Token::Type::integer_of_unknown_sign
-        , Token::Type::signed_integer
-        , Token::Type::integer_of_unknown_sign
-        , Token::Type::unsigned_integer }));
+        { Token::Type::integer_literal
+        , Token::Type::integer_literal
+        , Token::Type::operator_name
+        , Token::Type::integer_literal
+        , Token::Type::integer_literal
+        , Token::Type::integer_literal }));
 
-    REQUIRE(lex("0.3e-5 -0. -0.2E5") == types(
-        { Token::Type::floating
-        , Token::Type::floating
-        , Token::Type::floating }));
+    REQUIRE(lex("0.3e-5 -0.0 -0.2E5") == types(
+        { Token::Type::floating_literal
+        , Token::Type::operator_name
+        , Token::Type::floating_literal
+        , Token::Type::operator_name
+        , Token::Type::floating_literal }));
 }
 
 
 TEST("tuple member access") {
     REQUIRE(lex(".0.0, 0.0") == types(
         { Token::Type::dot
-        , Token::Type::integer_of_unknown_sign
+        , Token::Type::integer_literal
         , Token::Type::dot
-        , Token::Type::integer_of_unknown_sign
+        , Token::Type::integer_literal
         , Token::Type::comma
-        , Token::Type::floating }));
+        , Token::Type::floating_literal }));
 }
 
 
@@ -79,7 +83,7 @@ TEST("comment") {
     REQUIRE(lex(R"(/* "" */ . /* "*/" */ . "/* /*" . /* /* "*/"*/ */ .)") == types(
         { Token::Type::dot
         , Token::Type::dot
-        , Token::Type::string
+        , Token::Type::string_literal
         , Token::Type::dot
         , Token::Type::dot }));
 }
@@ -109,7 +113,7 @@ TEST("pattern") {
         , Token::Type::underscore
         , Token::Type::lower_name
         , Token::Type::comma
-        , Token::Type::integer_of_unknown_sign }));
+        , Token::Type::integer_literal }));
 
     REQUIRE(lex("a<$>_:\nVec") == types(
         { Token::Type::lower_name
@@ -129,14 +133,15 @@ TEST("pattern") {
 
 TEST("string") {
     REQUIRE(lex("\"test\\t\\\",\", 'a', '\\\\'") == types( // NOLINT
-        { Token::Type::string
+        { Token::Type::string_literal
         , Token::Type::comma
-        , Token::Type::character
+        , Token::Type::character_literal
         , Token::Type::comma
-        , Token::Type::character }));
+        , Token::Type::character_literal }));
 
     REQUIRE(lex(R"("hmm" ", yes")") == types(
-        { Token::Type::string }));
+        { Token::Type::string_literal
+        , Token::Type::string_literal }));
 }
 
 

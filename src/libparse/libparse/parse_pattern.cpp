@@ -140,19 +140,15 @@ namespace {
         switch (context.extract().type) {
         case Token::Type::underscore:
             return extract_wildcard(context);
-        case Token::Type::signed_integer:
-            return extract_literal<kieli::Signed_integer>(context);
-        case Token::Type::unsigned_integer:
-            return extract_literal<kieli::Unsigned_integer>(context);
-        case Token::Type::integer_of_unknown_sign:
-            return extract_literal<kieli::Integer_of_unknown_sign>(context);
-        case Token::Type::floating:
+        case Token::Type::integer_literal:
+            return extract_literal<kieli::Integer>(context);
+        case Token::Type::floating_literal:
             return extract_literal<kieli::Floating>(context);
-        case Token::Type::character:
+        case Token::Type::character_literal:
             return extract_literal<kieli::Character>(context);
-        case Token::Type::boolean:
+        case Token::Type::boolean_literal:
             return extract_literal<kieli::Boolean>(context);
-        case Token::Type::string:
+        case Token::Type::string_literal:
             return extract_literal<compiler::String>(context);
         case Token::Type::paren_open:
             return extract_tuple(context);

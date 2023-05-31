@@ -203,7 +203,7 @@ namespace ast {
         struct Binary_operator_invocation {
             utl::Wrapper<Expression> left;
             utl::Wrapper<Expression> right;
-            compiler::Identifier     op;
+            compiler::Operator       op;
         };
         struct Struct_field_access {
             utl::Wrapper<Expression> base_expression;
@@ -335,9 +335,7 @@ namespace ast {
 
     struct Expression {
         using Variant = std::variant<
-            expression::Literal<kieli::Signed_integer>,
-            expression::Literal<kieli::Unsigned_integer>,
-            expression::Literal<kieli::Integer_of_unknown_sign>,
+            expression::Literal<kieli::Integer>,
             expression::Literal<kieli::Floating>,
             expression::Literal<kieli::Character>,
             expression::Literal<kieli::Boolean>,
@@ -420,9 +418,7 @@ namespace ast {
 
     struct Pattern {
         using Variant = std::variant<
-            pattern::Literal<kieli::Signed_integer>,
-            pattern::Literal<kieli::Unsigned_integer>,
-            pattern::Literal<kieli::Integer_of_unknown_sign>,
+            pattern::Literal<kieli::Integer>,
             pattern::Literal<kieli::Floating>,
             pattern::Literal<kieli::Character>,
             pattern::Literal<kieli::Boolean>,

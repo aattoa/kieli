@@ -80,9 +80,7 @@ namespace cir {
 
     struct Pattern {
         using Variant = std::variant<
-            pattern::Literal<kieli::Signed_integer>,
-            pattern::Literal<kieli::Unsigned_integer>,
-            pattern::Literal<kieli::Integer_of_unknown_sign>,
+            pattern::Literal<kieli::Integer>,
             pattern::Literal<kieli::Floating>,
             pattern::Literal<kieli::Character>,
             pattern::Literal<kieli::Boolean>,
@@ -136,9 +134,7 @@ namespace cir {
 
     struct [[nodiscard]] Expression {
         using Variant = std::variant<
-            expression::Literal<kieli::Signed_integer>,
-            expression::Literal<kieli::Unsigned_integer>,
-            expression::Literal<kieli::Integer_of_unknown_sign>,
+            expression::Literal<kieli::Integer>,
             expression::Literal<kieli::Floating>,
             expression::Literal<kieli::Character>,
             expression::Literal<kieli::Boolean>,

@@ -7,13 +7,15 @@
 
 namespace compiler {
 
-    using String     = utl::Pooled_string<struct _string_tag>;
+    using String = utl::Pooled_string<struct _string_tag>;
+    using Operator = utl::Pooled_string<struct _operator_tag>;
     using Identifier = utl::Pooled_string<struct _identifier_tag>;
 
     struct [[nodiscard]] Shared_compilation_info {
         utl::diagnostics::Builder       diagnostics;
         utl::Wrapper_arena<utl::Source> source_arena = utl::Source::Arena::with_page_size(8);
         String::Pool                    string_literal_pool;
+        Operator::Pool                  operator_pool;
         Identifier::Pool                identifier_pool;
     };
     using Compilation_info = utl::Strong<std::shared_ptr<Shared_compilation_info>>;

@@ -330,7 +330,7 @@ namespace {
                     context.wrap_type(mir::type::Array {
                         .element_type = element_type,
                         .array_length = context.wrap(mir::Expression {
-                            .value       = mir::expression::Literal<kieli::Unsigned_integer> { array_length },
+                            .value       = mir::expression::Literal<kieli::Integer> { array_length },
                             .type        = context.size_type(this_expression.source_view),
                             .source_view = this_expression.source_view,
                             .mutability  = context.immut_constant(this_expression.source_view),
