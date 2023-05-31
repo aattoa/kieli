@@ -6,6 +6,13 @@ using namespace libresolve;
 
 namespace {
 
+    struct [[nodiscard]] Loop_info {
+        tl::optional<mir::Type>                  break_return_type;
+        utl::Strong<hir::expression::Loop::Kind> loop_kind;
+    };
+
+    enum class Safety_status { safe, unsafe };
+
     auto require_addressability(
         Context               & context,
         mir::Expression  const& expression,
@@ -139,13 +146,23 @@ namespace {
 
 
     struct Expression_resolution_visitor {
-        Context        & context;
-        Scope          & scope;
-        Namespace      & space;
-        hir::Expression& this_expression;
+        Context                & context;
+        Scope                  & scope;
+        Namespace              & space;
+        hir::Expression        & this_expression;
+        tl::optional<Loop_info>& current_loop_info;
+        Safety_status          & current_safety_status;
+
 
         auto recurse(hir::Expression& expression, Scope* const new_scope = nullptr) {
-            return context.resolve_expression(expression, new_scope != nullptr ? *new_scope : scope, space);
+            return std::visit(Expression_resolution_visitor {
+                .context               = context,
+                .scope                 = new_scope ? *new_scope : scope,
+                .space                 = space,
+                .this_expression       = expression,
+                .current_loop_info     = current_loop_info,
+                .current_safety_status = current_safety_status,
+            }, expression.value);
         }
 
         [[nodiscard]]
@@ -417,11 +434,11 @@ namespace {
         }
 
         auto operator()(hir::expression::Loop& loop) -> mir::Expression {
-            auto const old_loop_info  = context.current_loop_info;
-            context.current_loop_info = Loop_info { .loop_kind = loop.kind };
+            auto const old_loop_info  = current_loop_info;
+            current_loop_info = Loop_info { .loop_kind = loop.kind };
             mir::Expression loop_body = recurse(*loop.body);
-            Loop_info const loop_info = utl::get(context.current_loop_info);
-            context.current_loop_info = old_loop_info;
+            Loop_info const loop_info = utl::get(current_loop_info);
+            current_loop_info = old_loop_info;
             return {
                 .value = mir::expression::Loop { .body = context.wrap(std::move(loop_body)) },
                 .type  = loop_info.break_return_type.has_value()
@@ -435,11 +452,11 @@ namespace {
         auto operator()(hir::expression::Break& break_) -> mir::Expression {
             if (break_.label.has_value())
                 utl::todo();
-            if (!context.current_loop_info.has_value())
+            if (!current_loop_info.has_value())
                 context.error(this_expression.source_view, { "a break expression can not appear outside of a loop" });
 
             mir::Expression break_result = recurse(*break_.result);
-            Loop_info& loop_info = utl::get(context.current_loop_info);
+            Loop_info& loop_info = utl::get(current_loop_info);
 
             if (loop_info.loop_kind.get() == hir::expression::Loop::Kind::plain_loop) {
                 if (!loop_info.break_return_type.has_value()) {
@@ -481,7 +498,7 @@ namespace {
         }
 
         auto operator()(hir::expression::Continue&) -> mir::Expression {
-            if (!context.current_loop_info.has_value())
+            if (!current_loop_info.has_value())
                 context.error(this_expression.source_view, { "a continue expression can not appear outside of a loop" });
             return {
                 .value       = mir::expression::Continue {},
@@ -956,7 +973,7 @@ namespace {
                 this_expression.source_view);
         }
 
-        auto operator()(hir::expression::Dereference& dereference) -> mir::Expression {
+        auto operator()(hir::expression::Reference_dereference& dereference) -> mir::Expression {
             mir::Expression dereferenced_expression = recurse(*dereference.dereferenced_expression);
             bool const is_pure = dereferenced_expression.is_pure;
 
@@ -1031,7 +1048,14 @@ namespace {
             };
         }
 
-        auto operator()(hir::expression::Unsafe_dereference& dereference) -> mir::Expression {
+        auto operator()(hir::expression::Pointer_dereference& dereference) -> mir::Expression {
+            if (current_safety_status == Safety_status::safe) {
+                context.error(this_expression.source_view, {
+                    .message   = "A pointer dereference expression may not appear within safe context",
+                    .help_note = "Wrap the expression in an 'unsafe' block to introduce an unsafe context",
+                });
+            }
+
             mir::Expression pointer = recurse(*dereference.pointer);
             bool const is_pure = pointer.is_pure;
 
@@ -1051,7 +1075,7 @@ namespace {
                 .constrained_type = pointer.type,
                 .constrainer_note = constraint::Explanation {
                     this_expression.source_view,
-                    "The operand of unsafe_dereference must be of a pointer type"
+                    "The operand of unsafe dereference must be of a pointer type"
                 },
                 .constrained_note {
                     pointer.source_view,
@@ -1093,6 +1117,14 @@ namespace {
             };
         }
 
+        auto operator()(hir::expression::Unsafe& unsafe) -> mir::Expression {
+            Safety_status const old_safety_status = current_safety_status;
+            current_safety_status = Safety_status::unsafe;
+            mir::Expression expression = recurse(*unsafe.expression);
+            current_safety_status = old_safety_status;
+            return expression;
+        }
+
 
         auto operator()(hir::expression::Array_index_access&) -> mir::Expression {
             utl::todo();
@@ -1115,5 +1147,14 @@ namespace {
 
 
 auto libresolve::Context::resolve_expression(hir::Expression& expression, Scope& scope, Namespace& space) -> mir::Expression {
-    return std::visit(Expression_resolution_visitor { *this, scope, space, expression }, expression.value);
+    tl::optional<Loop_info> expression_loop_info;
+    Safety_status expression_safety_status = Safety_status::safe;
+    return std::visit(Expression_resolution_visitor {
+        .context               = *this,
+        .scope                 = scope,
+        .space                 = space,
+        .this_expression       = expression,
+        .current_loop_info     = expression_loop_info,
+        .current_safety_status = expression_safety_status,
+    }, expression.value);
 }
