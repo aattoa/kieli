@@ -2,15 +2,11 @@
 #include <liblex/numeric.hpp>
 #include <catch2/catch_test_macros.hpp>
 
-#define TEST(name) TEST_CASE(name, "[liblex][numeric]")
-
-
-namespace {
-    constexpr auto max_usize = std::numeric_limits<utl::Usize>::max();
-}
+#define TEST(name) TEST_CASE(name, "[liblex][numeric]") // NOLINT
 
 
 TEST("liblex::apply_scientific_exponent") {
+    static constexpr auto max_usize = std::numeric_limits<utl::Usize>::max();
     REQUIRE(liblex::apply_scientific_exponent(35, 0) == 35);
     REQUIRE(liblex::apply_scientific_exponent(35, 1) == 350);
     REQUIRE(liblex::apply_scientific_exponent(35, 2) == 3500);

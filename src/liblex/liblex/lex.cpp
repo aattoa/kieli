@@ -96,10 +96,6 @@ namespace {
     constexpr auto satisfies_one_of(char const c) noexcept -> bool {
         return (predicates(c) || ...);
     }
-    template <std::predicate<char> auto... predicates>
-    constexpr auto satisfies_none_of(char const c) noexcept -> bool {
-        return (!predicates(c) && ...);
-    }
 
     constexpr auto is_space = is_one_of<" \t\n">;
     constexpr auto is_lower = is_in_range<'a', 'z'>;
@@ -120,7 +116,7 @@ namespace {
     constexpr auto is_operator        = is_one_of<"+-*/.|<=>:!?#%&^~$@\\">;
 
     constexpr auto is_invalid_character =
-        satisfies_none_of<is_identifier_tail, is_operator, is_space, is_one_of<"(){}[],\"'">>;
+        std::not_fn(satisfies_one_of<is_identifier_tail, is_operator, is_space, is_one_of<"(){}[],\"'">>);
 
     template <std::predicate<char> auto is_digit>
     constexpr auto is_digit_or_separator =
@@ -130,7 +126,6 @@ namespace {
     static_assert(is_one_of<"ab">('b'));
     static_assert(is_not_one_of<"ab">('c'));
     static_assert(is_not_one_of<"ab">('\0'));
-
 
     constexpr auto digit_predicate_for(int const base) noexcept -> bool(*)(char) {
         switch (base) {
@@ -144,7 +139,6 @@ namespace {
             utl::unreachable();
         }
     }
-
 
     auto make_token(
         utl::Source_position const start_position,
@@ -166,7 +160,6 @@ namespace {
         };
     }
 
-
     class [[nodiscard]] Token_maker {
         char const*          m_old_pointer;
         utl::Source_position m_old_position;
@@ -187,57 +180,11 @@ namespace {
         }
     };
 
-
-    auto extract_comments_and_whitespace(liblex::Context& context) -> std::string_view {
-        char const* const anchor = context.pointer();
-
-        for (;;) {
-            context.consume(is_space);
-
-            if (context.try_consume("//")) {
-                context.consume(is_not_one_of<"\n">);
-                continue;
-            }
-            else if (context.try_consume("/*")) {
-                for (utl::Usize depth = 1; depth != 0; ) {
-                    if (context.try_consume('"')) {
-                        char const* const string_start = context.pointer() - 1;
-                        context.consume(is_not_one_of<"\"">);
-                        if (context.is_finished())
-                            context.error(string_start, { .message = "Unterminating string within comment block" });
-                        context.advance();
-                    }
-
-                    if (context.try_consume("*/")) {
-                        --depth;
-                    }
-                    else if (context.try_consume("/*")) {
-                        ++depth;
-                    }
-                    else if (context.is_finished()) {
-                        context.error(anchor, {
-                            .message   = "Unterminating comment block",
-                            .help_note = "Comments starting with '/*' must be terminated with '*/'"
-                        });
-                    }
-                    else {
-                        context.advance();
-                    }
-                }
-                continue;
-            }
-            else {
-                break;
-            }
-        }
-
-        return std::string_view { anchor, context.pointer() };
-    }
-
     auto handle_escape_sequence(liblex::Context& context) -> char {
         char const* const anchor = context.pointer();
-        if (context.is_finished())
+        if (context.is_finished()) {
             context.error(anchor, { "Expected an escape sequence, but found the end of input" });
+        }
         switch (context.extract_current()) {
         case 'a': return '\a';
         case 'b': return '\b';
@@ -252,6 +199,63 @@ namespace {
         default:
             context.error(anchor, { "Unrecognized escape sequence" });
         }
+    }
+
+    auto skip_string_literal_within_comment(liblex::Context& context) -> void {
+        char const* const anchor = context.pointer();
+        if (!context.try_consume('"')) return;
+        for (;;) {
+            if (context.is_finished()) {
+                context.error(anchor, { "Unterminating string literal within comment block" });
+            }
+            switch (context.extract_current()) {
+            case '"':
+                return;
+            case '\\':
+                (void)handle_escape_sequence(context);
+                [[fallthrough]];
+            default:
+                continue;
+            }
+        }
+    }
+
+    auto skip_comment_block(char const* const anchor, liblex::Context& context) -> void {
+        for (utl::Usize depth = 1; depth != 0; ) {
+            skip_string_literal_within_comment(context);
+
+            if (context.try_consume("*/")) {
+                assert(depth != 0);
+                --depth;
+            }
+            else if (context.try_consume("/*")) {
+                assert(depth != std::numeric_limits<utl::Usize>::max());
+                ++depth;
+            }
+            else if (context.is_finished()) {
+                context.error(anchor, {
+                    .message   = "Unterminating comment block",
+                    .help_note = "Comments starting with '/*' must be terminated with '*/'",
+                });
+            }
+            else {
+                context.advance();
+            }
+        }
+    }
+
+    auto extract_comments_and_whitespace(liblex::Context& context) -> std::string_view {
+        char const* const anchor = context.pointer();
+        for (;;) {
+            context.consume(is_space);
+            if (context.try_consume("//"))
+                context.consume(is_not_one_of<"\n">);
+            else if (context.try_consume("/*"))
+                skip_comment_block(anchor, context);
+            else
+                break;
+        }
+        return std::string_view { anchor, context.pointer() };
     }
 
     auto extract_identifier(Token_maker const& token_maker, liblex::Context& context) -> Token {
@@ -285,7 +289,8 @@ namespace {
 
     auto extract_character_literal(Token_maker const& token_maker, liblex::Context& context) -> Token {
         char const* const anchor = context.pointer();
-        assert(context.extract_current() == '\'');
+        assert(context.current() == '\'');
+        context.advance();
 
         if (context.is_finished())
             context.error(anchor, { "Unterminating character literal" });
@@ -301,7 +306,8 @@ namespace {
 
     auto extract_string_literal(Token_maker const& token_maker, liblex::Context& context) -> Token {
         char const* const anchor = context.pointer();
-        assert(context.extract_current() == '"');
+        assert(context.current() == '"');
+        context.advance();
 
         static thread_local std::string string = utl::string_with_capacity(50);
         string.clear();
@@ -336,7 +342,7 @@ namespace {
 
         auto const error_if_trailing_separator = [&](std::string_view const view) {
             if (view.empty() || view.back() != '\'') return;
-            context.error({ "Expected a digit after the digit separator" });
+            context.error({ "Expected one or more digits after the digit separator" });
         };
 
         tl::optional     const base                 = try_extract_numeric_base(context);
@@ -344,9 +350,9 @@ namespace {
         std::string_view const first_digit_sequence = context.extract(digit_predicate);
 
         if (base.has_value()) {
-            if (first_digit_sequence.empty()) {
+            if (first_digit_sequence.find_first_not_of('\'') == std::string_view::npos) {
                 context.error(context.pointer(),
-                    { "Expected an integer literal after the base-{} specifier"_format(*base) });
+                    { "Expected one or more digits after the base-{} specifier"_format(*base) });
             }
         }
         else {
@@ -360,10 +366,11 @@ namespace {
 
         if (!has_preceding_dot() && context.try_consume('.')) {
             if (base.has_value()) {
+                context.consume(is_digit10);
                 context.error({ anchor, 2 },
                     { "A floating point literal may not have a base specifier" });
             }
-            else if (!digit_predicate(context.current())) {
+            else if (context.is_finished() || !digit_predicate(context.current())) {
                 context.error({ "Expected one or more digits after the decimal separator" });
             }
             std::string_view const second_digit_sequence = context.extract(digit_predicate);
@@ -413,14 +420,15 @@ namespace {
             else if (suffix != "e" && suffix != "E") {
                 context.error(suffix, { "Erroneous integer literal alphabetic suffix" });
             }
-            else if (!context.is_finished() && context.current() == '-') {
+            else if (context.try_consume('-')) {
+                context.consume(is_digit10);
                 context.error({ "An integer literal may not have a negative exponent" });
             }
             else if (context.is_finished() || !is_digit10(context.current())) {
                 context.error({ "Expected an exponent" });
             }
             else {
-                std::string_view const exponent_digit_sequence = context.extract(digit_predicate);
+                std::string_view const exponent_digit_sequence = context.extract(is_digit10);
                 assert(!exponent_digit_sequence.empty());
                 error_if_trailing_separator(exponent_digit_sequence);
 
@@ -450,26 +458,31 @@ namespace {
     auto extract_token(liblex::Context& context) -> Token {
         assert(!context.is_finished());
         Token_maker const token { context };
-        switch (char const current = context.current()) {
-        case '(': context.advance(); return token({}, Token::Type::paren_open);
-        case ')': context.advance(); return token({}, Token::Type::paren_close);
-        case '{': context.advance(); return token({}, Token::Type::brace_open);
-        case '}': context.advance(); return token({}, Token::Type::brace_close);
-        case '[': context.advance(); return token({}, Token::Type::bracket_open);
-        case ']': context.advance(); return token({}, Token::Type::bracket_close);
-        case ';': context.advance(); return token({}, Token::Type::semicolon);
-        case ',': context.advance(); return token({}, Token::Type::comma);
-        case '\'': return extract_character_literal(token, context);
-        case '\"': return extract_string_literal(token, context);
-        default:
-            if (is_identifier_head(current))
-                return extract_identifier(token, context);
-            else if (is_operator(current))
-                return extract_operator(token, context);
-            else if (is_digit10(current))
-                return extract_numeric(token, context);
-            else
-                context.error(context.extract(is_invalid_character), { "Unable to extract lexical token" });
+        try {
+            switch (char const current = context.current()) {
+            case '(': context.advance(); return token({}, Token::Type::paren_open);
+            case ')': context.advance(); return token({}, Token::Type::paren_close);
+            case '{': context.advance(); return token({}, Token::Type::brace_open);
+            case '}': context.advance(); return token({}, Token::Type::brace_close);
+            case '[': context.advance(); return token({}, Token::Type::bracket_open);
+            case ']': context.advance(); return token({}, Token::Type::bracket_close);
+            case ';': context.advance(); return token({}, Token::Type::semicolon);
+            case ',': context.advance(); return token({}, Token::Type::comma);
+            case '\'': return extract_character_literal(token, context);
+            case '\"': return extract_string_literal(token, context);
+            default:
+                if (is_identifier_head(current))
+                    return extract_identifier(token, context);
+                else if (is_operator(current))
+                    return extract_operator(token, context);
+                else if (is_digit10(current))
+                    return extract_numeric(token, context);
+                else
+                    context.error(context.extract(is_invalid_character), { "Unable to extract lexical token" });
+            }
+        }
+        catch (liblex::Token_extraction_failure const&) {
+            return token({}, Token::Type::error);
         }
     }
 
