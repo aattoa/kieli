@@ -195,7 +195,7 @@ DEFINE_FORMATTER_FOR(kieli::Lexical_token::Type) {
 
 DEFINE_FORMATTER_FOR(kieli::Lexical_token) {
     if (std::holds_alternative<std::monostate>(value.value))
-        return fmt::format_to(context.out(), "'{}'", value.type);
+        return fmt::format_to(context.out(), "{}", value.type);
     else
         return fmt::format_to(context.out(), "({}: '{}')", value.type, value.value);
 }

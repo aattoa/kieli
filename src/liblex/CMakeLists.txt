@@ -16,4 +16,7 @@ target_link_libraries(liblex
     PRIVATE libcompiler-pipeline)
 
 kieli_consume_libutl_common(liblex)
-kieli_add_tests(liblex TESTS liblex numeric)
+
+kieli_add_tests(liblex
+    EXTRA_SOURCES test_liblex.hpp test_liblex.cpp
+    TESTS floating_literal identifier integer_literal numeric punctuation quoted_literal trivia)

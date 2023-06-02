@@ -4,6 +4,9 @@
 
 
 namespace liblex {
+    // Thrown on a lexical error, caught by the token extraction loop
+    struct [[nodiscard]] Token_extraction_failure {};
+
     class [[nodiscard]] Context {
         compiler::Compilation_info& m_compilation_info;
         utl::Source::Wrapper        m_source;
