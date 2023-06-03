@@ -2,7 +2,7 @@
 
 #include <libutl/common/utilities.hpp>
 #include <libutl/common/wrapper.hpp>
-#include <libvm/virtual_machine.hpp>
+#include <libutl/common/safe_integer.hpp>
 #include <liblex/token.hpp>
 
 
@@ -32,24 +32,24 @@ namespace lir {
         struct Direct_invocation {
             std::string             function_symbol;
             std::vector<Expression> arguments;
-            vm::Local_size_type     return_value_size {};
+            utl::Safe_usize         return_value_size;
         };
         // Invocation of a function through a pointer the value of which is determined at runtime.
         struct Indirect_invocation {
             utl::Wrapper<Expression> invocable;
             std::vector<Expression>  arguments;
-            vm::Local_size_type      return_value_size {};
+            utl::Safe_usize          return_value_size;
         };
         struct Local_variable_bitcopy {
-            vm::Local_offset_type frame_offset {};
-            vm::Local_size_type   byte_count {};
+            utl::Safe_isize frame_offset;
+            utl::Safe_usize byte_count;
         };
         struct Block {
             std::vector<Expression>  side_effect_expressions;
             utl::Wrapper<Expression> result_expression;
-            vm::Local_offset_type    result_object_frame_offset {};
-            vm::Local_size_type      result_size {};
-            vm::Local_size_type      scope_size {};
+            utl::Safe_isize          result_object_frame_offset;
+            utl::Safe_usize          result_size;
+            utl::Safe_usize          scope_size;
         };
         struct Loop {
             utl::Wrapper<Expression> body;

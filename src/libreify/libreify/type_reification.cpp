@@ -63,12 +63,10 @@ namespace {
                 | ranges::views::transform(recurse())
                 | ranges::to<std::vector>();
 
-            auto size = std::transform_reduce(
-                    field_types.begin(),
-                    field_types.end(),
-                    cir::Type::Size {},
-                    std::plus {},
-                    std::mem_fn(&cir::Type::size));
+            auto const size = ranges::fold_left(
+                ranges::views::transform(field_types, &cir::Type::size),
+                utl::Safe_usize {},
+                std::plus {});
 
             return {
                 .value       = context.wrap_type(cir::type::Tuple { .field_types = std::move(field_types) }),
