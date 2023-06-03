@@ -1,7 +1,6 @@
 #pragma once
 
 #include <libresolve/mir.hpp>
-#include <libvm/virtual_machine.hpp>
 #include <libutl/common/safe_integer.hpp>
 
 
@@ -22,9 +21,8 @@ namespace cir {
 
     struct [[nodiscard]] Type {
         struct [[nodiscard]] Variant;
-        using Size = utl::Safe_integer<vm::Local_size_type>;
         utl::Wrapper<Variant> value;
-        Size                  size;
+        utl::Safe_usize       size;
         utl::Source_view      source_view;
     };
 
@@ -103,8 +101,8 @@ namespace cir {
         struct Block {
             std::vector<Expression>  side_effect_expressions;
             utl::Wrapper<Expression> result_expression;
-            Type::Size               scope_size {};
-            vm::Local_offset_type    result_object_frame_offset {};
+            utl::Safe_usize          scope_size;
+            utl::Safe_isize          result_object_frame_offset;
         };
         struct Tuple {
             std::vector<Expression> fields;
@@ -121,8 +119,8 @@ namespace cir {
             utl::Wrapper<Expression> initializer;
         };
         struct Local_variable_reference {
-            vm::Local_offset_type frame_offset {};
-            compiler::Identifier  identifier;
+            utl::Safe_isize      frame_offset;
+            compiler::Identifier identifier;
         };
         struct Conditional {
             utl::Wrapper<cir::Expression> condition;

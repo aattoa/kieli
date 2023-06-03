@@ -1,16 +1,14 @@
 #pragma once
 
+#include <libutl/common/utilities.hpp>
 #include <libutl/common/safe_integer.hpp>
-#include <libvm/virtual_machine.hpp>
 #include <libresolve/mir.hpp>
 #include <libreify/cir.hpp>
 
 
 namespace libreify {
 
-    using Frame_offset = utl::Safe_integer<vm::Local_offset_type>;
-
-    struct Reification_constants {
+    struct [[nodiscard]] Reification_constants {
         utl::Wrapper<cir::Type::Variant> unit_type;
         utl::Wrapper<cir::Type::Variant> boolean_type;
         utl::Wrapper<cir::Type::Variant> string_type;
@@ -29,11 +27,11 @@ namespace libreify {
     };
 
     struct [[nodiscard]] Context {
-        compiler::Compilation_info                          compilation_info;
-        cir::Node_arena                                     node_arena;
-        Reification_constants                               constants;
-        utl::Flatmap<mir::Local_variable_tag, Frame_offset> variable_frame_offsets;
-        Frame_offset                                        current_frame_offset;
+        compiler::Compilation_info                             compilation_info;
+        cir::Node_arena                                        node_arena;
+        Reification_constants                                  constants;
+        utl::Flatmap<mir::Local_variable_tag, utl::Safe_isize> variable_frame_offsets;
+        utl::Safe_isize                                        current_frame_offset;
 
         explicit Context(
             compiler::Compilation_info&& compilation_info,

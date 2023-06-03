@@ -47,7 +47,7 @@ namespace {
             return cir::expression::Block {
                 .side_effect_expressions    = std::move(side_effects),
                 .result_expression          = std::move(result),
-                .scope_size                 = cir::Type::Size { scope_size },
+                .scope_size                 = static_cast<utl::Safe_usize>(scope_size),
                 .result_object_frame_offset = result_object_frame_offset.get()
             };
         }
