@@ -4,6 +4,8 @@ target_sources(libparse
     PRIVATE libparse/ast.cpp
     PRIVATE libparse/ast.hpp
     PRIVATE libparse/ast_formatting.cpp
+    PRIVATE libparse/cst.cpp
+    PRIVATE libparse/cst.hpp
     PRIVATE libparse/parse.cpp
     PRIVATE libparse/parse.hpp
     PRIVATE libparse/parse_expression.cpp
