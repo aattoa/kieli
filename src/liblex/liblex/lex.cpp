@@ -85,9 +85,6 @@ namespace {
     constexpr auto is_one_of(char const c) noexcept -> bool {
         return ranges::contains(string.view(), c);
     }
-    template <utl::Metastring string>
-    constexpr auto is_not_one_of = std::not_fn(is_one_of<string>);
-
     template <char a, char b> requires (a < b)
     constexpr auto is_in_range(char const c) noexcept -> bool {
         return a <= c && c <= b;
@@ -124,8 +121,8 @@ namespace {
 
     static_assert(is_one_of<"ab">('a'));
     static_assert(is_one_of<"ab">('b'));
-    static_assert(is_not_one_of<"ab">('c'));
-    static_assert(is_not_one_of<"ab">('\0'));
+    static_assert(!is_one_of<"ab">('c'));
+    static_assert(!is_one_of<"ab">('\0'));
 
     constexpr auto digit_predicate_for(int const base) noexcept -> bool(*)(char) {
         switch (base) {
@@ -249,7 +246,7 @@ namespace {
         for (;;) {
             context.consume(is_space);
             if (context.try_consume("//"))
-                context.consume(is_not_one_of<"\n">);
+                context.consume([](char const c) { return c != '\n'; });
             else if (context.try_consume("/*"))
                 skip_comment_block(anchor, context);
             else

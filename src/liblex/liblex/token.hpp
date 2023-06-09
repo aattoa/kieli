@@ -143,13 +143,27 @@ namespace kieli {
         [[nodiscard]] auto as_identifier () const noexcept -> compiler::Identifier;
 
         [[nodiscard]] static auto description(Type) noexcept -> std::string_view;
+        [[nodiscard]] static auto type_string(Type) noexcept -> std::string_view;
     };
 }
 
 
-DECLARE_FORMATTER_FOR(kieli::Lexical_token::Type);
-DECLARE_FORMATTER_FOR(kieli::Lexical_token);
+template <>
+struct fmt::formatter<kieli::Lexical_token::Type> : fmt::formatter<std::string_view> {
+    auto format(kieli::Lexical_token::Type const type, auto& context) { // NOLINT
+        return fmt::formatter<std::string_view>::format(kieli::Lexical_token::type_string(type), context);
+    }
+};
 
+template <>
+struct fmt::formatter<kieli::Lexical_token> : fmt::formatter<std::string_view> {
+    auto format(kieli::Lexical_token const& token, auto& context) { // NOLINT
+        if (std::holds_alternative<std::monostate>(token.value))
+            return fmt::formatter<std::string_view>::format(kieli::Lexical_token::type_string(token.type), context);
+        else
+            return fmt::format_to(context.out(), "({}: '{}')", token.type, token.value);
+    }
+};
 
 template <utl::one_of<kieli::Integer, kieli::Floating, kieli::Boolean, kieli::Character> T>
 struct fmt::formatter<T> : fmt::formatter<decltype(T::value)> {

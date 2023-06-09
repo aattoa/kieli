@@ -29,6 +29,13 @@ namespace liblex {
         [[nodiscard]] auto current()      const noexcept -> char;
         [[nodiscard]] auto extract_current()    noexcept -> char;
 
+        [[nodiscard]] auto try_consume(char)             noexcept -> bool;
+        [[nodiscard]] auto try_consume(std::string_view) noexcept -> bool;
+
+        [[noreturn]] auto error(std::string_view, utl::diagnostics::Message_arguments) -> void;
+        [[noreturn]] auto error(char const*, utl::diagnostics::Message_arguments) -> void;
+        [[noreturn]] auto error(utl::diagnostics::Message_arguments) -> void;
+
         auto advance(utl::Usize offset = 1) noexcept -> void;
 
         auto consume(std::predicate<char> auto const& predicate) noexcept -> void {
@@ -41,13 +48,6 @@ namespace liblex {
             consume(predicate);
             return { pointer, m_pointer };
         }
-
-        [[nodiscard]] auto try_consume(char)             noexcept -> bool;
-        [[nodiscard]] auto try_consume(std::string_view) noexcept -> bool;
-
-        [[noreturn]] auto error(std::string_view, utl::diagnostics::Message_arguments) -> void;
-        [[noreturn]] auto error(char const*, utl::diagnostics::Message_arguments) -> void;
-        [[noreturn]] auto error(utl::diagnostics::Message_arguments) -> void;
 
         auto make_string_literal(std::string_view) -> compiler::String;
         auto make_operator      (std::string_view) -> compiler::Operator;
