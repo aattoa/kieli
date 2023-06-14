@@ -59,10 +59,10 @@ namespace {
     }>;
 
     constexpr auto expression_parser_repl = generic_repl<[](kieli::Lex_result&& lex_result) {
-        libparse::Parse_context context { std::move(lex_result), ast::Node_arena::with_default_page_size() };
+        libparse::Parse_context context { std::move(lex_result), cst::Node_arena::with_default_page_size() };
 
         if (auto result = parse_expression(context)) {
-            fmt::println("Result: {}", result);
+            // fmt::println("Result: {}", result);
             if (!context.pointer->source_view.string.empty())
                 fmt::println("Remaining input: '{}'", context.pointer->source_view.string.data());
         }
@@ -73,7 +73,8 @@ namespace {
 
     constexpr auto program_parser_repl = generic_repl<[](kieli::Lex_result&& lex_result) {
         auto parse_result = parse(std::move(lex_result));
-        fmt::println("{}", parse_result.module);
+        (void)parse_result;
+        // fmt::println("{}", parse_result.module);
     }>;
 
     constexpr auto desugaring_repl = generic_repl<[](kieli::Lex_result&& lex_result) {
