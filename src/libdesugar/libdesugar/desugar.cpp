@@ -165,6 +165,9 @@ auto libdesugar::Desugar_context::error(utl::Source_view const erroneous_view, u
 
 
 auto kieli::desugar(kieli::Parse_result&& parse_result) -> Desugar_result {
+    (void)parse_result;
+    utl::todo();
+#if 0
     libdesugar::Desugar_context context {
         std::move(parse_result.compilation_info),
         hir::Node_arena::with_default_page_size(),
@@ -175,4 +178,5 @@ auto kieli::desugar(kieli::Parse_result&& parse_result) -> Desugar_result {
         .node_arena       = std::move(context.node_arena),
         .module           = { .definitions = std::move(desugared_definitions) },
     };
+#endif
 }

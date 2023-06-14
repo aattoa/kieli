@@ -12,6 +12,9 @@ target_sources(libdesugar
     PRIVATE libdesugar/hir_formatting.cpp
     PRIVATE libdesugar/shared_formatting.cpp)
 
+target_link_libraries(libdesugar
+    PRIVATE libparse)
+
 kieli_consume_libutl_common(libdesugar)
 
 kieli_add_tests(libdesugar
