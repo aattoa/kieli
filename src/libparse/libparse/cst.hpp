@@ -15,9 +15,9 @@
     may still be erroneous in other ways, and such errors can only be revealed
     by subsequent compilation steps.
 
-    For example, the following expression is syntactically valid, and
-    can thus be represented by a CST node, but it will be rejected upon
-    expression resolution due to the obvious type error:
+    For example, the following expression is syntactically valid, and can thus
+    be represented by a CST node, but it will be rejected upon expression
+    resolution due to the obvious type error:
 
         let x: Int = "hello"
 
@@ -31,53 +31,59 @@ namespace cst {
     struct [[nodiscard]] Type;
     struct [[nodiscard]] Definition;
 
-    struct Token {
+    struct [[nodiscard]] Token {
         utl::Source_view source_view;
         std::string_view preceding_trivia;
         std::string_view trailing_trivia;
+
+        // Precondition: `pointer` must point to a token within a contiguous token sequence
+        static auto from_lexical(kieli::Lexical_token const* pointer) -> Token;
     };
 
-    struct Upper_name {
+    struct [[nodiscard]] Name_upper;
+    struct [[nodiscard]] Name_lower;
+
+    struct [[nodiscard]] Name_dynamic {
         compiler::Identifier identifier;
         utl::Source_view     source_view;
+        utl::Strong<bool>    is_upper;
+        auto as_upper() const noexcept -> Name_upper;
+        auto as_lower() const noexcept -> Name_lower;
     };
-    struct Lower_name {
+    struct Name_upper {
         compiler::Identifier identifier;
         utl::Source_view     source_view;
+        operator Name_dynamic() const noexcept; // NOLINT: implicit
+    };
+    struct Name_lower {
+        compiler::Identifier identifier;
+        utl::Source_view     source_view;
+        operator Name_dynamic() const noexcept; // NOLINT: implicit
     };
 
     template <class T>
-    struct Comma_separated_syntax {
-        struct Element {
-            T                   value;
-            tl::optional<Token> trailing_comma_token;
-        };
-        std::vector<Element> elements;
+    struct Surrounded {
+        T     value;
+        Token open_token;
+        Token close_token;
     };
+
     template <class T>
-    struct Pipe_separated_syntax {
+    struct Separated_sequence {
         struct Element {
             T                   value;
-            tl::optional<Token> trailing_pipe_token;
-        };
-        std::vector<Element> elements;
-    };
-    template <class T>
-    struct Plus_separated_syntax {
-        struct Element {
-            T                   value;
-            tl::optional<Token> trailing_plus_token;
+            tl::optional<Token> trailing_separator_token;
         };
         std::vector<Element> elements;
     };
 
 
-    struct Lower_name_equals_syntax {
-        Lower_name name;
+    struct Name_lower_equals {
+        Name_lower name;
         Token      equals_sign_token;
     };
 
-    struct Type_annotation_syntax {
+    struct Type_annotation {
         utl::Wrapper<Type> type;
         Token              colon_token;
     };
@@ -94,8 +100,18 @@ namespace cst {
 
         Variant          value;
         utl::Source_view source_view;
-        Token            mut_keyword_token;
+        Token            mut_or_immut_keyword_token;
     };
+
+    struct Self_parameter {
+        tl::optional<Mutability> mutability;
+        tl::optional<Token>      ampersand_token;
+        Token                    self_keyword_token;
+        utl::Source_view         source_view;
+
+        [[nodiscard]] auto is_reference() const noexcept -> bool;
+    };
+
 
     struct Template_argument {
         struct Wildcard {
@@ -106,21 +122,18 @@ namespace cst {
             utl::Wrapper<Expression>,
             Mutability,
             Wildcard>;
-        Variant                  value;
-        tl::optional<Lower_name> name;
+        Variant value;
+        explicit constexpr Template_argument(Variant&& value) noexcept
+            : value { value } {}
     };
 
-    struct Template_arguments {
-        Comma_separated_syntax<Template_argument> arguments;
-        Token                                     open_bracket_token;
-        Token                                     close_bracket_token;
-    };
+    using Template_arguments = Surrounded<Separated_sequence<Template_argument>>;
 
     struct Qualifier {
         tl::optional<Template_arguments> template_arguments;
-        Lower_name                       name;
+        Name_dynamic                     name;
+        tl::optional<Token>              trailing_double_colon_token;
         utl::Source_view                 source_view;
-        Token                            preceding_double_colon_token;
     };
 
     struct Root_qualifier {
@@ -129,13 +142,15 @@ namespace cst {
             Global,              // global::id
             utl::Wrapper<Type>>; // Type::id
         Variant value;
+        Token   double_colon_token;
     };
 
     struct Qualified_name {
-        std::vector<Qualifier>       middle_qualifiers;
-        tl::optional<Root_qualifier> root_qualifier;
-        Lower_name                   primary_name;
+        Separated_sequence<Qualifier> middle_qualifiers;
+        tl::optional<Root_qualifier>  root_qualifier;
+        Name_dynamic                  primary_name;
 
+        [[nodiscard]] auto is_upper()       const noexcept -> bool;
         [[nodiscard]] auto is_unqualified() const noexcept -> bool;
     };
 
@@ -150,63 +165,64 @@ namespace cst {
             utl::Wrapper<Expression> expression;
             Token                    equals_sign_token;
         };
-        utl::Wrapper<Pattern>                pattern;
-        tl::optional<Type_annotation_syntax> type;
-        tl::optional<Default_argument>       default_argument;
+        utl::Wrapper<Pattern>          pattern;
+        tl::optional<Type_annotation>  type;
+        tl::optional<Default_argument> default_argument;
     };
 
     struct Function_parameters {
-        Comma_separated_syntax<Function_parameter> parameters;
-        Token                                      open_parenthesis_token;
-        Token                                      close_parenthesis_token;
+        Separated_sequence<Function_parameter> normal_parameters;
+        tl::optional<cst::Self_parameter>      self_parameter;
+        tl::optional<Token>                    comma_token_after_self_parameter;
+        Token                                  open_parenthesis_token;
+        Token                                  close_parenthesis_token;
     };
 
     struct Function_argument {
-        tl::optional<Lower_name_equals_syntax> argument_name;
-        utl::Wrapper<Expression>               expression;
+        tl::optional<Name_lower_equals> argument_name;
+        utl::Wrapper<Expression>        expression;
     };
 
-    struct Function_arguments {
-        Comma_separated_syntax<Function_argument> arguments;
-        Token                                     open_parenthesis_token;
-        Token                                     close_parenthesis_token;
-    };
+    using Function_arguments = Surrounded<Separated_sequence<Function_argument>>;
 
     struct Template_parameter {
-        struct Type {
-            Plus_separated_syntax<Class_reference> classes;
-            Upper_name                             name;
+        struct Type_parameter {
+            Separated_sequence<Class_reference> classes;
+            Name_upper                          name;
         };
-        struct Value {
-            tl::optional<Type_annotation_syntax> type;
-            Lower_name                           name;
+        struct Value_parameter {
+            tl::optional<utl::Wrapper<Type>> type;
+            Name_lower                       name;
         };
-        struct Mutability {
-            Lower_name name;
+        struct Mutability_parameter {
+            Name_lower name;
+            Token      mut_keyword_token;
         };
-        using Variant = std::variant<Type, Value, Mutability>;
+        using Variant = std::variant<Type_parameter, Value_parameter, Mutability_parameter>;
 
-        Variant                         value;
-        tl::optional<Template_argument> default_argument;
-        utl::Source_view                source_view;
+        struct Default_argument {
+            Template_argument argument;
+            Token             equals_sign_token;
+        };
+
+        Variant                        value;
+        tl::optional<Token>            colon_token;
+        tl::optional<Default_argument> default_argument;
+        utl::Source_view               source_view;
     };
 
-    struct Template_parameters {
-        Comma_separated_syntax<Template_parameter> parameters;
-        Token                                      open_bracket_token;
-        Token                                      close_bracket_token;
-    };
-
+    using Template_parameters = Surrounded<Separated_sequence<Template_parameter>>;
 
     namespace expression {
+        struct Parenthesized {
+            Surrounded<utl::Wrapper<Expression>> expression;
+        };
         template <class T>
         struct Literal {
             T value;
         };
         struct Array_literal {
-            Comma_separated_syntax<utl::Wrapper<Expression>> elements;
-            Token                                            open_bracket_token;
-            Token                                            close_bracket_token;
+            Surrounded<Separated_sequence<utl::Wrapper<Expression>>> elements;
         };
         struct Self {};
         struct Variable {
@@ -217,17 +233,17 @@ namespace cst {
             Qualified_name     name;
         };
         struct Tuple {
-            Comma_separated_syntax<utl::Wrapper<Expression>> fields;
-            Token                                            open_parenthesis_token;
-            Token                                            close_parenthesis_token;
+            Surrounded<Separated_sequence<utl::Wrapper<Expression>>> fields;
         };
         struct Block {
             struct Side_effect {
-                Token                    trailing_semicolon_token;
                 utl::Wrapper<Expression> expression;
+                Token                    trailing_semicolon_token;
             };
             std::vector<Side_effect>               side_effects;
             tl::optional<utl::Wrapper<Expression>> result_expression;
+            Token                                  open_brace_token;
+            Token                                  close_brace_token;
         };
         struct Invocation {
             Function_arguments       function_arguments;
@@ -235,22 +251,25 @@ namespace cst {
         };
         struct Struct_initializer {
             struct Member_initializer {
-                Lower_name               name;
+                Name_lower               name;
                 utl::Wrapper<Expression> expression;
                 Token                    equals_sign_token;
             };
-            std::vector<Member_initializer> member_initializers;
-            utl::Wrapper<Type>              struct_type;
+            Surrounded<Separated_sequence<Member_initializer>> member_initializers;
+            utl::Wrapper<Type>                                 struct_type;
         };
-        struct Binary_operator_invocation {
-            utl::Wrapper<Expression> left_operand;
-            utl::Wrapper<Expression> right_operand;
-            compiler::Operator       operator_name;
-            Token                    operator_token;
+        struct Binary_operator_invocation_sequence {
+            struct Operator_and_operand {
+                compiler::Operator       operator_name;
+                Token                    operator_token;
+                utl::Wrapper<Expression> right_operand;
+            };
+            std::vector<Operator_and_operand> sequence_tail;
+            utl::Wrapper<Expression>          leftmost_operand;
         };
         struct Struct_field_access {
             utl::Wrapper<Expression> base_expression;
-            Lower_name               field_name;
+            Name_lower               field_name;
             Token                    dot_token;
         };
         struct Tuple_field_access {
@@ -262,26 +281,36 @@ namespace cst {
         struct Array_index_access {
             utl::Wrapper<Expression> base_expression;
             utl::Wrapper<Expression> index_expression;
+            Token                    dot_token;
         };
         struct Method_invocation {
-            Function_arguments       function_arguments;
-            Template_arguments       template_arguments;
-            utl::Wrapper<Expression> base_expression;
-            Lower_name               method_name;
+            Function_arguments               function_arguments;
+            tl::optional<Template_arguments> template_arguments;
+            utl::Wrapper<Expression>         base_expression;
+            Name_lower                       method_name;
         };
         struct Conditional {
-            struct False_branch {
+            struct Elif {
+                utl::Wrapper<Expression> condition;
+                utl::Wrapper<Expression> branch;
+                Token                    elif_keyword_token;
             };
-            utl::Wrapper<Expression>   condition;
+            struct False_branch {
+                utl::Wrapper<Expression> body;
+                Token                    else_keyword_token;
+            };
+            utl::Wrapper<Expression>   primary_condition;
             utl::Wrapper<Expression>   true_branch;
+            std::vector<Elif>          elif_chain;
             tl::optional<False_branch> false_branch;
             Token                      if_keyword_token;
         };
         struct Match {
             struct Case {
-                Token                    arrow_token;
                 utl::Wrapper<Pattern>    pattern;
                 utl::Wrapper<Expression> handler;
+                Token                    arrow_token;
+                tl::optional<Token>      optional_semicolon_token;
             };
             std::vector<Case>        cases;
             utl::Wrapper<Expression> matched_expression;
@@ -295,18 +324,18 @@ namespace cst {
             utl::Wrapper<Type>       ascribed_type;
         };
         struct Let_binding {
-            utl::Wrapper<Pattern>                pattern;
-            tl::optional<Type_annotation_syntax> type;
-            utl::Wrapper<Expression>             initializer;
-            Token                                let_keyword_token;
-            Token                                equals_sign_token;
+            utl::Wrapper<Pattern>         pattern;
+            tl::optional<Type_annotation> type;
+            utl::Wrapper<Expression>      initializer;
+            Token                         let_keyword_token;
+            Token                         equals_sign_token;
         };
         struct Conditional_let {
             utl::Wrapper<Pattern>    pattern;
             utl::Wrapper<Expression> initializer;
         };
         struct Local_type_alias {
-            Upper_name         alias_name;
+            Name_upper         alias_name;
             utl::Wrapper<Type> aliased_type;
             Token              alias_keyword_token;
             Token              equals_sign_token;
@@ -340,49 +369,45 @@ namespace cst {
             tl::optional<utl::Wrapper<Expression>> returned_expression;
             Token                                  ret_keyword_token;
         };
-        struct Sizeof {
-            utl::Wrapper<Type> inspected_type;
-            Token              sizeof_keyword_token;
-            Token              open_parenthesis_token;
-            Token              close_parenthesis_token;
-        };
         struct Reference {
             tl::optional<Mutability> mutability;
             utl::Wrapper<Expression> referenced_expression;
             Token                    ampersand_token;
         };
+        struct Sizeof {
+            Surrounded<utl::Wrapper<Type>> inspected_type;
+            Token                          sizeof_keyword_token;
+        };
         struct Addressof {
-            utl::Wrapper<Expression> lvalue_expression;
-            Token                    addressof_keyword_token;
-            Token                    open_parenthesis_token;
-            Token                    close_parenthesis_token;
+            Surrounded<utl::Wrapper<Expression>> lvalue_expression;
+            Token                                addressof_keyword_token;
         };
         struct Reference_dereference {
             utl::Wrapper<Expression> dereferenced_expression;
+            Token                    asterisk_token;
         };
         struct Pointer_dereference {
-            utl::Wrapper<Expression> pointer_expression;
-            Token                    dereference_keyword_token;
-            Token                    open_parenthesis_token;
-            Token                    close_parenthesis_token;
+            Surrounded<utl::Wrapper<Expression>> pointer_expression;
+            Token                                dereference_keyword_token;
         };
         struct Unsafe {
-            Token                    unsafe_keyword_token;
             utl::Wrapper<Expression> expression;
+            Token                    unsafe_keyword_token;
         };
         struct Move {
             utl::Wrapper<Expression> lvalue;
             Token                    mov_keyword_token;
         };
         struct Meta {
-            utl::Wrapper<Expression> expression;
-            Token                    meta_keyword_token;
+            Surrounded<utl::Wrapper<Expression>> expression;
+            Token                                meta_keyword_token;
         };
         struct Hole {};
     }
 
     struct Expression {
         using Variant = std::variant<
+            expression::Parenthesized,
             expression::Literal<kieli::Integer>,
             expression::Literal<kieli::Floating>,
             expression::Literal<kieli::Character>,
@@ -396,7 +421,7 @@ namespace cst {
             expression::Block,
             expression::Invocation,
             expression::Struct_initializer,
-            expression::Binary_operator_invocation,
+            expression::Binary_operator_invocation_sequence,
             expression::Struct_field_access,
             expression::Tuple_field_access,
             expression::Array_index_access,
@@ -432,33 +457,35 @@ namespace cst {
 
 
     namespace pattern {
+        struct Parenthesized {
+            Surrounded<utl::Wrapper<Pattern>> pattern;
+        };
         template <class T>
         struct Literal {
             T value;
         };
         struct Wildcard {};
         struct Name {
-            compiler::Identifier identifier;
-            Mutability           mutability;
+            compiler::Identifier     identifier;
+            tl::optional<Mutability> mutability;
         };
         struct Constructor {
-            Qualified_name                      constructor_name;
-            tl::optional<utl::Wrapper<Pattern>> payload_pattern;
+            Qualified_name                                       constructor_name;
+            tl::optional<cst::Surrounded<utl::Wrapper<Pattern>>> payload_pattern;
         };
         struct Abbreviated_constructor {
-            Lower_name                          constructor_name;
-            tl::optional<utl::Wrapper<Pattern>> payload_pattern;
-            Token                               double_colon_token;
+            Name_lower                                           constructor_name;
+            tl::optional<cst::Surrounded<utl::Wrapper<Pattern>>> payload_pattern;
+            Token                                                double_colon_token;
         };
         struct Tuple {
-            Comma_separated_syntax<utl::Wrapper<Pattern>> patterns;
-            Token                                         open_parenthesis_token;
-            Token                                         close_parenthesis_token;
+            Surrounded<Separated_sequence<utl::Wrapper<Pattern>>> patterns;
+        };
+        struct Top_level_tuple {
+            Separated_sequence<utl::Wrapper<Pattern>> patterns;
         };
         struct Slice {
-            Comma_separated_syntax<utl::Wrapper<Pattern>> patterns;
-            Token                                         open_bracket_token;
-            Token                                         close_bracket_token;
+            Surrounded<Separated_sequence<utl::Wrapper<Pattern>>> patterns;
         };
         struct Alias {
             utl::Wrapper<Pattern> aliased_pattern;
@@ -466,14 +493,15 @@ namespace cst {
             Token                 as_keyword_token;
         };
         struct Guarded {
-            utl::Wrapper<Pattern> guarded_pattern;
-            Expression            guard;
-            Token                 if_keyword_token;
+            utl::Wrapper<Pattern>    guarded_pattern;
+            utl::Wrapper<Expression> guard_expression;
+            Token                    if_keyword_token;
         };
     }
 
     struct Pattern {
         using Variant = std::variant<
+            pattern::Parenthesized,
             pattern::Literal<kieli::Integer>,
             pattern::Literal<kieli::Floating>,
             pattern::Literal<kieli::Character>,
@@ -484,6 +512,7 @@ namespace cst {
             pattern::Constructor,
             pattern::Abbreviated_constructor,
             pattern::Tuple,
+            pattern::Top_level_tuple,
             pattern::Slice,
             pattern::Alias,
             pattern::Guarded>;
@@ -495,6 +524,9 @@ namespace cst {
 
 
     namespace type {
+        struct Parenthesized {
+            Surrounded<utl::Wrapper<Type>> type;
+        };
         enum class Integer {
             i8, i16, i32, i64,
             u8, u16, u32, u64,
@@ -510,9 +542,7 @@ namespace cst {
             Qualified_name name;
         };
         struct Tuple {
-            Comma_separated_syntax<utl::Wrapper<Type>> field_types;
-            Token                                      open_parenthesis_token;
-            Token                                      close_parenthesis_token;
+            Surrounded<Separated_sequence<utl::Wrapper<Type>>> field_types;
         };
         struct Array {
             utl::Wrapper<Type>       element_type;
@@ -522,20 +552,16 @@ namespace cst {
             Token                    semicolon_token;
         };
         struct Slice {
-            utl::Wrapper<Type> element_type;
-            Token              open_bracket_token;
-            Token              close_bracket_token;
+            Surrounded<utl::Wrapper<Type>> element_type;
         };
         struct Function {
-            Comma_separated_syntax<utl::Wrapper<Expression>> parameter_types;
-            Type_annotation_syntax                           return_type;
-            Token                                            fn_keyword_token;
-            Token                                            open_parenthesis_token;
-            Token                                            close_parenthesis_token;
+            Surrounded<Separated_sequence<utl::Wrapper<Type>>> parameter_types;
+            Type_annotation                                    return_type;
+            Token                                              fn_keyword_token;
         };
         struct Typeof {
-            utl::Wrapper<Expression> inspected_expression;
-            Token                    typeof_keyword_token;
+            Surrounded<utl::Wrapper<Expression>> inspected_expression;
+            Token                                typeof_keyword_token;
         };
         struct Reference {
             utl::Wrapper<Type>       referenced_type;
@@ -548,8 +574,8 @@ namespace cst {
             Token                    asterisk_token;
         };
         struct Instance_of {
-            std::vector<Class_reference> classes;
-            Token                        inst_keyword_token;
+            Separated_sequence<Class_reference> classes;
+            Token                               inst_keyword_token;
         };
         struct Template_application {
             Template_arguments template_arguments;
@@ -559,6 +585,7 @@ namespace cst {
 
     struct Type {
         using Variant = std::variant<
+            type::Parenthesized,
             type::Integer,
             type::Floating,
             type::Character,
@@ -582,29 +609,20 @@ namespace cst {
     };
 
 
-
-    struct Self_parameter {
-        Mutability          mutability;
-        tl::optional<Token> ampersand_token;
-        Token               self_keyword_token;
-        utl::Source_view    source_view;
-
-        [[nodiscard]] auto is_reference() const noexcept -> bool;
-    };
-
     struct Function_signature {
         tl::optional<Template_parameters> template_parameters;
-        Function_parameters               parameters;
-        tl::optional<Self_parameter>      self_parameter;
-        Type_annotation_syntax            return_type;
-        Lower_name                        name;
+        Function_parameters               function_parameters;
+        tl::optional<Type_annotation>     return_type;
+        Name_lower                        name;
         Token                             fn_keyword_token;
     };
 
     struct Type_signature {
-        tl::optional<Template_parameters> template_parameters;
-        std::vector<Class_reference>      classes;
-        Upper_name                        name;
+        tl::optional<Template_parameters>   template_parameters;
+        Separated_sequence<Class_reference> classes;
+        Name_upper                          name;
+        tl::optional<Token>                 classes_colon_token;
+        Token                               alias_keyword_token;
     };
 
 
@@ -613,37 +631,37 @@ namespace cst {
         struct Function {
             Function_signature       signature;
             utl::Wrapper<Expression> body;
+            tl::optional<Token>      optional_equals_sign_token;
             Token                    fn_keyword_token;
         };
         struct Struct {
             struct Member {
-                Lower_name             name;
-                Type_annotation_syntax type;
-                utl::Strong<bool>      is_public;
-                utl::Source_view       source_view;
+                Name_lower        name;
+                Type_annotation   type;
+                utl::Strong<bool> is_public;
+                utl::Source_view  source_view;
             };
             tl::optional<Template_parameters> template_parameters;
-            Comma_separated_syntax<Member>    members;
-            Upper_name                        name;
+            Separated_sequence<Member>        members;
+            Name_upper                        name;
             Token                             struct_keyword_token;
+            Token                             equals_sign_token;
         };
         struct Enum {
             struct Constructor {
-                Lower_name                       name;
-                tl::optional<utl::Wrapper<Type>> payload_type;
-                utl::Source_view                 source_view;
-                Token                            open_parenthesis_token;
-                Token                            close_parenthesis_token;
+                tl::optional<Surrounded<Separated_sequence<utl::Wrapper<cst::Type>>>> payload_types;
+                Name_lower                                                            name;
+                utl::Source_view                                                      source_view;
             };
-            tl::optional<Template_parameters>  template_parameters;
-            Pipe_separated_syntax<Constructor> constructors;
-            Upper_name                         name;
-            Token                              enum_keyword_token;
-            Token                              equals_sign_token;
+            tl::optional<Template_parameters> template_parameters;
+            Separated_sequence<Constructor>   constructors;
+            Name_upper                        name;
+            Token                             enum_keyword_token;
+            Token                             equals_sign_token;
         };
         struct Alias {
             tl::optional<Template_parameters> template_parameters;
-            Upper_name                        name;
+            Name_upper                        name;
             utl::Wrapper<Type>                type;
             Token                             alias_keyword_token;
             Token                             equals_sign_token;
@@ -652,8 +670,10 @@ namespace cst {
             tl::optional<Template_parameters> template_parameters;
             std::vector<Function_signature>   function_signatures;
             std::vector<Type_signature>       type_signatures;
-            Upper_name                        name;
+            Name_upper                        name;
             Token                             class_keyword_token;
+            Token                             open_brace_token;
+            Token                             close_brace_token;
         };
         struct Implementation {
             tl::optional<Template_parameters> template_parameters;
@@ -672,7 +692,7 @@ namespace cst {
         struct Namespace {
             tl::optional<Template_parameters> template_parameters;
             std::vector<Definition>           definitions;
-            Lower_name                        name;
+            Name_lower                        name;
             Token                             namespace_keyword_token;
         };
     }
@@ -690,6 +710,18 @@ namespace cst {
 
         Variant          value;
         utl::Source_view source_view;
+    };
+
+
+    template <class T>
+    concept node = utl::one_of<T, Expression, Type, Pattern>;
+
+    using Node_arena = utl::Wrapper_arena<Expression, Type, Pattern>;
+
+    struct [[nodiscard]] Module {
+        std::vector<Definition>        definitions;
+        tl::optional<compiler::String> name;
+        std::vector<compiler::String>  imports;
     };
 
 }
