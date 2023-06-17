@@ -11,7 +11,7 @@ namespace {
         Definition_state& definition_state;
         int               initial_exception_count;
     public:
-        Definition_state_guard(Context& context, Definition_state& state, ast::Name const name)
+        Definition_state_guard(Context& context, Definition_state& state, compiler::Name_dynamic const name)
             : definition_state        { state }
             , initial_exception_count { std::uncaught_exceptions() }
         {
@@ -61,14 +61,14 @@ namespace {
 
         for (hir::Function_parameter& parameter : hir_parameters) {
             if (!parameter.type.has_value())
-                context.error(parameter.pattern.source_view, { "Implicit parameter types are not supported yet" });
+                context.error(parameter.pattern->source_view, { "Implicit parameter types are not supported yet" });
             if (parameter.default_argument.has_value())
-                context.error(parameter.default_argument->source_view, { "Default arguments are not supported yet" });
+                context.error((*parameter.default_argument)->source_view, { "Default arguments are not supported yet" });
 
             mir::Type const parameter_type =
-                context.resolve_type(utl::get(parameter.type), signature_scope, home_namespace);
+                context.resolve_type(*utl::get(parameter.type), signature_scope, home_namespace);
             mir::Pattern parameter_pattern =
-                context.resolve_pattern(parameter.pattern, parameter_type, signature_scope, home_namespace);
+                context.resolve_pattern(*parameter.pattern, parameter_type, signature_scope, home_namespace);
 
             if (!parameter_pattern.is_exhaustive_by_itself)
                 context.error(parameter_pattern.source_view, { "Inexhaustive function parameter pattern" });
@@ -86,10 +86,10 @@ namespace {
     }
 
 
-    auto resolve_self_parameter(Context& context, Scope& scope, tl::optional<ast::Self_parameter> const& self)
+    auto resolve_self_parameter(Context& context, Scope& scope, tl::optional<hir::Self_parameter> const& self)
         -> tl::optional<mir::Self_parameter>
     {
-        return self.transform([&](ast::Self_parameter const& self) {
+        return self.transform([&](hir::Self_parameter const& self) {
             return mir::Self_parameter {
                 .mutability   = context.resolve_mutability(self.mutability, scope),
                 .is_reference = self.is_reference,
@@ -101,7 +101,7 @@ namespace {
 
     auto make_function_signature(
         Context&                               context,
-        ast::Name                        const function_name,
+        compiler::Name_lower             const function_name,
         mir::Type                        const return_type,
         tl::optional<mir::Self_parameter>   && self_parameter,
         std::vector<mir::Function_parameter>&& function_parameters,
@@ -143,7 +143,7 @@ namespace {
             resolve_self_parameter(context, template_parameter_scope, signature.self_parameter);
 
         auto [signature_scope, function_parameters] =
-            resolve_function_parameters(context, allow_generalization, signature.parameters, mir_template_parameters, std::move(template_parameter_scope), space);
+            resolve_function_parameters(context, allow_generalization, signature.function_parameters, mir_template_parameters, std::move(template_parameter_scope), space);
 
         mir::Type const return_type = std::invoke([&] {
             if (signature.return_type.has_value())
@@ -257,64 +257,13 @@ namespace {
 
 
     auto resolve_enum_impl(
-        hir::definition::Enum & enumeration,
-        Context               & context,
-        Scope                   scope,
-        utl::Wrapper<Namespace> home_namespace,
-        mir::Type               enumeration_type) -> mir::Enum
+        hir::definition::Enum & ,
+        Context               & ,
+        Scope                   ,
+        utl::Wrapper<Namespace> ,
+        mir::Type               ) -> mir::Enum
     {
-        mir::Enum mir_enumeration {
-            .constructors         = utl::vector_with_capacity(enumeration.constructors.size()),
-            .name                 = enumeration.name,
-            .associated_namespace = context.wrap(Namespace { .parent = home_namespace })
-        };
-
-        Scope constructor_scope = scope.make_child();
-
-        for (hir::definition::Enum::Constructor& hir_constructor : enumeration.constructors) {
-            mir::Enum_constructor const constructor = std::invoke([&] {
-                if (hir_constructor.payload_type.has_value()) {
-                    mir::Type payload_type = context.resolve_type(*hir_constructor.payload_type, constructor_scope, *home_namespace);
-                    std::vector<mir::Type> constructor_function_parameter_types;
-
-                    if (auto* const tuple = std::get_if<mir::type::Tuple>(&*payload_type.flattened_value())) {
-                        constructor_function_parameter_types = tuple->field_types;
-                    }
-                    else {
-                        constructor_function_parameter_types.reserve(1); // Try to avoid overallocating
-                        constructor_function_parameter_types.push_back(payload_type);
-                    }
-
-                    mir::Type const function_type {
-                        context.wrap_type(mir::type::Function {
-                            .parameter_types = std::move(constructor_function_parameter_types),
-                            .return_type     = enumeration_type,
-                        }),
-                        hir_constructor.source_view,
-                    };
-                    context.ensure_non_generalizable(function_type, "An enum constructor");
-
-                    return mir::Enum_constructor {
-                        .name          = hir_constructor.name,
-                        .payload_type  = payload_type,
-                        .function_type = function_type,
-                        .enum_type     = enumeration_type,
-                    };
-                }
-                else {
-                    return mir::Enum_constructor {
-                        .name      = hir_constructor.name,
-                        .enum_type = enumeration_type
-                    };
-                }
-            });
-
-            mir_enumeration.constructors.push_back(constructor);
-            mir_enumeration.associated_namespace->lower_table
-                .add_new_or_abort(hir_constructor.name.identifier, Lower_variant { constructor });
-        }
-
-        return mir_enumeration;
+        utl::todo();
     }
 
 }
@@ -325,9 +274,7 @@ auto libresolve::Context::resolve_function_signature(Function_info& info)
 {
     if (auto* const function = std::get_if<hir::definition::Function>(&info.value))
         resolve_function_signature_impl(*this, info, std::move(*function), {});
-    else if (auto* const function_template = std::get_if<hir::definition::Function_template>(&info.value))
-        resolve_function_signature_impl(*this, info, std::move(function_template->definition), std::move(function_template->parameters));
-
+    
     if (auto* const function = std::get_if<Partially_resolved_function>(&info.value))
         return function->resolved_signature;
     else
@@ -382,7 +329,10 @@ auto libresolve::Context::resolve_alias(utl::Wrapper<Alias_info> const wrapped_i
         Scope scope;
         mir::Type const aliased_type = resolve_type(alias->type, scope, *info.home_namespace);
         ensure_non_generalizable(aliased_type, "An aliased type");
-        info.value = mir::Alias { .aliased_type = aliased_type, .name = alias->name, };
+        info.value = mir::Alias {
+            .name         = alias->name,
+            .aliased_type = aliased_type,
+        };
     }
 
     return utl::get<mir::Alias>(info.value);
@@ -393,7 +343,7 @@ auto libresolve::Context::resolve_typeclass(utl::Wrapper<Typeclass_info> const w
     Typeclass_info& info = *wrapped_info;
 
     if (auto* const hir_typeclass = std::get_if<hir::definition::Typeclass>(&info.value)) {
-        utl::always_assert(hir_typeclass->type_signatures.empty() && hir_typeclass->type_template_signatures.empty());
+        utl::always_assert(hir_typeclass->type_signatures.empty());
 
         Definition_state_guard const state_guard { *this, info.state, hir_typeclass->name };
         Self_type_guard const self_type_guard { *this, self_placeholder_type(info.name.source_view) };
@@ -416,8 +366,6 @@ auto libresolve::Context::resolve_typeclass(utl::Wrapper<Typeclass_info> const w
 
         for (hir::Function_signature& signature : hir_typeclass->function_signatures)
             handle_signature(std::move(signature), tl::nullopt);
-        for (hir::Function_template_signature& signature : hir_typeclass->function_template_signatures)
-            handle_signature(std::move(signature.function_signature), std::move(signature.template_parameters));
 
         info.value = std::move(mir_typeclass);
     }
@@ -437,7 +385,11 @@ auto libresolve::Context::resolve_implementation(utl::Wrapper<Implementation_inf
 
         utl::Wrapper<Namespace> self_type_associated_namespace = std::invoke([&] {
             if (tl::optional space = associated_namespace_if(self_type)) return *space;
-            error(self_type.source_view(), { "{} does not have an associated namespace, so it can not be the Self type in an implementation block"_format(self_type) });
+            error(self_type.source_view(), {
+                .message = fmt::format(
+                    "{} does not have an associated namespace, so it can not be the Self type in an implementation block",
+                    mir::to_string(self_type)),
+            });
         });
 
         Self_type_guard const self_type_guard { *this, self_type };
@@ -448,7 +400,7 @@ auto libresolve::Context::resolve_implementation(utl::Wrapper<Implementation_inf
 
             utl::match(definition.value,
                 [&](hir::definition::Function& function) {
-                    ast::Name const name = function.signature.name;
+                    auto const name = function.signature.name;
                     auto function_info = wrap(Function_info {
                         .value          = std::move(function),
                         .home_namespace = info.home_namespace,
@@ -458,17 +410,6 @@ auto libresolve::Context::resolve_implementation(utl::Wrapper<Implementation_inf
                     add_to_namespace(*self_type_associated_namespace, name, function_info);
                     definitions.functions.add_new_or_abort(name.identifier, function_info);
                 },
-                [&](hir::definition::Function_template& function_template) {
-                    ast::Name const name = function_template.definition.signature.name;
-                    auto function_template_info = wrap(Function_info {
-                        .value          = std::move(function_template),
-                        .home_namespace = info.home_namespace,
-                        .name           = name
-                    });
-                    (void)resolve_function(function_template_info);
-                    add_to_namespace(*self_type_associated_namespace, name, function_template_info);
-                    definitions.functions.add_new_or_abort(name.identifier, function_template_info);
-                },
                 [](auto const&) {
                     utl::todo();
                 });
@@ -476,7 +417,7 @@ auto libresolve::Context::resolve_implementation(utl::Wrapper<Implementation_inf
 
         info.value = mir::Implementation {
             .definitions = std::move(definitions),
-            .self_type = self_type
+            .self_type = self_type,
         };
 
     }
@@ -508,7 +449,7 @@ auto libresolve::Context::resolve_struct_template(utl::Wrapper<Struct_template_i
                 *this,
                 std::move(scope),
                 info.home_namespace),
-            .parameters = std::move(parameters)
+            .parameters = std::move(parameters),
         };
     }
     return utl::get<mir::Struct_template>(info.value);
@@ -533,7 +474,7 @@ auto libresolve::Context::resolve_enum_template(utl::Wrapper<Enum_template_info>
                 std::move(template_parameter_scope),
                 info.home_namespace,
                 info.parameterized_type_of_this),
-            .parameters = std::move(template_parameters)
+            .parameters = std::move(template_parameters),
         };
     }
     
@@ -554,10 +495,10 @@ auto libresolve::Context::resolve_alias_template(utl::Wrapper<Alias_template_inf
 
         info.value = mir::Alias_template {
             .definition = mir::Alias {
+                .name         = info.name,
                 .aliased_type = resolve_type(alias_template->definition.type, template_parameter_scope, *info.home_namespace),
-                .name         = info.name
             },
-            .parameters = std::move(template_parameters)
+            .parameters = std::move(template_parameters),
         };
     }
 

@@ -7,8 +7,8 @@ using namespace libresolve;
 namespace {
 
     struct [[nodiscard]] Loop_info {
-        tl::optional<mir::Type>                  break_return_type;
-        utl::Strong<hir::expression::Loop::Kind> loop_kind;
+        tl::optional<mir::Type>                    break_return_type;
+        utl::Strong<hir::expression::Loop::Source> loop_source;
     };
 
     enum class Safety_status { safe, unsafe };
@@ -51,7 +51,7 @@ namespace {
                         .note_color  = utl::diagnostics::error_color
                     }
                 }),
-                .message = message
+                .message = message,
             });
         };
 
@@ -61,11 +61,11 @@ namespace {
                 .constrained_mutability = requested_mutability,
                 .constrainer_note {
                     requested_mutability.source_view(),
-                    "Requested mutability ({1})"
+                    "Requested mutability ({1})",
                 },
                 .constrained_note {
                     actual_mutability.source_view(),
-                    "Actual mutability ({0})"
+                    "Actual mutability ({0})",
                 }
             });
         };
@@ -186,7 +186,7 @@ namespace {
             if (argument_count != parameter_count) {
                 context.error(this_expression.source_view, {
                     .message   = "The function has {} parameters, but {} arguments were supplied"_format(parameter_count, argument_count),
-                    .help_note = "The function is of type {}"_format(signature.function_type),
+                    .help_note = "The function is of type {}"_format(mir::to_string(signature.function_type)),
                 });
             }
 
@@ -267,10 +267,10 @@ namespace {
             -> std::vector<mir::Expression>
         {
             auto const resolve_argument = [&](hir::Function_argument& argument) {
-                if (argument.name.has_value())
-                    context.error(argument.name->source_view, { "Named arguments are not supported yet" });
+                if (argument.argument_name.has_value())
+                    context.error(argument.argument_name->source_view, { "Named arguments are not supported yet" });
                 else
-                    return recurse(argument.expression);
+                    return recurse(*argument.expression);
             };
             return utl::map(resolve_argument, arguments);
         }
@@ -435,7 +435,7 @@ namespace {
 
         auto operator()(hir::expression::Loop& loop) -> mir::Expression {
             auto const old_loop_info  = current_loop_info;
-            current_loop_info = Loop_info { .loop_kind = loop.kind };
+            current_loop_info = Loop_info { .loop_source = loop.source };
             mir::Expression loop_body = recurse(*loop.body);
             Loop_info const loop_info = utl::get(current_loop_info);
             current_loop_info = old_loop_info;
@@ -450,15 +450,13 @@ namespace {
         }
 
         auto operator()(hir::expression::Break& break_) -> mir::Expression {
-            if (break_.label.has_value())
-                utl::todo();
             if (!current_loop_info.has_value())
                 context.error(this_expression.source_view, { "a break expression can not appear outside of a loop" });
 
             mir::Expression break_result = recurse(*break_.result);
             Loop_info& loop_info = utl::get(current_loop_info);
 
-            if (loop_info.loop_kind.get() == hir::expression::Loop::Kind::plain_loop) {
+            if (loop_info.loop_source.get() == hir::expression::Loop::Source::plain_loop) {
                 if (!loop_info.break_return_type.has_value()) {
                     loop_info.break_return_type = break_result.type;
                 }
@@ -468,11 +466,11 @@ namespace {
                         .constrained_type = break_result.type,
                         .constrainer_note = constraint::Explanation {
                             loop_info.break_return_type->source_view(),
-                            "Previous break expressions had results of type {0}"
+                            "Previous break expressions had results of type {0}",
                         },
                         .constrained_note = constraint::Explanation {
                             break_result.type.source_view(),
-                            "But this break expressions's result is of type {1}"
+                            "But this break expressions's result is of type {1}",
                         }
                     });
                 }
@@ -484,7 +482,7 @@ namespace {
                     .constrained_note = constraint::Explanation {
                         break_result.source_view,
                         "This break expression's result type is {1}, but only break "
-                        "expressions within plain loops can have results of non-unit types"
+                        "expressions within plain loops can have results of non-unit types",
                     }
                 });
             }
@@ -519,7 +517,7 @@ namespace {
                 if (side_effect.is_pure) {
                     context.diagnostics().emit_warning(side_effect.source_view, {
                         .message   = "This block side-effect expression is pure, so it does not have any side-effects",
-                        .help_note = "Pure side effect-expressions have no effect on program execution, but they are still evaluated. This may lead to performance degradation."
+                        .help_note = "Pure side effect-expressions have no effect on program execution, but they are still evaluated. This may lead to performance degradation.",
                     });
                 }
                 context.solve(constraint::Type_equality {
@@ -527,7 +525,7 @@ namespace {
                     .constrained_type = side_effect.type,
                     .constrained_note = constraint::Explanation {
                         side_effect.source_view,
-                        "This expression is of type {1}, but side-effect expressions must be of the unit type"
+                        "This expression is of type {1}, but side-effect expressions must be of the unit type",
                     }
                 });
                 side_effects.push_back(std::move(side_effect));
@@ -554,7 +552,7 @@ namespace {
         }
 
         auto operator()(hir::expression::Local_type_alias& alias) -> mir::Expression {
-            scope.bind_type(context, alias.identifier, {
+            scope.bind_type(context, alias.alias_name.identifier, {
                 .type               = context.resolve_type(*alias.aliased_type, scope, space),
                 .has_been_mentioned = false,
                 .source_view        = this_expression.source_view
@@ -607,7 +605,7 @@ namespace {
                 },
             });
 
-            if (!pattern.is_exhaustive_by_itself) {
+            if (!pattern.is_exhaustive_by_itself.get()) {
                 context.error(pattern.source_view, {
                     .message   = "An inexhaustive pattern can not be used in a let-binding",
                     .help_note = "If you wish to conditionally bind the expression when the pattern matches, use 'if let'",
@@ -634,7 +632,7 @@ namespace {
                 .constrained_type = condition.type,
                 .constrained_note {
                     condition.source_view,
-                    "This should be of type {0}, not {1}"
+                    "This should be of type {0}, not {1}",
                 }
             });
 
@@ -643,27 +641,27 @@ namespace {
 
             if (conditional.has_explicit_false_branch.get()) {
                 switch (conditional.kind.get()) {
-                case hir::expression::Conditional::Kind::normal_conditional:
+                case hir::expression::Conditional::Source::normal_conditional:
                     context.solve(constraint::Type_equality {
                         .constrainer_type = true_branch.type,
                         .constrained_type = false_branch.type,
                         .constrainer_note = constraint::Explanation {
                             true_branch.type.source_view(),
-                            "The true branch is of type {0}"
+                            "The true branch is of type {0}",
                         },
                         .constrained_note {
                             false_branch.type.source_view(),
-                            "But the false branch is of type {1}"
+                            "But the false branch is of type {1}",
                         }
                     });
                     break;
-                case hir::expression::Conditional::Kind::while_loop_body:
+                case hir::expression::Conditional::Source::while_loop_body:
                     context.solve(constraint::Type_equality {
                         .constrainer_type = context.unit_type(true_branch.source_view),
                         .constrained_type = true_branch.type,
                         .constrained_note = constraint::Explanation {
                             true_branch.type.source_view(),
-                            "The body of a while loop must be of the unit type, not {1}"
+                            "The body of a while loop must be of the unit type, not {1}",
                         }
                     });
                     break;
@@ -677,11 +675,11 @@ namespace {
                     .constrained_type = true_branch.type,
                     .constrainer_note = constraint::Explanation {
                         this_expression.source_view,
-                        "This `if` expression has no `else` block, so the true branch must be of the unit type"
+                        "This `if` expression has no `else` block, so the true branch must be of the unit type",
                     },
                     .constrained_note = constraint::Explanation {
                         true_branch.type.source_view(),
-                        "But the true branch is of type {1}"
+                        "But the true branch is of type {1}",
                     }
                 });
             }
@@ -695,10 +693,10 @@ namespace {
                     .true_branch  = context.wrap(std::move(true_branch)),
                     .false_branch = context.wrap(std::move(false_branch))
                 },
-                .type           = result_type.with(this_expression.source_view),
-                .source_view    = this_expression.source_view,
-                .mutability     = context.immut_constant(this_expression.source_view),
-                .is_pure        = is_pure,
+                .type        = result_type.with(this_expression.source_view),
+                .source_view = this_expression.source_view,
+                .mutability  = context.immut_constant(this_expression.source_view),
+                .is_pure     = is_pure,
             };
         }
 
@@ -722,7 +720,7 @@ namespace {
                         .constrained_type = handler.type,
                         .constrained_note {
                             handler.source_view,
-                            "The previous case handlers were of type {0}, but this is of type {1}"
+                            "The previous case handlers were of type {0}, but this is of type {1}",
                         }
                     });
                 }
@@ -737,88 +735,34 @@ namespace {
             return {
                 .value = mir::expression::Match {
                     .cases              = std::move(cases),
-                    .matched_expression = context.wrap(std::move(matched_expression))
+                    .matched_expression = context.wrap(std::move(matched_expression)),
                 },
                 .type        = utl::get(previous_case_result_type),
                 .source_view = this_expression.source_view,
-                .mutability  = context.immut_constant(this_expression.source_view)
+                .mutability  = context.immut_constant(this_expression.source_view),
             };
         }
 
-        auto operator()(hir::expression::Struct_initializer& struct_initializer) -> mir::Expression {
-            mir::Type const struct_type =
-                context.resolve_type(*struct_initializer.struct_type, scope, space);
-
-            if (auto* const structure_ptr = std::get_if<mir::type::Structure>(&*struct_type.flattened_value())) {
-                mir::Struct& structure = context.resolve_struct(structure_ptr->info);
-                auto initializers = utl::vector_with_capacity<mir::Expression>(structure.members.size());
-
-                for (auto const& [name, _] : struct_initializer.member_initializers) {
-                    if (!ranges::contains(structure.members, name, &mir::Struct::Member::name))
-                        context.error(name.source_view, { "{} does not have a member '{}'"_format(struct_type, name) });
-                }
-
-                for (mir::Struct::Member& member : structure.members) {
-                    if (utl::wrapper auto* const member_initializer_ptr = struct_initializer.member_initializers.find(member.name)) {
-                        mir::Expression member_initializer = recurse(**member_initializer_ptr);
-                        context.solve(constraint::Type_equality {
-                            .constrainer_type = member.type,
-                            .constrained_type = member_initializer.type,
-                            .constrainer_note = constraint::Explanation {
-                                member.name.source_view,
-                                "This member is of type {0}",
-                            },
-                            .constrained_note {
-                                member_initializer.source_view,
-                                "But the given initializer is of type {1}",
-                            }
-                        });
-                        initializers.push_back(std::move(member_initializer));
-                    }
-                    else {
-                        context.error(this_expression.source_view, { "Field '{}' is not initialized"_format(member.name) });
-                    }
-                }
-
-                bool const is_pure = ranges::all_of(initializers, &mir::Expression::is_pure);
-
-                return {
-                    .value = mir::expression::Struct_initializer {
-                        .initializers = std::move(initializers),
-                        .struct_type  = struct_type,
-                    },
-                    .type        = struct_type,
-                    .source_view = this_expression.source_view,
-                    .mutability  = context.immut_constant(this_expression.source_view),
-                    .is_pure     = is_pure,
-                };
-            }
-            else {
-                utl::todo();
-            }
+        auto operator()(hir::expression::Struct_initializer&) -> mir::Expression {
+            utl::todo();
         }
 
-        auto operator()(hir::expression::Type_cast& cast) -> mir::Expression {
-            if (cast.cast_kind == ast::expression::Type_cast::Kind::ascription) {
-                mir::Expression result = recurse(*cast.expression);
-                context.solve(constraint::Type_equality {
-                    .constrainer_type = context.resolve_type(*cast.target_type, scope, space),
-                    .constrained_type = result.type,
-                    .constrainer_note = constraint::Explanation {
-                        cast.target_type->source_view,
-                        "The ascribed type is {0}"
-                    },
-                    .constrained_note {
-                        cast.expression->source_view,
-                        "But the actual type is {1}"
-                    }
-                });
-                result.type = result.type.with(cast.target_type->source_view);
-                return result;
-            }
-            else {
-                utl::todo();
-            }
+        auto operator()(hir::expression::Type_ascription& cast) -> mir::Expression {
+            mir::Expression result = recurse(*cast.expression);
+            context.solve(constraint::Type_equality {
+                .constrainer_type = context.resolve_type(*cast.ascribed_type, scope, space),
+                .constrained_type = result.type,
+                .constrainer_note = constraint::Explanation {
+                    cast.ascribed_type->source_view,
+                    "The ascribed type is {0}",
+                },
+                .constrained_note {
+                    cast.expression->source_view,
+                    "But the actual type is {1}",
+                }
+            });
+            result.type = result.type.with(cast.ascribed_type->source_view);
+            return result;
         }
 
         auto operator()(hir::expression::Template_application& application) -> mir::Expression {
@@ -826,8 +770,8 @@ namespace {
                 [&](utl::Wrapper<Function_info> const info) -> mir::Expression {
                     if (!context.resolve_function_signature(*info).is_template()) {
                         context.error(application.name.primary_name.source_view, {
-                            .message   = "'{}' is a concrete function, not a function template"_format(application.name),
-                            .help_note = "If you did mean to refer to '{}', simply remove the template argument list"_format(application.name),
+                            .message   = "'{}' is a concrete function, not a function template"_format(hir::to_string(application.name)),
+                            .help_note = "If you did mean to refer to '{}', simply remove the template argument list"_format(hir::to_string(application.name)),
                         });
                     }
                     utl::Wrapper<Function_info> const concrete =
@@ -885,7 +829,7 @@ namespace {
             return resolve_direct_invocation(
                 mir::expression::Function_reference {
                     .info           = method_info,
-                    .is_application = invocation.template_arguments.has_value()
+                    .is_application = invocation.template_arguments.has_value(),
                 },
                 std::move(arguments));
         }
@@ -936,14 +880,14 @@ namespace {
                 .field_index = access.field_index.get(),
                 .explanation {
                     access.field_index_source_view,
-                    "Invalid indexed field access"
+                    "Invalid indexed field access",
                 }
             });
             return {
                 .value = mir::expression::Tuple_field_access {
                     .base_expression         = context.wrap(std::move(base_expression)),
                     .field_index             = access.field_index.get(),
-                    .field_index_source_view = access.field_index_source_view
+                    .field_index_source_view = access.field_index_source_view,
                 },
                 .type           = field_type,
                 .source_view    = this_expression.source_view,
@@ -1027,7 +971,7 @@ namespace {
         }
 
         auto operator()(hir::expression::Addressof& addressof) -> mir::Expression {
-            mir::Expression lvalue = recurse(*addressof.lvalue);
+            mir::Expression lvalue = recurse(*addressof.lvalue_expression);
             bool const is_pure = lvalue.is_pure;
             require_addressability(context, lvalue, "The address of a temporary object can not be taken");
 
@@ -1056,7 +1000,7 @@ namespace {
                 });
             }
 
-            mir::Expression pointer = recurse(*dereference.pointer);
+            mir::Expression pointer = recurse(*dereference.pointer_expression);
             bool const is_pure = pointer.is_pure;
 
             mir::Type       const lvalue_type       = context.fresh_general_unification_type_variable(this_expression.source_view);
@@ -1126,6 +1070,9 @@ namespace {
         }
 
 
+        auto operator()(hir::expression::Type_cast&) -> mir::Expression {
+            utl::todo();
+        }
         auto operator()(hir::expression::Array_index_access&) -> mir::Expression {
             utl::todo();
         }
@@ -1133,9 +1080,6 @@ namespace {
             utl::todo();
         }
         auto operator()(hir::expression::Binary_operator_invocation&) -> mir::Expression {
-            utl::todo();
-        }
-        auto operator()(hir::expression::Placement_init&) -> mir::Expression {
             utl::todo();
         }
         auto operator()(hir::expression::Meta&) -> mir::Expression {

@@ -6,13 +6,16 @@
 
 
 namespace {
-    auto format_mir_functions(std::span<mir::Function const> const functions) -> std::string {
+    auto format_mir_functions(std::span<mir::Function const>) -> std::string {
+        utl::todo();
+#if 0
         std::string formatted_mir_functions;
         for (mir::Function const& function : functions) {
             if (function.signature.is_template()) continue;
             fmt::format_to(std::back_inserter(formatted_mir_functions), "{}", function);
         }
         return formatted_mir_functions;
+#endif
     }
 }
 

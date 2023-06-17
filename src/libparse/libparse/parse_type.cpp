@@ -46,7 +46,7 @@ namespace {
 
         if (types.elements.size() == 1) {
             return cst::type::Parenthesized { {
-                .value       = types.elements.front().value,
+                .value       = types.elements.front(),
                 .open_token  = cst::Token::from_lexical(open_parenthesis),
                 .close_token = cst::Token::from_lexical(close_parenthesis),
             } };
@@ -174,19 +174,19 @@ namespace {
 
     auto parse_normal_type(Parse_context& context) -> tl::optional<cst::Type::Variant> {
         switch (context.extract().type) {
-        case Lexical_token::Type::i8_type:        return cst::type::Integer::i8;
-        case Lexical_token::Type::i16_type:       return cst::type::Integer::i16;
-        case Lexical_token::Type::i32_type:       return cst::type::Integer::i32;
-        case Lexical_token::Type::i64_type:       return cst::type::Integer::i64;
-        case Lexical_token::Type::u8_type:        return cst::type::Integer::u8;
-        case Lexical_token::Type::u16_type:       return cst::type::Integer::u16;
-        case Lexical_token::Type::u32_type:       return cst::type::Integer::u32;
-        case Lexical_token::Type::u64_type:       return cst::type::Integer::u64;
-        case Lexical_token::Type::floating_type:  return cst::type::Floating {};
-        case Lexical_token::Type::character_type: return cst::type::Character {};
-        case Lexical_token::Type::boolean_type:   return cst::type::Boolean {};
+        case Lexical_token::Type::i8_type:        return compiler::built_in_type::Integer::i8;
+        case Lexical_token::Type::i16_type:       return compiler::built_in_type::Integer::i16;
+        case Lexical_token::Type::i32_type:       return compiler::built_in_type::Integer::i32;
+        case Lexical_token::Type::i64_type:       return compiler::built_in_type::Integer::i64;
+        case Lexical_token::Type::u8_type:        return compiler::built_in_type::Integer::u8;
+        case Lexical_token::Type::u16_type:       return compiler::built_in_type::Integer::u16;
+        case Lexical_token::Type::u32_type:       return compiler::built_in_type::Integer::u32;
+        case Lexical_token::Type::u64_type:       return compiler::built_in_type::Integer::u64;
+        case Lexical_token::Type::floating_type:  return compiler::built_in_type::Floating {};
+        case Lexical_token::Type::character_type: return compiler::built_in_type::Character {};
+        case Lexical_token::Type::boolean_type:   return compiler::built_in_type::Boolean {};
+        case Lexical_token::Type::string_type:    return compiler::built_in_type::String {};
         case Lexical_token::Type::underscore:     return cst::type::Wildcard {};
-        case Lexical_token::Type::string_type:    return cst::type::String {};
         case Lexical_token::Type::upper_self:     return cst::type::Self {};
         case Lexical_token::Type::paren_open:     return extract_tuple(context);
         case Lexical_token::Type::bracket_open:   return extract_array_or_slice(context);

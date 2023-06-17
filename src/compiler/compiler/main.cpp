@@ -79,12 +79,14 @@ namespace {
 
     constexpr auto desugaring_repl = generic_repl<[](kieli::Lex_result&& lex_result) {
         auto desugar_result = desugar(parse(std::move(lex_result)));
-        fmt::print("{}\n\n", utl::formatting::delimited_range(desugar_result.module.definitions, "\n\n"));
+        (void)desugar_result;
+        // fmt::print("{}\n\n", utl::formatting::delimited_range(desugar_result.module.definitions, "\n\n"));
     }>;
 
     constexpr auto resolution_repl = generic_repl<[](kieli::Lex_result&& lex_result) {
         auto resolve_result = resolve(desugar(parse(std::move(lex_result))));
-        fmt::println("{}", utl::formatting::delimited_range(resolve_result.functions, "\n\n"));
+        (void)resolve_result;
+        // fmt::println("{}", utl::formatting::delimited_range(resolve_result.functions, "\n\n"));
     }>;
 
     constexpr auto reification_repl = generic_repl<[](kieli::Lex_result&& lex_result) {
@@ -93,8 +95,9 @@ namespace {
 
     constexpr auto lowering_repl = generic_repl<[](kieli::Lex_result&& lex_result) {
         auto lowering_result = lower(reify(resolve(desugar(kieli::parse(std::move(lex_result))))));
-        for (lir::Function const& function : lowering_result.functions)
-            fmt::println("{}: {}", function.symbol, function.body);
+        (void)lowering_result;
+        // for (lir::Function const& function : lowering_result.functions)
+        //     fmt::println("{}: {}", function.symbol, function.body);
     }>;
 
 }
@@ -110,7 +113,6 @@ auto main(int argc, char const** argv) -> int try {
         ({ "version", 'v' },                               "Show kieli version"        )
         ("new"             , cli::string("project name"),  "Create a new kieli project")
         ("repl"            , cli::string("repl to run"),   "Run the given repl"        )
-        ("machine"                                                                     )
         ("debug"           , cli::string("phase to debug")                             )
         ("nocolor"         ,                               "Disable colored output"    )
         ("time"            ,                               "Print the execution time"  );
@@ -157,7 +159,7 @@ auto main(int argc, char const** argv) -> int try {
         else if (*phase == "rei")
             (void)reify(do_resolve());
         else if (*phase == "res")
-            fmt::println("{}", utl::formatting::delimited_range(do_resolve().functions, "\n\n"));
+            (void)do_resolve(); // fmt::println("{}", utl::formatting::delimited_range(do_resolve().functions, "\n\n"));
         else if (*phase == "comp")
             (void)compiler::compile({ .source_directory_path = std::move(source_directory_path), .main_file_name = "main.kieli" });
         else

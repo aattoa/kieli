@@ -2,7 +2,6 @@ add_library(liblower STATIC)
 
 target_sources(liblower
     PRIVATE liblower/lir.hpp
-    PRIVATE liblower/lir_formatting.cpp
     PRIVATE liblower/lower.cpp
     PRIVATE liblower/lower.hpp)
 

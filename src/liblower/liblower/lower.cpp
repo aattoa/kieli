@@ -6,11 +6,11 @@
 namespace {
     [[nodiscard]]
     auto make_integer_constant(
-        cir::type::Integer const type,
-        std::integral auto const integer) -> lir::Expression
+        compiler::built_in_type::Integer const type,
+        std::integral auto               const integer) -> lir::Expression
     {
-        using enum cir::type::Integer;
         using lir::expression::Constant;
+        using enum compiler::built_in_type::Integer;
         switch (type) {
         case i8:  return Constant<utl::I8>  { utl::safe_cast<utl::I8> (integer) };
         case i16: return Constant<utl::I16> { utl::safe_cast<utl::I16>(integer) };
@@ -25,7 +25,7 @@ namespace {
     }
 
     [[nodiscard]]
-    auto make_integer_range(cir::type::Integer const type)
+    auto make_integer_range(compiler::built_in_type::Integer const type)
         -> utl::Pair<std::variant<utl::Isize, utl::Usize>>
     {
         static constexpr auto range = []<std::integral T>(utl::Type<T>) {
@@ -35,7 +35,7 @@ namespace {
                 utl::safe_cast<U>(std::numeric_limits<T>::max()),
             };
         };
-        using enum cir::type::Integer;
+        using enum compiler::built_in_type::Integer;
         switch (type) {
         case i8:  return range(utl::type<utl::I8>);
         case i16: return range(utl::type<utl::I16>);
@@ -67,7 +67,7 @@ namespace {
         }
 
         auto operator()(cir::expression::Literal<kieli::Integer> const& integer_literal) -> lir::Expression {
-            auto const type = utl::get<cir::type::Integer>(*this_expression.type.value);
+            auto const type = utl::get<compiler::built_in_type::Integer>(*this_expression.type.value);
             try {
                 return make_integer_constant(type, integer_literal.value.value);
             }
@@ -75,8 +75,8 @@ namespace {
                 auto const [min, max] = make_integer_range(type);
                 diagnostics.emit_error({
                     .sections  = utl::to_vector({ utl::diagnostics::Text_section { .source_view = this_expression.source_view } }),
-                    .message   = "The value of this integer literal is outside of the valid range for {}"_format(this_expression.type),
-                    .help_note = "The valid range for {} is {}..{}"_format(this_expression.type, min, max),
+                    .message   = "The value of this integer literal is outside of the valid range for {}"_format(cir::to_string(this_expression.type)),
+                    .help_note = "The valid range for {} is {}..{}"_format(cir::to_string(this_expression.type), min, max),
                 });
             }
         }
@@ -105,13 +105,13 @@ namespace {
                 .result_expression          = recurse(block.result_expression),
                 .result_object_frame_offset = block.result_object_frame_offset,
                 .result_size                = block.result_expression->type.size.get(),
-                .scope_size                 = block.scope_size.get()
+                .scope_size                 = block.scope_size.get(),
             };
         }
         auto operator()(cir::expression::Local_variable_reference const& local) -> lir::Expression {
             return lir::expression::Local_variable_bitcopy {
                 .frame_offset = local.frame_offset,
-                .byte_count   = this_expression.type.size.get()
+                .byte_count   = this_expression.type.size.get(),
             };
         }
         auto operator()(cir::expression::Conditional const& conditional) -> lir::Expression {

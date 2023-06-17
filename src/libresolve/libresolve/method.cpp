@@ -23,9 +23,9 @@ namespace {
 
 
     auto lookup_method(
-        Context&        context,
-        ast::Name const method_name,
-        mir::Type const inspected_type) -> Method_lookup_result
+        Context&                   context,
+        compiler::Name_lower const method_name,
+        mir::Type            const inspected_type) -> Method_lookup_result
     {
         tl::optional<Method_lookup_result> return_value;
 
@@ -78,11 +78,11 @@ namespace {
 
 
 auto libresolve::Context::resolve_method(
-    ast::Name                                              const method_name,
+    compiler::Name_lower                                  const method_name,
     tl::optional<std::span<hir::Template_argument const>> const template_arguments,
-    mir::Type                                              const type,
-    Scope                                                      & scope,
-    Namespace                                                  & space) -> utl::Wrapper<Function_info>
+    mir::Type                                             const type,
+    Scope                                                     & scope,
+    Namespace                                                 & space) -> utl::Wrapper<Function_info>
 {
     Method_lookup_result const lookup_result = lookup_method(*this, method_name, type);
 

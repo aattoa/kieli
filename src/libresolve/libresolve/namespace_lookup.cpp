@@ -9,41 +9,35 @@ namespace {
 
     [[nodiscard]]
     auto namespace_name(Namespace const& space) -> std::string_view {
-        return space.parent
-            ? space.name ? space.name->identifier.view() : "<unnamed>"
-            : "The global namespace";
+        return space.parent ? (space.name ? space.name->identifier.view() : "<unnamed>") : "The global namespace";
     }
 
     [[noreturn]]
-    auto relative_lookup_error(Context& context, ast::Name const erroneous_name) -> void {
+    auto relative_lookup_error(Context& context, compiler::Name_dynamic const erroneous_name) -> void {
         context.error(erroneous_name.source_view, { "No definition for '{}' in scope"_format(erroneous_name) });
     }
     [[noreturn]]
-    auto absolute_lookup_error(Context& context, std::string_view const space_name, ast::Name const erroneous_name) -> void {
+    auto absolute_lookup_error(Context& context, std::string_view const space_name, compiler::Name_dynamic const erroneous_name) -> void {
         context.error(erroneous_name.source_view, { "{} does not contain a definition for '{}'"_format(space_name, erroneous_name) });
     }
 
 
     auto apply_root_qualifier(
-        Context            & context,
-        Scope              & scope,
-        Namespace          & space,
-        hir::Root_qualifier& qualifier) -> utl::Pair<Lookup_strategy, Namespace*>
+        Context                                & context,
+        Scope                                  & scope,
+        Namespace                              & space,
+        tl::optional<hir::Root_qualifier> const& qualifier) -> utl::Pair<Lookup_strategy, Namespace*>
     {
-        return utl::match(qualifier.value,
-            [&](std::monostate) {
-                return utl::Pair { Lookup_strategy::relative, &space };
-            },
-            [&](ast::Global_root_qualifier) {
-                return utl::Pair { Lookup_strategy::absolute, &*context.global_namespace };
-            },
-            [&](utl::Wrapper<hir::Type> type) {
-                return utl::Pair {
-                    Lookup_strategy::absolute,
-                    &*context.associated_namespace(context.resolve_type(*type, scope, space))
-                };
-            }
-        );
+        if (qualifier.has_value()) {
+            return utl::match(qualifier->value,
+                [&](hir::Root_qualifier::Global) {
+                    return utl::Pair { Lookup_strategy::absolute, &*context.global_namespace };
+                },
+                [&](utl::Wrapper<hir::Type> type) {
+                    return utl::Pair { Lookup_strategy::absolute, &*context.associated_namespace(context.resolve_type(*type, scope, space)) };
+                });
+        }
+        return utl::Pair { Lookup_strategy::relative, &space };
     }
 
 
@@ -172,7 +166,7 @@ namespace {
         Namespace          & space,
         hir::Qualified_name& name) -> typename std::remove_cvref_t<decltype(space.*table)>::mapped_type
     {
-        ast::Name const primary = name.primary_name;
+        auto const primary = name.primary_name;
 
         auto [lookup_strategy, root] = // NOLINT
             apply_root_qualifier(context, scope, space, name.root_qualifier);

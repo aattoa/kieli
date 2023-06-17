@@ -72,12 +72,12 @@ template <> struct dtl::To_HIR_impl<name> : std::type_identity<hir::definition::
     IMPL_TO_FROM_HIR(Instantiation);
 #undef IMPL_TO_FROM_HIR
 
-    template <template <class> class Definition>
-    struct dtl::From_HIR_impl<ast::definition::Template<Definition<hir::HIR_configuration>>>
-        : std::type_identity<Template<From_HIR<Definition<hir::HIR_configuration>>>> {};
+    template <class Definition>
+    struct dtl::From_HIR_impl<hir::definition::Template<Definition>>
+        : std::type_identity<Template<From_HIR<Definition>>> {};
     template <class Definition>
     struct dtl::To_HIR_impl<Template<Definition>>
-        : std::type_identity<ast::definition::Template<To_HIR<Definition>>> {};
+        : std::type_identity<hir::definition::Template<To_HIR<Definition>>> {};
 
 
     struct [[nodiscard]] Expression;
@@ -168,12 +168,6 @@ template <> struct dtl::To_HIR_impl<name> : std::type_identity<hir::definition::
 
 
     namespace type {
-        using hir::type::Primitive;
-        using hir::type::Integer;
-        using hir::type::Floating;
-        using hir::type::Character;
-        using hir::type::Boolean;
-        using hir::type::String;
         // Self within a class
         struct Self_placeholder {};
         struct Tuple {
@@ -218,14 +212,14 @@ template <> struct dtl::To_HIR_impl<name> : std::type_identity<hir::definition::
 
 
     struct Type::Variant : std::variant<
-        type::Tuple,
-        type::Integer,
-        type::Floating,
-        type::Character,
-        type::Boolean,
-        type::String,
+        compiler::built_in_type::Integer,
+        compiler::built_in_type::Floating,
+        compiler::built_in_type::Character,
+        compiler::built_in_type::Boolean,
+        compiler::built_in_type::String,
         type::Self_placeholder,
         type::Array,
+        type::Tuple,
         type::Slice,
         type::Function,
         type::Reference,
@@ -241,10 +235,10 @@ template <> struct dtl::To_HIR_impl<name> : std::type_identity<hir::definition::
 
 
     struct Enum_constructor {
-        ast::Name          name;
-        tl::optional<Type> payload_type;
-        tl::optional<Type> function_type;
-        Type               enum_type;
+        compiler::Name_lower name;
+        tl::optional<Type>   payload_type;
+        tl::optional<Type>   function_type;
+        Type                 enum_type;
     };
 
     namespace expression {
@@ -297,7 +291,7 @@ template <> struct dtl::To_HIR_impl<name> : std::type_identity<hir::definition::
         };
         struct Struct_field_access {
             utl::Wrapper<Expression> base_expression;
-            ast::Name                field_name;
+            compiler::Name_lower     field_name;
         };
         struct Tuple_field_access {
             utl::Wrapper<Expression> base_expression;
@@ -407,7 +401,7 @@ template <> struct dtl::To_HIR_impl<name> : std::type_identity<hir::definition::
             std::vector<mir::Template_parameter> template_parameters; // empty when not a template
             std::vector<mir::Function_parameter> parameters;
             tl::optional<Self_parameter>         self_parameter;
-            ast::Name                            name;
+            compiler::Name_lower                 name;
             mir::Type                            return_type;
             mir::Type                            function_type;
 
@@ -420,26 +414,26 @@ template <> struct dtl::To_HIR_impl<name> : std::type_identity<hir::definition::
 
     struct Struct {
         struct Member { // NOLINT
-            ast::Name         name;
-            Type              type;
-            utl::Strong<bool> is_public;
+            compiler::Name_lower name;
+            Type                 type;
+            utl::Strong<bool>    is_public;
         };
         std::vector<Member>                 members;
-        ast::Name                           name;
+        compiler::Name_upper                name;
         utl::Wrapper<libresolve::Namespace> associated_namespace;
     };
     using Struct_template = Template<Struct>;
 
     struct Enum {
         std::vector<Enum_constructor>       constructors;
-        ast::Name                           name;
+        compiler::Name_upper                name;
         utl::Wrapper<libresolve::Namespace> associated_namespace;
     };
     using Enum_template = Template<Enum>;
 
     struct Alias {
-        Type      aliased_type;
-        ast::Name name;
+        compiler::Name_upper name;
+        Type                 aliased_type;
     };
     using Alias_template = Template<Alias>;
 
@@ -451,10 +445,9 @@ template <> struct dtl::To_HIR_impl<name> : std::type_identity<hir::definition::
             Type_signature                       type_signature;
             std::vector<mir::Template_parameter> template_parameters;
         };
-        utl::Flatmap<compiler::Identifier, Function::Signature>     function_signatures;
-        utl::Flatmap<compiler::Identifier, Type_signature>          type_signatures;
-        utl::Flatmap<compiler::Identifier, Type_template_signature> type_template_signatures;
-        ast::Name                                                   name;
+        utl::Flatmap<compiler::Identifier, Function::Signature> function_signatures;
+        utl::Flatmap<compiler::Identifier, Type_signature>      type_signatures;
+        compiler::Name_upper                                    name;
     };
     using Typeclass_template = Template<Typeclass>;
 
@@ -532,17 +525,16 @@ template <> struct dtl::To_HIR_impl<name> : std::type_identity<hir::definition::
             pattern::As,
             pattern::Guarded>;
 
-        Variant          value;
-        bool             is_exhaustive_by_itself = false;
-        utl::Source_view source_view;
+        Variant           value;
+        utl::Strong<bool> is_exhaustive_by_itself;
+        utl::Source_view  source_view;
     };
 
 
 
     struct Template_argument {
         using Variant = std::variant<Type, Expression, Mutability>;
-        Variant                  value;
-        tl::optional<ast::Name> name;
+        Variant value;
     };
 
     struct Template_default_argument {
@@ -552,17 +544,20 @@ template <> struct dtl::To_HIR_impl<name> : std::type_identity<hir::definition::
 
     struct Template_parameter {
         struct Type_parameter {
-            std::vector<Class_reference> classes;
+            std::vector<Class_reference>       classes;
+            tl::optional<compiler::Name_upper> name; // nullopt for implicit type parameters
         };
         struct Value_parameter {
-            Type type;
+            Type                 type;
+            compiler::Name_lower name;
         };
-        struct Mutability_parameter {};
+        struct Mutability_parameter {
+            compiler::Name_lower name;
+        };
 
         using Variant = std::variant<Type_parameter, Value_parameter, Mutability_parameter>;
 
         Variant                                 value;
-        utl::Strong<tl::optional<ast::Name>>    name; // nullopt for implicit template parameters
         tl::optional<Template_default_argument> default_argument;
         Template_parameter_tag                  reference_tag;
         utl::Source_view                        source_view;
@@ -646,26 +641,28 @@ template <> struct dtl::To_HIR_impl<name> : std::type_identity<hir::definition::
         libresolve::Implementation_template_info,
         libresolve::Instantiation_template_info>;
 
+
+    auto format_to(Expression               const&, std::string&) -> void;
+    auto format_to(Type                     const&, std::string&) -> void;
+    auto format_to(Pattern                  const&, std::string&) -> void;
+    auto format_to(Mutability               const&, std::string&) -> void;
+    auto format_to(Function                 const&, std::string&) -> void;
+    auto format_to(Struct                   const&, std::string&) -> void;
+    auto format_to(Enum                     const&, std::string&) -> void;
+    auto format_to(Alias                    const&, std::string&) -> void;
+    auto format_to(Typeclass                const&, std::string&) -> void;
+    auto format_to(Implementation           const&, std::string&) -> void;
+    auto format_to(Instantiation            const&, std::string&) -> void;
+    auto format_to(Unification_variable_tag const&, std::string&) -> void;
+    auto format_to(Template_parameter       const&, std::string&) -> void;
+    auto format_to(Template_argument        const&, std::string&) -> void;
+
+    auto to_string(auto const& x) -> std::string
+        requires requires { mir::format_to(x, std::declval<std::string&>()); }
+    {
+        std::string output;
+        mir::format_to(x, output);
+        return output;
+    }
+
 }
-
-
-DECLARE_FORMATTER_FOR(mir::Template_argument);
-DECLARE_FORMATTER_FOR(mir::Template_parameter);
-DECLARE_FORMATTER_FOR(mir::Class_reference);
-DECLARE_FORMATTER_FOR(mir::Mutability);
-
-DECLARE_FORMATTER_FOR(mir::Unification_variable_tag);
-DECLARE_FORMATTER_FOR(mir::Unification_type_variable_state::Unsolved);
-DECLARE_FORMATTER_FOR(mir::Unification_mutability_variable_state::Unsolved);
-
-DECLARE_FORMATTER_FOR(mir::Expression);
-DECLARE_FORMATTER_FOR(mir::Pattern);
-DECLARE_FORMATTER_FOR(mir::Type);
-
-DECLARE_FORMATTER_FOR(mir::Function);
-DECLARE_FORMATTER_FOR(mir::Struct);
-DECLARE_FORMATTER_FOR(mir::Enum);
-DECLARE_FORMATTER_FOR(mir::Alias);
-DECLARE_FORMATTER_FOR(mir::Typeclass);
-DECLARE_FORMATTER_FOR(mir::Implementation);
-DECLARE_FORMATTER_FOR(mir::Instantiation);

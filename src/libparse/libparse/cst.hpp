@@ -40,27 +40,6 @@ namespace cst {
         static auto from_lexical(kieli::Lexical_token const* pointer) -> Token;
     };
 
-    struct [[nodiscard]] Name_upper;
-    struct [[nodiscard]] Name_lower;
-
-    struct [[nodiscard]] Name_dynamic {
-        compiler::Identifier identifier;
-        utl::Source_view     source_view;
-        utl::Strong<bool>    is_upper;
-        auto as_upper() const noexcept -> Name_upper;
-        auto as_lower() const noexcept -> Name_lower;
-    };
-    struct Name_upper {
-        compiler::Identifier identifier;
-        utl::Source_view     source_view;
-        operator Name_dynamic() const noexcept; // NOLINT: implicit
-    };
-    struct Name_lower {
-        compiler::Identifier identifier;
-        utl::Source_view     source_view;
-        operator Name_dynamic() const noexcept; // NOLINT: implicit
-    };
-
     template <class T>
     struct Surrounded {
         T     value;
@@ -70,17 +49,13 @@ namespace cst {
 
     template <class T>
     struct Separated_sequence {
-        struct Element {
-            T                   value;
-            tl::optional<Token> trailing_separator_token;
-        };
-        std::vector<Element> elements;
+        std::vector<T>     elements;
+        std::vector<Token> separator_tokens;
     };
 
-
     struct Name_lower_equals {
-        Name_lower name;
-        Token      equals_sign_token;
+        compiler::Name_lower name;
+        Token                equals_sign_token;
     };
 
     struct Type_annotation {
@@ -93,7 +68,7 @@ namespace cst {
             bool is_mutable = false;
         };
         struct Parameterized {
-            compiler::Identifier identifier;
+            compiler::Name_lower name;
             Token                question_mark_token;
         };
         using Variant = std::variant<Concrete, Parameterized>;
@@ -123,15 +98,13 @@ namespace cst {
             Mutability,
             Wildcard>;
         Variant value;
-        explicit constexpr Template_argument(Variant&& value) noexcept
-            : value { value } {}
     };
 
     using Template_arguments = Surrounded<Separated_sequence<Template_argument>>;
 
     struct Qualifier {
         tl::optional<Template_arguments> template_arguments;
-        Name_dynamic                     name;
+        compiler::Name_dynamic           name;
         tl::optional<Token>              trailing_double_colon_token;
         utl::Source_view                 source_view;
     };
@@ -148,7 +121,7 @@ namespace cst {
     struct Qualified_name {
         Separated_sequence<Qualifier> middle_qualifiers;
         tl::optional<Root_qualifier>  root_qualifier;
-        Name_dynamic                  primary_name;
+        compiler::Name_dynamic        primary_name;
 
         [[nodiscard]] auto is_upper()       const noexcept -> bool;
         [[nodiscard]] auto is_unqualified() const noexcept -> bool;
@@ -188,15 +161,15 @@ namespace cst {
     struct Template_parameter {
         struct Type_parameter {
             Separated_sequence<Class_reference> classes;
-            Name_upper                          name;
+            compiler::Name_upper                name;
         };
         struct Value_parameter {
             tl::optional<utl::Wrapper<Type>> type;
-            Name_lower                       name;
+            compiler::Name_lower             name;
         };
         struct Mutability_parameter {
-            Name_lower name;
-            Token      mut_keyword_token;
+            compiler::Name_lower name;
+            Token                mut_keyword_token;
         };
         using Variant = std::variant<Type_parameter, Value_parameter, Mutability_parameter>;
 
@@ -251,7 +224,7 @@ namespace cst {
         };
         struct Struct_initializer {
             struct Member_initializer {
-                Name_lower               name;
+                compiler::Name_lower     name;
                 utl::Wrapper<Expression> expression;
                 Token                    equals_sign_token;
             };
@@ -269,7 +242,7 @@ namespace cst {
         };
         struct Struct_field_access {
             utl::Wrapper<Expression> base_expression;
-            Name_lower               field_name;
+            compiler::Name_lower     field_name;
             Token                    dot_token;
         };
         struct Tuple_field_access {
@@ -287,7 +260,7 @@ namespace cst {
             Function_arguments               function_arguments;
             tl::optional<Template_arguments> template_arguments;
             utl::Wrapper<Expression>         base_expression;
-            Name_lower                       method_name;
+            compiler::Name_lower             method_name;
         };
         struct Conditional {
             struct Elif {
@@ -335,10 +308,10 @@ namespace cst {
             utl::Wrapper<Expression> initializer;
         };
         struct Local_type_alias {
-            Name_upper         alias_name;
-            utl::Wrapper<Type> aliased_type;
-            Token              alias_keyword_token;
-            Token              equals_sign_token;
+            compiler::Name_upper alias_name;
+            utl::Wrapper<Type>   aliased_type;
+            Token                alias_keyword_token;
+            Token                equals_sign_token;
         };
         struct Infinite_loop {
             utl::Wrapper<Expression> body;
@@ -466,7 +439,7 @@ namespace cst {
         };
         struct Wildcard {};
         struct Name {
-            compiler::Identifier     identifier;
+            compiler::Name_lower     name;
             tl::optional<Mutability> mutability;
         };
         struct Constructor {
@@ -474,7 +447,7 @@ namespace cst {
             tl::optional<cst::Surrounded<utl::Wrapper<Pattern>>> payload_pattern;
         };
         struct Abbreviated_constructor {
-            Name_lower                                           constructor_name;
+            compiler::Name_lower                                 constructor_name;
             tl::optional<cst::Surrounded<utl::Wrapper<Pattern>>> payload_pattern;
             Token                                                double_colon_token;
         };
@@ -488,9 +461,10 @@ namespace cst {
             Surrounded<Separated_sequence<utl::Wrapper<Pattern>>> patterns;
         };
         struct Alias {
-            utl::Wrapper<Pattern> aliased_pattern;
-            Name                  alias_name;
-            Token                 as_keyword_token;
+            compiler::Name_lower     alias_name;
+            tl::optional<Mutability> alias_mutability;
+            utl::Wrapper<Pattern>    aliased_pattern;
+            Token                    as_keyword_token;
         };
         struct Guarded {
             utl::Wrapper<Pattern>    guarded_pattern;
@@ -527,15 +501,6 @@ namespace cst {
         struct Parenthesized {
             Surrounded<utl::Wrapper<Type>> type;
         };
-        enum class Integer {
-            i8, i16, i32, i64,
-            u8, u16, u32, u64,
-            _enumerator_count,
-        };
-        struct Floating {};
-        struct Character {};
-        struct Boolean {};
-        struct String {};
         struct Wildcard {};
         struct Self {};
         struct Typename {
@@ -586,11 +551,11 @@ namespace cst {
     struct Type {
         using Variant = std::variant<
             type::Parenthesized,
-            type::Integer,
-            type::Floating,
-            type::Character,
-            type::Boolean,
-            type::String,
+            compiler::built_in_type::Integer,
+            compiler::built_in_type::Floating,
+            compiler::built_in_type::Character,
+            compiler::built_in_type::Boolean,
+            compiler::built_in_type::String,
             type::Wildcard,
             type::Self,
             type::Typename,
@@ -613,14 +578,14 @@ namespace cst {
         tl::optional<Template_parameters> template_parameters;
         Function_parameters               function_parameters;
         tl::optional<Type_annotation>     return_type;
-        Name_lower                        name;
+        compiler::Name_lower              name;
         Token                             fn_keyword_token;
     };
 
     struct Type_signature {
         tl::optional<Template_parameters>   template_parameters;
         Separated_sequence<Class_reference> classes;
-        Name_upper                          name;
+        compiler::Name_upper                name;
         tl::optional<Token>                 classes_colon_token;
         Token                               alias_keyword_token;
     };
@@ -636,32 +601,32 @@ namespace cst {
         };
         struct Struct {
             struct Member {
-                Name_lower        name;
-                Type_annotation   type;
-                utl::Strong<bool> is_public;
-                utl::Source_view  source_view;
+                compiler::Name_lower name;
+                Type_annotation      type;
+                utl::Strong<bool>    is_public;
+                utl::Source_view     source_view;
             };
             tl::optional<Template_parameters> template_parameters;
             Separated_sequence<Member>        members;
-            Name_upper                        name;
+            compiler::Name_upper              name;
             Token                             struct_keyword_token;
             Token                             equals_sign_token;
         };
         struct Enum {
             struct Constructor {
                 tl::optional<Surrounded<Separated_sequence<utl::Wrapper<cst::Type>>>> payload_types;
-                Name_lower                                                            name;
+                compiler::Name_lower                                                            name;
                 utl::Source_view                                                      source_view;
             };
             tl::optional<Template_parameters> template_parameters;
             Separated_sequence<Constructor>   constructors;
-            Name_upper                        name;
+            compiler::Name_upper              name;
             Token                             enum_keyword_token;
             Token                             equals_sign_token;
         };
         struct Alias {
             tl::optional<Template_parameters> template_parameters;
-            Name_upper                        name;
+            compiler::Name_upper              name;
             utl::Wrapper<Type>                type;
             Token                             alias_keyword_token;
             Token                             equals_sign_token;
@@ -670,7 +635,7 @@ namespace cst {
             tl::optional<Template_parameters> template_parameters;
             std::vector<Function_signature>   function_signatures;
             std::vector<Type_signature>       type_signatures;
-            Name_upper                        name;
+            compiler::Name_upper              name;
             Token                             class_keyword_token;
             Token                             open_brace_token;
             Token                             close_brace_token;
@@ -692,7 +657,7 @@ namespace cst {
         struct Namespace {
             tl::optional<Template_parameters> template_parameters;
             std::vector<Definition>           definitions;
-            Name_lower                        name;
+            compiler::Name_lower              name;
             Token                             namespace_keyword_token;
         };
     }
@@ -722,6 +687,14 @@ namespace cst {
         std::vector<Definition>        definitions;
         tl::optional<compiler::String> name;
         std::vector<compiler::String>  imports;
+    };
+
+
+    constexpr auto surrounded_value = []<class T>(Surrounded<T> const& surrounded) noexcept -> T const& {
+        return surrounded.value;
+    };
+    constexpr auto separated_sequence_elements = []<class T>(Separated_sequence<T> const& sequence) -> std::vector<T> const& {
+        return sequence.elements;
     };
 
 }

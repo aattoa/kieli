@@ -21,24 +21,24 @@ namespace {
         }
 
 
-        auto operator()(hir::type::Integer const integer) -> mir::Type {
+        auto operator()(compiler::built_in_type::Integer const integer) -> mir::Type {
             static constexpr auto integers = std::to_array({
                 &Context::i8_type, &Context::i16_type, &Context::i32_type, &Context::i64_type,
                 &Context::u8_type, &Context::u16_type, &Context::u32_type, &Context::u64_type,
             });
-            static_assert(integers.size() == utl::enumerator_count<hir::type::Integer>);
+            static_assert(integers.size() == utl::enumerator_count<compiler::built_in_type::Integer>);
             return (context.*integers[utl::as_index(integer)])(this_type.source_view);
         }
-        auto operator()(hir::type::String&) -> mir::Type {
+        auto operator()(compiler::built_in_type::String) -> mir::Type {
             return context.string_type(this_type.source_view);
         }
-        auto operator()(hir::type::Floating&) -> mir::Type {
+        auto operator()(compiler::built_in_type::Floating) -> mir::Type {
             return context.floating_type(this_type.source_view);
         }
-        auto operator()(hir::type::Character&) -> mir::Type {
+        auto operator()(compiler::built_in_type::Character) -> mir::Type {
             return context.character_type(this_type.source_view);
         }
-        auto operator()(hir::type::Boolean&) -> mir::Type {
+        auto operator()(compiler::built_in_type::Boolean) -> mir::Type {
             return context.boolean_type(this_type.source_view);
         }
 
@@ -109,7 +109,7 @@ namespace {
                     return mir::Type {
                         context.wrap_type(mir::type::Structure {
                             .info           = context.instantiate_struct_template_with_synthetic_arguments(info, this_type.source_view),
-                            .is_application = true
+                            .is_application = true,
                         }),
                         this_type.source_view,
                     };
@@ -118,7 +118,7 @@ namespace {
                     return mir::Type {
                         context.wrap_type(mir::type::Enumeration {
                             .info           = context.instantiate_enum_template_with_synthetic_arguments(info, this_type.source_view),
-                            .is_application = true
+                            .is_application = true,
                         }),
                         this_type.source_view,
                     };
@@ -134,8 +134,7 @@ namespace {
                 },
                 [](utl::Wrapper<Typeclass_template_info>) -> mir::Type {
                     utl::todo();
-                }
-            );
+                });
         }
 
         auto operator()(hir::type::Reference& reference) -> mir::Type {
@@ -185,7 +184,7 @@ namespace {
                         context.wrap_type(mir::type::Enumeration {
                             .info = context.instantiate_enum_template(
                                 info, application.arguments, this_type.source_view, scope, space),
-                            .is_application = true
+                            .is_application = true,
                         }),
                         this_type.source_view,
                     };

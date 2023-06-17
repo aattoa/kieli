@@ -92,7 +92,8 @@ auto mir::Unification_mutability_variable_state::as_solved_if() const noexcept -
 
 
 auto mir::Template_parameter::is_implicit() const noexcept -> bool {
-    return !name.get().has_value();
+    auto const* const type_parameter = std::get_if<Type_parameter>(&value);
+    return type_parameter && !type_parameter->name.has_value();
 }
 auto mir::Function::Signature::is_template() const noexcept -> bool {
     return !template_parameters.empty();

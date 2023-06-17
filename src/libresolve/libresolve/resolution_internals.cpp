@@ -6,18 +6,18 @@ libresolve::Resolution_constants::Resolution_constants(mir::Node_arena& arena)
     : immut                 { arena.wrap<mir::Mutability::Variant>(mir::Mutability::Concrete { .is_mutable = false }) }
     , mut                   { arena.wrap<mir::Mutability::Variant>(mir::Mutability::Concrete { .is_mutable = true }) }
     , unit_type             { arena.wrap<mir::Type::Variant>(mir::type::Tuple {}) }
-    , i8_type               { arena.wrap<mir::Type::Variant>(mir::type::Integer::i8) }
-    , i16_type              { arena.wrap<mir::Type::Variant>(mir::type::Integer::i16) }
-    , i32_type              { arena.wrap<mir::Type::Variant>(mir::type::Integer::i32) }
-    , i64_type              { arena.wrap<mir::Type::Variant>(mir::type::Integer::i64) }
-    , u8_type               { arena.wrap<mir::Type::Variant>(mir::type::Integer::u8) }
-    , u16_type              { arena.wrap<mir::Type::Variant>(mir::type::Integer::u16) }
-    , u32_type              { arena.wrap<mir::Type::Variant>(mir::type::Integer::u32) }
-    , u64_type              { arena.wrap<mir::Type::Variant>(mir::type::Integer::u64) }
-    , floating_type         { arena.wrap<mir::Type::Variant>(mir::type::Floating {}) }
-    , character_type        { arena.wrap<mir::Type::Variant>(mir::type::Character {}) }
-    , boolean_type          { arena.wrap<mir::Type::Variant>(mir::type::Boolean {}) }
-    , string_type           { arena.wrap<mir::Type::Variant>(mir::type::String {}) }
+    , i8_type               { arena.wrap<mir::Type::Variant>(compiler::built_in_type::Integer::i8) }
+    , i16_type              { arena.wrap<mir::Type::Variant>(compiler::built_in_type::Integer::i16) }
+    , i32_type              { arena.wrap<mir::Type::Variant>(compiler::built_in_type::Integer::i32) }
+    , i64_type              { arena.wrap<mir::Type::Variant>(compiler::built_in_type::Integer::i64) }
+    , u8_type               { arena.wrap<mir::Type::Variant>(compiler::built_in_type::Integer::u8) }
+    , u16_type              { arena.wrap<mir::Type::Variant>(compiler::built_in_type::Integer::u16) }
+    , u32_type              { arena.wrap<mir::Type::Variant>(compiler::built_in_type::Integer::u32) }
+    , u64_type              { arena.wrap<mir::Type::Variant>(compiler::built_in_type::Integer::u64) }
+    , floating_type         { arena.wrap<mir::Type::Variant>(compiler::built_in_type::Floating {}) }
+    , character_type        { arena.wrap<mir::Type::Variant>(compiler::built_in_type::Character {}) }
+    , boolean_type          { arena.wrap<mir::Type::Variant>(compiler::built_in_type::Boolean {}) }
+    , string_type           { arena.wrap<mir::Type::Variant>(compiler::built_in_type::String {}) }
     , self_placeholder_type { arena.wrap<mir::Type::Variant>(mir::type::Self_placeholder {}) } {}
 
 
@@ -130,7 +130,7 @@ auto libresolve::Context::associated_namespace(mir::Type type)
 {
     if (tl::optional space = associated_namespace_if(type))
         return *space;
-    error(type.source_view(), { "{} does not have an associated namespace"_format(type) });
+    error(type.source_view(), { fmt::format("{} does not have an associated namespace", mir::to_string(type)) });
 }
 
 
@@ -139,7 +139,7 @@ namespace {
     auto add_to_namespace_impl(
         libresolve::Context  & context,
         libresolve::Namespace& space,
-        ast::Name        const name,
+        auto const             name,
         auto                   variant,
         auto                   get_name_from_variant) -> void
     {
@@ -149,11 +149,11 @@ namespace {
                     {
                         .source_view = std::visit(get_name_from_variant, *existing).source_view,
                         .note        = "Originally defined here",
-                        .note_color  = utl::diagnostics::warning_color
+                        .note_color  = utl::diagnostics::warning_color,
                     },
                     {
                         .source_view = name.source_view,
-                        .note        = "Later defined here"
+                        .note        = "Later defined here",
                     }
                 }),
                 .message = "{} erroneously redefined"_format(name),
@@ -165,35 +165,33 @@ namespace {
     }
 }
 
-auto libresolve::Context::add_to_namespace(Namespace& space, ast::Name const name, Lower_variant lower) -> void {
-    assert(!name.is_upper.get());
+auto libresolve::Context::add_to_namespace(Namespace& space, compiler::Name_lower const name, Lower_variant lower) -> void {
     add_to_namespace_impl<&Namespace::lower_table>(*this, space, name, std::move(lower), utl::Overload {
         [](utl::Wrapper<Namespace> const space) { return utl::get(space->name); },
         [](mir::Enum_constructor   const ctor)  { return ctor.name; },
         [](utl::wrapper auto       const info)  { return info->name; }
     });
 }
-auto libresolve::Context::add_to_namespace(Namespace& space, ast::Name const name, Upper_variant upper) -> void {
-    assert(name.is_upper.get());
+auto libresolve::Context::add_to_namespace(Namespace& space, compiler::Name_upper const name, Upper_variant upper) -> void {
     add_to_namespace_impl<&Namespace::upper_table>(*this, space, name, std::move(upper), [](auto const& info) { return info->name;  });
 }
 
 
-auto libresolve::Context::resolve_mutability(ast::Mutability const mutability, Scope& scope)
+auto libresolve::Context::resolve_mutability(hir::Mutability const& mutability, Scope& scope)
     -> mir::Mutability
 {
     return utl::match(mutability.value,
-        [&](ast::Mutability::Concrete const concrete) {
-            return concrete.is_mutable
+        [&](hir::Mutability::Concrete const concrete) {
+            return concrete.is_mutable.get()
                 ? mut_constant(mutability.source_view)
                 : immut_constant(mutability.source_view);
         },
-        [&](ast::Mutability::Parameterized const parameterized) {
-            if (auto* const mutability_binding = scope.find_mutability(parameterized.identifier)) {
+        [&](hir::Mutability::Parameterized const parameterized) {
+            if (auto* const mutability_binding = scope.find_mutability(parameterized.name.identifier)) {
                 mutability_binding->has_been_mentioned = true;
                 return mutability_binding->mutability.with(mutability.source_view);
             }
-            error(mutability.source_view, { "No mutability parameter '{}: mut' in scope"_format(parameterized.identifier) });
+            error(mutability.source_view, { "No mutability parameter '{}: mut' in scope"_format(parameterized.name) });
         }
     );
 }
@@ -231,7 +229,7 @@ auto libresolve::Context::resolve_template_parameters(
                 utl::match(default_argument.value,
                         [&](utl::Wrapper<hir::Type>       const type_argument)       { (void)resolve_type(*type_argument, parameter_scope, space); },
                         [&](utl::Wrapper<hir::Expression> const value_argument)      { (void)resolve_expression(*value_argument, parameter_scope, space); },
-                        [&](ast::Mutability               const mutability_argument) { (void)resolve_mutability(mutability_argument, parameter_scope); },
+                        [&](hir::Mutability               const mutability_argument) { (void)resolve_mutability(mutability_argument, parameter_scope); },
                         [&](hir::Template_argument::Wildcard) {});
                 return mir::Template_default_argument {
                     .argument = std::move(default_argument),
@@ -240,7 +238,6 @@ auto libresolve::Context::resolve_template_parameters(
             };
             parameters.push_back(mir::Template_parameter {
                 .value            = std::move(value),
-                .name             = { parameter.name },
                 .default_argument = std::move(parameter.default_argument).transform(make_default_argument),
                 .reference_tag    = reference_tag,
                 .source_view      = parameter.source_view,
@@ -249,13 +246,13 @@ auto libresolve::Context::resolve_template_parameters(
 
         utl::match(parameter.value,
             [&](hir::Template_parameter::Type_parameter& type_parameter) {
-                parameter_scope.bind_type(*this, parameter.name.identifier, {
+                parameter_scope.bind_type(*this, type_parameter.name.identifier, {
                     .type = mir::Type {
                         wrap_type(mir::type::Template_parameter_reference {
-                            .identifier = { parameter.name.identifier },
+                            .identifier = { type_parameter.name.identifier },
                             .tag        = reference_tag,
                         }),
-                        parameter.name.source_view,
+                        type_parameter.name.source_view,
                     },
                     .source_view = parameter.source_view,
                 });
@@ -266,20 +263,22 @@ auto libresolve::Context::resolve_template_parameters(
                     .classes = utl::map(resolve_class, type_parameter.classes)
                 });
             },
-            [&](hir::Template_parameter::Mutability_parameter&) {
-                parameter_scope.bind_mutability(*this, parameter.name.identifier, {
+            [&](hir::Template_parameter::Mutability_parameter& mutability_parameter) {
+                parameter_scope.bind_mutability(*this, mutability_parameter.name.identifier, {
                     .mutability = mir::Mutability {
                         wrap(mir::Mutability::Variant {
                             mir::Mutability::Parameterized {
-                                .identifier = parameter.name.identifier,
+                                .identifier = mutability_parameter.name.identifier,
                                 .tag        = reference_tag,
                             }
                         }),
-                        parameter.name.source_view,
+                        parameter.source_view,
                     },
                     .source_view = parameter.source_view,
                 });
-                add_parameter(mir::Template_parameter::Mutability_parameter {});
+                add_parameter(mir::Template_parameter::Mutability_parameter {
+                    .name = mutability_parameter.name,
+                });
             },
             [](hir::Template_parameter::Value_parameter&) {
                 utl::todo();
@@ -293,21 +292,4 @@ auto libresolve::Context::resolve_template_parameters(
 
 auto libresolve::Enum_info::constructor_count() const noexcept -> utl::Usize {
     return utl::match(value, [](auto const& enumeration) { return enumeration.constructors.size(); });
-}
-
-
-DEFINE_FORMATTER_FOR(libresolve::constraint::Type_equality) {
-    return fmt::format_to(context.out(), "{} ~ {}", value.constrainer_type, value.constrained_type);
-}
-DEFINE_FORMATTER_FOR(libresolve::constraint::Mutability_equality) {
-    return fmt::format_to(context.out(), "{} ~ {}", value.constrainer_mutability, value.constrained_mutability);
-}
-DEFINE_FORMATTER_FOR(libresolve::constraint::Instance) {
-    return fmt::format_to(context.out(), "{}: {}", value.type, value.typeclass->name);
-}
-DEFINE_FORMATTER_FOR(libresolve::constraint::Struct_field) {
-    return fmt::format_to(context.out(), "({}.{}): {}", value.struct_type, value.field_identifier, value.field_type);
-}
-DEFINE_FORMATTER_FOR(libresolve::constraint::Tuple_field) {
-    return fmt::format_to(context.out(), "({}.{}): {}", value.tuple_type, value.field_index, value.field_type);
 }

@@ -203,7 +203,7 @@ namespace {
         Lexical_token const* const close = context.extract_required(Token_type::paren_close);
         if (expressions.elements.size() == 1) {
             return cst::expression::Parenthesized { {
-                .value       = expressions.elements.front().value,
+                .value       = expressions.elements.front(),
                 .open_token  = cst::Token::from_lexical(open),
                 .close_token = cst::Token::from_lexical(close),
             } };

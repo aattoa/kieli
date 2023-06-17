@@ -44,8 +44,9 @@ namespace {
         auto operator()(hir::pattern::Literal<T>& literal) -> mir::Pattern {
             solve_pattern_type_constraint(context.literal_type<T>(this_pattern.source_view));
             return {
-                .value       = mir::pattern::Literal<T> { literal.value },
-                .source_view = this_pattern.source_view,
+                .value                   = mir::pattern::Literal<T> { literal.value },
+                .is_exhaustive_by_itself = false,
+                .source_view             = this_pattern.source_view,
             };
         }
 
@@ -53,7 +54,7 @@ namespace {
             mir::Mutability const mutability = context.resolve_mutability(name.mutability, scope);
             auto const variable_tag = context.fresh_local_variable_tag();
 
-            scope.bind_variable(context, name.identifier, {
+            scope.bind_variable(context, name.name.identifier, {
                 .type               = matched_type,
                 .mutability         = mutability,
                 .variable_tag       = variable_tag,
@@ -64,7 +65,7 @@ namespace {
             return {
                 .value = mir::pattern::Name {
                     .variable_tag = variable_tag,
-                    .identifier   = name.identifier,
+                    .identifier   = name.name.identifier,
                     .mutability   = mutability,
                 },
                 .is_exhaustive_by_itself = true,
@@ -102,11 +103,11 @@ namespace {
             };
         }
 
-        auto operator()(hir::pattern::As& as) -> mir::Pattern {
-            mir::Pattern          aliased_pattern = recurse(*as.aliased_pattern, matched_type);
-            mir::Mutability const mutability      = context.resolve_mutability(as.alias.mutability, scope);
+        auto operator()(hir::pattern::Alias& alias) -> mir::Pattern {
+            mir::Pattern          aliased_pattern = recurse(*alias.aliased_pattern, matched_type);
+            mir::Mutability const mutability      = context.resolve_mutability(alias.alias_mutability, scope);
 
-            scope.bind_variable(context, as.alias.identifier, {
+            scope.bind_variable(context, alias.alias_name.identifier, {
                 .type               = matched_type,
                 .mutability         = mutability,
                 .variable_tag       = context.fresh_local_variable_tag(),
@@ -178,8 +179,8 @@ namespace {
                     context.error(hir_constructor.constructor_name.source_view, {
                         .message = fmt::format(
                             "{} does not have a constructor '{}'",
-                            matched_type,
-                            hir_constructor.constructor_name)
+                            mir::to_string(matched_type),
+                            hir_constructor.constructor_name),
                     });
                 }
                 return handle_constructor_pattern(*it, hir_constructor.payload_pattern);
@@ -194,7 +195,7 @@ namespace {
             context.error(this_pattern.source_view, {
                 .message = fmt::format(
                     "Abbreviated constructor pattern used with non-enum type {}",
-                    matched_type)
+                    mir::to_string(matched_type)),
             });
         }
 
@@ -214,7 +215,8 @@ namespace {
                         return recurse(element_pattern, element_type);
                     }, slice.element_patterns),
                 },
-                .source_view = this_pattern.source_view,
+                .is_exhaustive_by_itself = false,
+                .source_view             = this_pattern.source_view,
             };
         }
 
@@ -236,7 +238,8 @@ namespace {
                     .guarded_pattern = context.wrap(std::move(guarded_pattern)),
                     .guard           = std::move(guard),
                 },
-                .source_view = this_pattern.source_view,
+                .is_exhaustive_by_itself = false,
+                .source_view             = this_pattern.source_view,
             };
         }
     };

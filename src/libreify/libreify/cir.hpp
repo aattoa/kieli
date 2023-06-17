@@ -1,7 +1,10 @@
 #pragma once
 
-#include <libresolve/mir.hpp>
+#include <libutl/common/utilities.hpp>
+#include <libutl/common/wrapper.hpp>
 #include <libutl/common/safe_integer.hpp>
+#include <liblex/token.hpp>
+#include <libcompiler-pipeline/compiler-pipeline.hpp>
 
 
 /*
@@ -27,20 +30,14 @@ namespace cir {
     };
 
     namespace type {
-        using mir::type::Primitive;
-        using mir::type::Integer;
-        using mir::type::Floating;
-        using mir::type::Character;
-        using mir::type::Boolean;
-        using mir::type::String;
         struct Tuple {
             std::vector<Type> field_types;
         };
         struct Struct_reference {
-
+            // TODO
         };
         struct Enum_reference {
-
+            // TODO
         };
         // Can represent both pointers and references
         struct Pointer {
@@ -49,11 +46,11 @@ namespace cir {
     }
 
     struct Type::Variant : std::variant<
-        type::Integer,
-        type::Floating,
-        type::Character,
-        type::Boolean,
-        type::String,
+        compiler::built_in_type::Integer,
+        compiler::built_in_type::Floating,
+        compiler::built_in_type::Character,
+        compiler::built_in_type::Boolean,
+        compiler::built_in_type::String,
         type::Tuple,
         type::Struct_reference,
         type::Enum_reference,
@@ -162,9 +159,17 @@ namespace cir {
 
     using Node_arena = utl::Wrapper_arena<Expression, Pattern, Type::Variant>;
 
+
+    auto format_to(Expression const&, std::string&) -> void;
+    auto format_to(Pattern    const&, std::string&) -> void;
+    auto format_to(Type       const&, std::string&) -> void;
+
+    auto to_string(auto const& x) -> std::string
+        requires requires { cir::format_to(x, std::declval<std::string&>()); }
+    {
+        std::string output;
+        cir::format_to(x, output);
+        return output;
+    }
+
 }
-
-
-DECLARE_FORMATTER_FOR(cir::Expression);
-DECLARE_FORMATTER_FOR(cir::Pattern);
-DECLARE_FORMATTER_FOR(cir::Type);

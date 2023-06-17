@@ -8,9 +8,9 @@ target_sources(libdesugar
     PRIVATE libdesugar/desugar_pattern.cpp
     PRIVATE libdesugar/desugar_type.cpp
     PRIVATE libdesugar/desugaring_internals.hpp
-    PRIVATE libdesugar/hir.hpp
-    PRIVATE libdesugar/hir_formatting.cpp
-    PRIVATE libdesugar/shared_formatting.cpp)
+    PRIVATE libdesugar/format_hir.cpp
+    PRIVATE libdesugar/hir.cpp
+    PRIVATE libdesugar/hir.hpp)
 
 target_link_libraries(libdesugar
     PRIVATE libparse)

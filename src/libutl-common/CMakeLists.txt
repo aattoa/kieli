@@ -12,7 +12,7 @@ target_sources(libutl-common
     PRIVATE libutl/common/wrapper.hpp)
 
 target_precompile_headers(libutl-common
-    PUBLIC libutl/common/utilities.hpp)
+    PRIVATE libutl/common/utilities.hpp)
 target_link_libraries(libutl-common
     PUBLIC fmt::fmt)
 
