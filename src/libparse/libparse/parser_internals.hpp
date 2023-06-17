@@ -125,12 +125,11 @@ namespace libparse {
     {
         cst::Separated_sequence<Parse_result<p>> sequence;
         while (auto value = p(context)) {
-            Lexical_token const* const separator_token = context.try_extract(separator);
-            using Element = typename cst::Separated_sequence<Parse_result<p>>::Element;
-            Element element { .value = std::move(*value) };
-            if (separator_token) element.trailing_separator_token = cst::Token::from_lexical(separator_token);
-            sequence.elements.push_back(std::move(element));
-            if (!separator_token) return sequence;
+            sequence.elements.push_back(std::move(*value));
+            if (Lexical_token const* const separator_token = context.try_extract(separator))
+                sequence.separator_tokens.push_back(cst::Token::from_lexical(separator_token));
+            else
+                return sequence;
         }
         if (sequence.elements.empty())
             return sequence;
@@ -213,8 +212,8 @@ namespace libparse {
         return tl::nullopt;
     }
 
-    constexpr auto parse_lower_name = parse_name<Token_type::lower_name, cst::Name_lower>;
-    constexpr auto parse_upper_name = parse_name<Token_type::upper_name, cst::Name_upper>;
+    constexpr auto parse_lower_name = parse_name<Token_type::lower_name, compiler::Name_lower>;
+    constexpr auto parse_upper_name = parse_name<Token_type::upper_name, compiler::Name_upper>;
 
 
     template <Token_type identifier_type, class Name>
@@ -225,8 +224,8 @@ namespace libparse {
             context.error_expected(description);
     }
 
-    constexpr auto extract_lower_name = extract_name<Token_type::lower_name, cst::Name_lower>;
-    constexpr auto extract_upper_name = extract_name<Token_type::upper_name, cst::Name_upper>;
+    constexpr auto extract_lower_name = extract_name<Token_type::lower_name, compiler::Name_lower>;
+    constexpr auto extract_upper_name = extract_name<Token_type::upper_name, compiler::Name_upper>;
 
 
     template <class Node, parser auto parse>

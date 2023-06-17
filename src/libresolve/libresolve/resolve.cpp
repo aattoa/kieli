@@ -26,7 +26,7 @@ namespace {
                     // compiler::desugar should convert all function bodies to block form
                     utl::always_assert(std::holds_alternative<hir::expression::Block>(function.body.value));
 
-                    ast::Name const name = function.signature.name;
+                    auto const name = function.signature.name;
                     auto const info = context.wrap(Function_info {
                         .value          = std::move(function),
                         .home_namespace = space,
@@ -35,21 +35,8 @@ namespace {
                     context.output_functions.push_back(info);
                     add_definition(info);
                 },
-                [&](hir::definition::Function_template& function_template) {
-                    // compiler::desugar should convert all function bodies to block form
-                    utl::always_assert(std::holds_alternative<hir::expression::Block>(function_template.definition.body.value));
-
-                    ast::Name const name = function_template.definition.signature.name;
-                    auto const info = context.wrap(Function_info {
-                        .value          = std::move(function_template),
-                        .home_namespace = space,
-                        .name           = name,
-                    });
-                    context.output_functions.push_back(info);
-                    add_definition(info);
-                },
                 [&](hir::definition::Alias& alias) {
-                    ast::Name const name = alias.name;
+                    auto const name = alias.name;
                     add_definition(context.wrap(Alias_info {
                         .value          = std::move(alias),
                         .home_namespace = space,
@@ -57,7 +44,7 @@ namespace {
                     }));
                 },
                 [&](hir::definition::Typeclass& typeclass) {
-                    ast::Name const name = typeclass.name;
+                    auto const name = typeclass.name;
                     add_definition(context.wrap(Typeclass_info {
                         .value          = std::move(typeclass),
                         .home_namespace = space,
@@ -67,7 +54,7 @@ namespace {
                 [&](hir::definition::Struct& structure) {
                     mir::Type const structure_type =
                         context.temporary_placeholder_type(structure.name.source_view);
-                    ast::Name const name = structure.name;
+                    auto const name = structure.name;
 
                     auto info = context.wrap(Struct_info {
                         .value          = std::move(structure),
@@ -81,7 +68,7 @@ namespace {
                 [&](hir::definition::Enum& enumeration) {
                     mir::Type const enumeration_type =
                         context.temporary_placeholder_type(enumeration.name.source_view);
-                    ast::Name const name = enumeration.name;
+                    auto const name = enumeration.name;
 
                     auto info = context.wrap(Enum_info{
                         .value            = std::move(enumeration),
@@ -105,9 +92,9 @@ namespace {
                     register_namespace(context, hir_child.definitions, child);
                 },
 
-                [&]<class T>(ast::definition::Template<T>& template_definition) {
-                    ast::Name const name = template_definition.definition.name;
-                    add_definition(context.wrap(Definition_info<ast::definition::Template<T>> {
+                [&]<class T>(hir::definition::Template<T>& template_definition) {
+                    auto const name = template_definition.definition.name;
+                    add_definition(context.wrap(Definition_info<hir::definition::Template<T>> {
                         .value                      = std::move(template_definition),
                         .home_namespace             = space,
                         .parameterized_type_of_this = context.temporary_placeholder_type(name.source_view),

@@ -59,11 +59,11 @@ namespace {
         auto operator()(utl::one_of<
             mir::type::Template_parameter_reference,
             mir::type::Self_placeholder,
-            mir::type::Integer,
-            mir::type::Floating,
-            mir::type::String,
-            mir::type::Character,
-            mir::type::Boolean> auto const&) -> void {}
+            compiler::built_in_type::Integer,
+            compiler::built_in_type::Floating,
+            compiler::built_in_type::String,
+            compiler::built_in_type::Character,
+            compiler::built_in_type::Boolean> auto const&) -> void {}
     };
 }
 
@@ -75,7 +75,6 @@ auto libresolve::Context::generalize_to(mir::Type const type, std::vector<mir::T
 
         output.push_back(mir::Template_parameter {
             .value            = mir::Template_parameter::Type_parameter { .classes = std::move(unsolved.classes) },
-            .name             = { tl::nullopt },
             .default_argument = mir::Template_default_argument {
                 .argument = { hir::Template_argument::Wildcard { type.source_view() } },
                 .scope    = nullptr, // Wildcard arguments need no scope
@@ -98,7 +97,7 @@ auto libresolve::Context::generalize_to(mir::Type const type, std::vector<mir::T
 auto libresolve::Context::ensure_non_generalizable(mir::Type const type, std::string_view const type_description) -> void {
     std::function handler = [&](mir::Type const type, mir::Unification_type_variable_state&) {
         error(type.source_view(), {
-            .message   = "{}'s type contains an unsolved unification type variable: {}"_format(type_description, type),
+            .message   = "{}'s type contains an unsolved unification type variable: {}"_format(type_description, mir::to_string(type)),
             .help_note = "This can most likely be fixed by providing explicit type annotations",
         });
     };

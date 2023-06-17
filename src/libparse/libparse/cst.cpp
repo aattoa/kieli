@@ -11,21 +11,6 @@ auto cst::Token::from_lexical(kieli::Lexical_token const* const pointer) -> Toke
     };
 }
 
-auto cst::Name_dynamic::as_upper() const noexcept -> Name_upper {
-    utl::always_assert(is_upper.get());
-    return { identifier, source_view };
-}
-auto cst::Name_dynamic::as_lower() const noexcept -> Name_lower {
-    utl::always_assert(!is_upper.get());
-    return { identifier, source_view };
-}
-cst::Name_upper::operator Name_dynamic() const noexcept {
-    return { identifier, source_view, true };
-}
-cst::Name_lower::operator Name_dynamic() const noexcept {
-    return { identifier, source_view, false };
-}
-
 auto cst::Self_parameter::is_reference() const noexcept -> bool {
     return ampersand_token.has_value();
 }

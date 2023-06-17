@@ -107,6 +107,3 @@ namespace lir {
     using Node_arena = utl::Wrapper_arena<Expression>;
 
 }
-
-
-DECLARE_FORMATTER_FOR(lir::Expression);

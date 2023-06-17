@@ -2,8 +2,8 @@ add_library(libreify STATIC)
 
 target_sources(libreify
     PRIVATE libreify/cir.hpp
-    PRIVATE libreify/cir_formatting.cpp
     PRIVATE libreify/expression_reification.cpp
+    PRIVATE libreify/format_cir.cpp
     PRIVATE libreify/pattern_reification.cpp
     PRIVATE libreify/reification_internals.cpp
     PRIVATE libreify/reification_internals.hpp

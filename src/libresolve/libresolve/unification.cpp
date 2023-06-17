@@ -86,11 +86,15 @@ namespace {
             }
             return false;
         }
-        auto operator()(utl::one_of<mir::type::Template_parameter_reference, mir::type::Self_placeholder, mir::type::Integer> auto const&) const {
-            return false;
-        }
-        template <class T>
-        auto operator()(ast::type::Primitive<T> const&) const {
+        auto operator()(utl::one_of<
+            compiler::built_in_type::Integer,
+            compiler::built_in_type::Floating,
+            compiler::built_in_type::Character,
+            compiler::built_in_type::Boolean,
+            compiler::built_in_type::String,
+            mir::type::Template_parameter_reference,
+            mir::type::Self_placeholder> auto const&) const
+        {
             return false;
         }
     };
@@ -247,11 +251,15 @@ namespace {
         }
 
 
-        template <utl::one_of<mir::type::Floating, mir::type::Character, mir::type::Boolean, mir::type::String> T>
+        template <utl::one_of<
+            compiler::built_in_type::Floating,
+            compiler::built_in_type::Character,
+            compiler::built_in_type::Boolean,
+            compiler::built_in_type::String> T>
         auto operator()(T, T) -> bool {
             return true;
         }
-        auto operator()(mir::type::Integer const left, mir::type::Integer const right) -> bool {
+        auto operator()(compiler::built_in_type::Integer const left, compiler::built_in_type::Integer const right) -> bool {
             return left == right || unification_failure();
         }
         auto operator()(mir::type::Template_parameter_reference const left, mir::type::Template_parameter_reference const right) -> bool {
@@ -275,7 +283,7 @@ namespace {
             utl::always_assert(unsolved.classes.empty());
 
             if (unsolved.kind.get() == mir::Unification_type_variable_kind::integral)
-                if (!std::holds_alternative<mir::type::Integer>(*current_right_type.pure_value()))
+                if (!std::holds_alternative<compiler::built_in_type::Integer>(*current_right_type.pure_value()))
                     return unification_failure();
 
             if (occurs_check(unsolved.tag, current_right_type))
@@ -288,7 +296,7 @@ namespace {
             utl::always_assert(unsolved.classes.empty());
 
             if (unsolved.kind.get() == mir::Unification_type_variable_kind::integral)
-                if (!std::holds_alternative<mir::type::Integer>(*current_left_type.pure_value()))
+                if (!std::holds_alternative<compiler::built_in_type::Integer>(*current_left_type.pure_value()))
                     return unification_failure();
 
             if (occurs_check(unsolved.tag, current_left_type))

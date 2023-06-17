@@ -28,7 +28,9 @@ namespace {
             } };
         }
         else {
-            return parse_mutability(context).transform(utl::make<cst::Template_argument>);
+            return parse_mutability(context).transform([](cst::Mutability&& mutability) {
+                return cst::Template_argument { std::move(mutability) };
+            });
         }
     }
 
@@ -119,9 +121,9 @@ auto libparse::parse_top_level_pattern(Parse_context& context)
         .transform([&](cst::Separated_sequence<utl::Wrapper<cst::Pattern>>&& patterns) -> utl::Wrapper<cst::Pattern>
     {
         if (patterns.elements.size() == 1)
-            return patterns.elements.front().value;
+            return patterns.elements.front();
         auto const source_view =
-            patterns.elements.front().value->source_view.combine_with(patterns.elements.back().value->source_view);
+            patterns.elements.front()->source_view.combine_with(patterns.elements.back()->source_view);
         return context.wrap(cst::Pattern {
             .value       = cst::pattern::Top_level_tuple { std::move(patterns) },
             .source_view = source_view,
@@ -181,7 +183,7 @@ auto libparse::extract_qualified(Parse_context& context, tl::optional<cst::Root_
     for (;;) {
         Lexical_token const& token = context.extract();
         if (is_name_token_type(token.type)) {
-            cst::Name_dynamic const qualifier_name {
+            compiler::Name_dynamic const qualifier_name {
                 .identifier  = token.as_identifier(),
                 .source_view = token.source_view,
                 .is_upper    = token.type == Token_type::upper_name,
@@ -190,14 +192,12 @@ auto libparse::extract_qualified(Parse_context& context, tl::optional<cst::Root_
             auto template_arguments = parse_template_arguments(context);
             Lexical_token const* const double_colon = context.try_extract(Token_type::double_colon);
             if (double_colon) {
+                middle_qualifiers.separator_tokens.push_back(cst::Token::from_lexical(double_colon));
                 middle_qualifiers.elements.push_back({
-                    .value {
-                        .template_arguments          = std::move(template_arguments),
-                        .name                        = qualifier_name,
-                        .trailing_double_colon_token = cst::Token::from_lexical(double_colon),
-                        .source_view                 = token.source_view,
-                    },
-                    .trailing_separator_token = cst::Token::from_lexical(double_colon),
+                    .template_arguments          = std::move(template_arguments),
+                    .name                        = qualifier_name,
+                    .trailing_double_colon_token = cst::Token::from_lexical(double_colon),
+                    .source_view                 = token.source_view,
                 });
                 continue;
             }
@@ -222,11 +222,10 @@ auto libparse::extract_qualified(Parse_context& context, tl::optional<cst::Root_
 auto libparse::parse_mutability(Parse_context& context) -> tl::optional<cst::Mutability> {
     if (Lexical_token const* const mut_keyword = context.try_extract(Token_type::mut)) {
         if (Lexical_token const* const question_mark = context.try_extract(Token_type::question)) {
-            compiler::Identifier const parameter =
-                extract_lower_id(context, "a mutability parameter name");
+            auto parameter_name = extract_lower_name(context, "a mutability parameter name");
             return cst::Mutability {
                 .value = cst::Mutability::Parameterized {
-                    .identifier          = parameter,
+                    .name                = std::move(parameter_name),
                     .question_mark_token = cst::Token::from_lexical(question_mark),
                 },
                 .source_view                = make_source_view(mut_keyword, context.pointer - 1),

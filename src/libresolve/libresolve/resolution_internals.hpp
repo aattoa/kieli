@@ -83,7 +83,7 @@ namespace libresolve {
         utl::Flatmap<compiler::Identifier, Lower_variant> lower_table;
         utl::Flatmap<compiler::Identifier, Upper_variant> upper_table;
         tl::optional<utl::Wrapper<Namespace>>             parent;
-        tl::optional<ast::Name>                           name;
+        tl::optional<compiler::Name_lower>                name;
     };
 
     enum class Definition_state {
@@ -97,7 +97,7 @@ namespace libresolve {
         mir::Function::Signature resolved_signature;
         Scope                    signature_scope;
         hir::Expression          unresolved_body;
-        ast::Name                name;
+        compiler::Name_lower     name;
     };
 
 
@@ -105,24 +105,23 @@ namespace libresolve {
     struct Definition_info {
         using Variant = std::variant<HIR_representation, mir::From_HIR<HIR_representation>>;
 
-        Variant                 value;
-        utl::Wrapper<Namespace> home_namespace;
-        Definition_state        state = Definition_state::unresolved;
-        ast::Name               name;
+        Variant                            value;
+        utl::Wrapper<Namespace>            home_namespace;
+        Definition_state                   state = Definition_state::unresolved;
+        decltype(HIR_representation::name) name;
     };
 
-    template <template <class> class Definition>
-    requires requires { &Definition<hir::HIR_configuration>::name; }
-    struct Definition_info<ast::definition::Template<Definition<hir::HIR_configuration>>> {
+    template <class Definition> requires requires { &Definition::name; }
+    struct Definition_info<hir::definition::Template<Definition>> {
         using Variant = std::variant<
-            ast::definition::Template<Definition<hir::HIR_configuration>>,
-            mir::From_HIR<ast::definition::Template<Definition<hir::HIR_configuration>>>>;
+            hir::definition::Template<Definition>,
+            mir::From_HIR<hir::definition::Template<Definition>>>;
 
-        Variant                 value;
-        utl::Wrapper<Namespace> home_namespace;
-        mir::Type               parameterized_type_of_this; // One of mir::type::{Structure, Enumeration
-        Definition_state        state = Definition_state::unresolved;
-        ast::Name               name;
+        Variant                    value;
+        utl::Wrapper<Namespace>    home_namespace;
+        mir::Type                  parameterized_type_of_this; // One of mir::type::{Structure, Enumeration}
+        Definition_state           state = Definition_state::unresolved;
+        decltype(Definition::name) name;
     };
 
     template <class Info>
@@ -135,15 +134,14 @@ namespace libresolve {
     template <>
     struct Definition_info<hir::definition::Function> {
         using Variant = std::variant<
-            hir::definition::Function,          // Fully unresolved function
-            hir::definition::Function_template, // Fully unresolved function template
-            Partially_resolved_function,        // Signature resolved, body unresolved
-            mir::Function>;                     // Fully resolved
+            hir::definition::Function,   // Fully unresolved function
+            Partially_resolved_function, // Signature resolved, body unresolved
+            mir::Function>;              // Fully resolved
 
         Variant                 value;
         utl::Wrapper<Namespace> home_namespace;
         Definition_state        state = Definition_state::unresolved;
-        ast::Name               name;
+        compiler::Name_lower    name;
 
         tl::optional<Template_instantiation_info<Function_info>> template_instantiation_info;
     };
@@ -156,7 +154,7 @@ namespace libresolve {
         utl::Wrapper<Namespace> home_namespace;
         mir::Type               structure_type;
         Definition_state        state = Definition_state::unresolved;
-        ast::Name               name;
+        compiler::Name_upper    name;
 
         tl::optional<Template_instantiation_info<Struct_template_info>> template_instantiation_info;
     };
@@ -169,7 +167,7 @@ namespace libresolve {
         utl::Wrapper<Namespace> home_namespace;
         mir::Type               enumeration_type;
         Definition_state        state = Definition_state::unresolved;
-        ast::Name               name;
+        compiler::Name_upper    name;
 
         tl::optional<Template_instantiation_info<Enum_template_info>> template_instantiation_info;
 
@@ -194,12 +192,12 @@ namespace libresolve {
         Definition_state        state = Definition_state::unresolved;
     };
 
-    template <template <class> class Definition>
-    requires (!requires { &Definition<hir::HIR_configuration>::name; })
-    struct Definition_info<ast::definition::Template<Definition<hir::HIR_configuration>>> {
+    template <class Definition>
+    requires (!requires { &Definition::name; })
+    struct Definition_info<hir::definition::Template<Definition>> {
         using Variant = std::variant<
-            ast::definition::Template<Definition<hir::HIR_configuration>>,
-            mir::From_HIR<ast::definition::Template<Definition<hir::HIR_configuration>>>>;
+            hir::definition::Template<Definition>,
+            mir::From_HIR<hir::definition::Template<Definition>>>;
 
         Variant                 value;
         utl::Wrapper<Namespace> home_namespace;
@@ -413,17 +411,17 @@ namespace libresolve {
 
         [[nodiscard]] auto resolve_pattern(hir::Pattern&, mir::Type, Scope&, Namespace&) -> mir::Pattern;
 
-        [[nodiscard]] auto resolve_mutability(ast::Mutability, Scope&) -> mir::Mutability;
+        [[nodiscard]] auto resolve_mutability(hir::Mutability const&, Scope&) -> mir::Mutability;
 
         [[nodiscard]] auto resolve_class_reference(hir::Class_reference&, Scope&, Namespace&) -> mir::Class_reference;
 
-        [[nodiscard]] auto resolve_method(ast::Name method_name, tl::optional<std::span<hir::Template_argument const>>, mir::Type method_for, Scope&, Namespace&) -> utl::Wrapper<Function_info>;
+        [[nodiscard]] auto resolve_method(compiler::Name_lower method_name, tl::optional<std::span<hir::Template_argument const>>, mir::Type method_for, Scope&, Namespace&) -> utl::Wrapper<Function_info>;
 
         [[nodiscard]] auto find_lower(hir::Qualified_name&, Scope&, Namespace&) -> Lower_variant;
         [[nodiscard]] auto find_upper(hir::Qualified_name&, Scope&, Namespace&) -> Upper_variant;
 
-        auto add_to_namespace(Namespace&, ast::Name, Lower_variant) -> void;
-        auto add_to_namespace(Namespace&, ast::Name, Upper_variant) -> void;
+        auto add_to_namespace(Namespace&, compiler::Name_lower, Lower_variant) -> void;
+        auto add_to_namespace(Namespace&, compiler::Name_upper, Upper_variant) -> void;
 
         // Returns the associated namespace of the given type, or returns nullopt if the type does not have one.
         auto associated_namespace_if(mir::Type) -> tl::optional<utl::Wrapper<Namespace>>;
@@ -489,10 +487,3 @@ namespace libresolve {
     };
 
 }
-
-
-DECLARE_FORMATTER_FOR(libresolve::constraint::Type_equality);
-DECLARE_FORMATTER_FOR(libresolve::constraint::Mutability_equality);
-DECLARE_FORMATTER_FOR(libresolve::constraint::Instance);
-DECLARE_FORMATTER_FOR(libresolve::constraint::Struct_field);
-DECLARE_FORMATTER_FOR(libresolve::constraint::Tuple_field);

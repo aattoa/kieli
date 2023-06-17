@@ -307,11 +307,11 @@ namespace utl {
     class [[nodiscard]] Strong {
         T m_value;
     public:
-        /*implicit*/ constexpr Strong(T const& value) // NOLINT
+        constexpr Strong(T const& value) // NOLINT: implicit
             noexcept(std::is_nothrow_copy_constructible_v<T>)
             requires std::is_copy_constructible_v<T>
             : m_value { value } {}
-        /*implicit*/ constexpr Strong(T&& value) // NOLINT
+        constexpr Strong(T&& value) // NOLINT: implicit
             noexcept(std::is_nothrow_move_constructible_v<T>)
             requires std::is_move_constructible_v<T>
             : m_value { std::move(value) } {}
@@ -321,6 +321,11 @@ namespace utl {
         [[nodiscard]] constexpr auto get()       & -> T       & { return m_value; }
         [[nodiscard]] constexpr auto get() const&& -> T const&& { return std::move(m_value); }
         [[nodiscard]] constexpr auto get()      && -> T      && { return std::move(m_value); }
+
+        [[nodiscard]] constexpr operator T const &() const & { return m_value; }
+        [[nodiscard]] constexpr operator T       &()       & { return m_value; }
+        [[nodiscard]] constexpr operator T const&&() const&& { return std::move(m_value); }
+        [[nodiscard]] constexpr operator T      &&()      && { return std::move(m_value); }
     };
 
 
@@ -421,6 +426,13 @@ namespace utl {
         if (variant.valueless_by_exception()) [[unlikely]]
             abort("utl::match was invoked with a valueless variant");
         return std::visit(Overload { std::forward<Arms>(arms)... }, std::forward<Variant>(variant));
+    }
+
+    template <class R, class Variant, class... Arms>
+    constexpr auto match(Variant&& variant, Arms&&... arms)
+        noexcept(noexcept(match(std::forward<Variant>(variant), std::forward<Arms>(arms)...))) -> R
+    {
+        return static_cast<R>(match(std::forward<Variant>(variant), std::forward<Arms>(arms)...));
     }
 
     template <class Ok, std::derived_from<std::exception> Err>
@@ -540,7 +552,9 @@ namespace utl {
 
 
     template <class F, class Vector>
-    constexpr auto map(F&& f, Vector&& input) {
+    constexpr auto map(F&& f, Vector&& input)
+        requires std::is_invocable_v<F&&, decltype(bootleg::forward_like<Vector>(input.front()))>
+    {
         using Result = std::remove_cvref_t<decltype(std::invoke(f, bootleg::forward_like<Vector>(input.front())))>;
         auto output = vector_with_capacity<Result>(input.size());
         for (auto& element : input)

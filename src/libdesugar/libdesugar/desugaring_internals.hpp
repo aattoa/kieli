@@ -3,15 +3,15 @@
 #include <libutl/common/utilities.hpp>
 #include <libutl/common/safe_integer.hpp>
 #include <libcompiler-pipeline/compiler-pipeline.hpp>
-#include <libparse/ast.hpp>
+#include <libparse/cst.hpp>
 #include <libdesugar/hir.hpp>
 
 
 namespace libdesugar {
     struct Desugar_context {
         compiler::Compilation_info compilation_info;
-        hir::Node_arena node_arena;
-        compiler::Identifier self_variable_identifier = compilation_info.get()->identifier_pool.make("self");
+        hir::Node_arena            node_arena;
+        compiler::Identifier       self_variable_identifier = compilation_info.get()->identifier_pool.make("self");
 
         explicit Desugar_context(
             compiler::Compilation_info&& compilation_info,
@@ -29,23 +29,26 @@ namespace libdesugar {
             };
         }
 
-        auto desugar(ast::Expression const&) -> hir::Expression;
-        auto desugar(ast::Type       const&) -> hir::Type;
-        auto desugar(ast::Pattern    const&) -> hir::Pattern;
-        auto desugar(ast::Definition const&) -> hir::Definition;
+        auto desugar(cst::Expression const&) -> hir::Expression;
+        auto desugar(cst::Type       const&) -> hir::Type;
+        auto desugar(cst::Pattern    const&) -> hir::Pattern;
+        auto desugar(cst::Definition const&) -> hir::Definition;
 
-        auto desugar(ast::Function_argument           const&) -> hir::Function_argument;
-        auto desugar(ast::Function_parameter          const&) -> hir::Function_parameter;
-        auto desugar(ast::Self_parameter              const&) -> hir::Function_parameter;
-        auto desugar(ast::Template_argument           const&) -> hir::Template_argument;
-        auto desugar(ast::Template_parameter          const&) -> hir::Template_parameter;
-        auto desugar(ast::Qualifier                   const&) -> hir::Qualifier;
-        auto desugar(ast::Qualified_name              const&) -> hir::Qualified_name;
-        auto desugar(ast::Class_reference             const&) -> hir::Class_reference;
-        auto desugar(ast::Function_signature          const&) -> hir::Function_signature;
-        auto desugar(ast::Function_template_signature const&) -> hir::Function_template_signature;
-        auto desugar(ast::Type_signature              const&) -> hir::Type_signature;
-        auto desugar(ast::Type_template_signature     const&) -> hir::Type_template_signature;
+        auto desugar(cst::Function_argument  const&) -> hir::Function_argument;
+        auto desugar(cst::Function_parameter const&) -> hir::Function_parameter;
+        auto desugar(cst::Self_parameter     const&) -> hir::Self_parameter;
+        auto desugar(cst::Template_argument  const&) -> hir::Template_argument;
+        auto desugar(cst::Template_parameter const&) -> hir::Template_parameter;
+        auto desugar(cst::Qualifier          const&) -> hir::Qualifier;
+        auto desugar(cst::Qualified_name     const&) -> hir::Qualified_name;
+        auto desugar(cst::Class_reference    const&) -> hir::Class_reference;
+        auto desugar(cst::Function_signature const&) -> hir::Function_signature;
+        auto desugar(cst::Type_signature     const&) -> hir::Type_signature;
+        auto desugar(cst::Mutability         const&) -> hir::Mutability;
+
+        auto desugar(cst::Type_annotation                      const&) -> hir::Type;
+        auto desugar(cst::Function_parameter::Default_argument const&) -> utl::Wrapper<hir::Expression>;
+        auto desugar(cst::Template_parameter::Default_argument const&) -> hir::Template_argument;
 
         auto desugar(utl::wrapper auto const node) {
             return wrap(desugar(*node));
@@ -53,6 +56,17 @@ namespace libdesugar {
         auto desugar() noexcept {
             return [this](auto const& node) { return desugar(node); };
         }
+
+        auto deref_desugar() {
+            return [this](utl::wrapper auto const node) {
+                return desugar(*node);
+            };
+        }
+
+        auto desugar_mutability(tl::optional<cst::Mutability> const&, utl::Source_view) -> hir::Mutability;
+        auto desugar_mutability(cst::Mutability const&, utl::Source_view) = delete;
+
+        auto normalize_self_parameter(cst::Self_parameter const&) -> hir::Function_parameter;
 
         auto unit_value      (utl::Source_view) -> utl::Wrapper<hir::Expression>;
         auto wildcard_pattern(utl::Source_view) -> utl::Wrapper<hir::Pattern>;

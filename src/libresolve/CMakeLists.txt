@@ -4,10 +4,10 @@ target_sources(libresolve
     PRIVATE libresolve/constraint.cpp
     PRIVATE libresolve/definition_resolution.cpp
     PRIVATE libresolve/expression_resolution.cpp
+    PRIVATE libresolve/format_mir.cpp
     PRIVATE libresolve/generalization.cpp
     PRIVATE libresolve/method.cpp
     PRIVATE libresolve/mir.cpp
-    PRIVATE libresolve/mir_formatting.cpp
     PRIVATE libresolve/mir.hpp
     PRIVATE libresolve/namespace_lookup.cpp
     PRIVATE libresolve/pattern_resolution.cpp

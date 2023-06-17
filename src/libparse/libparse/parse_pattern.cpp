@@ -27,7 +27,7 @@ namespace {
         Lexical_token const* const close = context.extract_required(Token_type::paren_close);
         if (patterns.elements.size() == 1) {
             return cst::pattern::Parenthesized { {
-                .value       = std::move(patterns.elements.front().value),
+                .value       = std::move(patterns.elements.front()),
                 .open_token  = cst::Token::from_lexical(open),
                 .close_token = cst::Token::from_lexical(close),
             } };
@@ -99,7 +99,7 @@ namespace {
         context.retreat();
         auto mutability = parse_mutability(context);
 
-        tl::optional<compiler::Identifier> identifier;
+        tl::optional<compiler::Name_lower> name;
 
         if (!mutability.has_value()) {
             if (auto ctor_name = parse_constructor_name(context)) {
@@ -110,16 +110,15 @@ namespace {
                     };
                 }
                 else {
-                    identifier = ctor_name->primary_name.identifier;
+                    name = ctor_name->primary_name.as_lower();
                 }
             }
         }
 
-        if (!identifier)
-            identifier = extract_lower_id(context, "a lowercase identifier");
+        if (!name) name = extract_lower_name(context, "a lowercase identifier");
 
         return cst::pattern::Name {
-            .identifier = std::move(*identifier),
+            .name       = std::move(*name),
             .mutability = std::move(mutability),
         };
     };
@@ -187,13 +186,11 @@ namespace {
         if (auto pattern = parse_node<cst::Pattern, parse_normal_pattern>(context)) {
             if (Lexical_token const* const as_keyword = context.try_extract(Token_type::as)) {
                 auto mutability = parse_mutability(context);
-                auto identifier = extract_lower_id(context, "a pattern alias");
+                auto name = extract_lower_name(context, "a pattern alias");
                 return cst::pattern::Alias {
-                    .aliased_pattern = *pattern,
-                    .alias_name {
-                        .identifier = std::move(identifier),
-                        .mutability = std::move(mutability),
-                    },
+                    .alias_name       = std::move(name),
+                    .alias_mutability = std::move(mutability),
+                    .aliased_pattern  = *pattern,
                     .as_keyword_token = cst::Token::from_lexical(as_keyword),
                 };
             }

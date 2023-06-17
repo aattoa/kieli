@@ -153,7 +153,7 @@ namespace {
                 state->as_unsolved().classes = type_parameter.classes;
                 return mir::Template_argument { mir::Type { context.wrap_type(mir::type::Unification_variable { .state = state }), wildcard.source_view } };
             },
-            [&](mir::Template_parameter::Mutability_parameter, ast::Mutability const mutability_argument) {
+            [&](mir::Template_parameter::Mutability_parameter, hir::Mutability const mutability_argument) {
                 return mir::Template_argument { context.resolve_mutability(mutability_argument, scope) };
             },
             [&](mir::Template_parameter::Mutability_parameter, hir::Template_argument::Wildcard const wildcard) {
@@ -163,8 +163,8 @@ namespace {
                 context.error(instantiation_view, {
                     .message = fmt::format(
                         "Argument {} is incompatible with parameter {}",
-                        argument,
-                        parameter)
+                        hir::to_string(argument),
+                        mir::to_string(parameter))
                 });
             },
         }, parameter.value, argument.value);
@@ -481,8 +481,8 @@ namespace {
 
         return resolution_context.wrap(Alias_info {
             .value = mir::Alias {
+                .name         = alias_template.definition.name,
                 .aliased_type = instantiate(alias_template.definition.aliased_type, substitution_context),
-                .name         = alias_template.definition.name
             },
             .home_namespace = template_info->home_namespace,
             .state          = Definition_state::resolved,
@@ -738,11 +738,11 @@ namespace {
 
         auto operator()(
             utl::one_of<
-                mir::type::Integer,
-                mir::type::Floating,
-                mir::type::Character,
-                mir::type::Boolean,
-                mir::type::String,
+                compiler::built_in_type::Integer,
+                compiler::built_in_type::Floating,
+                compiler::built_in_type::Character,
+                compiler::built_in_type::Boolean,
+                compiler::built_in_type::String,
                 mir::type::Self_placeholder,
                 mir::type::Unification_variable
             > auto const&) -> R
@@ -842,7 +842,6 @@ namespace {
     auto instantiate(mir::Template_argument const& argument, Substitution_context const context) -> mir::Template_argument {
         return mir::Template_argument {
             .value = std::visit<mir::Template_argument::Variant>(context.recurse(), argument.value),
-            .name  = argument.name
         };
     }
 

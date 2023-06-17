@@ -11,32 +11,33 @@ namespace {
         mir::Type                             const right) -> void
     {
         auto sections = utl::vector_with_capacity<utl::diagnostics::Text_section>(2);
+        auto const constrainer_string = mir::to_string(constraint.constrainer_type);
+        auto const constrained_string = mir::to_string(constraint.constrained_type);
 
-        tl::optional<std::string> const constrainer_note = constraint.constrainer_note.transform(
+        auto const constrainer_note = constraint.constrainer_note.transform(
             [&](libresolve::constraint::Explanation const explanation) {
-                return fmt::vformat(explanation.explanatory_note, fmt::make_format_args(constraint.constrainer_type, constraint.constrained_type));
+                return fmt::vformat(explanation.explanatory_note, fmt::make_format_args(constrainer_string, constrained_string));
             });
-
-        std::string const constrained_note =
-            fmt::vformat(constraint.constrained_note.explanatory_note, fmt::make_format_args(constraint.constrainer_type, constraint.constrained_type));
+        auto const constrained_note =
+            fmt::vformat(constraint.constrained_note.explanatory_note, fmt::make_format_args(constrainer_string, constrained_string));
 
         if (constrainer_note.has_value()) {
-            sections.push_back(utl::diagnostics::Text_section{
+            sections.push_back(utl::diagnostics::Text_section {
                 .source_view = constraint.constrainer_note->source_view,
                 .note        = *constrainer_note,
-                .note_color  = utl::diagnostics::warning_color
+                .note_color  = utl::diagnostics::warning_color,
             });
         }
 
-        sections.push_back(utl::diagnostics::Text_section{
+        sections.push_back(utl::diagnostics::Text_section {
             .source_view = constraint.constrained_note.source_view,
             .note        = constrained_note,
-            .note_color  = utl::diagnostics::error_color
+            .note_color  = utl::diagnostics::error_color,
         });
 
         context.diagnostics().emit_error({
             .sections = std::move(sections),
-            .message  = "Could not unify {} ~ {}"_format(left, right),
+            .message  = "Could not unify {} ~ {}"_format(mir::to_string(left), mir::to_string(right)),
         });
     }
 
@@ -47,15 +48,15 @@ namespace {
         mir::Type                             const solution) -> void
     {
         context.error(constraint.constrained_type.source_view(),
-            { "Recursive unification variable solution: {} = {}"_format(variable, solution) });
+            { "Recursive unification variable solution: {} = {}"_format(mir::to_string(variable), mir::to_string(solution)) });
     }
 
     auto report_mutability_unification_failure(
         libresolve::Context&                              context,
         libresolve::constraint::Mutability_equality const constraint) -> void
     {
-        mir::Mutability const left  = constraint.constrainer_mutability;
-        mir::Mutability const right = constraint.constrained_mutability;
+        auto const left  = mir::to_string(constraint.constrainer_mutability);
+        auto const right = mir::to_string(constraint.constrained_mutability);
 
         std::string const constrainer_note =
             fmt::vformat(constraint.constrainer_note.explanatory_note, fmt::make_format_args(left, right));
@@ -126,13 +127,18 @@ auto libresolve::Context::solve(constraint::Struct_field const& constraint) -> v
         }
         error(constraint.explanation.source_view, {
             .message   = constraint.explanation.explanatory_note,
-            .help_note = "{} does not have a member '{}'"_format(constraint.struct_type, constraint.field_identifier),
+            .help_note = fmt::format(
+                "{} does not have a member '{}'",
+                mir::to_string(constraint.struct_type),
+                constraint.field_identifier),
         });
     }
     else {
         error(constraint.explanation.source_view, {
             .message   = constraint.explanation.explanatory_note,
-            .help_note = "{} is not a struct type, so it does not have named fields"_format(constraint.struct_type),
+            .help_note = fmt::format(
+                "{} is not a struct type, so it does not have named fields",
+                mir::to_string(constraint.struct_type)),
         });
     }
 }
@@ -143,7 +149,10 @@ auto libresolve::Context::solve(constraint::Tuple_field const& constraint) -> vo
         if (constraint.field_index.get() >= type->field_types.size()) {
             error(constraint.explanation.source_view, {
                 .message   = constraint.explanation.explanatory_note,
-                .help_note = "{} does not have a {} field"_format(constraint.tuple_type, utl::formatting::integer_with_ordinal_indicator(constraint.field_index.get() + 1)),
+                .help_note = fmt::format(
+                    "{} does not have a {} field",
+                    mir::to_string(constraint.tuple_type),
+                    utl::formatting::integer_with_ordinal_indicator(constraint.field_index.get() + 1)),
             });
         }
         solve(constraint::Type_equality {
@@ -158,7 +167,9 @@ auto libresolve::Context::solve(constraint::Tuple_field const& constraint) -> vo
     else {
         error(constraint.explanation.source_view, {
             .message   = constraint.explanation.explanatory_note,
-            .help_note = "{} is not a tuple type, so it does not have indexed fields"_format(constraint.tuple_type),
+            .help_note = fmt::format(
+                "{} is not a tuple type, so it does not have indexed fields",
+                mir::to_string(constraint.tuple_type)),
         });
     }
 }

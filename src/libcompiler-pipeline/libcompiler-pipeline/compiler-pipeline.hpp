@@ -28,4 +28,48 @@ namespace compiler {
     auto predefinitions_source(Compilation_info&) -> utl::Wrapper<utl::Source>;
     auto mock_compilation_info(utl::diagnostics::Level = utl::diagnostics::Level::suppress) -> Compilation_info;
 
+
+    struct [[nodiscard]] Name_upper;
+    struct [[nodiscard]] Name_lower;
+
+    struct [[nodiscard]] Name_dynamic {
+        compiler::Identifier identifier;
+        utl::Source_view     source_view;
+        utl::Strong<bool>    is_upper;
+        auto as_upper() const noexcept -> Name_upper;
+        auto as_lower() const noexcept -> Name_lower;
+        [[nodiscard]] auto operator==(Name_dynamic const&) const noexcept -> bool;
+    };
+    struct Name_upper {
+        compiler::Identifier identifier;
+        utl::Source_view     source_view;
+        operator Name_dynamic() const noexcept; // NOLINT: implicit
+        [[nodiscard]] auto operator==(Name_upper const&) const noexcept -> bool;
+    };
+    struct Name_lower {
+        compiler::Identifier identifier;
+        utl::Source_view     source_view;
+        operator Name_dynamic() const noexcept; // NOLINT: implicit
+        [[nodiscard]] auto operator==(Name_lower const&) const noexcept -> bool;
+    };
+
+    namespace built_in_type {
+        enum class Integer {
+            i8, i16, i32, i64,
+            u8, u16, u32, u64,
+            _enumerator_count,
+        };
+        struct Floating  {};
+        struct Boolean   {};
+        struct Character {};
+        struct String    {};
+    }
+
 }
+
+template <utl::one_of<compiler::Name_dynamic, compiler::Name_lower, compiler::Name_upper> Name>
+struct fmt::formatter<Name> : fmt::formatter<compiler::Identifier> {
+    auto format(Name const& name, auto& context) {
+        return fmt::formatter<compiler::Identifier>::format(name.identifier, context);
+    }
+};
