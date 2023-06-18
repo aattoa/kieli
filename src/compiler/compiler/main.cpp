@@ -55,38 +55,38 @@ namespace {
     }
 
     constexpr auto lexer_repl = generic_repl<[](kieli::Lex_result&& lex_result) {
-        fmt::print("Tokens: {}\n", lex_result.tokens);
+        utl::print("Tokens: {}\n", lex_result.tokens);
     }>;
 
     constexpr auto expression_parser_repl = generic_repl<[](kieli::Lex_result&& lex_result) {
         libparse::Parse_context context { std::move(lex_result), cst::Node_arena::with_default_page_size() };
 
         if (auto result = parse_expression(context)) {
-            // fmt::println("Result: {}", result);
+            // std::println("Result: {}", result);
             if (!context.pointer->source_view.string.empty())
-                fmt::println("Remaining input: '{}'", context.pointer->source_view.string.data());
+                utl::print("Remaining input: '{}'\n", context.pointer->source_view.string.data());
         }
         else {
-            fmt::println("No parse");
+            utl::print("No parse\n");
         }
     }>;
 
     constexpr auto program_parser_repl = generic_repl<[](kieli::Lex_result&& lex_result) {
         auto parse_result = parse(std::move(lex_result));
         (void)parse_result;
-        // fmt::println("{}", parse_result.module);
+        // std::println("{}", parse_result.module);
     }>;
 
     constexpr auto desugaring_repl = generic_repl<[](kieli::Lex_result&& lex_result) {
         auto desugar_result = desugar(parse(std::move(lex_result)));
         (void)desugar_result;
-        // fmt::print("{}\n\n", utl::formatting::delimited_range(desugar_result.module.definitions, "\n\n"));
+        // std::print("{}\n\n", utl::formatting::delimited_range(desugar_result.module.definitions, "\n\n"));
     }>;
 
     constexpr auto resolution_repl = generic_repl<[](kieli::Lex_result&& lex_result) {
         auto resolve_result = resolve(desugar(parse(std::move(lex_result))));
         (void)resolve_result;
-        // fmt::println("{}", utl::formatting::delimited_range(resolve_result.functions, "\n\n"));
+        // std::println("{}", utl::formatting::delimited_range(resolve_result.functions, "\n\n"));
     }>;
 
     constexpr auto reification_repl = generic_repl<[](kieli::Lex_result&& lex_result) {
@@ -97,7 +97,7 @@ namespace {
         auto lowering_result = lower(reify(resolve(desugar(kieli::parse(std::move(lex_result))))));
         (void)lowering_result;
         // for (lir::Function const& function : lowering_result.functions)
-        //     fmt::println("{}: {}", function.symbol, function.body);
+        //     std::println("{}: {}", function.symbol, function.body);
     }>;
 
 }
@@ -122,21 +122,21 @@ auto main(int argc, char const** argv) -> int try {
     utl::Logging_timer const execution_timer {
         [&options](auto const elapsed) {
             if (options["time"])
-                fmt::println("Total execution time: {}", elapsed);
+                utl::print("Total execution time: {}\n", elapsed);
         }
     };
 
     if (options["nocolor"]) {
-        utl::disable_color_formatting();
+        utl::set_color_formatting_state(false);
     }
 
     if (options["help"]) {
-        fmt::print("Valid options:\n\n{}", description);
+        utl::print("Valid options:\n\n{}\n", cli::to_string(description));
         return EXIT_SUCCESS;
     }
 
     if (options["version"]) {
-        fmt::println("kieli version 0, compiled on " __DATE__ ", " __TIME__ ".");
+        utl::print("kieli version 0, compiled on " __DATE__ ", " __TIME__ ".\n");
     }
 
     if (std::string_view const* const name = options["new"]) {
@@ -159,13 +159,13 @@ auto main(int argc, char const** argv) -> int try {
         else if (*phase == "rei")
             (void)reify(do_resolve());
         else if (*phase == "res")
-            (void)do_resolve(); // fmt::println("{}", utl::formatting::delimited_range(do_resolve().functions, "\n\n"));
+            (void)do_resolve(); // std::println("{}", utl::formatting::delimited_range(do_resolve().functions, "\n\n"));
         else if (*phase == "comp")
             (void)compiler::compile({ .source_directory_path = std::move(source_directory_path), .main_file_name = "main.kieli" });
         else
             throw utl::exception("The phase must be one of low|rei|res|comp, not '{}'", *phase);
 
-        fmt::println("Finished debugging phase {}", *phase);
+        utl::print("Finished debugging phase {}\n", *phase);
     }
 
     if (std::string_view const* const name = options["repl"]) {

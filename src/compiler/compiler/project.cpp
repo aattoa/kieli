@@ -53,9 +53,9 @@ auto project::to_string(Configuration const& configuration) -> std::string {
     auto out = std::back_inserter(string);
 
     for (auto const& [key, value] : configuration) {
-        out = fmt::format_to(out, "{}: ", key);
+        out = std::format_to(out, "{}: ", key);
         if (value.has_value())
-            out = fmt::format_to(out, "{}", *value);
+            out = std::format_to(out, "{}", *value);
     }
 
     return string;
@@ -178,5 +178,5 @@ auto project::initialize(std::string_view const project_name) -> void {
     else
         throw utl::exception("Could not create the main file");
 
-    fmt::print("Successfully created a new project at '{}'\n", project_path.string());
+    utl::print("Successfully created a new project at '{}'\n", project_path.string());
 }

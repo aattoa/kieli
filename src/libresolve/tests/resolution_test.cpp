@@ -12,7 +12,7 @@ namespace {
         std::string formatted_mir_functions;
         for (mir::Function const& function : functions) {
             if (function.signature.is_template()) continue;
-            fmt::format_to(std::back_inserter(formatted_mir_functions), "{}", function);
+            std::format_to(std::back_inserter(formatted_mir_functions), "{}", function);
         }
         return formatted_mir_functions;
 #endif

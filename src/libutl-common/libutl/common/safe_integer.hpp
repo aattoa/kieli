@@ -231,8 +231,8 @@ namespace utl {
 
 
 template <class T>
-struct fmt::formatter<utl::Safe_integer<T>> : fmt::formatter<T> {
-    auto format(utl::Safe_integer<T> const value, auto& context) { // NOLINT
+struct std::formatter<utl::Safe_integer<T>> : std::formatter<T> {
+    auto format(utl::Safe_integer<T> const value, auto& context) const { // NOLINT
         return formatter<T>::format(value.get(), context);
     }
 };

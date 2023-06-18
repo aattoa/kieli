@@ -393,7 +393,7 @@ auto libparse::Parse_context::error(utl::diagnostics::Message_arguments const& a
 }
 auto libparse::Parse_context::error_expected(utl::Source_view const erroneous_view, std::string_view const expectation, tl::optional<std::string_view> const help) -> void {
     error(erroneous_view, {
-        .message = fmt::format(
+        .message = std::format(
             "Expected {}, but found {}",
             expectation,
             kieli::Lexical_token::description(pointer->type)),

@@ -7,14 +7,16 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # Set global warning settings
 if (MSVC)
-    add_compile_options("/W4"
-                        "/wd4127"  # Conditional expression is constant
-                        "/wd4459"  # Declaration hides global declaration
-                        "/wd4063") # Invalid value for switch
+    add_compile_options(
+        "/W4"
+        "/wd4127"  # Conditional expression is constant
+        "/wd4459"  # Declaration hides global declaration
+        "/wd4063") # Invalid value for switch
 else ()
-    add_compile_options("-Wall" "-Wextra" "-Wpedantic"
-                        "-Wno-missing-field-initializers"
-                        "-Wno-switch")
+    add_compile_options(
+        "-Wall" "-Wextra" "-Wpedantic"
+        "-Wno-missing-field-initializers"
+        "-Wno-switch")
 endif ()
 
 # Enable sized deallocation functions on Clang
@@ -43,7 +45,6 @@ include_directories(
     dependencies/optional/include
     dependencies/expected/include)
 
-add_subdirectory(dependencies/fmt)
 add_subdirectory(dependencies/Catch2)
 
 # Enable CTest registration

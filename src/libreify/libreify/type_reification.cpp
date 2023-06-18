@@ -18,7 +18,7 @@ namespace {
 
         auto operator()(mir::type::Unification_variable const& variable) -> cir::Type {
             context.error(this_type.source_view(), {
-                .message = fmt::format(
+                .message = std::format(
                     "Found an unsolved type variable: {}",
                     mir::to_string(variable.state->as_unsolved().tag)),
             });

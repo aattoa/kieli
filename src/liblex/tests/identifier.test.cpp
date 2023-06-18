@@ -24,7 +24,7 @@ namespace {
 
 TEST("keywords") {
     for (auto const keyword : keywords) {
-        REQUIRE(lex_success(std::string(keyword)) == fmt::format("{}, end of input", keyword));
+        REQUIRE(lex_success(std::string(keyword)) == std::format("{}, end of input", keyword));
     }
 }
 

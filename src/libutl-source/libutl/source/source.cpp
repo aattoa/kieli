@@ -67,8 +67,3 @@ auto utl::Source_view::combine_with(Source_view const& other) const noexcept -> 
         other.stop_position,
     };
 }
-
-
-DEFINE_FORMATTER_FOR(utl::Source_position) {
-    return fmt::format_to(context.out(), "{}:{}", value.line, value.column);
-}

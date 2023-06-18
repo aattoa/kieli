@@ -149,25 +149,25 @@ namespace kieli {
 
 
 template <>
-struct fmt::formatter<kieli::Lexical_token::Type> : fmt::formatter<std::string_view> {
-    auto format(kieli::Lexical_token::Type const type, auto& context) { // NOLINT
-        return fmt::formatter<std::string_view>::format(kieli::Lexical_token::type_string(type), context);
+struct std::formatter<kieli::Lexical_token::Type> : std::formatter<std::string_view> {
+    auto format(kieli::Lexical_token::Type const type, auto& context) const { // NOLINT
+        return std::formatter<std::string_view>::format(kieli::Lexical_token::type_string(type), context);
     }
 };
 
 template <>
-struct fmt::formatter<kieli::Lexical_token> : fmt::formatter<std::string_view> {
-    auto format(kieli::Lexical_token const& token, auto& context) { // NOLINT
+struct std::formatter<kieli::Lexical_token> : std::formatter<std::string_view> {
+    auto format(kieli::Lexical_token const& token, auto& context) const { // NOLINT
         if (std::holds_alternative<std::monostate>(token.value))
-            return fmt::formatter<std::string_view>::format(kieli::Lexical_token::type_string(token.type), context);
+            return std::formatter<std::string_view>::format(kieli::Lexical_token::type_string(token.type), context);
         else
-            return fmt::format_to(context.out(), "({}: '{}')", token.type, token.value);
+            return std::format_to(context.out(), "({}: '{}')", token.type, token.value);
     }
 };
 
 template <utl::one_of<kieli::Integer, kieli::Floating, kieli::Boolean, kieli::Character> T>
-struct fmt::formatter<T> : fmt::formatter<decltype(T::value)> {
-    auto format(T const value_wrapper, auto& context) {
-        return fmt::formatter<decltype(T::value)>::format(value_wrapper.value, context);
+struct std::formatter<T> : std::formatter<decltype(T::value)> {
+    auto format(T const value_wrapper, auto& context) const {
+        return std::formatter<decltype(T::value)>::format(value_wrapper.value, context);
     }
 };

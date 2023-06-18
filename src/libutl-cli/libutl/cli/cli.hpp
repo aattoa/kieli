@@ -141,10 +141,11 @@ namespace cli {
     };
 
 
+    [[nodiscard]]
+    auto to_string(cli::Options_description const&) -> std::string;
+
+    [[nodiscard]]
     auto parse_command_line(int argc, char const* const* argv, Options_description const&)
         -> tl::expected<Options, Unrecognized_option>;
 
 }
-
-
-DECLARE_FORMATTER_FOR(cli::Options_description);

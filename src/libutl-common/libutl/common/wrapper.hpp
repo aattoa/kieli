@@ -156,8 +156,8 @@ struct std::hash<utl::Wrapper<T>> : hash<T> {
 };
 
 template <class T>
-struct fmt::formatter<utl::Wrapper<T>> : formatter<T> {
-    auto format(utl::Wrapper<T> const wrapper, auto& context) {
+struct std::formatter<utl::Wrapper<T>> : formatter<T> {
+    auto format(utl::Wrapper<T> const wrapper, auto& context) const {
         return formatter<T>::format(*wrapper, context);
     }
 };

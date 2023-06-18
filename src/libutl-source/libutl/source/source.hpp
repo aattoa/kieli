@@ -54,4 +54,9 @@ namespace utl {
 }
 
 
-DECLARE_FORMATTER_FOR(utl::Source_position);
+template <>
+struct std::formatter<utl::Source_position> : utl::formatting::Formatter_base {
+    auto format(utl::Source_position const& position, auto& context) const {
+        return std::format_to(context.out(), "{}:{}", position.line, position.column);
+    }
+};

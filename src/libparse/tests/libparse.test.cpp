@@ -13,7 +13,7 @@ namespace {
             lex(kieli::Lex_arguments { .compilation_info = std::move(test_info), .source = test_source }),
             cst::Node_arena::with_default_page_size()
         };
-        return fmt::format("{}", extractor(parse_context));
+        return std::format("{}", extractor(parse_context));
 #endif
         (void)node_string;
         return {};

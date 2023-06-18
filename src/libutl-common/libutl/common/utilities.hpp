@@ -5,6 +5,7 @@
 
 
 #include <cstdlib>
+#include <cstring>
 #include <cstddef>
 #include <cstdint>
 #include <climits>
@@ -35,14 +36,13 @@
 #include <variant>
 
 #include <string>
+#include <format>
 #include <charconv>
 #include <string_view>
 
 #include <numeric>
 #include <algorithm>
 
-#include <fmt/format.h>
-#include <fmt/chrono.h>
 #include <range/v3/all.hpp>
 #include <tl/optional.hpp>
 #include <tl/expected.hpp>
@@ -125,7 +125,7 @@ namespace utl::inline literals {
 
     consteval auto operator""_format(char const* const s, Usize const n) noexcept {
         return [fmt = std::string_view(s, n)](auto const&... args) -> std::string {
-            return fmt::vformat(fmt, fmt::make_format_args(args...));
+            return std::vformat(fmt, std::make_format_args(args...));
         };
     }
 }
@@ -240,14 +240,22 @@ namespace utl {
     };
 
     template <class... Args>
-    auto exception(fmt::format_string<Args...> const fmt, Args const&... args) -> Exception {
-        return Exception { fmt::vformat(fmt.get(), fmt::make_format_args(args...))};
+    auto exception(std::format_string<Args...> const fmt, Args&&... args) -> Exception {
+        return Exception { std::vformat(fmt.get(), std::make_format_args(args...))};
+    }
+
+    template <class... Args>
+    auto print(std::format_string<Args...> const fmt, Args&&... args) -> void {
+        if constexpr (sizeof...(Args) == 0)
+            std::cout << fmt.get();
+        else
+            std::cout << std::vformat(fmt.get(), std::make_format_args(args...));
     }
 
     [[noreturn]]
     inline auto abort(std::string_view const message = "Invoked utl::abort", std::source_location const caller = std::source_location::current()) -> void {
-        fmt::println(
-            "[{}:{}:{}] {}, in function '{}'",
+        print(
+            "[{}:{}:{}] {}, in function '{}'\n",
             filename_without_path(caller.file_name()),
             caller.line(),
             caller.column(),
@@ -269,8 +277,8 @@ namespace utl {
     }
 
     inline auto trace(std::source_location const caller = std::source_location::current()) -> void {
-        fmt::println(
-            "utl::trace: Reached line {} in {}, in function '{}'",
+        print(
+            "utl::trace: Reached line {} in {}, in function '{}'\n",
             caller.line(),
             filename_without_path(caller.file_name()),
             caller.function_name());
@@ -618,7 +626,7 @@ namespace utl {
     struct [[nodiscard]] Metastring {
         char characters[length];
 
-        /*implicit*/ consteval Metastring(char const* pointer) noexcept { // NOLINT
+        consteval Metastring(char const* pointer) noexcept { // NOLINT: implicit
             std::copy_n(pointer, length, characters);
         }
         [[nodiscard]]
@@ -634,18 +642,9 @@ namespace utl {
     namespace formatting {
         struct Formatter_base {
             constexpr auto parse(auto& parse_context) {
-                return parse_context.end();
+                return parse_context.begin();
             }
         };
-        struct Visitor_base {
-            fmt::format_context::iterator out;
-
-            template <class... Args>
-            auto format(fmt::format_string<Args...> const fmt, Args const&... args) {
-                return out = fmt::vformat_to(out, fmt.get(), fmt::make_format_args(args...));
-            }
-        };
-
         template <std::integral Integer>
         struct Integer_with_ordinal_indicator_formatter_closure {
             Integer integer;
@@ -656,7 +655,6 @@ namespace utl {
         {
             return { .integer = integer };
         }
-
         template <ranges::sized_range Range>
         struct Range_formatter_closure {
             Range const*     range;
@@ -691,112 +689,81 @@ struct std::hash<utl::Pair<Fst, Snd>> {
 };
 
 
-#define DECLARE_FORMATTER_FOR_TEMPLATE(...)                                \
-struct fmt::formatter<__VA_ARGS__> : utl::formatting::Formatter_base {     \
-    [[nodiscard]] auto format(__VA_ARGS__ const&, fmt::format_context&) \
-        -> fmt::format_context::iterator;                                  \
-}
-
-#define DECLARE_FORMATTER_FOR(...) \
-template <> DECLARE_FORMATTER_FOR_TEMPLATE(__VA_ARGS__)
-
-#define DEFINE_FORMATTER_FOR(...) \
-auto fmt::formatter<__VA_ARGS__>::format(__VA_ARGS__ const& value, fmt::format_context& context) \
-    -> fmt::format_context::iterator
-
-#define DIRECTLY_DEFINE_FORMATTER_FOR(...) \
-DECLARE_FORMATTER_FOR(__VA_ARGS__);        \
-DEFINE_FORMATTER_FOR(__VA_ARGS__)
-
-
 template <class... Ts>
-DECLARE_FORMATTER_FOR_TEMPLATE(std::variant<Ts...>);
-template <class T, utl::Usize extent>
-DECLARE_FORMATTER_FOR_TEMPLATE(std::span<T, extent>);
-template <class T>
-DECLARE_FORMATTER_FOR_TEMPLATE(std::vector<T>);
-template <class F, class S>
-DECLARE_FORMATTER_FOR_TEMPLATE(utl::Pair<F, S>);
-template <class Range>
-DECLARE_FORMATTER_FOR_TEMPLATE(utl::formatting::Range_formatter_closure<Range>);
-template <class T>
-DECLARE_FORMATTER_FOR_TEMPLATE(utl::formatting::Integer_with_ordinal_indicator_formatter_closure<T>);
-
-
-template <class T>
-struct fmt::formatter<tl::optional<T>> : fmt::formatter<T> {
-    auto format(tl::optional<T> const& optional, auto& context) {
-        if (optional)
-            return formatter<T>::format(*optional, context);
-        else
-            return context.out();
+struct std::formatter<std::variant<Ts...>> : utl::formatting::Formatter_base {
+    auto format(std::variant<Ts...> const& variant, auto& context) const {
+        return utl::match(variant, [&](auto const& alternative) {
+            return std::format_to(context.out(), "{}", alternative);
+        });
     }
 };
 
-
-template <class... Ts>
-DEFINE_FORMATTER_FOR(std::variant<Ts...>) {
-    return std::visit([&](auto const& alternative) {
-        return fmt::format_to(context.out(), "{}", alternative);
-    }, value);
-}
-
-template <class T, utl::Usize extent>
-DEFINE_FORMATTER_FOR(std::span<T, extent>) {
-    return fmt::format_to(context.out(), "{}", utl::formatting::delimited_range(value, ", "));
-}
+template <class T, utl::Usize n>
+struct std::formatter<std::span<T, n>> : utl::formatting::Formatter_base {
+    auto format(std::span<T, n> const span, auto& context) const {
+        return std::format_to(context.out(), "{}", utl::formatting::delimited_range(span, ", "));
+    }
+};
 
 template <class T>
-DEFINE_FORMATTER_FOR(std::vector<T>) {
-    return fmt::format_to(context.out(), "{}", std::span { value });
-}
+struct std::formatter<std::vector<T>> : std::formatter<std::span<T>> {
+    auto format(std::vector<T> const& vector, auto& context) const {
+        return std::format_to(context.out(), "{}", std::span { vector });
+    }
+};
 
 template <class F, class S>
-DEFINE_FORMATTER_FOR(utl::Pair<F, S>) {
-    return fmt::format_to(context.out(), "({}, {})", value.first, value.second);
-}
+struct std::formatter<utl::Pair<F, S>> : utl::formatting::Formatter_base {
+    auto format(utl::Pair<F, S> const& pair, auto& context) const {
+        return std::format_to(context.out(), "({}, {})", pair.first, pair.second);
+    }
+};
 
 template <class Range>
-DEFINE_FORMATTER_FOR(utl::formatting::Range_formatter_closure<Range>) {
-    if (value.range->empty())
-        return context.out();
-    auto out = fmt::format_to(context.out(), "{}", value.range->front());
-    for (auto& element : *value.range | ranges::views::drop(1))
-        out = fmt::format_to(out, "{}{}", value.delimiter, element);
-    return out;
-}
+struct std::formatter<utl::formatting::Range_formatter_closure<Range>> : utl::formatting::Formatter_base {
+    auto format(utl::formatting::Range_formatter_closure<Range> const& closure, auto& context) const {
+        if (closure.range->empty())
+            return context.out();
+
+        auto       it  = ranges::begin(*closure.range);
+        auto const end = ranges::end(*closure.range);
+        auto       out = std::format_to(context.out(), "{}", *it++);
+
+        while (it != end) {
+            out = std::format_to(out, "{}{}", closure.delimiter, *it++);
+        }
+        return out;
+    }
+};
 
 template <class T>
-DEFINE_FORMATTER_FOR(utl::formatting::Integer_with_ordinal_indicator_formatter_closure<T>) {
-    // https://stackoverflow.com/questions/61786685/how-do-i-print-ordinal-indicators-in-a-c-program-cant-print-numbers-with-st
-
-    static constexpr auto suffixes = std::to_array<std::string_view>({ "th", "st", "nd", "rd" });
-
-    T n = value.integer % 100;
-
-    if (n == 11 || n == 12 || n == 13) {
-        n = 0;
-    }
-    else {
-        n %= 10;
-        if (n > 3)
+struct std::formatter<utl::formatting::Integer_with_ordinal_indicator_formatter_closure<T>> : utl::formatting::Formatter_base {
+    auto format(auto const closure, auto& context) const {
+        // https://stackoverflow.com/questions/61786685/how-do-i-print-ordinal-indicators-in-a-c-program-cant-print-numbers-with-st
+        static constexpr auto suffixes = std::to_array<std::string_view>({ "th", "st", "nd", "rd" });
+        T n = closure.integer % 100;
+        if (n == 11 || n == 12 || n == 13) {
             n = 0;
+        }
+        else {
+            n %= 10;
+            if (n > 3)
+                n = 0;
+        }
+        return std::format_to(context.out(), "{}{}", closure.integer, suffixes.at(n));
     }
-
-    return fmt::format_to(context.out(), "{}{}", value.integer, suffixes.at(n));
-}
-
+};
 
 template <class T>
-struct fmt::formatter<utl::Strong<T>> : fmt::formatter<T> {
-    auto format(utl::Strong<T> const& strong, auto& context) {
-        return fmt::formatter<T>::format(strong.get(), context);
+struct std::formatter<utl::Strong<T>> : std::formatter<T> {
+    auto format(utl::Strong<T> const& strong, auto& context) const {
+        return std::formatter<T>::format(strong.get(), context);
     }
 };
 
 template <>
-struct fmt::formatter<std::monostate> : utl::formatting::Formatter_base {
-    auto format(std::monostate, auto& context) {
-        return fmt::format_to(context.out(), "std::monostate");
+struct std::formatter<std::monostate> : utl::formatting::Formatter_base {
+    auto format(std::monostate, auto& context) const {
+        return std::format_to(context.out(), "std::monostate");
     }
 };

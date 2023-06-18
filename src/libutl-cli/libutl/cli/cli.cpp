@@ -111,7 +111,7 @@ namespace {
 
         [[noreturn]]
         auto expected(std::string_view const expectation) const -> void {
-            error({ fmt::format("Expected {}", expectation) });
+            error({ std::format("Expected {}", expectation) });
         }
 
         [[nodiscard]]
@@ -140,13 +140,13 @@ namespace {
             {
                 if (ptr == stop) return value;
                 context.retreat();
-                context.error({ fmt::format("Unexpected suffix: '{}'", std::string_view { ptr, stop }) });
+                context.error({ std::format("Unexpected suffix: '{}'", std::string_view { ptr, stop }) });
             }
             case std::errc::result_out_of_range:
             {
                 context.retreat();
                 context.error({
-                    fmt::format(
+                    std::format(
                         "The given value is too large to be represented by a {}-bit value",
                         sizeof(T) * CHAR_BIT)
                 });
@@ -196,18 +196,18 @@ namespace {
             std::visit([&]<class T>(cli::Value<T> const& value) {
                 auto argument = extract_value<T>(context);
                 if (!argument)
-                    context.error({ fmt::format("Expected an argument [{}]", type_description<T>()) });
+                    context.error({ std::format("Expected an argument [{}]", type_description<T>()) });
 
                 if (value.minimum_value) {
                     if (*argument < *value.minimum_value) {
                         context.retreat();
-                        context.error({ fmt::format("The minimum allowed value is {}", *value.minimum_value) });
+                        context.error({ std::format("The minimum allowed value is {}", *value.minimum_value) });
                     }
                 }
                 if (value.maximum_value) {
                     if (*argument > *value.maximum_value) {
                         context.retreat();
-                        context.error({ fmt::format("The maximum allowed value is {}", *value.maximum_value) });
+                        context.error({ std::format("The maximum allowed value is {}", *value.maximum_value) });
                     }
                 }
 
@@ -513,23 +513,23 @@ auto cli::Options::operator[](std::string_view const name) noexcept -> Argument_
 }
 
 
-DEFINE_FORMATTER_FOR(cli::Options_description) {
+auto cli::to_string(cli::Options_description const& options_description) -> std::string {
     std::vector<utl::Pair<std::string, tl::optional<std::string_view>>> lines;
-    lines.reserve(value.parameters.size());
+    lines.reserve(options_description.parameters.size());
     utl::Usize max_length = 0;
 
-    for (auto const& [name, arguments, description, _] : value.parameters) {
+    for (auto const& [name, arguments, description, _] : options_description.parameters) {
         std::string line;
         auto line_out = std::back_inserter(line);
 
-        fmt::format_to(
+        std::format_to(
             line_out,
             "--{}{}",
             name.long_form,
-            name.short_form ? fmt::format(", -{}", *name.short_form) : "");
+            name.short_form ? std::format(", -{}", *name.short_form) : "");
 
         for (auto const& argument : arguments) {
-            fmt::format_to(line_out, " [{}]", std::visit([]<class T>(cli::Value<T> const& value) {
+            std::format_to(line_out, " [{}]", std::visit([]<class T>(cli::Value<T> const& value) {
                 return value.name.empty() ? type_description<T>() : value.name;
             }, argument));
         }
@@ -538,16 +538,17 @@ DEFINE_FORMATTER_FOR(cli::Options_description) {
         lines.emplace_back(std::move(line), description);
     }
 
-    auto out = context.out();
+    std::string output;
+    auto out = std::back_inserter(output);
 
     for (auto& [names, description] : lines) {
-        out = fmt::format_to(
+        out = std::format_to(
             out,
             "\t{:{}}{}\n",
             names,
             max_length,
-            description ? fmt::format(" : {}", *description) : "");
+            description ? " : {}"_format(*description) : "");
     }
 
-    return out;
+    return output;
 }
