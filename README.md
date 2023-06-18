@@ -7,7 +7,6 @@ This is a work in progress, and can not be used for anything yet.
 
 The following is a list of the required dependencies:
 
-* https://github.com/fmtlib/fmt
 * https://github.com/ericniebler/range-v3
 * https://github.com/TartanLlama/expected
 * https://github.com/TartanLlama/optional
@@ -22,7 +21,6 @@ git clone https://github.com/aattoa/kieli.git
 cd kieli
 mkdir dependencies
 cd dependencies
-git clone https://github.com/fmtlib/fmt.git
 git clone https://github.com/ericniebler/range-v3.git
 git clone https://github.com/TartanLlama/expected.git
 git clone https://github.com/TartanLlama/optional.git
@@ -46,10 +44,8 @@ cmake --build build -j 8
 
 On Linux, these build steps have been tested with the following:
 
-* CMake `3.26.3`
-* GNU Make `4.4.1`
-* Ninja `1.11.1`
-* clang `15.0.7`, `16.0.0`
-* GCC `12.2.1`, `13.1.1`
+* CMake `3.26.4`
+* Build systems: Ninja `1.11.1`, GNU Make `4.4.1`
+* Compilers: clang `15.0.7`, GCC `13.1.1`
 
 On Windows, these build steps have been tested with Visual Studio 2022 `17.5.4`.

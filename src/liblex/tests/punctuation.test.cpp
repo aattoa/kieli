@@ -21,7 +21,7 @@ namespace {
 TEST("punctuation and reserved operators") {
     for (auto const punctuation_string : punctuation_strings) {
         REQUIRE(lex_success(std::string(punctuation_string)) ==
-            fmt::format("{}, end of input", punctuation_string));
+            std::format("{}, end of input", punctuation_string));
     }
 }
 

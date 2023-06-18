@@ -130,7 +130,7 @@ auto libresolve::Context::associated_namespace(mir::Type type)
 {
     if (tl::optional space = associated_namespace_if(type))
         return *space;
-    error(type.source_view(), { fmt::format("{} does not have an associated namespace", mir::to_string(type)) });
+    error(type.source_view(), { std::format("{} does not have an associated namespace", mir::to_string(type)) });
 }
 
 

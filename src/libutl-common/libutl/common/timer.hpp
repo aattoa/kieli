@@ -29,7 +29,7 @@ namespace utl {
 
         Basic_logging_timer() noexcept
             : scope_exit_logger { [](Duration const duration) {
-                fmt::print("[utl::Logging_timer::~Logging_timer]: Total elapsed time: {}\n", duration); }
+                utl::print("[utl::Logging_timer::~Logging_timer]: Total elapsed time: {}\n", duration); }
             } {}
 
         explicit Basic_logging_timer(decltype(scope_exit_logger)&& scope_exit_logger) noexcept

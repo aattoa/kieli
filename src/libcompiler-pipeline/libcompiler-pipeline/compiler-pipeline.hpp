@@ -68,8 +68,8 @@ namespace compiler {
 }
 
 template <utl::one_of<compiler::Name_dynamic, compiler::Name_lower, compiler::Name_upper> Name>
-struct fmt::formatter<Name> : fmt::formatter<compiler::Identifier> {
-    auto format(Name const& name, auto& context) {
-        return fmt::formatter<compiler::Identifier>::format(name.identifier, context);
+struct std::formatter<Name> : std::formatter<compiler::Identifier> {
+    auto format(Name const& name, auto& context) const {
+        return std::formatter<compiler::Identifier>::format(name.identifier, context);
     }
 };

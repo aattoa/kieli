@@ -10,7 +10,7 @@ namespace {
 
         std::string output;
         for (auto const& token : lex_result.tokens)
-            fmt::format_to(std::back_inserter(output), "('{}' {})", token.preceding_trivia, token.type);
+            std::format_to(std::back_inserter(output), "('{}' {})", token.preceding_trivia, token.type);
         return output;
     }
 }

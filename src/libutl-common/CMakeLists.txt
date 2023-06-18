@@ -13,8 +13,6 @@ target_sources(libutl-common
 
 target_precompile_headers(libutl-common
     PRIVATE libutl/common/utilities.hpp)
-target_link_libraries(libutl-common
-    PUBLIC fmt::fmt)
 
 kieli_add_tests(libutl-common
     TESTS utilities flatmap safe_integer pooled_string)

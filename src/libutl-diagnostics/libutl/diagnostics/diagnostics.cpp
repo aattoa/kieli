@@ -73,7 +73,7 @@ namespace {
         auto const digit_count = utl::digit_count(section.source_view.stop_position.line);
         auto       line_number = section.source_view.start_position.line;
 
-        fmt::format_to(
+        std::format_to(
             out,
             "{}{} --> {}:{}-{}{}\n",
             std::string(digit_count, ' '),
@@ -88,7 +88,7 @@ namespace {
             ranges::max(lines | ranges::views::transform(utl::size));
 
         for (auto const& line : lines) {
-            fmt::format_to(
+            std::format_to(
                 out,
                 "\n {}{:<{}} |{} ",
                 utl::diagnostics::line_info_color,
@@ -102,7 +102,7 @@ namespace {
                     utl::Usize const source_view_offset =
                         utl::unsigned_distance(line.data(), section.source_view.string.data());
 
-                    fmt::format_to(
+                    std::format_to(
                         out,
                         "{}{}{}{}",
                         utl::Color::dark_grey,
@@ -116,7 +116,7 @@ namespace {
                             line.data(),
                             section.source_view.string.data() + section.source_view.string.size());
 
-                    fmt::format_to(
+                    std::format_to(
                         out,
                         "{}{}{}{}",
                         line.substr(0, source_view_offset),
@@ -125,24 +125,24 @@ namespace {
                         utl::Color::white);
                 }
                 else {
-                    fmt::format_to(out, "{}", line);
+                    std::format_to(out, "{}", line);
                 }
             }
             else {
-                fmt::format_to(out, "{}", line);
+                std::format_to(out, "{}", line);
             }
 
             if (lines.size() > 1) {
-                fmt::format_to(
+                std::format_to(
                     out,
                     "{} {}<",
                     std::string(longest_line_length - line.size(), ' '),
                     section.note_color.value_or(title_color));
 
                 if (&line == &lines.back())
-                    fmt::format_to(out, " {}", section.note);
+                    std::format_to(out, " {}", section.note);
 
-                fmt::format_to(out, "{}", utl::Color::white);
+                std::format_to(out, "{}", utl::Color::white);
             }
         }
 
@@ -158,7 +158,7 @@ namespace {
                 // Only reached if the error occurred at the end of input
                 ++whitespace_length;
 
-            fmt::format_to(
+            std::format_to(
                 out,
                 "\n    {}{:>{}} {}{}",
                 section.note_color.value_or(title_color),
@@ -181,9 +181,9 @@ namespace {
 
         if (!diagnostic_string.empty())
             // There are previous diagnostic messages, insert newlines to separate them
-            fmt::format_to(out, "\n\n\n");
+            std::format_to(out, "\n\n\n");
 
-        fmt::format_to(
+        std::format_to(
             out,
             "{}{}:{} {}",
             title_color,
@@ -192,16 +192,16 @@ namespace {
             arguments.message);
 
         if (!arguments.sections.empty())
-            fmt::format_to(out, "\n\n");
+            std::format_to(out, "\n\n");
 
         for (auto const& section : arguments.sections) {
             format_highlighted_section(out, title_color, section);
             if (&section != &arguments.sections.back())
-                fmt::format_to(out, "\n\n");
+                std::format_to(out, "\n\n");
         }
 
         if (arguments.help_note)
-            fmt::format_to(out, "\n\nHelpful note: {}", *arguments.help_note);
+            std::format_to(out, "\n\nHelpful note: {}", *arguments.help_note);
 
         if (diagnostic_type == utl::diagnostics::Type::irrecoverable)
             throw utl::diagnostics::Error { std::move(diagnostic_string) };

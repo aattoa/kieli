@@ -4,13 +4,6 @@
 using namespace libresolve;
 
 
-#if 0
-#define UNIFICATION_LOG(...) fmt::println("[UNIFICATION LOG] " __VA_ARGS__)
-#else
-#define UNIFICATION_LOG(...) static_assert(requires { fmt::println(__VA_ARGS__); })
-#endif
-
-
 namespace {
 
     struct Wrapper_shallow_equality {
@@ -388,11 +381,6 @@ auto libresolve::Context::unify_mutabilities(Mutability_unification_arguments co
 
 
 auto libresolve::Context::unify_types(Type_unification_arguments const arguments) -> bool {
-    UNIFICATION_LOG(
-        "unifying {} ~ {}\n",
-        arguments.constraint_to_be_tested.constrainer_type,
-        arguments.constraint_to_be_tested.constrained_type);
-
     Unification_variable_solutions solutions;
 
     Type_unification_visitor visitor {

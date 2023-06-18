@@ -12,7 +12,7 @@ namespace {
         compiler::Compilation_info test_info = compiler::mock_compilation_info(utl::diagnostics::Level::suppress);
         utl::wrapper auto const test_source = test_info.get()->source_arena.wrap("[test]", std::move(string));
         auto desugar_result = desugar(parse(kieli::lex({ .compilation_info = std::move(test_info), .source = test_source })));
-        return fmt::format("{}", desugar_result.module.definitions);
+        return std::format("{}", desugar_result.module.definitions);
 #endif
     }
 }

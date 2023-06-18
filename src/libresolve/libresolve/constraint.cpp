@@ -16,10 +16,10 @@ namespace {
 
         auto const constrainer_note = constraint.constrainer_note.transform(
             [&](libresolve::constraint::Explanation const explanation) {
-                return fmt::vformat(explanation.explanatory_note, fmt::make_format_args(constrainer_string, constrained_string));
+                return std::vformat(explanation.explanatory_note, std::make_format_args(constrainer_string, constrained_string));
             });
         auto const constrained_note =
-            fmt::vformat(constraint.constrained_note.explanatory_note, fmt::make_format_args(constrainer_string, constrained_string));
+            std::vformat(constraint.constrained_note.explanatory_note, std::make_format_args(constrainer_string, constrained_string));
 
         if (constrainer_note.has_value()) {
             sections.push_back(utl::diagnostics::Text_section {
@@ -59,9 +59,9 @@ namespace {
         auto const right = mir::to_string(constraint.constrained_mutability);
 
         std::string const constrainer_note =
-            fmt::vformat(constraint.constrainer_note.explanatory_note, fmt::make_format_args(left, right));
+            std::vformat(constraint.constrainer_note.explanatory_note, std::make_format_args(left, right));
         std::string const constrained_note =
-            fmt::vformat(constraint.constrained_note.explanatory_note, fmt::make_format_args(left, right));
+            std::vformat(constraint.constrained_note.explanatory_note, std::make_format_args(left, right));
 
         context.diagnostics().emit_error({
             .sections = utl::to_vector({
@@ -127,7 +127,7 @@ auto libresolve::Context::solve(constraint::Struct_field const& constraint) -> v
         }
         error(constraint.explanation.source_view, {
             .message   = constraint.explanation.explanatory_note,
-            .help_note = fmt::format(
+            .help_note = std::format(
                 "{} does not have a member '{}'",
                 mir::to_string(constraint.struct_type),
                 constraint.field_identifier),
@@ -136,7 +136,7 @@ auto libresolve::Context::solve(constraint::Struct_field const& constraint) -> v
     else {
         error(constraint.explanation.source_view, {
             .message   = constraint.explanation.explanatory_note,
-            .help_note = fmt::format(
+            .help_note = std::format(
                 "{} is not a struct type, so it does not have named fields",
                 mir::to_string(constraint.struct_type)),
         });
@@ -149,7 +149,7 @@ auto libresolve::Context::solve(constraint::Tuple_field const& constraint) -> vo
         if (constraint.field_index.get() >= type->field_types.size()) {
             error(constraint.explanation.source_view, {
                 .message   = constraint.explanation.explanatory_note,
-                .help_note = fmt::format(
+                .help_note = std::format(
                     "{} does not have a {} field",
                     mir::to_string(constraint.tuple_type),
                     utl::formatting::integer_with_ordinal_indicator(constraint.field_index.get() + 1)),
@@ -167,7 +167,7 @@ auto libresolve::Context::solve(constraint::Tuple_field const& constraint) -> vo
     else {
         error(constraint.explanation.source_view, {
             .message   = constraint.explanation.explanatory_note,
-            .help_note = fmt::format(
+            .help_note = std::format(
                 "{} is not a tuple type, so it does not have indexed fields",
                 mir::to_string(constraint.tuple_type)),
         });

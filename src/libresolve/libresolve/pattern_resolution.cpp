@@ -131,7 +131,7 @@ namespace {
                 }
                 else {
                     context.error(this_pattern.source_view, {
-                        .message = fmt::format(
+                        .message = std::format(
                             "Constructor '{}' has no fields to be handled",
                             constructor.name)
                     });
@@ -139,7 +139,7 @@ namespace {
             }
             else if (constructor.payload_type.has_value()) {
                 context.error(this_pattern.source_view, {
-                    .message = fmt::format(
+                    .message = std::format(
                         "Constructor '{}' has fields which must be handled",
                         constructor.name)
                 });
@@ -177,7 +177,7 @@ namespace {
                 auto const it = ranges::find(enumeration.constructors, hir_constructor.constructor_name, &mir::Enum_constructor::name);
                 if (it == enumeration.constructors.end()) {
                     context.error(hir_constructor.constructor_name.source_view, {
-                        .message = fmt::format(
+                        .message = std::format(
                             "{} does not have a constructor '{}'",
                             mir::to_string(matched_type),
                             hir_constructor.constructor_name),
@@ -193,7 +193,7 @@ namespace {
                 });
             }
             context.error(this_pattern.source_view, {
-                .message = fmt::format(
+                .message = std::format(
                     "Abbreviated constructor pattern used with non-enum type {}",
                     mir::to_string(matched_type)),
             });

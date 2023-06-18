@@ -86,7 +86,7 @@ namespace {
             if (actual_argument_count != minimum_argument_count) {
                 if (maximum_argument_count == 0) {
                     context.error(instantiation_view, {
-                        .message = fmt::format(
+                        .message = std::format(
                             "{} has no explicit template parameters, but {} explicit template {} supplied",
                             template_name,
                             actual_argument_count,
@@ -95,7 +95,7 @@ namespace {
                 }
                 else {
                     context.error(instantiation_view, {
-                        .message = fmt::format(
+                        .message = std::format(
                             "{} requires exactly {} template {}, but {} {} supplied",
                             template_name,
                             minimum_argument_count,
@@ -111,7 +111,7 @@ namespace {
             if (actual_argument_count < minimum_argument_count) {
                 // Too few arguments
                 context.error(instantiation_view, {
-                    .message = fmt::format(
+                    .message = std::format(
                         "{} requires at least {} template {}, but {} {} supplied",
                         template_name,
                         minimum_argument_count,
@@ -123,7 +123,7 @@ namespace {
             else if (actual_argument_count > maximum_argument_count) {
                 // Too many arguments
                 context.error(instantiation_view, {
-                    .message = fmt::format(
+                    .message = std::format(
                         "{} has only {} template {}, but {} template {} supplied",
                         template_name,
                         maximum_argument_count,
@@ -161,7 +161,7 @@ namespace {
             },
             [&](auto const&, auto const&) -> mir::Template_argument {
                 context.error(instantiation_view, {
-                    .message = fmt::format(
+                    .message = std::format(
                         "Argument {} is incompatible with parameter {}",
                         hir::to_string(argument),
                         mir::to_string(parameter))
@@ -876,7 +876,7 @@ auto libresolve::Context::instantiate_function_template(
     mir::Function& function = resolve_function(template_info);
     if (!function.signature.is_template()) {
         error(instantiation_view, {
-            .message = fmt::format(
+            .message = std::format(
                 "{} is not a template, so template arguments can not be applied to it",
                 function.signature.name)
         });

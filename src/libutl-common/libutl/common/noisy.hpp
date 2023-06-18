@@ -6,7 +6,7 @@
 namespace utl {
 
 #define BU_NOISY_LOG(op, f, ...) \
-f noexcept { op live_count; fmt::print("[{},{}] utl::Noisy::" #f "\n", live_count, static_cast<void const*>(this)); __VA_ARGS__ }
+f noexcept { op live_count; utl::print("[{},{}] utl::Noisy::" #f "\n", live_count, static_cast<void const*>(this)); __VA_ARGS__ }
 
     struct Noisy {
         inline static constinit Usize live_count = 0;
