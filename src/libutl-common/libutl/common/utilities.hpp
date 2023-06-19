@@ -86,8 +86,7 @@ namespace utl {
 
 
     struct Safe_cast_invalid_argument : std::invalid_argument {
-        Safe_cast_invalid_argument()
-            : invalid_argument { "utl::safe_cast argument out of target range" } {}
+        Safe_cast_invalid_argument();
     };
 
     template <std::integral To, std::integral From> [[nodiscard]]
@@ -216,27 +215,15 @@ namespace utl {
     constexpr bool compiling_in_release_mode = !compiling_in_debug_mode;
 
 
-    constexpr auto filename_without_path(std::string_view path) noexcept -> std::string_view {
-        auto const trim_if = [&](char const c) {
-            if (auto const pos = path.find_last_of(c); pos != std::string_view::npos)
-                path.remove_prefix(pos + 1);
-        };
-        trim_if('\\');
-        trim_if('/');
-        assert(!path.empty());
-        return path;
-    }
+    auto filename_without_path(std::string_view path) noexcept -> std::string_view;
 
 
     class [[nodiscard]] Exception : public std::exception {
         std::string message;
     public:
-        explicit Exception(std::string&& message) noexcept
-            : message { std::move(message) } {}
+        explicit Exception(std::string&& message) noexcept;
         [[nodiscard]]
-        auto what() const noexcept -> char const* override {
-            return message.c_str();
-        }
+        auto what() const noexcept -> char const* override;
     };
 
     template <class... Args>
@@ -253,42 +240,23 @@ namespace utl {
     }
 
     [[noreturn]]
-    inline auto abort(std::string_view const message = "Invoked utl::abort", std::source_location const caller = std::source_location::current()) -> void {
-        print(
-            "[{}:{}:{}] {}, in function '{}'\n",
-            filename_without_path(caller.file_name()),
-            caller.line(),
-            caller.column(),
-            message,
-            caller.function_name());
-        std::exit(EXIT_FAILURE);
-    }
+    auto abort(std::string_view message = "Invoked utl::abort", std::source_location = std::source_location::current()) -> void;
 
     [[noreturn]]
-    inline auto todo(std::source_location const caller = std::source_location::current()) -> void {
-        abort("Unimplemented branch reached", caller);
-    }
-    [[noreturn]]
-    inline auto unreachable(std::source_location const caller = std::source_location::current()) -> void {
-        abort("Unreachable branch reached", caller);
-    }
-    inline auto always_assert(bool const condition, std::source_location const caller = std::source_location::current()) -> void {
-        if (!condition) [[unlikely]] abort("Assertion failed", caller);
-    }
+    auto todo(std::source_location = std::source_location::current()) -> void;
 
-    inline auto trace(std::source_location const caller = std::source_location::current()) -> void {
-        print(
-            "utl::trace: Reached line {} in {}, in function '{}'\n",
-            caller.line(),
-            filename_without_path(caller.file_name()),
-            caller.function_name());
-    }
+    [[noreturn]]
+    auto unreachable(std::source_location = std::source_location::current()) -> void;
+
+    auto always_assert(bool condition, std::source_location = std::source_location::current()) -> void;
+
+    auto trace(std::source_location = std::source_location::current()) -> void;
 
 
     template <class Fst, class Snd = Fst>
     struct [[nodiscard]] Pair {
-        Fst first;
-        Snd second;
+        Fst first {};
+        Snd second {};
 
         Pair() = default;
 
@@ -436,13 +404,6 @@ namespace utl {
         return std::visit(Overload { std::forward<Arms>(arms)... }, std::forward<Variant>(variant));
     }
 
-    template <class R, class Variant, class... Arms>
-    constexpr auto match(Variant&& variant, Arms&&... arms)
-        noexcept(noexcept(match(std::forward<Variant>(variant), std::forward<Arms>(arms)...))) -> R
-    {
-        return static_cast<R>(match(std::forward<Variant>(variant), std::forward<Arms>(arms)...));
-    }
-
     template <class Ok, std::derived_from<std::exception> Err>
     constexpr auto expect(tl::expected<Ok, Err>&& expected) -> Ok&& {
         if (expected)
@@ -484,17 +445,10 @@ namespace utl {
     }
 
 
-    inline auto disable_short_string_optimization(std::string& string) -> void {
-        if (string.capacity() <= sizeof(std::string))
-            string.reserve(sizeof(std::string) + 1);
-    }
+    auto disable_short_string_optimization(std::string&) -> void;
 
     [[nodiscard]]
-    inline auto string_with_capacity(Usize const capacity) -> std::string {
-        std::string string;
-        string.reserve(capacity);
-        return string;
-    }
+    auto string_with_capacity(Usize capacity) -> std::string;
 
     template <class T> [[nodiscard]]
     constexpr auto vector_with_capacity(Usize const capacity) -> std::vector<T> {
@@ -507,7 +461,7 @@ namespace utl {
         struct Vector_with_capacity_closure {
             Usize capacity;
             template <class T> [[nodiscard]]
-            /*implicit*/ operator std::vector<T>() const { // NOLINT
+            operator std::vector<T>() const { // NOLINT: implicit
                 APPLY_EXPLICIT_OBJECT_PARAMETER_HERE;
                 return vector_with_capacity<T>(capacity);
             }
@@ -603,22 +557,6 @@ namespace utl {
 
     auto hash_combine(hashable auto const&... args) -> Usize {
         return hash_combine_with_seed(0, args...);
-    }
-
-
-    // inline auto local_time() -> std::chrono::local_time<std::chrono::system_clock::duration> {
-    //     return std::chrono::current_zone()->to_local(std::chrono::system_clock::now());
-    // }
-
-
-    auto serialize_to(std::output_iterator<std::byte> auto out, trivially_copyable auto const... args)
-        noexcept -> void
-    {
-        (std::invoke([=, &out]() mutable noexcept {
-            auto* const memory = reinterpret_cast<std::byte const*>(&args);
-            for (Usize i = 0; i != sizeof args; ++i)
-                *out++ = memory[i];
-        }), ...);
     }
 
 

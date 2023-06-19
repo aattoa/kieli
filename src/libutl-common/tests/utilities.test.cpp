@@ -73,6 +73,11 @@ TEST("utl::map") {
             utl::to_vector({ 1_mov, 4_mov, 9_mov }));
 }
 
+TEST("utl::filename_without_path") {
+    REQUIRE(utl::filename_without_path("aaa/bbb/ccc") == "ccc");
+    REQUIRE(utl::filename_without_path("aaa\\bbb\\ccc") == "ccc");
+}
+
 
 static_assert( utl::losslessly_convertible_to<utl::I8,  utl::I16>);
 static_assert( utl::losslessly_convertible_to<utl::I32, utl::I32>);
@@ -82,9 +87,6 @@ static_assert(!utl::losslessly_convertible_to<utl::I8,  utl::U8>);
 static_assert(!utl::losslessly_convertible_to<utl::U64, utl::I8>);
 static_assert(!utl::losslessly_convertible_to<utl::I8,  utl::U64>);
 static_assert(!utl::losslessly_convertible_to<utl::I16, utl::I8>);
-
-static_assert(utl::filename_without_path("aaa/bbb/ccc") == "ccc");
-static_assert(utl::filename_without_path("aaa\\bbb\\ccc") == "ccc");
 
 static_assert(utl::digit_count(0) == 1);
 static_assert(utl::digit_count(-10) == 2);

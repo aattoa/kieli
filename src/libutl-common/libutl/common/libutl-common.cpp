@@ -1,5 +1,4 @@
 #include <libutl/common/utilities.hpp>
-#include <libutl/common/bytestack.hpp>
 #include <libutl/common/flatmap.hpp>
 #include <libutl/common/noisy.hpp>
 #include <libutl/common/pooled_string.hpp>
