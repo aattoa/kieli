@@ -28,18 +28,18 @@ namespace libresolve {
             utl::Source_view source_view;
         };
     private:
-        utl::Flatmap<compiler::Identifier, Variable_binding>   variable_bindings;
-        utl::Flatmap<compiler::Identifier, Type_binding>       type_bindings;
-        utl::Flatmap<compiler::Identifier, Mutability_binding> mutability_bindings;
+        utl::Flatmap<utl::Pooled_string, Variable_binding>   variable_bindings;
+        utl::Flatmap<utl::Pooled_string, Type_binding>       type_bindings;
+        utl::Flatmap<utl::Pooled_string, Mutability_binding> mutability_bindings;
         Scope*                                                 parent = nullptr;
     public:
-        auto bind_variable  (Context&, compiler::Identifier, Variable_binding  &&) -> void;
-        auto bind_type      (Context&, compiler::Identifier, Type_binding      &&) -> void;
-        auto bind_mutability(Context&, compiler::Identifier, Mutability_binding&&) -> void;
+        auto bind_variable  (Context&, utl::Pooled_string, Variable_binding  &&) -> void;
+        auto bind_type      (Context&, utl::Pooled_string, Type_binding      &&) -> void;
+        auto bind_mutability(Context&, utl::Pooled_string, Mutability_binding&&) -> void;
 
-        auto find_variable  (compiler::Identifier) noexcept -> Variable_binding*;
-        auto find_type      (compiler::Identifier) noexcept -> Type_binding*;
-        auto find_mutability(compiler::Identifier) noexcept -> Mutability_binding*;
+        auto find_variable  (utl::Pooled_string) noexcept -> Variable_binding*;
+        auto find_type      (utl::Pooled_string) noexcept -> Type_binding*;
+        auto find_mutability(utl::Pooled_string) noexcept -> Mutability_binding*;
 
         auto make_child() noexcept -> Scope;
 
@@ -79,11 +79,11 @@ namespace libresolve {
 
 
     struct [[nodiscard]] Namespace {
-        std::vector<Definition_variant>                   definitions_in_order;
-        utl::Flatmap<compiler::Identifier, Lower_variant> lower_table;
-        utl::Flatmap<compiler::Identifier, Upper_variant> upper_table;
-        tl::optional<utl::Wrapper<Namespace>>             parent;
-        tl::optional<compiler::Name_lower>                name;
+        std::vector<Definition_variant>                 definitions_in_order;
+        utl::Flatmap<utl::Pooled_string, Lower_variant> lower_table;
+        utl::Flatmap<utl::Pooled_string, Upper_variant> upper_table;
+        tl::optional<utl::Wrapper<Namespace>>           parent;
+        tl::optional<compiler::Name_lower>              name;
     };
 
     enum class Definition_state {
@@ -236,16 +236,16 @@ namespace libresolve {
             Explanation                  explanation;
         };
         struct Struct_field { // NOLINT
-            mir::Type            struct_type;
-            mir::Type            field_type;
-            compiler::Identifier field_identifier;
-            Explanation          explanation;
+            mir::Type          struct_type;
+            mir::Type          field_type;
+            utl::Pooled_string field_identifier;
+            Explanation        explanation;
         };
         struct Tuple_field { //NOLINT
-            mir::Type               tuple_type;
-            mir::Type               field_type;
-            utl::Strong<utl::Usize> field_index;
-            Explanation             explanation;
+            mir::Type                 tuple_type;
+            mir::Type                 field_type;
+            utl::Explicit<utl::Usize> field_index;
+            Explanation               explanation;
         };
     };
 
@@ -318,7 +318,7 @@ namespace libresolve {
 
         std::vector<utl::Wrapper<Function_info>> output_functions;
 
-        compiler::Identifier self_variable_id = compilation_info.get()->identifier_pool.make("self");
+        utl::Pooled_string self_variable_id = compilation_info.get()->identifier_pool.make("self");
 
         explicit Context(
             compiler::Compilation_info&& compilation_info,
@@ -471,15 +471,15 @@ namespace libresolve {
 
         template <class T>
         auto literal_type(utl::Source_view const view) -> mir::Type {
-            if constexpr (std::same_as<T, kieli::Integer>)
+            if constexpr (std::same_as<T, compiler::Integer>)
                 return fresh_integral_unification_type_variable(view);
-            else if constexpr (std::same_as<T, kieli::Floating>)
+            else if constexpr (std::same_as<T, compiler::Floating>)
                 return floating_type(view);
-            else if constexpr (std::same_as<T, kieli::Character>)
+            else if constexpr (std::same_as<T, compiler::Character>)
                 return character_type(view);
-            else if constexpr (std::same_as<T, kieli::Boolean>)
+            else if constexpr (std::same_as<T, compiler::Boolean>)
                 return boolean_type(view);
-            else if constexpr (std::same_as<T, compiler::String>)
+            else if constexpr (std::same_as<T, utl::Pooled_string>)
                 return string_type(view);
             else
                 static_assert(utl::always_false<T>);

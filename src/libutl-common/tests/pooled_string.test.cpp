@@ -4,17 +4,13 @@
 
 #define TEST(name) TEST_CASE(name, "[libutl][pooled_string]")
 
-namespace {
-    using String = utl::Pooled_string<struct Test_pooled_string_tag>;
-}
-
 
 TEST("string pool") {
-    String::Pool pool { /*initial_capacity=*/ 32 };
+    utl::String_pool pool { /*initial_capacity=*/ 32 };
 
-    String const a = pool.make("ab");
-    String const b = pool.make("cd");
-    String const c = pool.make("bc");
+    utl::Pooled_string const a = pool.make("ab");
+    utl::Pooled_string const b = pool.make("cd");
+    utl::Pooled_string const c = pool.make("bc");
 
     REQUIRE(a.size() == 2); REQUIRE(a == "ab");
     REQUIRE(b.size() == 2); REQUIRE(b == "cd");

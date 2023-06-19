@@ -94,12 +94,12 @@ auto liblex::Context::error(utl::diagnostics::Message_arguments const arguments)
     error(pointer(), arguments);
 }
 
-auto liblex::Context::make_string_literal(std::string_view const string) -> compiler::String {
+auto liblex::Context::make_string_literal(std::string_view const string) -> utl::Pooled_string {
     return m_compilation_info.get()->string_literal_pool.make(string);
 }
-auto liblex::Context::make_operator(std::string_view const string) -> compiler::Operator {
+auto liblex::Context::make_operator(std::string_view const string) -> utl::Pooled_string {
     return m_compilation_info.get()->operator_pool.make(string);
 }
-auto liblex::Context::make_identifier(std::string_view const string) -> compiler::Identifier {
+auto liblex::Context::make_identifier(std::string_view const string) -> utl::Pooled_string {
     return m_compilation_info.get()->identifier_pool.make(string);
 }

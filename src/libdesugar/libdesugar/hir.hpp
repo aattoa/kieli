@@ -2,7 +2,6 @@
 
 #include <libutl/common/utilities.hpp>
 #include <libutl/common/flatmap.hpp>
-#include <liblex/token.hpp> // FIXME
 #include <libcompiler-pipeline/compiler-pipeline.hpp>
 
 
@@ -30,16 +29,16 @@ namespace hir {
 
     struct Mutability {
         struct Concrete {
-            utl::Strong<bool> is_mutable;
+            utl::Explicit<bool> is_mutable;
         };
         struct Parameterized {
             compiler::Name_lower name;
         };
         using Variant = std::variant<Concrete, Parameterized>;
 
-        Variant           value;
-        utl::Strong<bool> is_explicit;
-        utl::Source_view  source_view;
+        Variant             value;
+        utl::Explicit<bool> is_explicit;
+        utl::Source_view    source_view;
     };
 
 
@@ -135,7 +134,7 @@ namespace hir {
         struct Loop {
             enum class Source { plain_loop, while_loop, for_loop };
             utl::Wrapper<Expression> body;
-            utl::Strong<Source>      source;
+            utl::Explicit<Source>    source;
         };
         struct Continue {};
         struct Break {
@@ -156,16 +155,16 @@ namespace hir {
         struct Binary_operator_invocation {
             utl::Wrapper<Expression> left;
             utl::Wrapper<Expression> right;
-            compiler::Operator       op;
+            utl::Pooled_string       op;
         };
         struct Struct_field_access {
             utl::Wrapper<Expression> base_expression;
             compiler::Name_lower     field_name;
         };
         struct Tuple_field_access {
-            utl::Wrapper<Expression> base_expression;
-            utl::Strong<utl::Usize>  field_index;
-            utl::Source_view         field_index_source_view;
+            utl::Wrapper<Expression>  base_expression;
+            utl::Explicit<utl::Usize> field_index;
+            utl::Source_view          field_index_source_view;
         };
         struct Array_index_access {
             utl::Wrapper<Expression> base_expression;
@@ -182,8 +181,8 @@ namespace hir {
             utl::Wrapper<Expression> condition;
             utl::Wrapper<Expression> true_branch;
             utl::Wrapper<Expression> false_branch;
-            utl::Strong<Source>      kind;
-            utl::Strong<bool>        has_explicit_false_branch;
+            utl::Explicit<Source>    source;
+            utl::Explicit<bool>      has_explicit_false_branch;
         };
         struct Match {
             struct Case {
@@ -247,11 +246,11 @@ namespace hir {
 
     struct Expression {
         using Variant = std::variant<
-            expression::Literal<kieli::Integer>,
-            expression::Literal<kieli::Floating>,
-            expression::Literal<kieli::Character>,
-            expression::Literal<kieli::Boolean>,
-            expression::Literal<compiler::String>,
+            expression::Literal<compiler::Integer>,
+            expression::Literal<compiler::Floating>,
+            expression::Literal<compiler::Character>,
+            expression::Literal<compiler::Boolean>,
+            expression::Literal<utl::Pooled_string>,
             expression::Array_literal,
             expression::Self,
             expression::Variable,
@@ -328,11 +327,11 @@ namespace hir {
 
     struct Pattern {
         using Variant = std::variant<
-            pattern::Literal<kieli::Integer>,
-            pattern::Literal<kieli::Floating>,
-            pattern::Literal<kieli::Character>,
-            pattern::Literal<kieli::Boolean>,
-            pattern::Literal<compiler::String>,
+            pattern::Literal<compiler::Integer>,
+            pattern::Literal<compiler::Floating>,
+            pattern::Literal<compiler::Character>,
+            pattern::Literal<compiler::Boolean>,
+            pattern::Literal<utl::Pooled_string>,
             pattern::Wildcard,
             pattern::Name,
             pattern::Constructor,
@@ -414,9 +413,9 @@ namespace hir {
 
 
     struct Self_parameter {
-        Mutability        mutability;
-        utl::Strong<bool> is_reference;
-        utl::Source_view  source_view;
+        Mutability          mutability;
+        utl::Explicit<bool> is_reference;
+        utl::Source_view    source_view;
     };
 
     struct Function_signature {
@@ -443,7 +442,7 @@ namespace hir {
             struct Member {
                 compiler::Name_lower name;
                 Type                 type;
-                utl::Strong<bool>    is_public;
+                utl::Explicit<bool>  is_public;
                 utl::Source_view     source_view;
             };
             std::vector<Member>  members;

@@ -280,28 +280,26 @@ namespace utl {
 
     // Value wrapper that is used to disable default constructors
     template <class T>
-    class [[nodiscard]] Strong {
+    class [[nodiscard]] Explicit {
         T m_value;
     public:
-        constexpr Strong(T const& value) // NOLINT: implicit
+        constexpr Explicit(T const& value) // NOLINT: implicit
             noexcept(std::is_nothrow_copy_constructible_v<T>)
             requires std::is_copy_constructible_v<T>
             : m_value { value } {}
-        constexpr Strong(T&& value) // NOLINT: implicit
+        constexpr Explicit(T&& value) // NOLINT: implicit
             noexcept(std::is_nothrow_move_constructible_v<T>)
             requires std::is_move_constructible_v<T>
             : m_value { std::move(value) } {}
-
         APPLY_EXPLICIT_OBJECT_PARAMETER_HERE
         [[nodiscard]] constexpr auto get() const & -> T const & { return m_value; }
         [[nodiscard]] constexpr auto get()       & -> T       & { return m_value; }
         [[nodiscard]] constexpr auto get() const&& -> T const&& { return std::move(m_value); }
         [[nodiscard]] constexpr auto get()      && -> T      && { return std::move(m_value); }
-
-        [[nodiscard]] constexpr operator T const &() const & { return m_value; }
-        [[nodiscard]] constexpr operator T       &()       & { return m_value; }
-        [[nodiscard]] constexpr operator T const&&() const&& { return std::move(m_value); }
-        [[nodiscard]] constexpr operator T      &&()      && { return std::move(m_value); }
+        [[nodiscard]] constexpr operator T const &()    const & { return m_value; }
+        [[nodiscard]] constexpr operator T       &()          & { return m_value; }
+        [[nodiscard]] constexpr operator T const&&()    const&& { return std::move(m_value); }
+        [[nodiscard]] constexpr operator T      &&()         && { return std::move(m_value); }
     };
 
 
@@ -659,7 +657,7 @@ struct std::formatter<utl::Pair<F, S>> : utl::formatting::Formatter_base {
 
 template <class Range>
 struct std::formatter<utl::formatting::Range_formatter_closure<Range>> : utl::formatting::Formatter_base {
-    auto format(utl::formatting::Range_formatter_closure<Range> const& closure, auto& context) const {
+    auto format(auto const closure, auto& context) const {
         if (closure.range->empty())
             return context.out();
 
@@ -693,8 +691,8 @@ struct std::formatter<utl::formatting::Integer_with_ordinal_indicator_formatter_
 };
 
 template <class T>
-struct std::formatter<utl::Strong<T>> : std::formatter<T> {
-    auto format(utl::Strong<T> const& strong, auto& context) const {
+struct std::formatter<utl::Explicit<T>> : std::formatter<T> {
+    auto format(utl::Explicit<T> const& strong, auto& context) const {
         return std::formatter<T>::format(strong.get(), context);
     }
 };

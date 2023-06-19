@@ -49,8 +49,8 @@ namespace liblex {
             return { pointer, m_pointer };
         }
 
-        auto make_string_literal(std::string_view) -> compiler::String;
-        auto make_operator      (std::string_view) -> compiler::Operator;
-        auto make_identifier    (std::string_view) -> compiler::Identifier;
+        auto make_string_literal(std::string_view) -> utl::Pooled_string;
+        auto make_operator      (std::string_view) -> utl::Pooled_string;
+        auto make_identifier    (std::string_view) -> utl::Pooled_string;
     };
 }

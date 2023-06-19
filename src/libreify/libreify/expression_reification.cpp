@@ -27,7 +27,7 @@ namespace {
 
         auto operator()(mir::expression::Sizeof const& sizeof_) -> cir::Expression::Variant {
             cir::Type const inspected_type = context.reify_type(sizeof_.inspected_type);
-            return cir::expression::Literal<kieli::Integer> { inspected_type.size.get() };
+            return cir::expression::Literal<compiler::Integer> { inspected_type.size.get() };
         }
 
         auto operator()(mir::expression::Block const& block) -> cir::Expression::Variant {
