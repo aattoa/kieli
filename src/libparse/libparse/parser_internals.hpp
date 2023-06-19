@@ -12,9 +12,6 @@ namespace libparse {
     using Token_type = Lexical_token::Type;
 
     [[nodiscard]]
-    auto make_source_view(Lexical_token const*, Lexical_token const*) noexcept -> utl::Source_view;
-
-    [[nodiscard]]
     auto is_name_token_type(Token_type) noexcept -> bool;
 
     [[nodiscard]]
@@ -59,6 +56,8 @@ namespace libparse {
         [[noreturn]] auto error(utl::diagnostics::Message_arguments const&) -> void;
         [[noreturn]] auto error_expected(utl::Source_view, std::string_view expectation, tl::optional<std::string_view> help = tl::nullopt) -> void;
         [[noreturn]] auto error_expected(std::string_view expectation, tl::optional<std::string_view> help = tl::nullopt) -> void;
+
+        auto make_source_view(Lexical_token const*, Lexical_token const*) noexcept -> utl::Source_view;
     };
 
 
@@ -232,7 +231,7 @@ namespace libparse {
     auto parse_node(Parse_context& context) -> tl::optional<utl::Wrapper<Node>> {
         Lexical_token const* const anchor = context.pointer;
         if (auto node_value = parse(context))
-            return context.wrap(Node { std::move(*node_value), make_source_view(anchor, context.pointer -1) });
+            return context.wrap(Node { std::move(*node_value), context.make_source_view(anchor, context.pointer - 1) });
         else
             return tl::nullopt;
     }
