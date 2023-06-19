@@ -77,7 +77,7 @@ namespace {
                     .pattern     = std::move(pattern),
                     .initializer = extract_expression(context),
                 },
-                .source_view = make_source_view(anchor, context.pointer - 1),
+                .source_view = context.make_source_view(anchor, context.pointer - 1),
             });
         }
         return extract_expression(context);
@@ -154,10 +154,10 @@ namespace {
             });
             return extract_struct_initializer(context, context.wrap(cst::Type {
                 .value       = std::move(value),
-                .source_view = make_source_view(anchor, context.pointer - 1),
+                .source_view = context.make_source_view(anchor, context.pointer - 1),
             }));
         }
-        context.error(make_source_view(anchor, context.pointer),
+        context.error(context.make_source_view(anchor, context.pointer),
             { "Expected an expression, but found a type" });
     }
 
@@ -526,7 +526,7 @@ namespace {
             else if (context.try_consume(Token_type::brace_open)) {
                 return extract_struct_initializer(context, std::move(*type));
             }
-            context.error(make_source_view(anchor, context.pointer),
+            context.error(context.make_source_view(anchor, context.pointer),
                 { "Expected an expression, but found a type" });
         }
         return tl::nullopt;
@@ -653,7 +653,7 @@ namespace {
                         .function_arguments  = std::move(arguments),
                         .function_expression = std::move(*potential_invocable),
                     },
-                    .source_view = make_source_view(anchor, context.pointer - 1),
+                    .source_view = context.make_source_view(anchor, context.pointer - 1),
                 });
             }
         }
@@ -680,7 +680,7 @@ namespace {
                                 .base_expression    = *expression,
                                 .method_name        = *field_name,
                             },
-                            .source_view = make_source_view(anchor, context.pointer - 1),
+                            .source_view = context.make_source_view(anchor, context.pointer - 1),
                         });
                     }
                     else if (template_arguments.has_value()) {
@@ -693,7 +693,7 @@ namespace {
                                 .field_name      = *field_name,
                                 .dot_token       = cst::Token::from_lexical(dot),
                             },
-                            .source_view = make_source_view(anchor, context.pointer - 1),
+                            .source_view = context.make_source_view(anchor, context.pointer - 1),
                         });
                     }
                 }
@@ -706,7 +706,7 @@ namespace {
                             .field_index_source_view = field_index_token.source_view,
                             .dot_token               = cst::Token::from_lexical(dot),
                         },
-                        .source_view = make_source_view(anchor, context.pointer - 1)
+                        .source_view = context.make_source_view(anchor, context.pointer - 1)
                     });
                 }
                 else if (context.try_consume(Token_type::bracket_open)) {
@@ -718,7 +718,7 @@ namespace {
                             .index_expression = std::move(index_expression),
                             .dot_token        = cst::Token::from_lexical(dot),
                         },
-                        .source_view = make_source_view(anchor, context.pointer - 1),
+                        .source_view = context.make_source_view(anchor, context.pointer - 1),
                     });
                 }
                 else {
@@ -748,7 +748,7 @@ namespace {
                             .base_expression = *expression,
                             .ascribed_type   = type,
                         },
-                        .source_view = make_source_view(anchor, context.pointer - 1),
+                        .source_view = context.make_source_view(anchor, context.pointer - 1),
                     });
                     break;
                 }
@@ -760,7 +760,7 @@ namespace {
                             .base_expression = *expression,
                             .target_type     = type,
                         },
-                        .source_view = make_source_view(anchor, context.pointer - 1),
+                        .source_view = context.make_source_view(anchor, context.pointer - 1),
                     });
                     break;
                 }
@@ -818,7 +818,7 @@ namespace {
                         .sequence_tail    = std::move(tail),
                         .leftmost_operand = *leftmost_operand,
                     },
-                    .source_view = make_source_view(anchor, context.pointer - 1),
+                    .source_view = context.make_source_view(anchor, context.pointer - 1),
                 });
             }
         }
@@ -841,7 +841,7 @@ auto libparse::parse_block_expression(Parse_context& context)
         Lexical_token const* const anchor = context.pointer;
         return context.wrap(cst::Expression {
             .value       = extract_block_expression(context),
-            .source_view = make_source_view(anchor - 1, context.pointer - 1),
+            .source_view = context.make_source_view(anchor - 1, context.pointer - 1),
         });
     }
     return tl::nullopt;

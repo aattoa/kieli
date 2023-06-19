@@ -148,7 +148,7 @@ namespace {
                     .name        = *name,
                     .type        = *type,
                     .is_public   = is_public,
-                    .source_view = make_source_view(anchor, context.pointer - 1)
+                    .source_view = context.make_source_view(anchor, context.pointer - 1),
                 };
             }
             context.error_expected("a ':' followed by a type");
@@ -204,7 +204,7 @@ namespace {
             return cst::definition::Enum::Constructor {
                 .payload_types = std::move(payload_types),
                 .name          = *name,
-                .source_view   = make_source_view(anchor, context.pointer - 1),
+                .source_view   = context.make_source_view(anchor, context.pointer - 1),
             };
         }
         return tl::nullopt;
@@ -366,10 +366,10 @@ namespace {
     auto parse_definition(Parse_context& context)
         -> tl::optional<cst::Definition>
     {
-        auto const definition = [&, anchor = context.pointer - 1](cst::Definition::Variant&& value) {
+        auto const definition = [&, anchor = context.pointer](cst::Definition::Variant&& value) {
             return cst::Definition {
                 .value       = std::move(value),
-                .source_view = make_source_view(anchor, context.pointer),
+                .source_view = context.make_source_view(anchor, context.pointer - 1),
             };
         };
         switch (context.extract().type) {

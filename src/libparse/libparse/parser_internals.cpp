@@ -41,7 +41,7 @@ namespace {
             (cst::Template_parameter::Variant&& value,
              Lexical_token const* const         colon = nullptr)
         {
-            auto const source_view = make_source_view(anchor, context.pointer - 1);
+            auto const source_view = context.make_source_view(anchor, context.pointer - 1);
             tl::optional<cst::Template_parameter::Default_argument> default_argument;
             if (Lexical_token const* const equals_sign = context.try_extract(Token_type::equals)) {
                 default_argument = cst::Template_parameter::Default_argument {
@@ -228,7 +228,7 @@ auto libparse::parse_mutability(Parse_context& context) -> tl::optional<cst::Mut
                     .name                = std::move(parameter_name),
                     .question_mark_token = cst::Token::from_lexical(question_mark),
                 },
-                .source_view                = make_source_view(mut_keyword, context.pointer - 1),
+                .source_view                = context.make_source_view(mut_keyword, context.pointer - 1),
                 .mut_or_immut_keyword_token = cst::Token::from_lexical(mut_keyword),
             };
         }
@@ -296,7 +296,7 @@ auto libparse::parse_class_reference(Parse_context& context)
         if (name.primary_name.is_upper.get())
             return name;
 
-        context.error(make_source_view(anchor, context.pointer),
+        context.error(context.make_source_view(anchor, context.pointer),
             { "Expected a class name, but found a lowercase identifier" });
     });
 
@@ -306,7 +306,7 @@ auto libparse::parse_class_reference(Parse_context& context)
         return cst::Class_reference {
             .template_arguments = std::move(template_arguments),
             .name               = std::move(*name),
-            .source_view        = make_source_view(anchor, context.pointer - 1)
+            .source_view        = context.make_source_view(anchor, context.pointer - 1)
         };
     }
     return tl::nullopt;
@@ -325,13 +325,6 @@ auto libparse::extract_class_references(Parse_context& context)
 }
 
 
-
-auto libparse::make_source_view(Lexical_token const* const first, Lexical_token const* const last)
-    noexcept -> utl::Source_view
-{
-    utl::always_assert(first && last);
-    return first->source_view.combine_with(last->source_view);
-}
 
 auto libparse::is_name_token_type(Token_type const type) noexcept -> bool {
     return type == Token_type::upper_name || type == Token_type::lower_name;
@@ -402,4 +395,14 @@ auto libparse::Parse_context::error_expected(utl::Source_view const erroneous_vi
 }
 auto libparse::Parse_context::error_expected(std::string_view const expectation, tl::optional<std::string_view> const help) -> void {
     error_expected(pointer->source_view, expectation, help);
+}
+
+auto libparse::Parse_context::make_source_view(
+    Lexical_token const* const first,
+    Lexical_token const* const last) noexcept -> utl::Source_view
+{
+    assert(first && last);
+    assert(std::invoke(std::less_equal {}, first, last));
+    assert(std::invoke(std::less {}, last, std::to_address(tokens.end())));
+    return first->source_view.combine_with(last->source_view);
 }

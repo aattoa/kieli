@@ -212,7 +212,7 @@ auto libparse::parse_type(Parse_context& context) -> tl::optional<utl::Wrapper<c
     if (auto type_value = parse_normal_type(context)) {
         utl::wrapper auto const type = context.wrap(cst::Type {
             .value       = std::move(*type_value),
-            .source_view = make_source_view(type_anchor, context.pointer - 1)
+            .source_view = context.make_source_view(type_anchor, context.pointer - 1)
         });
         Lexical_token* const anchor = context.pointer;
         if (Lexical_token const* const double_colon = context.try_extract(Lexical_token::Type::double_colon)) {
@@ -233,7 +233,7 @@ auto libparse::parse_type(Parse_context& context) -> tl::optional<utl::Wrapper<c
                         }
                         return cst::type::Typename { std::move(name) };
                     }),
-                    .source_view = make_source_view(anchor, context.pointer - 1),
+                    .source_view = context.make_source_view(anchor, context.pointer - 1),
                 });
             }
             else {
