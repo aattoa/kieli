@@ -263,9 +263,9 @@ namespace {
                 return token_maker({}, token_type);
         }
         if (view == "true")
-            return token_maker(kieli::Boolean { true }, Token::Type::boolean_literal);
+            return token_maker(compiler::Boolean { true }, Token::Type::boolean_literal);
         else if (view == "false")
-            return token_maker(kieli::Boolean { false }, Token::Type::boolean_literal);
+            return token_maker(compiler::Boolean { false }, Token::Type::boolean_literal);
         else if (ranges::all_of(view, is_one_of<"_">))
             return token_maker({}, Token::Type::underscore);
         else if (is_upper(view[view.find_first_not_of('_')]))
@@ -296,7 +296,7 @@ namespace {
         if (c == '\\') c = handle_escape_sequence(context);
 
         if (context.try_consume('\''))
-            return token_maker(kieli::Character { c }, Token::Type::character_literal);
+            return token_maker(compiler::Character { c }, Token::Type::character_literal);
         else
             context.error(context.pointer(), { "Expected a closing single-quote" });
     }
@@ -401,7 +401,7 @@ namespace {
                 context.error(extraneous_suffix, { "Erroneous floating point literal alphabetic suffix" });
             }
 
-            return token_maker(kieli::Floating { floating.value() }, Token::Type::floating_literal);
+            return token_maker(compiler::Floating { floating.value() }, Token::Type::floating_literal);
         }
         else {
             auto integer = liblex::parse_integer(first_digit_sequence, base.value_or(10));
@@ -412,7 +412,7 @@ namespace {
 
             std::string_view const suffix = context.extract(is_alpha);
             if (suffix.empty()) {
-                return token_maker(kieli::Integer { integer.value() }, Token::Type::integer_literal);
+                return token_maker(compiler::Integer { integer.value() }, Token::Type::integer_literal);
             }
             else if (suffix != "e" && suffix != "E") {
                 context.error(suffix, { "Erroneous integer literal alphabetic suffix" });
@@ -447,7 +447,7 @@ namespace {
                 else
                     utl::always_assert(result.has_value());
 
-                return token_maker(kieli::Integer { result.value() }, Token::Type::integer_literal);
+                return token_maker(compiler::Integer { result.value() }, Token::Type::integer_literal);
             }
         }
     }

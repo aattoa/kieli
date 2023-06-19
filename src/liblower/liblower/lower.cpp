@@ -66,7 +66,7 @@ namespace {
             return [this](auto const& expression) { return recurse(expression); };
         }
 
-        auto operator()(cir::expression::Literal<kieli::Integer> const& integer_literal) -> lir::Expression {
+        auto operator()(cir::expression::Literal<compiler::Integer> const& integer_literal) -> lir::Expression {
             auto const type = utl::get<compiler::built_in_type::Integer>(*this_expression.type.value);
             try {
                 return make_integer_constant(type, integer_literal.value.value);

@@ -75,11 +75,11 @@ namespace cir {
 
     struct Pattern {
         using Variant = std::variant<
-            pattern::Literal<kieli::Integer>,
-            pattern::Literal<kieli::Floating>,
-            pattern::Literal<kieli::Character>,
-            pattern::Literal<kieli::Boolean>,
-            pattern::Literal<compiler::String>,
+            pattern::Literal<compiler::Integer>,
+            pattern::Literal<compiler::Floating>,
+            pattern::Literal<compiler::Character>,
+            pattern::Literal<compiler::Boolean>,
+            pattern::Literal<utl::Pooled_string>,
             pattern::Tuple,
             pattern::Exhaustive>;
 
@@ -116,8 +116,8 @@ namespace cir {
             utl::Wrapper<Expression> initializer;
         };
         struct Local_variable_reference {
-            utl::Safe_isize      frame_offset;
-            compiler::Identifier identifier;
+            utl::Safe_isize    frame_offset;
+            utl::Pooled_string identifier;
         };
         struct Conditional {
             utl::Wrapper<cir::Expression> condition;
@@ -129,11 +129,11 @@ namespace cir {
 
     struct [[nodiscard]] Expression {
         using Variant = std::variant<
-            expression::Literal<kieli::Integer>,
-            expression::Literal<kieli::Floating>,
-            expression::Literal<kieli::Character>,
-            expression::Literal<kieli::Boolean>,
-            expression::Literal<compiler::String>,
+            expression::Literal<compiler::Integer>,
+            expression::Literal<compiler::Floating>,
+            expression::Literal<compiler::Character>,
+            expression::Literal<compiler::Boolean>,
+            expression::Literal<utl::Pooled_string>,
             expression::Block,
             expression::Tuple,
             expression::Loop,

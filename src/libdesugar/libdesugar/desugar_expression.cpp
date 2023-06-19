@@ -112,7 +112,7 @@ namespace {
                             },
                             .source_view = this_expression.source_view,
                         }),
-                        .kind                      = hir::expression::Conditional::Source::while_loop_body,
+                        .source                    = hir::expression::Conditional::Source::while_loop_body,
                         .has_explicit_false_branch = true,
                     },
                     .source_view = loop.body->source_view,

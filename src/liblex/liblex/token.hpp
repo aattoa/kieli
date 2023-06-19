@@ -6,21 +6,15 @@
 
 
 namespace kieli {
-    struct Integer   { utl::Usize value {}; };
-    struct Floating  { utl::Float value {}; };
-    struct Boolean   { bool       value {}; };
-    struct Character { char       value {}; };
 
     struct [[nodiscard]] Lexical_token {
         using Variant = std::variant<
             std::monostate,
-            Integer,
-            Floating,
-            Character,
-            Boolean,
-            compiler::String,
-            compiler::Operator,
-            compiler::Identifier>;
+            compiler::Integer,
+            compiler::Floating,
+            compiler::Character,
+            compiler::Boolean,
+            utl::Pooled_string>;
 
         enum class Type {
             error,
@@ -134,13 +128,11 @@ namespace kieli {
                 utl::abort();
         }
 
-        [[nodiscard]] auto as_integer    () const noexcept -> decltype(Integer::value);
-        [[nodiscard]] auto as_floating   () const noexcept -> decltype(Floating::value);
-        [[nodiscard]] auto as_character  () const noexcept -> decltype(Character::value);
-        [[nodiscard]] auto as_boolean    () const noexcept -> decltype(Boolean::value);
-        [[nodiscard]] auto as_string     () const noexcept -> compiler::String;
-        [[nodiscard]] auto as_operator   () const noexcept -> compiler::Operator;
-        [[nodiscard]] auto as_identifier () const noexcept -> compiler::Identifier;
+        [[nodiscard]] auto as_integer  () const noexcept -> decltype(compiler::Integer::value);
+        [[nodiscard]] auto as_floating () const noexcept -> decltype(compiler::Floating::value);
+        [[nodiscard]] auto as_character() const noexcept -> decltype(compiler::Character::value);
+        [[nodiscard]] auto as_boolean  () const noexcept -> decltype(compiler::Boolean::value);
+        [[nodiscard]] auto as_string   () const noexcept -> utl::Pooled_string;
 
         [[nodiscard]] static auto description(Type) noexcept -> std::string_view;
         [[nodiscard]] static auto type_string(Type) noexcept -> std::string_view;
@@ -162,12 +154,5 @@ struct std::formatter<kieli::Lexical_token> : std::formatter<std::string_view> {
             return std::formatter<std::string_view>::format(kieli::Lexical_token::type_string(token.type), context);
         else
             return std::format_to(context.out(), "({}: '{}')", token.type, token.value);
-    }
-};
-
-template <utl::one_of<kieli::Integer, kieli::Floating, kieli::Boolean, kieli::Character> T>
-struct std::formatter<T> : std::formatter<decltype(T::value)> {
-    auto format(T const value_wrapper, auto& context) const {
-        return std::formatter<decltype(T::value)>::format(value_wrapper.value, context);
     }
 };

@@ -6,19 +6,14 @@
 
 
 namespace compiler {
-
-    using String = utl::Pooled_string<struct _string_tag>;
-    using Operator = utl::Pooled_string<struct _operator_tag>;
-    using Identifier = utl::Pooled_string<struct _identifier_tag>;
-
     struct [[nodiscard]] Shared_compilation_info {
         utl::diagnostics::Builder       diagnostics;
         utl::Wrapper_arena<utl::Source> source_arena = utl::Source::Arena::with_page_size(8);
-        String::Pool                    string_literal_pool;
-        Operator::Pool                  operator_pool;
-        Identifier::Pool                identifier_pool;
+        utl::String_pool                string_literal_pool;
+        utl::String_pool                operator_pool;
+        utl::String_pool                identifier_pool;
     };
-    using Compilation_info = utl::Strong<std::shared_ptr<Shared_compilation_info>>;
+    using Compilation_info = utl::Explicit<std::shared_ptr<Shared_compilation_info>>;
 
     struct [[nodiscard]] Compile_arguments {
         std::filesystem::path source_directory_path;
@@ -28,30 +23,34 @@ namespace compiler {
     auto predefinitions_source(Compilation_info&) -> utl::Wrapper<utl::Source>;
     auto mock_compilation_info(utl::diagnostics::Level = utl::diagnostics::Level::suppress) -> Compilation_info;
 
-
     struct [[nodiscard]] Name_upper;
     struct [[nodiscard]] Name_lower;
 
     struct [[nodiscard]] Name_dynamic {
-        compiler::Identifier identifier;
+        utl::Pooled_string   identifier;
         utl::Source_view     source_view;
-        utl::Strong<bool>    is_upper;
+        utl::Explicit<bool>  is_upper;
         auto as_upper() const noexcept -> Name_upper;
         auto as_lower() const noexcept -> Name_lower;
         [[nodiscard]] auto operator==(Name_dynamic const&) const noexcept -> bool;
     };
     struct Name_upper {
-        compiler::Identifier identifier;
-        utl::Source_view     source_view;
+        utl::Pooled_string identifier;
+        utl::Source_view   source_view;
         operator Name_dynamic() const noexcept; // NOLINT: implicit
         [[nodiscard]] auto operator==(Name_upper const&) const noexcept -> bool;
     };
     struct Name_lower {
-        compiler::Identifier identifier;
-        utl::Source_view     source_view;
+        utl::Pooled_string identifier;
+        utl::Source_view   source_view;
         operator Name_dynamic() const noexcept; // NOLINT: implicit
         [[nodiscard]] auto operator==(Name_lower const&) const noexcept -> bool;
     };
+
+    struct Integer   { utl::U64   value {}; };
+    struct Floating  { utl::Float value {}; };
+    struct Boolean   { bool       value {}; };
+    struct Character { char       value {}; };
 
     namespace built_in_type {
         enum class Integer {
@@ -64,12 +63,18 @@ namespace compiler {
         struct Character {};
         struct String    {};
     }
-
 }
 
 template <utl::one_of<compiler::Name_dynamic, compiler::Name_lower, compiler::Name_upper> Name>
-struct std::formatter<Name> : std::formatter<compiler::Identifier> {
+struct std::formatter<Name> : std::formatter<utl::Pooled_string> {
     auto format(Name const& name, auto& context) const {
-        return std::formatter<compiler::Identifier>::format(name.identifier, context);
+        return std::formatter<utl::Pooled_string>::format(name.identifier, context);
+    }
+};
+
+template <utl::one_of<compiler::Integer, compiler::Floating, compiler::Boolean, compiler::Character> T>
+struct std::formatter<T> : std::formatter<decltype(T::value)> {
+    auto format(T const value_wrapper, auto& context) const {
+        return std::formatter<decltype(T::value)>::format(value_wrapper.value, context);
     }
 };

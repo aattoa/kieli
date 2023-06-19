@@ -7,8 +7,8 @@ using namespace libresolve;
 namespace {
 
     struct [[nodiscard]] Loop_info {
-        tl::optional<mir::Type>                    break_return_type;
-        utl::Strong<hir::expression::Loop::Source> loop_source;
+        tl::optional<mir::Type>                      break_return_type;
+        utl::Explicit<hir::expression::Loop::Source> loop_source;
     };
 
     enum class Safety_status { safe, unsafe };
@@ -276,7 +276,7 @@ namespace {
         }
 
 
-        auto try_resolve_local_variable_reference(compiler::Identifier const identifier)
+        auto try_resolve_local_variable_reference(utl::Pooled_string const identifier)
             -> tl::optional<mir::Expression>
         {
             if (auto* const binding = scope.find_variable(identifier)) {
@@ -347,7 +347,7 @@ namespace {
                     context.wrap_type(mir::type::Array {
                         .element_type = element_type,
                         .array_length = context.wrap(mir::Expression {
-                            .value       = mir::expression::Literal<kieli::Integer> { array_length },
+                            .value       = mir::expression::Literal<compiler::Integer> { array_length },
                             .type        = context.size_type(this_expression.source_view),
                             .source_view = this_expression.source_view,
                             .mutability  = context.immut_constant(this_expression.source_view),
@@ -640,7 +640,7 @@ namespace {
             mir::Expression false_branch = recurse(*conditional.false_branch);
 
             if (conditional.has_explicit_false_branch.get()) {
-                switch (conditional.kind.get()) {
+                switch (conditional.source.get()) {
                 case hir::expression::Conditional::Source::normal_conditional:
                     context.solve(constraint::Type_equality {
                         .constrainer_type = true_branch.type,

@@ -18,13 +18,13 @@ namespace {
     {
         auto const first_string = context.previous().as_string();
         if (context.pointer->type != Token_type::string_literal) {
-            return cst::expression::Literal<compiler::String> { first_string };
+            return cst::expression::Literal<utl::Pooled_string> { first_string };
         }
         std::string combined_string { first_string.view() };
         while (Lexical_token const* const token = context.try_extract(Token_type::string_literal)) {
             combined_string += token->as_string().view();
         }
-        return cst::expression::Literal<compiler::String> {
+        return cst::expression::Literal<utl::Pooled_string> {
             context.compilation_info.get()->string_literal_pool.make(combined_string)
         };
     }
@@ -538,13 +538,13 @@ namespace {
     {
         switch (context.extract().type) {
         case Token_type::integer_literal:
-            return extract_literal<kieli::Integer>(context);
+            return extract_literal<compiler::Integer>(context);
         case Token_type::floating_literal:
-            return extract_literal<kieli::Floating>(context);
+            return extract_literal<compiler::Floating>(context);
         case Token_type::character_literal:
-            return extract_literal<kieli::Character>(context);
+            return extract_literal<compiler::Character>(context);
         case Token_type::boolean_literal:
-            return extract_literal<kieli::Boolean>(context);
+            return extract_literal<compiler::Boolean>(context);
         case Token_type::string_literal:
             return extract_string_literal(context);
         case Token_type::lower_name:
@@ -777,11 +777,11 @@ namespace {
 
 
     auto parse_operator(Parse_context& context)
-        -> tl::optional<compiler::Operator>
+        -> tl::optional<utl::Pooled_string>
     {
         switch (context.extract().type) {
         case Token_type::operator_name:
-            return context.previous().as_operator();
+            return context.previous().as_string();
         case Token_type::asterisk:
             return context.asterisk_id;
         case Token_type::plus:

@@ -4,89 +4,47 @@
 
 
 namespace utl {
-
-    template <class Tag>
     class [[nodiscard]] String_pool;
 
-
-    template <class Tag>
     class [[nodiscard]] Pooled_string {
     public:
-        friend struct std::hash<Pooled_string<Tag>>;
-        friend class String_pool<Tag>;
-        using Pool = String_pool<Tag>;
+        friend struct std::hash<Pooled_string>;
+        friend class String_pool;
     private:
         Usize              m_index;
         Usize              m_size;
         std::string const* m_pool;
-
-        explicit constexpr Pooled_string(Usize const index, Usize const size, std::string const* const pool) // NOLINT
-            : m_index { index }, m_size { size }, m_pool { pool } {}
+        explicit Pooled_string(Usize index, Usize size, std::string const* pool); // NOLINT
     public:
-        [[nodiscard]]
-        constexpr auto view() const noexcept -> std::string_view {
-            return { m_pool->c_str() + m_index, m_size };
-        }
-        [[nodiscard]]
-        constexpr auto size() const noexcept -> Usize {
-            return m_size;
-        }
-        [[nodiscard]]
-        auto operator==(Pooled_string const&) const noexcept -> bool = default;
+        [[nodiscard]] auto view() const noexcept -> std::string_view;
+        [[nodiscard]] auto size() const noexcept -> Usize;
+        [[nodiscard]] auto operator==(Pooled_string const&) const -> bool = default;
     };
 
-    template <class Tag> [[nodiscard]]
-    constexpr auto operator==(Pooled_string<Tag> const& left, std::string_view const right) -> bool {
-        return left.view() == right;
-    }
-    template <class Tag> [[nodiscard]]
-    constexpr auto operator==(std::string_view const left, Pooled_string<Tag> const& right) -> bool {
-        return left == right.view();
-    }
-
-
-    template <class Tag>
     class [[nodiscard]] String_pool {
         std::unique_ptr<std::string> m_string;
     public:
-        explicit constexpr String_pool(Usize const initial_capacity)
-            : m_string { std::make_unique<std::string>() }
-        {
-            m_string->reserve(std::max(initial_capacity, sizeof(std::string) + 1));
-        }
-
-        constexpr String_pool()
-            : String_pool { 2048 } {}
-
-        constexpr auto make(std::string_view const string) -> Pooled_string<Tag> {
-            // The searcher overload is faster than the bare iterator overload for some reason
-            auto it = std::search(m_string->begin(), m_string->end(), std::default_searcher { string.begin(), string.end() });
-
-            if (it == m_string->end())
-                return make_guaranteed_new_string(string);
-            else
-                return Pooled_string<Tag> { unsigned_distance(m_string->begin(), it), string.size(), m_string.get() };
-        }
-        constexpr auto make_guaranteed_new_string(std::string_view const string) -> Pooled_string<Tag> {
-            Usize const index = m_string->size();
-            m_string->append(string);
-            return Pooled_string<Tag> { index, string.size(), m_string.get() };
-        }
+        explicit String_pool(Usize initial_capacity);
+        String_pool();
+        auto make                      (std::string_view) -> Pooled_string;
+        auto make_guaranteed_new_string(std::string_view) -> Pooled_string;
     };
 
+    [[nodiscard]] auto operator==(Pooled_string const&, std::string_view) -> bool;
+    [[nodiscard]] auto operator==(std::string_view, Pooled_string const&) -> bool;
 }
 
 
-template <class Tag>
-struct std::formatter<utl::Pooled_string<Tag>> : std::formatter<std::string_view> {
-    auto format(utl::Pooled_string<Tag> const string, auto& context) const {
+template <>
+struct std::formatter<utl::Pooled_string> : std::formatter<std::string_view> {
+    auto format(utl::Pooled_string const string, auto& context) const {
         return std::formatter<std::string_view>::format(string.view(), context);
     }
 };
 
-template <class Tag>
-struct std::hash<utl::Pooled_string<Tag>> {
-    auto operator()(utl::Pooled_string<Tag> const string) const noexcept -> utl::Usize {
+template <>
+struct std::hash<utl::Pooled_string> {
+    auto operator()(utl::Pooled_string const string) const noexcept -> utl::Usize {
         return string.m_index;
     }
 };

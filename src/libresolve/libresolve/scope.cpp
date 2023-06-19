@@ -19,11 +19,11 @@ namespace {
     }
 
     auto add_binding_impl(
-        libresolve::Context      & context,
-        auto                     & bindings,
-        compiler::Identifier const identifier,
-        auto                    && binding,
-        std::string_view     const description)
+        libresolve::Context    & context,
+        auto                   & bindings,
+        utl::Pooled_string const identifier,
+        auto                  && binding,
+        std::string_view   const description)
     {
         // If the name starts with an underscore, then we pretend that the
         // binding has already been mentioned in order to prevent possible warnings.
@@ -56,8 +56,8 @@ namespace {
         }
     }
 
-    template <auto (libresolve::Scope::*find)(compiler::Identifier)>
-    auto find_impl(compiler::Identifier const identifier, auto& bindings, libresolve::Scope* const parent) noexcept
+    template <auto (libresolve::Scope::*find)(utl::Pooled_string)>
+    auto find_impl(utl::Pooled_string const identifier, auto& bindings, libresolve::Scope* const parent) noexcept
         -> decltype(bindings.find(identifier))
     {
         if (auto* const binding = bindings.find(identifier))
@@ -68,23 +68,23 @@ namespace {
 }
 
 
-auto libresolve::Scope::bind_variable(Context& context, compiler::Identifier const identifier, Variable_binding&& binding) -> void {
+auto libresolve::Scope::bind_variable(Context& context, utl::Pooled_string const identifier, Variable_binding&& binding) -> void {
     add_binding_impl(context, variable_bindings.container(), identifier, binding, "variable");
 }
-auto libresolve::Scope::bind_type(Context& context, compiler::Identifier const identifier, Type_binding&& binding) -> void {
+auto libresolve::Scope::bind_type(Context& context, utl::Pooled_string const identifier, Type_binding&& binding) -> void {
     add_binding_impl(context, type_bindings.container(), identifier, binding, "type binding");
 }
-auto libresolve::Scope::bind_mutability(Context& context, compiler::Identifier const identifier, Mutability_binding&& binding) -> void {
+auto libresolve::Scope::bind_mutability(Context& context, utl::Pooled_string const identifier, Mutability_binding&& binding) -> void {
     add_binding_impl(context, mutability_bindings.container(), identifier, binding, "mutability binding");
 }
 
-auto libresolve::Scope::find_variable(compiler::Identifier const identifier) noexcept -> Variable_binding* {
+auto libresolve::Scope::find_variable(utl::Pooled_string const identifier) noexcept -> Variable_binding* {
     return find_impl<&Scope::find_variable>(identifier, variable_bindings, parent);
 }
-auto libresolve::Scope::find_type(compiler::Identifier const identifier) noexcept -> Type_binding* {
+auto libresolve::Scope::find_type(utl::Pooled_string const identifier) noexcept -> Type_binding* {
     return find_impl<&Scope::find_type>(identifier, type_bindings, parent);
 }
-auto libresolve::Scope::find_mutability(compiler::Identifier const identifier) noexcept -> Mutability_binding* {
+auto libresolve::Scope::find_mutability(utl::Pooled_string const identifier) noexcept -> Mutability_binding* {
     return find_impl<&Scope::find_mutability>(identifier, mutability_bindings, parent);
 }
 

@@ -11,7 +11,7 @@ namespace libdesugar {
     struct Desugar_context {
         compiler::Compilation_info compilation_info;
         hir::Node_arena            node_arena;
-        compiler::Identifier       self_variable_identifier = compilation_info.get()->identifier_pool.make("self");
+        utl::Pooled_string         self_variable_identifier = compilation_info.get()->identifier_pool.make("self");
 
         explicit Desugar_context(
             compiler::Compilation_info&& compilation_info,

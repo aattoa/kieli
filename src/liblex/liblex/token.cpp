@@ -77,13 +77,11 @@ namespace {
 
 static_assert(std::is_trivially_copyable_v<kieli::Lexical_token>);
 
-auto kieli::Lexical_token::as_integer   () const noexcept -> decltype(Integer::value)   { return value_as<Integer>().value; }
-auto kieli::Lexical_token::as_floating  () const noexcept -> decltype(Floating::value)  { return value_as<Floating>().value; }
-auto kieli::Lexical_token::as_character () const noexcept -> decltype(Character::value) { return value_as<Character>().value; }
-auto kieli::Lexical_token::as_boolean   () const noexcept -> decltype(Boolean::value)   { return value_as<Boolean>().value; }
-auto kieli::Lexical_token::as_string    () const noexcept -> compiler::String           { return value_as<compiler::String>(); }
-auto kieli::Lexical_token::as_operator  () const noexcept -> compiler::Operator         { return value_as<compiler::Operator>(); }
-auto kieli::Lexical_token::as_identifier() const noexcept -> compiler::Identifier       { return value_as<compiler::Identifier>(); }
+auto kieli::Lexical_token::as_integer  () const noexcept -> decltype(compiler::Integer::value)   { return value_as<compiler::Integer>().value; }
+auto kieli::Lexical_token::as_floating () const noexcept -> decltype(compiler::Floating::value)  { return value_as<compiler::Floating>().value; }
+auto kieli::Lexical_token::as_character() const noexcept -> decltype(compiler::Character::value) { return value_as<compiler::Character>().value; }
+auto kieli::Lexical_token::as_boolean  () const noexcept -> decltype(compiler::Boolean::value)   { return value_as<compiler::Boolean>().value; }
+auto kieli::Lexical_token::as_string   () const noexcept -> utl::Pooled_string                   { return value_as<utl::Pooled_string>(); }
 
 
 auto kieli::Lexical_token::description(Type const type)

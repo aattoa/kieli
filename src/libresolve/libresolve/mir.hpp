@@ -122,14 +122,14 @@ template <> struct dtl::To_HIR_impl<name> : std::type_identity<hir::definition::
     class [[nodiscard]] Mutability {
     public:
         struct Concrete {
-            utl::Strong<bool> is_mutable;
+            utl::Explicit<bool> is_mutable;
         };
         struct Variable {
             utl::Wrapper<Unification_mutability_variable_state> state;
         };
         struct Parameterized {
             // The identifier serves no purpose other than debuggability
-            compiler::Identifier   identifier;
+            utl::Pooled_string     identifier;
             Template_parameter_tag tag;
         };
         using Variant = std::variant<Concrete, Variable, Parameterized>;
@@ -205,7 +205,7 @@ template <> struct dtl::To_HIR_impl<name> : std::type_identity<hir::definition::
         };
         struct Template_parameter_reference {
             // The identifier serves no purpose other than debuggability
-            utl::Strong<tl::optional<compiler::Identifier>> identifier;
+            utl::Explicit<tl::optional<utl::Pooled_string>> identifier;
             Template_parameter_tag                          tag;
         };
     }
@@ -282,8 +282,8 @@ template <> struct dtl::To_HIR_impl<name> : std::type_identity<hir::definition::
             utl::Wrapper<Expression> matched_expression;
         };
         struct Local_variable_reference {
-            Local_variable_tag   tag;
-            compiler::Identifier identifier;
+            Local_variable_tag tag;
+            utl::Pooled_string identifier;
         };
         struct Struct_initializer {
             std::vector<Expression> initializers;
@@ -342,11 +342,11 @@ template <> struct dtl::To_HIR_impl<name> : std::type_identity<hir::definition::
 
     struct Expression {
         using Variant = std::variant<
-            expression::Literal<kieli::Integer>,
-            expression::Literal<kieli::Floating>,
-            expression::Literal<kieli::Character>,
-            expression::Literal<kieli::Boolean>,
-            expression::Literal<compiler::String>,
+            expression::Literal<compiler::Integer>,
+            expression::Literal<compiler::Floating>,
+            expression::Literal<compiler::Character>,
+            expression::Literal<compiler::Boolean>,
+            expression::Literal<utl::Pooled_string>,
             expression::Array_literal,
             expression::Tuple,
             expression::Loop,
@@ -391,9 +391,9 @@ template <> struct dtl::To_HIR_impl<name> : std::type_identity<hir::definition::
     };
 
     struct [[nodiscard]] Self_parameter {
-        mir::Mutability   mutability;
-        utl::Strong<bool> is_reference;
-        utl::Source_view  source_view;
+        mir::Mutability     mutability;
+        utl::Explicit<bool> is_reference;
+        utl::Source_view    source_view;
     };
 
     struct Function {
@@ -416,7 +416,7 @@ template <> struct dtl::To_HIR_impl<name> : std::type_identity<hir::definition::
         struct Member { // NOLINT
             compiler::Name_lower name;
             Type                 type;
-            utl::Strong<bool>    is_public;
+            utl::Explicit<bool>  is_public;
         };
         std::vector<Member>                 members;
         compiler::Name_upper                name;
@@ -445,15 +445,15 @@ template <> struct dtl::To_HIR_impl<name> : std::type_identity<hir::definition::
             Type_signature                       type_signature;
             std::vector<mir::Template_parameter> template_parameters;
         };
-        utl::Flatmap<compiler::Identifier, Function::Signature> function_signatures;
-        utl::Flatmap<compiler::Identifier, Type_signature>      type_signatures;
-        compiler::Name_upper                                    name;
+        utl::Flatmap<utl::Pooled_string, Function::Signature> function_signatures;
+        utl::Flatmap<utl::Pooled_string, Type_signature>      type_signatures;
+        compiler::Name_upper                                  name;
     };
     using Typeclass_template = Template<Typeclass>;
 
     struct Implementation {
         template <utl::instance_of<libresolve::Definition_info> Info>
-        using Map = utl::Flatmap<compiler::Identifier, utl::Wrapper<Info>>;
+        using Map = utl::Flatmap<utl::Pooled_string, utl::Wrapper<Info>>;
 
         struct Definitions {
             Map<libresolve::Function_info>        functions;
@@ -486,9 +486,9 @@ template <> struct dtl::To_HIR_impl<name> : std::type_identity<hir::definition::
             T value;
         };
         struct Name {
-            Local_variable_tag   variable_tag;
-            compiler::Identifier identifier;
-            Mutability           mutability;
+            Local_variable_tag variable_tag;
+            utl::Pooled_string identifier;
+            Mutability         mutability;
         };
         struct Tuple {
             std::vector<Pattern> field_patterns;
@@ -512,11 +512,11 @@ template <> struct dtl::To_HIR_impl<name> : std::type_identity<hir::definition::
 
     struct Pattern {
         using Variant = std::variant<
-            pattern::Literal<kieli::Integer>,
-            pattern::Literal<kieli::Floating>,
-            pattern::Literal<kieli::Character>,
-            pattern::Literal<kieli::Boolean>,
-            pattern::Literal<compiler::String>,
+            pattern::Literal<compiler::Integer>,
+            pattern::Literal<compiler::Floating>,
+            pattern::Literal<compiler::Character>,
+            pattern::Literal<compiler::Boolean>,
+            pattern::Literal<utl::Pooled_string>,
             pattern::Wildcard,
             pattern::Name,
             pattern::Tuple,
@@ -525,9 +525,9 @@ template <> struct dtl::To_HIR_impl<name> : std::type_identity<hir::definition::
             pattern::As,
             pattern::Guarded>;
 
-        Variant           value;
-        utl::Strong<bool> is_exhaustive_by_itself;
-        utl::Source_view  source_view;
+        Variant             value;
+        utl::Explicit<bool> is_exhaustive_by_itself;
+        utl::Source_view    source_view;
     };
 
 
@@ -580,9 +580,9 @@ template <> struct dtl::To_HIR_impl<name> : std::type_identity<hir::definition::
             Type solution;
         };
         struct Unsolved {
-            Unification_variable_tag                    tag;
-            utl::Strong<Unification_type_variable_kind> kind;
-            std::vector<Class_reference>                classes;
+            Unification_variable_tag                      tag;
+            utl::Explicit<Unification_type_variable_kind> kind;
+            std::vector<Class_reference>                  classes;
         };
     private:
         std::variant<Solved, Unsolved> m_value;

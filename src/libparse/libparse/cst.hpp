@@ -233,7 +233,7 @@ namespace cst {
         };
         struct Binary_operator_invocation_sequence {
             struct Operator_and_operand {
-                compiler::Operator       operator_name;
+                utl::Pooled_string       operator_name;
                 Token                    operator_token;
                 utl::Wrapper<Expression> right_operand;
             };
@@ -381,11 +381,11 @@ namespace cst {
     struct Expression {
         using Variant = std::variant<
             expression::Parenthesized,
-            expression::Literal<kieli::Integer>,
-            expression::Literal<kieli::Floating>,
-            expression::Literal<kieli::Character>,
-            expression::Literal<kieli::Boolean>,
-            expression::Literal<compiler::String>,
+            expression::Literal<compiler::Integer>,
+            expression::Literal<compiler::Floating>,
+            expression::Literal<compiler::Character>,
+            expression::Literal<compiler::Boolean>,
+            expression::Literal<utl::Pooled_string>,
             expression::Array_literal,
             expression::Self,
             expression::Variable,
@@ -476,11 +476,11 @@ namespace cst {
     struct Pattern {
         using Variant = std::variant<
             pattern::Parenthesized,
-            pattern::Literal<kieli::Integer>,
-            pattern::Literal<kieli::Floating>,
-            pattern::Literal<kieli::Character>,
-            pattern::Literal<kieli::Boolean>,
-            pattern::Literal<compiler::String>,
+            pattern::Literal<compiler::Integer>,
+            pattern::Literal<compiler::Floating>,
+            pattern::Literal<compiler::Character>,
+            pattern::Literal<compiler::Boolean>,
+            pattern::Literal<utl::Pooled_string>,
             pattern::Wildcard,
             pattern::Name,
             pattern::Constructor,
@@ -603,7 +603,7 @@ namespace cst {
             struct Member {
                 compiler::Name_lower name;
                 Type_annotation      type;
-                utl::Strong<bool>    is_public;
+                utl::Explicit<bool>  is_public;
                 utl::Source_view     source_view;
             };
             tl::optional<Template_parameters> template_parameters;
@@ -684,9 +684,9 @@ namespace cst {
     using Node_arena = utl::Wrapper_arena<Expression, Type, Pattern>;
 
     struct [[nodiscard]] Module {
-        std::vector<Definition>        definitions;
-        tl::optional<compiler::String> name;
-        std::vector<compiler::String>  imports;
+        std::vector<Definition>          definitions;
+        tl::optional<utl::Pooled_string> name;
+        std::vector<utl::Pooled_string>  imports;
     };
 
 

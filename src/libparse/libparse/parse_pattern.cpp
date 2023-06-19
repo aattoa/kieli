@@ -153,15 +153,15 @@ namespace {
         case Token_type::underscore:
             return extract_wildcard(context);
         case Token_type::integer_literal:
-            return extract_literal<kieli::Integer>(context);
+            return extract_literal<compiler::Integer>(context);
         case Token_type::floating_literal:
-            return extract_literal<kieli::Floating>(context);
+            return extract_literal<compiler::Floating>(context);
         case Token_type::character_literal:
-            return extract_literal<kieli::Character>(context);
+            return extract_literal<compiler::Character>(context);
         case Token_type::boolean_literal:
-            return extract_literal<kieli::Boolean>(context);
+            return extract_literal<compiler::Boolean>(context);
         case Token_type::string_literal:
-            return extract_literal<compiler::String>(context);
+            return extract_literal<utl::Pooled_string>(context);
         case Token_type::paren_open:
             return extract_tuple(context);
         case Token_type::bracket_open:

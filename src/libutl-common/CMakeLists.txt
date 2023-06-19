@@ -4,6 +4,7 @@ target_sources(libutl-common
     PRIVATE libutl/common/flatmap.hpp
     PRIVATE libutl/common/libutl-common.cpp
     PRIVATE libutl/common/noisy.hpp
+    PRIVATE libutl/common/pooled_string.cpp
     PRIVATE libutl/common/pooled_string.hpp
     PRIVATE libutl/common/safe_integer.hpp
     PRIVATE libutl/common/timer.hpp

@@ -187,10 +187,10 @@ auto libdesugar::Desugar_context::wildcard_pattern(utl::Source_view const view) 
     return wrap(hir::Pattern { .value = hir::pattern::Wildcard {}, .source_view = view});
 }
 auto libdesugar::Desugar_context::true_pattern(utl::Source_view const view) -> utl::Wrapper<hir::Pattern> {
-    return wrap(hir::Pattern { .value = hir::pattern::Literal<kieli::Boolean> { true }, .source_view = view });
+    return wrap(hir::Pattern { .value = hir::pattern::Literal<compiler::Boolean> { true }, .source_view = view });
 }
 auto libdesugar::Desugar_context::false_pattern(utl::Source_view const view) -> utl::Wrapper<hir::Pattern> {
-    return wrap(hir::Pattern { .value = hir::pattern::Literal<kieli::Boolean> { false }, .source_view = view });
+    return wrap(hir::Pattern { .value = hir::pattern::Literal<compiler::Boolean> { false }, .source_view = view });
 }
 
 
