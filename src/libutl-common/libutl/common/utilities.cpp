@@ -16,12 +16,12 @@ utl::Safe_cast_invalid_argument::Safe_cast_invalid_argument()
     : invalid_argument { "utl::safe_cast argument out of target range" } {}
 
 utl::Exception::Exception(std::string&& message) noexcept
-    : message { std::move(message) }
+    : m_message { std::move(message) }
 {
-    disable_short_string_optimization(this->message);
+    disable_short_string_optimization(m_message);
 }
 auto utl::Exception::what() const noexcept -> const char* {
-    return message.c_str();
+    return m_message.c_str();
 }
 
 auto utl::abort(std::string_view const message, std::source_location const caller) -> void {
