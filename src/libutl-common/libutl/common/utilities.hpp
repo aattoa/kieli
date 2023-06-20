@@ -72,7 +72,6 @@ namespace utl {
     using Char  = char;
     using Float = double;
 
-
     template <class From, class To>
     concept losslessly_convertible_to = requires {
         requires std::integral<From> && std::integral<To>;
@@ -83,7 +82,6 @@ namespace utl {
             std::numeric_limits<From>::max(),
             std::numeric_limits<To>::max());
     };
-
 
     struct Safe_cast_invalid_argument : std::invalid_argument {
         Safe_cast_invalid_argument();
@@ -105,6 +103,20 @@ namespace utl {
                 throw Safe_cast_invalid_argument {};
         }
     }
+
+    template <Usize length>
+    struct [[nodiscard]] Metastring {
+        char characters[length];
+        consteval Metastring(char const* pointer) noexcept { // NOLINT: implicit
+            std::copy_n(pointer, length, characters);
+        }
+        [[nodiscard]]
+        consteval auto view() const noexcept -> std::string_view {
+            return { characters, length - 1 };
+        }
+    };
+    template <Usize length>
+    Metastring(char const(&)[length]) -> Metastring<length>;
 }
 
 
@@ -122,9 +134,10 @@ namespace utl::inline literals {
     consteval auto operator""_uz(unsigned long long const n) noexcept { return safe_cast<Usize>(n); }
     consteval auto operator""_iz(unsigned long long const n) noexcept { return safe_cast<Isize>(n); }
 
-    consteval auto operator""_format(char const* const s, Usize const n) noexcept {
-        return [fmt = std::string_view(s, n)](auto const&... args) -> std::string {
-            return std::vformat(fmt, std::make_format_args(args...));
+    template <Metastring string>
+    consteval auto operator""_format() noexcept {
+        return [](auto const&... args) -> std::string {
+            return std::format(string.view(), args...);
         };
     }
 }
@@ -219,7 +232,7 @@ namespace utl {
 
 
     class [[nodiscard]] Exception : public std::exception {
-        std::string message;
+        std::string m_message;
     public:
         explicit Exception(std::string&& message) noexcept;
         [[nodiscard]]
@@ -228,7 +241,7 @@ namespace utl {
 
     template <class... Args>
     auto exception(std::format_string<Args...> const fmt, Args&&... args) -> Exception {
-        return Exception { std::vformat(fmt.get(), std::make_format_args(args...))};
+        return Exception { std::format(fmt, std::forward<Args>(args)...) };
     }
 
     template <class... Args>
@@ -556,23 +569,6 @@ namespace utl {
     auto hash_combine(hashable auto const&... args) -> Usize {
         return hash_combine_with_seed(0, args...);
     }
-
-
-    template <Usize length>
-    struct [[nodiscard]] Metastring {
-        char characters[length];
-
-        consteval Metastring(char const* pointer) noexcept { // NOLINT: implicit
-            std::copy_n(pointer, length, characters);
-        }
-        [[nodiscard]]
-        consteval auto view() const noexcept -> std::string_view {
-            return { characters, length - 1 };
-        }
-    };
-
-    template <Usize length>
-    Metastring(char const(&)[length]) -> Metastring<length>;
 
 
     namespace formatting {
