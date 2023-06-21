@@ -103,9 +103,6 @@ namespace {
 }
 
 
-// Tokens -> AST -> HIR -> MIR -> CIR -> LIR -> Bytecode
-
-
 auto main(int argc, char const** argv) -> int try {
     cli::Options_description description;
     description.add_options()

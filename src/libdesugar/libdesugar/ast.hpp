@@ -20,7 +20,7 @@
 */
 
 
-namespace hir {
+namespace ast {
     struct [[nodiscard]] Expression;
     struct [[nodiscard]] Type;
     struct [[nodiscard]] Pattern;
@@ -527,20 +527,20 @@ namespace hir {
     };
 
 
-    auto format_to(hir::Expression         const&, std::string&) -> void;
-    auto format_to(hir::Pattern            const&, std::string&) -> void;
-    auto format_to(hir::Type               const&, std::string&) -> void;
-    auto format_to(hir::Mutability         const&, std::string&) -> void;
-    auto format_to(hir::Qualified_name     const&, std::string&) -> void;
-    auto format_to(hir::Class_reference    const&, std::string&) -> void;
-    auto format_to(hir::Template_parameter const&, std::string&) -> void;
-    auto format_to(hir::Template_argument  const&, std::string&) -> void;
+    auto format_to(Expression         const&, std::string&) -> void;
+    auto format_to(Pattern            const&, std::string&) -> void;
+    auto format_to(Type               const&, std::string&) -> void;
+    auto format_to(Mutability         const&, std::string&) -> void;
+    auto format_to(Qualified_name     const&, std::string&) -> void;
+    auto format_to(Class_reference    const&, std::string&) -> void;
+    auto format_to(Template_parameter const&, std::string&) -> void;
+    auto format_to(Template_argument  const&, std::string&) -> void;
 
     auto to_string(auto const& x) -> std::string
-        requires requires { hir::format_to(x, std::declval<std::string&>()); }
+        requires requires (std::string out) { ast::format_to(x, out); }
     {
         std::string output;
-        hir::format_to(x, output);
+        ast::format_to(x, output);
         return output;
     }
 

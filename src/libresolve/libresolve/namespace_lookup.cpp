@@ -26,14 +26,14 @@ namespace {
         Context                                & context,
         Scope                                  & scope,
         Namespace                              & space,
-        tl::optional<hir::Root_qualifier> const& qualifier) -> utl::Pair<Lookup_strategy, Namespace*>
+        tl::optional<ast::Root_qualifier> const& qualifier) -> utl::Pair<Lookup_strategy, Namespace*>
     {
         if (qualifier.has_value()) {
             return utl::match(qualifier->value,
-                [&](hir::Root_qualifier::Global) {
+                [&](ast::Root_qualifier::Global) {
                     return utl::Pair { Lookup_strategy::absolute, &*context.global_namespace };
                 },
-                [&](utl::Wrapper<hir::Type> type) {
+                [&](utl::Wrapper<ast::Type> type) {
                     return utl::Pair { Lookup_strategy::absolute, &*context.associated_namespace(context.resolve_type(*type, scope, space)) };
                 });
         }
@@ -46,7 +46,7 @@ namespace {
         Context       & context,
         Scope         & scope,
         Namespace     & space,
-        hir::Qualifier& qualifier) -> Namespace*
+        ast::Qualifier& qualifier) -> Namespace*
     {
         if (qualifier.name.is_upper.get()) {
             if (auto* const item = space.upper_table.find(qualifier.name.identifier)) {
@@ -128,7 +128,7 @@ namespace {
         Context       & context,
         Scope         & scope,
         Namespace     & space,
-        hir::Qualifier& qualifier) -> Namespace*
+        ast::Qualifier& qualifier) -> Namespace*
     {
         Namespace* target = &space;
         for (;;) {
@@ -146,10 +146,10 @@ namespace {
         Context                       & context,
         Scope                         & scope,
         Namespace                     & space,
-        std::span<hir::Qualifier> const qualifiers) -> Namespace*
+        std::span<ast::Qualifier> const qualifiers) -> Namespace*
     {
         Namespace* target = &space;
-        for (hir::Qualifier& qualifier : qualifiers) {
+        for (ast::Qualifier& qualifier : qualifiers) {
             if (Namespace* const new_target = apply_qualifier(context, scope, *target, qualifier))
                 target = new_target;
             else
@@ -164,14 +164,14 @@ namespace {
         Context            & context,
         Scope              & scope,
         Namespace          & space,
-        hir::Qualified_name& name) -> typename std::remove_cvref_t<decltype(space.*table)>::mapped_type
+        ast::Qualified_name& name) -> typename std::remove_cvref_t<decltype(space.*table)>::mapped_type
     {
         auto const primary = name.primary_name;
 
         auto [lookup_strategy, root] = // NOLINT
             apply_root_qualifier(context, scope, space, name.root_qualifier);
 
-        std::span<hir::Qualifier> qualifiers = name.middle_qualifiers;
+        std::span<ast::Qualifier> qualifiers = name.middle_qualifiers;
 
         if (lookup_strategy == Lookup_strategy::relative) {
             if (qualifiers.empty()) {
@@ -203,11 +203,11 @@ namespace {
 }
 
 
-auto libresolve::Context::find_lower(hir::Qualified_name& name, Scope& scope, Namespace& space) -> Lower_variant {
+auto libresolve::Context::find_lower(ast::Qualified_name& name, Scope& scope, Namespace& space) -> Lower_variant {
     assert(!name.primary_name.is_upper.get());
     return do_lookup<&Namespace::lower_table>(*this, scope, space, name);
 }
-auto libresolve::Context::find_upper(hir::Qualified_name& name, Scope& scope, Namespace& space) -> Upper_variant {
+auto libresolve::Context::find_upper(ast::Qualified_name& name, Scope& scope, Namespace& space) -> Upper_variant {
     assert(name.primary_name.is_upper.get());
     return do_lookup<&Namespace::upper_table>(*this, scope, space, name);
 }

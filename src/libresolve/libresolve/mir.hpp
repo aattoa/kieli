@@ -3,15 +3,14 @@
 #include <libutl/common/utilities.hpp>
 #include <libutl/common/wrapper.hpp>
 #include <libutl/source/source.hpp>
-#include <libdesugar/hir.hpp>
-
+#include <libdesugar/ast.hpp>
 
 /*
 
     The Mid-level Intermediate Representation (MIR) is the first intermediate
     program representation that is fully typed. It contains abstract
     information concerning generics, type variables, and other details
-    relevant to the type-system. It is produced by resolving the HIR.
+    relevant to the type-system. It is produced by resolving the AST.
 
 */
 
@@ -24,11 +23,11 @@ namespace libresolve {
     template <class>
     struct Definition_info;
 
-    using Function_info = Definition_info<hir::definition::Function>;
+    using Function_info = Definition_info<ast::definition::Function>;
 
 #define DEFINE_INFO_NAME(name) \
-using name##_info          = Definition_info<hir::definition::name>; \
-using name##_template_info = Definition_info<hir::definition::name##_template>
+using name##_info          = Definition_info<ast::definition::name>; \
+using name##_template_info = Definition_info<ast::definition::name##_template>
     DEFINE_INFO_NAME(Struct);
     DEFINE_INFO_NAME(Enum);
     DEFINE_INFO_NAME(Alias);
@@ -54,30 +53,30 @@ namespace mir {
     struct Template;
 
     namespace dtl {
-        template <class> struct From_HIR_impl;
-        template <class> struct To_HIR_impl;
+        template <class> struct From_AST_impl;
+        template <class> struct To_AST_impl;
     }
-    template <class T> using From_HIR = typename dtl::From_HIR_impl<T>::type;
-    template <class T> using To_HIR = typename dtl::To_HIR_impl<T>::type;
+    template <class T> using From_AST = typename dtl::From_AST_impl<T>::type;
+    template <class T> using To_AST = typename dtl::To_AST_impl<T>::type;
 
-#define IMPL_TO_FROM_HIR(name) \
-template <> struct dtl::From_HIR_impl<hir::definition::name> : std::type_identity<name> {}; \
-template <> struct dtl::To_HIR_impl<name> : std::type_identity<hir::definition::name> {}
-    IMPL_TO_FROM_HIR(Function);
-    IMPL_TO_FROM_HIR(Struct);
-    IMPL_TO_FROM_HIR(Enum);
-    IMPL_TO_FROM_HIR(Alias);
-    IMPL_TO_FROM_HIR(Typeclass);
-    IMPL_TO_FROM_HIR(Implementation);
-    IMPL_TO_FROM_HIR(Instantiation);
-#undef IMPL_TO_FROM_HIR
+#define IMPL_TO_FROM_AST(name) \
+template <> struct dtl::From_AST_impl<ast::definition::name> : std::type_identity<name> {}; \
+template <> struct dtl::To_AST_impl<name> : std::type_identity<ast::definition::name> {}
+    IMPL_TO_FROM_AST(Function);
+    IMPL_TO_FROM_AST(Struct);
+    IMPL_TO_FROM_AST(Enum);
+    IMPL_TO_FROM_AST(Alias);
+    IMPL_TO_FROM_AST(Typeclass);
+    IMPL_TO_FROM_AST(Implementation);
+    IMPL_TO_FROM_AST(Instantiation);
+#undef IMPL_TO_FROM_AST
 
     template <class Definition>
-    struct dtl::From_HIR_impl<hir::definition::Template<Definition>>
-        : std::type_identity<Template<From_HIR<Definition>>> {};
+    struct dtl::From_AST_impl<ast::definition::Template<Definition>>
+        : std::type_identity<Template<From_AST<Definition>>> {};
     template <class Definition>
-    struct dtl::To_HIR_impl<Template<Definition>>
-        : std::type_identity<hir::definition::Template<To_HIR<Definition>>> {};
+    struct dtl::To_AST_impl<Template<Definition>>
+        : std::type_identity<ast::definition::Template<To_AST<Definition>>> {};
 
 
     struct [[nodiscard]] Expression;
@@ -387,7 +386,7 @@ template <> struct dtl::To_HIR_impl<name> : std::type_identity<hir::definition::
     struct Template {
         Definition                                                                 definition;
         std::vector<Template_parameter>                                            parameters;
-        std::vector<utl::Wrapper<libresolve::Definition_info<To_HIR<Definition>>>> instantiations;
+        std::vector<utl::Wrapper<libresolve::Definition_info<To_AST<Definition>>>> instantiations;
     };
 
     struct [[nodiscard]] Self_parameter {
@@ -538,7 +537,7 @@ template <> struct dtl::To_HIR_impl<name> : std::type_identity<hir::definition::
     };
 
     struct Template_default_argument {
-        hir::Template_argument             argument;
+        ast::Template_argument             argument;
         std::shared_ptr<libresolve::Scope> scope; // FIXME: shared ptr used just for copyability
     };
 

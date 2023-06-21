@@ -12,7 +12,7 @@ namespace kieli {
         compiler::Compilation_info compilation_info;
         mir::Node_arena            node_arena;
         mir::Namespace_arena       namespace_arena;
-        hir::Node_arena            hir_node_arena; // FIXME: the HIR has to be kept alive because MIR template parameters store the HIR representation of their default arguments
+        ast::Node_arena            ast_node_arena; // FIXME: the AST has to be kept alive because MIR template parameters store the AST representation of their default arguments
         std::vector<mir::Function> functions;
     };
 

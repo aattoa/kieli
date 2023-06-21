@@ -79,7 +79,7 @@ namespace {
 
 auto libresolve::Context::resolve_method(
     compiler::Name_lower                                  const method_name,
-    tl::optional<std::span<hir::Template_argument const>> const template_arguments,
+    tl::optional<std::span<ast::Template_argument const>> const template_arguments,
     mir::Type                                             const type,
     Scope                                                     & scope,
     Namespace                                                 & space) -> utl::Wrapper<Function_info>

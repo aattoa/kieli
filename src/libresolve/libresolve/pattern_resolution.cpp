@@ -9,10 +9,10 @@ namespace {
         Context     & context;
         Scope       & scope;
         Namespace   & space;
-        hir::Pattern& this_pattern;
+        ast::Pattern& this_pattern;
         mir::Type     matched_type;
 
-        auto recurse(hir::Pattern& pattern, mir::Type const type) -> mir::Pattern {
+        auto recurse(ast::Pattern& pattern, mir::Type const type) -> mir::Pattern {
             return context.resolve_pattern(pattern, type, scope, space);
         }
 
@@ -32,7 +32,7 @@ namespace {
         }
 
 
-        auto operator()(hir::pattern::Wildcard) -> mir::Pattern {
+        auto operator()(ast::pattern::Wildcard) -> mir::Pattern {
             return {
                 .value                   = mir::pattern::Wildcard {},
                 .is_exhaustive_by_itself = true,
@@ -41,7 +41,7 @@ namespace {
         }
 
         template <class T>
-        auto operator()(hir::pattern::Literal<T>& literal) -> mir::Pattern {
+        auto operator()(ast::pattern::Literal<T>& literal) -> mir::Pattern {
             solve_pattern_type_constraint(context.literal_type<T>(this_pattern.source_view));
             return {
                 .value                   = mir::pattern::Literal<T> { literal.value },
@@ -50,7 +50,7 @@ namespace {
             };
         }
 
-        auto operator()(hir::pattern::Name& name) -> mir::Pattern {
+        auto operator()(ast::pattern::Name& name) -> mir::Pattern {
             mir::Mutability const mutability = context.resolve_mutability(name.mutability, scope);
             auto const variable_tag = context.fresh_local_variable_tag();
 
@@ -73,10 +73,10 @@ namespace {
             };
         }
 
-        auto operator()(hir::pattern::Tuple& tuple) -> mir::Pattern {
+        auto operator()(ast::pattern::Tuple& tuple) -> mir::Pattern {
             mir::Type const mir_tuple_type {
                 context.wrap_type(mir::type::Tuple {
-                    .field_types = utl::map([&](hir::Pattern& pattern) {
+                    .field_types = utl::map([&](ast::Pattern& pattern) {
                         return context.fresh_general_unification_type_variable(pattern.source_view);
                     }, tuple.field_patterns)
                 }),
@@ -103,7 +103,7 @@ namespace {
             };
         }
 
-        auto operator()(hir::pattern::Alias& alias) -> mir::Pattern {
+        auto operator()(ast::pattern::Alias& alias) -> mir::Pattern {
             mir::Pattern          aliased_pattern = recurse(*alias.aliased_pattern, matched_type);
             mir::Mutability const mutability      = context.resolve_mutability(alias.alias_mutability, scope);
 
@@ -120,14 +120,14 @@ namespace {
 
         auto handle_constructor_pattern(
             mir::Enum_constructor                    const constructor,
-            tl::optional<utl::Wrapper<hir::Pattern>> const hir_payload_pattern) -> mir::Pattern
+            tl::optional<utl::Wrapper<ast::Pattern>> const ast_payload_pattern) -> mir::Pattern
         {
             solve_pattern_type_constraint(constructor.enum_type);
             tl::optional<mir::Pattern> mir_payload_pattern;
 
-            if (hir_payload_pattern.has_value()) {
+            if (ast_payload_pattern.has_value()) {
                 if (constructor.payload_type.has_value()) {
-                    mir_payload_pattern = recurse(*utl::get(hir_payload_pattern), *constructor.payload_type);
+                    mir_payload_pattern = recurse(*utl::get(ast_payload_pattern), *constructor.payload_type);
                 }
                 else {
                     context.error(this_pattern.source_view, {
@@ -158,8 +158,8 @@ namespace {
             };
         }
 
-        auto operator()(hir::pattern::Constructor& hir_constructor) -> mir::Pattern {
-            return utl::match(context.find_lower(hir_constructor.constructor_name, scope, space),
+        auto operator()(ast::pattern::Constructor& ast_constructor) -> mir::Pattern {
+            return utl::match(context.find_lower(ast_constructor.constructor_name, scope, space),
                 [&](utl::Wrapper<Function_info>) -> mir::Pattern {
                     context.error(this_pattern.source_view, { "Expected a constructor, but found a function" });
                 },
@@ -167,23 +167,23 @@ namespace {
                     context.error(this_pattern.source_view, { "Expected a constructor, but found a namespace" });
                 },
                 [&](mir::Enum_constructor constructor) -> mir::Pattern {
-                    return handle_constructor_pattern(constructor, hir_constructor.payload_pattern);
+                    return handle_constructor_pattern(constructor, ast_constructor.payload_pattern);
                 });
         }
 
-        auto operator()(hir::pattern::Abbreviated_constructor& hir_constructor) -> mir::Pattern {
+        auto operator()(ast::pattern::Abbreviated_constructor& ast_constructor) -> mir::Pattern {
             if (auto const* const enumeration_ptr = std::get_if<mir::type::Enumeration>(&*matched_type.flattened_value())) {
                 mir::Enum& enumeration = context.resolve_enum(enumeration_ptr->info);
-                auto const it = ranges::find(enumeration.constructors, hir_constructor.constructor_name, &mir::Enum_constructor::name);
+                auto const it = ranges::find(enumeration.constructors, ast_constructor.constructor_name, &mir::Enum_constructor::name);
                 if (it == enumeration.constructors.end()) {
-                    context.error(hir_constructor.constructor_name.source_view, {
+                    context.error(ast_constructor.constructor_name.source_view, {
                         .message = std::format(
                             "{} does not have a constructor '{}'",
                             mir::to_string(matched_type),
-                            hir_constructor.constructor_name),
+                            ast_constructor.constructor_name),
                     });
                 }
-                return handle_constructor_pattern(*it, hir_constructor.payload_pattern);
+                return handle_constructor_pattern(*it, ast_constructor.payload_pattern);
             }
             else if (std::holds_alternative<mir::type::Unification_variable>(*matched_type.pure_value())) {
                 context.error(this_pattern.source_view, {
@@ -199,7 +199,7 @@ namespace {
             });
         }
 
-        auto operator()(hir::pattern::Slice& slice) -> mir::Pattern {
+        auto operator()(ast::pattern::Slice& slice) -> mir::Pattern {
             mir::Type const element_type = context.fresh_general_unification_type_variable(this_pattern.source_view);
 
             solve_pattern_type_constraint(mir::Type {
@@ -211,7 +211,7 @@ namespace {
 
             return {
                 .value = mir::pattern::Slice {
-                    .element_patterns = utl::map([&](hir::Pattern& element_pattern) {
+                    .element_patterns = utl::map([&](ast::Pattern& element_pattern) {
                         return recurse(element_pattern, element_type);
                     }, slice.element_patterns),
                 },
@@ -220,7 +220,7 @@ namespace {
             };
         }
 
-        auto operator()(hir::pattern::Guarded& guarded) -> mir::Pattern {
+        auto operator()(ast::pattern::Guarded& guarded) -> mir::Pattern {
             mir::Pattern    guarded_pattern = recurse(*guarded.guarded_pattern, matched_type);
             mir::Expression guard           = context.resolve_expression(guarded.guard, scope, space);
 
@@ -246,6 +246,6 @@ namespace {
 }
 
 
-auto libresolve::Context::resolve_pattern(hir::Pattern& pattern, mir::Type const type, Scope& scope, Namespace& space) -> mir::Pattern {
+auto libresolve::Context::resolve_pattern(ast::Pattern& pattern, mir::Type const type, Scope& scope, Namespace& space) -> mir::Pattern {
     return std::visit(Pattern_resolution_visitor { *this, scope, space, pattern, type }, pattern.value);
 }

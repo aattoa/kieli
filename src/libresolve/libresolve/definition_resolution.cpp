@@ -51,15 +51,15 @@ namespace {
     auto resolve_function_parameters(
         Context                                & context,
         Allow_generalization               const allow_generalization,
-        std::span<hir::Function_parameter> const hir_parameters,
+        std::span<ast::Function_parameter> const ast_parameters,
         std::vector<mir::Template_parameter>   & template_parameters,
         Scope                                    signature_scope,
         Namespace                              & home_namespace) -> utl::Pair<Scope, std::vector<mir::Function_parameter>>
     {
         std::vector<mir::Function_parameter> mir_parameters;
-        mir_parameters.reserve(hir_parameters.size());
+        mir_parameters.reserve(ast_parameters.size());
 
-        for (hir::Function_parameter& parameter : hir_parameters) {
+        for (ast::Function_parameter& parameter : ast_parameters) {
             if (!parameter.type.has_value())
                 context.error(parameter.pattern->source_view, { "Implicit parameter types are not supported yet" });
             if (parameter.default_argument.has_value())
@@ -86,10 +86,10 @@ namespace {
     }
 
 
-    auto resolve_self_parameter(Context& context, Scope& scope, tl::optional<hir::Self_parameter> const& self)
+    auto resolve_self_parameter(Context& context, Scope& scope, tl::optional<ast::Self_parameter> const& self)
         -> tl::optional<mir::Self_parameter>
     {
-        return self.transform([&](hir::Self_parameter const& self) {
+        return self.transform([&](ast::Self_parameter const& self) {
             return mir::Self_parameter {
                 .mutability   = context.resolve_mutability(self.mutability, scope),
                 .is_reference = self.is_reference,
@@ -128,13 +128,13 @@ namespace {
     auto resolve_function_signature_only(
         Context                                            & context,
         Namespace                                          & space,
-        hir::Function_signature                           && signature,
-        tl::optional<std::vector<hir::Template_parameter>>&& hir_template_parameters,
+        ast::Function_signature                           && signature,
+        tl::optional<std::vector<ast::Template_parameter>>&& ast_template_parameters,
         Allow_generalization                           const allow_generalization) -> utl::Pair<Scope, mir::Function::Signature>
     {
         auto [template_parameter_scope, mir_template_parameters] = std::invoke([&] {
-            if (hir_template_parameters.has_value())
-                return context.resolve_template_parameters(*hir_template_parameters, space);
+            if (ast_template_parameters.has_value())
+                return context.resolve_template_parameters(*ast_template_parameters, space);
             else
                 return utl::Pair { Scope {}, std::vector<mir::Template_parameter> {} };
         });
@@ -168,15 +168,15 @@ namespace {
     auto resolve_function_signature_impl(
         Context                              & context,
         Function_info                        & function_info,
-        hir::definition::Function           && function,
-        std::vector<hir::Template_parameter>&& hir_template_parameters) -> void
+        ast::definition::Function           && function,
+        std::vector<ast::Template_parameter>&& ast_template_parameters) -> void
     {
         Definition_state_guard const state_guard { context, function_info.state, function.signature.name };
         bool const has_explicit_return_type = function.signature.return_type.has_value();
         auto const name = function.signature.name;
 
         auto [signature_scope, signature] =
-            resolve_function_signature_only(context, *function_info.home_namespace, std::move(function.signature), std::move(hir_template_parameters), Allow_generalization::yes);
+            resolve_function_signature_only(context, *function_info.home_namespace, std::move(function.signature), std::move(ast_template_parameters), Allow_generalization::yes);
 
         if (has_explicit_return_type) {
             context.generalize_to(signature.return_type, signature.template_parameters);
@@ -231,7 +231,7 @@ namespace {
 
 
     auto resolve_struct_impl(
-        hir::definition::Struct& structure,
+        ast::definition::Struct& structure,
         Context                & context,
         Scope                    scope,
         utl::Wrapper<Namespace>  home_namespace) -> mir::Struct
@@ -242,7 +242,7 @@ namespace {
             .associated_namespace = context.wrap(Namespace { .parent = home_namespace })
         };
 
-        for (hir::definition::Struct::Member& member : structure.members) {
+        for (ast::definition::Struct::Member& member : structure.members) {
             mir::Type const member_type = context.resolve_type(member.type, scope, *home_namespace);
             context.ensure_non_generalizable(member_type, "A struct member");
             mir_structure.members.push_back({
@@ -257,7 +257,7 @@ namespace {
 
 
     auto resolve_enum_impl(
-        hir::definition::Enum & ,
+        ast::definition::Enum & ,
         Context               & ,
         Scope                   ,
         utl::Wrapper<Namespace> ,
@@ -272,7 +272,7 @@ namespace {
 auto libresolve::Context::resolve_function_signature(Function_info& info)
     -> mir::Function::Signature&
 {
-    if (auto* const function = std::get_if<hir::definition::Function>(&info.value))
+    if (auto* const function = std::get_if<ast::definition::Function>(&info.value))
         resolve_function_signature_impl(*this, info, std::move(*function), {});
     
     if (auto* const function = std::get_if<Partially_resolved_function>(&info.value))
@@ -300,7 +300,7 @@ auto libresolve::Context::resolve_function(utl::Wrapper<Function_info> const wra
 auto libresolve::Context::resolve_struct(utl::Wrapper<Struct_info> const wrapped_info) -> mir::Struct& {
     Struct_info& info = *wrapped_info;
 
-    if (auto* const structure = std::get_if<hir::definition::Struct>(&info.value)) {
+    if (auto* const structure = std::get_if<ast::definition::Struct>(&info.value)) {
         Definition_state_guard const state_guard { *this, info.state, structure->name };
         info.value = resolve_struct_impl(*structure, *this, Scope {}, info.home_namespace);
     }
@@ -312,7 +312,7 @@ auto libresolve::Context::resolve_struct(utl::Wrapper<Struct_info> const wrapped
 auto libresolve::Context::resolve_enum(utl::Wrapper<Enum_info> const wrapped_info) -> mir::Enum& {
     Enum_info& info = *wrapped_info;
 
-    if (auto* const enumeration = std::get_if<hir::definition::Enum>(&info.value)) {
+    if (auto* const enumeration = std::get_if<ast::definition::Enum>(&info.value)) {
         Definition_state_guard const state_guard { *this, info.state, enumeration->name };
         info.value = resolve_enum_impl(*enumeration, *this, Scope {}, info.home_namespace, info.enumeration_type);
     }
@@ -324,7 +324,7 @@ auto libresolve::Context::resolve_enum(utl::Wrapper<Enum_info> const wrapped_inf
 auto libresolve::Context::resolve_alias(utl::Wrapper<Alias_info> const wrapped_info) -> mir::Alias& {
     Alias_info& info = *wrapped_info;
 
-    if (auto* const alias = std::get_if<hir::definition::Alias>(&info.value)) {
+    if (auto* const alias = std::get_if<ast::definition::Alias>(&info.value)) {
         Definition_state_guard const state_guard { *this, info.state, alias->name };
         Scope scope;
         mir::Type const aliased_type = resolve_type(alias->type, scope, *info.home_namespace);
@@ -342,15 +342,15 @@ auto libresolve::Context::resolve_alias(utl::Wrapper<Alias_info> const wrapped_i
 auto libresolve::Context::resolve_typeclass(utl::Wrapper<Typeclass_info> const wrapped_info) -> mir::Typeclass& {
     Typeclass_info& info = *wrapped_info;
 
-    if (auto* const hir_typeclass = std::get_if<hir::definition::Typeclass>(&info.value)) {
-        utl::always_assert(hir_typeclass->type_signatures.empty());
+    if (auto* const ast_typeclass = std::get_if<ast::definition::Typeclass>(&info.value)) {
+        utl::always_assert(ast_typeclass->type_signatures.empty());
 
-        Definition_state_guard const state_guard { *this, info.state, hir_typeclass->name };
+        Definition_state_guard const state_guard { *this, info.state, ast_typeclass->name };
         Self_type_guard const self_type_guard { *this, self_placeholder_type(info.name.source_view) };
 
         mir::Typeclass mir_typeclass { .name = info.name };
 
-        auto handle_signature = [&](hir::Function_signature&& signature, tl::optional<std::vector<hir::Template_parameter>>&& template_parameters) {
+        auto handle_signature = [&](ast::Function_signature&& signature, tl::optional<std::vector<ast::Template_parameter>>&& template_parameters) {
             // Should be guaranteed by the parser
             utl::always_assert(signature.return_type.has_value());
 
@@ -364,7 +364,7 @@ auto libresolve::Context::resolve_typeclass(utl::Wrapper<Typeclass_info> const w
             mir_typeclass.function_signatures.add_new_or_abort(identifier, std::move(mir_signature));
         };
 
-        for (hir::Function_signature& signature : hir_typeclass->function_signatures)
+        for (ast::Function_signature& signature : ast_typeclass->function_signatures)
             handle_signature(std::move(signature), tl::nullopt);
 
         info.value = std::move(mir_typeclass);
@@ -377,7 +377,7 @@ auto libresolve::Context::resolve_typeclass(utl::Wrapper<Typeclass_info> const w
 auto libresolve::Context::resolve_implementation(utl::Wrapper<Implementation_info> const wrapped_info) -> mir::Implementation& {
     Implementation_info& info = *wrapped_info;
 
-    if (auto* const implementation = std::get_if<hir::definition::Implementation>(&info.value)) {
+    if (auto* const implementation = std::get_if<ast::definition::Implementation>(&info.value)) {
         // Definition_state_guard is not needed because an implementation block can not be referred to
 
         Scope scope;
@@ -395,11 +395,11 @@ auto libresolve::Context::resolve_implementation(utl::Wrapper<Implementation_inf
         Self_type_guard const self_type_guard { *this, self_type };
         mir::Implementation::Definitions definitions;
 
-        for (hir::Definition& definition : implementation->definitions) {
+        for (ast::Definition& definition : implementation->definitions) {
             // TODO: deduplicate
 
             utl::match(definition.value,
-                [&](hir::definition::Function& function) {
+                [&](ast::definition::Function& function) {
                     auto const name = function.signature.name;
                     auto function_info = wrap(Function_info {
                         .value          = std::move(function),
@@ -437,7 +437,7 @@ auto libresolve::Context::resolve_struct_template(utl::Wrapper<Struct_template_i
 {
     Struct_template_info& info = *wrapped_info;
 
-    if (auto* const structure = std::get_if<hir::definition::Struct_template>(&info.value)) {
+    if (auto* const structure = std::get_if<ast::definition::Struct_template>(&info.value)) {
         Definition_state_guard const state_guard { *this, info.state, info.name };
 
         auto [scope, parameters] = // NOLINT
@@ -461,7 +461,7 @@ auto libresolve::Context::resolve_enum_template(utl::Wrapper<Enum_template_info>
 {
     Enum_template_info& info = *wrapped_info;
 
-    if (auto* const enumeration = std::get_if<hir::definition::Enum_template>(&info.value)) {
+    if (auto* const enumeration = std::get_if<ast::definition::Enum_template>(&info.value)) {
         Definition_state_guard const state_guard { *this, info.state, info.name };
 
         auto [template_parameter_scope, template_parameters] =
@@ -487,7 +487,7 @@ auto libresolve::Context::resolve_alias_template(utl::Wrapper<Alias_template_inf
 {
     Alias_template_info& info = *wrapped_info;
 
-    if (auto* const alias_template = std::get_if<hir::definition::Alias_template>(&info.value)) {
+    if (auto* const alias_template = std::get_if<ast::definition::Alias_template>(&info.value)) {
         Definition_state_guard const state_guard { *this, info.state, info.name };
 
         auto [template_parameter_scope, template_parameters] =

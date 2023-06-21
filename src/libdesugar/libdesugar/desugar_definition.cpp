@@ -11,10 +11,10 @@ namespace {
         template <class Definition>
         auto definition(
             Definition&&                                  definition,
-            tl::optional<cst::Template_parameters> const& parameters) const -> hir::Definition::Variant
+            tl::optional<cst::Template_parameters> const& parameters) const -> ast::Definition::Variant
         {
             if (parameters.has_value()) {
-                return hir::definition::Template<std::remove_reference_t<Definition>> {
+                return ast::definition::Template<std::remove_reference_t<Definition>> {
                     .definition = std::forward<Definition>(definition),
                     .parameters = utl::map(context.desugar(), parameters->value.elements),
                 };
@@ -23,9 +23,9 @@ namespace {
         }
 
         auto operator()(cst::definition::Function const& function)
-            -> hir::Definition::Variant
+            -> ast::Definition::Variant
         {
-            std::vector<hir::Function_parameter> parameters;
+            std::vector<ast::Function_parameter> parameters;
             if (function.signature.function_parameters.self_parameter.has_value())
                 parameters.push_back(context.normalize_self_parameter(*function.signature.function_parameters.self_parameter));
 
@@ -34,17 +34,17 @@ namespace {
                 std::back_inserter(parameters));
 
             // Convert function bodies defined with shorthand syntax into blocks
-            hir::Expression function_body = context.desugar(*function.body);
-            if (!std::holds_alternative<hir::expression::Block>(function_body.value)) {
-                function_body.value = hir::expression::Block {
-                    .result_expression = context.wrap(hir::Expression {
+            ast::Expression function_body = context.desugar(*function.body);
+            if (!std::holds_alternative<ast::expression::Block>(function_body.value)) {
+                function_body.value = ast::expression::Block {
+                    .result_expression = context.wrap(ast::Expression {
                         .value       = std::move(function_body.value),
                         .source_view = function_body.source_view,
                     })
                 };
             }
 
-            return hir::definition::Function {
+            return ast::definition::Function {
                 .signature {
                     .function_parameters = std::move(parameters),
                     .self_parameter      = function.signature.function_parameters.self_parameter.transform(context.desugar()),
@@ -56,10 +56,10 @@ namespace {
         }
 
         auto operator()(cst::definition::Struct const& structure)
-            -> hir::Definition::Variant
+            -> ast::Definition::Variant
         {
             auto const desugar_member = [this](cst::definition::Struct::Member const& member)
-                -> hir::definition::Struct::Member
+                -> ast::definition::Struct::Member
             {
                 return {
                     .name        = member.name,
@@ -69,7 +69,7 @@ namespace {
                 };
             };
             return definition(
-                hir::definition::Struct {
+                ast::definition::Struct {
                     .members = utl::map(desugar_member, structure.members.elements),
                     .name    = structure.name,
                 },
@@ -77,15 +77,15 @@ namespace {
         }
 
         auto operator()(cst::definition::Enum const& enumeration)
-            -> hir::Definition::Variant
+            -> ast::Definition::Variant
         {
             auto const desugar_constructor = [this](cst::definition::Enum::Constructor const&)
-                -> hir::definition::Enum::Constructor
+                -> ast::definition::Enum::Constructor
             {
                 utl::todo();
             };
             return definition(
-                hir::definition::Enum {
+                ast::definition::Enum {
                     .constructors = utl::map(desugar_constructor, enumeration.constructors.elements),
                     .name         = enumeration.name,
                 },
@@ -93,10 +93,10 @@ namespace {
         }
 
         auto operator()(cst::definition::Alias const& alias)
-            -> hir::Definition::Variant
+            -> ast::Definition::Variant
         {
             return definition(
-                hir::definition::Alias {
+                ast::definition::Alias {
                     .name = alias.name,
                     .type = context.desugar(*alias.type),
                 },
@@ -104,10 +104,10 @@ namespace {
         }
 
         auto operator()(cst::definition::Typeclass const& typeclass)
-            -> hir::Definition::Variant
+            -> ast::Definition::Variant
         {
             return definition(
-                hir::definition::Typeclass {
+                ast::definition::Typeclass {
                     .function_signatures = utl::map(context.desugar(), typeclass.function_signatures),
                     .type_signatures     = utl::map(context.desugar(), typeclass.type_signatures),
                     .name                = typeclass.name,
@@ -116,10 +116,10 @@ namespace {
         }
 
         auto operator()(cst::definition::Implementation const& implementation)
-            -> hir::Definition::Variant
+            -> ast::Definition::Variant
         {
             return definition(
-                hir::definition::Implementation {
+                ast::definition::Implementation {
                     .type        = context.desugar(*implementation.self_type),
                     .definitions = utl::map(context.desugar(), implementation.definitions),
                 },
@@ -127,10 +127,10 @@ namespace {
         }
 
         auto operator()(cst::definition::Instantiation const& instantiation)
-            -> hir::Definition::Variant
+            -> ast::Definition::Variant
         {
             return definition(
-                hir::definition::Instantiation {
+                ast::definition::Instantiation {
                     .typeclass   = context.desugar(instantiation.typeclass),
                     .self_type   = context.desugar(*instantiation.self_type),
                     .definitions = utl::map(context.desugar(), instantiation.definitions),
@@ -139,10 +139,10 @@ namespace {
         }
 
         auto operator()(cst::definition::Namespace const& space)
-            -> hir::Definition::Variant
+            -> ast::Definition::Variant
         {
             return definition(
-                hir::definition::Namespace {
+                ast::definition::Namespace {
                     .definitions = utl::map(context.desugar(), space.definitions),
                     .name        = space.name,
                 },
@@ -152,10 +152,10 @@ namespace {
 }
 
 
-auto libdesugar::Desugar_context::desugar(cst::Definition const& definition) -> hir::Definition {
+auto libdesugar::Desugar_context::desugar(cst::Definition const& definition) -> ast::Definition {
     utl::always_assert(!definition.value.valueless_by_exception());
     return {
-        std::visit<hir::Definition::Variant>(Definition_desugaring_visitor { *this }, definition.value),
+        std::visit<ast::Definition::Variant>(Definition_desugaring_visitor { *this }, definition.value),
         definition.source_view,
     };
 }

@@ -177,16 +177,16 @@ auto libresolve::Context::add_to_namespace(Namespace& space, compiler::Name_uppe
 }
 
 
-auto libresolve::Context::resolve_mutability(hir::Mutability const& mutability, Scope& scope)
+auto libresolve::Context::resolve_mutability(ast::Mutability const& mutability, Scope& scope)
     -> mir::Mutability
 {
     return utl::match(mutability.value,
-        [&](hir::Mutability::Concrete const concrete) {
+        [&](ast::Mutability::Concrete const concrete) {
             return concrete.is_mutable.get()
                 ? mut_constant(mutability.source_view)
                 : immut_constant(mutability.source_view);
         },
-        [&](hir::Mutability::Parameterized const parameterized) {
+        [&](ast::Mutability::Parameterized const parameterized) {
             if (auto* const mutability_binding = scope.find_mutability(parameterized.name.identifier)) {
                 mutability_binding->has_been_mentioned = true;
                 return mutability_binding->mutability.with(mutability.source_view);
@@ -198,7 +198,7 @@ auto libresolve::Context::resolve_mutability(hir::Mutability const& mutability, 
 
 
 auto libresolve::Context::resolve_class_reference(
-    hir::Class_reference& reference,
+    ast::Class_reference& reference,
     Scope               & scope,
     Namespace           & space) -> mir::Class_reference
 {
@@ -214,23 +214,23 @@ auto libresolve::Context::resolve_class_reference(
 
 
 auto libresolve::Context::resolve_template_parameters(
-    std::span<hir::Template_parameter> const hir_parameters,
+    std::span<ast::Template_parameter> const ast_parameters,
     Namespace                              & space) -> utl::Pair<Scope, std::vector<mir::Template_parameter>>
 {
     Scope parameter_scope;
-    auto  parameters = utl::vector_with_capacity<mir::Template_parameter>(hir_parameters.size());
+    auto  parameters = utl::vector_with_capacity<mir::Template_parameter>(ast_parameters.size());
 
-    for (hir::Template_parameter& parameter : hir_parameters) {
+    for (ast::Template_parameter& parameter : ast_parameters) {
         auto const reference_tag = fresh_template_parameter_reference_tag();
 
         auto const add_parameter = [&](mir::Template_parameter::Variant&& value) {
-            auto const make_default_argument = [&](hir::Template_argument&& default_argument) {
+            auto const make_default_argument = [&](ast::Template_argument&& default_argument) {
                 // Validate the default argument by resolving it here, but discard the result
                 utl::match(default_argument.value,
-                        [&](utl::Wrapper<hir::Type>       const type_argument)       { (void)resolve_type(*type_argument, parameter_scope, space); },
-                        [&](utl::Wrapper<hir::Expression> const value_argument)      { (void)resolve_expression(*value_argument, parameter_scope, space); },
-                        [&](hir::Mutability               const mutability_argument) { (void)resolve_mutability(mutability_argument, parameter_scope); },
-                        [&](hir::Template_argument::Wildcard) {});
+                        [&](utl::Wrapper<ast::Type>       const type_argument)       { (void)resolve_type(*type_argument, parameter_scope, space); },
+                        [&](utl::Wrapper<ast::Expression> const value_argument)      { (void)resolve_expression(*value_argument, parameter_scope, space); },
+                        [&](ast::Mutability               const mutability_argument) { (void)resolve_mutability(mutability_argument, parameter_scope); },
+                        [&](ast::Template_argument::Wildcard) {});
                 return mir::Template_default_argument {
                     .argument = std::move(default_argument),
                     .scope    = std::make_unique<Scope>(parameter_scope),
@@ -245,7 +245,7 @@ auto libresolve::Context::resolve_template_parameters(
         };
 
         utl::match(parameter.value,
-            [&](hir::Template_parameter::Type_parameter& type_parameter) {
+            [&](ast::Template_parameter::Type_parameter& type_parameter) {
                 parameter_scope.bind_type(*this, type_parameter.name.identifier, {
                     .type = mir::Type {
                         wrap_type(mir::type::Template_parameter_reference {
@@ -256,14 +256,14 @@ auto libresolve::Context::resolve_template_parameters(
                     },
                     .source_view = parameter.source_view,
                 });
-                auto const resolve_class = [&](hir::Class_reference& reference) {
+                auto const resolve_class = [&](ast::Class_reference& reference) {
                     return resolve_class_reference(reference, parameter_scope, space);
                 };
                 add_parameter(mir::Template_parameter::Type_parameter {
                     .classes = utl::map(resolve_class, type_parameter.classes)
                 });
             },
-            [&](hir::Template_parameter::Mutability_parameter& mutability_parameter) {
+            [&](ast::Template_parameter::Mutability_parameter& mutability_parameter) {
                 parameter_scope.bind_mutability(*this, mutability_parameter.name.identifier, {
                     .mutability = mir::Mutability {
                         wrap(mir::Mutability::Variant {
@@ -280,7 +280,7 @@ auto libresolve::Context::resolve_template_parameters(
                     .name = mutability_parameter.name,
                 });
             },
-            [](hir::Template_parameter::Value_parameter&) {
+            [](ast::Template_parameter::Value_parameter&) {
                 utl::todo();
             }
         );

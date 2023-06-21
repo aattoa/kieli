@@ -9,13 +9,13 @@ namespace {
         Context  & context;
         Scope    & scope;
         Namespace& space;
-        hir::Type& this_type;
+        ast::Type& this_type;
 
-        auto recurse(hir::Type& type) -> mir::Type {
+        auto recurse(ast::Type& type) -> mir::Type {
             return context.resolve_type(type, scope, space);
         }
         auto recurse() noexcept {
-            return [this](hir::Type& type) -> mir::Type {
+            return [this](ast::Type& type) -> mir::Type {
                 return recurse(type);
             };
         }
@@ -42,7 +42,7 @@ namespace {
             return context.boolean_type(this_type.source_view);
         }
 
-        auto operator()(hir::type::Self&) -> mir::Type {
+        auto operator()(ast::type::Self&) -> mir::Type {
             if (context.current_self_type.has_value())
                 return *context.current_self_type;
             context.error(this_type.source_view, {
@@ -50,7 +50,7 @@ namespace {
             });
         }
 
-        auto operator()(hir::type::Tuple& tuple) -> mir::Type {
+        auto operator()(ast::type::Tuple& tuple) -> mir::Type {
             if (tuple.field_types.empty())
                 return context.unit_type(this_type.source_view);
             return mir::Type {
@@ -59,7 +59,7 @@ namespace {
             };
         }
 
-        auto operator()(hir::type::Array& array) -> mir::Type {
+        auto operator()(ast::type::Array& array) -> mir::Type {
             mir::Type const element_type = recurse(*array.element_type);
             mir::Expression length = context.resolve_expression(*array.array_length, scope, space);
 
@@ -81,12 +81,12 @@ namespace {
             };
         }
 
-        auto operator()(hir::type::Typeof& typeof_) -> mir::Type {
+        auto operator()(ast::type::Typeof& typeof_) -> mir::Type {
             auto child_scope = scope.make_child();
             return context.resolve_expression(*typeof_.inspected_expression, child_scope, space).type.with(this_type.source_view);
         }
 
-        auto operator()(hir::type::Typename& type) -> mir::Type {
+        auto operator()(ast::type::Typename& type) -> mir::Type {
             if (type.name.is_unqualified()) {
                 if (auto* const binding = scope.find_type(type.name.primary_name.identifier)) {
                     binding->has_been_mentioned = true;
@@ -137,7 +137,7 @@ namespace {
                 });
         }
 
-        auto operator()(hir::type::Reference& reference) -> mir::Type {
+        auto operator()(ast::type::Reference& reference) -> mir::Type {
             return mir::Type {
                 context.wrap_type(mir::type::Reference {
                     .mutability      = context.resolve_mutability(reference.mutability, scope),
@@ -147,7 +147,7 @@ namespace {
             };
         }
 
-        auto operator()(hir::type::Pointer& pointer) -> mir::Type {
+        auto operator()(ast::type::Pointer& pointer) -> mir::Type {
             return mir::Type {
                 context.wrap_type(mir::type::Pointer {
                     .mutability      = context.resolve_mutability(pointer.mutability, scope),
@@ -157,7 +157,7 @@ namespace {
             };
         }
 
-        auto operator()(hir::type::Function& function) -> mir::Type {
+        auto operator()(ast::type::Function& function) -> mir::Type {
             return mir::Type {
                 context.wrap_type(mir::type::Function {
                     .parameter_types = utl::map(recurse(), function.argument_types),
@@ -167,7 +167,7 @@ namespace {
             };
         }
 
-        auto operator()(hir::type::Template_application& application) -> mir::Type {
+        auto operator()(ast::type::Template_application& application) -> mir::Type {
             return utl::match(context.find_upper(application.name, scope, space),
                 [&](utl::Wrapper<Struct_template_info> const info) -> mir::Type {
                     return mir::Type {
@@ -205,7 +205,7 @@ namespace {
             );
         }
 
-        auto operator()(hir::type::Wildcard) {
+        auto operator()(ast::type::Wildcard) {
             return context.fresh_general_unification_type_variable(this_type.source_view);
         }
 
@@ -216,6 +216,6 @@ namespace {
 }
 
 
-auto libresolve::Context::resolve_type(hir::Type& type, Scope& scope, Namespace& space) -> mir::Type {
+auto libresolve::Context::resolve_type(ast::Type& type, Scope& scope, Namespace& space) -> mir::Type {
     return std::visit(Type_resolution_visitor { *this, scope, space, type }, type.value);
 }
