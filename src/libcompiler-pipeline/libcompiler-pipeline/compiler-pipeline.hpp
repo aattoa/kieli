@@ -62,6 +62,8 @@ namespace compiler {
         struct Boolean   {};
         struct Character {};
         struct String    {};
+
+        auto integer_string(Integer) noexcept -> std::string_view;
     }
 }
 
