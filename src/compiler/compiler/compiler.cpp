@@ -48,7 +48,7 @@ auto compiler::compile(Compile_arguments&& compile_arguments) -> Compilation_res
 
     kieli::Desugar_result combined_desugar_result {
         .compilation_info = compilation_info,
-        .node_arena = hir::Node_arena::with_default_page_size(),
+        .node_arena = ast::Node_arena::with_default_page_size(),
     };
 
     combined_desugar_result.module.definitions.reserve(

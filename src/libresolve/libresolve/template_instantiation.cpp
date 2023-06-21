@@ -140,30 +140,30 @@ namespace {
         Scope                        & scope,
         Namespace                    & space,
         mir::Template_parameter const& parameter,
-        hir::Template_argument  const& argument,
+        ast::Template_argument  const& argument,
         utl::Source_view        const  instantiation_view) -> mir::Template_argument
     {
         return std::visit(utl::Overload {
-            [&](mir::Template_parameter::Type_parameter const& type_parameter, utl::Wrapper<hir::Type> const type_argument) {
+            [&](mir::Template_parameter::Type_parameter const& type_parameter, utl::Wrapper<ast::Type> const type_argument) {
                 if (!type_parameter.classes.empty()) { utl::todo(); }
                 return mir::Template_argument { context.resolve_type(*type_argument, scope, space) };
             },
-            [&](mir::Template_parameter::Type_parameter const& type_parameter, hir::Template_argument::Wildcard const wildcard) {
+            [&](mir::Template_parameter::Type_parameter const& type_parameter, ast::Template_argument::Wildcard const wildcard) {
                 utl::wrapper auto const state = context.fresh_unification_type_variable_state(mir::Unification_type_variable_kind::general);
                 state->as_unsolved().classes = type_parameter.classes;
                 return mir::Template_argument { mir::Type { context.wrap_type(mir::type::Unification_variable { .state = state }), wildcard.source_view } };
             },
-            [&](mir::Template_parameter::Mutability_parameter, hir::Mutability const mutability_argument) {
+            [&](mir::Template_parameter::Mutability_parameter, ast::Mutability const mutability_argument) {
                 return mir::Template_argument { context.resolve_mutability(mutability_argument, scope) };
             },
-            [&](mir::Template_parameter::Mutability_parameter, hir::Template_argument::Wildcard const wildcard) {
+            [&](mir::Template_parameter::Mutability_parameter, ast::Template_argument::Wildcard const wildcard) {
                 return mir::Template_argument { context.fresh_unification_mutability_variable(wildcard.source_view) };
             },
             [&](auto const&, auto const&) -> mir::Template_argument {
                 context.error(instantiation_view, {
                     .message = std::format(
                         "Argument {} is incompatible with parameter {}",
-                        hir::to_string(argument),
+                        ast::to_string(argument),
                         mir::to_string(parameter))
                 });
             },
@@ -176,7 +176,7 @@ namespace {
         Namespace                                    & space,
         std::vector<mir::Template_argument>          & output_arguments,
         std::span<mir::Template_parameter const> const parameters,
-        std::span<hir::Template_argument  const> const arguments,
+        std::span<ast::Template_argument  const> const arguments,
         utl::Source_view                         const instantiation_view) -> void
     {
         utl::always_assert(parameters.size() == arguments.size());
@@ -217,7 +217,7 @@ namespace {
         Namespace                                    & instantiation_space,
         Namespace                                    & template_space,
         std::span<mir::Template_parameter const> const parameters,
-        std::span<hir::Template_argument  const> const arguments,
+        std::span<ast::Template_argument  const> const arguments,
         std::string_view                         const template_name,
         utl::Source_view                         const instantiation_view) -> std::vector<mir::Template_argument>
     {
@@ -856,11 +856,11 @@ namespace {
 
     [[nodiscard]]
     auto synthetize_arguments_for(std::span<mir::Template_parameter const> const parameters, utl::Source_view const argument_view)
-        -> std::vector<hir::Template_argument>
+        -> std::vector<ast::Template_argument>
     {
         return std::vector(
             ranges::count_if(parameters, std::not_fn(&mir::Template_parameter::is_implicit)),
-            hir::Template_argument { hir::Template_argument::Wildcard { argument_view } });
+            ast::Template_argument { ast::Template_argument::Wildcard { argument_view } });
     }
 
 }
@@ -868,7 +868,7 @@ namespace {
 
 auto libresolve::Context::instantiate_function_template(
     utl::Wrapper<Function_info>             const template_info,
-    std::span<hir::Template_argument const> const template_arguments,
+    std::span<ast::Template_argument const> const template_arguments,
     utl::Source_view                        const instantiation_view,
     Scope                                       & scope,
     Namespace                                   & space) -> utl::Wrapper<Function_info>
@@ -901,7 +901,7 @@ auto libresolve::Context::instantiate_function_template(
 
 auto libresolve::Context::instantiate_struct_template(
     utl::Wrapper<Struct_template_info>      const template_info,
-    std::span<hir::Template_argument const> const template_arguments,
+    std::span<ast::Template_argument const> const template_arguments,
     utl::Source_view                        const instantiation_view,
     Scope                                       & scope,
     Namespace                                   & space) -> utl::Wrapper<Struct_info>
@@ -927,7 +927,7 @@ auto libresolve::Context::instantiate_struct_template(
 
 auto libresolve::Context::instantiate_enum_template(
     utl::Wrapper<Enum_template_info>        const template_info,
-    std::span<hir::Template_argument const> const template_arguments,
+    std::span<ast::Template_argument const> const template_arguments,
     utl::Source_view                        const instantiation_view,
     Scope                                       & scope,
     Namespace                                   & space) -> utl::Wrapper<Enum_info>
@@ -953,7 +953,7 @@ auto libresolve::Context::instantiate_enum_template(
 
 auto libresolve::Context::instantiate_alias_template(
     utl::Wrapper<Alias_template_info>       const template_info,
-    std::span<hir::Template_argument const> const template_arguments,
+    std::span<ast::Template_argument const> const template_arguments,
     utl::Source_view                        const instantiation_view,
     Scope                                       & scope,
     Namespace                                   & space) -> utl::Wrapper<Alias_info>

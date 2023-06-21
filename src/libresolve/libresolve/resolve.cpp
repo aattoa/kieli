@@ -10,7 +10,7 @@ namespace {
     // Collect top-level name information
     auto register_namespace(
         Context&                         context,
-        std::span<hir::Definition> const definitions,
+        std::span<ast::Definition> const definitions,
         utl::Wrapper<Namespace>    const space) -> void
     {
         space->definitions_in_order.reserve(definitions.size());
@@ -20,11 +20,11 @@ namespace {
             space->definitions_in_order.push_back(definition);
         };
 
-        for (hir::Definition& definition : definitions) {
+        for (ast::Definition& definition : definitions) {
             utl::match(definition.value,
-                [&](hir::definition::Function& function) {
+                [&](ast::definition::Function& function) {
                     // compiler::desugar should convert all function bodies to block form
-                    utl::always_assert(std::holds_alternative<hir::expression::Block>(function.body.value));
+                    utl::always_assert(std::holds_alternative<ast::expression::Block>(function.body.value));
 
                     auto const name = function.signature.name;
                     auto const info = context.wrap(Function_info {
@@ -35,7 +35,7 @@ namespace {
                     context.output_functions.push_back(info);
                     add_definition(info);
                 },
-                [&](hir::definition::Alias& alias) {
+                [&](ast::definition::Alias& alias) {
                     auto const name = alias.name;
                     add_definition(context.wrap(Alias_info {
                         .value          = std::move(alias),
@@ -43,7 +43,7 @@ namespace {
                         .name           = name,
                     }));
                 },
-                [&](hir::definition::Typeclass& typeclass) {
+                [&](ast::definition::Typeclass& typeclass) {
                     auto const name = typeclass.name;
                     add_definition(context.wrap(Typeclass_info {
                         .value          = std::move(typeclass),
@@ -51,7 +51,7 @@ namespace {
                         .name           = name,
                     }));
                 },
-                [&](hir::definition::Struct& structure) {
+                [&](ast::definition::Struct& structure) {
                     mir::Type const structure_type =
                         context.temporary_placeholder_type(structure.name.source_view);
                     auto const name = structure.name;
@@ -65,7 +65,7 @@ namespace {
                     *structure_type.pure_value() = mir::type::Structure { info };
                     add_definition(info);
                 },
-                [&](hir::definition::Enum& enumeration) {
+                [&](ast::definition::Enum& enumeration) {
                     mir::Type const enumeration_type =
                         context.temporary_placeholder_type(enumeration.name.source_view);
                     auto const name = enumeration.name;
@@ -80,21 +80,21 @@ namespace {
                     add_definition(info);
                 },
 
-                [&](hir::definition::Namespace& hir_child) {
+                [&](ast::definition::Namespace& ast_child) {
                     utl::wrapper auto child = context.wrap(Namespace {
                         .parent = space,
-                        .name   = hir_child.name,
+                        .name   = ast_child.name,
                     });
 
                     space->definitions_in_order.emplace_back(child);
-                    space->lower_table.add_new_or_abort(hir_child.name.identifier, child);
+                    space->lower_table.add_new_or_abort(ast_child.name.identifier, child);
 
-                    register_namespace(context, hir_child.definitions, child);
+                    register_namespace(context, ast_child.definitions, child);
                 },
 
-                [&]<class T>(hir::definition::Template<T>& template_definition) {
+                [&]<class T>(ast::definition::Template<T>& template_definition) {
                     auto const name = template_definition.definition.name;
-                    add_definition(context.wrap(Definition_info<hir::definition::Template<T>> {
+                    add_definition(context.wrap(Definition_info<ast::definition::Template<T>> {
                         .value                      = std::move(template_definition),
                         .home_namespace             = space,
                         .parameterized_type_of_this = context.temporary_placeholder_type(name.source_view),
@@ -104,7 +104,7 @@ namespace {
                     
                 // TODO: reduce impl/inst duplication
 
-                [&](hir::definition::Implementation& implementation) {
+                [&](ast::definition::Implementation& implementation) {
                     utl::wrapper auto const info = context.wrap(Implementation_info {
                         .value          = std::move(implementation),
                         .home_namespace = space,
@@ -112,7 +112,7 @@ namespace {
                     space->definitions_in_order.emplace_back(info);
                     context.nameless_entities.implementations.push_back(info);
                 },
-                [&](hir::definition::Instantiation& instantiation) {
+                [&](ast::definition::Instantiation& instantiation) {
                     utl::wrapper auto const info = context.wrap(Instantiation_info {
                         .value          = std::move(instantiation),
                         .home_namespace = space,
@@ -120,7 +120,7 @@ namespace {
                     space->definitions_in_order.emplace_back(info);
                     context.nameless_entities.instantiations.push_back(info);
                 },
-                [&](hir::definition::Implementation_template& implementation_template) {
+                [&](ast::definition::Implementation_template& implementation_template) {
                     utl::wrapper auto const info = context.wrap(Implementation_template_info {
                         .value          = std::move(implementation_template),
                         .home_namespace = space,
@@ -128,7 +128,7 @@ namespace {
                     space->definitions_in_order.emplace_back(info);
                     context.nameless_entities.implementation_templates.push_back(info);
                 },
-                [&](hir::definition::Instantiation_template& instantiation_template) {
+                [&](ast::definition::Instantiation_template& instantiation_template) {
                     utl::wrapper auto const info = context.wrap(Instantiation_template_info {
                         .value          = std::move(instantiation_template),
                         .home_namespace = space,
@@ -137,7 +137,7 @@ namespace {
                     context.nameless_entities.instantiation_templates.push_back(info);
                 },
 
-                [](hir::definition::Namespace_template&) {
+                [](ast::definition::Namespace_template&) {
                     utl::todo();
                 }
             );
@@ -209,12 +209,12 @@ namespace {
     }
 
 
-    auto set_predefinitions(hir::Node_arena& output_hir_arena, Context& context) -> void {
+    auto set_predefinitions(ast::Node_arena& output_ast_arena, Context& context) -> void {
         auto desugar_result = desugar(parse(lex(kieli::Lex_arguments {
             .compilation_info = context.compilation_info,
             .source           = compiler::predefinitions_source(context.compilation_info),
         })));
-        output_hir_arena.merge_with(std::move(desugar_result.node_arena));
+        output_ast_arena.merge_with(std::move(desugar_result.node_arena));
         register_namespace(context, desugar_result.module.definitions, context.global_namespace);
 
         static constexpr auto find = []<class T>(std::string_view const name, auto& table, utl::Type<T>) {
@@ -256,7 +256,7 @@ auto kieli::resolve(Desugar_result&& desugar_result) -> Resolve_result {
         .compilation_info = std::move(context.compilation_info),
         .node_arena       = std::move(context.node_arena),
         .namespace_arena  = std::move(context.namespace_arena),
-        .hir_node_arena   = std::move(desugar_result.node_arena),
+        .ast_node_arena   = std::move(desugar_result.node_arena),
         .functions        = std::move(output_functions),
     };
 }
