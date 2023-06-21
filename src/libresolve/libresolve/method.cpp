@@ -9,8 +9,8 @@ namespace {
     [[nodiscard]]
     auto is_implementation_for(
         Context&        context,
-        mir::Type const self,
-        mir::Type const inspected) -> bool
+        hir::Type const self,
+        hir::Type const inspected) -> bool
     {
         return context.pure_equality_compare(self, inspected);
     }
@@ -25,7 +25,7 @@ namespace {
     auto lookup_method(
         Context&                   context,
         compiler::Name_lower const method_name,
-        mir::Type            const inspected_type) -> Method_lookup_result
+        hir::Type            const inspected_type) -> Method_lookup_result
     {
         tl::optional<Method_lookup_result> return_value;
 
@@ -52,8 +52,8 @@ namespace {
         };
 
         for (utl::wrapper auto const implementation_info : context.nameless_entities.implementations) {
-            mir::Implementation& implementation = context.resolve_implementation(implementation_info);
-            mir::Implementation::Definitions& definitions = implementation.definitions;
+            hir::Implementation& implementation = context.resolve_implementation(implementation_info);
+            hir::Implementation::Definitions& definitions = implementation.definitions;
 
             // Try to find a method with the given name first and only then check if the implementation
             // concerns the given type, because the former is a much cheaper operation than the latter.
@@ -80,7 +80,7 @@ namespace {
 auto libresolve::Context::resolve_method(
     compiler::Name_lower                                  const method_name,
     tl::optional<std::span<ast::Template_argument const>> const template_arguments,
-    mir::Type                                             const type,
+    hir::Type                                             const type,
     Scope                                                     & scope,
     Namespace                                                 & space) -> utl::Wrapper<Function_info>
 {

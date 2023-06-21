@@ -7,7 +7,7 @@ using namespace libresolve;
 namespace {
 
     struct [[nodiscard]] Loop_info {
-        tl::optional<mir::Type>                      break_return_type;
+        tl::optional<hir::Type>                      break_return_type;
         utl::Explicit<ast::expression::Loop::Source> loop_source;
     };
 
@@ -15,7 +15,7 @@ namespace {
 
     auto require_addressability(
         Context               & context,
-        mir::Expression  const& expression,
+        hir::Expression  const& expression,
         std::string_view const  explanation) -> void
     {
         if (!expression.is_addressable) {
@@ -28,14 +28,14 @@ namespace {
 
     auto take_reference(
         Context&               context,
-        mir::Expression&&      referenced_expression,
-        mir::Mutability  const requested_mutability,
-        utl::Source_view const source_view) -> mir::Expression
+        hir::Expression&&      referenced_expression,
+        hir::Mutability  const requested_mutability,
+        utl::Source_view const source_view) -> hir::Expression
     {
         require_addressability(context, referenced_expression, "A temporary object can not be referenced");
 
-        mir::Type       const referenced_type   = referenced_expression.type;
-        mir::Mutability const actual_mutability = referenced_expression.mutability;
+        hir::Type       const referenced_type   = referenced_expression.type;
+        hir::Mutability const actual_mutability = referenced_expression.mutability;
 
         auto const mutability_error = [&](std::string_view const message, utl::Pair<std::string_view> const notes) {
             context.diagnostics().emit_error({
@@ -74,7 +74,7 @@ namespace {
         // but this improves the error messages for some of the common cases.
 
         std::visit(utl::Overload {
-            [&](mir::Mutability::Concrete const actual, mir::Mutability::Concrete const requested) {
+            [&](hir::Mutability::Concrete const actual, hir::Mutability::Concrete const requested) {
                 if (!actual.is_mutable.get() && requested.is_mutable.get()) {
                     mutability_error(
                         "Can not acquire a mutable reference to an immutable object",
@@ -84,7 +84,7 @@ namespace {
                         });
                 }
             },
-            [&](mir::Mutability::Parameterized const actual, mir::Mutability::Parameterized const requested) {
+            [&](hir::Mutability::Parameterized const actual, hir::Mutability::Parameterized const requested) {
                 if (actual.tag != requested.tag) {
                     mutability_error(
                         "Mutabilities parameterized by different template parameters",
@@ -94,7 +94,7 @@ namespace {
                         });
                 }
             },
-            [&](mir::Mutability::Parameterized, mir::Mutability::Concrete const requested) {
+            [&](hir::Mutability::Parameterized, hir::Mutability::Concrete const requested) {
                 if (requested.is_mutable.get()) {
                     mutability_error(
                         "Can not acquire mutable reference to object of parameterized mutability",
@@ -104,7 +104,7 @@ namespace {
                         });
                 }
             },
-            [&](mir::Mutability::Concrete const actual, mir::Mutability::Parameterized) {
+            [&](hir::Mutability::Concrete const actual, hir::Mutability::Parameterized) {
                 if (!actual.is_mutable.get()) {
                     mutability_error(
                         "Can not acquire reference of parameterized mutability to immutable object",
@@ -114,11 +114,11 @@ namespace {
                         });
                 }
             },
-            [&](mir::Mutability::Variable const actual, mir::Mutability::Variable const requested) {
+            [&](hir::Mutability::Variable const actual, hir::Mutability::Variable const requested) {
                 if (actual.state.is_not(requested.state))
                     solve_mutability_quality_constraint();
             },
-            [&](mir::Mutability::Concrete const actual, auto) {
+            [&](hir::Mutability::Concrete const actual, auto) {
                 if (!actual.is_mutable.get())
                     solve_mutability_quality_constraint();
             },
@@ -128,12 +128,12 @@ namespace {
         }, *actual_mutability.flattened_value(), *requested_mutability.flattened_value());
 
         return {
-            .value = mir::expression::Reference {
+            .value = hir::expression::Reference {
                 .mutability            = requested_mutability,
                 .referenced_expression = context.wrap(std::move(referenced_expression)),
             },
-            .type = mir::Type {
-                context.wrap_type(mir::type::Reference {
+            .type = hir::Type {
+                context.wrap_type(hir::type::Reference {
                     .mutability      = requested_mutability,
                     .referenced_type = referenced_type,
                 }),
@@ -167,17 +167,17 @@ namespace {
 
         [[nodiscard]]
         auto recurse() noexcept {
-            return [this](ast::Expression& expression) -> mir::Expression {
+            return [this](ast::Expression& expression) -> hir::Expression {
                 return recurse(expression);
             };
         }
 
 
         auto resolve_direct_invocation(
-            mir::expression::Function_reference&& function,
-            std::vector<mir::Expression>       && arguments) -> mir::Expression
+            hir::expression::Function_reference&& function,
+            std::vector<hir::Expression>       && arguments) -> hir::Expression
         {
-            mir::Function::Signature& signature = context.resolve_function_signature(*function.info);
+            hir::Function::Signature& signature = context.resolve_function_signature(*function.info);
             utl::always_assert(!signature.is_template());
 
             utl::Usize const argument_count  = arguments.size();
@@ -186,7 +186,7 @@ namespace {
             if (argument_count != parameter_count) {
                 context.error(this_expression.source_view, {
                     .message   = "The function has {} parameters, but {} arguments were supplied"_format(parameter_count, argument_count),
-                    .help_note = "The function is of type {}"_format(mir::to_string(signature.function_type)),
+                    .help_note = "The function is of type {}"_format(hir::to_string(signature.function_type)),
                 });
             }
 
@@ -206,7 +206,7 @@ namespace {
             }
 
             return {
-                .value = mir::expression::Direct_invocation {
+                .value = hir::expression::Direct_invocation {
                     .function  = { .info = function.info },
                     .arguments = std::move(arguments)
                 },
@@ -217,16 +217,16 @@ namespace {
         }
 
         auto resolve_indirect_invocation(
-            mir::Expression             && invocable,
-            std::vector<mir::Expression>&& arguments) -> mir::Expression
+            hir::Expression             && invocable,
+            std::vector<hir::Expression>&& arguments) -> hir::Expression
         {
-            mir::Type const return_type =
+            hir::Type const return_type =
                 context.fresh_general_unification_type_variable(this_expression.source_view);
 
             context.solve(constraint::Type_equality {
-                .constrainer_type = mir::Type {
-                    context.wrap_type(mir::type::Function {
-                        .parameter_types = utl::map(&mir::Expression::type, arguments),
+                .constrainer_type = hir::Type {
+                    context.wrap_type(hir::type::Function {
+                        .parameter_types = utl::map(&hir::Expression::type, arguments),
                         .return_type     = return_type,
                     }),
                     this_expression.source_view,
@@ -243,7 +243,7 @@ namespace {
             });
 
             return {
-                .value = mir::expression::Indirect_invocation {
+                .value = hir::expression::Indirect_invocation {
                     .arguments = std::move(arguments),
                     .invocable = context.wrap(std::move(invocable))
                 },
@@ -254,17 +254,17 @@ namespace {
         }
 
         auto resolve_invocation(
-            mir::Expression             && invocable,
-            std::vector<mir::Expression>&& arguments) -> mir::Expression
+            hir::Expression             && invocable,
+            std::vector<hir::Expression>&& arguments) -> hir::Expression
         {
-            if (auto* const function = std::get_if<mir::expression::Function_reference>(&invocable.value))
+            if (auto* const function = std::get_if<hir::expression::Function_reference>(&invocable.value))
                 return resolve_direct_invocation(std::move(*function), std::move(arguments));
             else
                 return resolve_indirect_invocation(std::move(invocable), std::move(arguments));
         }
 
         auto resolve_arguments(std::vector<ast::Function_argument>& arguments)
-            -> std::vector<mir::Expression>
+            -> std::vector<hir::Expression>
         {
             auto const resolve_argument = [&](ast::Function_argument& argument) {
                 if (argument.argument_name.has_value())
@@ -277,12 +277,12 @@ namespace {
 
 
         auto try_resolve_local_variable_reference(utl::Pooled_string const identifier)
-            -> tl::optional<mir::Expression>
+            -> tl::optional<hir::Expression>
         {
             if (auto* const binding = scope.find_variable(identifier)) {
                 binding->has_been_mentioned = true;
-                return mir::Expression {
-                    .value          = mir::expression::Local_variable_reference { binding->variable_tag, identifier },
+                return hir::Expression {
+                    .value          = hir::expression::Local_variable_reference { binding->variable_tag, identifier },
                     .type           = binding->type.with(this_expression.source_view),
                     .source_view    = this_expression.source_view,
                     .mutability     = binding->mutability,
@@ -295,9 +295,9 @@ namespace {
 
 
         template <class T>
-        auto operator()(ast::expression::Literal<T>& literal) -> mir::Expression {
+        auto operator()(ast::expression::Literal<T>& literal) -> hir::Expression {
             return {
-                .value       = mir::expression::Literal<T> { literal.value },
+                .value       = hir::expression::Literal<T> { literal.value },
                 .type        = context.literal_type<T>(this_expression.source_view),
                 .source_view = this_expression.source_view,
                 .mutability  = context.immut_constant(this_expression.source_view),
@@ -305,22 +305,22 @@ namespace {
             };
         }
 
-        auto operator()(ast::expression::Array_literal& array) -> mir::Expression {
-            mir::expression::Array_literal mir_array;
-            mir_array.elements.reserve(array.elements.size());
+        auto operator()(ast::expression::Array_literal& array) -> hir::Expression {
+            hir::expression::Array_literal hir_array;
+            hir_array.elements.reserve(array.elements.size());
 
             if (!array.elements.empty()) {
-                mir_array.elements.push_back(recurse(array.elements.front()));
+                hir_array.elements.push_back(recurse(array.elements.front()));
 
                 for (utl::Usize i = 1; i != array.elements.size(); ++i) {
                     ast::Expression& previous_element = array.elements[i - 1];
                     ast::Expression& current_element  = array.elements[i];
 
-                    mir_array.elements.push_back(recurse(current_element));
+                    hir_array.elements.push_back(recurse(current_element));
 
                     context.solve(constraint::Type_equality {
-                        .constrainer_type = mir_array.elements.front().type,
-                        .constrained_type = mir_array.elements.back().type,
+                        .constrainer_type = hir_array.elements.front().type,
+                        .constrained_type = hir_array.elements.back().type,
                         .constrainer_note = constraint::Explanation {
                             array.elements.front().source_view.combine_with(previous_element.source_view),
                             i == 1 ? "The previous element was of type {0}"
@@ -334,20 +334,20 @@ namespace {
                 }
             }
 
-            mir::Type const element_type = mir_array.elements.empty()
+            hir::Type const element_type = hir_array.elements.empty()
                 ? context.fresh_general_unification_type_variable(this_expression.source_view)
-                : mir_array.elements.front().type;
+                : hir_array.elements.front().type;
 
-            auto const array_length = mir_array.elements.size();
-            bool const is_pure = ranges::all_of(mir_array.elements, &mir::Expression::is_pure);
+            auto const array_length = hir_array.elements.size();
+            bool const is_pure = ranges::all_of(hir_array.elements, &hir::Expression::is_pure);
 
             return {
-                .value = std::move(mir_array),
-                .type  = mir::Type {
-                    context.wrap_type(mir::type::Array {
+                .value = std::move(hir_array),
+                .type  = hir::Type {
+                    context.wrap_type(hir::type::Array {
                         .element_type = element_type,
-                        .array_length = context.wrap(mir::Expression {
-                            .value       = mir::expression::Literal<compiler::Integer> { array_length },
+                        .array_length = context.wrap(hir::Expression {
+                            .value       = hir::expression::Literal<compiler::Integer> { array_length },
                             .type        = context.size_type(this_expression.source_view),
                             .source_view = this_expression.source_view,
                             .mutability  = context.immut_constant(this_expression.source_view),
@@ -362,27 +362,27 @@ namespace {
             };
         }
 
-        auto operator()(ast::expression::Move& move) -> mir::Expression {
-            mir::Expression lvalue = recurse(*move.lvalue);
-            mir::Type const type   = lvalue.type;
+        auto operator()(ast::expression::Move& move) -> hir::Expression {
+            hir::Expression lvalue = recurse(*move.lvalue);
+            hir::Type const type   = lvalue.type;
             require_addressability(context, lvalue, "Temporaries are moved by default, and may not be explicitly moved");
             return {
-                .value       = mir::expression::Move { context.wrap(std::move(lvalue)) },
+                .value       = hir::expression::Move { context.wrap(std::move(lvalue)) },
                 .type        = type,
                 .source_view = this_expression.source_view,
                 .mutability  = context.immut_constant(this_expression.source_view),
             };
         }
 
-        auto operator()(ast::expression::Variable& variable) -> mir::Expression {
+        auto operator()(ast::expression::Variable& variable) -> hir::Expression {
             if (variable.name.is_unqualified()) {
                 if (auto local_variable = try_resolve_local_variable_reference(variable.name.primary_name.identifier))
                     return std::move(*local_variable);
             }
 
-            auto const handle_function_reference = [&](utl::Wrapper<Function_info> const info, bool const is_application) -> mir::Expression {
+            auto const handle_function_reference = [&](utl::Wrapper<Function_info> const info, bool const is_application) -> hir::Expression {
                 return {
-                    .value       = mir::expression::Function_reference { info, is_application },
+                    .value       = hir::expression::Function_reference { info, is_application },
                     .type        = context.resolve_function_signature(*info).function_type.with(this_expression.source_view),
                     .source_view = this_expression.source_view,
                     .mutability  = context.immut_constant(this_expression.source_view),
@@ -391,7 +391,7 @@ namespace {
             };
 
             return utl::match(context.find_lower(variable.name, scope, space),
-                [&](utl::Wrapper<Function_info> const info) -> mir::Expression {
+                [&](utl::Wrapper<Function_info> const info) -> hir::Expression {
                     if (context.resolve_function_signature(*info).is_template()) {
                         return handle_function_reference(
                             context.instantiate_function_template_with_synthetic_arguments(info, this_expression.source_view),
@@ -401,30 +401,30 @@ namespace {
                         return handle_function_reference(info, /*is_application=*/ false);
                     }
                 },
-                [this](mir::Enum_constructor const constructor) -> mir::Expression {
+                [this](hir::Enum_constructor const constructor) -> hir::Expression {
                     return {
-                        .value       = mir::expression::Enum_constructor_reference { constructor },
+                        .value       = hir::expression::Enum_constructor_reference { constructor },
                         .type        = constructor.function_type.value_or(constructor.enum_type).with(this_expression.source_view),
                         .source_view = this_expression.source_view,
                         .mutability  = context.immut_constant(this_expression.source_view)
                     };
                 },
-                [this](utl::Wrapper<Namespace>) -> mir::Expression {
+                [this](utl::Wrapper<Namespace>) -> hir::Expression {
                     context.error(this_expression.source_view, { "Expected an expression, but found a namespace" });
                 }
             );
         }
 
-        auto operator()(ast::expression::Tuple& tuple) -> mir::Expression {
-            mir::expression::Tuple mir_tuple {
+        auto operator()(ast::expression::Tuple& tuple) -> hir::Expression {
+            hir::expression::Tuple hir_tuple {
                 .fields = utl::map(recurse(), tuple.fields) };
-            mir::type::Tuple mir_tuple_type {
-                .field_types = utl::map(&mir::Expression::type, mir_tuple.fields) };
-            bool const is_pure = ranges::all_of(mir_tuple.fields, &mir::Expression::is_pure);
+            hir::type::Tuple hir_tuple_type {
+                .field_types = utl::map(&hir::Expression::type, hir_tuple.fields) };
+            bool const is_pure = ranges::all_of(hir_tuple.fields, &hir::Expression::is_pure);
             return {
-                .value = std::move(mir_tuple),
-                .type = mir::Type {
-                    context.wrap_type(std::move(mir_tuple_type)),
+                .value = std::move(hir_tuple),
+                .type = hir::Type {
+                    context.wrap_type(std::move(hir_tuple_type)),
                     this_expression.source_view,
                 },
                 .source_view = this_expression.source_view,
@@ -433,14 +433,14 @@ namespace {
             };
         }
 
-        auto operator()(ast::expression::Loop& loop) -> mir::Expression {
+        auto operator()(ast::expression::Loop& loop) -> hir::Expression {
             auto const old_loop_info  = current_loop_info;
             current_loop_info = Loop_info { .loop_source = loop.source };
-            mir::Expression loop_body = recurse(*loop.body);
+            hir::Expression loop_body = recurse(*loop.body);
             Loop_info const loop_info = utl::get(current_loop_info);
             current_loop_info = old_loop_info;
             return {
-                .value = mir::expression::Loop { .body = context.wrap(std::move(loop_body)) },
+                .value = hir::expression::Loop { .body = context.wrap(std::move(loop_body)) },
                 .type  = loop_info.break_return_type.has_value()
                     ? loop_info.break_return_type->with(this_expression.source_view)
                     : context.unit_type(this_expression.source_view),
@@ -449,11 +449,11 @@ namespace {
             };
         }
 
-        auto operator()(ast::expression::Break& break_) -> mir::Expression {
+        auto operator()(ast::expression::Break& break_) -> hir::Expression {
             if (!current_loop_info.has_value())
                 context.error(this_expression.source_view, { "a break expression can not appear outside of a loop" });
 
-            mir::Expression break_result = recurse(*break_.result);
+            hir::Expression break_result = recurse(*break_.result);
             Loop_info& loop_info = utl::get(current_loop_info);
 
             if (loop_info.loop_source.get() == ast::expression::Loop::Source::plain_loop) {
@@ -488,32 +488,32 @@ namespace {
             }
 
             return {
-                .value       = mir::expression::Break { .result = context.wrap(std::move(break_result)) },
+                .value       = hir::expression::Break { .result = context.wrap(std::move(break_result)) },
                 .type        = context.unit_type(this_expression.source_view),
                 .source_view = this_expression.source_view,
                 .mutability  = context.immut_constant(this_expression.source_view),
             };
         }
 
-        auto operator()(ast::expression::Continue&) -> mir::Expression {
+        auto operator()(ast::expression::Continue&) -> hir::Expression {
             if (!current_loop_info.has_value())
                 context.error(this_expression.source_view, { "a continue expression can not appear outside of a loop" });
             return {
-                .value       = mir::expression::Continue {},
+                .value       = hir::expression::Continue {},
                 .type        = context.unit_type(this_expression.source_view),
                 .source_view = this_expression.source_view,
                 .mutability  = context.immut_constant(this_expression.source_view),
             };
         }
 
-        auto operator()(ast::expression::Block& block) -> mir::Expression {
+        auto operator()(ast::expression::Block& block) -> hir::Expression {
             Scope block_scope = scope.make_child();
 
-            std::vector<mir::Expression> side_effects;
+            std::vector<hir::Expression> side_effects;
             side_effects.reserve(block.side_effect_expressions.size());
 
             for (ast::Expression& ast_side_effect : block.side_effect_expressions) {
-                mir::Expression side_effect = recurse(ast_side_effect, &block_scope);
+                hir::Expression side_effect = recurse(ast_side_effect, &block_scope);
                 if (side_effect.is_pure) {
                     context.diagnostics().emit_warning(side_effect.source_view, {
                         .message   = "This block side-effect expression is pure, so it does not have any side-effects",
@@ -531,16 +531,16 @@ namespace {
                 side_effects.push_back(std::move(side_effect));
             }
 
-            mir::Expression block_result = recurse(*block.result_expression, &block_scope);
-            mir::Type const result_type  = block_result.type;
+            hir::Expression block_result = recurse(*block.result_expression, &block_scope);
+            hir::Type const result_type  = block_result.type;
 
             block_scope.warn_about_unused_bindings(context);
 
             bool const is_pure = block_result.is_pure
-                && ranges::all_of(side_effects, &mir::Expression::is_pure);
+                && ranges::all_of(side_effects, &hir::Expression::is_pure);
 
             return {
-                .value = mir::expression::Block {
+                .value = hir::expression::Block {
                     .side_effect_expressions = std::move(side_effects),
                     .result_expression       = context.wrap(std::move(block_result))
                 },
@@ -551,14 +551,14 @@ namespace {
             };
         }
 
-        auto operator()(ast::expression::Local_type_alias& alias) -> mir::Expression {
+        auto operator()(ast::expression::Local_type_alias& alias) -> hir::Expression {
             scope.bind_type(context, alias.alias_name.identifier, {
                 .type               = context.resolve_type(*alias.aliased_type, scope, space),
                 .has_been_mentioned = false,
                 .source_view        = this_expression.source_view
             });
             return {
-                .value          = mir::expression::Tuple {},
+                .value          = hir::expression::Tuple {},
                 .type           = context.unit_type(this_expression.source_view),
                 .source_view    = this_expression.source_view,
                 .mutability     = context.immut_constant(this_expression.source_view),
@@ -567,14 +567,14 @@ namespace {
             };
         }
 
-        auto operator()(ast::expression::Let_binding& let) -> mir::Expression {
-            mir::Expression initializer = recurse(*let.initializer);
-            mir::Pattern pattern = context.resolve_pattern(*let.pattern, initializer.type, scope, space);
+        auto operator()(ast::expression::Let_binding& let) -> hir::Expression {
+            hir::Expression initializer = recurse(*let.initializer);
+            hir::Pattern pattern = context.resolve_pattern(*let.pattern, initializer.type, scope, space);
 
-            mir::Type const type = std::invoke([&] {
+            hir::Type const type = std::invoke([&] {
                 if (!let.type.has_value())
                     return initializer.type;
-                mir::Type const explicit_type = context.resolve_type(**let.type, scope, space);
+                hir::Type const explicit_type = context.resolve_type(**let.type, scope, space);
                 context.solve(constraint::Type_equality {
                     .constrainer_type = explicit_type,
                     .constrained_type = initializer.type,
@@ -613,7 +613,7 @@ namespace {
             }
 
             return {
-                .value = mir::expression::Let_binding {
+                .value = hir::expression::Let_binding {
                     .pattern     = context.wrap(std::move(pattern)),
                     .type        = type,
                     .initializer = context.wrap(std::move(initializer)),
@@ -624,8 +624,8 @@ namespace {
             };
         }
 
-        auto operator()(ast::expression::Conditional& conditional) -> mir::Expression {
-            mir::Expression condition = recurse(*conditional.condition);
+        auto operator()(ast::expression::Conditional& conditional) -> hir::Expression {
+            hir::Expression condition = recurse(*conditional.condition);
 
             context.solve(constraint::Type_equality {
                 .constrainer_type = context.boolean_type(condition.source_view),
@@ -636,8 +636,8 @@ namespace {
                 }
             });
 
-            mir::Expression true_branch  = recurse(*conditional.true_branch);
-            mir::Expression false_branch = recurse(*conditional.false_branch);
+            hir::Expression true_branch  = recurse(*conditional.true_branch);
+            hir::Expression false_branch = recurse(*conditional.false_branch);
 
             if (conditional.has_explicit_false_branch.get()) {
                 switch (conditional.source.get()) {
@@ -684,11 +684,11 @@ namespace {
                 });
             }
 
-            mir::Type const result_type = true_branch.type;
+            hir::Type const result_type = true_branch.type;
             bool const is_pure = condition.is_pure && true_branch.is_pure && false_branch.is_pure;
 
             return {
-                .value = mir::expression::Conditional {
+                .value = hir::expression::Conditional {
                     .condition    = context.wrap(std::move(condition)),
                     .true_branch  = context.wrap(std::move(true_branch)),
                     .false_branch = context.wrap(std::move(false_branch))
@@ -700,19 +700,19 @@ namespace {
             };
         }
 
-        auto operator()(ast::expression::Match& match) -> mir::Expression {
+        auto operator()(ast::expression::Match& match) -> hir::Expression {
             utl::always_assert(!match.cases.empty());
 
-            mir::Expression matched_expression = recurse(*match.matched_expression);
-            auto cases = utl::vector_with_capacity<mir::expression::Match::Case>(match.cases.size());
+            hir::Expression matched_expression = recurse(*match.matched_expression);
+            auto cases = utl::vector_with_capacity<hir::expression::Match::Case>(match.cases.size());
 
-            tl::optional<mir::Type> previous_case_result_type;
+            tl::optional<hir::Type> previous_case_result_type;
 
             for (ast::expression::Match::Case& match_case : match.cases) {
                 Scope case_scope = scope.make_child();
 
-                mir::Pattern    pattern = context.resolve_pattern(*match_case.pattern, matched_expression.type, case_scope, space);
-                mir::Expression handler = recurse(*match_case.handler, &case_scope);
+                hir::Pattern    pattern = context.resolve_pattern(*match_case.pattern, matched_expression.type, case_scope, space);
+                hir::Expression handler = recurse(*match_case.handler, &case_scope);
 
                 if (previous_case_result_type.has_value()) {
                     context.solve(constraint::Type_equality {
@@ -726,14 +726,14 @@ namespace {
                 }
                 previous_case_result_type = handler.type;
 
-                cases.push_back(mir::expression::Match::Case {
+                cases.push_back(hir::expression::Match::Case {
                     .pattern = context.wrap(std::move(pattern)),
                     .handler = context.wrap(std::move(handler)),
                 });
             }
 
             return {
-                .value = mir::expression::Match {
+                .value = hir::expression::Match {
                     .cases              = std::move(cases),
                     .matched_expression = context.wrap(std::move(matched_expression)),
                 },
@@ -743,12 +743,12 @@ namespace {
             };
         }
 
-        auto operator()(ast::expression::Struct_initializer&) -> mir::Expression {
+        auto operator()(ast::expression::Struct_initializer&) -> hir::Expression {
             utl::todo();
         }
 
-        auto operator()(ast::expression::Type_ascription& cast) -> mir::Expression {
-            mir::Expression result = recurse(*cast.expression);
+        auto operator()(ast::expression::Type_ascription& cast) -> hir::Expression {
+            hir::Expression result = recurse(*cast.expression);
             context.solve(constraint::Type_equality {
                 .constrainer_type = context.resolve_type(*cast.ascribed_type, scope, space),
                 .constrained_type = result.type,
@@ -765,9 +765,9 @@ namespace {
             return result;
         }
 
-        auto operator()(ast::expression::Template_application& application) -> mir::Expression {
+        auto operator()(ast::expression::Template_application& application) -> hir::Expression {
             return utl::match(context.find_lower(application.name, scope, space),
-                [&](utl::Wrapper<Function_info> const info) -> mir::Expression {
+                [&](utl::Wrapper<Function_info> const info) -> hir::Expression {
                     if (!context.resolve_function_signature(*info).is_template()) {
                         context.error(application.name.primary_name.source_view, {
                             .message   = "'{}' is a concrete function, not a function template"_format(ast::to_string(application.name)),
@@ -777,28 +777,28 @@ namespace {
                     utl::Wrapper<Function_info> const concrete =
                         context.instantiate_function_template(info, application.template_arguments, this_expression.source_view, scope, space);
                     return {
-                        .value       = mir::expression::Function_reference { .info = concrete, .is_application = true },
+                        .value       = hir::expression::Function_reference { .info = concrete, .is_application = true },
                         .type        = context.resolve_function_signature(*concrete).function_type.with(this_expression.source_view),
                         .source_view = this_expression.source_view,
                         .mutability  = context.immut_constant(this_expression.source_view),
                         .is_pure     = true,
                     };
                 },
-                [](mir::Enum_constructor const) -> mir::Expression {
+                [](hir::Enum_constructor const) -> hir::Expression {
                     utl::todo();
                 },
-                [](utl::Wrapper<Namespace> const) -> mir::Expression {
+                [](utl::Wrapper<Namespace> const) -> hir::Expression {
                     utl::todo();
                 }
             );
         }
 
-        auto operator()(ast::expression::Invocation& invocation) -> mir::Expression {
+        auto operator()(ast::expression::Invocation& invocation) -> hir::Expression {
             return resolve_invocation(recurse(*invocation.invocable), resolve_arguments(invocation.arguments));
         }
 
-        auto operator()(ast::expression::Method_invocation &invocation) -> mir::Expression {
-            mir::Expression base_expression = recurse(*invocation.base_expression);
+        auto operator()(ast::expression::Method_invocation &invocation) -> hir::Expression {
+            hir::Expression base_expression = recurse(*invocation.base_expression);
 
             utl::Wrapper<Function_info> const method_info = context.resolve_method(
                 invocation.method_name,
@@ -806,7 +806,7 @@ namespace {
                 base_expression.type,
                 scope,
                 space);
-            mir::Function& method = context.resolve_function(method_info);
+            hir::Function& method = context.resolve_function(method_info);
 
             auto arguments = resolve_arguments(invocation.arguments);
             arguments.insert(
@@ -827,20 +827,20 @@ namespace {
             );
 
             return resolve_direct_invocation(
-                mir::expression::Function_reference {
+                hir::expression::Function_reference {
                     .info           = method_info,
                     .is_application = invocation.template_arguments.has_value(),
                 },
                 std::move(arguments));
         }
 
-        auto operator()(ast::expression::Struct_field_access& access) -> mir::Expression {
-            mir::Expression       base_expression = recurse(*access.base_expression);
-            mir::Mutability const mutability      = base_expression.mutability;
+        auto operator()(ast::expression::Struct_field_access& access) -> hir::Expression {
+            hir::Expression       base_expression = recurse(*access.base_expression);
+            hir::Mutability const mutability      = base_expression.mutability;
             bool            const is_addressable  = base_expression.is_addressable;
             bool            const is_pure         = base_expression.is_pure;
 
-            mir::Type const field_type = context.fresh_general_unification_type_variable(
+            hir::Type const field_type = context.fresh_general_unification_type_variable(
                 this_expression.source_view);
 
             context.solve(constraint::Struct_field {
@@ -853,7 +853,7 @@ namespace {
                 }
             });
             return {
-                .value = mir::expression::Struct_field_access {
+                .value = hir::expression::Struct_field_access {
                     .base_expression = context.wrap(std::move(base_expression)),
                     .field_name      = access.field_name,
                 },
@@ -865,13 +865,13 @@ namespace {
             };
         }
 
-        auto operator()(ast::expression::Tuple_field_access& access) -> mir::Expression {
-            mir::Expression       base_expression = recurse(*access.base_expression);
-            mir::Mutability const mutability      = base_expression.mutability;
+        auto operator()(ast::expression::Tuple_field_access& access) -> hir::Expression {
+            hir::Expression       base_expression = recurse(*access.base_expression);
+            hir::Mutability const mutability      = base_expression.mutability;
             bool            const is_addressable  = base_expression.is_addressable;
             bool            const is_pure         = base_expression.is_pure;
 
-            mir::Type const field_type = context.fresh_general_unification_type_variable(
+            hir::Type const field_type = context.fresh_general_unification_type_variable(
                 this_expression.source_view);
 
             context.solve(constraint::Tuple_field {
@@ -884,7 +884,7 @@ namespace {
                 }
             });
             return {
-                .value = mir::expression::Tuple_field_access {
+                .value = hir::expression::Tuple_field_access {
                     .base_expression         = context.wrap(std::move(base_expression)),
                     .field_index             = access.field_index.get(),
                     .field_index_source_view = access.field_index_source_view,
@@ -897,9 +897,9 @@ namespace {
             };
         }
 
-        auto operator()(ast::expression::Sizeof& sizeof_) -> mir::Expression {
+        auto operator()(ast::expression::Sizeof& sizeof_) -> hir::Expression {
             return {
-                .value = mir::expression::Sizeof {
+                .value = hir::expression::Sizeof {
                     .inspected_type = context.resolve_type(*sizeof_.inspected_type, scope, space)
                 },
                 .type           = context.size_type(this_expression.source_view),
@@ -909,7 +909,7 @@ namespace {
             };
         }
 
-        auto operator()(ast::expression::Reference& reference) -> mir::Expression {
+        auto operator()(ast::expression::Reference& reference) -> hir::Expression {
             return take_reference(
                 context,
                 recurse(*reference.referenced_expression),
@@ -917,16 +917,16 @@ namespace {
                 this_expression.source_view);
         }
 
-        auto operator()(ast::expression::Reference_dereference& dereference) -> mir::Expression {
-            mir::Expression dereferenced_expression = recurse(*dereference.dereferenced_expression);
+        auto operator()(ast::expression::Reference_dereference& dereference) -> hir::Expression {
+            hir::Expression dereferenced_expression = recurse(*dereference.dereferenced_expression);
             bool const is_pure = dereferenced_expression.is_pure;
 
-            if (auto const* const reference = std::get_if<mir::type::Reference>(&*dereferenced_expression.type.flattened_value())) {
+            if (auto const* const reference = std::get_if<hir::type::Reference>(&*dereferenced_expression.type.flattened_value())) {
                 // If the type of the dereferenced expression is already known to
-                // be mir::type::Reference, there is no need to solve constraints.
+                // be hir::type::Reference, there is no need to solve constraints.
 
                 return {
-                    .value          = mir::expression::Dereference { context.wrap(std::move(dereferenced_expression)) },
+                    .value          = hir::expression::Dereference { context.wrap(std::move(dereferenced_expression)) },
                     .type           = reference->referenced_type,
                     .source_view    = this_expression.source_view,
                     .mutability     = reference->mutability,
@@ -935,11 +935,11 @@ namespace {
                 };
             }
             else {
-                mir::Type       const referenced_type      = context.fresh_general_unification_type_variable(dereferenced_expression.source_view);
-                mir::Mutability const reference_mutability = context.fresh_unification_mutability_variable(this_expression.source_view);
+                hir::Type       const referenced_type      = context.fresh_general_unification_type_variable(dereferenced_expression.source_view);
+                hir::Mutability const reference_mutability = context.fresh_unification_mutability_variable(this_expression.source_view);
 
-                mir::Type const reference_type {
-                    context.wrap_type(mir::type::Reference {
+                hir::Type const reference_type {
+                    context.wrap_type(hir::type::Reference {
                         .mutability      = reference_mutability,
                         .referenced_type = referenced_type
                     }),
@@ -960,7 +960,7 @@ namespace {
                 });
 
                 return {
-                    .value          = mir::expression::Dereference { context.wrap(std::move(dereferenced_expression)) },
+                    .value          = hir::expression::Dereference { context.wrap(std::move(dereferenced_expression)) },
                     .type           = referenced_type,
                     .source_view    = this_expression.source_view,
                     .mutability     = reference_mutability,
@@ -970,13 +970,13 @@ namespace {
             }
         }
 
-        auto operator()(ast::expression::Addressof& addressof) -> mir::Expression {
-            mir::Expression lvalue = recurse(*addressof.lvalue_expression);
+        auto operator()(ast::expression::Addressof& addressof) -> hir::Expression {
+            hir::Expression lvalue = recurse(*addressof.lvalue_expression);
             bool const is_pure = lvalue.is_pure;
             require_addressability(context, lvalue, "The address of a temporary object can not be taken");
 
-            mir::Type const pointer_type {
-                context.wrap_type(mir::type::Pointer {
+            hir::Type const pointer_type {
+                context.wrap_type(hir::type::Pointer {
                     .mutability      = lvalue.mutability,
                     .pointed_to_type = lvalue.type
                 }),
@@ -984,7 +984,7 @@ namespace {
             };
 
             return {
-                .value       = mir::expression::Addressof { context.wrap(std::move(lvalue)) },
+                .value       = hir::expression::Addressof { context.wrap(std::move(lvalue)) },
                 .type        = pointer_type,
                 .source_view = this_expression.source_view,
                 .mutability  = context.immut_constant(this_expression.source_view),
@@ -992,7 +992,7 @@ namespace {
             };
         }
 
-        auto operator()(ast::expression::Pointer_dereference& dereference) -> mir::Expression {
+        auto operator()(ast::expression::Pointer_dereference& dereference) -> hir::Expression {
             if (current_safety_status == Safety_status::safe) {
                 context.error(this_expression.source_view, {
                     .message   = "A pointer dereference expression may not appear within safe context",
@@ -1000,14 +1000,14 @@ namespace {
                 });
             }
 
-            mir::Expression pointer = recurse(*dereference.pointer_expression);
+            hir::Expression pointer = recurse(*dereference.pointer_expression);
             bool const is_pure = pointer.is_pure;
 
-            mir::Type       const lvalue_type       = context.fresh_general_unification_type_variable(this_expression.source_view);
-            mir::Mutability const lvalue_mutability = context.fresh_unification_mutability_variable(this_expression.source_view);
+            hir::Type       const lvalue_type       = context.fresh_general_unification_type_variable(this_expression.source_view);
+            hir::Mutability const lvalue_mutability = context.fresh_unification_mutability_variable(this_expression.source_view);
 
-            mir::Type const pointer_type {
-                context.wrap_type(mir::type::Pointer {
+            hir::Type const pointer_type {
+                context.wrap_type(hir::type::Pointer {
                     .mutability      = lvalue_mutability,
                     .pointed_to_type = lvalue_type
                 }),
@@ -1028,7 +1028,7 @@ namespace {
             });
 
             return {
-                .value          = mir::expression::Unsafe_dereference { context.wrap(std::move(pointer)) },
+                .value          = hir::expression::Unsafe_dereference { context.wrap(std::move(pointer)) },
                 .type           = lvalue_type,
                 .source_view    = this_expression.source_view,
                 .mutability     = lvalue_mutability,
@@ -1037,7 +1037,7 @@ namespace {
             };
         }
 
-        auto operator()(ast::expression::Self) -> mir::Expression {
+        auto operator()(ast::expression::Self) -> hir::Expression {
             if (auto self = try_resolve_local_variable_reference(context.self_variable_id))
                 return std::move(*self);
             context.error(this_expression.source_view, {
@@ -1046,12 +1046,12 @@ namespace {
             });
         }
 
-        auto operator()(ast::expression::Hole&) -> mir::Expression {
+        auto operator()(ast::expression::Hole&) -> hir::Expression {
             // Workaround for a bug in GCC 13.1.1.
-            // Directly constructing `mir::Expression::Variant` from a `mir::Expression::Hole` causes GCC to get stuck and its memory usage to grow without bound.
+            // Directly constructing `hir::Expression::Variant` from a `hir::Expression::Hole` causes GCC to get stuck and its memory usage to grow without bound.
 
-            mir::Expression::Variant value;
-            value.emplace<mir::expression::Hole>();
+            hir::Expression::Variant value;
+            value.emplace<hir::expression::Hole>();
             return {
                 .value       = std::move(value),
                 .type        = context.fresh_general_unification_type_variable(this_expression.source_view),
@@ -1061,28 +1061,28 @@ namespace {
             };
         }
 
-        auto operator()(ast::expression::Unsafe& unsafe) -> mir::Expression {
+        auto operator()(ast::expression::Unsafe& unsafe) -> hir::Expression {
             Safety_status const old_safety_status = current_safety_status;
             current_safety_status = Safety_status::unsafe;
-            mir::Expression expression = recurse(*unsafe.expression);
+            hir::Expression expression = recurse(*unsafe.expression);
             current_safety_status = old_safety_status;
             return expression;
         }
 
 
-        auto operator()(ast::expression::Type_cast&) -> mir::Expression {
+        auto operator()(ast::expression::Type_cast&) -> hir::Expression {
             utl::todo();
         }
-        auto operator()(ast::expression::Array_index_access&) -> mir::Expression {
+        auto operator()(ast::expression::Array_index_access&) -> hir::Expression {
             utl::todo();
         }
-        auto operator()(ast::expression::Ret&) -> mir::Expression {
+        auto operator()(ast::expression::Ret&) -> hir::Expression {
             utl::todo();
         }
-        auto operator()(ast::expression::Binary_operator_invocation&) -> mir::Expression {
+        auto operator()(ast::expression::Binary_operator_invocation&) -> hir::Expression {
             utl::todo();
         }
-        auto operator()(ast::expression::Meta&) -> mir::Expression {
+        auto operator()(ast::expression::Meta&) -> hir::Expression {
             utl::todo();
         }
     };
@@ -1090,7 +1090,7 @@ namespace {
 }
 
 
-auto libresolve::Context::resolve_expression(ast::Expression& expression, Scope& scope, Namespace& space) -> mir::Expression {
+auto libresolve::Context::resolve_expression(ast::Expression& expression, Scope& scope, Namespace& space) -> hir::Expression {
     tl::optional<Loop_info> expression_loop_info;
     Safety_status expression_safety_status = Safety_status::safe;
     return std::visit(Expression_resolution_visitor {

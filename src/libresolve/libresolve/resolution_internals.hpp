@@ -3,7 +3,7 @@
 #include <libutl/common/utilities.hpp>
 #include <libutl/common/safe_integer.hpp>
 #include <libdesugar/ast.hpp>
-#include <libresolve/mir.hpp>
+#include <libresolve/hir.hpp>
 
 
 namespace libresolve {
@@ -11,19 +11,19 @@ namespace libresolve {
     class [[nodiscard]] Scope {
     public:
         struct Variable_binding {
-            mir::Type               type;
-            mir::Mutability         mutability;
-            mir::Local_variable_tag variable_tag;
+            hir::Type               type;
+            hir::Mutability         mutability;
+            hir::Local_variable_tag variable_tag;
             bool                    has_been_mentioned = false;
             utl::Source_view        source_view;
         };
         struct Type_binding {
-            mir::Type        type;
+            hir::Type        type;
             bool             has_been_mentioned = false;
             utl::Source_view source_view;
         };
         struct Mutability_binding {
-            mir::Mutability  mutability;
+            hir::Mutability  mutability;
             bool             has_been_mentioned = false;
             utl::Source_view source_view;
         };
@@ -49,7 +49,7 @@ namespace libresolve {
     using Lower_variant = std::variant<
         utl::Wrapper<Namespace>,
         utl::Wrapper<Function_info>,
-        mir::Enum_constructor>;
+        hir::Enum_constructor>;
 
     using Upper_variant = std::variant<
         utl::Wrapper<Struct_info>,
@@ -94,7 +94,7 @@ namespace libresolve {
 
 
     struct Partially_resolved_function {
-        mir::Function::Signature resolved_signature;
+        hir::Function::Signature resolved_signature;
         Scope                    signature_scope;
         ast::Expression          unresolved_body;
         compiler::Name_lower     name;
@@ -103,7 +103,7 @@ namespace libresolve {
 
     template <class AST_representation>
     struct Definition_info {
-        using Variant = std::variant<AST_representation, mir::From_AST<AST_representation>>;
+        using Variant = std::variant<AST_representation, hir::From_AST<AST_representation>>;
 
         Variant                            value;
         utl::Wrapper<Namespace>            home_namespace;
@@ -115,11 +115,11 @@ namespace libresolve {
     struct Definition_info<ast::definition::Template<Definition>> {
         using Variant = std::variant<
             ast::definition::Template<Definition>,
-            mir::From_AST<ast::definition::Template<Definition>>>;
+            hir::From_AST<ast::definition::Template<Definition>>>;
 
         Variant                    value;
         utl::Wrapper<Namespace>    home_namespace;
-        mir::Type                  parameterized_type_of_this; // One of mir::type::{Structure, Enumeration}
+        hir::Type                  parameterized_type_of_this; // One of hir::type::{Structure, Enumeration}
         Definition_state           state = Definition_state::unresolved;
         decltype(Definition::name) name;
     };
@@ -127,8 +127,8 @@ namespace libresolve {
     template <class Info>
     struct Template_instantiation_info {
         utl::Wrapper<Info>                   template_instantiated_from;
-        std::vector<mir::Template_parameter> template_parameters;
-        std::vector<mir::Template_argument>  template_arguments;
+        std::vector<hir::Template_parameter> template_parameters;
+        std::vector<hir::Template_argument>  template_arguments;
     };
 
     template <>
@@ -136,7 +136,7 @@ namespace libresolve {
         using Variant = std::variant<
             ast::definition::Function,   // Fully unresolved function
             Partially_resolved_function, // Signature resolved, body unresolved
-            mir::Function>;              // Fully resolved
+            hir::Function>;              // Fully resolved
 
         Variant                 value;
         utl::Wrapper<Namespace> home_namespace;
@@ -148,11 +148,11 @@ namespace libresolve {
 
     template <>
     struct Definition_info<ast::definition::Struct> {
-        using Variant = std::variant<ast::definition::Struct, mir::Struct>;
+        using Variant = std::variant<ast::definition::Struct, hir::Struct>;
 
         Variant                 value;
         utl::Wrapper<Namespace> home_namespace;
-        mir::Type               structure_type;
+        hir::Type               structure_type;
         Definition_state        state = Definition_state::unresolved;
         compiler::Name_upper    name;
 
@@ -161,11 +161,11 @@ namespace libresolve {
 
     template <>
     struct Definition_info<ast::definition::Enum> {
-        using Variant = std::variant<ast::definition::Enum, mir::Enum>;
+        using Variant = std::variant<ast::definition::Enum, hir::Enum>;
 
         Variant                 value;
         utl::Wrapper<Namespace> home_namespace;
-        mir::Type               enumeration_type;
+        hir::Type               enumeration_type;
         Definition_state        state = Definition_state::unresolved;
         compiler::Name_upper    name;
 
@@ -176,7 +176,7 @@ namespace libresolve {
 
     template <>
     struct Definition_info<ast::definition::Implementation> {
-        using Variant = std::variant<ast::definition::Implementation, mir::Implementation>;
+        using Variant = std::variant<ast::definition::Implementation, hir::Implementation>;
 
         Variant                 value;
         utl::Wrapper<Namespace> home_namespace;
@@ -185,7 +185,7 @@ namespace libresolve {
 
     template <>
     struct Definition_info<ast::definition::Instantiation> {
-        using Variant = std::variant<ast::definition::Instantiation, mir::Instantiation>;
+        using Variant = std::variant<ast::definition::Instantiation, hir::Instantiation>;
 
         Variant                 value;
         utl::Wrapper<Namespace> home_namespace;
@@ -197,7 +197,7 @@ namespace libresolve {
     struct Definition_info<ast::definition::Template<Definition>> {
         using Variant = std::variant<
             ast::definition::Template<Definition>,
-            mir::From_AST<ast::definition::Template<Definition>>>;
+            hir::From_AST<ast::definition::Template<Definition>>>;
 
         Variant                 value;
         utl::Wrapper<Namespace> home_namespace;
@@ -219,31 +219,31 @@ namespace libresolve {
         };
 
         struct Type_equality {
-            mir::Type                  constrainer_type;
-            mir::Type                  constrained_type;
+            hir::Type                  constrainer_type;
+            hir::Type                  constrained_type;
             tl::optional<Explanation> constrainer_note;
             Explanation                constrained_note;
         };
         struct Mutability_equality {
-            mir::Mutability constrainer_mutability;
-            mir::Mutability constrained_mutability;
+            hir::Mutability constrainer_mutability;
+            hir::Mutability constrained_mutability;
             Explanation     constrainer_note;
             Explanation     constrained_note;
         };
         struct Instance { // NOLINT
-            mir::Type                    type;
+            hir::Type                    type;
             utl::Wrapper<Typeclass_info> typeclass;
             Explanation                  explanation;
         };
         struct Struct_field { // NOLINT
-            mir::Type          struct_type;
-            mir::Type          field_type;
+            hir::Type          struct_type;
+            hir::Type          field_type;
             utl::Pooled_string field_identifier;
             Explanation        explanation;
         };
         struct Tuple_field { //NOLINT
-            mir::Type                 tuple_type;
-            mir::Type                 field_type;
+            hir::Type                 tuple_type;
+            hir::Type                 field_type;
             utl::Explicit<utl::Usize> field_index;
             Explanation               explanation;
         };
@@ -253,9 +253,9 @@ namespace libresolve {
     // Passed to `Context::unify_types`
     struct [[nodiscard]] Type_unification_arguments {
         using Report_unification_failure_callback =
-            void (Context&, constraint::Type_equality original, mir::Type left, mir::Type right);
+            void (Context&, constraint::Type_equality original, hir::Type left, hir::Type right);
         using Report_recursion_error_callback =
-            void (Context&, constraint::Type_equality original, mir::Type variable, mir::Type solution);
+            void (Context&, constraint::Type_equality original, hir::Type variable, hir::Type solution);
 
         constraint::Type_equality            constraint_to_be_tested;
         bool                                 allow_coercion             = false;
@@ -276,24 +276,24 @@ namespace libresolve {
 
 
     struct Resolution_constants {
-        utl::Wrapper<mir::Mutability::Variant> immut;
-        utl::Wrapper<mir::Mutability::Variant> mut;
-        utl::Wrapper<mir::Type::Variant> unit_type;
-        utl::Wrapper<mir::Type::Variant> i8_type;
-        utl::Wrapper<mir::Type::Variant> i16_type;
-        utl::Wrapper<mir::Type::Variant> i32_type;
-        utl::Wrapper<mir::Type::Variant> i64_type;
-        utl::Wrapper<mir::Type::Variant> u8_type;
-        utl::Wrapper<mir::Type::Variant> u16_type;
-        utl::Wrapper<mir::Type::Variant> u32_type;
-        utl::Wrapper<mir::Type::Variant> u64_type;
-        utl::Wrapper<mir::Type::Variant> floating_type;
-        utl::Wrapper<mir::Type::Variant> character_type;
-        utl::Wrapper<mir::Type::Variant> boolean_type;
-        utl::Wrapper<mir::Type::Variant> string_type;
-        utl::Wrapper<mir::Type::Variant> self_placeholder_type;
+        utl::Wrapper<hir::Mutability::Variant> immut;
+        utl::Wrapper<hir::Mutability::Variant> mut;
+        utl::Wrapper<hir::Type::Variant> unit_type;
+        utl::Wrapper<hir::Type::Variant> i8_type;
+        utl::Wrapper<hir::Type::Variant> i16_type;
+        utl::Wrapper<hir::Type::Variant> i32_type;
+        utl::Wrapper<hir::Type::Variant> i64_type;
+        utl::Wrapper<hir::Type::Variant> u8_type;
+        utl::Wrapper<hir::Type::Variant> u16_type;
+        utl::Wrapper<hir::Type::Variant> u32_type;
+        utl::Wrapper<hir::Type::Variant> u64_type;
+        utl::Wrapper<hir::Type::Variant> floating_type;
+        utl::Wrapper<hir::Type::Variant> character_type;
+        utl::Wrapper<hir::Type::Variant> boolean_type;
+        utl::Wrapper<hir::Type::Variant> string_type;
+        utl::Wrapper<hir::Type::Variant> self_placeholder_type;
 
-        explicit Resolution_constants(mir::Node_arena&);
+        explicit Resolution_constants(hir::Node_arena&);
     };
 
     struct Predefinitions {
@@ -308,13 +308,13 @@ namespace libresolve {
         utl::Safe_usize current_local_variable_tag;
     public:
         compiler::Compilation_info   compilation_info;
-        mir::Node_arena              node_arena;
-        mir::Namespace_arena         namespace_arena;
+        hir::Node_arena              node_arena;
+        hir::Namespace_arena         namespace_arena;
         Resolution_constants         constants;
         tl::optional<Predefinitions> predefinitions_value;
         utl::Wrapper<Namespace>      global_namespace;
         Nameless_entities            nameless_entities;
-        tl::optional<mir::Type>      current_self_type;
+        tl::optional<hir::Type>      current_self_type;
 
         std::vector<utl::Wrapper<Function_info>> output_functions;
 
@@ -322,8 +322,8 @@ namespace libresolve {
 
         explicit Context(
             compiler::Compilation_info&& compilation_info,
-            mir::Node_arena           && node_arena,
-            mir::Namespace_arena      && namespace_arena) noexcept
+            hir::Node_arena           && node_arena,
+            hir::Namespace_arena      && namespace_arena) noexcept
             : compilation_info { std::move(compilation_info) }
             , node_arena       { std::move(node_arena) }
             , namespace_arena  { std::move(namespace_arena) }
@@ -355,8 +355,8 @@ namespace libresolve {
             };
         }
 
-        // `wrap_type(x)` is shorthand for `wrap(mir::Type::Variant { x })`
-        auto wrap_type(mir::Type::Variant&& value) -> utl::Wrapper<mir::Type::Variant> {
+        // `wrap_type(x)` is shorthand for `wrap(hir::Type::Variant { x })`
+        auto wrap_type(hir::Type::Variant&& value) -> utl::Wrapper<hir::Type::Variant> {
             return wrap(std::move(value));
         }
 
@@ -369,7 +369,7 @@ namespace libresolve {
         [[nodiscard]] auto unify_types(Type_unification_arguments) -> bool;
         [[nodiscard]] auto unify_mutabilities(Mutability_unification_arguments) -> bool;
 
-        [[nodiscard]] auto pure_equality_compare(mir::Type, mir::Type) -> bool;
+        [[nodiscard]] auto pure_equality_compare(hir::Type, hir::Type) -> bool;
 
         auto solve(constraint::Type_equality       const&) -> void;
         auto solve(constraint::Mutability_equality const&) -> void;
@@ -379,43 +379,43 @@ namespace libresolve {
 
         [[nodiscard]] auto predefinitions() -> Predefinitions;
 
-        // Returns a scope with local bindings for the template parameters and the MIR representations of the parameters themselves.
-        [[nodiscard]] auto resolve_template_parameters(std::span<ast::Template_parameter>, Namespace&) -> utl::Pair<Scope, std::vector<mir::Template_parameter>>;
+        // Returns a scope with local bindings for the template parameters and the HIR representations of the parameters themselves.
+        [[nodiscard]] auto resolve_template_parameters(std::span<ast::Template_parameter>, Namespace&) -> utl::Pair<Scope, std::vector<hir::Template_parameter>>;
 
         // Returns the signature of the function. Resolves the function body only if the return type is not explicitly specified.
-        [[nodiscard]] auto resolve_function_signature(Function_info&) -> mir::Function::Signature&;
+        [[nodiscard]] auto resolve_function_signature(Function_info&) -> hir::Function::Signature&;
 
         // Solve unsolved unification variables with implicit template parameters
-        auto generalize_to(mir::Type, std::vector<mir::Template_parameter>&) -> void;
+        auto generalize_to(hir::Type, std::vector<hir::Template_parameter>&) -> void;
 
         // Emit an error diagnostic if the given type contains unsolved unification variables
-        auto ensure_non_generalizable(mir::Type, std::string_view type_description) -> void;
+        auto ensure_non_generalizable(hir::Type, std::string_view type_description) -> void;
 
-        [[nodiscard]] auto resolve_function      (utl::Wrapper<Function_info      >) -> mir::Function      &;
-        [[nodiscard]] auto resolve_struct        (utl::Wrapper<Struct_info        >) -> mir::Struct        &;
-        [[nodiscard]] auto resolve_enum          (utl::Wrapper<Enum_info          >) -> mir::Enum          &;
-        [[nodiscard]] auto resolve_alias         (utl::Wrapper<Alias_info         >) -> mir::Alias         &;
-        [[nodiscard]] auto resolve_typeclass     (utl::Wrapper<Typeclass_info     >) -> mir::Typeclass     &;
-        [[nodiscard]] auto resolve_implementation(utl::Wrapper<Implementation_info>) -> mir::Implementation&;
-        [[nodiscard]] auto resolve_instantiation (utl::Wrapper<Instantiation_info >) -> mir::Instantiation &;
+        [[nodiscard]] auto resolve_function      (utl::Wrapper<Function_info      >) -> hir::Function      &;
+        [[nodiscard]] auto resolve_struct        (utl::Wrapper<Struct_info        >) -> hir::Struct        &;
+        [[nodiscard]] auto resolve_enum          (utl::Wrapper<Enum_info          >) -> hir::Enum          &;
+        [[nodiscard]] auto resolve_alias         (utl::Wrapper<Alias_info         >) -> hir::Alias         &;
+        [[nodiscard]] auto resolve_typeclass     (utl::Wrapper<Typeclass_info     >) -> hir::Typeclass     &;
+        [[nodiscard]] auto resolve_implementation(utl::Wrapper<Implementation_info>) -> hir::Implementation&;
+        [[nodiscard]] auto resolve_instantiation (utl::Wrapper<Instantiation_info >) -> hir::Instantiation &;
 
-        [[nodiscard]] auto resolve_struct_template        (utl::Wrapper<Struct_template_info        >) -> mir::Struct_template        &;
-        [[nodiscard]] auto resolve_enum_template          (utl::Wrapper<Enum_template_info          >) -> mir::Enum_template          &;
-        [[nodiscard]] auto resolve_alias_template         (utl::Wrapper<Alias_template_info         >) -> mir::Alias_template         &;
-        [[nodiscard]] auto resolve_typeclass_template     (utl::Wrapper<Typeclass_template_info     >) -> mir::Typeclass_template     &;
-        [[nodiscard]] auto resolve_implementation_template(utl::Wrapper<Implementation_template_info>) -> mir::Implementation_template&;
-        [[nodiscard]] auto resolve_instantiation_template (utl::Wrapper<Instantiation_template_info >) -> mir::Instantiation_template &;
+        [[nodiscard]] auto resolve_struct_template        (utl::Wrapper<Struct_template_info        >) -> hir::Struct_template        &;
+        [[nodiscard]] auto resolve_enum_template          (utl::Wrapper<Enum_template_info          >) -> hir::Enum_template          &;
+        [[nodiscard]] auto resolve_alias_template         (utl::Wrapper<Alias_template_info         >) -> hir::Alias_template         &;
+        [[nodiscard]] auto resolve_typeclass_template     (utl::Wrapper<Typeclass_template_info     >) -> hir::Typeclass_template     &;
+        [[nodiscard]] auto resolve_implementation_template(utl::Wrapper<Implementation_template_info>) -> hir::Implementation_template&;
+        [[nodiscard]] auto resolve_instantiation_template (utl::Wrapper<Instantiation_template_info >) -> hir::Instantiation_template &;
 
-        [[nodiscard]] auto resolve_type      (ast::Type      &, Scope&, Namespace&) -> mir::Type;
-        [[nodiscard]] auto resolve_expression(ast::Expression&, Scope&, Namespace&) -> mir::Expression;
+        [[nodiscard]] auto resolve_type      (ast::Type      &, Scope&, Namespace&) -> hir::Type;
+        [[nodiscard]] auto resolve_expression(ast::Expression&, Scope&, Namespace&) -> hir::Expression;
 
-        [[nodiscard]] auto resolve_pattern(ast::Pattern&, mir::Type, Scope&, Namespace&) -> mir::Pattern;
+        [[nodiscard]] auto resolve_pattern(ast::Pattern&, hir::Type, Scope&, Namespace&) -> hir::Pattern;
 
-        [[nodiscard]] auto resolve_mutability(ast::Mutability const&, Scope&) -> mir::Mutability;
+        [[nodiscard]] auto resolve_mutability(ast::Mutability const&, Scope&) -> hir::Mutability;
 
-        [[nodiscard]] auto resolve_class_reference(ast::Class_reference&, Scope&, Namespace&) -> mir::Class_reference;
+        [[nodiscard]] auto resolve_class_reference(ast::Class_reference&, Scope&, Namespace&) -> hir::Class_reference;
 
-        [[nodiscard]] auto resolve_method(compiler::Name_lower method_name, tl::optional<std::span<ast::Template_argument const>>, mir::Type method_for, Scope&, Namespace&) -> utl::Wrapper<Function_info>;
+        [[nodiscard]] auto resolve_method(compiler::Name_lower method_name, tl::optional<std::span<ast::Template_argument const>>, hir::Type method_for, Scope&, Namespace&) -> utl::Wrapper<Function_info>;
 
         [[nodiscard]] auto find_lower(ast::Qualified_name&, Scope&, Namespace&) -> Lower_variant;
         [[nodiscard]] auto find_upper(ast::Qualified_name&, Scope&, Namespace&) -> Upper_variant;
@@ -424,18 +424,18 @@ namespace libresolve {
         auto add_to_namespace(Namespace&, compiler::Name_upper, Upper_variant) -> void;
 
         // Returns the associated namespace of the given type, or returns nullopt if the type does not have one.
-        auto associated_namespace_if(mir::Type) -> tl::optional<utl::Wrapper<Namespace>>;
+        auto associated_namespace_if(hir::Type) -> tl::optional<utl::Wrapper<Namespace>>;
         // Returns the associated namespace of the given type, or emits an error diagnostic if the type does not have one.
-        auto associated_namespace(mir::Type) -> utl::Wrapper<Namespace>;
+        auto associated_namespace(hir::Type) -> utl::Wrapper<Namespace>;
 
-        auto fresh_unification_type_variable_state(mir::Unification_type_variable_kind) -> utl::Wrapper<mir::Unification_type_variable_state>;
+        auto fresh_unification_type_variable_state(hir::Unification_type_variable_kind) -> utl::Wrapper<hir::Unification_type_variable_state>;
 
-        auto fresh_general_unification_type_variable(utl::Source_view) -> mir::Type;
-        auto fresh_integral_unification_type_variable(utl::Source_view) -> mir::Type;
+        auto fresh_general_unification_type_variable(utl::Source_view) -> hir::Type;
+        auto fresh_integral_unification_type_variable(utl::Source_view) -> hir::Type;
 
-        auto fresh_unification_mutability_variable(utl::Source_view) -> mir::Mutability;
-        auto fresh_template_parameter_reference_tag() -> mir::Template_parameter_tag;
-        auto fresh_local_variable_tag()               -> mir::Local_variable_tag;
+        auto fresh_unification_mutability_variable(utl::Source_view) -> hir::Mutability;
+        auto fresh_template_parameter_reference_tag() -> hir::Template_parameter_tag;
+        auto fresh_local_variable_tag()               -> hir::Local_variable_tag;
 
         auto instantiate_function_template(utl::Wrapper<Function_info>,        std::span<ast::Template_argument const>, utl::Source_view instantiation_view, Scope&, Namespace&) -> utl::Wrapper<Function_info>;
         auto instantiate_struct_template  (utl::Wrapper<Struct_template_info>, std::span<ast::Template_argument const>, utl::Source_view instantiation_view, Scope&, Namespace&) -> utl::Wrapper<Struct_info>;
@@ -447,30 +447,30 @@ namespace libresolve {
         auto instantiate_enum_template_with_synthetic_arguments    (utl::Wrapper<Enum_template_info>,   utl::Source_view instantiation_view) -> utl::Wrapper<Enum_info>;
         auto instantiate_alias_template_with_synthetic_arguments   (utl::Wrapper<Alias_template_info>,  utl::Source_view instantiation_view) -> utl::Wrapper<Alias_info>;
 
-        auto   mut_constant(utl::Source_view) -> mir::Mutability;
-        auto immut_constant(utl::Source_view) -> mir::Mutability;
+        auto   mut_constant(utl::Source_view) -> hir::Mutability;
+        auto immut_constant(utl::Source_view) -> hir::Mutability;
 
-        auto unit_type            (utl::Source_view) -> mir::Type;
-        auto i8_type              (utl::Source_view) -> mir::Type;
-        auto i16_type             (utl::Source_view) -> mir::Type;
-        auto i32_type             (utl::Source_view) -> mir::Type;
-        auto i64_type             (utl::Source_view) -> mir::Type;
-        auto u8_type              (utl::Source_view) -> mir::Type;
-        auto u16_type             (utl::Source_view) -> mir::Type;
-        auto u32_type             (utl::Source_view) -> mir::Type;
-        auto u64_type             (utl::Source_view) -> mir::Type;
-        auto floating_type        (utl::Source_view) -> mir::Type;
-        auto character_type       (utl::Source_view) -> mir::Type;
-        auto boolean_type         (utl::Source_view) -> mir::Type;
-        auto string_type          (utl::Source_view) -> mir::Type;
-        auto size_type            (utl::Source_view) -> mir::Type;
-        auto self_placeholder_type(utl::Source_view) -> mir::Type;
+        auto unit_type            (utl::Source_view) -> hir::Type;
+        auto i8_type              (utl::Source_view) -> hir::Type;
+        auto i16_type             (utl::Source_view) -> hir::Type;
+        auto i32_type             (utl::Source_view) -> hir::Type;
+        auto i64_type             (utl::Source_view) -> hir::Type;
+        auto u8_type              (utl::Source_view) -> hir::Type;
+        auto u16_type             (utl::Source_view) -> hir::Type;
+        auto u32_type             (utl::Source_view) -> hir::Type;
+        auto u64_type             (utl::Source_view) -> hir::Type;
+        auto floating_type        (utl::Source_view) -> hir::Type;
+        auto character_type       (utl::Source_view) -> hir::Type;
+        auto boolean_type         (utl::Source_view) -> hir::Type;
+        auto string_type          (utl::Source_view) -> hir::Type;
+        auto size_type            (utl::Source_view) -> hir::Type;
+        auto self_placeholder_type(utl::Source_view) -> hir::Type;
 
         // Returns a type the value of which must be overwritten
-        auto temporary_placeholder_type(utl::Source_view) -> mir::Type;
+        auto temporary_placeholder_type(utl::Source_view) -> hir::Type;
 
         template <class T>
-        auto literal_type(utl::Source_view const view) -> mir::Type {
+        auto literal_type(utl::Source_view const view) -> hir::Type {
             if constexpr (std::same_as<T, compiler::Integer>)
                 return fresh_integral_unification_type_variable(view);
             else if constexpr (std::same_as<T, compiler::Floating>)

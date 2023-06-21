@@ -7,58 +7,58 @@ using namespace libresolve;
 namespace {
     struct Generalization_type_visitor {
         using Unification_variable_handler =
-            std::function<void(mir::Type variable, mir::Unification_type_variable_state&)>;
+            std::function<void(hir::Type variable, hir::Unification_type_variable_state&)>;
 
         Context                     & context;
         Unification_variable_handler& unification_variable_handler;
-        mir::Type                     this_type;
+        hir::Type                     this_type;
 
         auto recurse() noexcept {
-            return [*this](mir::Type const type) mutable -> void {
+            return [*this](hir::Type const type) mutable -> void {
                 this_type = type;
                 std::visit(*this, *type.flattened_value());
             };
         }
-        auto recurse(mir::Type const type) -> void {
+        auto recurse(hir::Type const type) -> void {
             return recurse()(type);
         }
 
-        auto operator()(mir::type::Unification_variable const variable) -> void {
+        auto operator()(hir::type::Unification_variable const variable) -> void {
             unification_variable_handler(this_type, *variable.state);
         }
-        auto operator()(mir::type::Tuple const& tuple) -> void {
+        auto operator()(hir::type::Tuple const& tuple) -> void {
             ranges::for_each(tuple.field_types, recurse());
         }
-        auto operator()(mir::type::Array const& array) -> void {
+        auto operator()(hir::type::Array const& array) -> void {
             recurse(array.element_type);
             recurse(array.array_length->type);
         }
-        auto operator()(utl::one_of<mir::type::Structure, mir::type::Enumeration> auto const& user_defined) -> void {
+        auto operator()(utl::one_of<hir::type::Structure, hir::type::Enumeration> auto const& user_defined) -> void {
             if (user_defined.is_application) {
-                for (mir::Template_argument const& argument : utl::get(user_defined.info->template_instantiation_info).template_arguments) {
+                for (hir::Template_argument const& argument : utl::get(user_defined.info->template_instantiation_info).template_arguments) {
                     utl::match(argument.value,
-                        [&](mir::Type const type)              { recurse(type); },
-                        [&](mir::Expression const& expression) { recurse(expression.type); },
-                        [&](mir::Mutability const&)            {});
+                        [&](hir::Type const type)              { recurse(type); },
+                        [&](hir::Expression const& expression) { recurse(expression.type); },
+                        [&](hir::Mutability const&)            {});
                 }
             }
         }
-        auto operator()(mir::type::Function const& function) -> void {
+        auto operator()(hir::type::Function const& function) -> void {
             recurse(function.return_type);
             ranges::for_each(function.parameter_types, recurse());
         }
-        auto operator()(mir::type::Reference const& reference) -> void {
+        auto operator()(hir::type::Reference const& reference) -> void {
             recurse(reference.referenced_type);
         }
-        auto operator()(mir::type::Pointer const& pointer) -> void {
+        auto operator()(hir::type::Pointer const& pointer) -> void {
             recurse(pointer.pointed_to_type);
         }
-        auto operator()(mir::type::Slice const& slice) -> void {
+        auto operator()(hir::type::Slice const& slice) -> void {
             recurse(slice.element_type);
         }
         auto operator()(utl::one_of<
-            mir::type::Template_parameter_reference,
-            mir::type::Self_placeholder,
+            hir::type::Template_parameter_reference,
+            hir::type::Self_placeholder,
             compiler::built_in_type::Integer,
             compiler::built_in_type::Floating,
             compiler::built_in_type::String,
@@ -68,22 +68,22 @@ namespace {
 }
 
 
-auto libresolve::Context::generalize_to(mir::Type const type, std::vector<mir::Template_parameter>& output) -> void {
-    std::function handler = [&](mir::Type const type, mir::Unification_type_variable_state& state) {
+auto libresolve::Context::generalize_to(hir::Type const type, std::vector<hir::Template_parameter>& output) -> void {
+    std::function handler = [&](hir::Type const type, hir::Unification_type_variable_state& state) {
         auto& unsolved = state.as_unsolved();
         auto const tag = fresh_template_parameter_reference_tag();
 
-        output.push_back(mir::Template_parameter {
-            .value            = mir::Template_parameter::Type_parameter { .classes = std::move(unsolved.classes) },
-            .default_argument = mir::Template_default_argument {
+        output.push_back(hir::Template_parameter {
+            .value            = hir::Template_parameter::Type_parameter { .classes = std::move(unsolved.classes) },
+            .default_argument = hir::Template_default_argument {
                 .argument = { ast::Template_argument::Wildcard { type.source_view() } },
                 .scope    = nullptr, // Wildcard arguments need no scope
             },
             .reference_tag = tag,
             .source_view   = type.source_view(),
         });
-        state.solve_with(mir::Type {
-            wrap_type(mir::type::Template_parameter_reference {
+        state.solve_with(hir::Type {
+            wrap_type(hir::type::Template_parameter_reference {
                 .identifier = { tl::nullopt },
                 .tag        = tag,
             }),
@@ -94,10 +94,10 @@ auto libresolve::Context::generalize_to(mir::Type const type, std::vector<mir::T
 }
 
 
-auto libresolve::Context::ensure_non_generalizable(mir::Type const type, std::string_view const type_description) -> void {
-    std::function handler = [&](mir::Type const type, mir::Unification_type_variable_state&) {
+auto libresolve::Context::ensure_non_generalizable(hir::Type const type, std::string_view const type_description) -> void {
+    std::function handler = [&](hir::Type const type, hir::Unification_type_variable_state&) {
         error(type.source_view(), {
-            .message   = "{}'s type contains an unsolved unification type variable: {}"_format(type_description, mir::to_string(type)),
+            .message   = "{}'s type contains an unsolved unification type variable: {}"_format(type_description, hir::to_string(type)),
             .help_note = "This can most likely be fixed by providing explicit type annotations",
         });
     };

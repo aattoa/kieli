@@ -4,9 +4,9 @@
 
 
 namespace {
-    auto reify_function(libreify::Context& context, mir::Function const& function) -> cir::Function {
+    auto reify_function(libreify::Context& context, hir::Function const& function) -> cir::Function {
         auto const reify_parameter_type = utl::compose(
-            std::bind_front(&libreify::Context::reify_type, &context), &mir::Function_parameter::type);
+            std::bind_front(&libreify::Context::reify_type, &context), &hir::Function_parameter::type);
         return cir::Function {
             .symbol          = std::string(function.signature.name.identifier.view()), // TODO: format function signature
             .parameter_types = utl::map(reify_parameter_type, function.signature.parameters),

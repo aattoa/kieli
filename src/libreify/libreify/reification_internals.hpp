@@ -2,7 +2,7 @@
 
 #include <libutl/common/utilities.hpp>
 #include <libutl/common/safe_integer.hpp>
-#include <libresolve/mir.hpp>
+#include <libresolve/hir.hpp>
 #include <libreify/cir.hpp>
 
 
@@ -30,7 +30,7 @@ namespace libreify {
         compiler::Compilation_info                             compilation_info;
         cir::Node_arena                                        node_arena;
         Reification_constants                                  constants;
-        utl::Flatmap<mir::Local_variable_tag, utl::Safe_isize> variable_frame_offsets;
+        utl::Flatmap<hir::Local_variable_tag, utl::Safe_isize> variable_frame_offsets;
         utl::Safe_isize                                        current_frame_offset;
 
         explicit Context(
@@ -61,9 +61,9 @@ namespace libreify {
             return wrap(std::move(value));
         }
 
-        auto reify_expression(mir::Expression const&) -> cir::Expression;
-        auto reify_pattern   (mir::Pattern    const&) -> cir::Pattern;
-        auto reify_type      (mir::Type             ) -> cir::Type;
+        auto reify_expression(hir::Expression const&) -> cir::Expression;
+        auto reify_pattern   (hir::Pattern    const&) -> cir::Pattern;
+        auto reify_type      (hir::Type             ) -> cir::Type;
 
         [[noreturn]]
         auto error(utl::Source_view, utl::diagnostics::Message_arguments) -> void;
