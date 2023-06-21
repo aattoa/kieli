@@ -12,8 +12,8 @@ namespace {
     };
 
     struct [[nodiscard]] Unification_variable_solutions {
-        using Type_mappings = utl::Flatmap<utl::Wrapper<mir::Unification_type_variable_state>, mir::Type, Wrapper_shallow_equality>;
-        using Mutability_mappings = utl::Flatmap<utl::Wrapper<mir::Unification_mutability_variable_state>, mir::Mutability, Wrapper_shallow_equality>;
+        using Type_mappings = utl::Flatmap<utl::Wrapper<hir::Unification_type_variable_state>, hir::Type, Wrapper_shallow_equality>;
+        using Mutability_mappings = utl::Flatmap<utl::Wrapper<hir::Unification_mutability_variable_state>, hir::Mutability, Wrapper_shallow_equality>;
 
         Type_mappings       type_mappings;
         Mutability_mappings mutability_mappings;
@@ -28,50 +28,50 @@ namespace {
 
 
     // Check whether a unification type variable with the given tag occurs in the given type
-    auto occurs_check(mir::Unification_variable_tag, mir::Type) -> bool;
+    auto occurs_check(hir::Unification_variable_tag, hir::Type) -> bool;
 
     struct Occurs_check_visitor {
-        mir::Unification_variable_tag tag;
-        mir::Type                     this_type;
+        hir::Unification_variable_tag tag;
+        hir::Type                     this_type;
 
         [[nodiscard]]
-        auto recurse(mir::Type const type) const -> bool {
+        auto recurse(hir::Type const type) const -> bool {
             return occurs_check(tag, type);
         }
         [[nodiscard]]
         auto recurse() const {
-            return [*this](mir::Type const type) { return recurse(type); };
+            return [*this](hir::Type const type) { return recurse(type); };
         }
 
-        auto operator()(mir::type::Unification_variable const& variable) const {
+        auto operator()(hir::type::Unification_variable const& variable) const {
             return tag == variable.state->as_unsolved().tag;
         }
-        auto operator()(mir::type::Array const& array) const {
+        auto operator()(hir::type::Array const& array) const {
             return recurse(array.element_type) || recurse(array.array_length->type);
         }
-        auto operator()(mir::type::Slice const& slice) const {
+        auto operator()(hir::type::Slice const& slice) const {
             return recurse(slice.element_type);
         }
-        auto operator()(mir::type::Tuple const& tuple) const {
+        auto operator()(hir::type::Tuple const& tuple) const {
             return ranges::any_of(tuple.field_types, recurse());
         }
-        auto operator()(mir::type::Function const& function) const {
+        auto operator()(hir::type::Function const& function) const {
             return ranges::any_of(function.parameter_types, recurse())
                 || recurse(function.return_type);
         }
-        auto operator()(mir::type::Reference const& reference) const {
+        auto operator()(hir::type::Reference const& reference) const {
             return recurse(reference.referenced_type);
         }
-        auto operator()(mir::type::Pointer const& pointer) const {
+        auto operator()(hir::type::Pointer const& pointer) const {
             return recurse(pointer.pointed_to_type);
         }
-        auto operator()(utl::one_of<mir::type::Structure, mir::type::Enumeration> auto const& user_defined) const {
+        auto operator()(utl::one_of<hir::type::Structure, hir::type::Enumeration> auto const& user_defined) const {
             if (user_defined.is_application) {
-                auto const check_template_argument = [this](mir::Template_argument const& argument) {
+                auto const check_template_argument = [this](hir::Template_argument const& argument) {
                     return utl::match(argument.value,
-                        [*this](mir::Type       const  type)       { return recurse(type); },
-                        [*this](mir::Expression const& expression) { return recurse(expression.type); },
-                        []     (mir::Mutability)                   { return false; }
+                        [*this](hir::Type       const  type)       { return recurse(type); },
+                        [*this](hir::Expression const& expression) { return recurse(expression.type); },
+                        []     (hir::Mutability)                   { return false; }
                     );
                 };
                 auto& info = utl::get(user_defined.info->template_instantiation_info);
@@ -85,15 +85,15 @@ namespace {
             compiler::built_in_type::Character,
             compiler::built_in_type::Boolean,
             compiler::built_in_type::String,
-            mir::type::Template_parameter_reference,
-            mir::type::Self_placeholder> auto const&) const
+            hir::type::Template_parameter_reference,
+            hir::type::Self_placeholder> auto const&) const
         {
             return false;
         }
     };
 
     [[nodiscard]]
-    auto occurs_check(mir::Unification_variable_tag const tag, mir::Type const type) -> bool {
+    auto occurs_check(hir::Unification_variable_tag const tag, hir::Type const type) -> bool {
         return std::visit(Occurs_check_visitor { .tag = tag, .this_type = type }, *type.flattened_value());
     }
 
@@ -112,22 +112,22 @@ namespace {
         }
 
         auto solution(
-            utl::Wrapper<mir::Unification_mutability_variable_state> const variable_state,
-            mir::Mutability                                          const solution) -> bool
+            utl::Wrapper<hir::Unification_mutability_variable_state> const variable_state,
+            hir::Mutability                                          const solution) -> bool
         {
             solutions.add_new_or_abort(variable_state, solution);
             return true;
         }
 
-        auto left_mutability() const noexcept -> mir::Mutability {
+        auto left_mutability() const noexcept -> hir::Mutability {
             return unification_arguments.constraint_to_be_tested.constrainer_mutability;
         }
-        auto right_mutability() const noexcept -> mir::Mutability {
+        auto right_mutability() const noexcept -> hir::Mutability {
             return unification_arguments.constraint_to_be_tested.constrained_mutability;
         }
 
 
-        auto operator()(mir::Mutability::Concrete const constrainer, mir::Mutability::Concrete const constrained) -> bool {
+        auto operator()(hir::Mutability::Concrete const constrainer, hir::Mutability::Concrete const constrained) -> bool {
             if (constrainer.is_mutable.get() == constrained.is_mutable.get()) {
                 return true;
             }
@@ -141,16 +141,16 @@ namespace {
                 return unification_arguments.allow_coercion;
             }
         }
-        auto operator()(mir::Mutability::Parameterized const left, mir::Mutability::Parameterized const right) -> bool {
+        auto operator()(hir::Mutability::Parameterized const left, hir::Mutability::Parameterized const right) -> bool {
             return left.tag == right.tag || unification_failure();
         }
-        auto operator()(mir::Mutability::Variable const left, auto) -> bool {
+        auto operator()(hir::Mutability::Variable const left, auto) -> bool {
             return solution(left.state, right_mutability());
         }
-        auto operator()(auto, mir::Mutability::Variable const right) -> bool {
+        auto operator()(auto, hir::Mutability::Variable const right) -> bool {
             return solution(right.state, left_mutability());
         }
-        auto operator()(mir::Mutability::Variable const left, mir::Mutability::Variable const right) -> bool {
+        auto operator()(hir::Mutability::Variable const left, hir::Mutability::Variable const right) -> bool {
             if (left.state.is(right.state))
                 return true;
 
@@ -165,15 +165,15 @@ namespace {
 
 
     struct Type_unification_visitor {
-        mir::Type                                        current_left_type;
-        mir::Type                                        current_right_type;
+        hir::Type                                        current_left_type;
+        hir::Type                                        current_right_type;
         libresolve::constraint::Type_equality     const& original_constraint;
         libresolve::Type_unification_arguments    const& unification_arguments;
         Unification_variable_solutions                 & solutions;
         libresolve::Context                            & context;
 
         [[nodiscard]]
-        auto recurse(mir::Type const constrainer, mir::Type const constrained) -> bool {
+        auto recurse(hir::Type const constrainer, hir::Type const constrained) -> bool {
             auto visitor_copy = *this;
             visitor_copy.current_left_type = constrainer;
             visitor_copy.current_right_type = constrained;
@@ -191,7 +191,7 @@ namespace {
             };
         }
 
-        auto unify_mutability(mir::Mutability const constrainer, mir::Mutability const constrained) -> bool {
+        auto unify_mutability(hir::Mutability const constrainer, hir::Mutability const constrained) -> bool {
             Mutability_unification_visitor visitor {
                 .unification_arguments {
                     .constraint_to_be_tested {
@@ -221,7 +221,7 @@ namespace {
         }
 
         [[nodiscard]]
-        auto recursion_error(mir::Type const variable, mir::Type const solution) -> bool {
+        auto recursion_error(hir::Type const variable, hir::Type const solution) -> bool {
             if (auto* const callback = unification_arguments.report_recursive_type) {
                 callback(context, original_constraint, variable, solution);
                 utl::unreachable();
@@ -230,12 +230,12 @@ namespace {
         }
 
         auto solution(
-            utl::Wrapper<mir::Unification_type_variable_state> const variable_state,
-            mir::Type                                          const solution) -> bool
+            utl::Wrapper<hir::Unification_type_variable_state> const variable_state,
+            hir::Type                                          const solution) -> bool
         {
             // UNIFICATION_LOG("adding solution: {} -> {}\n", variable_state, solution);
 
-            if (mir::Type const* const existing_solution = solutions.type_mappings.find(variable_state))
+            if (hir::Type const* const existing_solution = solutions.type_mappings.find(variable_state))
                 if (!context.pure_equality_compare(*existing_solution, solution))
                     return unification_failure();
 
@@ -255,27 +255,27 @@ namespace {
         auto operator()(compiler::built_in_type::Integer const left, compiler::built_in_type::Integer const right) -> bool {
             return left == right || unification_failure();
         }
-        auto operator()(mir::type::Template_parameter_reference const left, mir::type::Template_parameter_reference const right) -> bool {
+        auto operator()(hir::type::Template_parameter_reference const left, hir::type::Template_parameter_reference const right) -> bool {
             return left.tag == right.tag || unification_failure();
         }
 
-        auto operator()(mir::type::Unification_variable const left, mir::type::Unification_variable const right) -> bool {
+        auto operator()(hir::type::Unification_variable const left, hir::type::Unification_variable const right) -> bool {
             if (left.state.is(right.state)) return true;
 
             auto& left_unsolved = left.state->as_unsolved();
             auto& right_unsolved = right.state->as_unsolved();
 
-            if (right_unsolved.kind.get() == mir::Unification_type_variable_kind::integral)
-                left_unsolved.kind.get() = mir::Unification_type_variable_kind::integral;
+            if (right_unsolved.kind.get() == hir::Unification_type_variable_kind::integral)
+                left_unsolved.kind.get() = hir::Unification_type_variable_kind::integral;
             utl::append_vector(left_unsolved.classes, std::move(right_unsolved.classes));
             return solution(right.state, current_left_type);
         }
 
-        auto operator()(mir::type::Unification_variable const left, auto&) -> bool {
+        auto operator()(hir::type::Unification_variable const left, auto&) -> bool {
             auto const& unsolved = left.state->as_unsolved();
             utl::always_assert(unsolved.classes.empty());
 
-            if (unsolved.kind.get() == mir::Unification_type_variable_kind::integral)
+            if (unsolved.kind.get() == hir::Unification_type_variable_kind::integral)
                 if (!std::holds_alternative<compiler::built_in_type::Integer>(*current_right_type.pure_value()))
                     return unification_failure();
 
@@ -284,11 +284,11 @@ namespace {
             else
                 return solution(left.state, current_right_type);
         }
-        auto operator()(auto&, mir::type::Unification_variable const right) -> bool {
+        auto operator()(auto&, hir::type::Unification_variable const right) -> bool {
             auto const& unsolved = right.state->as_unsolved();
             utl::always_assert(unsolved.classes.empty());
 
-            if (unsolved.kind.get() == mir::Unification_type_variable_kind::integral)
+            if (unsolved.kind.get() == hir::Unification_type_variable_kind::integral)
                 if (!std::holds_alternative<compiler::built_in_type::Integer>(*current_left_type.pure_value()))
                     return unification_failure();
 
@@ -298,23 +298,23 @@ namespace {
                 return solution(right.state, current_left_type);
         }
 
-        auto operator()(mir::type::Reference& left, mir::type::Reference& right) -> bool {
+        auto operator()(hir::type::Reference& left, hir::type::Reference& right) -> bool {
             return recurse(left.referenced_type, right.referenced_type)
                 && unify_mutability(left.mutability, right.mutability);
         }
-        auto operator()(mir::type::Pointer& left, mir::type::Pointer& right) -> bool {
+        auto operator()(hir::type::Pointer& left, hir::type::Pointer& right) -> bool {
             return recurse(left.pointed_to_type, right.pointed_to_type)
                 && unify_mutability(left.mutability, right.mutability);
         }
 
-        auto operator()(mir::type::Tuple& left, mir::type::Tuple& right) -> bool {
+        auto operator()(hir::type::Tuple& left, hir::type::Tuple& right) -> bool {
             if (left.field_types.size() == right.field_types.size())
                 return ranges::all_of(ranges::views::zip(left.field_types, right.field_types), recurse());
             else
                 return unification_failure();
         }
 
-        auto operator()(mir::type::Function& left, mir::type::Function& right) -> bool {
+        auto operator()(hir::type::Function& left, hir::type::Function& right) -> bool {
             if (left.parameter_types.size() == right.parameter_types.size())
                 return ranges::all_of(ranges::views::zip(left.parameter_types, right.parameter_types), recurse())
                     && recurse(left.return_type, right.return_type);
@@ -322,7 +322,7 @@ namespace {
                 return unification_failure();
         }
 
-        template <utl::one_of<mir::type::Structure, mir::type::Enumeration> T>
+        template <utl::one_of<hir::type::Structure, hir::type::Enumeration> T>
         auto operator()(T& left, T& right) -> bool {
             if (left.info.is(right.info))
                 return true; // Same type
@@ -337,10 +337,10 @@ namespace {
 
             auto const unify_template_arguments = [&](auto const& pair) {
                 return std::visit(utl::Overload {
-                    [&](mir::Type const left_argument, mir::Type const right_argument) {
+                    [&](hir::Type const left_argument, hir::Type const right_argument) {
                         return recurse(left_argument, right_argument);
                     },
-                    [&](mir::Mutability const left_argument, mir::Mutability const right_argument) {
+                    [&](hir::Mutability const left_argument, hir::Mutability const right_argument) {
                         return unify_mutability(left_argument, right_argument);
                     },
                     [](auto const&, auto const&) -> bool {
@@ -402,7 +402,7 @@ auto libresolve::Context::unify_types(Type_unification_arguments const arguments
 }
 
 
-auto libresolve::Context::pure_equality_compare(mir::Type const left, mir::Type const right) -> bool {
+auto libresolve::Context::pure_equality_compare(hir::Type const left, hir::Type const right) -> bool {
     return unify_types({
         .constraint_to_be_tested {
             .constrainer_type = left,

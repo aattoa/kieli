@@ -7,12 +7,12 @@ namespace {
     auto report_type_unification_failure(
         libresolve::Context&                        context,
         libresolve::constraint::Type_equality const constraint,
-        mir::Type                             const left,
-        mir::Type                             const right) -> void
+        hir::Type                             const left,
+        hir::Type                             const right) -> void
     {
         auto sections = utl::vector_with_capacity<utl::diagnostics::Text_section>(2);
-        auto const constrainer_string = mir::to_string(constraint.constrainer_type);
-        auto const constrained_string = mir::to_string(constraint.constrained_type);
+        auto const constrainer_string = hir::to_string(constraint.constrainer_type);
+        auto const constrained_string = hir::to_string(constraint.constrained_type);
 
         auto const constrainer_note = constraint.constrainer_note.transform(
             [&](libresolve::constraint::Explanation const explanation) {
@@ -37,26 +37,26 @@ namespace {
 
         context.diagnostics().emit_error({
             .sections = std::move(sections),
-            .message  = "Could not unify {} ~ {}"_format(mir::to_string(left), mir::to_string(right)),
+            .message  = "Could not unify {} ~ {}"_format(hir::to_string(left), hir::to_string(right)),
         });
     }
 
     auto report_recursive_type(
         libresolve::Context&                        context,
         libresolve::constraint::Type_equality const constraint,
-        mir::Type                             const variable,
-        mir::Type                             const solution) -> void
+        hir::Type                             const variable,
+        hir::Type                             const solution) -> void
     {
         context.error(constraint.constrained_type.source_view(),
-            { "Recursive unification variable solution: {} = {}"_format(mir::to_string(variable), mir::to_string(solution)) });
+            { "Recursive unification variable solution: {} = {}"_format(hir::to_string(variable), hir::to_string(solution)) });
     }
 
     auto report_mutability_unification_failure(
         libresolve::Context&                              context,
         libresolve::constraint::Mutability_equality const constraint) -> void
     {
-        auto const left  = mir::to_string(constraint.constrainer_mutability);
-        auto const right = mir::to_string(constraint.constrained_mutability);
+        auto const left  = hir::to_string(constraint.constrainer_mutability);
+        auto const right = hir::to_string(constraint.constrained_mutability);
 
         std::string const constrainer_note =
             std::vformat(constraint.constrainer_note.explanatory_note, std::make_format_args(left, right));
@@ -110,9 +110,9 @@ auto libresolve::Context::solve(constraint::Instance const&) -> void {
 
 
 auto libresolve::Context::solve(constraint::Struct_field const& constraint) -> void {
-    if (auto const* const type = std::get_if<mir::type::Structure>(&*constraint.struct_type.flattened_value())) {
-        mir::Struct const& structure = resolve_struct(type->info);
-        for (mir::Struct::Member const& member : structure.members) {
+    if (auto const* const type = std::get_if<hir::type::Structure>(&*constraint.struct_type.flattened_value())) {
+        hir::Struct const& structure = resolve_struct(type->info);
+        for (hir::Struct::Member const& member : structure.members) {
             if (constraint.field_identifier == member.name.identifier) {
                 solve(constraint::Type_equality {
                     .constrainer_type = member.type,
@@ -129,7 +129,7 @@ auto libresolve::Context::solve(constraint::Struct_field const& constraint) -> v
             .message   = constraint.explanation.explanatory_note,
             .help_note = std::format(
                 "{} does not have a member '{}'",
-                mir::to_string(constraint.struct_type),
+                hir::to_string(constraint.struct_type),
                 constraint.field_identifier),
         });
     }
@@ -138,20 +138,20 @@ auto libresolve::Context::solve(constraint::Struct_field const& constraint) -> v
             .message   = constraint.explanation.explanatory_note,
             .help_note = std::format(
                 "{} is not a struct type, so it does not have named fields",
-                mir::to_string(constraint.struct_type)),
+                hir::to_string(constraint.struct_type)),
         });
     }
 }
 
 
 auto libresolve::Context::solve(constraint::Tuple_field const& constraint) -> void {
-    if (auto const* const type = std::get_if<mir::type::Tuple>(&*constraint.tuple_type.flattened_value())) {
+    if (auto const* const type = std::get_if<hir::type::Tuple>(&*constraint.tuple_type.flattened_value())) {
         if (constraint.field_index.get() >= type->field_types.size()) {
             error(constraint.explanation.source_view, {
                 .message   = constraint.explanation.explanatory_note,
                 .help_note = std::format(
                     "{} does not have a {} field",
-                    mir::to_string(constraint.tuple_type),
+                    hir::to_string(constraint.tuple_type),
                     utl::formatting::integer_with_ordinal_indicator(constraint.field_index.get() + 1)),
             });
         }
@@ -169,7 +169,7 @@ auto libresolve::Context::solve(constraint::Tuple_field const& constraint) -> vo
             .message   = constraint.explanation.explanatory_note,
             .help_note = std::format(
                 "{} is not a tuple type, so it does not have indexed fields",
-                mir::to_string(constraint.tuple_type)),
+                hir::to_string(constraint.tuple_type)),
         });
     }
 }

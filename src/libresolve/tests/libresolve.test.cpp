@@ -12,7 +12,7 @@ namespace {
         return Catch::Matchers::ContainsSubstring(string, Catch::CaseSensitive::No);
     }
     auto resolve(std::string&& string) -> std::string {
-        return libresolve::do_test_resolve(std::move(string)).formatted_mir_functions;
+        return libresolve::do_test_resolve(std::move(string)).formatted_hir_functions;
     }
     auto resolution_diagnostics(std::string&& string) -> std::string {
         return libresolve::do_test_resolve(std::move(string)).diagnostics_messages;

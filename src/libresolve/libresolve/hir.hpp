@@ -7,7 +7,7 @@
 
 /*
 
-    The Mid-level Intermediate Representation (MIR) is the first intermediate
+    The High-level Intermediate Representation (HIR) is the first intermediate
     program representation that is fully typed. It contains abstract
     information concerning generics, type variables, and other details
     relevant to the type-system. It is produced by resolving the AST.
@@ -39,7 +39,7 @@ using name##_template_info = Definition_info<ast::definition::name##_template>
 
 
 
-namespace mir {
+namespace hir {
 
     struct Function;
     struct Struct;
@@ -264,7 +264,7 @@ template <> struct dtl::To_AST_impl<name> : std::type_identity<ast::definition::
         };
         struct Let_binding {
             utl::Wrapper<Pattern>    pattern;
-            mir::Type                type;
+            hir::Type                type;
             utl::Wrapper<Expression> initializer;
         };
         struct Conditional {
@@ -390,19 +390,19 @@ template <> struct dtl::To_AST_impl<name> : std::type_identity<ast::definition::
     };
 
     struct [[nodiscard]] Self_parameter {
-        mir::Mutability     mutability;
+        hir::Mutability     mutability;
         utl::Explicit<bool> is_reference;
         utl::Source_view    source_view;
     };
 
     struct Function {
         struct Signature {
-            std::vector<mir::Template_parameter> template_parameters; // empty when not a template
-            std::vector<mir::Function_parameter> parameters;
+            std::vector<hir::Template_parameter> template_parameters; // empty when not a template
+            std::vector<hir::Function_parameter> parameters;
             tl::optional<Self_parameter>         self_parameter;
             compiler::Name_lower                 name;
-            mir::Type                            return_type;
-            mir::Type                            function_type;
+            hir::Type                            return_type;
+            hir::Type                            function_type;
 
             [[nodiscard]] auto is_template() const noexcept -> bool;
         };
@@ -442,7 +442,7 @@ template <> struct dtl::To_AST_impl<name> : std::type_identity<ast::definition::
         };
         struct Type_template_signature {
             Type_signature                       type_signature;
-            std::vector<mir::Template_parameter> template_parameters;
+            std::vector<hir::Template_parameter> template_parameters;
         };
         utl::Flatmap<utl::Pooled_string, Function::Signature> function_signatures;
         utl::Flatmap<utl::Pooled_string, Type_signature>      type_signatures;
@@ -497,7 +497,7 @@ template <> struct dtl::To_AST_impl<name> : std::type_identity<ast::definition::
         };
         struct Enum_constructor {
             tl::optional<utl::Wrapper<Pattern>> payload_pattern;
-            ::mir::Enum_constructor             constructor;
+            ::hir::Enum_constructor             constructor;
         };
         struct As {
             Name                  alias;
@@ -657,10 +657,10 @@ template <> struct dtl::To_AST_impl<name> : std::type_identity<ast::definition::
     auto format_to(Template_argument        const&, std::string&) -> void;
 
     auto to_string(auto const& x) -> std::string
-        requires requires { mir::format_to(x, std::declval<std::string&>()); }
+        requires requires (std::string out) { hir::format_to(x, out); }
     {
         std::string output;
-        mir::format_to(x, output);
+        hir::format_to(x, output);
         return output;
     }
 

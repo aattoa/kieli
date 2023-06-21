@@ -8,7 +8,7 @@ namespace {
 
     struct Type_reification_visitor {
         Context&  context;
-        mir::Type this_type;
+        hir::Type this_type;
 
         [[nodiscard]]
         auto recurse() const noexcept {
@@ -16,11 +16,11 @@ namespace {
         }
 
 
-        auto operator()(mir::type::Unification_variable const& variable) -> cir::Type {
+        auto operator()(hir::type::Unification_variable const& variable) -> cir::Type {
             context.error(this_type.source_view(), {
                 .message = std::format(
                     "Found an unsolved type variable: {}",
-                    mir::to_string(variable.state->as_unsolved().tag)),
+                    hir::to_string(variable.state->as_unsolved().tag)),
             });
         }
 
@@ -46,7 +46,7 @@ namespace {
             return context.character_type(this_type.source_view());
         }
 
-        auto operator()(utl::one_of<mir::type::Pointer, mir::type::Reference> auto const& pointer) -> cir::Type {
+        auto operator()(utl::one_of<hir::type::Pointer, hir::type::Reference> auto const& pointer) -> cir::Type {
             // The structured binding avoids having to spell out the field
             // names, which are different for reference and pointer nodes.
             auto [mutability, pointed_to_type] = pointer;
@@ -57,7 +57,7 @@ namespace {
             };
         }
 
-        auto operator()(mir::type::Tuple const& tuple) -> cir::Type {
+        auto operator()(hir::type::Tuple const& tuple) -> cir::Type {
             auto field_types
                 = tuple.field_types
                 | ranges::views::transform(recurse())
@@ -75,25 +75,25 @@ namespace {
             };
         }
 
-        auto operator()(mir::type::Array const&) -> cir::Type {
+        auto operator()(hir::type::Array const&) -> cir::Type {
             utl::todo();
         }
-        auto operator()(mir::type::Enumeration const&) -> cir::Type {
+        auto operator()(hir::type::Enumeration const&) -> cir::Type {
             utl::todo();
         }
-        auto operator()(mir::type::Structure const&) -> cir::Type {
+        auto operator()(hir::type::Structure const&) -> cir::Type {
             utl::todo();
         }
-        auto operator()(mir::type::Function const&) -> cir::Type {
+        auto operator()(hir::type::Function const&) -> cir::Type {
             utl::todo();
         }
-        auto operator()(mir::type::Self_placeholder const&) -> cir::Type {
+        auto operator()(hir::type::Self_placeholder const&) -> cir::Type {
             utl::todo();
         }
-        auto operator()(mir::type::Slice const&) -> cir::Type {
+        auto operator()(hir::type::Slice const&) -> cir::Type {
             utl::todo();
         }
-        auto operator()(mir::type::Template_parameter_reference const&) -> cir::Type {
+        auto operator()(hir::type::Template_parameter_reference const&) -> cir::Type {
             utl::todo();
         }
     };
@@ -101,6 +101,6 @@ namespace {
 }
 
 
-auto libreify::Context::reify_type(mir::Type type) -> cir::Type {
+auto libreify::Context::reify_type(hir::Type type) -> cir::Type {
     return std::visit(Type_reification_visitor { *this, type }, *type.flattened_value());
 }

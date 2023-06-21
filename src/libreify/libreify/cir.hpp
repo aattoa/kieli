@@ -11,7 +11,7 @@
 
     The Concrete Intermediate Representation (CIR) is a fully typed, concrete
     representation of a program, which means that it contains no information
-    about generics or type variables. It is produced by reifying the MIR.
+    about generics or type variables. It is produced by reifying the HIR.
 
 */
 

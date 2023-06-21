@@ -52,7 +52,7 @@ namespace {
                     }));
                 },
                 [&](ast::definition::Struct& structure) {
-                    mir::Type const structure_type =
+                    hir::Type const structure_type =
                         context.temporary_placeholder_type(structure.name.source_view);
                     auto const name = structure.name;
 
@@ -62,11 +62,11 @@ namespace {
                         .structure_type = structure_type,
                         .name           = name,
                     });
-                    *structure_type.pure_value() = mir::type::Structure { info };
+                    *structure_type.pure_value() = hir::type::Structure { info };
                     add_definition(info);
                 },
                 [&](ast::definition::Enum& enumeration) {
-                    mir::Type const enumeration_type =
+                    hir::Type const enumeration_type =
                         context.temporary_placeholder_type(enumeration.name.source_view);
                     auto const name = enumeration.name;
 
@@ -76,7 +76,7 @@ namespace {
                         .enumeration_type = enumeration_type,
                         .name             = name,
                     });
-                    *enumeration_type.pure_value() = mir::type::Enumeration { info };
+                    *enumeration_type.pure_value() = hir::type::Enumeration { info };
                     add_definition(info);
                 },
 
@@ -236,8 +236,8 @@ namespace {
 auto kieli::resolve(Desugar_result&& desugar_result) -> Resolve_result {
     Context context {
         std::move(desugar_result.compilation_info),
-        mir::Node_arena::with_default_page_size(),
-        mir::Namespace_arena::with_default_page_size(),
+        hir::Node_arena::with_default_page_size(),
+        hir::Namespace_arena::with_default_page_size(),
     };
 
     set_predefinitions(desugar_result.node_arena, context);
@@ -245,9 +245,9 @@ auto kieli::resolve(Desugar_result&& desugar_result) -> Resolve_result {
     resolve_signatures(context, context.global_namespace);
     resolve_functions(context, context.global_namespace);
 
-    std::vector<mir::Function> output_functions;
+    std::vector<hir::Function> output_functions;
     for (utl::wrapper auto const function_info : context.output_functions) {
-        mir::Function& function = utl::get<mir::Function>(function_info->value);
+        hir::Function& function = utl::get<hir::Function>(function_info->value);
         if (!function.signature.is_template())
             output_functions.push_back(std::move(function));
     }

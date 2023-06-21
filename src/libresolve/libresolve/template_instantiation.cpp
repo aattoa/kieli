@@ -7,15 +7,15 @@ using namespace libresolve;
 namespace {
 
     struct [[nodiscard]] Substitutions {
-        utl::Flatmap<mir::Template_parameter_tag, mir::Type>       type_substitutions;
-        utl::Flatmap<mir::Template_parameter_tag, mir::Mutability> mutability_substitutions;
+        utl::Flatmap<hir::Template_parameter_tag, hir::Type>       type_substitutions;
+        utl::Flatmap<hir::Template_parameter_tag, hir::Mutability> mutability_substitutions;
 
-        auto add_substitution(mir::Template_parameter const& parameter, mir::Template_argument const& argument) -> void {
+        auto add_substitution(hir::Template_parameter const& parameter, hir::Template_argument const& argument) -> void {
             std::visit(utl::Overload {
-                [&](mir::Template_parameter::Type_parameter const&, mir::Type const type_argument) {
+                [&](hir::Template_parameter::Type_parameter const&, hir::Type const type_argument) {
                     type_substitutions.add_new_or_abort(parameter.reference_tag, type_argument);
                 },
-                [&](mir::Template_parameter::Mutability_parameter, mir::Mutability const mutability_argument) {
+                [&](hir::Template_parameter::Mutability_parameter, hir::Mutability const mutability_argument) {
                     mutability_substitutions.add_new_or_abort(parameter.reference_tag, mutability_argument);
                 },
                 [&](auto const&, auto const&) {
@@ -25,8 +25,8 @@ namespace {
         }
 
         Substitutions(
-            std::span<mir::Template_parameter const> const parameters,
-            std::span<mir::Template_argument  const> const arguments)
+            std::span<hir::Template_parameter const> const parameters,
+            std::span<hir::Template_argument  const> const arguments)
         {
             for (auto [parameter, argument] : ranges::views::zip(parameters, arguments))
                 add_substitution(parameter, argument);
@@ -36,12 +36,12 @@ namespace {
 
     struct [[nodiscard]] Substitution_context;
 
-    auto instantiate(mir::Expression        const&, Substitution_context) -> mir::Expression;
-    auto instantiate(mir::Type              const&, Substitution_context) -> mir::Type;
-    auto instantiate(mir::Pattern           const&, Substitution_context) -> mir::Pattern;
-    auto instantiate(mir::Mutability        const&, Substitution_context) -> mir::Mutability;
-    auto instantiate(mir::Template_argument const&, Substitution_context) -> mir::Template_argument;
-    auto instantiate(mir::Self_parameter    const&, Substitution_context) -> mir::Self_parameter;
+    auto instantiate(hir::Expression        const&, Substitution_context) -> hir::Expression;
+    auto instantiate(hir::Type              const&, Substitution_context) -> hir::Type;
+    auto instantiate(hir::Pattern           const&, Substitution_context) -> hir::Pattern;
+    auto instantiate(hir::Mutability        const&, Substitution_context) -> hir::Mutability;
+    auto instantiate(hir::Template_argument const&, Substitution_context) -> hir::Template_argument;
+    auto instantiate(hir::Self_parameter    const&, Substitution_context) -> hir::Self_parameter;
 
     template <class Node>
     concept instantiable = requires (Node const node, Substitution_context const context) {
@@ -139,32 +139,32 @@ namespace {
         Context                      & context,
         Scope                        & scope,
         Namespace                    & space,
-        mir::Template_parameter const& parameter,
+        hir::Template_parameter const& parameter,
         ast::Template_argument  const& argument,
-        utl::Source_view        const  instantiation_view) -> mir::Template_argument
+        utl::Source_view        const  instantiation_view) -> hir::Template_argument
     {
         return std::visit(utl::Overload {
-            [&](mir::Template_parameter::Type_parameter const& type_parameter, utl::Wrapper<ast::Type> const type_argument) {
+            [&](hir::Template_parameter::Type_parameter const& type_parameter, utl::Wrapper<ast::Type> const type_argument) {
                 if (!type_parameter.classes.empty()) { utl::todo(); }
-                return mir::Template_argument { context.resolve_type(*type_argument, scope, space) };
+                return hir::Template_argument { context.resolve_type(*type_argument, scope, space) };
             },
-            [&](mir::Template_parameter::Type_parameter const& type_parameter, ast::Template_argument::Wildcard const wildcard) {
-                utl::wrapper auto const state = context.fresh_unification_type_variable_state(mir::Unification_type_variable_kind::general);
+            [&](hir::Template_parameter::Type_parameter const& type_parameter, ast::Template_argument::Wildcard const wildcard) {
+                utl::wrapper auto const state = context.fresh_unification_type_variable_state(hir::Unification_type_variable_kind::general);
                 state->as_unsolved().classes = type_parameter.classes;
-                return mir::Template_argument { mir::Type { context.wrap_type(mir::type::Unification_variable { .state = state }), wildcard.source_view } };
+                return hir::Template_argument { hir::Type { context.wrap_type(hir::type::Unification_variable { .state = state }), wildcard.source_view } };
             },
-            [&](mir::Template_parameter::Mutability_parameter, ast::Mutability const mutability_argument) {
-                return mir::Template_argument { context.resolve_mutability(mutability_argument, scope) };
+            [&](hir::Template_parameter::Mutability_parameter, ast::Mutability const mutability_argument) {
+                return hir::Template_argument { context.resolve_mutability(mutability_argument, scope) };
             },
-            [&](mir::Template_parameter::Mutability_parameter, ast::Template_argument::Wildcard const wildcard) {
-                return mir::Template_argument { context.fresh_unification_mutability_variable(wildcard.source_view) };
+            [&](hir::Template_parameter::Mutability_parameter, ast::Template_argument::Wildcard const wildcard) {
+                return hir::Template_argument { context.fresh_unification_mutability_variable(wildcard.source_view) };
             },
-            [&](auto const&, auto const&) -> mir::Template_argument {
+            [&](auto const&, auto const&) -> hir::Template_argument {
                 context.error(instantiation_view, {
                     .message = std::format(
                         "Argument {} is incompatible with parameter {}",
                         ast::to_string(argument),
-                        mir::to_string(parameter))
+                        hir::to_string(parameter))
                 });
             },
         }, parameter.value, argument.value);
@@ -174,8 +174,8 @@ namespace {
         Context                                      & context,
         Scope                                        & scope,
         Namespace                                    & space,
-        std::vector<mir::Template_argument>          & output_arguments,
-        std::span<mir::Template_parameter const> const parameters,
+        std::vector<hir::Template_argument>          & output_arguments,
+        std::span<hir::Template_parameter const> const parameters,
         std::span<ast::Template_argument  const> const arguments,
         utl::Source_view                         const instantiation_view) -> void
     {
@@ -187,16 +187,16 @@ namespace {
     auto resolve_defaulted_template_arguments(
         Context                                      & context,
         Namespace                                    & template_space,
-        std::vector<mir::Template_argument>          & output_arguments,
+        std::vector<hir::Template_argument>          & output_arguments,
         Substitutions                                & substitutions,
         Substitution_context                     const substitution_context,
-        std::span<mir::Template_parameter const> const parameters,
+        std::span<hir::Template_parameter const> const parameters,
         utl::Source_view                         const instantiation_view) -> void
     {
         Scope empty_scope;
-        for (mir::Template_parameter const& parameter : parameters) {
+        for (hir::Template_parameter const& parameter : parameters) {
             utl::always_assert(parameter.default_argument.has_value());
-            mir::Template_argument default_argument = substitution_context.recurse(
+            hir::Template_argument default_argument = substitution_context.recurse(
                 resolve_single_template_argument(
                     context,
                     parameter.default_argument->scope
@@ -216,13 +216,13 @@ namespace {
         Scope                                        & scope,
         Namespace                                    & instantiation_space,
         Namespace                                    & template_space,
-        std::span<mir::Template_parameter const> const parameters,
+        std::span<hir::Template_parameter const> const parameters,
         std::span<ast::Template_argument  const> const arguments,
         std::string_view                         const template_name,
-        utl::Source_view                         const instantiation_view) -> std::vector<mir::Template_argument>
+        utl::Source_view                         const instantiation_view) -> std::vector<hir::Template_argument>
     {
         auto const first_defaulted = ranges::find_if(parameters, [](auto const& parameter) { return parameter.default_argument.has_value(); });
-        auto const first_implicit  = ranges::find_if(parameters, &mir::Template_parameter::is_implicit);
+        auto const first_implicit  = ranges::find_if(parameters, &hir::Template_parameter::is_implicit);
 
         utl::Usize const minimum_required_argument_count  = utl::unsigned_distance(parameters.begin(), first_defaulted);
         utl::Usize const maximum_permitted_argument_count = utl::unsigned_distance(parameters.begin(), first_implicit);
@@ -238,39 +238,39 @@ namespace {
         utl::Usize const defaulted_argument_count = utl::unsigned_distance(first_defaulted, parameters.end());
         utl::always_assert(parameters.size() == minimum_required_argument_count + defaulted_argument_count);
 
-        std::vector<mir::Template_argument> mir_arguments;
-        mir_arguments.reserve(parameters.size());
+        std::vector<hir::Template_argument> hir_arguments;
+        hir_arguments.reserve(parameters.size());
 
         resolve_explicit_template_arguments(
             context,
             scope,
             instantiation_space,
-            mir_arguments,
+            hir_arguments,
             parameters.subspan(0, arguments.size()),
             arguments,
             instantiation_view);
 
-        Substitutions default_argument_substitutions { parameters.subspan(0, arguments.size()), mir_arguments };
+        Substitutions default_argument_substitutions { parameters.subspan(0, arguments.size()), hir_arguments };
         Substitution_context const default_argument_substitution_context { default_argument_substitutions, context, scope, instantiation_space };
 
         resolve_defaulted_template_arguments(
             context,
             template_space,
-            mir_arguments,
+            hir_arguments,
             default_argument_substitutions,
             default_argument_substitution_context,
             parameters.subspan(arguments.size()),
             instantiation_view);
 
-        return mir_arguments;
+        return hir_arguments;
     }
 
 
     auto instantiate_function_template_application(
         Context                             & resolution_context,
-        mir::Function                       & function_template,
+        hir::Function                       & function_template,
         utl::Wrapper<Function_info>     const template_info,
-        std::vector<mir::Template_argument>&& template_arguments,
+        std::vector<hir::Template_argument>&& template_arguments,
         Scope                               & scope,
         Namespace                           & space) -> utl::Wrapper<Function_info>
     {
@@ -284,31 +284,31 @@ namespace {
             .space              = space,
         };
 
-        auto const instantiate_parameter = [=](mir::Function_parameter const& parameter) {
-            return mir::Function_parameter {
+        auto const instantiate_parameter = [=](hir::Function_parameter const& parameter) {
+            return hir::Function_parameter {
                 .pattern = instantiate(parameter.pattern, substitution_context),
                 .type    = instantiate(parameter.type,    substitution_context),
             };
         };
 
-        tl::optional<mir::Self_parameter> concrete_self_parameter =
+        tl::optional<hir::Self_parameter> concrete_self_parameter =
             function_template.signature.self_parameter.transform(substitution_context.recurse());
 
-        std::vector<mir::Function_parameter> concrete_function_parameters =
+        std::vector<hir::Function_parameter> concrete_function_parameters =
             utl::map(instantiate_parameter, function_template.signature.parameters);
 
-        mir::Type const concrete_return_type =
+        hir::Type const concrete_return_type =
             instantiate(function_template.signature.return_type, substitution_context);
 
-        mir::Type const concrete_function_type {
-            resolution_context.wrap_type(mir::type::Function {
-                .parameter_types = utl::map(&mir::Function_parameter::type, concrete_function_parameters),
+        hir::Type const concrete_function_type {
+            resolution_context.wrap_type(hir::type::Function {
+                .parameter_types = utl::map(&hir::Function_parameter::type, concrete_function_parameters),
                 .return_type     = concrete_return_type,
             }),
             template_info->name.source_view,
         };
 
-        mir::Function concrete_function {
+        hir::Function concrete_function {
             .signature {
                 .parameters     = std::move(concrete_function_parameters),
                 .self_parameter = std::move(concrete_self_parameter),
@@ -337,9 +337,9 @@ namespace {
 
     auto instantiate_struct_template_application(
         Context                                & resolution_context,
-        mir::Struct_template                   & struct_template,
+        hir::Struct_template                   & struct_template,
         utl::Wrapper<Struct_template_info> const template_info,
-        std::vector<mir::Template_argument>   && template_arguments,
+        std::vector<hir::Template_argument>   && template_arguments,
         Scope                                  & scope,
         Namespace                              & space) -> utl::Wrapper<Struct_info>
     {
@@ -352,15 +352,15 @@ namespace {
             .space              = space,
         };
 
-        mir::Struct concrete_struct {
+        hir::Struct concrete_struct {
             .members              = utl::vector_with_capacity(struct_template.definition.members.size()),
             .name                 = template_info->name,
             .associated_namespace = resolution_context.wrap(Namespace {}),
         };
 
-        for (mir::Struct::Member const& member : struct_template.definition.members) {
+        for (hir::Struct::Member const& member : struct_template.definition.members) {
             concrete_struct.members.push_back(
-                mir::Struct::Member {
+                hir::Struct::Member {
                     .name      = member.name,
                     .type      = instantiate(member.type, substitution_context),
                     .is_public = member.is_public,
@@ -368,7 +368,7 @@ namespace {
             );
         }
 
-        mir::Type const concrete_type =
+        hir::Type const concrete_type =
             resolution_context.temporary_placeholder_type(concrete_struct.name.source_view);
 
         auto const concrete_info = resolution_context.wrap(Struct_info {
@@ -383,7 +383,7 @@ namespace {
                 std::move(template_arguments)
             }
         });
-        *concrete_type.pure_value() = mir::type::Structure {
+        *concrete_type.pure_value() = hir::type::Structure {
             .info           = concrete_info,
             .is_application = true,
         };
@@ -395,9 +395,9 @@ namespace {
 
     auto instantiate_enum_template_application(
         Context                              & resolution_context,
-        mir::Enum_template                   & enum_template,
+        hir::Enum_template                   & enum_template,
         utl::Wrapper<Enum_template_info> const template_info,
-        std::vector<mir::Template_argument> && template_arguments,
+        std::vector<hir::Template_argument> && template_arguments,
         Scope                                & scope,
         Namespace                            & space) -> utl::Wrapper<Enum_info>
     {
@@ -410,24 +410,24 @@ namespace {
             .space              = space,
         };
 
-        mir::Enum concrete_enum {
+        hir::Enum concrete_enum {
             .constructors         = utl::vector_with_capacity(enum_template.definition.constructors.size()),
             .name                 = template_info->name,
             .associated_namespace = resolution_context.wrap(Namespace { .parent = template_info->home_namespace })
         };
 
-        mir::Type concrete_type =
+        hir::Type concrete_type =
             resolution_context.temporary_placeholder_type(concrete_enum.name.source_view);
 
 
-        for (mir::Enum_constructor& constructor : enum_template.definition.constructors) {
-            mir::Enum_constructor concrete_constructor {
+        for (hir::Enum_constructor& constructor : enum_template.definition.constructors) {
+            hir::Enum_constructor concrete_constructor {
                 .name          = constructor.name,
                 .payload_type  = constructor.payload_type.transform(substitution_context.recurse()),
-                .function_type = constructor.function_type.transform([&](mir::Type const function_type) {
-                    return mir::Type {
-                        resolution_context.wrap_type(mir::type::Function {
-                            .parameter_types = utl::map(substitution_context.recurse(), utl::get<mir::type::Function>(*function_type.flattened_value()).parameter_types),
+                .function_type = constructor.function_type.transform([&](hir::Type const function_type) {
+                    return hir::Type {
+                        resolution_context.wrap_type(hir::type::Function {
+                            .parameter_types = utl::map(substitution_context.recurse(), utl::get<hir::type::Function>(*function_type.flattened_value()).parameter_types),
                             .return_type     = concrete_type,
                         }),
                         function_type.source_view(),
@@ -452,7 +452,7 @@ namespace {
                 std::move(template_arguments),
             }
         });
-        *concrete_type.pure_value() = mir::type::Enumeration {
+        *concrete_type.pure_value() = hir::type::Enumeration {
             .info           = concrete_info,
             .is_application = true,
         };
@@ -464,9 +464,9 @@ namespace {
 
     auto instantiate_alias_template_application(
         Context                               & resolution_context,
-        mir::Alias_template                   & alias_template,
+        hir::Alias_template                   & alias_template,
         utl::Wrapper<Alias_template_info> const template_info,
-        std::vector<mir::Template_argument>  && template_arguments,
+        std::vector<hir::Template_argument>  && template_arguments,
         Scope                                 & scope,
         Namespace                             & space) -> utl::Wrapper<Alias_info>
     {
@@ -480,7 +480,7 @@ namespace {
         };
 
         return resolution_context.wrap(Alias_info {
-            .value = mir::Alias {
+            .value = hir::Alias {
                 .name         = alias_template.definition.name,
                 .aliased_type = instantiate(alias_template.definition.aliased_type, substitution_context),
             },
@@ -492,143 +492,143 @@ namespace {
 
 
     struct Expression_instantiation_visitor {
-        using R = mir::Expression::Variant;
+        using R = hir::Expression::Variant;
         Substitution_context context;
         utl::Source_view this_expression_source_view;
 
-        auto operator()(mir::expression::Tuple const& tuple) -> R {
-            return mir::expression::Tuple {
+        auto operator()(hir::expression::Tuple const& tuple) -> R {
+            return hir::expression::Tuple {
                 .fields = utl::map(context.recurse(), tuple.fields),
             };
         }
-        auto operator()(mir::expression::Loop const& loop) -> R {
-            return mir::expression::Loop {
+        auto operator()(hir::expression::Loop const& loop) -> R {
+            return hir::expression::Loop {
                 .body = context.recurse(loop.body),
             };
         }
-        auto operator()(mir::expression::Break const& break_) -> R {
-            return mir::expression::Break {
+        auto operator()(hir::expression::Break const& break_) -> R {
+            return hir::expression::Break {
                 .result = context.recurse(break_.result),
             };
         }
-        auto operator()(mir::expression::Continue const&) -> R {
-            return mir::expression::Continue {};
+        auto operator()(hir::expression::Continue const&) -> R {
+            return hir::expression::Continue {};
         }
-        auto operator()(mir::expression::Array_literal const& literal) -> R {
-            return mir::expression::Array_literal {
+        auto operator()(hir::expression::Array_literal const& literal) -> R {
+            return hir::expression::Array_literal {
                 .elements = utl::map(context.recurse(), literal.elements),
             };
         }
-        auto operator()(mir::expression::Block const& block) -> R {
-            return mir::expression::Block {
+        auto operator()(hir::expression::Block const& block) -> R {
+            return hir::expression::Block {
                 .side_effect_expressions = utl::map(context.recurse(), block.side_effect_expressions),
                 .result_expression       = context.recurse(block.result_expression),
             };
         }
-        auto operator()(mir::expression::Direct_invocation const& invocation) -> R {
-            return mir::expression::Direct_invocation {
+        auto operator()(hir::expression::Direct_invocation const& invocation) -> R {
+            return hir::expression::Direct_invocation {
                 .function  = invocation.function,
                 .arguments = utl::map(context.recurse(), invocation.arguments),
             };
         }
-        auto operator()(mir::expression::Indirect_invocation const& invocation) -> R {
-            return mir::expression::Indirect_invocation {
+        auto operator()(hir::expression::Indirect_invocation const& invocation) -> R {
+            return hir::expression::Indirect_invocation {
                 .arguments = utl::map(context.recurse(), invocation.arguments),
                 .invocable = context.recurse(invocation.invocable),
             };
         }
-        auto operator()(mir::expression::Direct_enum_constructor_invocation const& invocation) -> R {
-            return mir::expression::Direct_enum_constructor_invocation {
+        auto operator()(hir::expression::Direct_enum_constructor_invocation const& invocation) -> R {
+            return hir::expression::Direct_enum_constructor_invocation {
                 .constructor = invocation.constructor,
                 .arguments   = utl::map(context.recurse(), invocation.arguments),
             };
         }
-        auto operator()(mir::expression::Let_binding const& binding) -> R {
-            return mir::expression::Let_binding {
+        auto operator()(hir::expression::Let_binding const& binding) -> R {
+            return hir::expression::Let_binding {
                 .pattern     = context.recurse(binding.pattern),
                 .type        = context.recurse(binding.type),
                 .initializer = context.recurse(binding.initializer),
             };
         }
-        auto operator()(mir::expression::Conditional const& conditional) -> R {
-            return mir::expression::Conditional {
+        auto operator()(hir::expression::Conditional const& conditional) -> R {
+            return hir::expression::Conditional {
                 .condition    = context.recurse(conditional.condition),
                 .true_branch  = context.recurse(conditional.true_branch),
                 .false_branch = context.recurse(conditional.false_branch),
             };
         }
-        auto operator()(mir::expression::Match const& match) -> R {
-            auto const instantiate_case = [this](mir::expression::Match::Case const& match_case) {
-                return mir::expression::Match::Case {
+        auto operator()(hir::expression::Match const& match) -> R {
+            auto const instantiate_case = [this](hir::expression::Match::Case const& match_case) {
+                return hir::expression::Match::Case {
                     .pattern = context.recurse(match_case.pattern),
                     .handler = context.recurse(match_case.handler),
                 };
             };
 
-            return mir::expression::Match {
+            return hir::expression::Match {
                 .cases              = utl::map(instantiate_case, match.cases),
                 .matched_expression = context.recurse(match.matched_expression),
             };
         }
-        auto operator()(mir::expression::Sizeof const& sizeof_) -> R {
-            return mir::expression::Sizeof {
+        auto operator()(hir::expression::Sizeof const& sizeof_) -> R {
+            return hir::expression::Sizeof {
                 .inspected_type = context.recurse(sizeof_.inspected_type),
             };
         }
-        auto operator()(mir::expression::Reference const& reference) -> R {
-            return mir::expression::Reference {
+        auto operator()(hir::expression::Reference const& reference) -> R {
+            return hir::expression::Reference {
                 .mutability            = context.recurse(reference.mutability),
                 .referenced_expression = context.recurse(reference.referenced_expression),
             };
         }
-        auto operator()(mir::expression::Dereference const& dereference) -> R {
-            return mir::expression::Dereference {
+        auto operator()(hir::expression::Dereference const& dereference) -> R {
+            return hir::expression::Dereference {
                 .dereferenced_expression = context.recurse(dereference.dereferenced_expression),
             };
         }
-        auto operator()(mir::expression::Addressof const& addressof) -> R {
-            return mir::expression::Addressof {
+        auto operator()(hir::expression::Addressof const& addressof) -> R {
+            return hir::expression::Addressof {
                 .lvalue = context.recurse(addressof.lvalue),
             };
         }
-        auto operator()(mir::expression::Unsafe_dereference const& dereference) -> R {
-            return mir::expression::Unsafe_dereference {
+        auto operator()(hir::expression::Unsafe_dereference const& dereference) -> R {
+            return hir::expression::Unsafe_dereference {
                 .pointer = context.recurse(dereference.pointer),
             };
         }
-        auto operator()(mir::expression::Struct_initializer const& initializer) -> R {
-            return mir::expression::Struct_initializer {
+        auto operator()(hir::expression::Struct_initializer const& initializer) -> R {
+            return hir::expression::Struct_initializer {
                 .initializers = utl::map(context.recurse(), initializer.initializers),
                 .struct_type  = context.recurse(initializer.struct_type),
             };
         }
-        auto operator()(mir::expression::Struct_field_access const& access) -> R {
-            return mir::expression::Struct_field_access {
+        auto operator()(hir::expression::Struct_field_access const& access) -> R {
+            return hir::expression::Struct_field_access {
                 .base_expression = context.recurse(access.base_expression),
                 .field_name      = access.field_name,
             };
         }
-        auto operator()(mir::expression::Tuple_field_access const& access) -> R {
-            return mir::expression::Tuple_field_access {
+        auto operator()(hir::expression::Tuple_field_access const& access) -> R {
+            return hir::expression::Tuple_field_access {
                 .base_expression         = context.recurse(access.base_expression),
                 .field_index             = access.field_index,
                 .field_index_source_view = access.field_index_source_view,
             };
         }
-        auto operator()(mir::expression::Move const& move) -> R {
-            return mir::expression::Move { .lvalue = context.recurse(move.lvalue) };
+        auto operator()(hir::expression::Move const& move) -> R {
+            return hir::expression::Move { .lvalue = context.recurse(move.lvalue) };
         }
 
-        auto operator()(mir::expression::Function_reference const& function) -> R {
+        auto operator()(hir::expression::Function_reference const& function) -> R {
             if (function.is_application) {
                 auto const& instantiation_info =
                     utl::get(function.info->template_instantiation_info);
                 utl::Wrapper<Function_info> const template_info =
                     instantiation_info.template_instantiated_from;
-                mir::Function& function_template =
+                hir::Function& function_template =
                     context.resolution_context.resolve_function(template_info);
 
-                return mir::expression::Function_reference {
+                return hir::expression::Function_reference {
                     .info = instantiate_function_template_application(
                         context.resolution_context,
                         function_template,
@@ -644,7 +644,7 @@ namespace {
 
         template <class T>
         auto operator()(T const& terminal) -> R
-            requires utl::instance_of<T, mir::expression::Literal> || utl::one_of<T, mir::expression::Enum_constructor_reference, mir::expression::Local_variable_reference, mir::expression::Hole>
+            requires utl::instance_of<T, hir::expression::Literal> || utl::one_of<T, hir::expression::Enum_constructor_reference, hir::expression::Local_variable_reference, hir::expression::Hole>
         {
             return terminal;
         }
@@ -652,12 +652,12 @@ namespace {
 
 
     struct Type_instantiation_visitor {
-        using R = utl::Wrapper<mir::Type::Variant>;
+        using R = utl::Wrapper<hir::Type::Variant>;
         Substitution_context context;
-        mir::Type            this_type;
+        hir::Type            this_type;
 
-        auto operator()(mir::type::Template_parameter_reference const& reference) -> R {
-            if (mir::Type const* const substitution =
+        auto operator()(hir::type::Template_parameter_reference const& reference) -> R {
+            if (hir::Type const* const substitution =
                 context.substitutions.type_substitutions.find(reference.tag))
             {
                 return context.recurse(*substitution).flattened_value();
@@ -665,46 +665,46 @@ namespace {
             return this_type.pure_value();
         }
 
-        auto operator()(mir::type::Tuple const& tuple) -> R {
-            return context.resolution_context.wrap_type(mir::type::Tuple {
+        auto operator()(hir::type::Tuple const& tuple) -> R {
+            return context.resolution_context.wrap_type(hir::type::Tuple {
                 .field_types = utl::map(context.recurse(), tuple.field_types),
             });
         }
-        auto operator()(mir::type::Array const& array) -> R {
-            return context.resolution_context.wrap_type(mir::type::Array {
+        auto operator()(hir::type::Array const& array) -> R {
+            return context.resolution_context.wrap_type(hir::type::Array {
                 .element_type = context.recurse(array.element_type),
                 .array_length = context.recurse(array.array_length),
             });
         }
-        auto operator()(mir::type::Slice const& slice) -> R {
-            return context.resolution_context.wrap_type(mir::type::Slice {
+        auto operator()(hir::type::Slice const& slice) -> R {
+            return context.resolution_context.wrap_type(hir::type::Slice {
                 .element_type = context.recurse(slice.element_type),
             });
         }
-        auto operator()(mir::type::Function const& function) -> R {
-            return context.resolution_context.wrap_type(mir::type::Function {
+        auto operator()(hir::type::Function const& function) -> R {
+            return context.resolution_context.wrap_type(hir::type::Function {
                 .parameter_types = utl::map(context.recurse(), function.parameter_types),
                 .return_type     = context.recurse(function.return_type),
             });
         }
-        auto operator()(mir::type::Reference const& reference) -> R {
-            return context.resolution_context.wrap_type(mir::type::Reference {
+        auto operator()(hir::type::Reference const& reference) -> R {
+            return context.resolution_context.wrap_type(hir::type::Reference {
                 .mutability      = context.recurse(reference.mutability),
                 .referenced_type = context.recurse(reference.referenced_type),
             });
         }
-        auto operator()(mir::type::Pointer const& pointer) -> R {
-            return context.resolution_context.wrap_type(mir::type::Pointer {
+        auto operator()(hir::type::Pointer const& pointer) -> R {
+            return context.resolution_context.wrap_type(hir::type::Pointer {
                 .mutability      = context.recurse(pointer.mutability),
                 .pointed_to_type = context.recurse(pointer.pointed_to_type),
             });
         }
-        auto operator()(mir::type::Structure const& structure) -> R {
+        auto operator()(hir::type::Structure const& structure) -> R {
             if (structure.is_application) {
                 auto& instantiation_info =
                     utl::get(structure.info->template_instantiation_info);
 
-                return context.resolution_context.wrap_type(mir::type::Structure {
+                return context.resolution_context.wrap_type(hir::type::Structure {
                     .info = instantiate_struct_template_application(
                         context.resolution_context,
                         context.resolution_context.resolve_struct_template(instantiation_info.template_instantiated_from),
@@ -717,12 +717,12 @@ namespace {
             }
             return this_type.pure_value();
         }
-        auto operator()(mir::type::Enumeration const& enumeration) -> R {
+        auto operator()(hir::type::Enumeration const& enumeration) -> R {
             if (enumeration.is_application) {
                 auto& instantiation_info =
                     utl::get(enumeration.info->template_instantiation_info);
 
-                return context.resolution_context.wrap_type(mir::type::Enumeration {
+                return context.resolution_context.wrap_type(hir::type::Enumeration {
                     .info = instantiate_enum_template_application(
                         context.resolution_context,
                         context.resolution_context.resolve_enum_template(instantiation_info.template_instantiated_from),
@@ -743,8 +743,8 @@ namespace {
                 compiler::built_in_type::Character,
                 compiler::built_in_type::Boolean,
                 compiler::built_in_type::String,
-                mir::type::Self_placeholder,
-                mir::type::Unification_variable
+                hir::type::Self_placeholder,
+                hir::type::Unification_variable
             > auto const&) -> R
         {
             return this_type.pure_value();
@@ -755,45 +755,45 @@ namespace {
     struct Pattern_instantiation_visitor {
         Substitution_context context;
 
-        auto operator()(mir::pattern::As const& as) -> mir::Pattern::Variant {
-            return mir::pattern::As {
+        auto operator()(hir::pattern::As const& as) -> hir::Pattern::Variant {
+            return hir::pattern::As {
                 .alias           = as.alias,
                 .aliased_pattern = context.recurse(as.aliased_pattern),
             };
         }
-        auto operator()(mir::pattern::Enum_constructor const& pattern) -> mir::Pattern::Variant {
-            mir::Type const enum_type =
+        auto operator()(hir::pattern::Enum_constructor const& pattern) -> hir::Pattern::Variant {
+            hir::Type const enum_type =
                 context.recurse(pattern.constructor.enum_type);
 
-            mir::Enum& enumeration =
-                context.resolution_context.resolve_enum(utl::get<mir::type::Enumeration>(*enum_type.pure_value()).info);
+            hir::Enum& enumeration =
+                context.resolution_context.resolve_enum(utl::get<hir::type::Enumeration>(*enum_type.pure_value()).info);
 
-            auto it = ranges::find(enumeration.constructors, pattern.constructor.name, &mir::Enum_constructor::name);
+            auto it = ranges::find(enumeration.constructors, pattern.constructor.name, &hir::Enum_constructor::name);
             if (it == enumeration.constructors.end()) {
                 // Should be unreachable because enum resolution would've caught the error
                 utl::unreachable();
             }
-            return mir::pattern::Enum_constructor {
+            return hir::pattern::Enum_constructor {
                 .payload_pattern = pattern.payload_pattern.transform(context.recurse()),
                 .constructor     = *it,
             };
         }
-        auto operator()(mir::pattern::Guarded const& guarded) -> mir::Pattern::Variant {
-            return mir::pattern::Guarded {
+        auto operator()(hir::pattern::Guarded const& guarded) -> hir::Pattern::Variant {
+            return hir::pattern::Guarded {
                 .guarded_pattern = context.recurse(guarded.guarded_pattern),
                 .guard           = context.recurse(guarded.guard),
             };
         }
-        auto operator()(mir::pattern::Tuple const& tuple) -> mir::Pattern::Variant {
-            return mir::pattern::Tuple { .field_patterns = utl::map(context.recurse(), tuple.field_patterns) };
+        auto operator()(hir::pattern::Tuple const& tuple) -> hir::Pattern::Variant {
+            return hir::pattern::Tuple { .field_patterns = utl::map(context.recurse(), tuple.field_patterns) };
         }
-        auto operator()(mir::pattern::Slice const& slice) -> mir::Pattern::Variant {
-            return mir::pattern::Slice { .element_patterns = utl::map(context.recurse(), slice.element_patterns) };
+        auto operator()(hir::pattern::Slice const& slice) -> hir::Pattern::Variant {
+            return hir::pattern::Slice { .element_patterns = utl::map(context.recurse(), slice.element_patterns) };
         }
         template <class T>
-        auto operator()(T const terminal) -> mir::Pattern::Variant
-            requires utl::instance_of<T, mir::pattern::Literal>
-                  || utl::one_of<T, mir::pattern::Wildcard, mir::pattern::Name>
+        auto operator()(T const terminal) -> hir::Pattern::Variant
+            requires utl::instance_of<T, hir::pattern::Literal>
+                  || utl::one_of<T, hir::pattern::Wildcard, hir::pattern::Name>
         {
             return terminal;
         }
@@ -801,8 +801,8 @@ namespace {
 
 
 
-    auto instantiate(mir::Expression const& expression, Substitution_context const context)
-        -> mir::Expression
+    auto instantiate(hir::Expression const& expression, Substitution_context const context)
+        -> hir::Expression
     {
         return {
             .value          = std::visit(Expression_instantiation_visitor { context, expression.source_view }, expression.value),
@@ -813,14 +813,14 @@ namespace {
         };
     }
 
-    auto instantiate(mir::Type const& type, Substitution_context const context) -> mir::Type {
-        return mir::Type {
+    auto instantiate(hir::Type const& type, Substitution_context const context) -> hir::Type {
+        return hir::Type {
             std::visit(Type_instantiation_visitor { context, type }, *type.flattened_value()),
             type.source_view(),
         };
     }
 
-    auto instantiate(mir::Pattern const& pattern, Substitution_context const context) -> mir::Pattern {
+    auto instantiate(hir::Pattern const& pattern, Substitution_context const context) -> hir::Pattern {
         return {
             .value                   = std::visit(Pattern_instantiation_visitor { context }, pattern.value),
             .is_exhaustive_by_itself = pattern.is_exhaustive_by_itself,
@@ -828,9 +828,9 @@ namespace {
         };
     }
 
-    auto instantiate(mir::Mutability const& mutability, Substitution_context const context) -> mir::Mutability {
-        if (auto const* parameterized = std::get_if<mir::Mutability::Parameterized>(&*mutability.flattened_value())) {
-            if (mir::Mutability const* const substitution =
+    auto instantiate(hir::Mutability const& mutability, Substitution_context const context) -> hir::Mutability {
+        if (auto const* parameterized = std::get_if<hir::Mutability::Parameterized>(&*mutability.flattened_value())) {
+            if (hir::Mutability const* const substitution =
                 context.substitutions.mutability_substitutions.find(parameterized->tag))
             {
                 return context.recurse(*substitution);
@@ -839,14 +839,14 @@ namespace {
         return mutability;
     }
 
-    auto instantiate(mir::Template_argument const& argument, Substitution_context const context) -> mir::Template_argument {
-        return mir::Template_argument {
-            .value = std::visit<mir::Template_argument::Variant>(context.recurse(), argument.value),
+    auto instantiate(hir::Template_argument const& argument, Substitution_context const context) -> hir::Template_argument {
+        return hir::Template_argument {
+            .value = std::visit<hir::Template_argument::Variant>(context.recurse(), argument.value),
         };
     }
 
-    auto instantiate(mir::Self_parameter const& parameter, Substitution_context const context) -> mir::Self_parameter {
-        return mir::Self_parameter {
+    auto instantiate(hir::Self_parameter const& parameter, Substitution_context const context) -> hir::Self_parameter {
+        return hir::Self_parameter {
             .mutability   = instantiate(parameter.mutability, context),
             .is_reference = parameter.is_reference,
             .source_view  = parameter.source_view
@@ -855,11 +855,11 @@ namespace {
 
 
     [[nodiscard]]
-    auto synthetize_arguments_for(std::span<mir::Template_parameter const> const parameters, utl::Source_view const argument_view)
+    auto synthetize_arguments_for(std::span<hir::Template_parameter const> const parameters, utl::Source_view const argument_view)
         -> std::vector<ast::Template_argument>
     {
         return std::vector(
-            ranges::count_if(parameters, std::not_fn(&mir::Template_parameter::is_implicit)),
+            ranges::count_if(parameters, std::not_fn(&hir::Template_parameter::is_implicit)),
             ast::Template_argument { ast::Template_argument::Wildcard { argument_view } });
     }
 
@@ -873,7 +873,7 @@ auto libresolve::Context::instantiate_function_template(
     Scope                                       & scope,
     Namespace                                   & space) -> utl::Wrapper<Function_info>
 {
-    mir::Function& function = resolve_function(template_info);
+    hir::Function& function = resolve_function(template_info);
     if (!function.signature.is_template()) {
         error(instantiation_view, {
             .message = std::format(
@@ -906,7 +906,7 @@ auto libresolve::Context::instantiate_struct_template(
     Scope                                       & scope,
     Namespace                                   & space) -> utl::Wrapper<Struct_info>
 {
-    mir::Struct_template& struct_template = resolve_struct_template(template_info);
+    hir::Struct_template& struct_template = resolve_struct_template(template_info);
     return instantiate_struct_template_application(
         *this,
         struct_template,
@@ -932,7 +932,7 @@ auto libresolve::Context::instantiate_enum_template(
     Scope                                       & scope,
     Namespace                                   & space) -> utl::Wrapper<Enum_info>
 {
-    mir::Enum_template& enum_template = resolve_enum_template(template_info);
+    hir::Enum_template& enum_template = resolve_enum_template(template_info);
     return instantiate_enum_template_application(
         *this,
         enum_template,
@@ -958,7 +958,7 @@ auto libresolve::Context::instantiate_alias_template(
     Scope                                       & scope,
     Namespace                                   & space) -> utl::Wrapper<Alias_info>
 {
-    mir::Alias_template& alias_template = resolve_alias_template(template_info);
+    hir::Alias_template& alias_template = resolve_alias_template(template_info);
     return instantiate_alias_template_application(
         *this,
         alias_template,
