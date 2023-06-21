@@ -16,6 +16,7 @@ target_link_libraries(kieli
     PRIVATE libdesugar
     PRIVATE libresolve
     PRIVATE libreify
-    PRIVATE liblower)
+    PRIVATE liblower
+    PRIVATE libformat)
 
 kieli_consume_libutl_common(kieli)
