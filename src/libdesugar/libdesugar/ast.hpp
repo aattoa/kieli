@@ -530,9 +530,12 @@ namespace ast {
     auto format_to(Expression         const&, std::string&) -> void;
     auto format_to(Pattern            const&, std::string&) -> void;
     auto format_to(Type               const&, std::string&) -> void;
+    auto format_to(Definition         const&, std::string&) -> void;
     auto format_to(Mutability         const&, std::string&) -> void;
     auto format_to(Qualified_name     const&, std::string&) -> void;
     auto format_to(Class_reference    const&, std::string&) -> void;
+    auto format_to(Function_parameter const&, std::string&) -> void;
+    auto format_to(Function_argument  const&, std::string&) -> void;
     auto format_to(Template_parameter const&, std::string&) -> void;
     auto format_to(Template_argument  const&, std::string&) -> void;
 

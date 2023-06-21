@@ -6,18 +6,17 @@
 
 namespace {
     auto desugar(std::string&& string) -> std::string {
-        (void)string;
-        return {};
-#if 0
         compiler::Compilation_info test_info = compiler::mock_compilation_info(utl::diagnostics::Level::suppress);
         utl::wrapper auto const test_source = test_info.get()->source_arena.wrap("[test]", std::move(string));
         auto desugar_result = desugar(parse(kieli::lex({ .compilation_info = std::move(test_info), .source = test_source })));
-        return std::format("{}", desugar_result.module.definitions);
-#endif
+        std::string output;
+        for (ast::Definition const& definition : desugar_result.module.definitions)
+            ast::format_to(definition, output);
+        return output;
     }
 }
 
-#define TEST(name) TEST_CASE(name, "[libdesugar]")
+#define TEST(name) TEST_CASE(name, "[libdesugar]") // NOLINT
 
 
 TEST("block expression") {
