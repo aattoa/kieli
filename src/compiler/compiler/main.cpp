@@ -13,6 +13,7 @@
 #include <libresolve/resolution_internals.hpp>
 #include <libreify/reify.hpp>
 #include <liblower/lower.hpp>
+#include <libformat/format.hpp>
 
 #include <compiler/compiler.hpp>
 #include <compiler/project.hpp>
@@ -73,8 +74,7 @@ namespace {
 
     constexpr auto program_parser_repl = generic_repl<[](kieli::Lex_result&& lex_result) {
         auto parse_result = parse(std::move(lex_result));
-        (void)parse_result;
-        // std::println("{}", parse_result.module);
+        utl::print("{}", kieli::format(parse_result.module, {}));
     }>;
 
     constexpr auto desugaring_repl = generic_repl<[](kieli::Lex_result&& lex_result) {

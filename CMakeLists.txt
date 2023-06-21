@@ -40,6 +40,7 @@ include_directories(
     src/liblower
     src/libvm
     src/libcompiler-pipeline
+    src/libformat
     src/compiler
     dependencies/range-v3/include
     dependencies/optional/include
@@ -94,4 +95,5 @@ add_subdirectory(src/libresolve)
 add_subdirectory(src/libreify)
 add_subdirectory(src/liblower)
 add_subdirectory(src/libcompiler-pipeline)
+add_subdirectory(src/libformat)
 add_subdirectory(src/compiler)
