@@ -808,7 +808,7 @@ namespace {
                 space);
             hir::Function& method = context.resolve_function(method_info);
 
-            auto arguments = resolve_arguments(invocation.arguments);
+            auto arguments = resolve_arguments(invocation.function_arguments);
             arguments.insert(
                 arguments.begin(),
                 std::invoke([&] {

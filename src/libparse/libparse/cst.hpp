@@ -263,20 +263,15 @@ namespace cst {
             compiler::Name_lower             method_name;
         };
         struct Conditional {
-            struct Elif {
-                utl::Wrapper<Expression> condition;
-                utl::Wrapper<Expression> branch;
-                Token                    elif_keyword_token;
-            };
             struct False_branch {
                 utl::Wrapper<Expression> body;
-                Token                    else_keyword_token;
+                Token                    else_or_elif_keyword_token;
             };
-            utl::Wrapper<Expression>   primary_condition;
+            utl::Wrapper<Expression>   condition;
             utl::Wrapper<Expression>   true_branch;
-            std::vector<Elif>          elif_chain;
             tl::optional<False_branch> false_branch;
-            Token                      if_keyword_token;
+            Token                      if_or_elif_keyword_token;
+            utl::Explicit<bool>        is_elif_conditional;
         };
         struct Match {
             struct Case {
@@ -285,8 +280,9 @@ namespace cst {
                 Token                    arrow_token;
                 tl::optional<Token>      optional_semicolon_token;
             };
-            std::vector<Case>        cases;
-            utl::Wrapper<Expression> matched_expression;
+            Surrounded<std::vector<Case>> cases;
+            utl::Wrapper<Expression>      matched_expression;
+            Token                         match_keyword_token;
         };
         struct Type_cast {
             utl::Wrapper<Expression> base_expression;
@@ -306,6 +302,8 @@ namespace cst {
         struct Conditional_let {
             utl::Wrapper<Pattern>    pattern;
             utl::Wrapper<Expression> initializer;
+            Token                    let_keyword_token;
+            Token                    equals_sign_token;
         };
         struct Local_type_alias {
             compiler::Name_upper alias_name;
@@ -329,7 +327,9 @@ namespace cst {
             Token                    for_keyword_token;
             Token                    in_keyword_token;
         };
-        struct Continue {};
+        struct Continue {
+            Token continue_keyword_token;
+        };
         struct Break {
             tl::optional<utl::Wrapper<Expression>> result;
             Token                                  break_keyword_token;

@@ -55,13 +55,13 @@ namespace {
             std::format_to(out, "{}[{}]", application.name, application.template_arguments);
         }
         auto operator()(ast::expression::Reference const& reference) {
-            std::format_to(out, "&{} {}", reference.mutability, reference.referenced_expression);
+            std::format_to(out, "(&{} {})", reference.mutability, reference.referenced_expression);
         }
         auto operator()(ast::expression::Type_cast const& cast) {
-            std::format_to(out, "{} as {}", cast.expression, cast.target_type);
+            std::format_to(out, "({} as {})", cast.expression, cast.target_type);
         }
         auto operator()(ast::expression::Type_ascription const& ascription) {
-            std::format_to(out, "{}: {}", ascription.expression, ascription.ascribed_type);
+            std::format_to(out, "({}: {})", ascription.expression, ascription.ascribed_type);
         }
         auto operator()(ast::expression::Conditional const& conditional) {
             std::format_to(out, "if {} {} else {}", conditional.condition, conditional.true_branch, conditional.false_branch);
@@ -79,7 +79,7 @@ namespace {
             std::format_to(out, "dereference({})", dereference.pointer_expression);
         }
         auto operator()(ast::expression::Reference_dereference const& dereference) {
-            std::format_to(out, "*{}", dereference.dereferenced_expression);
+            std::format_to(out, "(*{})", dereference.dereferenced_expression);
         }
         auto operator()(ast::expression::Addressof const& addressof) {
             std::format_to(out, "addressof({})", addressof.lvalue_expression);
@@ -97,7 +97,7 @@ namespace {
             std::format_to(out, "[{}]", literal.elements);
         }
         auto operator()(ast::expression::Binary_operator_invocation const& invocation) {
-            std::format_to(out, "{} {} {}", invocation.left, invocation.op, invocation.right);
+            std::format_to(out, "({} {} {})", invocation.left, invocation.op, invocation.right);
         }
         auto operator()(ast::expression::Break const& break_) {
             std::format_to(out, "break {}", break_.result);
@@ -121,7 +121,10 @@ namespace {
             std::format_to(out, "alias {} = {}", alias.alias_name, alias.aliased_type);
         }
         auto operator()(ast::expression::Loop const& loop) {
-            std::format_to(out, "loop {}", loop.body);
+            if (std::holds_alternative<ast::expression::Block>(loop.body->value))
+                std::format_to(out, "loop {}", loop.body);
+            else
+                std::format_to(out, "loop {{ {} }}", loop.body);
         }
         auto operator()(ast::expression::Match const& match) {
             std::format_to(out, "match {} {{", match.matched_expression);
@@ -133,7 +136,7 @@ namespace {
             std::format_to(out, "{}.{}", invocation.base_expression, invocation.method_name);
             if (invocation.template_arguments.has_value())
                 std::format_to(out, "[{}]", *invocation.template_arguments);
-            std::format_to(out, "({})", invocation.arguments);
+            std::format_to(out, "({})", invocation.function_arguments);
         }
         auto operator()(ast::expression::Move const& move) {
             std::format_to(out, "mov {}", move.lvalue);
@@ -299,9 +302,8 @@ namespace {
 
 
 DEFINE_FORMATTER(ast::Expression) {
-    std::format_to(context.out(), "(");
     utl::match(value.value, Expression_format_visitor { context.out() });
-    return std::format_to(context.out(), ")");
+    return context.out();
 }
 DEFINE_FORMATTER(ast::Pattern) {
     utl::match(value.value, Pattern_format_visitor { context.out() });

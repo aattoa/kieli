@@ -34,20 +34,20 @@ auto compiler::Name_dynamic::as_lower() const noexcept -> Name_lower {
     utl::always_assert(!is_upper.get());
     return { identifier, source_view };
 }
-compiler::Name_upper::operator Name_dynamic() const noexcept {
+auto compiler::Name_upper::as_dynamic() const noexcept -> Name_dynamic {
     return { identifier, source_view, true };
 }
-compiler::Name_lower::operator Name_dynamic() const noexcept {
+auto compiler::Name_lower::as_dynamic() const noexcept -> Name_dynamic {
     return { identifier, source_view, false };
 }
 
-auto compiler::Name_dynamic::operator==(compiler::Name_dynamic const& other) const noexcept -> bool {
+auto compiler::Name_dynamic::operator==(Name_dynamic const& other) const noexcept -> bool {
     return identifier == other.identifier;
 }
-auto compiler::Name_lower::operator==(compiler::Name_lower const& other) const noexcept -> bool {
+auto compiler::Name_lower::operator==(Name_lower const& other) const noexcept -> bool {
     return identifier == other.identifier;
 }
-auto compiler::Name_upper::operator==(compiler::Name_upper const& other) const noexcept -> bool {
+auto compiler::Name_upper::operator==(Name_upper const& other) const noexcept -> bool {
     return identifier == other.identifier;
 }
 

@@ -13,10 +13,10 @@ namespace {
             lex(kieli::Lex_arguments { .compilation_info = std::move(test_info), .source = test_source }),
             cst::Node_arena::with_default_page_size()
         };
-        return std::format("{}", extractor(parse_context));
+        return cst::to_string(extractor(parse_context));
 #endif
         (void)node_string;
-        return {};
+        utl::todo();
     }
 
     constexpr auto expression = make_node<libparse::extract_expression>;

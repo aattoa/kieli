@@ -171,7 +171,7 @@ namespace {
         ast::definition::Function           && function,
         std::vector<ast::Template_parameter>&& ast_template_parameters) -> void
     {
-        Definition_state_guard const state_guard { context, function_info.state, function.signature.name };
+        Definition_state_guard const state_guard { context, function_info.state, function.signature.name.as_dynamic() };
         bool const has_explicit_return_type = function.signature.return_type.has_value();
         auto const name = function.signature.name;
 
@@ -289,7 +289,7 @@ auto libresolve::Context::resolve_function(utl::Wrapper<Function_info> const wra
     (void)resolve_function_signature(info);
 
     if (auto* const function = std::get_if<Partially_resolved_function>(&info.value)) {
-        Definition_state_guard const state_guard { *this, info.state, function->name  };
+        Definition_state_guard const state_guard { *this, info.state, function->name.as_dynamic()  };
         info.value = resolve_function_impl(*function, *this, info.home_namespace);
     }
     
@@ -301,7 +301,7 @@ auto libresolve::Context::resolve_struct(utl::Wrapper<Struct_info> const wrapped
     Struct_info& info = *wrapped_info;
 
     if (auto* const structure = std::get_if<ast::definition::Struct>(&info.value)) {
-        Definition_state_guard const state_guard { *this, info.state, structure->name };
+        Definition_state_guard const state_guard { *this, info.state, structure->name.as_dynamic() };
         info.value = resolve_struct_impl(*structure, *this, Scope {}, info.home_namespace);
     }
     
@@ -313,7 +313,7 @@ auto libresolve::Context::resolve_enum(utl::Wrapper<Enum_info> const wrapped_inf
     Enum_info& info = *wrapped_info;
 
     if (auto* const enumeration = std::get_if<ast::definition::Enum>(&info.value)) {
-        Definition_state_guard const state_guard { *this, info.state, enumeration->name };
+        Definition_state_guard const state_guard { *this, info.state, enumeration->name.as_dynamic() };
         info.value = resolve_enum_impl(*enumeration, *this, Scope {}, info.home_namespace, info.enumeration_type);
     }
     
@@ -325,7 +325,7 @@ auto libresolve::Context::resolve_alias(utl::Wrapper<Alias_info> const wrapped_i
     Alias_info& info = *wrapped_info;
 
     if (auto* const alias = std::get_if<ast::definition::Alias>(&info.value)) {
-        Definition_state_guard const state_guard { *this, info.state, alias->name };
+        Definition_state_guard const state_guard { *this, info.state, alias->name.as_dynamic() };
         Scope scope;
         hir::Type const aliased_type = resolve_type(alias->type, scope, *info.home_namespace);
         ensure_non_generalizable(aliased_type, "An aliased type");
@@ -345,7 +345,7 @@ auto libresolve::Context::resolve_typeclass(utl::Wrapper<Typeclass_info> const w
     if (auto* const ast_typeclass = std::get_if<ast::definition::Typeclass>(&info.value)) {
         utl::always_assert(ast_typeclass->type_signatures.empty());
 
-        Definition_state_guard const state_guard { *this, info.state, ast_typeclass->name };
+        Definition_state_guard const state_guard { *this, info.state, ast_typeclass->name.as_dynamic() };
         Self_type_guard const self_type_guard { *this, self_placeholder_type(info.name.source_view) };
 
         hir::Typeclass hir_typeclass { .name = info.name };
@@ -438,7 +438,7 @@ auto libresolve::Context::resolve_struct_template(utl::Wrapper<Struct_template_i
     Struct_template_info& info = *wrapped_info;
 
     if (auto* const structure = std::get_if<ast::definition::Struct_template>(&info.value)) {
-        Definition_state_guard const state_guard { *this, info.state, info.name };
+        Definition_state_guard const state_guard { *this, info.state, info.name.as_dynamic() };
 
         auto [scope, parameters] = // NOLINT
             resolve_template_parameters(structure->parameters, *info.home_namespace);
@@ -462,7 +462,7 @@ auto libresolve::Context::resolve_enum_template(utl::Wrapper<Enum_template_info>
     Enum_template_info& info = *wrapped_info;
 
     if (auto* const enumeration = std::get_if<ast::definition::Enum_template>(&info.value)) {
-        Definition_state_guard const state_guard { *this, info.state, info.name };
+        Definition_state_guard const state_guard { *this, info.state, info.name.as_dynamic() };
 
         auto [template_parameter_scope, template_parameters] =
             resolve_template_parameters(enumeration->parameters, *info.home_namespace);
@@ -488,7 +488,7 @@ auto libresolve::Context::resolve_alias_template(utl::Wrapper<Alias_template_inf
     Alias_template_info& info = *wrapped_info;
 
     if (auto* const alias_template = std::get_if<ast::definition::Alias_template>(&info.value)) {
-        Definition_state_guard const state_guard { *this, info.state, info.name };
+        Definition_state_guard const state_guard { *this, info.state, info.name.as_dynamic() };
 
         auto [template_parameter_scope, template_parameters] =
             resolve_template_parameters(alias_template->parameters, *info.home_namespace);

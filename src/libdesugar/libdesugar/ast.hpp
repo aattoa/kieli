@@ -171,13 +171,13 @@ namespace ast {
             utl::Wrapper<Expression> index_expression;
         };
         struct Method_invocation {
-            std::vector<Function_argument>               arguments;
+            std::vector<Function_argument>               function_arguments;
             tl::optional<std::vector<Template_argument>> template_arguments;
             utl::Wrapper<Expression>                     base_expression;
             compiler::Name_lower                         method_name;
         };
         struct Conditional {
-            enum class Source { normal_conditional, while_loop_body };
+            enum class Source { normal_conditional, elif_conditional, while_loop_body };
             utl::Wrapper<Expression> condition;
             utl::Wrapper<Expression> true_branch;
             utl::Wrapper<Expression> false_branch;
