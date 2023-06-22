@@ -1,6 +1,12 @@
 #include <libutl/common/utilities.hpp>
 #include <libutl/color/color.hpp>
 
+
+namespace {
+    constinit bool color_formatting_state = true;
+}
+
+
 #ifdef _WIN32
 
 // Copied the necessary declarations from Windows.h, this allows not #including it,
@@ -24,7 +30,6 @@ extern "C" {
 
 
 namespace {
-
     auto enable_virtual_terminal_processing() -> void {
         static bool has_been_enabled = false;
 
@@ -53,17 +58,12 @@ namespace {
             }
         }
     }
-
 }
 
 #else
 #define enable_virtual_terminal_processing() ((void)0)
 #endif
 
-
-namespace {
-    constinit bool color_formatting_state = true;
-}
 
 auto utl::color_string(utl::Color const color) noexcept -> std::string_view {
     static constexpr auto color_map = std::to_array<std::string_view>({
