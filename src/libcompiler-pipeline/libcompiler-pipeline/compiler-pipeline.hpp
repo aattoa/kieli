@@ -34,16 +34,16 @@ namespace compiler {
         auto as_lower() const noexcept -> Name_lower;
         [[nodiscard]] auto operator==(Name_dynamic const&) const noexcept -> bool;
     };
-    struct Name_upper {
+    struct [[nodiscard]] Name_upper {
         utl::Pooled_string identifier;
         utl::Source_view   source_view;
-        operator Name_dynamic() const noexcept; // NOLINT: implicit
+        auto as_dynamic() const noexcept -> Name_dynamic;
         [[nodiscard]] auto operator==(Name_upper const&) const noexcept -> bool;
     };
-    struct Name_lower {
+    struct [[nodiscard]] Name_lower {
         utl::Pooled_string identifier;
         utl::Source_view   source_view;
-        operator Name_dynamic() const noexcept; // NOLINT: implicit
+        auto as_dynamic() const noexcept -> Name_dynamic;
         [[nodiscard]] auto operator==(Name_lower const&) const noexcept -> bool;
     };
 

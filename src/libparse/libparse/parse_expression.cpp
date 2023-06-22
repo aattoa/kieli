@@ -69,13 +69,15 @@ namespace {
         -> utl::Wrapper<cst::Expression>
     {
         Lexical_token const* const anchor = context.pointer;
-        if (context.try_consume(Token_type::let)) {
+        if (Lexical_token const* const let_keyword = context.try_extract(Token_type::let)) {
             utl::wrapper auto const pattern = extract_pattern(context);
-            context.consume_required(Token_type::equals);
+            Lexical_token const* const equals_sign = context.extract_required(Token_type::equals);
             return context.wrap(cst::Expression {
                 .value = cst::expression::Conditional_let {
-                    .pattern     = std::move(pattern),
-                    .initializer = extract_expression(context),
+                    .pattern           = std::move(pattern),
+                    .initializer       = extract_expression(context),
+                    .let_keyword_token = cst::Token::from_lexical(let_keyword),
+                    .equals_sign_token = cst::Token::from_lexical(equals_sign),
                 },
                 .source_view = context.make_source_view(anchor, context.pointer - 1),
             });
@@ -93,6 +95,7 @@ namespace {
 
     auto extract_infinite_loop(Parse_context& context) -> cst::Expression::Variant {
         Lexical_token const* const loop_keyword = context.pointer - 1;
+        assert(loop_keyword->source_view.string == "loop");
         return cst::expression::Infinite_loop {
             .body               = extract_loop_body(context),
             .loop_keyword_token = cst::Token::from_lexical(loop_keyword),
@@ -101,6 +104,7 @@ namespace {
 
     auto extract_while_loop(Parse_context& context) -> cst::Expression::Variant {
         Lexical_token const* const while_keyword = context.pointer - 1;
+        assert(while_keyword->source_view.string == "while");
         utl::wrapper auto const condition = extract_condition(context);
         return cst::expression::While_loop {
             .condition           = std::move(condition),
@@ -111,9 +115,10 @@ namespace {
 
     auto extract_for_loop(Parse_context& context) -> cst::Expression::Variant {
         Lexical_token const* const for_keyword = context.pointer - 1;
-        utl::wrapper auto const iterator = extract_pattern(context);
-        Lexical_token const* const in_keyword = context.extract_required(Token_type::in);
-        utl::wrapper auto const iterable = extract_expression(context);
+        utl::wrapper auto    const iterator    = extract_pattern(context);
+        Lexical_token const* const in_keyword  = context.extract_required(Token_type::in);
+        utl::wrapper auto    const iterable    = extract_expression(context);
+        assert(for_keyword->source_view.string == "for");
         return cst::expression::For_loop {
             .iterator          = std::move(iterator),
             .iterable          = std::move(iterable),
@@ -189,6 +194,7 @@ namespace {
         -> cst::Expression::Variant
     {
         Lexical_token const* const asterisk = context.pointer - 1;
+        assert(asterisk->source_view.string == "*");
         return cst::expression::Reference_dereference {
             .dereferenced_expression = extract_expression(context),
             .asterisk_token          = cst::Token::from_lexical(asterisk),
@@ -199,6 +205,7 @@ namespace {
         -> cst::Expression::Variant
     {
         Lexical_token const* const open = context.pointer - 1;
+        assert(open->source_view.string == "(");
         auto expressions = extract_comma_separated_zero_or_more<parse_expression, "an expression">(context);
         Lexical_token const* const close = context.extract_required(Token_type::paren_close);
         if (expressions.elements.size() == 1) {
@@ -221,6 +228,7 @@ namespace {
         -> cst::Expression::Variant
     {
         Lexical_token const* const open = context.pointer - 1;
+        assert(open->source_view.string == "]");
         auto elements =
             extract_comma_separated_zero_or_more<parse_expression, "an array element">(context);
         if (Lexical_token const* const close = context.try_extract(Token_type::bracket_close)) {
@@ -236,7 +244,9 @@ namespace {
             context.error_expected("a ',' or a ']'");
     }
 
-    auto extract_conditional(Parse_context& context)
+    enum class Conditional_kind { if_, elif };
+
+    auto extract_conditional(Parse_context& context, Conditional_kind const kind)
         -> cst::Expression::Variant
     {
         static constexpr auto extract_branch = [](Parse_context& context) -> utl::wrapper auto {
@@ -247,35 +257,37 @@ namespace {
         };
 
         Lexical_token const* const if_keyword = context.pointer - 1;
+        assert(if_keyword->source_view.string == "if"
+            || if_keyword->source_view.string == "elif");
 
         utl::wrapper auto const primary_condition = extract_condition(context);
         utl::wrapper auto const true_branch = extract_branch(context);
 
-        std::vector<cst::expression::Conditional::Elif> elif_chain;
-        while (Lexical_token const* const elif_keyword = context.try_extract(Token_type::elif)) {
-            utl::wrapper auto const elif_condition = extract_condition(context);
-            utl::wrapper auto const elif_branch = extract_branch(context);
-            elif_chain.push_back({
-                .condition          = elif_condition,
-                .branch             = elif_branch,
-                .elif_keyword_token = cst::Token::from_lexical(elif_keyword),
-            });
-        }
-
         tl::optional<cst::expression::Conditional::False_branch> false_branch;
-        if (Lexical_token const* const else_keyword = context.try_extract(Token_type::else_)) {
+
+        if (Lexical_token const* const elif_keyword = context.try_extract(Token_type::elif)) {
+            auto elif_conditional = extract_conditional(context, Conditional_kind::elif);
             false_branch = cst::expression::Conditional::False_branch {
-                .body               = extract_branch(context),
-                .else_keyword_token = cst::Token::from_lexical(else_keyword),
+                .body = context.wrap(cst::Expression {
+                    .value       = std::move(elif_conditional),
+                    .source_view = context.make_source_view(elif_keyword, context.pointer - 1),
+                }),
+                .else_or_elif_keyword_token = cst::Token::from_lexical(elif_keyword),
+            };
+        }
+        else if (Lexical_token const* const else_keyword = context.try_extract(Token_type::else_)) {
+            false_branch = cst::expression::Conditional::False_branch {
+                .body                       = extract_branch(context),
+                .else_or_elif_keyword_token = cst::Token::from_lexical(else_keyword),
             };
         }
 
         return cst::expression::Conditional {
-            .primary_condition = primary_condition,
-            .true_branch       = true_branch,
-            .elif_chain        = std::move(elif_chain),
-            .false_branch      = false_branch,
-            .if_keyword_token  = cst::Token::from_lexical(if_keyword),
+            .condition                = primary_condition,
+            .true_branch              = true_branch,
+            .false_branch             = false_branch,
+            .if_or_elif_keyword_token = cst::Token::from_lexical(if_keyword),
+            .is_elif_conditional      = kind == Conditional_kind::elif,
         };
     }
 
@@ -286,6 +298,7 @@ namespace {
         auto pattern = extract_required<parse_top_level_pattern, "a pattern">(context);
         auto type = parse_type_annotation(context);
         Lexical_token const* const equals_sign = context.extract_required(Token_type::equals);
+        assert(let_keyword->source_view.string == "let");
         return cst::expression::Let_binding {
             .pattern           = std::move(pattern),
             .type              = type,
@@ -299,6 +312,7 @@ namespace {
         -> cst::Expression::Variant
     {
         Lexical_token const* const alias_keyword = context.pointer - 1;
+        assert(alias_keyword->source_view.string == "alias");
         auto name = extract_upper_name(context, "an alias name");
         Lexical_token const* const equals_sign = context.extract_required(Token_type::equals);
         return cst::expression::Local_type_alias {
@@ -321,6 +335,7 @@ namespace {
         -> cst::Expression::Variant
     {
         Lexical_token const* const sizeof_keyword = context.pointer - 1;
+        assert(sizeof_keyword->source_view.string == "sizeof");
         if (auto type = parenthesized<parse_type, "a type">(context)) {
             return cst::expression::Sizeof {
                 .inspected_type       = *type,
@@ -334,6 +349,7 @@ namespace {
         -> cst::Expression::Variant
     {
         Lexical_token const* const addressof_keyword = context.pointer - 1;
+        assert(addressof_keyword->source_view.string == "addressof");
         if (auto lvalue = parenthesized<parse_expression, "an addressable expression">(context)) {
             return cst::expression::Addressof {
                 .lvalue_expression       = *lvalue,
@@ -347,6 +363,7 @@ namespace {
         -> cst::Expression::Variant
     {
         Lexical_token const* const dereference_keyword = context.pointer - 1;
+        assert(dereference_keyword->source_view.string == "dereference");
         if (auto pointer_expression = parenthesized<parse_expression, "a pointer expression">(context)) {
             return cst::expression::Pointer_dereference {
                 .pointer_expression        = std::move(*pointer_expression),
@@ -378,9 +395,10 @@ namespace {
     auto extract_match(Parse_context& context)
         -> cst::Expression::Variant
     {
+        Lexical_token const* const match_keyword = context.pointer - 1;
         auto expression = extract_expression(context);
-
-        context.consume_required(Token_type::brace_open);
+        Lexical_token const* const open = context.extract_required(Token_type::brace_open);
+        assert(match_keyword->source_view.string == "match");
 
         std::vector<cst::expression::Match::Case> cases;
         while (auto match_case = parse_match_case(context))
@@ -389,24 +407,34 @@ namespace {
         if (cases.empty())
             context.error_expected("one or more match cases");
 
-        context.consume_required(Token_type::brace_close);
+        Lexical_token const* const close = context.extract_required(Token_type::brace_close);
 
         return cst::expression::Match {
-            .cases              = std::move(cases),
-            .matched_expression = std::move(expression),
+            .cases {
+                .value       = std::move(cases),
+                .open_token  = cst::Token::from_lexical(open),
+                .close_token = cst::Token::from_lexical(close),
+            },
+            .matched_expression  = std::move(expression),
+            .match_keyword_token = cst::Token::from_lexical(match_keyword),
         };
     }
 
-    auto extract_continue(Parse_context&)
+    auto extract_continue(Parse_context& context)
         -> cst::Expression::Variant
     {
-        return cst::expression::Continue {};
+        Lexical_token const* const continue_keyword = context.pointer - 1;
+        assert(continue_keyword->source_view.string == "continue");
+        return cst::expression::Continue {
+            .continue_keyword_token = cst::Token::from_lexical(continue_keyword),
+        };
     }
 
     auto extract_break(Parse_context& context)
         -> cst::Expression::Variant
     {
         Lexical_token const* const break_keyword = context.pointer - 1;
+        assert(break_keyword->source_view.string == "break");
         return cst::expression::Break {
             .result              = parse_expression(context),
             .break_keyword_token = cst::Token::from_lexical(break_keyword),
@@ -417,6 +445,7 @@ namespace {
         -> cst::Expression::Variant
     {
         Lexical_token const* const ret_keyword = context.pointer - 1;
+        assert(ret_keyword->source_view.string == "ret");
         return cst::expression::Ret {
             .returned_expression = parse_expression(context),
             .ret_keyword_token   = cst::Token::from_lexical(ret_keyword),
@@ -427,6 +456,7 @@ namespace {
         -> cst::Expression::Variant
     {
         Lexical_token const* const discard_keyword = context.pointer - 1;
+        assert(discard_keyword->source_view.string == "discard");
         return cst::expression::Discard {
             .discarded_expression  = extract_expression(context),
             .discard_keyword_token = cst::Token::from_lexical(discard_keyword),
@@ -437,6 +467,7 @@ namespace {
         -> cst::Expression::Variant
     {
         Lexical_token const* const ampersand = context.pointer - 1;
+        assert(ampersand->source_view.string == "&");
         auto mutability = parse_mutability(context);
         return cst::expression::Reference {
             .mutability            = std::move(mutability),
@@ -449,6 +480,7 @@ namespace {
         -> cst::Expression::Variant
     {
         Lexical_token const* const unsafe_keyword = context.pointer - 1;
+        assert(unsafe_keyword->source_view.string == "unsafe");
         if (auto block = parse_block_expression(context)) {
             return cst::expression::Unsafe {
                 .expression           = std::move(*block),
@@ -462,6 +494,7 @@ namespace {
         -> cst::Expression::Variant
     {
         Lexical_token const* const mov_keyword = context.pointer - 1;
+        assert(mov_keyword->source_view.string == "mov");
         return cst::expression::Move {
             .lvalue            = extract_expression(context),
             .mov_keyword_token = cst::Token::from_lexical(mov_keyword),
@@ -472,6 +505,7 @@ namespace {
         -> cst::Expression::Variant
     {
         Lexical_token const* const meta_keyword = context.pointer - 1;
+        assert(meta_keyword->source_view.string == "meta");
         if (auto expression = parenthesized<parse_expression, "an expression">(context)) {
             return cst::expression::Meta {
                 .expression         = *expression,
@@ -487,6 +521,7 @@ namespace {
         Lexical_token const* const open_brace = context.pointer - 1;
         std::vector<cst::expression::Block::Side_effect> side_effects;
         tl::optional<utl::Wrapper<cst::Expression>> result_expression;
+        assert(open_brace->source_view.string == "{");
 
         while (auto expression = parse_expression(context)) {
             if (Lexical_token const* const semicolon = context.try_extract(Token_type::semicolon)) {
@@ -561,7 +596,7 @@ namespace {
         case Token_type::bracket_open:
             return extract_array(context);
         case Token_type::if_:
-            return extract_conditional(context);
+            return extract_conditional(context, Conditional_kind::if_);
         case Token_type::let:
             return extract_let_binding(context);
         case Token_type::alias:
@@ -630,6 +665,7 @@ namespace {
         -> cst::Function_arguments
     {
         Lexical_token const* const open = context.pointer - 1;
+        assert(open->source_view.string == "(");
         auto arguments = extract_comma_separated_zero_or_more<parse_argument, "a function argument">(context);
         Lexical_token const* const close = context.extract_required(Token_type::paren_close);
         return cst::Function_arguments {
@@ -736,9 +772,7 @@ namespace {
         Lexical_token const* const anchor = context.pointer;
 
         if (auto expression = parse_potential_member_access(context)) {
-            bool continue_looping = true;
-
-            while (continue_looping) {
+            for (;;) {
                 switch (context.extract().type) {
                 case Token_type::colon:
                 {
@@ -766,11 +800,9 @@ namespace {
                 }
                 default:
                     context.retreat();
-                    continue_looping = false;
+                    return expression;
                 }
             }
-
-            return expression;
         }
         return tl::nullopt;
     }
@@ -807,7 +839,9 @@ namespace {
                         .right_operand  = *right_operand,
                     });
                 }
-                context.error_expected("an operand");
+                else {
+                    context.error_expected("an operand");
+                }
             }
             if (tail.empty()) {
                 return leftmost_operand;

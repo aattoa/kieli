@@ -34,8 +34,48 @@ namespace {
                 .fields = utl::map(context.deref_desugar(), tuple.fields.value.elements),
             };
         }
-        auto operator()(cst::expression::Conditional const&) -> ast::Expression::Variant {
-            utl::todo();
+        auto operator()(cst::expression::Conditional const& conditional) -> ast::Expression::Variant {
+            utl::wrapper auto const false_branch = conditional.false_branch.has_value()
+                ? context.desugar(conditional.false_branch->body)
+                : context.unit_value(this_expression.source_view);
+
+            if (auto const* const let = std::get_if<cst::expression::Conditional_let>(&conditional.condition->value)) {
+                /*
+                    if let a = b { c } else { d }
+
+                    is transformed into
+
+                    match b {
+                        a -> c
+                        _ -> d
+                    }
+                */
+
+                return ast::expression::Match {
+                    .cases = utl::to_vector<ast::expression::Match::Case>({
+                        {
+                            .pattern = context.desugar(let->pattern),
+                            .handler = context.desugar(conditional.true_branch),
+                        },
+                        {
+                            .pattern = context.wildcard_pattern(let->pattern->source_view),
+                            .handler = false_branch,
+                        },
+                    }),
+                    .matched_expression = context.desugar(let->initializer),
+                };
+            }
+            else {
+                return ast::expression::Conditional {
+                    .condition    = context.desugar(conditional.condition),
+                    .true_branch  = context.desugar(conditional.true_branch),
+                    .false_branch = false_branch,
+                    .source = conditional.is_elif_conditional
+                        ? ast::expression::Conditional::Source::elif_conditional
+                        : ast::expression::Conditional::Source::normal_conditional,
+                    .has_explicit_false_branch = conditional.false_branch.has_value(),
+                };
+            }
         }
         auto operator()(cst::expression::Match const& match) -> ast::Expression::Variant {
             auto const desugar_match_case = [this](cst::expression::Match::Case const& match_case) {
@@ -45,12 +85,26 @@ namespace {
                 };
             };
             return ast::expression::Match {
-                .cases              = utl::map(desugar_match_case, match.cases),
+                .cases              = utl::map(desugar_match_case, match.cases.value),
                 .matched_expression = context.desugar(match.matched_expression),
             };
         }
-        auto operator()(cst::expression::Block const&) -> ast::Expression::Variant {
-            utl::todo();
+        auto operator()(cst::expression::Block const& block) -> ast::Expression::Variant {
+            std::vector<ast::Expression> side_effects;
+            for (auto const& side_effect : block.side_effects)
+                side_effects.push_back(context.desugar(*side_effect.expression));
+            if (block.result_expression.has_value()) {
+                return ast::expression::Block {
+                    .side_effect_expressions = std::move(side_effects),
+                    .result_expression       = context.desugar(*block.result_expression),
+                };
+            }
+            else {
+                return ast::expression::Block {
+                    .side_effect_expressions = std::move(side_effects),
+                    .result_expression       = context.unit_value(block.close_brace_token.source_view),
+                };
+            }
         }
         auto operator()(cst::expression::While_loop const& loop) -> ast::Expression::Variant {
             if (auto const* const let = std::get_if<cst::expression::Conditional_let>(&loop.condition->value)) {
@@ -132,8 +186,25 @@ namespace {
                 .invocable = context.desugar(invocation.function_expression),
             };
         }
-        auto operator()(cst::expression::Struct_initializer const&) -> ast::Expression::Variant {
-            utl::todo();
+        auto operator()(cst::expression::Struct_initializer const& cst_struct_initializer) -> ast::Expression::Variant {
+            ast::expression::Struct_initializer ast_struct_initializer {
+                .struct_type = context.desugar(cst_struct_initializer.struct_type),
+            };
+            auto const& initializers = cst_struct_initializer.member_initializers.value.elements;
+            for (auto it = initializers.begin(); it != initializers.end(); ++it) {
+                static constexpr auto projection = &cst::expression::Struct_initializer::Member_initializer::name;
+                if (auto duplicate = ranges::find(initializers.begin(), it, it->name, projection); duplicate != it) {
+                    // TODO: point to individual initializer source views
+                    context.error(this_expression.source_view, {
+                        .message = std::format(
+                            "Struct initializer expression contains more than one initializer for {}",
+                            it->name),
+                    });
+                }
+                ast_struct_initializer.member_initializers
+                    .add_new_unchecked(it->name, context.desugar(it->expression));
+            }
+            return ast_struct_initializer;
         }
         auto operator()(cst::expression::Binary_operator_invocation_sequence const&) -> ast::Expression::Variant {
             utl::todo();
@@ -163,8 +234,17 @@ namespace {
                 .index_expression = context.desugar(access.index_expression),
             };
         }
-        auto operator()(cst::expression::Method_invocation const&) -> ast::Expression::Variant {
-            utl::todo();
+        auto operator()(cst::expression::Method_invocation const& invocation) -> ast::Expression::Variant {
+            return ast::expression::Method_invocation {
+                .function_arguments = utl::map(context.desugar(), invocation.function_arguments.value.elements),
+                .template_arguments = std::invoke([&]() -> tl::optional<std::vector<ast::Template_argument>> {
+                    if (invocation.template_arguments.has_value())
+                        return utl::map(context.desugar(), invocation.template_arguments->value.elements);
+                    return tl::nullopt;
+                }),
+                .base_expression    = context.desugar(invocation.base_expression),
+                .method_name        = invocation.method_name,
+            };
         }
         auto operator()(cst::expression::Type_cast const& cast) -> ast::Expression::Variant {
             return ast::expression::Type_cast {

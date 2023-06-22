@@ -79,8 +79,10 @@ namespace {
 
     constexpr auto desugaring_repl = generic_repl<[](kieli::Lex_result&& lex_result) {
         auto desugar_result = desugar(parse(std::move(lex_result)));
-        (void)desugar_result;
-        // std::print("{}\n\n", utl::formatting::delimited_range(desugar_result.module.definitions, "\n\n"));
+        std::string output;
+        for (ast::Definition const& definition : desugar_result.module.definitions)
+            ast::format_to(definition, output);
+        utl::print("{}\n\n", output);
     }>;
 
     constexpr auto resolution_repl = generic_repl<[](kieli::Lex_result&& lex_result) {
