@@ -12,11 +12,11 @@ namespace {
         auto operator()(cst::type::Parenthesized const& parenthesized) -> ast::Type::Variant {
             return utl::match(parenthesized.type.value->value, *this);
         }
-        auto operator()(compiler::built_in_type::Integer   const& integer) -> ast::Type::Variant { return integer; }
-        auto operator()(compiler::built_in_type::String    const& string) -> ast::Type::Variant { return string; }
-        auto operator()(compiler::built_in_type::Floating  const& floating) -> ast::Type::Variant { return floating; }
+        auto operator()(compiler::built_in_type::Integer   const& integer)   -> ast::Type::Variant { return integer; }
+        auto operator()(compiler::built_in_type::String    const& string)    -> ast::Type::Variant { return string; }
+        auto operator()(compiler::built_in_type::Floating  const& floating)  -> ast::Type::Variant { return floating; }
         auto operator()(compiler::built_in_type::Character const& character) -> ast::Type::Variant { return character; }
-        auto operator()(compiler::built_in_type::Boolean   const& boolean) -> ast::Type::Variant { return boolean; }
+        auto operator()(compiler::built_in_type::Boolean   const& boolean)   -> ast::Type::Variant { return boolean; }
         auto operator()(cst::type::Wildcard const&) -> ast::Type::Variant {
             return ast::type::Wildcard {};
         }
@@ -68,11 +68,11 @@ namespace {
             };
         }
         auto operator()(cst::type::Instance_of const& instance_of) -> ast::Type::Variant {
-            return ast::type::Instance_of { .classes = utl::map(context.desugar(), instance_of.classes.elements) };
+            return ast::type::Instance_of { .classes = context.desugar(instance_of.classes.elements) };
         }
         auto operator()(cst::type::Template_application const& application) -> ast::Type::Variant {
             return ast::type::Template_application {
-                .arguments = utl::map(context.desugar(), application.template_arguments.value.elements),
+                .arguments = context.desugar(application.template_arguments.value.elements),
                 .name      = context.desugar(application.name),
             };
         }

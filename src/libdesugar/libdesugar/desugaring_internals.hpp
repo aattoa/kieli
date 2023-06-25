@@ -56,6 +56,19 @@ namespace libdesugar {
             return [this](auto const& node) { return desugar(node); };
         }
 
+        template <class T>
+        auto desugar(std::vector<T> const& vector) {
+            return utl::map(desugar(), vector);
+        }
+        template <class T>
+        auto desugar(cst::Separated_sequence<T> const& sequence) {
+            return desugar(sequence.elements);
+        }
+        template <class T>
+        auto desugar(cst::Surrounded<T> const& surrounded) {
+            return desugar(surrounded.value);
+        }
+
         auto deref_desugar() {
             return [this](utl::wrapper auto const node) {
                 return desugar(*node);
