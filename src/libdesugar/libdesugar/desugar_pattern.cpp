@@ -42,13 +42,13 @@ namespace {
         auto operator()(cst::pattern::Constructor const& ctor) -> ast::Pattern::Variant {
             return ast::pattern::Constructor {
                 .constructor_name = context.desugar(ctor.constructor_name),
-                .payload_pattern  = ctor.payload_pattern.transform(utl::compose(context.desugar(), cst::surrounded_value)),
+                .payload_pattern  = ctor.payload_pattern.transform(context.desugar()),
             };
         }
         auto operator()(cst::pattern::Abbreviated_constructor const& ctor) -> ast::Pattern::Variant {
             return ast::pattern::Abbreviated_constructor {
                 .constructor_name = ctor.constructor_name,
-                .payload_pattern  = ctor.payload_pattern.transform(utl::compose(context.desugar(), cst::surrounded_value)),
+                .payload_pattern  = ctor.payload_pattern.transform(context.desugar()),
             };
         }
         auto operator()(cst::pattern::Alias const& alias) -> ast::Pattern::Variant {

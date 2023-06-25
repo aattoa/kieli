@@ -689,12 +689,4 @@ namespace cst {
         std::vector<utl::Pooled_string>  imports;
     };
 
-
-    constexpr auto surrounded_value = []<class T>(Surrounded<T> const& surrounded) noexcept -> T const& {
-        return surrounded.value;
-    };
-    constexpr auto separated_sequence_elements = []<class T>(Separated_sequence<T> const& sequence) -> std::vector<T> const& {
-        return sequence.elements;
-    };
-
 }

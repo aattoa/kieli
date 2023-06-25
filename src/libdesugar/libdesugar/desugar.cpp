@@ -29,17 +29,11 @@ auto libdesugar::Desugar_context::desugar(const cst::Self_parameter& self_parame
 auto libdesugar::Desugar_context::desugar(cst::Template_argument const& argument) -> ast::Template_argument {
     return {
         .value = utl::match(argument.value,
-            [this](cst::Mutability const& mutability) -> ast::Template_argument::Variant {
-                return desugar(mutability);
+            [this](auto const& argument) -> ast::Template_argument::Variant {
+                return desugar(argument);
             },
             [](cst::Template_argument::Wildcard const wildcard) -> ast::Template_argument::Variant {
                 return ast::Template_argument::Wildcard { .source_view = wildcard.source_view };
-            },
-            [this](utl::Wrapper<cst::Type> const type) -> ast::Template_argument::Variant {
-                return desugar(type);
-            },
-            [this](utl::Wrapper<cst::Expression> const expression) -> ast::Template_argument::Variant {
-                error(expression->source_view, { "Constant evaluation is not supported yet" });
             }),
     };
 }
@@ -49,7 +43,7 @@ auto libdesugar::Desugar_context::desugar(cst::Template_parameter const& paramet
         .value = utl::match(parameter.value,
             [this](cst::Template_parameter::Type_parameter const& type_parameter) -> ast::Template_parameter::Variant {
                 return ast::Template_parameter::Type_parameter {
-                    .classes = utl::map(desugar(), type_parameter.classes.elements),
+                    .classes = desugar(type_parameter.classes),
                     .name    = type_parameter.name,
                 };
             },
@@ -69,13 +63,17 @@ auto libdesugar::Desugar_context::desugar(cst::Template_parameter const& paramet
     };
 }
 
-auto libdesugar::Desugar_context::desugar(cst::Qualifier const&) -> ast::Qualifier {
-    utl::todo();
+auto libdesugar::Desugar_context::desugar(cst::Qualifier const& qualifier) -> ast::Qualifier {
+    return {
+        .template_arguments = qualifier.template_arguments.transform(desugar()),
+        .name               = qualifier.name,
+        .source_view        = qualifier.source_view,
+    };
 }
 
 auto libdesugar::Desugar_context::desugar(cst::Qualified_name const& name) -> ast::Qualified_name {
     return {
-        .middle_qualifiers = utl::map(desugar(), name.middle_qualifiers.elements),
+        .middle_qualifiers = desugar(name.middle_qualifiers.elements),
         .root_qualifier = name.root_qualifier.transform([&](cst::Root_qualifier const& root) {
             return utl::match(root.value,
                 [](std::monostate)                         -> ast::Root_qualifier { return {}; },
@@ -86,13 +84,17 @@ auto libdesugar::Desugar_context::desugar(cst::Qualified_name const& name) -> as
     };
 }
 
-auto libdesugar::Desugar_context::desugar(cst::Class_reference const&) -> ast::Class_reference {
-    utl::todo();
+auto libdesugar::Desugar_context::desugar(cst::Class_reference const& reference) -> ast::Class_reference {
+    return {
+        .template_arguments = reference.template_arguments.transform(desugar()),
+        .name               = desugar(reference.name),
+        .source_view        = reference.source_view,
+    };
 }
 
 auto libdesugar::Desugar_context::desugar(cst::Function_signature const& signature) -> ast::Function_signature {
     return {
-        .function_parameters = utl::map(desugar(), signature.function_parameters.normal_parameters.elements),
+        .function_parameters = desugar(signature.function_parameters.normal_parameters.elements),
         .self_parameter      = signature.function_parameters.self_parameter.transform(desugar()),
         .return_type         = signature.return_type.transform(desugar()),
         .name                = signature.name,
@@ -101,7 +103,7 @@ auto libdesugar::Desugar_context::desugar(cst::Function_signature const& signatu
 
 auto libdesugar::Desugar_context::desugar(cst::Type_signature const& signature) -> ast::Type_signature {
     return {
-        .classes = utl::map(desugar(), signature.classes.elements),
+        .classes = desugar(signature.classes.elements),
         .name    = signature.name,
     };
 }
@@ -204,7 +206,7 @@ auto kieli::desugar(kieli::Parse_result&& parse_result) -> Desugar_result {
         std::move(parse_result.compilation_info),
         ast::Node_arena::with_default_page_size(),
     };
-    auto desugared_definitions = utl::map(context.desugar(), parse_result.module.definitions);
+    auto desugared_definitions = context.desugar(parse_result.module.definitions);
     return Desugar_result {
         .compilation_info = std::move(context.compilation_info),
         .node_arena       = std::move(context.node_arena),

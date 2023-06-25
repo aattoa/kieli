@@ -182,7 +182,7 @@ namespace {
         }
         auto operator()(cst::expression::Invocation const& invocation) -> ast::Expression::Variant {
             return ast::expression::Invocation {
-                .arguments = utl::map(context.desugar(), invocation.function_arguments.value.elements),
+                .arguments = context.desugar(invocation.function_arguments.value.elements),
                 .invocable = context.desugar(invocation.function_expression),
             };
         }
@@ -211,7 +211,7 @@ namespace {
         }
         auto operator()(cst::expression::Template_application const& application) -> ast::Expression::Variant {
             return ast::expression::Template_application {
-                .template_arguments = utl::map(context.desugar(), application.template_arguments.value.elements),
+                .template_arguments = context.desugar(application.template_arguments.value.elements),
                 .name               = context.desugar(application.name),
             };
         }
@@ -236,12 +236,8 @@ namespace {
         }
         auto operator()(cst::expression::Method_invocation const& invocation) -> ast::Expression::Variant {
             return ast::expression::Method_invocation {
-                .function_arguments = utl::map(context.desugar(), invocation.function_arguments.value.elements),
-                .template_arguments = std::invoke([&]() -> tl::optional<std::vector<ast::Template_argument>> {
-                    if (invocation.template_arguments.has_value())
-                        return utl::map(context.desugar(), invocation.template_arguments->value.elements);
-                    return tl::nullopt;
-                }),
+                .function_arguments = context.desugar(invocation.function_arguments.value.elements),
+                .template_arguments = invocation.template_arguments.transform(context.desugar()),
                 .base_expression    = context.desugar(invocation.base_expression),
                 .method_name        = invocation.method_name,
             };

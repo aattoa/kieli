@@ -16,7 +16,7 @@ namespace {
             if (parameters.has_value()) {
                 return ast::definition::Template<std::remove_reference_t<Definition>> {
                     .definition = std::forward<Definition>(definition),
-                    .parameters = utl::map(context.desugar(), parameters->value.elements),
+                    .parameters = context.desugar(parameters->value.elements),
                 };
             }
             return std::forward<Definition>(definition);
@@ -65,7 +65,7 @@ namespace {
                     .name        = member.name,
                     .type        = context.desugar(member.type),
                     .is_public   = member.is_public,
-                    .source_view = member.source_view
+                    .source_view = member.source_view,
                 };
             };
             return definition(
@@ -108,8 +108,8 @@ namespace {
         {
             return definition(
                 ast::definition::Typeclass {
-                    .function_signatures = utl::map(context.desugar(), typeclass.function_signatures),
-                    .type_signatures     = utl::map(context.desugar(), typeclass.type_signatures),
+                    .function_signatures = context.desugar(typeclass.function_signatures),
+                    .type_signatures     = context.desugar(typeclass.type_signatures),
                     .name                = typeclass.name,
                 },
                 typeclass.template_parameters);
@@ -121,7 +121,7 @@ namespace {
             return definition(
                 ast::definition::Implementation {
                     .type        = context.desugar(*implementation.self_type),
-                    .definitions = utl::map(context.desugar(), implementation.definitions),
+                    .definitions = context.desugar(implementation.definitions),
                 },
                 implementation.template_parameters);
         }
@@ -133,7 +133,7 @@ namespace {
                 ast::definition::Instantiation {
                     .typeclass   = context.desugar(instantiation.typeclass),
                     .self_type   = context.desugar(*instantiation.self_type),
-                    .definitions = utl::map(context.desugar(), instantiation.definitions),
+                    .definitions = context.desugar(instantiation.definitions),
                 },
                 instantiation.template_parameters);
         }
@@ -143,7 +143,7 @@ namespace {
         {
             return definition(
                 ast::definition::Namespace {
-                    .definitions = utl::map(context.desugar(), space.definitions),
+                    .definitions = context.desugar(space.definitions),
                     .name        = space.name,
                 },
                 space.template_parameters);
@@ -155,7 +155,7 @@ namespace {
 auto libdesugar::Desugar_context::desugar(cst::Definition const& definition) -> ast::Definition {
     utl::always_assert(!definition.value.valueless_by_exception());
     return {
-        std::visit<ast::Definition::Variant>(Definition_desugaring_visitor { *this }, definition.value),
-        definition.source_view,
+        .value = std::visit<ast::Definition::Variant>(Definition_desugaring_visitor { *this }, definition.value),
+        .source_view = definition.source_view,
     };
 }
