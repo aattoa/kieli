@@ -173,15 +173,14 @@ namespace bootleg {
     }
 }
 
+namespace utl::dtl {
+    template <class, template <class...> class>
+    struct Is_instance_of : std::false_type {};
+    template <class... Ts, template <class...> class F>
+    struct Is_instance_of<F<Ts...>, F> : std::true_type {};
+}
 
 namespace utl {
-
-    namespace dtl {
-        template <class, template <class...> class>
-        struct Is_instance_of : std::false_type {};
-        template <class... Ts, template <class...> class F>
-        struct Is_instance_of<F<Ts...>, F> : std::true_type {};
-    }
 
     template <class T, template <class...> class F>
     concept instance_of = dtl::Is_instance_of<T, F>::value;
@@ -191,7 +190,6 @@ namespace utl {
     concept trivial = std::is_trivial_v<T>;
     template <class T>
     concept trivially_copyable = std::is_trivially_copyable_v<T>;
-
 
     template <class>
     struct Always_false : std::false_type {};
@@ -543,34 +541,6 @@ namespace utl {
     }
 
 
-    template <class T>
-    concept hashable = requires {
-        requires std::is_default_constructible_v<std::hash<T>>;
-        requires std::is_invocable_r_v<Usize, std::hash<T>, T const&>;
-    };
-
-
-    template <hashable Head, hashable... Tail>
-    auto hash_combine_with_seed(
-        Usize          seed,
-        Head const&    head,
-        Tail const&... tail) -> Usize
-    {
-        // https://stackoverflow.com/questions/2590677/how-do-i-combine-hash-values-in-c0x
-
-        seed ^= (std::hash<Head>{}(head) + 0x9e3779b9 + (seed << 6) + (seed >> 2));
-
-        if constexpr (sizeof...(tail) != 0)
-            return hash_combine_with_seed(seed, tail...);
-        else
-            return seed;
-    }
-
-    auto hash_combine(hashable auto const&... args) -> Usize {
-        return hash_combine_with_seed(0, args...);
-    }
-
-
     namespace formatting {
         struct Formatter_base {
             constexpr auto parse(auto& parse_context) {
@@ -579,7 +549,7 @@ namespace utl {
         };
         template <std::integral Integer>
         struct Integer_with_ordinal_indicator_formatter_closure {
-            Integer integer;
+            Integer integer {};
         };
         template <std::integral Integer>
         constexpr auto integer_with_ordinal_indicator(Integer const integer) noexcept
@@ -589,7 +559,7 @@ namespace utl {
         }
         template <ranges::sized_range Range>
         struct Range_formatter_closure {
-            Range const*     range;
+            Range const*     range {};
             std::string_view delimiter;
         };
         template <ranges::sized_range Range>
@@ -601,24 +571,6 @@ namespace utl {
     }
 
 }
-
-
-template <utl::hashable T>
-struct std::hash<std::vector<T>> {
-    auto operator()(std::vector<T> const& vector) const -> utl::Usize {
-        utl::Usize seed = 0;
-        for (auto& element : vector)
-            seed = utl::hash_combine_with_seed(seed, element);
-        return seed;
-    }
-};
-
-template <utl::hashable Fst, utl::hashable Snd>
-struct std::hash<utl::Pair<Fst, Snd>> {
-    auto operator()(utl::Pair<Fst, Snd> const& pair) const -> utl::Usize {
-        return utl::hash_combine(pair.first, pair.second);
-    }
-};
 
 
 template <class... Ts>
