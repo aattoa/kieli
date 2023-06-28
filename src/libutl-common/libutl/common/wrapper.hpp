@@ -148,13 +148,6 @@ namespace utl {
 }
 
 
-template <utl::hashable T>
-struct std::hash<utl::Wrapper<T>> : hash<T> {
-    [[nodiscard]] auto operator()(utl::Wrapper<T> const wrapper) const -> utl::Usize {
-        return hash<T>::operator()(*wrapper);
-    }
-};
-
 template <class T>
 struct std::formatter<utl::Wrapper<T>> : formatter<T> {
     auto format(utl::Wrapper<T> const wrapper, auto& context) const {

@@ -8,7 +8,6 @@ namespace utl {
 
     class [[nodiscard]] Pooled_string {
     public:
-        friend struct std::hash<Pooled_string>;
         friend class String_pool;
     private:
         Usize              m_index;
@@ -39,12 +38,5 @@ template <>
 struct std::formatter<utl::Pooled_string> : std::formatter<std::string_view> {
     auto format(utl::Pooled_string const string, auto& context) const {
         return std::formatter<std::string_view>::format(string.view(), context);
-    }
-};
-
-template <>
-struct std::hash<utl::Pooled_string> {
-    auto operator()(utl::Pooled_string const string) const noexcept -> utl::Usize {
-        return string.m_index;
     }
 };
