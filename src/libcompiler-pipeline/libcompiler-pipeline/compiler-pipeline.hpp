@@ -7,11 +7,11 @@
 
 namespace compiler {
     struct [[nodiscard]] Shared_compilation_info {
-        utl::diagnostics::Builder       diagnostics;
-        utl::Wrapper_arena<utl::Source> source_arena = utl::Source::Arena::with_page_size(8);
-        utl::String_pool                string_literal_pool;
-        utl::String_pool                operator_pool;
-        utl::String_pool                identifier_pool;
+        utl::diagnostics::Builder diagnostics;
+        utl::Source::Arena        source_arena = utl::Source::Arena::with_page_size(8);
+        utl::String_pool          string_literal_pool;
+        utl::String_pool          operator_pool;
+        utl::String_pool          identifier_pool;
     };
     using Compilation_info = utl::Explicit<std::shared_ptr<Shared_compilation_info>>;
 
@@ -22,6 +22,7 @@ namespace compiler {
 
     auto predefinitions_source(Compilation_info&) -> utl::Wrapper<utl::Source>;
     auto mock_compilation_info(utl::diagnostics::Level = utl::diagnostics::Level::suppress) -> Compilation_info;
+    auto test_info_and_source(std::string&&) -> utl::Pair<Compilation_info, utl::Source::Wrapper>;
 
     struct [[nodiscard]] Name_upper;
     struct [[nodiscard]] Name_lower;

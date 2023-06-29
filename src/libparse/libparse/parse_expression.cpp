@@ -228,7 +228,7 @@ namespace {
         -> cst::Expression::Variant
     {
         Lexical_token const* const open = context.pointer - 1;
-        assert(open->source_view.string == "]");
+        assert(open->source_view.string == "[");
         auto elements =
             extract_comma_separated_zero_or_more<parse_expression, "an array element">(context);
         if (Lexical_token const* const close = context.try_extract(Token_type::bracket_close)) {

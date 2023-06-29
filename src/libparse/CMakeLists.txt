@@ -14,11 +14,10 @@ target_sources(libparse
 target_link_libraries(libparse
     PRIVATE libutl-diagnostics
     PRIVATE libcompiler-pipeline
-    PRIVATE liblex
-    PRIVATE libdesugar) # FIXME
+    PRIVATE liblex)
 
 kieli_consume_libutl_common(libparse)
 
 kieli_add_tests(libparse
-    LINK liblex
-    TESTS libparse)
+    LINK liblex libformat
+    TESTS expression pattern type definition)
