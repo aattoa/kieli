@@ -33,6 +33,10 @@ auto compiler::test_info_and_source(std::string&& source_string)
     return { std::move(test_info), test_source };
 }
 
+auto compiler::Name_dynamic::as_upper() const noexcept -> Name_upper {
+    utl::always_assert(is_upper.get());
+    return { identifier, source_view };
+}
 auto compiler::Name_dynamic::as_lower() const noexcept -> Name_lower {
     utl::always_assert(!is_upper.get());
     return { identifier, source_view };
