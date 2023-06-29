@@ -21,7 +21,8 @@ target_sources(libresolve
     PRIVATE libresolve/unification.cpp)
 
 target_link_libraries(libresolve
-    PRIVATE libutl-diagnostics)
+    PRIVATE libutl-diagnostics
+    PRIVATE libdesugar)
 
 kieli_consume_libutl_common(libresolve)
 

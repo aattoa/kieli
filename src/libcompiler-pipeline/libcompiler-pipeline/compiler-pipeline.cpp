@@ -25,11 +25,14 @@ auto compiler::mock_compilation_info(utl::diagnostics::Level const level) -> Com
     });
 }
 
-
-auto compiler::Name_dynamic::as_upper() const noexcept -> Name_upper {
-    utl::always_assert(is_upper.get());
-    return { identifier, source_view };
+auto compiler::test_info_and_source(std::string&& source_string)
+    -> utl::Pair<Compilation_info, utl::Source::Wrapper>
+{
+    compiler::Compilation_info test_info = mock_compilation_info(utl::diagnostics::Level::suppress);
+    utl::wrapper auto const test_source = test_info.get()->source_arena.wrap("[test]", std::move(source_string));
+    return { std::move(test_info), test_source };
 }
+
 auto compiler::Name_dynamic::as_lower() const noexcept -> Name_lower {
     utl::always_assert(!is_upper.get());
     return { identifier, source_view };

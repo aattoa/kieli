@@ -178,6 +178,8 @@ namespace utl::dtl {
     struct Is_instance_of : std::false_type {};
     template <class... Ts, template <class...> class F>
     struct Is_instance_of<F<Ts...>, F> : std::true_type {};
+    template <class>
+    struct Always_false : std::false_type {};
 }
 
 namespace utl {
@@ -191,10 +193,8 @@ namespace utl {
     template <class T>
     concept trivially_copyable = std::is_trivially_copyable_v<T>;
 
-    template <class>
-    struct Always_false : std::false_type {};
     template <class T>
-    constexpr bool always_false = Always_false<T>::value;
+    constexpr bool always_false = dtl::Always_false<T>::value;
 
 
     template <class E> requires std::is_enum_v<E> && requires { E::_enumerator_count; }
@@ -247,7 +247,7 @@ namespace utl {
         if constexpr (sizeof...(Args) == 0)
             std::cout << fmt.get();
         else
-            std::cout << std::vformat(fmt.get(), std::make_format_args(args...));
+            std::format_to(std::ostreambuf_iterator { std::cout }, fmt, std::forward<Args>(args)...);
     }
 
     [[noreturn]]
