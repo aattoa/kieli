@@ -6,18 +6,58 @@
 namespace {
     struct Definition_format_visitor {
         libformat::State& state;
+
         auto operator()(cst::definition::Function const& function) const -> void {
             state.format("fn {}", function.signature.name);
             if (function.signature.template_parameters.has_value()) {
                 state.format("[TODO]");
             }
             state.format("(TODO)");
-            if (function.optional_equals_sign_token.has_value()) {
-                if (!std::holds_alternative<cst::expression::Block>(function.body->value))
+            switch (state.configuration.function_body) {
+            case kieli::Format_configuration::Function_body::leave_as_is:
+            {
+                if (function.optional_equals_sign_token.has_value()) {
                     state.format(" = ");
+                    state.format(*function.body);
+                }
+                return;
             }
-            libformat::format_expression(*function.body, state);
+            case kieli::Format_configuration::Function_body::normalize_to_equals_sign:
+            {
+                if (auto const* const block = std::get_if<cst::expression::Block>(&function.body->value)) {
+                    if (block->result_expression.has_value() && block->side_effects.empty()) {
+                        state.format(" = ");
+                        state.format(**block->result_expression);
+                    }
+                    else {
+                        state.format(" ");
+                        state.format(*function.body);
+                    }
+                }
+                else {
+                    state.format(" = ");
+                    state.format(*function.body);
+                }
+                return;
+            }
+            case kieli::Format_configuration::Function_body::normalize_to_block:
+            {
+                if (std::holds_alternative<cst::expression::Block>(function.body->value)) {
+                    state.format(" ");
+                    state.format(*function.body);
+                }
+                else {
+                    state.format(" {{ ");
+                    state.format(*function.body);
+                    state.format(" }}");
+                }
+                return;
+            }
+            default:
+                utl::unreachable();
+            }
         }
+
         auto operator()(cst::definition::Struct const&) -> void {
             utl::todo();
         }
@@ -43,7 +83,7 @@ namespace {
 }
 
 
-auto kieli::format(
+auto kieli::format_module(
     cst::Module                 const& module,
     kieli::Format_configuration const& configuration) -> std::string
 {
@@ -56,5 +96,27 @@ auto kieli::format(
     for (cst::Definition const& definition : module.definitions) {
         utl::match(definition.value, Definition_format_visitor { state });
     }
+    output_string.push_back('\n');
     return output_string;
+}
+
+auto kieli::format_expression(
+    cst::Expression      const& expression,
+    Format_configuration const& configuration) -> std::string
+{
+    utl::todo();
+}
+
+auto kieli::format_pattern(
+    cst::Pattern         const& expression,
+    Format_configuration const& configuration) -> std::string
+{
+    utl::todo();
+}
+
+auto kieli::format_type(
+    cst::Type            const& type,
+    Format_configuration const& configuration) -> std::string
+{
+    utl::todo();
 }
