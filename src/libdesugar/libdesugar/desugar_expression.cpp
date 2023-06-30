@@ -9,12 +9,12 @@ namespace {
         Desugar_context      & context;
         cst::Expression const& this_expression;
 
+        template <compiler::literal Literal>
+        auto operator()(Literal const literal) -> ast::Expression::Variant {
+            return literal;
+        }
         auto operator()(cst::expression::Parenthesized const& parenthesized) -> ast::Expression::Variant {
             return utl::match(parenthesized.expression.value->value, Expression_desugaring_visitor { context, *parenthesized.expression.value });
-        }
-        template <class T>
-        auto operator()(cst::expression::Literal<T> const& literal) -> ast::Expression::Variant {
-            return ast::expression::Literal<T> { literal.value };
         }
         auto operator()(cst::expression::Array_literal const& literal) -> ast::Expression::Variant {
             return ast::expression::Array_literal {

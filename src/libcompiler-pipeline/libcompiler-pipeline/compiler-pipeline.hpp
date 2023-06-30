@@ -48,10 +48,14 @@ namespace compiler {
         [[nodiscard]] auto operator==(Name_lower const&) const noexcept -> bool;
     };
 
-    struct Integer   { utl::U64   value {}; };
-    struct Floating  { utl::Float value {}; };
-    struct Boolean   { bool       value {}; };
-    struct Character { char       value {}; };
+    struct Integer   { utl::U64           value {}; };
+    struct Floating  { utl::Float         value {}; };
+    struct Boolean   { bool               value {}; };
+    struct Character { char               value {}; };
+    struct String    { utl::Pooled_string value;    };
+
+    template <class T>
+    concept literal = utl::one_of<T, Integer, Floating, Boolean, Character, String>;
 
     namespace built_in_type {
         enum class Integer {
@@ -75,9 +79,21 @@ struct std::formatter<Name> : std::formatter<utl::Pooled_string> {
     }
 };
 
-template <utl::one_of<compiler::Integer, compiler::Floating, compiler::Boolean, compiler::Character> T>
-struct std::formatter<T> : std::formatter<decltype(T::value)> {
-    auto format(T const value_wrapper, auto& context) const {
-        return std::formatter<decltype(T::value)>::format(value_wrapper.value, context);
+template <utl::one_of<compiler::Integer, compiler::Floating, compiler::Boolean> Literal>
+struct std::formatter<Literal> : std::formatter<decltype(Literal::value)> {
+    auto format(Literal const literal, auto& context) const {
+        return std::formatter<decltype(Literal::value)>::format(literal.value, context);
+    }
+};
+
+template <utl::one_of<compiler::Character, compiler::String> Literal>
+struct std::formatter<Literal> : utl::formatting::Formatter_base {
+    auto format(Literal const& literal, auto& context) const {
+        if constexpr (std::is_same_v<Literal, compiler::Character>)
+            return std::format_to(context.out(), "'{}'", literal.value);
+        else if constexpr (std::is_same_v<Literal, compiler::String>)
+            return std::format_to(context.out(), "\"{}\"", literal.value);
+        else
+            static_assert(utl::always_false<Literal>);
     }
 };

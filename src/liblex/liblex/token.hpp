@@ -132,7 +132,7 @@ namespace kieli {
         [[nodiscard]] auto as_floating () const noexcept -> decltype(compiler::Floating::value);
         [[nodiscard]] auto as_character() const noexcept -> decltype(compiler::Character::value);
         [[nodiscard]] auto as_boolean  () const noexcept -> decltype(compiler::Boolean::value);
-        [[nodiscard]] auto as_string   () const noexcept -> utl::Pooled_string;
+        [[nodiscard]] auto as_string   () const noexcept -> decltype(compiler::String::value);
 
         [[nodiscard]] static auto description(Type) noexcept -> std::string_view;
         [[nodiscard]] static auto type_string(Type) noexcept -> std::string_view;
@@ -153,6 +153,6 @@ struct std::formatter<kieli::Lexical_token> : std::formatter<std::string_view> {
         if (std::holds_alternative<std::monostate>(token.value))
             return std::formatter<std::string_view>::format(kieli::Lexical_token::type_string(token.type), context);
         else
-            return std::format_to(context.out(), "({}: '{}')", token.type, token.value);
+            return std::format_to(context.out(), "({}: {})", token.type, token.value);
     }
 };

@@ -10,7 +10,7 @@ namespace {
     auto extract_literal(Parse_context& context)
         -> cst::Expression::Variant
     {
-        return cst::expression::Literal<T> { context.previous().value_as<T>() };
+        return context.previous().value_as<T>();
     }
 
     auto extract_string_literal(Parse_context& context)
@@ -18,15 +18,13 @@ namespace {
     {
         auto const first_string = context.previous().as_string();
         if (context.pointer->type != Token_type::string_literal) {
-            return cst::expression::Literal<utl::Pooled_string> { first_string };
+            return compiler::String { first_string };
         }
         std::string combined_string { first_string.view() };
         while (Lexical_token const* const token = context.try_extract(Token_type::string_literal)) {
             combined_string += token->as_string().view();
         }
-        return cst::expression::Literal<utl::Pooled_string> {
-            context.compilation_info.get()->string_literal_pool.make(combined_string)
-        };
+        return compiler::String { context.compilation_info.get()->string_literal_pool.make(combined_string) };
     }
 
 

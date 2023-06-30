@@ -29,15 +29,9 @@ namespace {
     struct Expression_format_visitor {
         Out out;
         explicit Expression_format_visitor(Out&& out) noexcept : out { std::move(out) } {}
-        template <class T>
-        auto operator()(ast::expression::Literal<T> const& literal) {
-            std::format_to(out, "{}", literal.value);
-        }
-        auto operator()(ast::expression::Literal<utl::Pooled_string> const& literal) {
-            std::format_to(out, "\"{}\"", literal.value);
-        }
-        auto operator()(ast::expression::Literal<compiler::built_in_type::Character> const& literal) {
-            std::format_to(out, "'{}'", literal.value);
+        template <compiler::literal Literal>
+        auto operator()(Literal const& literal) {
+            std::format_to(out, "{}", literal);
         }
         auto operator()(ast::expression::Self const&) {
             std::format_to(out, "self");
@@ -189,15 +183,9 @@ namespace {
         auto operator()(ast::pattern::Guarded const& guarded) {
             std::format_to(out, "{} if {}", guarded.guarded_pattern, guarded.guard);
         }
-        template <class T>
-        auto operator()(ast::pattern::Literal<T> const& literal) {
-            std::format_to(out, "{}", literal.value);
-        }
-        auto operator()(ast::pattern::Literal<utl::Pooled_string> const& literal) {
-            std::format_to(out, "\"{}\"", literal.value);
-        }
-        auto operator()(ast::pattern::Literal<compiler::built_in_type::Character> const& literal) {
-            std::format_to(out, "'{}'", literal.value);
+        template <compiler::literal Literal>
+        auto operator()(Literal const& literal) {
+            std::format_to(out, "{}", literal);
         }
     };
 

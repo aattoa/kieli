@@ -494,7 +494,6 @@ namespace {
     struct Expression_instantiation_visitor {
         using R = hir::Expression::Variant;
         Substitution_context context;
-        utl::Source_view this_expression_source_view;
 
         auto operator()(hir::expression::Tuple const& tuple) -> R {
             return hir::expression::Tuple {
@@ -643,9 +642,8 @@ namespace {
         }
 
         template <class T>
-        auto operator()(T const& terminal) -> R
-            requires utl::instance_of<T, hir::expression::Literal> || utl::one_of<T, hir::expression::Enum_constructor_reference, hir::expression::Local_variable_reference, hir::expression::Hole>
-        {
+            requires compiler::literal<T> || utl::one_of<T, hir::expression::Enum_constructor_reference, hir::expression::Local_variable_reference, hir::expression::Hole>
+        auto operator()(T const& terminal) -> R {
             return terminal;
         }
     };
@@ -791,9 +789,8 @@ namespace {
             return hir::pattern::Slice { .element_patterns = utl::map(context.recurse(), slice.element_patterns) };
         }
         template <class T>
-        auto operator()(T const terminal) -> hir::Pattern::Variant
-            requires utl::instance_of<T, hir::pattern::Literal>
-                  || utl::one_of<T, hir::pattern::Wildcard, hir::pattern::Name>
+        auto operator()(T const& terminal) -> hir::Pattern::Variant
+            requires compiler::literal<T> || utl::one_of<T, hir::pattern::Wildcard, hir::pattern::Name>
         {
             return terminal;
         }
@@ -805,7 +802,7 @@ namespace {
         -> hir::Expression
     {
         return {
-            .value          = std::visit(Expression_instantiation_visitor { context, expression.source_view }, expression.value),
+            .value          = std::visit(Expression_instantiation_visitor { context }, expression.value),
             .type           = instantiate(expression.type, context),
             .source_view    = expression.source_view,
             .mutability     = instantiate(expression.mutability, context),

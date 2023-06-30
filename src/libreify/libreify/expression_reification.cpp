@@ -6,8 +6,7 @@ using namespace libreify;
 
 namespace {
     struct Expression_reification_visitor {
-        libreify::Context    & context;
-        hir::Expression const& this_expression;
+        libreify::Context& context;
 
         auto recurse(hir::Expression const& expression) -> cir::Expression {
             return context.reify_expression(expression);
@@ -20,14 +19,14 @@ namespace {
             return [this](auto const& expression) { return recurse(expression); };
         }
 
-        template <class T>
-        auto operator()(hir::expression::Literal<T> const& literal) -> cir::Expression::Variant {
-            return cir::expression::Literal<T> { literal.value };
+        template <compiler::literal Literal>
+        auto operator()(Literal const& literal) -> cir::Expression::Variant {
+            return literal;
         }
 
         auto operator()(hir::expression::Sizeof const& sizeof_) -> cir::Expression::Variant {
             cir::Type const inspected_type = context.reify_type(sizeof_.inspected_type);
-            return cir::expression::Literal<compiler::Integer> { inspected_type.size.get() };
+            return compiler::Integer { inspected_type.size.get() };
         }
 
         auto operator()(hir::expression::Block const& block) -> cir::Expression::Variant {
@@ -68,7 +67,7 @@ namespace {
         auto operator()(hir::expression::Let_binding const& binding) -> cir::Expression::Variant {
             return cir::expression::Let_binding {
                 .pattern     = context.reify_pattern(*binding.pattern),
-                .initializer = recurse(binding.initializer)
+                .initializer = recurse(binding.initializer),
             };
         }
 
@@ -76,7 +75,7 @@ namespace {
             if (auto const* const frame_offset = context.variable_frame_offsets.find(local.tag)) {
                 return cir::expression::Local_variable_reference {
                     .frame_offset = frame_offset->get(),
-                    .identifier   = local.identifier
+                    .identifier   = local.identifier,
                 };
             }
             utl::unreachable();
@@ -103,7 +102,7 @@ namespace {
 
 auto libreify::Context::reify_expression(hir::Expression const& expression) -> cir::Expression {
     return {
-        .value       = std::visit(Expression_reification_visitor { *this, expression }, expression.value),
+        .value       = std::visit(Expression_reification_visitor { *this }, expression.value),
         .type        = reify_type(expression.type),
         .source_view = expression.source_view
     };

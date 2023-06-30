@@ -16,7 +16,11 @@ namespace {
     auto extract_literal(Parse_context& context)
         -> cst::Pattern::Variant
     {
-        return cst::pattern::Literal<T> { context.previous().value_as<T>() };
+        // TODO: fix string literal extraction
+        if constexpr (std::is_same_v<T, utl::Pooled_string>)
+            return compiler::String { context.previous().value_as<T>() };
+        else
+            return context.previous().value_as<T>();
     };
 
     auto extract_tuple(Parse_context& context)

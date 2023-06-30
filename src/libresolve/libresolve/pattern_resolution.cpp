@@ -40,11 +40,11 @@ namespace {
             };
         }
 
-        template <class T>
-        auto operator()(ast::pattern::Literal<T>& literal) -> hir::Pattern {
-            solve_pattern_type_constraint(context.literal_type<T>(this_pattern.source_view));
+        template <compiler::literal Literal>
+        auto operator()(Literal const& literal) -> hir::Pattern {
+            solve_pattern_type_constraint(context.literal_type<Literal>(this_pattern.source_view));
             return {
-                .value                   = hir::pattern::Literal<T> { literal.value },
+                .value                   = literal,
                 .is_exhaustive_by_itself = false,
                 .source_view             = this_pattern.source_view,
             };

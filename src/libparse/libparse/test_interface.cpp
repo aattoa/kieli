@@ -17,6 +17,16 @@ namespace {
         }
         return tl::unexpected(libparse::Test_parse_failure::no_parse);
     }
+    auto failure_string(libparse::Test_parse_failure const failure) -> std::string_view {
+        switch (failure) {
+        case libparse::Test_parse_failure::unconsumed_input:
+            return "libparse::Test_parse_failure::unconsumed_input";
+        case libparse::Test_parse_failure::no_parse:
+            return "libparse::Test_parse_failure::no_parse";
+        default:
+            return "libparse::Test_parse_failure::{?}";
+        }
+    }
 }
 
 
@@ -28,4 +38,11 @@ auto libparse::test_parse_pattern(std::string&& string) -> Test_parse_result {
 }
 auto libparse::test_parse_type(std::string&& string) -> Test_parse_result {
     return test_parse<parse_type, kieli::format_type>(std::move(string));
+}
+
+auto libparse::operator<<(std::ostream& os, Test_parse_result const& result) -> std::ostream& {
+    if (result.has_value())
+        return os << '"' << result.value() << '"';
+    else
+        return os << failure_string(result.error());
 }

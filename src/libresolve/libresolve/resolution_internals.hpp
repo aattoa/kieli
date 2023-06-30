@@ -435,7 +435,7 @@ namespace libresolve {
 
         auto fresh_unification_mutability_variable(utl::Source_view) -> hir::Mutability;
         auto fresh_template_parameter_reference_tag() -> hir::Template_parameter_tag;
-        auto fresh_local_variable_tag()               -> hir::Local_variable_tag;
+        auto fresh_local_variable_tag() -> hir::Local_variable_tag;
 
         auto instantiate_function_template(utl::Wrapper<Function_info>,        std::span<ast::Template_argument const>, utl::Source_view instantiation_view, Scope&, Namespace&) -> utl::Wrapper<Function_info>;
         auto instantiate_struct_template  (utl::Wrapper<Struct_template_info>, std::span<ast::Template_argument const>, utl::Source_view instantiation_view, Scope&, Namespace&) -> utl::Wrapper<Struct_info>;
@@ -469,7 +469,7 @@ namespace libresolve {
         // Returns a type the value of which must be overwritten
         auto temporary_placeholder_type(utl::Source_view) -> hir::Type;
 
-        template <class T>
+        template <compiler::literal T>
         auto literal_type(utl::Source_view const view) -> hir::Type {
             if constexpr (std::same_as<T, compiler::Integer>)
                 return fresh_integral_unification_type_variable(view);
@@ -479,7 +479,7 @@ namespace libresolve {
                 return character_type(view);
             else if constexpr (std::same_as<T, compiler::Boolean>)
                 return boolean_type(view);
-            else if constexpr (std::same_as<T, utl::Pooled_string>)
+            else if constexpr (std::same_as<T, compiler::String>)
                 return string_type(view);
             else
                 static_assert(utl::always_false<T>);

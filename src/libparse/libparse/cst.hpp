@@ -190,10 +190,6 @@ namespace cst {
         struct Parenthesized {
             Surrounded<utl::Wrapper<Expression>> expression;
         };
-        template <class T>
-        struct Literal {
-            T value;
-        };
         struct Array_literal {
             Surrounded<Separated_sequence<utl::Wrapper<Expression>>> elements;
         };
@@ -380,12 +376,12 @@ namespace cst {
 
     struct Expression {
         using Variant = std::variant<
+            compiler::Integer,
+            compiler::Floating,
+            compiler::Character,
+            compiler::Boolean,
+            compiler::String,
             expression::Parenthesized,
-            expression::Literal<compiler::Integer>,
-            expression::Literal<compiler::Floating>,
-            expression::Literal<compiler::Character>,
-            expression::Literal<compiler::Boolean>,
-            expression::Literal<utl::Pooled_string>,
             expression::Array_literal,
             expression::Self,
             expression::Variable,
@@ -433,10 +429,6 @@ namespace cst {
         struct Parenthesized {
             Surrounded<utl::Wrapper<Pattern>> pattern;
         };
-        template <class T>
-        struct Literal {
-            T value;
-        };
         struct Wildcard {};
         struct Name {
             compiler::Name_lower     name;
@@ -476,11 +468,11 @@ namespace cst {
     struct Pattern {
         using Variant = std::variant<
             pattern::Parenthesized,
-            pattern::Literal<compiler::Integer>,
-            pattern::Literal<compiler::Floating>,
-            pattern::Literal<compiler::Character>,
-            pattern::Literal<compiler::Boolean>,
-            pattern::Literal<utl::Pooled_string>,
+            compiler::Integer,
+            compiler::Floating,
+            compiler::Character,
+            compiler::Boolean,
+            compiler::String,
             pattern::Wildcard,
             pattern::Name,
             pattern::Constructor,

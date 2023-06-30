@@ -117,10 +117,6 @@ namespace ast {
 
 
     namespace expression {
-        template <class T>
-        struct Literal {
-            T value;
-        };
         struct Array_literal {
             std::vector<Expression> elements;
         };
@@ -246,11 +242,11 @@ namespace ast {
 
     struct Expression {
         using Variant = std::variant<
-            expression::Literal<compiler::Integer>,
-            expression::Literal<compiler::Floating>,
-            expression::Literal<compiler::Character>,
-            expression::Literal<compiler::Boolean>,
-            expression::Literal<utl::Pooled_string>,
+            compiler::Integer,
+            compiler::Floating,
+            compiler::Character,
+            compiler::Boolean,
+            compiler::String,
             expression::Array_literal,
             expression::Self,
             expression::Variable,
@@ -291,10 +287,6 @@ namespace ast {
 
 
     namespace pattern {
-        template <class T>
-        struct Literal {
-            T value;
-        };
         struct Wildcard {};
         struct Name {
             compiler::Name_lower name;
@@ -327,11 +319,11 @@ namespace ast {
 
     struct Pattern {
         using Variant = std::variant<
-            pattern::Literal<compiler::Integer>,
-            pattern::Literal<compiler::Floating>,
-            pattern::Literal<compiler::Character>,
-            pattern::Literal<compiler::Boolean>,
-            pattern::Literal<utl::Pooled_string>,
+            compiler::Integer,
+            compiler::Floating,
+            compiler::Character,
+            compiler::Boolean,
+            compiler::String,
             pattern::Wildcard,
             pattern::Name,
             pattern::Constructor,
