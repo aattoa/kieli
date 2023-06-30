@@ -9,7 +9,9 @@ target_sources(libparse
     PRIVATE libparse/parse_pattern.cpp
     PRIVATE libparse/parse_type.cpp
     PRIVATE libparse/parser_internals.cpp
-    PRIVATE libparse/parser_internals.hpp)
+    PRIVATE libparse/parser_internals.hpp
+    PRIVATE libparse/test_interface.cpp
+    PRIVATE libparse/test_interface.hpp)
 
 target_link_libraries(libparse
     PRIVATE libutl-diagnostics

@@ -1,47 +1,22 @@
 #include <libutl/common/utilities.hpp>
-#include <libparse/parse.hpp>
-#include <libformat/format.hpp>
+#include <libparse/test_interface.hpp>
 #include <catch2/catch_test_macros.hpp>
+
+namespace { constexpr auto parse = libparse::test_parse_expression; }
 
 #define TEST(name) TEST_CASE("parse-expression " name, "[libparse][expression]") // NOLINT
 #define REQUIRE_SIMPLE_PARSE(string) REQUIRE(parse(string) == (string))
 
-namespace {
-    auto parse(std::string_view const string) -> std::string {
-        auto const [info, source] = compiler::test_info_and_source(std::format("fn f() = {}", string));
-        auto parse_result = kieli::parse(kieli::lex({ std::move(info), source }));
-        REQUIRE(parse_result.module.definitions.size() == 1);
-        auto output = kieli::format(parse_result.module, {
-            .block_indentation = 1,
-            .function_body     = kieli::Format_configuration::Function_body::leave_as_is,
-        });
-        output.pop_back(); // Remove the newline
-        return output.substr(output.find('=') + 2); // +2 for the "= "
-    }
-}
 
-
-TEST("integer literal") {
+TEST("literals") {
     REQUIRE_SIMPLE_PARSE("5");
     REQUIRE(parse("5e3") == "5000");
-}
-
-TEST("floating literal") {
     REQUIRE_SIMPLE_PARSE("5.0");
     REQUIRE(parse("5.0e3") == "5300.0");
-}
-
-TEST("boolean literal") {
     REQUIRE_SIMPLE_PARSE("true");
     REQUIRE_SIMPLE_PARSE("false");
-}
-
-TEST("character literal") {
     REQUIRE_SIMPLE_PARSE("'x'");
     REQUIRE_SIMPLE_PARSE("'\n'");
-}
-
-TEST("string literal") {
     REQUIRE_SIMPLE_PARSE("\"\"");
     REQUIRE_SIMPLE_PARSE("\"hello\"");
     REQUIRE_SIMPLE_PARSE("\"hello,\tworld!\n\"");
@@ -65,13 +40,21 @@ TEST("self") {
 
 TEST("variable") {
     REQUIRE_SIMPLE_PARSE("x");
+    REQUIRE_SIMPLE_PARSE("_x");
     REQUIRE_SIMPLE_PARSE("x::y");
+    REQUIRE_SIMPLE_PARSE("x::_y");
     REQUIRE_SIMPLE_PARSE("x[]::y");
+    REQUIRE_SIMPLE_PARSE("x[]::_y");
     REQUIRE_SIMPLE_PARSE("x[A, B]::y");
+    REQUIRE_SIMPLE_PARSE("x[A, B]::_y");
     REQUIRE_SIMPLE_PARSE("global::x");
+    REQUIRE_SIMPLE_PARSE("global::_x");
     REQUIRE_SIMPLE_PARSE("global::x::y");
+    REQUIRE_SIMPLE_PARSE("global::x::_y");
     REQUIRE_SIMPLE_PARSE("global::x[]::y");
+    REQUIRE_SIMPLE_PARSE("global::x[]::_y");
     REQUIRE_SIMPLE_PARSE("global::x[A, B]::y");
+    REQUIRE_SIMPLE_PARSE("global::x[A, B]::_y");
 }
 
 TEST("template application") {

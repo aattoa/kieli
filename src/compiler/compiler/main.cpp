@@ -74,7 +74,7 @@ namespace {
 
     constexpr auto program_parser_repl = generic_repl<[](kieli::Lex_result&& lex_result) {
         auto parse_result = parse(std::move(lex_result));
-        utl::print("{}", kieli::format(parse_result.module, {}));
+        utl::print("{}", kieli::format_module(parse_result.module, {}));
     }>;
 
     constexpr auto desugaring_repl = generic_repl<[](kieli::Lex_result&& lex_result) {
