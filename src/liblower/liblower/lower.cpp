@@ -9,17 +9,16 @@ namespace {
         compiler::built_in_type::Integer const type,
         std::integral auto               const integer) -> lir::Expression
     {
-        using lir::expression::Constant;
         using enum compiler::built_in_type::Integer;
         switch (type) {
-        case i8:  return Constant<utl::I8>  { utl::safe_cast<utl::I8> (integer) };
-        case i16: return Constant<utl::I16> { utl::safe_cast<utl::I16>(integer) };
-        case i32: return Constant<utl::I32> { utl::safe_cast<utl::I32>(integer) };
-        case i64: return Constant<utl::I64> { utl::safe_cast<utl::I64>(integer) };
-        case u8:  return Constant<utl::U8>  { utl::safe_cast<utl::U8> (integer) };
-        case u16: return Constant<utl::U16> { utl::safe_cast<utl::U16>(integer) };
-        case u32: return Constant<utl::U32> { utl::safe_cast<utl::U32>(integer) };
-        case u64: return Constant<utl::U64> { utl::safe_cast<utl::U64>(integer) };
+        case i8:  return utl::safe_cast<utl::I8> (integer);
+        case i16: return utl::safe_cast<utl::I16>(integer);
+        case i32: return utl::safe_cast<utl::I32>(integer);
+        case i64: return utl::safe_cast<utl::I64>(integer);
+        case u8:  return utl::safe_cast<utl::U8> (integer);
+        case u16: return utl::safe_cast<utl::U16>(integer);
+        case u32: return utl::safe_cast<utl::U32>(integer);
+        case u64: return utl::safe_cast<utl::U64>(integer);
         default: utl::unreachable();
         }
     }
@@ -66,10 +65,10 @@ namespace {
             return [this](auto const& expression) { return recurse(expression); };
         }
 
-        auto operator()(cir::expression::Literal<compiler::Integer> const& integer_literal) -> lir::Expression {
+        auto operator()(compiler::Integer const& integer_literal) -> lir::Expression {
             auto const type = utl::get<compiler::built_in_type::Integer>(*this_expression.type.value);
             try {
-                return make_integer_constant(type, integer_literal.value.value);
+                return make_integer_constant(type, integer_literal.value);
             }
             catch (utl::Safe_cast_invalid_argument const&) {
                 auto const [min, max] = make_integer_range(type);
@@ -80,9 +79,9 @@ namespace {
                 });
             }
         }
-        template <class T>
-        auto operator()(cir::expression::Literal<T> const& literal) -> lir::Expression {
-            return lir::expression::Constant<T> { literal.value };
+        template <compiler::literal Literal>
+        auto operator()(Literal const& literal) -> lir::Expression {
+            return literal;
         }
         auto operator()(cir::expression::Tuple const& tuple) -> lir::Expression {
             return lir::expression::Tuple { .elements = utl::map(recurse(), tuple.fields) };

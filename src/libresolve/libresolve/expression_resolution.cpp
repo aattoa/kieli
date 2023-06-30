@@ -294,11 +294,11 @@ namespace {
         }
 
 
-        template <class T>
-        auto operator()(ast::expression::Literal<T>& literal) -> hir::Expression {
+        template <compiler::literal Literal>
+        auto operator()(Literal const& literal) -> hir::Expression {
             return {
-                .value       = hir::expression::Literal<T> { literal.value },
-                .type        = context.literal_type<T>(this_expression.source_view),
+                .value       = literal,
+                .type        = context.literal_type<Literal>(this_expression.source_view),
                 .source_view = this_expression.source_view,
                 .mutability  = context.immut_constant(this_expression.source_view),
                 .is_pure     = true,
@@ -347,7 +347,7 @@ namespace {
                     context.wrap_type(hir::type::Array {
                         .element_type = element_type,
                         .array_length = context.wrap(hir::Expression {
-                            .value       = hir::expression::Literal<compiler::Integer> { array_length },
+                            .value       = compiler::Integer { array_length },
                             .type        = context.size_type(this_expression.source_view),
                             .source_view = this_expression.source_view,
                             .mutability  = context.immut_constant(this_expression.source_view),

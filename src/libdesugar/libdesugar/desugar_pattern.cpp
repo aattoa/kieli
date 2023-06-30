@@ -11,9 +11,9 @@ namespace {
         auto operator()(cst::pattern::Parenthesized const& parenthesized) -> ast::Pattern::Variant {
             return std::visit(Pattern_desugaring_visitor { context }, parenthesized.pattern.value->value);
         }
-        template <class T>
-        auto operator()(cst::pattern::Literal<T> const& literal) -> ast::Pattern::Variant {
-            return ast::pattern::Literal<T> { literal.value };
+        template <compiler::literal Literal>
+        auto operator()(Literal const& literal) -> ast::Pattern::Variant {
+            return literal;
         }
         auto operator()(cst::pattern::Wildcard const&) -> ast::Pattern::Variant {
             return ast::pattern::Wildcard {};

@@ -20,10 +20,6 @@ namespace lir {
     struct [[nodiscard]] Expression;
 
     namespace expression {
-        template <class T>
-        struct Constant {
-            T value {};
-        };
         // Sequence of things that are all pushed onto the stack. Can represent tuples, array literals, and struct initializers.
         struct Tuple {
             std::vector<Expression> elements;
@@ -70,18 +66,18 @@ namespace lir {
 
 
     struct Expression : std::variant<
-        expression::Constant<utl::I8>,
-        expression::Constant<utl::I16>,
-        expression::Constant<utl::I32>,
-        expression::Constant<utl::I64>,
-        expression::Constant<utl::U8>,
-        expression::Constant<utl::U16>,
-        expression::Constant<utl::U32>,
-        expression::Constant<utl::U64>,
-        expression::Constant<compiler::Floating>,
-        expression::Constant<compiler::Character>,
-        expression::Constant<compiler::Boolean>,
-        expression::Constant<utl::Pooled_string>,
+        utl::I8,
+        utl::I16,
+        utl::I32,
+        utl::I64,
+        utl::U8,
+        utl::U16,
+        utl::U32,
+        utl::U64,
+        compiler::Floating,
+        compiler::Character,
+        compiler::Boolean,
+        compiler::String,
         expression::Tuple,
         expression::Direct_invocation,
         expression::Indirect_invocation,

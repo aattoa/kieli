@@ -258,7 +258,7 @@ namespace {
     auto extract_identifier(Token_maker const& token_maker, liblex::Context& context) -> Token {
         std::string_view const view = context.extract(is_identifier_tail);
         assert(!view.empty());
-        for (auto const [keyword, token_type] : keyword_token_map) {
+        for (auto const& [keyword, token_type] : keyword_token_map) { // NOLINT
             if (view == keyword)
                 return token_maker({}, token_type);
         }

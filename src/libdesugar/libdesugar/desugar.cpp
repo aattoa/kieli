@@ -189,10 +189,10 @@ auto libdesugar::Desugar_context::wildcard_pattern(utl::Source_view const view) 
     return wrap(ast::Pattern { .value = ast::pattern::Wildcard {}, .source_view = view});
 }
 auto libdesugar::Desugar_context::true_pattern(utl::Source_view const view) -> utl::Wrapper<ast::Pattern> {
-    return wrap(ast::Pattern { .value = ast::pattern::Literal<compiler::Boolean> { true }, .source_view = view });
+    return wrap(ast::Pattern { .value = compiler::Boolean { true }, .source_view = view });
 }
 auto libdesugar::Desugar_context::false_pattern(utl::Source_view const view) -> utl::Wrapper<ast::Pattern> {
-    return wrap(ast::Pattern { .value = ast::pattern::Literal<compiler::Boolean> { false }, .source_view = view });
+    return wrap(ast::Pattern { .value = compiler::Boolean { false }, .source_view = view });
 }
 
 

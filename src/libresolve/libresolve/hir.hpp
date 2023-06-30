@@ -241,10 +241,6 @@ template <> struct dtl::To_AST_impl<name> : std::type_identity<ast::definition::
     };
 
     namespace expression {
-        template <class T>
-        struct Literal {
-            T value;
-        };
         struct Array_literal {
             std::vector<Expression> elements;
         };
@@ -341,11 +337,11 @@ template <> struct dtl::To_AST_impl<name> : std::type_identity<ast::definition::
 
     struct Expression {
         using Variant = std::variant<
-            expression::Literal<compiler::Integer>,
-            expression::Literal<compiler::Floating>,
-            expression::Literal<compiler::Character>,
-            expression::Literal<compiler::Boolean>,
-            expression::Literal<utl::Pooled_string>,
+            compiler::Integer,
+            compiler::Floating,
+            compiler::Character,
+            compiler::Boolean,
+            compiler::String,
             expression::Array_literal,
             expression::Tuple,
             expression::Loop,
@@ -480,10 +476,6 @@ template <> struct dtl::To_AST_impl<name> : std::type_identity<ast::definition::
 
     namespace pattern {
         struct Wildcard {};
-        template <class T>
-        struct Literal {
-            T value;
-        };
         struct Name {
             Local_variable_tag variable_tag;
             utl::Pooled_string identifier;
@@ -511,11 +503,11 @@ template <> struct dtl::To_AST_impl<name> : std::type_identity<ast::definition::
 
     struct Pattern {
         using Variant = std::variant<
-            pattern::Literal<compiler::Integer>,
-            pattern::Literal<compiler::Floating>,
-            pattern::Literal<compiler::Character>,
-            pattern::Literal<compiler::Boolean>,
-            pattern::Literal<utl::Pooled_string>,
+            compiler::Integer,
+            compiler::Floating,
+            compiler::Character,
+            compiler::Boolean,
+            compiler::String,
             pattern::Wildcard,
             pattern::Name,
             pattern::Tuple,

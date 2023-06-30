@@ -10,4 +10,7 @@ namespace libparse {
     auto test_parse_expression(std::string&&) -> Test_parse_result;
     auto test_parse_pattern   (std::string&&) -> Test_parse_result;
     auto test_parse_type      (std::string&&) -> Test_parse_result;
+
+    // Make Test_parse_result formattable by Catch2
+    auto operator<<(std::ostream&, Test_parse_result const&) -> std::ostream&;
 }

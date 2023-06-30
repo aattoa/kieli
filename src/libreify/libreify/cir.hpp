@@ -63,10 +63,6 @@ namespace cir {
 
 
     namespace pattern {
-        template <class T>
-        struct Literal {
-            T value;
-        };
         struct Tuple {
             std::vector<Pattern> field_patterns;
         };
@@ -75,11 +71,11 @@ namespace cir {
 
     struct Pattern {
         using Variant = std::variant<
-            pattern::Literal<compiler::Integer>,
-            pattern::Literal<compiler::Floating>,
-            pattern::Literal<compiler::Character>,
-            pattern::Literal<compiler::Boolean>,
-            pattern::Literal<utl::Pooled_string>,
+            compiler::Integer,
+            compiler::Floating,
+            compiler::Character,
+            compiler::Boolean,
+            compiler::String,
             pattern::Tuple,
             pattern::Exhaustive>;
 
@@ -91,10 +87,6 @@ namespace cir {
 
 
     namespace expression {
-        template <class T>
-        struct Literal {
-            T value;
-        };
         struct Block {
             std::vector<Expression>  side_effect_expressions;
             utl::Wrapper<Expression> result_expression;
@@ -129,11 +121,11 @@ namespace cir {
 
     struct [[nodiscard]] Expression {
         using Variant = std::variant<
-            expression::Literal<compiler::Integer>,
-            expression::Literal<compiler::Floating>,
-            expression::Literal<compiler::Character>,
-            expression::Literal<compiler::Boolean>,
-            expression::Literal<utl::Pooled_string>,
+            compiler::Integer,
+            compiler::Floating,
+            compiler::Character,
+            compiler::Boolean,
+            compiler::String,
             expression::Block,
             expression::Tuple,
             expression::Loop,
