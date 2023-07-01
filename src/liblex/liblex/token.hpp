@@ -152,6 +152,8 @@ struct std::formatter<kieli::Lexical_token> : std::formatter<std::string_view> {
     auto format(kieli::Lexical_token const& token, auto& context) const { // NOLINT
         if (std::holds_alternative<std::monostate>(token.value))
             return std::formatter<std::string_view>::format(kieli::Lexical_token::type_string(token.type), context);
+        else if (token.type == kieli::Lexical_token::Type::string_literal)
+            return std::format_to(context.out(), "({}: '{}')", token.type, token.value);
         else
             return std::format_to(context.out(), "({}: {})", token.type, token.value);
     }

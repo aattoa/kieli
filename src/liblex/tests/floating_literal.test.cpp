@@ -27,15 +27,15 @@ TEST("floating point literal explicit base rejection") {
 }
 
 TEST("basic floating point syntax") {
-    REQUIRE(lex_success("3.14") == "(float: '3.14'), end of input");
-    REQUIRE(lex_success(".314") == "., (int: '314'), end of input");
+    REQUIRE(lex_success("3.14") == "(float: 3.14), end of input");
+    REQUIRE(lex_success(".314") == "., (int: 314), end of input");
     REQUIRE_THAT(lex_failure("314."), contains("expected one or more digits after the decimal separator"));
 }
 
 TEST("precending dot") {
-    REQUIRE(lex_success(".3.14") == "., (int: '3'), ., (int: '14'), end of input");
-    REQUIRE(lex_success(".3 .14") == "., (int: '3'), ., (int: '14'), end of input");
-    REQUIRE(lex_success(". 3.14") == "., (float: '3.14'), end of input");
+    REQUIRE(lex_success(".3.14") == "., (int: 3), ., (int: 14), end of input");
+    REQUIRE(lex_success(".3 .14") == "., (int: 3), ., (int: 14), end of input");
+    REQUIRE(lex_success(". 3.14") == "., (float: 3.14), end of input");
 }
 
 TEST("floating point literal suffix") {
@@ -53,14 +53,14 @@ TEST("floating point literal suffix") {
 
 TEST("floating point literal exponent") {
     SECTION("positive exponent") {
-        REQUIRE(lex_success("3.14e0") == "(float: '3.14'), end of input");
-        REQUIRE(lex_success("3.14e1") == "(float: '31.4'), end of input");
-        REQUIRE(lex_success("3.14e2") == "(float: '314'), end of input");
+        REQUIRE(lex_success("3.14e0") == "(float: 3.14), end of input");
+        REQUIRE(lex_success("3.14e1") == "(float: 31.4), end of input");
+        REQUIRE(lex_success("3.14e2") == "(float: 314), end of input");
     }
     SECTION("negative exponent") {
-        REQUIRE(lex_success("3.14e-0") == "(float: '3.14'), end of input");
-        REQUIRE(lex_success("3.14e-1") == "(float: '0.314'), end of input");
-        REQUIRE(lex_success("3.14e-2") == "(float: '0.0314'), end of input");
+        REQUIRE(lex_success("3.14e-0") == "(float: 3.14), end of input");
+        REQUIRE(lex_success("3.14e-1") == "(float: 0.314), end of input");
+        REQUIRE(lex_success("3.14e-2") == "(float: 0.0314), end of input");
     }
 }
 
@@ -70,14 +70,14 @@ TEST("floating point literal out of valid range") {
 
 TEST("floating point literal digit separators") {
     SECTION("valid literal") {
-        REQUIRE(lex_success("1'2.3'4") == "(float: '12.34'), end of input");
+        REQUIRE(lex_success("1'2.3'4") == "(float: 12.34), end of input");
     }
     SECTION("digit separator preceding decimal separator") {
         auto const result = liblex::test_lex("1'.3");
         REQUIRE_THAT(result.diagnostic_messages, contains("expected one or more digits after the digit separator"));
-        REQUIRE(result.formatted_tokens == "lexical error, ., (int: '3'), end of input");
+        REQUIRE(result.formatted_tokens == "lexical error, ., (int: 3), end of input");
     }
     SECTION("digit separator trailing decimal separator") {
-        REQUIRE(lex_success("1'0.'3") == "(float: '10.3'), end of input");
+        REQUIRE(lex_success("1'0.'3") == "(float: 10.3), end of input");
     }
 }

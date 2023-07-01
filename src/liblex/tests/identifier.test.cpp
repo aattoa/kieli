@@ -29,8 +29,8 @@ TEST("keywords") {
 }
 
 TEST("boolean literals") {
-    REQUIRE(lex_success("true") == "(bool: 'true'), end of input");
-    REQUIRE(lex_success("false") == "(bool: 'false'), end of input");
+    REQUIRE(lex_success("true") == "(bool: true), end of input");
+    REQUIRE(lex_success("false") == "(bool: false), end of input");
 }
 
 TEST("underscores") {
@@ -40,12 +40,12 @@ TEST("underscores") {
 
 TEST("uncapitalized identifiers") {
     REQUIRE(lex_success("a bBb for_ forR _x ___x___ _5") ==
-        "(lower: 'a'), (lower: 'bBb'), (lower: 'for_'), "
-        "(lower: 'forR'), (lower: '_x'), (lower: '___x___'), (lower: '_5'), end of input");
+        "(lower: a), (lower: bBb), (lower: for_), "
+        "(lower: forR), (lower: _x), (lower: ___x___), (lower: _5), end of input");
 }
 
 TEST("capitalized identifiers") {
     REQUIRE(lex_success("A Bbb For_ FORR _X ___X___") ==
-        "(upper: 'A'), (upper: 'Bbb'), (upper: 'For_'), "
-        "(upper: 'FORR'), (upper: '_X'), (upper: '___X___'), end of input");
+        "(upper: A), (upper: Bbb), (upper: For_), "
+        "(upper: FORR), (upper: _X), (upper: ___X___), end of input");
 }
