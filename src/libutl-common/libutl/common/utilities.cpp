@@ -12,7 +12,7 @@ auto utl::filename_without_path(std::string_view path) noexcept -> std::string_v
     return path;
 }
 
-utl::Safe_cast_invalid_argument::Safe_cast_invalid_argument()
+utl::Safe_cast_argument_out_of_range::Safe_cast_argument_out_of_range()
     : invalid_argument { "utl::safe_cast argument out of target range" } {}
 
 utl::Exception::Exception(std::string&& message) noexcept

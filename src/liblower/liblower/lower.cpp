@@ -70,7 +70,7 @@ namespace {
             try {
                 return make_integer_constant(type, integer_literal.value);
             }
-            catch (utl::Safe_cast_invalid_argument const&) {
+            catch (utl::Safe_cast_argument_out_of_range const&) {
                 auto const [min, max] = make_integer_range(type);
                 diagnostics.emit_error({
                     .sections  = utl::to_vector({ utl::diagnostics::Text_section { .source_view = this_expression.source_view } }),

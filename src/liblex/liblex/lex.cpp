@@ -177,6 +177,11 @@ namespace {
         }
     };
 
+    auto error_if_trailing_separator(std::string_view const string, liblex::Context& context) {
+        if (string.empty() || string.back() != '\'') return;
+        context.error({ "Expected one or more digits after the digit separator" });
+    }
+
     auto handle_escape_sequence(liblex::Context& context) -> char {
         char const* const anchor = context.pointer();
         if (context.is_finished()) {
@@ -277,7 +282,7 @@ namespace {
     auto extract_operator(Token_maker const& token_maker, liblex::Context& context) -> Token {
         std::string_view const view = context.extract(is_operator);
         assert(!view.empty());
-        for (auto const [operator_name, token_type] : punctuation_token_map) {
+        for (auto const& [operator_name, token_type] : punctuation_token_map) { // NOLINT
             if (view == operator_name)
                 return token_maker({}, token_type);
         }
@@ -334,14 +339,105 @@ namespace {
         return tl::nullopt;
     }
 
+    auto extract_numeric_floating(
+        Token_maker const& token_maker,
+        char const* const  anchor,
+        liblex::Context&   context) -> Token
+    {
+        static constexpr auto digit_predicate = is_digit_or_separator<is_digit10>;
+        if (context.is_finished() || !digit_predicate(context.current())) {
+            context.error({ "Expected one or more digits after the decimal separator" });
+        }
+        std::string_view const second_digit_sequence = context.extract(digit_predicate);
+        error_if_trailing_separator(second_digit_sequence, context);
+
+        std::string_view const suffix = context.extract(is_alpha);
+        if (!suffix.empty()) {
+            if (suffix != "e" && suffix != "E") {
+                context.error(suffix, { "Erroneous floating point literal alphabetic suffix" });
+            }
+            (void)context.try_consume('-');
+            if (context.is_finished() || !is_digit10(context.current())) {
+                context.error({ "Expected an exponent" });
+            }
+            else {
+                std::string_view const exponent_digits = context.extract(digit_predicate);
+                assert(!exponent_digits.empty());
+                error_if_trailing_separator(exponent_digits, context);
+            }
+        }
+
+        std::string_view const floating_string { anchor, context.pointer() };
+        auto const floating = liblex::parse_floating(floating_string);
+        if (floating == tl::unexpected { liblex::Numeric_error::out_of_range })
+            context.error(floating_string, { "Floating point literal is too large" });
+        else
+            utl::always_assert(floating.has_value());
+
+        std::string_view const extraneous_suffix = context.extract(is_alpha);
+        if (!extraneous_suffix.empty()) {
+            context.error(extraneous_suffix, { "Erroneous floating point literal alphabetic suffix" });
+        }
+
+        return token_maker(compiler::Floating { floating.value() }, Token::Type::floating_literal);
+    }
+
+    auto extract_numeric_integer(
+        Token_maker const&     token_maker,
+        char const* const      anchor,
+        std::string_view const digit_sequence,
+        int const              base,
+        liblex::Context&       context) -> Token
+    {
+        auto integer = liblex::parse_integer(digit_sequence, base);
+        if (integer == tl::unexpected { liblex::Numeric_error::out_of_range })
+            context.error(digit_sequence, { "Integer literal is too large" });
+        else
+            utl::always_assert(integer.has_value());
+
+        std::string_view const suffix = context.extract(is_alpha);
+        if (suffix.empty()) {
+            return token_maker(compiler::Integer { integer.value() }, Token::Type::integer_literal);
+        }
+        else if (suffix != "e" && suffix != "E") {
+            context.error(suffix, { "Erroneous integer literal alphabetic suffix" });
+        }
+        else if (context.try_consume('-')) {
+            context.consume(is_digit10);
+            context.error({ "An integer literal may not have a negative exponent" });
+        }
+        else if (context.is_finished() || !is_digit10(context.current())) {
+            context.error({ "Expected an exponent" });
+        }
+        else {
+            std::string_view const exponent_digit_sequence = context.extract(is_digit10);
+            assert(!exponent_digit_sequence.empty());
+            error_if_trailing_separator(exponent_digit_sequence, context);
+
+            std::string_view const extraneous_suffix = context.extract(is_alpha);
+            if (!extraneous_suffix.empty()) {
+                context.error(extraneous_suffix, { "Erroneous integer literal alphabetic suffix" });
+            }
+
+            auto const exponent = liblex::parse_integer(exponent_digit_sequence);
+            if (exponent == tl::unexpected { liblex::Numeric_error::out_of_range })
+                context.error(exponent_digit_sequence, { "Exponent is too large" });
+            else
+                utl::always_assert(exponent.has_value());
+
+            auto const result = liblex::apply_scientific_exponent(*integer, *exponent);
+            if (result == tl::unexpected { liblex::Numeric_error::out_of_range })
+                context.error({ anchor, context.pointer() },
+                    { "Integer literal is too large after applying scientific exponent" });
+            else
+                utl::always_assert(result.has_value());
+
+            return token_maker(compiler::Integer { result.value() }, Token::Type::integer_literal);
+        }
+    }
+
     auto extract_numeric(Token_maker const& token_maker, liblex::Context& context) -> Token {
-        char const* const anchor = context.pointer();
-
-        auto const error_if_trailing_separator = [&](std::string_view const view) {
-            if (view.empty() || view.back() != '\'') return;
-            context.error({ "Expected one or more digits after the digit separator" });
-        };
-
+        char const*      const anchor               = context.pointer();
         tl::optional     const base                 = try_extract_numeric_base(context);
         auto             const digit_predicate      = digit_predicate_for(base.value_or(10));
         std::string_view const first_digit_sequence = context.extract(digit_predicate);
@@ -354,102 +450,23 @@ namespace {
         }
         else {
             assert(!first_digit_sequence.empty());
-            error_if_trailing_separator(first_digit_sequence);
+            error_if_trailing_separator(first_digit_sequence, context);
         }
 
         auto const has_preceding_dot = [&] {
+            // If the literal is preceded by a dot, don't attempt to extract a float.
+            // This enables nested tuple field access: x.0.0
             return anchor != context.source_begin() && anchor[-1] == '.';
         };
-
         if (!has_preceding_dot() && context.try_consume('.')) {
             if (base.has_value()) {
                 context.consume(is_digit10);
                 context.error({ anchor, 2 },
                     { "A floating point literal may not have a base specifier" });
             }
-            else if (context.is_finished() || !digit_predicate(context.current())) {
-                context.error({ "Expected one or more digits after the decimal separator" });
-            }
-            std::string_view const second_digit_sequence = context.extract(digit_predicate);
-            error_if_trailing_separator(second_digit_sequence);
-
-            std::string_view const suffix = context.extract(is_alpha);
-            if (!suffix.empty()) {
-                if (suffix != "e" && suffix != "E") {
-                    context.error(suffix, { "Erroneous floating point literal alphabetic suffix" });
-                }
-                (void)context.try_consume('-');
-                if (context.is_finished() || !is_digit10(context.current())) {
-                    context.error({ "Expected an exponent" });
-                }
-                else {
-                    std::string_view const exponent_digits = context.extract(digit_predicate);
-                    assert(!exponent_digits.empty());
-                    error_if_trailing_separator(exponent_digits);
-                }
-            }
-
-            std::string_view const floating_string { anchor, context.pointer() };
-            auto const floating = liblex::parse_floating(floating_string);
-            if (floating == tl::unexpected { liblex::Numeric_error::out_of_range })
-                context.error(floating_string, { "Floating point literal is too large" });
-            else
-                utl::always_assert(floating.has_value());
-
-            std::string_view const extraneous_suffix = context.extract(is_alpha);
-            if (!extraneous_suffix.empty()) {
-                context.error(extraneous_suffix, { "Erroneous floating point literal alphabetic suffix" });
-            }
-
-            return token_maker(compiler::Floating { floating.value() }, Token::Type::floating_literal);
+            return extract_numeric_floating(token_maker, anchor, context);
         }
-        else {
-            auto integer = liblex::parse_integer(first_digit_sequence, base.value_or(10));
-            if (integer == tl::unexpected { liblex::Numeric_error::out_of_range })
-                context.error(first_digit_sequence, { "Integer literal is too large" });
-            else
-                utl::always_assert(integer.has_value());
-
-            std::string_view const suffix = context.extract(is_alpha);
-            if (suffix.empty()) {
-                return token_maker(compiler::Integer { integer.value() }, Token::Type::integer_literal);
-            }
-            else if (suffix != "e" && suffix != "E") {
-                context.error(suffix, { "Erroneous integer literal alphabetic suffix" });
-            }
-            else if (context.try_consume('-')) {
-                context.consume(is_digit10);
-                context.error({ "An integer literal may not have a negative exponent" });
-            }
-            else if (context.is_finished() || !is_digit10(context.current())) {
-                context.error({ "Expected an exponent" });
-            }
-            else {
-                std::string_view const exponent_digit_sequence = context.extract(is_digit10);
-                assert(!exponent_digit_sequence.empty());
-                error_if_trailing_separator(exponent_digit_sequence);
-
-                std::string_view const extraneous_suffix = context.extract(is_alpha);
-                if (!extraneous_suffix.empty()) {
-                    context.error(extraneous_suffix, { "Erroneous integer literal alphabetic suffix" });
-                }
-
-                auto const exponent = liblex::parse_integer(exponent_digit_sequence);
-                if (exponent == tl::unexpected { liblex::Numeric_error::out_of_range })
-                    context.error(exponent_digit_sequence, { "Exponent is too large" });
-                else
-                    utl::always_assert(exponent.has_value());
-
-                auto const result = liblex::apply_scientific_exponent(*integer, *exponent);
-                if (result == tl::unexpected { liblex::Numeric_error::out_of_range })
-                    context.error({ anchor, context.pointer() },
-                        { "Integer literal is too large after applying scientific exponent" });
-                else
-                    utl::always_assert(result.has_value());
-
-                return token_maker(compiler::Integer { result.value() }, Token::Type::integer_literal);
-            }
-        }
+        return extract_numeric_integer(token_maker, anchor, first_digit_sequence, base.value_or(10), context);
     }
 
     auto extract_token(liblex::Context& context) -> Token {
