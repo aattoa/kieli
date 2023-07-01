@@ -73,35 +73,26 @@ namespace utl {
     using Float = double;
 
     template <class From, class To>
-    concept losslessly_convertible_to = requires {
-        requires std::integral<From> && std::integral<To>;
-        requires std::cmp_greater_equal(
-            std::numeric_limits<From>::min(),
-            std::numeric_limits<To>::min());
-        requires std::cmp_less_equal(
-            std::numeric_limits<From>::max(),
-            std::numeric_limits<To>::max());
-    };
+    concept losslessly_convertible_to =
+           std::integral<From>
+        && std::integral<To>
+        && std::in_range<To>(std::numeric_limits<From>::min())
+        && std::in_range<To>(std::numeric_limits<From>::max());
 
-    struct Safe_cast_invalid_argument : std::invalid_argument {
-        Safe_cast_invalid_argument();
+    struct Safe_cast_argument_out_of_range : std::invalid_argument {
+        Safe_cast_argument_out_of_range();
     };
 
     template <std::integral To, std::integral From> [[nodiscard]]
     constexpr auto safe_cast(From const from)
         noexcept(losslessly_convertible_to<From, To>) -> To
     {
-        if constexpr (losslessly_convertible_to<From, To>) {
-            // Still checked in debug mode just to be sure
-            assert(std::in_range<To>(from));
+        if constexpr (losslessly_convertible_to<From, To>)
             return static_cast<To>(from);
-        }
-        else {
-            if (std::in_range<To>(from))
-                return static_cast<To>(from);
-            else
-                throw Safe_cast_invalid_argument {};
-        }
+        else if (std::in_range<To>(from))
+            return static_cast<To>(from);
+        else
+            throw Safe_cast_argument_out_of_range {};
     }
 
     template <Usize length>
