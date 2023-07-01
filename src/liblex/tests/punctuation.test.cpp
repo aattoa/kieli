@@ -27,10 +27,10 @@ TEST("punctuation and reserved operators") {
 
 TEST("available operators") {
     REQUIRE(lex_success("-- %?% <$> ** @#") ==
-        "(op: '--'), (op: '%?%'), (op: '<$>'), (op: '**'), (op: '@#'), end of input");
+        "(op: --), (op: %?%), (op: <$>), (op: **), (op: @#), end of input");
 }
 
 TEST("operators and punctuation tokens mixed") {
     REQUIRE(lex_success("\n::\t,;(--?}@@") ==
-        "::, ,, ;, (, (op: '--?'), }, (op: '@@'), end of input");
+        "::, ,, ;, (, (op: --?), }, (op: @@), end of input");
 }
