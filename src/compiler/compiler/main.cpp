@@ -63,7 +63,7 @@ namespace {
         libparse::Parse_context context { std::move(lex_result), cst::Node_arena::with_default_page_size() };
 
         if (auto result = parse_expression(context)) {
-            // std::println("Result: {}", result);
+            utl::print("Result: {}\n", kieli::format_expression(**result, {}));
             if (!context.pointer->source_view.string.empty())
                 utl::print("Remaining input: '{}'\n", context.pointer->source_view.string.data());
         }

@@ -126,17 +126,16 @@ namespace {
 
 
     auto resolve_function_signature_only(
-        Context                                            & context,
-        Namespace                                          & space,
-        ast::Function_signature                           && signature,
-        tl::optional<std::vector<ast::Template_parameter>>&& ast_template_parameters,
-        Allow_generalization                           const allow_generalization) -> utl::Pair<Scope, hir::Function::Signature>
+        Context&                   context,
+        Namespace&                 space,
+        ast::Function_signature&&  signature,
+        Allow_generalization const allow_generalization) -> utl::Pair<Scope, hir::Function::Signature>
     {
         auto [template_parameter_scope, hir_template_parameters] = std::invoke([&] {
-            if (ast_template_parameters.has_value())
-                return context.resolve_template_parameters(*ast_template_parameters, space);
-            else
+            if (signature.template_parameters.empty())
                 return utl::Pair { Scope {}, std::vector<hir::Template_parameter> {} };
+            else
+                return context.resolve_template_parameters(signature.template_parameters, space);
         });
 
         auto self_parameter =
@@ -168,15 +167,18 @@ namespace {
     auto resolve_function_signature_impl(
         Context                              & context,
         Function_info                        & function_info,
-        ast::definition::Function           && function,
-        std::vector<ast::Template_parameter>&& ast_template_parameters) -> void
+        ast::definition::Function           && function) -> void
     {
         Definition_state_guard const state_guard { context, function_info.state, function.signature.name.as_dynamic() };
         bool const has_explicit_return_type = function.signature.return_type.has_value();
         auto const name = function.signature.name;
 
+        if (name.identifier == "id") {
+            utl::always_assert(!function.signature.template_parameters.empty());
+        }
+
         auto [signature_scope, signature] =
-            resolve_function_signature_only(context, *function_info.home_namespace, std::move(function.signature), std::move(ast_template_parameters), Allow_generalization::yes);
+            resolve_function_signature_only(context, *function_info.home_namespace, std::move(function.signature), Allow_generalization::yes);
 
         if (has_explicit_return_type) {
             context.generalize_to(signature.return_type, signature.template_parameters);
@@ -273,7 +275,7 @@ auto libresolve::Context::resolve_function_signature(Function_info& info)
     -> hir::Function::Signature&
 {
     if (auto* const function = std::get_if<ast::definition::Function>(&info.value))
-        resolve_function_signature_impl(*this, info, std::move(*function), {});
+        resolve_function_signature_impl(*this, info, std::move(*function));
     
     if (auto* const function = std::get_if<Partially_resolved_function>(&info.value))
         return function->resolved_signature;
@@ -350,12 +352,12 @@ auto libresolve::Context::resolve_typeclass(utl::Wrapper<Typeclass_info> const w
 
         hir::Typeclass hir_typeclass { .name = info.name };
 
-        auto handle_signature = [&](ast::Function_signature&& signature, tl::optional<std::vector<ast::Template_parameter>>&& template_parameters) {
+        auto handle_signature = [&](ast::Function_signature&& signature) {
             // Should be guaranteed by the parser
             utl::always_assert(signature.return_type.has_value());
 
-            auto [signature_scope, hir_signature] =
-                resolve_function_signature_only(*this, *info.home_namespace, std::move(signature), std::move(template_parameters), Allow_generalization::no);
+            auto [signature_scope, hir_signature] = // NOLINT: field order
+                resolve_function_signature_only(*this, *info.home_namespace, std::move(signature), Allow_generalization::no);
             signature_scope.warn_about_unused_bindings(*this);
 
             ensure_non_generalizable(hir_signature.function_type, "A class function signature");
@@ -365,7 +367,7 @@ auto libresolve::Context::resolve_typeclass(utl::Wrapper<Typeclass_info> const w
         };
 
         for (ast::Function_signature& signature : ast_typeclass->function_signatures)
-            handle_signature(std::move(signature), tl::nullopt);
+            handle_signature(std::move(signature));
 
         info.value = std::move(hir_typeclass);
     }

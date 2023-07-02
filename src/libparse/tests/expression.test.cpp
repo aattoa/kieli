@@ -69,7 +69,7 @@ TEST("block") {
     REQUIRE_SIMPLE_PARSE("{ x }");
     REQUIRE(parse("{ x; y }") == "{\n x;\n y\n}");
     REQUIRE(parse("{ a; { b; c; }; d; { e; f } }") ==
-        "{\n a;\n {\n b;\n c;\n};\n d;\n {\n  e;\n  f\n }\n}");
+        "{\n a;\n {\n  b;\n  c;\n };\n d;\n {\n  e;\n  f\n }\n}");
 }
 
 TEST("invocation") {
@@ -100,7 +100,7 @@ TEST("binary operator invocation") {
     REQUIRE_SIMPLE_PARSE("a * b");
     REQUIRE_SIMPLE_PARSE("a <$> b");
     REQUIRE_SIMPLE_PARSE("a * b + c");
-    REQUIRE_SIMPLE_PARSE("a *** (a //// b) +++ c");
+    REQUIRE_SIMPLE_PARSE("a *** (a <=> b) +++ c");
 }
 
 TEST("struct field access") {

@@ -2,10 +2,23 @@
 #include <libutl/common/pooled_string.hpp>
 #include <catch2/catch_test_macros.hpp>
 
-#define TEST(name) TEST_CASE(name, "[libutl][pooled_string]")
+#define TEST(name) TEST_CASE("pooled-string " name, "[libutl][pooled_string]")
 
 
-TEST("string pool") {
+TEST("equality") {
+    utl::String_pool pool { /*initial_capacity=*/ 32 };
+
+    utl::Pooled_string const a = pool.make("abc");
+    utl::Pooled_string const b = pool.make("def");
+    utl::Pooled_string const c = pool.make("abc");
+    utl::Pooled_string const d = pool.make("def");
+
+    REQUIRE(a == c);
+    REQUIRE(b == d);
+}
+
+
+TEST("overlap") {
     utl::String_pool pool { /*initial_capacity=*/ 32 };
 
     utl::Pooled_string const a = pool.make("ab");

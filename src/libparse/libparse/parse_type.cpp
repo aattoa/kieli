@@ -6,10 +6,15 @@ namespace {
 
     using namespace libparse;
 
-    auto extract_qualified_name(Parse_context& context, tl::optional<cst::Root_qualifier>&& root)
+    auto extract_qualified_typename(Parse_context& context, tl::optional<cst::Root_qualifier>&& root)
         -> cst::Type::Variant
     {
+        Lexical_token const* const anchor = context.pointer;
         auto name = extract_qualified(context, std::move(root));
+        if (!name.is_upper()) {
+            context.error(context.make_source_view(anchor, context.pointer - 1),
+                { "Expected a typename, but found a lowercase identifier" });
+        }
         if (auto template_arguments = parse_template_arguments(context)) {
             return cst::type::Template_application {
                 .template_arguments = std::move(*template_arguments),
@@ -23,13 +28,14 @@ namespace {
         -> cst::Type::Variant
     {
         context.retreat();
-        return extract_qualified_name(context, {});
+        return extract_qualified_typename(context, {});
     }
 
     auto extract_global_typename(Parse_context& context)
         -> cst::Type::Variant
     {
-        return extract_qualified_name(context, cst::Root_qualifier {
+        assert(context.pointer[-1].source_view.string == "global");
+        return extract_qualified_typename(context, cst::Root_qualifier {
             .value = cst::Root_qualifier::Global {},
             .double_colon_token =
                 cst::Token::from_lexical(context.extract_required(Lexical_token::Type::double_colon)),
@@ -40,6 +46,7 @@ namespace {
         -> cst::Type::Variant
     {
         Lexical_token const* const open_parenthesis = context.pointer - 1;
+        assert(open_parenthesis->source_view.string == "(");
         auto types = extract_comma_separated_zero_or_more<parse_type, "a type">(context);
         Lexical_token const* const close_parenthesis =
             context.extract_required(Lexical_token::Type::paren_close);
@@ -64,6 +71,7 @@ namespace {
         -> cst::Type::Variant
     {
         Lexical_token const* const open_bracket = context.pointer - 1;
+        assert(open_bracket->source_view.string == "[");
         utl::wrapper auto const element_type = extract_type(context);
 
         auto type = std::invoke([&]() -> cst::Type::Variant {
@@ -97,6 +105,7 @@ namespace {
         -> cst::Type::Variant
     {
         Lexical_token const* const fn_keyword = context.pointer - 1;
+        assert(fn_keyword->source_view.string == "fn");
         if (Lexical_token const* const open = context.try_extract(Lexical_token::Type::paren_open)) {
             auto parameter_types =
                 extract_comma_separated_zero_or_more<parse_type, "a parameter type">(context);
@@ -122,6 +131,7 @@ namespace {
         -> cst::Type::Variant
     {
         Lexical_token const* const typeof_keyword = context.pointer - 1;
+        assert(typeof_keyword->source_view.string == "typeof");
         if (Lexical_token const* const open = context.try_extract(Lexical_token::Type::paren_open)) {
             utl::wrapper auto expression = extract_expression(context);
             Lexical_token const* const close = context.extract_required(Lexical_token::Type::paren_close);
@@ -141,6 +151,7 @@ namespace {
         -> cst::Type::Variant
     {
         Lexical_token const* const inst_keyword = context.pointer - 1;
+        assert(inst_keyword->source_view.string == "inst");
         return cst::type::Instance_of {
             .classes            = extract_class_references(context),
             .inst_keyword_token = cst::Token::from_lexical(inst_keyword),
@@ -151,6 +162,7 @@ namespace {
         -> cst::Type::Variant
     {
         Lexical_token const* const ampersand = context.pointer - 1;
+        assert(ampersand->source_view.string == "&");
         auto mutability = parse_mutability(context);
         return cst::type::Reference {
             .referenced_type = extract_type(context),
@@ -163,6 +175,7 @@ namespace {
         -> cst::Type::Variant
     {
         Lexical_token const* const asterisk = context.pointer - 1;
+        assert(asterisk->source_view.string == "*");
         auto mutability = parse_mutability(context);
         return cst::type::Pointer {
             .pointed_to_type = extract_type(context),
