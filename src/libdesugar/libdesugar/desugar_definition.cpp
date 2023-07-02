@@ -46,6 +46,7 @@ namespace {
 
             return ast::definition::Function {
                 .signature {
+                    .template_parameters = utl::value_or_default(function.signature.template_parameters.transform(context.desugar())),
                     .function_parameters = std::move(parameters),
                     .self_parameter      = function.signature.function_parameters.self_parameter.transform(context.desugar()),
                     .return_type         = function.signature.return_type.transform(context.desugar()),

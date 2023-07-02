@@ -395,6 +395,16 @@ namespace utl {
             abort("Bad optional access", caller);
     }
 
+    template <class O> [[nodiscard]]
+    constexpr auto value_or_default(O&& optional)
+        requires requires { optional.has_value(); }
+    {
+        if (optional.has_value())
+            return bootleg::forward_like<O>(*optional);
+        else
+            return typename std::remove_cvref_t<O>::value_type {};
+    }
+
     template <class Variant, class... Arms>
     constexpr decltype(auto) match(Variant&& variant, Arms&&... arms)
         noexcept(noexcept(std::visit(Overload { std::forward<Arms>(arms)... }, std::forward<Variant>(variant))))

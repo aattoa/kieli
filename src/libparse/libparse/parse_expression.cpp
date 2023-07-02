@@ -175,6 +175,7 @@ namespace {
     auto extract_global_identifier(Parse_context& context)
         -> cst::Expression::Variant
     {
+        assert(context.pointer[-1].source_view.string == "global");
         return extract_qualified_lower_name_or_struct_initializer(context, cst::Root_qualifier {
             .value = cst::Root_qualifier::Global {},
             .double_colon_token =

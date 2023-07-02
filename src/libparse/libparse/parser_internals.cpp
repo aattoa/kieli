@@ -269,27 +269,15 @@ auto libparse::parse_class_reference(Parse_context& context)
     Lexical_token const* const anchor = context.pointer;
 
     auto name = std::invoke([&]() -> tl::optional<cst::Qualified_name> {
+        tl::optional<cst::Root_qualifier> root;
         Lexical_token const* const anchor = context.pointer;
 
-        auto root = std::invoke([&]() -> tl::optional<cst::Root_qualifier> {
-            if (context.try_consume(Token_type::global)) {
-                return cst::Root_qualifier {
-                    .value = cst::Root_qualifier::Global {},
-                    .double_colon_token =
-                    cst::Token::from_lexical(context.extract_required(Token_type::double_colon)),
-                };
-            }
-            else if (auto type = parse_type(context)) {
-                return cst::Root_qualifier {
-                    .value = *type,
-                    .double_colon_token =
-                    cst::Token::from_lexical(context.extract_required(Token_type::double_colon)),
-                };
-            }
-            else {
-                return tl::nullopt;
-            }
-        });
+        if (context.try_consume(Token_type::upper_name) || context.try_consume(Token_type::lower_name))
+            context.retreat();
+        else if (Lexical_token const* const double_colon = context.try_extract(Token_type::double_colon))
+            root = cst::Root_qualifier { .value = cst::Root_qualifier::Global {}, .double_colon_token = cst::Token::from_lexical(double_colon) };
+        else
+            return tl::nullopt;
 
         auto name = extract_qualified(context, std::move(root));
 
@@ -306,7 +294,7 @@ auto libparse::parse_class_reference(Parse_context& context)
         return cst::Class_reference {
             .template_arguments = std::move(template_arguments),
             .name               = std::move(*name),
-            .source_view        = context.make_source_view(anchor, context.pointer - 1)
+            .source_view        = context.make_source_view(anchor, context.pointer - 1),
         };
     }
     return tl::nullopt;
