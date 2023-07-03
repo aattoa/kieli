@@ -11,7 +11,7 @@ namespace {
         libparse::Parse_context context { kieli::lex({ info, source }), cst::Node_arena::with_page_size(64) };
         if (auto node = parse(context)) {
             if (context.is_finished())
-                return format(**node, kieli::Format_configuration { .block_indentation = 1 });
+                return format(**node, kieli::Format_configuration {});
             else
                 return tl::unexpected(libparse::Test_parse_failure::unconsumed_input);
         }

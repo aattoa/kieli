@@ -80,6 +80,20 @@ namespace {
             utl::todo();
         }
     };
+
+    auto format_node_impl(
+        auto const& node,
+        kieli::Format_configuration const& configuration) -> std::string
+    {
+        std::string output_string;
+        libformat::State state {
+            .configuration       = configuration,
+            .string              = output_string,
+            .current_indentation = 0,
+        };
+        state.format(node);
+        return output_string;
+    }
 }
 
 
@@ -104,19 +118,19 @@ auto kieli::format_expression(
     cst::Expression      const& expression,
     Format_configuration const& configuration) -> std::string
 {
-    utl::todo();
+    return format_node_impl(expression, configuration);
 }
 
 auto kieli::format_pattern(
-    cst::Pattern         const& expression,
+    cst::Pattern         const& pattern,
     Format_configuration const& configuration) -> std::string
 {
-    utl::todo();
+    return format_node_impl(pattern, configuration);
 }
 
 auto kieli::format_type(
     cst::Type            const& type,
     Format_configuration const& configuration) -> std::string
 {
-    utl::todo();
+    return format_node_impl(type, configuration);
 }

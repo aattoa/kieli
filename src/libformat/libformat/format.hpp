@@ -3,6 +3,7 @@
 #include <libutl/common/utilities.hpp>
 #include <libparse/cst.hpp>
 
+// TODO: collapse string literals, expand integer literals, insert digit separators
 
 namespace kieli {
     struct Format_configuration {

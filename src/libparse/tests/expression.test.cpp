@@ -67,9 +67,24 @@ TEST("template application") {
 TEST("block") {
     REQUIRE_SIMPLE_PARSE("{}");
     REQUIRE_SIMPLE_PARSE("{ x }");
-    REQUIRE(parse("{ x; y }") == "{\n x;\n y\n}");
+    REQUIRE(parse("{ x; y }") ==
+        "{\n"
+        "    x;\n"
+        "    y\n"
+        "}");
     REQUIRE(parse("{ a; { b; c; }; d; { e; f } }") ==
-        "{\n a;\n {\n  b;\n  c;\n };\n d;\n {\n  e;\n  f\n }\n}");
+        "{\n"
+        "    a;\n"
+        "    {\n"
+        "        b;\n"
+        "        c;\n"
+        "    };\n"
+        "    d;\n"
+        "    {\n"
+        "        e;\n"
+        "        f\n"
+        "    }\n"
+        "}");
 }
 
 TEST("invocation") {
@@ -119,17 +134,64 @@ TEST("array field access") {
 }
 
 TEST("conditional") {
-    REQUIRE_SIMPLE_PARSE("if a { b }");
-    REQUIRE_SIMPLE_PARSE("if a { b } else { c } ");
-    REQUIRE_SIMPLE_PARSE("if a { b } elif c { d } else { e }");
-    REQUIRE_SIMPLE_PARSE("if let a = b { c }");
-    REQUIRE_SIMPLE_PARSE("if let a = b { c } else { d }");
-    REQUIRE_SIMPLE_PARSE("if let a = b { c } elif let d = e { f } else { g }");
+    REQUIRE(parse("if a { b }") ==
+        "if a {\n"
+        "    b\n"
+        "}");
+    REQUIRE(parse("if a { b } else { c }") ==
+        "if a {\n"
+        "    b\n"
+        "}\n"
+        "else {\n"
+        "    c\n"
+        "}");
+    REQUIRE(parse("if a { b } elif c { d } elif e { f } else { g }") ==
+        "if a {\n"
+        "    b\n"
+        "}\n"
+        "elif c {\n"
+        "    d\n"
+        "}\n"
+        "elif e {\n"
+        "    f\n"
+        "}\n"
+        "else {\n"
+        "    g\n"
+        "}");
+    REQUIRE(parse("if let a = b { c }") ==
+        "if let a = b {\n"
+        "    c\n"
+        "}");
+    REQUIRE(parse("if let a = b { c } else { d }") ==
+        "if let a = b {\n"
+        "    c\n"
+        "}\n"
+        "else {\n"
+        "    d\n"
+        "}");
+    REQUIRE(parse("if let a = b { c } elif let d = e { f } else { g }") ==
+        "if let a = b {\n"
+        "    c\n"
+        "}\n"
+        "elif let d = e {\n"
+        "    f\n"
+        "}\n"
+        "else {\n"
+        "    g\n"
+        "}");
 }
 
 TEST("match") {
     REQUIRE(parse("match a { b -> c d -> e }") ==
-        "match a {\n b -> c\n d -> e\n}");
+        "match a {\n"
+        "    b -> c\n"
+        "    d -> e\n"
+        "}");
+    REQUIRE(parse("match a { b, c -> d; (e, f) -> g }") ==
+        "match a {\n"
+        "    b, c -> d;\n"
+        "    (e, f) -> g\n"
+        "}");
 }
 
 TEST("type cast") {
@@ -164,7 +226,7 @@ TEST("while loop") {
 
 TEST("for loop") {
     REQUIRE_SIMPLE_PARSE("for x in xs {}");
-    REQUIRE_SIMPLE_PARSE("for (x, y) in [(10, 'x'); (20, 'y')] {}");
+    REQUIRE_SIMPLE_PARSE("for (x, y) in [(10, 'x'), (20, 'y')] {}");
 }
 
 TEST("loop directives") {
@@ -216,7 +278,11 @@ TEST("pointer dereference") {
 TEST("unsafe") {
     REQUIRE_SIMPLE_PARSE("unsafe {}");
     REQUIRE_SIMPLE_PARSE("unsafe { x }");
-    REQUIRE(parse("unsafe { x; y }") == "unsafe {\n x;\n y\n}");
+    REQUIRE(parse("unsafe { x; y }") ==
+        "unsafe {\n"
+        "    x;\n"
+        "    y\n"
+        "}");
 }
 
 TEST("mov") {
