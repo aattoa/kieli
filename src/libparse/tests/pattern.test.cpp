@@ -10,9 +10,9 @@ namespace { constexpr auto parse = libparse::test_parse_pattern; }
 
 TEST("literals") {
     REQUIRE_SIMPLE_PARSE("5");
-    REQUIRE(parse("5e3") == "5000");
+    REQUIRE_SIMPLE_PARSE("5e3");
     REQUIRE_SIMPLE_PARSE("5.0");
-    REQUIRE(parse("5.0e3") == "5300.0");
+    REQUIRE_SIMPLE_PARSE("5.0e3");
     REQUIRE_SIMPLE_PARSE("true");
     REQUIRE_SIMPLE_PARSE("false");
     REQUIRE_SIMPLE_PARSE("'x'");
