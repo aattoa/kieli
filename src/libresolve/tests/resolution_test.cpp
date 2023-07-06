@@ -6,16 +6,13 @@
 
 
 namespace {
-    auto format_hir_functions(std::span<hir::Function const>) -> std::string {
-        utl::todo();
-#if 0
-        std::string formatted_hir_functions;
+    auto format_hir_functions(std::span<hir::Function const> const functions) -> std::string {
+        std::string output;
         for (hir::Function const& function : functions) {
             if (function.signature.is_template()) continue;
-            std::format_to(std::back_inserter(formatted_hir_functions), "{}", function);
+            hir::format_to(function, output);
         }
-        return formatted_hir_functions;
-#endif
+        return output;
     }
 }
 

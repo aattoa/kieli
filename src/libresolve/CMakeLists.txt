@@ -21,6 +21,7 @@ target_sources(libresolve
     PRIVATE libresolve/unification.cpp)
 
 target_link_libraries(libresolve
+    PRIVATE libcompiler-pipeline
     PRIVATE libutl-diagnostics
     PRIVATE libdesugar)
 
