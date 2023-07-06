@@ -647,6 +647,7 @@ template <> struct dtl::To_AST_impl<name> : std::type_identity<ast::definition::
     auto format_to(Unification_variable_tag const&, std::string&) -> void;
     auto format_to(Template_parameter       const&, std::string&) -> void;
     auto format_to(Template_argument        const&, std::string&) -> void;
+    auto format_to(Function_parameter       const&, std::string&) -> void;
 
     auto to_string(auto const& x) -> std::string
         requires requires (std::string out) { hir::format_to(x, out); }
