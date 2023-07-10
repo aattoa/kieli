@@ -80,10 +80,12 @@ namespace {
         auto operator()(cst::definition::Enum const& enumeration)
             -> ast::Definition::Variant
         {
-            auto const desugar_constructor = [this](cst::definition::Enum::Constructor const&)
-                -> ast::definition::Enum::Constructor
-            {
-                utl::todo();
+            auto const desugar_constructor = [this](cst::definition::Enum::Constructor const& ctor) {
+                return ast::definition::Enum::Constructor {
+                    .name          = ctor.name,
+                    .payload_types = ctor.payload_types.transform(context.desugar()),
+                    .source_view   = ctor.source_view,
+                };
             };
             return definition(
                 ast::definition::Enum {

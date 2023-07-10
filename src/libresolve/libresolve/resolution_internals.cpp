@@ -260,7 +260,8 @@ auto libresolve::Context::resolve_template_parameters(
                     return resolve_class_reference(reference, parameter_scope, space);
                 };
                 add_parameter(hir::Template_parameter::Type_parameter {
-                    .classes = utl::map(resolve_class, type_parameter.classes)
+                    .classes = utl::map(resolve_class, type_parameter.classes),
+                    .name    = type_parameter.name,
                 });
             },
             [&](ast::Template_parameter::Mutability_parameter& mutability_parameter) {

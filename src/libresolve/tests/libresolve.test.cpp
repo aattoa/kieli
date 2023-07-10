@@ -20,7 +20,7 @@ namespace {
 }
 
 
-#define TEST(name) TEST_CASE(name, "[resolve]") // NOLINT
+#define TEST(name) TEST_CASE("resolve " name, "[libresolve]") // NOLINT
 #define REQUIRE_RESOLUTION_SUCCESS(expression) REQUIRE_NOTHROW((void)(expression))
 #define REQUIRE_RESOLUTION_FAILURE(expression, error_string) \
     REQUIRE_THROWS_MATCHES((void)(expression), std::exception, Catch::Matchers::MessageMatches(contains(error_string)))
@@ -86,9 +86,9 @@ TEST("scope") {
         "}")
         ==
         "fn f(): () = ({ "
-            "(let x: Float = (3.14): Float): (); "
-            "(let x: String = (\"hello\"): String): (); "
-            "(let x: (String, String) = (((x): String, (x): String)): (String, String)): (); "
+            "(let immut x: Float = (3.14): Float): (); "
+            "(let immut x: String = (\"hello\"): String): (); "
+            "(let immut x: (String, String) = (((x): String, (x): String)): (String, String)): (); "
             "(()): () "
         "}): ()");
 }
@@ -97,8 +97,8 @@ TEST("safety status") {
     REQUIRE_RESOLUTION_FAILURE(resolve("fn f(x: *I32): I32 { dereference(x) }"),
         "may not appear within safe context");
     REQUIRE(resolve("fn f(x: *I32): I32 { unsafe { dereference(x) } }") ==
-        "fn f(x: *I32): I32 = ({ "
-            "({ (dereference((x): *I32)): I32 }): I32"
+        "fn f(immut x: *immut I32): I32 = ({ "
+            "({ (dereference((x): *immut I32)): I32 }): I32"
         " }): I32");
 }
 
@@ -115,9 +115,9 @@ TEST("mutability") {
         "}")
         ==
         "fn f(): () = ({ "
-            "(let x: Float = (3.14): Float): (); "
-            "(let y: &Float = (&(x): Float): &Float): (); "
-            "(let _: &Float = (&(*(y): &Float): Float): &Float): () "
+            "(let immut x: Float = (3.14): Float): (); "
+            "(let immut y: &immut Float = (&immut (x): Float): &immut Float): (); "
+            "(let _: &immut Float = (&immut (*(y): &immut Float): Float): &immut Float): () "
         "}): ()");
     REQUIRE_RESOLUTION_FAILURE(resolve(
         "fn f() {"
@@ -128,13 +128,13 @@ TEST("mutability") {
         "acquire mutable reference");
     REQUIRE(resolve(
         "fn f() { let a = \?\?\?; let b: &I32 = &(*a); b }") ==
-        "fn f(): &I32 = ({ (let a: &I32 = (\?\?\?): &I32): (); (let b: &I32 = (&(*(a): &I32): I32): &I32): (); (b): &I32 }): &I32");
+        "fn f(): &immut I32 = ({ (let immut a: &immut I32 = (\?\?\?): &immut I32): (); (let immut b: &immut I32 = (&immut (*(a): &immut I32): I32): &immut I32): (); (b): &immut I32 }): &immut I32");
     REQUIRE(resolve(
         "fn f() { let a = \?\?\?; let b: &mut I32 = &mut (*a); b }") ==
-        "fn f(): &mut I32 = ({ (let a: &mut I32 = (\?\?\?): &mut I32): (); (let b: &mut I32 = (&mut (*(a): &mut I32): I32): &mut I32): (); (b): &mut I32 }): &mut I32");
+        "fn f(): &mut I32 = ({ (let immut a: &mut I32 = (\?\?\?): &mut I32): (); (let immut b: &mut I32 = (&mut (*(a): &mut I32): I32): &mut I32): (); (b): &mut I32 }): &mut I32");
     REQUIRE(resolve(
         "fn f() { let a = \?\?\?; let b = &mut *a; let b: Char = *b; b }") ==
-        "fn f(): Char = ({ (let a: &mut Char = (\?\?\?): &mut Char): (); (let b: &mut Char = (&mut (*(a): &mut Char): Char): &mut Char): (); (let b: Char = (*(b): &mut Char): Char): (); (b): Char }): Char");
+        "fn f(): Char = ({ (let immut a: &mut Char = (\?\?\?): &mut Char): (); (let immut b: &mut Char = (&mut (*(a): &mut Char): Char): &mut Char): (); (let immut b: Char = (*(b): &mut Char): Char): (); (b): Char }): Char");
 }
 
 TEST("return type resolution") {
@@ -149,8 +149,8 @@ TEST("return type resolution") {
 TEST("local unification") {
     REQUIRE(resolve("fn f() { let x = ???; let f: fn(String): I64 = \?\?\?; f(x) }") ==
         "fn f(): I64 = ({ "
-            "(let x: String = (\?\?\?): String): (); "
-            "(let f: fn(String): I64 = (\?\?\?): fn(String): I64): (); "
+            "(let immut x: String = (\?\?\?): String): (); "
+            "(let immut f: fn(String): I64 = (\?\?\?): fn(String): I64): (); "
             "((f): fn(String): I64((x): String)): I64"
         " }): I64");
 }
@@ -162,9 +162,9 @@ TEST("match case unification") {
         ==
         "fn f(): String = ({ "
             "(match (Option[String]::none): Option[String] { "
-                "Option[String]::some(x) -> (x): String "
-                "Option[String]::none -> (\"hello\"): String"
-            " }): String"
+                "Option[String]::some(immut x) -> (x): String; "
+                "Option[String]::none -> (\"hello\"): String; "
+            "}): String"
         " }): String");
 }
 
@@ -176,10 +176,10 @@ TEST("abbreviated constructor pattern") {
             "_ -> \?\?\?"
         "}")
         ==
-        "fn f(a: Option[I32]): I32 = ({ "
+        "fn f(immut a: Option[I32]): I32 = ({ "
             "(match (a): Option[I32] { "
-                "Option[I32]::some(b) -> (b): I32 "
-                "_ -> (\?\?\?): I32 "
+                "Option[I32]::some(immut b) -> (b): I32; "
+                "_ -> (\?\?\?): I32; "
             "}): I32"
         " }): I32");
     REQUIRE_RESOLUTION_FAILURE(resolve(
@@ -201,8 +201,8 @@ TEST("pointer unification") {
         "fn f(): Char { let x = \?\?\?; unsafe { dereference(addressof(x)) } }")
         ==
         "fn f(): Char = ({ "
-            "(let x: Char = (\?\?\?): Char): (); "
-            "({ (dereference((addressof((x): Char)): *Char)): Char }): Char"
+            "(let immut x: Char = (\?\?\?): Char): (); "
+            "({ (dereference((addressof((x): Char)): *immut Char)): Char }): Char"
         " }): Char");
 }
 
@@ -210,7 +210,7 @@ TEST("reference mutability coercion") {
     REQUIRE(resolve("fn f() { let mut x: U8 = 5; let _: &mut U8 = &mut x; }") ==
         "fn f(): () = ({ (let mut x: U8 = (5): U8): (); (let _: &mut U8 = (&mut (x): U8): &mut U8): (); (()): () }): ()");
     REQUIRE(resolve("fn f() { let mut x: U8 = 5; let _: &U8 = &mut x; }") ==
-        "fn f(): () = ({ (let mut x: U8 = (5): U8): (); (let _: &U8 = (&mut (x): U8): &mut U8): (); (()): () }): ()");
+        "fn f(): () = ({ (let mut x: U8 = (5): U8): (); (let _: &immut U8 = (&mut (x): U8): &mut U8): (); (()): () }): ()");
 }
 
 TEST("double variable solution") {
@@ -282,11 +282,11 @@ TEST("multiple template instantiations") {
         "fn g(): I64 { let o = \?\?\?; get(o) }")
         ==
         "fn f(): String = ({ "
-            "(let o: Option[String] = (\?\?\?): Option[String]): (); "
+            "(let immut o: Option[String] = (\?\?\?): Option[String]): (); "
             "(get[String]((o): Option[String])): String"
         " }): String"
         "fn g(): I64 = ({ "
-            "(let o: Option[I64] = (\?\?\?): Option[I64]): (); "
+            "(let immut o: Option[I64] = (\?\?\?): Option[I64]): (); "
             "(get[I64]((o): Option[I64])): I64"
         " }): I64");
 }
@@ -365,10 +365,10 @@ TEST("simple method lookup") {
             "s.a()"
         "}")
         ==
-        "fn f(s: S): &Char = ({ "
-            "({ (let _: Char = (b((&(s): S): &S)): Char): (); (()): () }): (); "
-            "(a[immut]((&(s): S): &S)): &Char"
-        " }): &Char");
+        "fn f(immut s: S): &immut Char = ({ "
+            "({ (let _: Char = (b((&immut (s): S): &immut S)): Char): (); (()): () }): (); "
+            "(a[immut]((&immut (s): S): &immut S)): &immut Char"
+        " }): &immut Char");
     REQUIRE(resolve(
         "struct S = x: Char "
         "impl S { fn f[T](&self): T = ??? }"
@@ -391,7 +391,7 @@ TEST("map option") {
         "}"
         "fn f(o: Option[I32]): String = get(map(o, \?\?\?))")
         ==
-        "fn f(o: Option[I32]): String = ({ "
+        "fn f(immut o: Option[I32]): String = ({ "
             "(get[String]((map[I32, String]((o): Option[I32], (\?\?\?): fn(I32): String)): Option[String])): String"
         " }): String");
 }

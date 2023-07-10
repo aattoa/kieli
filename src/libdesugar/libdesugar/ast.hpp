@@ -442,9 +442,9 @@ namespace ast {
         };
         struct Enum {
             struct Constructor {
-                compiler::Name_lower            name;
-                tl::optional<std::vector<Type>> payload_types;
-                utl::Source_view                source_view;
+                compiler::Name_lower                          name;
+                tl::optional<std::vector<utl::Wrapper<Type>>> payload_types;
+                utl::Source_view                              source_view;
             };
             std::vector<Constructor> constructors;
             compiler::Name_upper     name;

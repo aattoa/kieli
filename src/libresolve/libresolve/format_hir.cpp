@@ -114,7 +114,7 @@ namespace {
             std::format_to(out, "{} }}", block.result_expression);
         }
         auto operator()(hir::expression::Let_binding const& let) {
-            std::format_to(out, "let {}: {} = {}", let.pattern, let.initializer->type, let.initializer);
+            std::format_to(out, "let {}: {} = {}", let.pattern, let.type, let.initializer);
         }
         auto operator()(hir::expression::Conditional const& conditional) {
             std::format_to(out, "if {} {} else {}", conditional.condition, conditional.true_branch, conditional.false_branch);
@@ -163,7 +163,7 @@ namespace {
             std::format_to(out, "addressof({})", addressof.lvalue);
         }
         auto operator()(hir::expression::Unsafe_dereference const& dereference) {
-            std::format_to(out, "unsafe_dereference({})", dereference.pointer);
+            std::format_to(out, "dereference({})", dereference.pointer);
         }
         auto operator()(hir::expression::Move const& move) {
             std::format_to(out, "mov {}", move.lvalue);
@@ -215,7 +215,7 @@ namespace {
         auto operator()(utl::one_of<hir::type::Structure, hir::type::Enumeration> auto const& type) {
             std::format_to(out, "{}", type.info->name);
             if (type.info->template_instantiation_info.has_value())
-                std::format_to(out, "[{}]", type.info->name, type.info->template_instantiation_info->template_arguments);
+                std::format_to(out, "[{}]", type.info->template_instantiation_info->template_arguments);
         }
         auto operator()(hir::type::Unification_variable const& variable) {
             std::format_to(out, "{}", variable.state->as_unsolved());
