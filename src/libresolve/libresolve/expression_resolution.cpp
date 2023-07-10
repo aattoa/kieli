@@ -743,8 +743,55 @@ namespace {
             };
         }
 
-        auto operator()(ast::expression::Struct_initializer&) -> hir::Expression {
-            utl::todo();
+        auto operator()(ast::expression::Struct_initializer& struct_initializer) -> hir::Expression {
+            hir::Type const struct_type = context.resolve_type(*struct_initializer.struct_type, scope, space);
+
+            auto* const structure_ptr = std::get_if<hir::type::Structure>(&*struct_type.flattened_value());
+            utl::always_assert(structure_ptr != nullptr);
+            hir::Struct& structure = context.resolve_struct(structure_ptr->info);
+
+            auto initializers = utl::vector_with_capacity<hir::Expression>(structure.members.size());
+
+            for (auto const& [name, _] : struct_initializer.member_initializers) {
+                if (!ranges::contains(structure.members, name, &hir::Struct::Member::name))
+                    context.error(name.source_view,
+                        { "{} does not have a member '{}'"_format(hir::to_string(struct_type), name) });
+            }
+
+            for (hir::Struct::Member& member : structure.members) {
+                if (utl::wrapper auto* const member_initializer_ptr = struct_initializer.member_initializers.find(member.name)) {
+                    hir::Expression member_initializer = recurse(**member_initializer_ptr);
+                    context.solve(constraint::Type_equality {
+                        .constrainer_type = member.type,
+                        .constrained_type = member_initializer.type,
+                        .constrainer_note = constraint::Explanation {
+                            member.name.source_view,
+                            "This member is of type {0}",
+                        },
+                        .constrained_note {
+                            member_initializer.source_view,
+                            "But the given initializer is of type {1}",
+                        }
+                    });
+                    initializers.push_back(std::move(member_initializer));
+                }
+                else {
+                    context.error(this_expression.source_view, { "Field '{}' is not initialized"_format(member.name) });
+                }
+            }
+
+            bool const is_pure = ranges::all_of(initializers, &hir::Expression::is_pure);
+
+            return {
+                .value = hir::expression::Struct_initializer {
+                    .initializers = std::move(initializers),
+                    .struct_type  = struct_type,
+                },
+                .type        = struct_type,
+                .source_view = this_expression.source_view,
+                .mutability  = context.immut_constant(this_expression.source_view),
+                .is_pure     = is_pure,
+            };
         }
 
         auto operator()(ast::expression::Type_ascription& cast) -> hir::Expression {

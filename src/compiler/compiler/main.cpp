@@ -87,8 +87,8 @@ namespace {
 
     constexpr auto resolution_repl = generic_repl<[](kieli::Lex_result&& lex_result) {
         auto resolve_result = resolve(desugar(parse(std::move(lex_result))));
-        (void)resolve_result;
-        // std::println("{}", utl::formatting::delimited_range(resolve_result.functions, "\n\n"));
+        for (auto const& function : resolve_result.functions)
+            utl::print("{}\n\n", hir::to_string(function));
     }>;
 
     constexpr auto reification_repl = generic_repl<[](kieli::Lex_result&& lex_result) {

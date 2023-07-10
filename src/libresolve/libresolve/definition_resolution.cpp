@@ -49,12 +49,12 @@ namespace {
 
 
     auto resolve_function_parameters(
-        Context                                & context,
-        Allow_generalization               const allow_generalization,
+        Context&                                 context,
+        Allow_generalization const               allow_generalization,
         std::span<ast::Function_parameter> const ast_parameters,
-        std::vector<hir::Template_parameter>   & template_parameters,
+        std::vector<hir::Template_parameter>&    template_parameters,
         Scope                                    signature_scope,
-        Namespace                              & home_namespace) -> utl::Pair<Scope, std::vector<hir::Function_parameter>>
+        Namespace&                               home_namespace) -> utl::Pair<Scope, std::vector<hir::Function_parameter>>
     {
         std::vector<hir::Function_parameter> hir_parameters;
         hir_parameters.reserve(ast_parameters.size());
@@ -141,7 +141,7 @@ namespace {
         auto self_parameter =
             resolve_self_parameter(context, template_parameter_scope, signature.self_parameter);
 
-        auto [signature_scope, function_parameters] =
+        auto [signature_scope, function_parameters] = // NOLINT: field order
             resolve_function_parameters(context, allow_generalization, signature.function_parameters, hir_template_parameters, std::move(template_parameter_scope), space);
 
         hir::Type const return_type = std::invoke([&] {
@@ -165,17 +165,13 @@ namespace {
 
 
     auto resolve_function_signature_impl(
-        Context                              & context,
-        Function_info                        & function_info,
-        ast::definition::Function           && function) -> void
+        Context                   & context,
+        Function_info             & function_info,
+        ast::definition::Function&& function) -> void
     {
         Definition_state_guard const state_guard { context, function_info.state, function.signature.name.as_dynamic() };
         bool const has_explicit_return_type = function.signature.return_type.has_value();
         auto const name = function.signature.name;
-
-        if (name.identifier == "id") {
-            utl::always_assert(!function.signature.template_parameters.empty());
-        }
 
         auto [signature_scope, signature] =
             resolve_function_signature_only(context, *function_info.home_namespace, std::move(function.signature), Allow_generalization::yes);
@@ -206,7 +202,7 @@ namespace {
 
     auto resolve_function_impl(
         Partially_resolved_function& function,
-        Context                    & context,
+        Context&                     context,
         utl::Wrapper<Namespace>      home_namespace) -> hir::Function
     {
         hir::Expression body = context.resolve_expression(function.unresolved_body, function.signature_scope, *home_namespace);
@@ -217,11 +213,11 @@ namespace {
             .constrained_type = body.type,
             .constrainer_note = constraint::Explanation {
                 function.resolved_signature.return_type.source_view(),
-                "The return type is specified to be {0}"
+                "The return type is specified to be {0}",
             },
             .constrained_note {
                 body.type.source_view(),
-                "But the body is of type {1}"
+                "But the body is of type {1}",
             }
         });
 
@@ -258,14 +254,73 @@ namespace {
     }
 
 
-    auto resolve_enum_impl(
-        ast::definition::Enum & ,
-        Context               & ,
-        Scope                   ,
-        utl::Wrapper<Namespace> ,
-        hir::Type               ) -> hir::Enum
+    auto resolve_enum_constructor(
+        ast::definition::Enum::Constructor& constructor,
+        Context&                            context,
+        Scope&                              scope,
+        utl::Wrapper<Namespace> const       home_namespace,
+        hir::Type const                     enumeration_type) -> hir::Enum_constructor
     {
-        utl::todo();
+        if (!constructor.payload_types.has_value()) {
+            return hir::Enum_constructor {
+                .name      = constructor.name,
+                .enum_type = enumeration_type,
+            };
+        }
+
+        auto const resolve_type = [&](utl::Wrapper<ast::Type> const type) -> hir::Type {
+            return context.resolve_type(*type, scope, *home_namespace);
+        };
+        auto payload_types = utl::map(resolve_type, *constructor.payload_types);
+
+        hir::Type const payload_type = std::invoke([&] {
+            static_assert(std::is_trivially_copyable_v<hir::Type>);
+            if (payload_types.size() == 1) return payload_types.front();
+            auto const source_view = payload_types.front().source_view().combine_with(payload_types.back().source_view());
+            return hir::Type { context.wrap_type(hir::type::Tuple { payload_types }), source_view };
+        });
+        hir::Type const function_type {
+            context.wrap_type(hir::type::Function {
+                .parameter_types = std::move(payload_types),
+                .return_type     = enumeration_type,
+            }),
+            constructor.source_view,
+        };
+
+        context.ensure_non_generalizable(payload_type, "An enum constructor");
+        return hir::Enum_constructor {
+            .name          = constructor.name,
+            .payload_type  = payload_type,
+            .function_type = function_type,
+            .enum_type     = enumeration_type,
+        };
+    }
+
+
+    auto resolve_enum_impl(
+        ast::definition::Enum&  enumeration,
+        Context&                context,
+        Scope                   scope,
+        utl::Wrapper<Namespace> home_namespace,
+        hir::Type               enumeration_type) -> hir::Enum
+    {
+        hir::Enum mir_enumeration {
+            .constructors         = utl::vector_with_capacity(enumeration.constructors.size()),
+            .name                 = enumeration.name,
+            .associated_namespace = context.wrap(Namespace { .parent = home_namespace }),
+        };
+
+        Scope constructor_scope = scope.make_child();
+
+        for (ast::definition::Enum::Constructor& ast_constructor : enumeration.constructors) {
+            hir::Enum_constructor const hir_constructor =
+                resolve_enum_constructor(ast_constructor, context, scope, home_namespace, enumeration_type);
+            mir_enumeration.constructors.push_back(hir_constructor);
+            mir_enumeration.associated_namespace->lower_table
+                .add_new_or_abort(hir_constructor.name.identifier, Lower_variant { hir_constructor });
+        }
+
+        return mir_enumeration;
     }
 
 }
