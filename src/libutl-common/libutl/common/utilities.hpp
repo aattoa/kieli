@@ -404,6 +404,11 @@ namespace utl {
             return typename std::remove_cvref_t<O>::value_type {};
     }
 
+    [[nodiscard]]
+    constexpr auto visitable(auto const&... variants) noexcept -> bool {
+        return (!variants.valueless_by_exception() && ...);
+    }
+
     template <class Variant, class... Arms>
     constexpr decltype(auto) match(Variant&& variant, Arms&&... arms)
         noexcept(noexcept(std::visit(Overload { std::forward<Arms>(arms)... }, std::forward<Variant>(variant))))

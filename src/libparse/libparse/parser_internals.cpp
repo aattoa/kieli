@@ -34,6 +34,37 @@ namespace {
         }
     }
 
+    auto is_valid_template_parameter_default_argument(
+        cst::Template_parameter::Variant const& parameter,
+        cst::Template_argument::Variant const&  argument) -> bool
+    {
+        assert(utl::visitable(parameter, argument));
+        return std::holds_alternative<cst::Template_argument::Wildcard>(argument)
+            || (std::holds_alternative<cst::Template_parameter::Type_parameter>(parameter) && std::holds_alternative<utl::Wrapper<cst::Type>>(argument))
+            || (std::holds_alternative<cst::Template_parameter::Value_parameter>(parameter) && std::holds_alternative<utl::Wrapper<cst::Expression>>(argument))
+            || (std::holds_alternative<cst::Template_parameter::Mutability_parameter>(parameter) && std::holds_alternative<cst::Mutability>(argument));
+    }
+
+    auto template_parameter_kind_description(cst::Template_parameter::Variant const& parameter)
+        -> std::string_view
+    {
+        return utl::match(parameter,
+            [](cst::Template_parameter::Type_parameter       const&) { return "type"; },
+            [](cst::Template_parameter::Value_parameter      const&) { return "value"; },
+            [](cst::Template_parameter::Mutability_parameter const&) { return "mutability"; });
+    }
+
+    auto template_argument_kind_description(cst::Template_argument::Variant const& argument)
+        -> std::string_view
+    {
+        return utl::match(argument,
+            [](cst::Template_argument::Wildcard const&) { return "wildcard"; },
+            [](utl::Wrapper<cst::Type>          const&) { return "type"; },
+            [](utl::Wrapper<cst::Expression>    const&) { return "value"; },
+            [](cst::Mutability                  const&) { return "mutability"; });
+    }
+
+
     auto parse_template_parameter(Parse_context& context)
         -> tl::optional<cst::Template_parameter>
     {
@@ -48,6 +79,15 @@ namespace {
                     .argument          = extract_required<parse_template_argument, "a default template argument">(context),
                     .equals_sign_token = cst::Token::from_lexical(equals_sign),
                 };
+                if (!is_valid_template_parameter_default_argument(value, default_argument->argument.value)) {
+                    context.error(default_argument->argument.source_view(), {
+                        std::format(
+                            "A template {0} parameter's default argument must "
+                            "be a {0} argument, but this is a {1} argument",
+                            template_parameter_kind_description(value),
+                            template_argument_kind_description(default_argument->argument.value))
+                    });
+                }
             }
             return cst::Template_parameter {
                 .value            = std::move(value),
