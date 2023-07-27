@@ -4,7 +4,6 @@
 #include <libutl/readline/readline.hpp>
 #include <libutl/color/color.hpp>
 #include <libutl/cli/cli.hpp>
-
 #include <liblex/lex.hpp>
 #include <libparse/parse.hpp>
 #include <libparse/parser_internals.hpp>
@@ -14,7 +13,6 @@
 #include <libreify/reify.hpp>
 #include <liblower/lower.hpp>
 #include <libformat/format.hpp>
-
 #include <compiler/compiler.hpp>
 #include <compiler/project.hpp>
 
@@ -61,7 +59,6 @@ namespace {
 
     constexpr auto expression_parser_repl = generic_repl<[](kieli::Lex_result&& lex_result) {
         libparse::Parse_context context { std::move(lex_result), cst::Node_arena::with_default_page_size() };
-
         if (auto result = parse_expression(context)) {
             utl::print("Result: {}\n", kieli::format_expression(**result, {}));
             if (!context.pointer->source_view.string.empty())

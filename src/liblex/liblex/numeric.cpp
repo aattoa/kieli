@@ -41,7 +41,7 @@ namespace {
 }
 
 
-auto liblex::apply_scientific_exponent(utl::Usize integer, const utl::Usize exponent)
+auto liblex::apply_scientific_exponent(utl::Usize integer, utl::Usize const exponent)
     -> tl::expected<utl::Usize, Numeric_error>
 {
     for (utl::Usize i = 0; i != exponent; ++i) {

@@ -127,8 +127,8 @@ namespace utl::inline literals {
 
     template <Metastring string>
     consteval auto operator""_format() noexcept {
-        return [](auto const&... args) -> std::string {
-            return std::format(string.view(), args...);
+        return []<class... Args>(Args&&... args) -> std::string {
+            return std::format(string.view(), std::forward<Args>(args)...);
         };
     }
 }
@@ -166,9 +166,9 @@ namespace bootleg {
 
 namespace utl::dtl {
     template <class, template <class...> class>
-    struct Is_instance_of : std::false_type {};
+    struct Is_specialization_of : std::false_type {};
     template <class... Ts, template <class...> class F>
-    struct Is_instance_of<F<Ts...>, F> : std::true_type {};
+    struct Is_specialization_of<F<Ts...>, F> : std::true_type {};
     template <class>
     struct Always_false : std::false_type {};
 }
@@ -176,7 +176,7 @@ namespace utl::dtl {
 namespace utl {
 
     template <class T, template <class...> class F>
-    concept instance_of = dtl::Is_instance_of<T, F>::value;
+    concept specialization_of = dtl::Is_specialization_of<T, F>::value;
     template <class T, class... Ts>
     concept one_of = std::disjunction_v<std::is_same<T, Ts>...>;
     template <class T>
@@ -213,11 +213,7 @@ namespace utl {
 #else
         true;
 #endif
-
     constexpr bool compiling_in_release_mode = !compiling_in_debug_mode;
-
-
-    auto filename_without_path(std::string_view path) noexcept -> std::string_view;
 
 
     class [[nodiscard]] Exception : public std::exception {
@@ -303,6 +299,9 @@ namespace utl {
         [[nodiscard]] constexpr operator T const&&()    const&& { return std::move(m_value); }
         [[nodiscard]] constexpr operator T      &&()         && { return std::move(m_value); }
     };
+
+
+    auto filename_without_path(std::string_view path) noexcept -> std::string_view;
 
 
     constexpr auto size = [](auto const& x)
