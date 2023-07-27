@@ -98,6 +98,8 @@ namespace cst {
             Mutability,
             Wildcard>;
         Variant value;
+
+        auto source_view() const -> utl::Source_view;
     };
 
     using Template_arguments = Surrounded<Separated_sequence<Template_argument>>;
