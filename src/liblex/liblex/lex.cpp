@@ -504,7 +504,8 @@ namespace {
 
 
 auto kieli::lex(Lex_arguments&& lex_arguments) -> Lex_result {
-    utl::always_assert(lex_arguments.source->string().data() != nullptr);
+    std::string_view const source_string = lex_arguments.source->string();
+    utl::always_assert(source_string.data() != nullptr);
     auto tokens = utl::vector_with_capacity<Token>(1024);
     std::string_view current_trivia;
 
@@ -520,7 +521,7 @@ auto kieli::lex(Lex_arguments&& lex_arguments) -> Lex_result {
     Token end_of_input_token = make_token(
         context.position(),
         context.position(),
-        lex_arguments.source->string(),
+        { source_string.data() + source_string.size(), 0 },
         Token::Variant {},
         Token::Type::end_of_input,
         lex_arguments.source);

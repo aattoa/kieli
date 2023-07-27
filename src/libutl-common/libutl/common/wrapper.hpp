@@ -143,7 +143,7 @@ namespace utl {
     };
 
     template <class T>
-    concept wrapper = instance_of<T, Wrapper>;
+    concept wrapper = specialization_of<T, Wrapper>;
 
 }
 

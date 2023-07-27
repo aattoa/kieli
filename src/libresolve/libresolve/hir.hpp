@@ -447,7 +447,7 @@ template <> struct dtl::To_AST_impl<name> : std::type_identity<ast::definition::
     using Typeclass_template = Template<Typeclass>;
 
     struct Implementation {
-        template <utl::instance_of<libresolve::Definition_info> Info>
+        template <utl::specialization_of<libresolve::Definition_info> Info>
         using Map = utl::Flatmap<utl::Pooled_string, utl::Wrapper<Info>>;
 
         struct Definitions {

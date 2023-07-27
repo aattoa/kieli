@@ -63,7 +63,7 @@ namespace libparse {
 
     template <class P>
     concept parser = requires (P p, Parse_context context) {
-        { p(context) } -> utl::instance_of<tl::optional>;
+        { p(context) } -> utl::specialization_of<tl::optional>;
     };
 
     template <parser auto p>
