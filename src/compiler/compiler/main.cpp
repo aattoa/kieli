@@ -24,7 +24,6 @@ namespace {
         return std::cerr << utl::Color::red << "Error: " << utl::Color::white;
     }
 
-
     template <void(*f)(kieli::Lex_result&&)>
     auto generic_repl() {
         for (;;) {
@@ -155,7 +154,7 @@ auto main(int argc, char const** argv) -> int try {
         else if (*phase == "rei")
             (void)reify(do_resolve());
         else if (*phase == "res")
-            (void)do_resolve(); // std::println("{}", utl::formatting::delimited_range(do_resolve().functions, "\n\n"));
+            utl::print("{}\n", utl::formatting::delimited_range(utl::map(hir::to_string, do_resolve().functions), "\n\n"));
         else if (*phase == "comp")
             (void)compiler::compile({ .source_directory_path = std::move(source_directory_path), .main_file_name = "main.kieli" });
         else
