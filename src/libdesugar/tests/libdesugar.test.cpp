@@ -16,10 +16,10 @@ namespace {
     }
 }
 
-#define TEST(name) TEST_CASE(name, "[libdesugar]") // NOLINT
+#define TEST(name) TEST_CASE("desugar " name, "[libdesugar]") // NOLINT
 
 
-// TODO: test binary operator invocations, struct initializer expressions
+// TODO: struct initializer expressions
 
 
 TEST("block expression") {
@@ -31,10 +31,32 @@ TEST("block expression") {
 }
 
 TEST("function body normalization") {
-    std::string_view const normalized = "fn f() { 5 }";
+    static constexpr std::string_view normalized = "fn f() { 5 }";
     REQUIRE(normalized == desugar("fn f() { 5 }"));
     REQUIRE(normalized == desugar("fn f() = 5"));
     REQUIRE(normalized == desugar("fn f() = { 5 }"));
+}
+
+TEST("operator precedence") {
+    /*
+        precedence table:
+        "*", "/", "%"
+        "+", "-"
+        "?=", "!="
+        "<", "<=", ">=", ">"
+        "&&", "||"
+        ":=", "+=", "*=", "/=", "%="
+     */
+    REQUIRE(desugar("fn f() { (a * b + c) + (d + e * f) }")
+        == "fn f() { (((a * b) + c) + (d + (e * f))) }");
+    REQUIRE(desugar("fn f() { a <$> b && c <= d ?= e + f / g }")
+        == "fn f() { (a <$> (b && (c <= (d ?= (e + (f / g)))))) }");
+    REQUIRE(desugar("fn f() { a / b + c ?= d <= e && f <$> g }")
+        == "fn f() { ((((((a / b) + c) ?= d) <= e) && f) <$> g) }");
+    REQUIRE(desugar("fn f() { a + b && c }")
+        == "fn f() { ((a + b) && c) }");
+    REQUIRE(desugar("fn f() { a %% c % d ?= e }")
+        == "fn f() { (a %% ((c % d) ?= e)) }");
 }
 
 TEST("desugar while loop expression") {
