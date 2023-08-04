@@ -207,13 +207,13 @@ namespace utl {
     }
 
 
-    constexpr bool compiling_in_debug_mode =
+    inline constexpr bool compiling_in_debug_mode =
 #ifdef NDEBUG
         false;
 #else
         true;
 #endif
-    constexpr bool compiling_in_release_mode = !compiling_in_debug_mode;
+    inline constexpr bool compiling_in_release_mode = !compiling_in_debug_mode;
 
 
     class [[nodiscard]] Exception : public std::exception {
@@ -272,8 +272,8 @@ namespace utl {
     template <class Fst, class Snd>
     Pair(Fst, Snd) -> Pair<std::remove_cvref_t<Fst>, std::remove_cvref_t<Snd>>;
 
-    constexpr auto first  = [](auto&& pair) noexcept -> decltype(auto) { return bootleg::forward_like<decltype(pair)>(pair.first); };
-    constexpr auto second = [](auto&& pair) noexcept -> decltype(auto) { return bootleg::forward_like<decltype(pair)>(pair.second); };
+    inline constexpr auto first  = [](auto&& pair) noexcept -> decltype(auto) { return bootleg::forward_like<decltype(pair)>(pair.first); };
+    inline constexpr auto second = [](auto&& pair) noexcept -> decltype(auto) { return bootleg::forward_like<decltype(pair)>(pair.second); };
 
 
     // Value wrapper that is used to disable default constructors
@@ -304,7 +304,7 @@ namespace utl {
     auto filename_without_path(std::string_view path) noexcept -> std::string_view;
 
 
-    constexpr auto size = [](auto const& x)
+    inline constexpr auto size = [](auto const& x)
         noexcept(noexcept(std::size(x))) -> Usize
     {
         return std::size(x);

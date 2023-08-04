@@ -649,12 +649,12 @@ template <> struct dtl::To_AST_impl<name> : std::type_identity<ast::definition::
     auto format_to(Template_argument        const&, std::string&) -> void;
     auto format_to(Function_parameter       const&, std::string&) -> void;
 
-    auto to_string(auto const& x) -> std::string
+    inline constexpr auto to_string = [](auto const& x) -> std::string
         requires requires (std::string out) { hir::format_to(x, out); }
     {
         std::string output;
         hir::format_to(x, output);
         return output;
-    }
+    };
 
 }

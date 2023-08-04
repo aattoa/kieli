@@ -156,12 +156,12 @@ namespace cir {
     auto format_to(Pattern    const&, std::string&) -> void;
     auto format_to(Type       const&, std::string&) -> void;
 
-    auto to_string(auto const& x) -> std::string
-        requires requires { cir::format_to(x, std::declval<std::string&>()); }
+    inline constexpr auto to_string = [](auto const& x) -> std::string
+        requires requires (std::string out) { cir::format_to(x, out); }
     {
         std::string output;
         cir::format_to(x, output);
         return output;
-    }
+    };
 
 }
