@@ -10,7 +10,7 @@ struct std::formatter<__VA_ARGS__> : utl::formatting::Formatter_base {          
 
 #define DEFINE_FORMATTER(...) \
 auto hir::format_to(__VA_ARGS__ const& value, std::string& string) -> void { std::format_to(std::back_inserter(string), "{}", value); } \
-auto std::formatter<__VA_ARGS__>::format([[maybe_unused]] __VA_ARGS__ const& value, auto& context) const -> decltype(context.out())
+auto std::formatter<__VA_ARGS__>::format(__VA_ARGS__ const& value, auto& context) const -> decltype(context.out())
 
 DECLARE_FORMATTER(hir::Expression);
 DECLARE_FORMATTER(hir::Type);
@@ -67,16 +67,22 @@ struct std::formatter<hir::Unification_type_variable_state::Unsolved> : utl::for
 template <>
 struct std::formatter<hir::Enum_constructor> : utl::formatting::Formatter_base {
     auto format(hir::Enum_constructor const& constructor, auto& context) const {
-        (void)constructor;
-        return context.out();
+        std::format_to(context.out(), "{}::{}", constructor.enum_type, constructor.name);
+        return constructor.payload_type.has_value()
+            ? std::format_to(context.out(), "({})", *constructor.payload_type)
+            : context.out();
     }
 };
 
 template <>
 struct std::formatter<hir::Struct::Member> : utl::formatting::Formatter_base {
     auto format(hir::Struct::Member const& member, auto& context) const {
-        (void)member;
-        return context.out();
+        return std::format_to(
+            context.out(),
+            "{}{}: {}",
+            member.is_public ? "pub " : "",
+            member.name,
+            member.type);
     }
 };
 
@@ -251,7 +257,7 @@ namespace {
         }
         auto operator()(hir::pattern::As const& as) {
             std::format_to(out, "{} as ", as.aliased_pattern);
-            operator()(as.alias); // FIXME
+            operator()(as.alias);
         }
         auto operator()(hir::pattern::Guarded const& guarded) {
             std::format_to(out, "{} if {}", guarded.guarded_pattern, guarded.guard);
@@ -329,23 +335,64 @@ DEFINE_FORMATTER(hir::Alias) {
 }
 
 DEFINE_FORMATTER(hir::Typeclass) {
-    return context.out();
+    if (value.type_signatures.empty() && value.function_signatures.empty())
+        return std::format_to(context.out(), "class {} {{}}", value.name);
+    std::format_to(context.out(), "class {} {{\n", value.name);
+    for (auto const& [name, signature] : value.type_signatures) {
+        std::format_to(context.out(), "{}", name);
+        if (!signature.classes.empty())
+            std::format_to(context.out(), ": {}\n", signature.classes);
+    }
+    for (auto const& [name, signature] : value.function_signatures) {
+        std::format_to(context.out(), "fn {}", name);
+        if (!signature.template_parameters.empty())
+            std::format_to(context.out(), "[{}]", signature.template_parameters);
+        std::format_to(context.out(), "({}): {}", signature.parameters, signature.return_type);
+    }
+    return std::format_to(context.out(), "}}");
 }
 
 DEFINE_FORMATTER(hir::Implementation) {
-    return context.out();
+    return std::format_to(
+        context.out(),
+        "impl {} {{ /*TODO*/ }}",
+        value.self_type);
 }
 
 DEFINE_FORMATTER(hir::Instantiation) {
-    return context.out();
+    return std::format_to(
+        context.out(),
+        "inst {} for {} {{ /*TODO*/ }}",
+        value.class_reference,
+        value.self_type);
 }
 
 DEFINE_FORMATTER(hir::Unification_variable_tag) {
-    return context.out();
+    return std::format_to(context.out(), "'{}", value.value);
 }
 
 DEFINE_FORMATTER(hir::Template_parameter) {
-    return context.out();
+    utl::match(value.value,
+        [&](hir::Template_parameter::Type_parameter const& parameter) {
+            if (parameter.name.has_value())
+                std::format_to(context.out(), "{}", *parameter.name);
+            else
+                std::format_to(context.out(), "implicit");
+
+            if (!parameter.classes.empty()) {
+                std::format_to(
+                    context.out(),
+                    ": {}",
+                    utl::formatting::delimited_range(parameter.classes, " + "));
+            }
+        },
+        [&](hir::Template_parameter::Mutability_parameter const& parameter) {
+            std::format_to(context.out(), "{}: mut", parameter.name);
+        },
+        [&](hir::Template_parameter::Value_parameter const& parameter) {
+            std::format_to(context.out(), "{}: {}", parameter.name, parameter.type);
+        });
+    return std::format_to(context.out(), " '{}", value.reference_tag.value);
 }
 
 DEFINE_FORMATTER(hir::Template_argument) {
