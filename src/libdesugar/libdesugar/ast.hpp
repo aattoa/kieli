@@ -531,12 +531,12 @@ namespace ast {
     auto format_to(Template_parameter const&, std::string&) -> void;
     auto format_to(Template_argument  const&, std::string&) -> void;
 
-    auto to_string(auto const& x) -> std::string
+    inline constexpr auto to_string = [](auto const& x) -> std::string
         requires requires (std::string out) { ast::format_to(x, out); }
     {
         std::string output;
         ast::format_to(x, output);
         return output;
-    }
+    };
 
 }
