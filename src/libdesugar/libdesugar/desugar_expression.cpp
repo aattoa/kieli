@@ -5,8 +5,61 @@ using namespace libdesugar;
 
 
 namespace {
+    constexpr std::tuple operator_precedence_table {
+        std::to_array<std::string_view>({ "*", "/", "%" }),
+        std::to_array<std::string_view>({ "+", "-" }),
+        std::to_array<std::string_view>({ "?=", "!=" }),
+        std::to_array<std::string_view>({ "<", "<=", ">=", ">" }),
+        std::to_array<std::string_view>({ "&&", "||" }),
+        std::to_array<std::string_view>({ ":=", "+=", "*=", "/=", "%=" }),
+    };
+    constexpr utl::Usize lowest_operator_precedence =
+        -1 + std::tuple_size_v<decltype(operator_precedence_table)>;
+
+    using Operator_and_operand =
+        cst::expression::Binary_operator_invocation_sequence::Operator_and_operand;
+
+    template <utl::Usize precedence = lowest_operator_precedence>
+    auto desugar_binary_operator_invocation_sequence(
+        Desugar_context&                    context,
+        utl::Wrapper<cst::Expression> const leftmost_expression,
+        Operator_and_operand const*&        tail_begin,
+        Operator_and_operand const* const   tail_end) -> ast::Expression
+    {
+        if constexpr (precedence != static_cast<utl::Usize>(-1)) {
+            auto const recurse = [&](utl::Wrapper<cst::Expression> const leftmost) {
+                return desugar_binary_operator_invocation_sequence<precedence - 1>(context, leftmost, tail_begin, tail_end);
+            };
+            ast::Expression left = recurse(leftmost_expression);
+            while (tail_begin != tail_end) {
+                auto const& operator_and_operand = *tail_begin;
+                if constexpr (precedence != lowest_operator_precedence) {
+                    static constexpr auto current_operator_group = std::get<precedence>(operator_precedence_table);
+                    if (!ranges::contains(current_operator_group, operator_and_operand.operator_name.view()))
+                        return left;
+                }
+                ++tail_begin;
+                ast::Expression right_operand = recurse(operator_and_operand.right_operand);
+                utl::Source_view const source_view = left.source_view.combine_with(right_operand.source_view);
+                left = ast::Expression {
+                    .value = ast::expression::Binary_operator_invocation {
+                        .left  = context.wrap(std::move(left)),
+                        .right = context.wrap(std::move(right_operand)),
+                        .op    = operator_and_operand.operator_name,
+                    },
+                    .source_view = source_view,
+                };
+            }
+            return left;
+        }
+        else {
+            // precedence == -1
+            return context.desugar(*leftmost_expression);
+        }
+    }
+
     struct Expression_desugaring_visitor {
-        Desugar_context      & context;
+        Desugar_context&       context;
         cst::Expression const& this_expression;
 
         template <compiler::literal Literal>
@@ -91,6 +144,7 @@ namespace {
         }
         auto operator()(cst::expression::Block const& block) -> ast::Expression::Variant {
             std::vector<ast::Expression> side_effects;
+            side_effects.reserve(block.side_effects.size());
             for (auto const& side_effect : block.side_effects)
                 side_effects.push_back(context.desugar(*side_effect.expression));
             if (block.result_expression.has_value()) {
@@ -206,8 +260,10 @@ namespace {
             }
             return ast_struct_initializer;
         }
-        auto operator()(cst::expression::Binary_operator_invocation_sequence const&) -> ast::Expression::Variant {
-            utl::todo();
+        auto operator()(cst::expression::Binary_operator_invocation_sequence const& sequence) -> ast::Expression::Variant {
+            Operator_and_operand const*       tail_begin = sequence.sequence_tail.data();
+            Operator_and_operand const* const tail_end   = tail_begin + sequence.sequence_tail.size();
+            return desugar_binary_operator_invocation_sequence(context, sequence.leftmost_operand, tail_begin, tail_end).value;
         }
         auto operator()(cst::expression::Template_application const& application) -> ast::Expression::Variant {
             return ast::expression::Template_application {
@@ -351,7 +407,6 @@ namespace {
             // only occur as the condition of if-let or while-let expressions.
             utl::unreachable();
         }
-
     };
 }
 
