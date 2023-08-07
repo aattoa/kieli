@@ -1,7 +1,7 @@
 #pragma once
 
 #include <libutl/common/utilities.hpp>
-#include <compiler/compiler.hpp>
+#include <libcompiler-pipeline/compiler-pipeline.hpp>
 #include <libdesugar/ast.hpp>
 #include <libparse/parse.hpp>
 

@@ -3,7 +3,6 @@
 #include <libutl/common/utilities.hpp>
 #include <libutl/common/wrapper.hpp>
 #include <libutl/common/safe_integer.hpp>
-#include <liblex/token.hpp>
 
 
 /*

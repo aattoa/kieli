@@ -2,7 +2,6 @@
 
 #include <libutl/common/utilities.hpp>
 #include <libutl/common/wrapper.hpp>
-#include <libutl/source/source.hpp>
 #include <liblex/token.hpp>
 #include <libcompiler-pipeline/compiler-pipeline.hpp>
 

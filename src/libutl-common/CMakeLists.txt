@@ -1,5 +1,11 @@
 add_library(libutl-common STATIC)
 
+target_include_directories(libutl-common
+    PUBLIC .
+    PUBLIC ${PROJECT_SOURCE_DIR}/dependencies/range-v3/include
+    PUBLIC ${PROJECT_SOURCE_DIR}/dependencies/optional/include
+    PUBLIC ${PROJECT_SOURCE_DIR}/dependencies/expected/include)
+
 target_sources(libutl-common
     PRIVATE libutl/common/flatmap.hpp
     PRIVATE libutl/common/libutl-common.cpp
@@ -13,7 +19,7 @@ target_sources(libutl-common
     PRIVATE libutl/common/wrapper.hpp)
 
 target_precompile_headers(libutl-common
-    PRIVATE libutl/common/utilities.hpp)
+    PUBLIC libutl/common/utilities.hpp)
 
 kieli_add_tests(libutl-common
     TESTS utilities flatmap safe_integer pooled_string)

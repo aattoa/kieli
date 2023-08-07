@@ -1,5 +1,7 @@
 add_library(liblex STATIC)
 
+target_include_directories(liblex PUBLIC .)
+
 target_sources(liblex
     PRIVATE liblex/context.cpp
     PRIVATE liblex/context.hpp
@@ -11,9 +13,7 @@ target_sources(liblex
     PRIVATE liblex/token.hpp)
 
 target_link_libraries(liblex
-    PRIVATE libutl-source
-    PRIVATE libutl-diagnostics
-    PRIVATE libcompiler-pipeline)
+    PUBLIC libcompiler-pipeline)
 
 kieli_consume_libutl_common(liblex)
 

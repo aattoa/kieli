@@ -1,5 +1,7 @@
 add_library(libdesugar STATIC)
 
+target_include_directories(libdesugar PUBLIC .)
+
 target_sources(libdesugar
     PRIVATE libdesugar/ast.cpp
     PRIVATE libdesugar/ast.hpp
@@ -13,7 +15,8 @@ target_sources(libdesugar
     PRIVATE libdesugar/format_ast.cpp)
 
 target_link_libraries(libdesugar
-    PRIVATE libparse)
+    PUBLIC libparse
+    PUBLIC libcompiler-pipeline)
 
 kieli_consume_libutl_common(libdesugar)
 

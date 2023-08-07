@@ -1,11 +1,10 @@
 cmake_minimum_required(VERSION 3.24)
 project(kieli)
 
-# Set the global C++ standard
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
 
-# Set global warning settings
 if (MSVC)
     add_compile_options(
         "/W4"
@@ -24,31 +23,8 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
     add_compile_options(-fsized-deallocation)
 endif ()
 
-# Set globally visible include directories
-include_directories(
-    src/libutl-common
-    src/libutl-readline
-    src/libutl-source
-    src/libutl-color
-    src/libutl-cli
-    src/libutl-diagnostics
-    src/liblex
-    src/libparse
-    src/libdesugar
-    src/libresolve
-    src/libreify
-    src/liblower
-    src/libvm
-    src/libcompiler-pipeline
-    src/libformat
-    src/compiler
-    dependencies/range-v3/include
-    dependencies/optional/include
-    dependencies/expected/include)
-
-add_subdirectory(dependencies/Catch2)
-
 # Enable CTest registration
+add_subdirectory(dependencies/Catch2)
 list(APPEND CMAKE_MODULE_PATH dependencies/Catch2/extras)
 include(CTest)
 include(Catch)
@@ -60,6 +36,8 @@ function (kieli_add_tests component)
         set(executable ${component}-test-${test})
         add_executable(${executable}
             ${CMAKE_CURRENT_SOURCE_DIR}/tests/${test}.test.cpp)
+        target_include_directories(${executable}
+            PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
         foreach (source IN LISTS _EXTRA_SOURCES)
             target_sources(${executable}
                 PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/tests/${source})
@@ -79,7 +57,7 @@ endfunction ()
 
 function (kieli_consume_libutl_common component)
     target_precompile_headers(${component} REUSE_FROM libutl-common)
-    target_link_libraries(${component} PRIVATE libutl-common)
+    target_link_libraries(${component} PUBLIC libutl-common)
 endfunction ()
 
 add_subdirectory(src/libutl-common)

@@ -1,5 +1,7 @@
 add_library(libutl-readline STATIC)
 
+target_include_directories(libutl-readline PUBLIC .)
+
 target_sources(libutl-readline
     PRIVATE libutl/readline/readline.cpp
     PRIVATE libutl/readline/readline.hpp)

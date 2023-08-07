@@ -1,5 +1,7 @@
 add_library(libreify STATIC)
 
+target_include_directories(libreify PUBLIC .)
+
 target_sources(libreify
     PRIVATE libreify/cir.hpp
     PRIVATE libreify/expression_reification.cpp
@@ -10,5 +12,9 @@ target_sources(libreify
     PRIVATE libreify/reify.cpp
     PRIVATE libreify/reify.hpp
     PRIVATE libreify/type_reification.cpp)
+
+target_link_libraries(libreify
+    PUBLIC libresolve
+    PUBLIC libcompiler-pipeline)
 
 kieli_consume_libutl_common(libreify)
