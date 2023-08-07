@@ -1,7 +1,6 @@
 #pragma once
 
 #include <libutl/common/utilities.hpp>
-#include <libutl/diagnostics/diagnostics.hpp>
 #include <liblex/lex.hpp>
 #include <libparse/cst.hpp>
 

@@ -1,6 +1,6 @@
 #pragma once
 
-#include <compiler/compiler.hpp>
+#include <libcompiler-pipeline/compiler-pipeline.hpp>
 #include <libreify/reify.hpp>
 #include <liblower/lir.hpp>
 

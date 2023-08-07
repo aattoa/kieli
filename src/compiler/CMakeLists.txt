@@ -1,5 +1,7 @@
 add_executable(kieli)
 
+target_include_directories(kieli PUBLIC .)
+
 target_sources(kieli
     PRIVATE compiler/compiler.cpp
     PRIVATE compiler/compiler.hpp

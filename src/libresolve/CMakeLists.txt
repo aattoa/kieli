@@ -1,5 +1,7 @@
 add_library(libresolve STATIC)
 
+target_include_directories(libresolve PUBLIC .)
+
 target_sources(libresolve
     PRIVATE libresolve/constraint.cpp
     PRIVATE libresolve/definition_resolution.cpp
@@ -21,9 +23,8 @@ target_sources(libresolve
     PRIVATE libresolve/unification.cpp)
 
 target_link_libraries(libresolve
-    PRIVATE libcompiler-pipeline
-    PRIVATE libutl-diagnostics
-    PRIVATE libdesugar)
+    PUBLIC libdesugar
+    PUBLIC libcompiler-pipeline)
 
 kieli_consume_libutl_common(libresolve)
 

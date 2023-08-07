@@ -1,5 +1,7 @@
 add_library(libparse STATIC)
 
+target_include_directories(libparse PUBLIC .)
+
 target_sources(libparse
     PRIVATE libparse/cst.cpp
     PRIVATE libparse/cst.hpp
@@ -14,9 +16,9 @@ target_sources(libparse
     PRIVATE libparse/test_interface.hpp)
 
 target_link_libraries(libparse
-    PRIVATE libutl-diagnostics
-    PRIVATE libcompiler-pipeline
-    PRIVATE liblex)
+    PUBLIC liblex
+    PUBLIC libformat
+    PUBLIC libcompiler-pipeline)
 
 kieli_consume_libutl_common(libparse)
 
