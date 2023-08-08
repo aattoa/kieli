@@ -359,7 +359,10 @@ auto libparse::is_name_token_type(Token_type const type) noexcept -> bool {
 }
 
 auto libparse::optional_token(kieli::Lexical_token const* const token) -> tl::optional<cst::Token> {
-    return token ? tl::optional { cst::Token::from_lexical(token) } : tl::nullopt;
+    if (token)
+        return tl::optional<cst::Token> { cst::Token::from_lexical(token) };
+    else
+        return tl::nullopt;
 }
 
 libparse::Parse_context::Parse_context(kieli::Lex_result&& lex_result, cst::Node_arena&& node_arena) noexcept

@@ -44,7 +44,7 @@ TEST("quote-character literal") {
 }
 
 TEST("valid string literals") {
-    REQUIRE(lex_success(R"("test\t\",", 'a', '\\')") ==
+    REQUIRE(lex_success("\"test\t\\\",\", 'a', '\\\\'") ==
         "(str: 'test\t\",'), ,, (char: 'a'), ,, (char: '\\'), end of input");
 }
 

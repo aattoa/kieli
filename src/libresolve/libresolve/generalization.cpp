@@ -74,7 +74,10 @@ auto libresolve::Context::generalize_to(hir::Type const type, std::vector<hir::T
         auto const tag = fresh_template_parameter_reference_tag();
 
         output.push_back(hir::Template_parameter {
-            .value            = hir::Template_parameter::Type_parameter { .classes = std::move(unsolved.classes) },
+            .value = hir::Template_parameter::Type_parameter {
+                .classes = std::move(unsolved.classes),
+                .name    = tl::nullopt, // Implicit template parameters have no name
+            },
             .default_argument = hir::Template_default_argument {
                 .argument = { ast::Template_argument::Wildcard { type.source_view() } },
                 .scope    = nullptr, // Wildcard arguments need no scope
