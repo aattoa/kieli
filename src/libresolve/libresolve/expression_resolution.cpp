@@ -1094,13 +1094,8 @@ namespace {
         }
 
         auto operator()(ast::expression::Hole&) -> hir::Expression {
-            // Workaround for a bug in GCC 13.1.1.
-            // Directly constructing `hir::Expression::Variant` from a `hir::Expression::Hole` causes GCC to get stuck and its memory usage to grow without bound.
-
-            hir::Expression::Variant value;
-            value.emplace<hir::expression::Hole>();
             return {
-                .value       = std::move(value),
+                .value       = hir::expression::Hole {},
                 .type        = context.fresh_general_unification_type_variable(this_expression.source_view),
                 .source_view = this_expression.source_view,
                 .mutability  = context.immut_constant(this_expression.source_view),
