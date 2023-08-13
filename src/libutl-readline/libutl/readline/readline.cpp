@@ -2,8 +2,18 @@
 #include <libutl/readline/readline.hpp>
 
 
-#if defined(linux) && __has_include(<readline/readline.h>) && __has_include(<readline/history.h>)
+#if !__has_include(<readline/readline.h>) || !__has_include(<readline/history.h>)
 
+auto utl::readline(std::string const& prompt) -> std::string {
+    std::cout << prompt;
+    std::string input;
+    std::getline(std::cin, input);
+    return input;
+}
+
+auto utl::add_to_readline_history(std::string const&) -> void {}
+
+#else
 
 #include <readline/readline.h>
 #include <readline/history.h>
@@ -80,19 +90,5 @@ auto utl::add_to_readline_history(std::string const& string) -> void {
     add_line_to_history_file(string);
     previous_readline_input = string;
 }
-
-
-#else
-
-
-auto utl::readline(std::string const& prompt) -> std::string {
-    std::cout << prompt;
-    std::string input;
-    std::getline(std::cin, input);
-    return input;
-}
-
-auto utl::add_to_readline_history(std::string const&) -> void {}
-
 
 #endif
