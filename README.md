@@ -46,6 +46,6 @@ On Linux, these build steps have been tested with the following:
 
 * CMake `3.27.1`
 * Build systems: Ninja `1.11.1`, GNU Make `4.4.1`
-* Compilers: clang `15.0.7`, GCC `13.1.1`
+* Compilers: clang `15.0.7`, GCC `13.2.1`
 
 On Windows, these build steps have been tested with Visual Studio 2022 `17.6.5`.
