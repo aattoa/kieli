@@ -23,24 +23,27 @@ namespace {
 
     auto is_valid_history_file_path(std::filesystem::path const& path) -> bool {
         try {
-            return !std::filesystem::exists(path)
-                || std::filesystem::is_regular_file(path);
+            return !std::filesystem::exists(path) || std::filesystem::is_regular_file(path);
         }
         catch (std::filesystem::filesystem_error const&) {
             return false;
         }
     }
 
-    auto determine_history_file_path() -> tl::optional<std::filesystem::path> {
-        if (char const* const path_override = std::getenv("KIELI_HISTORY")) {
-            return path_override;
-        }
-        else if (char const* const home = std::getenv("HOME")) {
-            std::filesystem::path path = home;
-            path /= ".kieli_history";
-            return path;
-        }
+    auto xdg_state_home_filename() -> tl::optional<std::filesystem::path> {
+        static constexpr auto filename = ".kieli_history";
+        if (char const* const state_home = std::getenv("XDG_STATE_HOME"))
+            return std::filesystem::path { state_home } / filename;
+        if (char const* const home = std::getenv("HOME"))
+            return std::filesystem::path { home } / ".local" / "state" / filename;
         return tl::nullopt;
+    }
+
+    auto determine_history_file_path() -> tl::optional<std::filesystem::path> {
+        if (char const* const override = std::getenv("KIELI_HISTORY"))
+            return override;
+        else
+            return xdg_state_home_filename();
     }
 
     auto read_history_file_to_current_history() -> void {
@@ -55,8 +58,8 @@ namespace {
         std::string line;
         while (std::getline(file, line)) {
             ::add_history(line.c_str());
-            // `line` is cleared when getline fails, so this has to be done every time.
             previous_readline_input = line;
+            // `line` is cleared when getline fails, so previous input has to be set every time.
         }
     }
 
