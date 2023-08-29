@@ -16,6 +16,7 @@ TEST("utl::Source::read") {
     static constexpr std::string_view test_string = "test string 123456789";
 
     {
+        REQUIRE(!std::filesystem::exists(path));
         std::ofstream file { path };
         REQUIRE(file.is_open());
         file << test_string;

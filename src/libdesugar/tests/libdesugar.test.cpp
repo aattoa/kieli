@@ -57,6 +57,8 @@ TEST("operator precedence") {
         == "fn f() { ((a + b) && c) }");
     REQUIRE(desugar("fn f() { a %% c % d ?= e }")
         == "fn f() { (a %% ((c % d) ?= e)) }");
+    REQUIRE(desugar("fn f() { a + b + c + d }")
+        == "fn f() { (((a + b) + c) + d) }");
 }
 
 TEST("desugar while loop expression") {
