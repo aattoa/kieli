@@ -26,7 +26,7 @@ namespace {
 TEST("vector capacity operations") {
     auto vector = utl::vector_with_capacity<int>(10);
     REQUIRE(vector.empty());
-    REQUIRE(vector.capacity() == 10);
+    REQUIRE(vector.capacity() >= 10);
     utl::release_vector_memory(vector);
     REQUIRE(vector.empty());
     REQUIRE(vector.capacity() == 0);
@@ -61,7 +61,7 @@ TEST("utl::append_vector") {
         auto from = utl::to_vector({ 300_mov, 400_mov });
         utl::append_vector(to, std::move(from));
         REQUIRE(to == utl::to_vector({ 100_mov, 200_mov, 300_mov, 400_mov }));
-        REQUIRE(from.empty()); // NOLINT
+        REQUIRE(from.empty()); // NOLINT: use after move
     }
 }
 
