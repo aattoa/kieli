@@ -5,6 +5,7 @@ dependencies
 .cache
 .vs
 .idea
+*.pdf
 
 # Build output
 build

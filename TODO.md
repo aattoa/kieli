@@ -33,7 +33,11 @@
 - Profile compilation with `-ftime-trace`
 - Try the mold linker, `-fuse-ld=mold`
 
+## clang-tidy
+- Assignments incorrectly align across multiple lines
+- Return type constraints should stay on the same line
+- Some ternary conditionals are excessively indented
+
 ## Miscellaneous
 - Parameters: in, inout, out, move, forward ?
-- clang-format
 - Fix compilation phase `#include` leakage
