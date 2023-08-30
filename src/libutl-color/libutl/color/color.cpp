@@ -1,11 +1,9 @@
 #include <libutl/common/utilities.hpp>
 #include <libutl/color/color.hpp>
 
-
 namespace {
     constinit bool color_formatting_state = true;
 }
-
 
 #ifdef _WIN32
 
@@ -13,24 +11,24 @@ namespace {
 // which would fail to compile because it requires some MS-specific compiler extensions.
 
 extern "C" {
-    typedef unsigned long DWORD;
-    typedef int           BOOL;
-    typedef void*         HANDLE;
-    typedef DWORD*        LPDWORD;
-    typedef long long     LONG_PTR;
+typedef unsigned long DWORD;
+typedef int           BOOL;
+typedef void*         HANDLE;
+typedef DWORD*        LPDWORD;
+typedef long long     LONG_PTR;
 
-    HANDLE __declspec(dllimport) GetStdHandle(DWORD);
-    BOOL   __declspec(dllimport) SetConsoleMode(HANDLE, DWORD);
-    BOOL   __declspec(dllimport) GetConsoleMode(HANDLE, LPDWORD);
+HANDLE __declspec(dllimport) GetStdHandle(DWORD);
+BOOL __declspec(dllimport) SetConsoleMode(HANDLE, DWORD);
+BOOL __declspec(dllimport) GetConsoleMode(HANDLE, LPDWORD);
 }
 
 #define STD_OUTPUT_HANDLE                  ((DWORD)-11)
 #define INVALID_HANDLE_VALUE               ((HANDLE)(LONG_PTR)-1)
 #define ENABLE_VIRTUAL_TERMINAL_PROCESSING 0x0004
 
-
 namespace {
-    auto enable_virtual_terminal_processing() -> void {
+    auto enable_virtual_terminal_processing() -> void
+    {
         static bool has_been_enabled = false;
 
         if (!has_been_enabled) {
@@ -58,14 +56,14 @@ namespace {
             }
         }
     }
-}
+} // namespace
 
 #else
 #define enable_virtual_terminal_processing() ((void)0)
 #endif
 
-
-auto utl::color_string(utl::Color const color) noexcept -> std::string_view {
+auto utl::color_string(utl::Color const color) noexcept -> std::string_view
+{
     static constexpr auto color_map = std::to_array<std::string_view>({
         "\033[31m",       // dark red
         "\033[32m",       // dark green
@@ -84,20 +82,24 @@ auto utl::color_string(utl::Color const color) noexcept -> std::string_view {
         "\033[90m", // grey
 
         "\033[30m", // black
-        "\033[0m" , // white
+        "\033[0m",  // white
     });
     static_assert(color_map.size() == utl::enumerator_count<utl::Color>);
     enable_virtual_terminal_processing();
-    if (color_formatting_state)
+    if (color_formatting_state) {
         return color_map[as_index(color)];
-    else
+    }
+    else {
         return {};
+    }
 }
 
-auto utl::set_color_formatting_state(bool const state) noexcept -> void {
+auto utl::set_color_formatting_state(bool const state) noexcept -> void
+{
     color_formatting_state = state;
 }
 
-auto utl::operator<<(std::ostream& os, utl::Color const color) -> std::ostream& {
+auto utl::operator<<(std::ostream& os, utl::Color const color) -> std::ostream&
+{
     return os << color_string(color);
 }

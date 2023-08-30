@@ -1,16 +1,33 @@
 #include <libutl/common/utilities.hpp>
 #include <liblex/token.hpp>
 
-
 namespace {
     constexpr auto type_strings_array = std::to_array<std::string_view>({
         "lexical error",
 
-        ".", ",", ":", ";", "::",
+        ".",
+        ",",
+        ":",
+        ";",
+        "::",
 
-        "&", "*", "+", "?", "=", "|", "\\", "<-", "->", R"(???)",
+        "&",
+        "*",
+        "+",
+        "?",
+        "=",
+        "|",
+        "\\",
+        "<-",
+        "->",
+        R"(???)",
 
-        "(", ")", "{", "}", "[", "]",
+        "(",
+        ")",
+        "{",
+        "}",
+        "[",
+        "]",
 
         "let",
         "mut",
@@ -52,9 +69,16 @@ namespace {
         "macro",
         "global",
 
-        "_", "lower", "upper", "op",
+        "_",
+        "lower",
+        "upper",
+        "op",
 
-        "int", "float", "str", "char", "bool",
+        "int",
+        "float",
+        "str",
+        "char",
+        "bool",
 
         "String",
         "Float",
@@ -69,7 +93,8 @@ namespace {
         "U32",
         "U64",
 
-        "self", "Self",
+        "self",
+        "Self",
 
         "end of input",
     });
@@ -77,39 +102,78 @@ namespace {
 
 static_assert(std::is_trivially_copyable_v<kieli::Lexical_token>);
 
-auto kieli::Lexical_token::as_integer  () const noexcept -> decltype(compiler::Integer::value)   { return value_as<compiler::Integer>().value; }
-auto kieli::Lexical_token::as_floating () const noexcept -> decltype(compiler::Floating::value)  { return value_as<compiler::Floating>().value; }
-auto kieli::Lexical_token::as_character() const noexcept -> decltype(compiler::Character::value) { return value_as<compiler::Character>().value; }
-auto kieli::Lexical_token::as_boolean  () const noexcept -> decltype(compiler::Boolean::value)   { return value_as<compiler::Boolean>().value; }
-auto kieli::Lexical_token::as_string   () const noexcept -> utl::Pooled_string                   { return value_as<utl::Pooled_string>(); }
+auto kieli::Lexical_token::as_integer() const noexcept -> decltype(compiler::Integer::value)
+{
+    return value_as<compiler::Integer>().value;
+}
 
+auto kieli::Lexical_token::as_floating() const noexcept -> decltype(compiler::Floating::value)
+{
+    return value_as<compiler::Floating>().value;
+}
 
-auto kieli::Lexical_token::description(Type const type)
-    noexcept -> std::string_view
+auto kieli::Lexical_token::as_character() const noexcept -> decltype(compiler::Character::value)
+{
+    return value_as<compiler::Character>().value;
+}
+
+auto kieli::Lexical_token::as_boolean() const noexcept -> decltype(compiler::Boolean::value)
+{
+    return value_as<compiler::Boolean>().value;
+}
+
+auto kieli::Lexical_token::as_string() const noexcept -> utl::Pooled_string
+{
+    return value_as<utl::Pooled_string>();
+}
+
+auto kieli::Lexical_token::description(Type const type) noexcept -> std::string_view
 {
     switch (type) {
-    case Type::error:         return "a lexical error";
-    case Type::dot:           return "a '.'";
-    case Type::comma:         return "a ','";
-    case Type::colon:         return "a ':'";
-    case Type::semicolon:     return "a ';'";
-    case Type::double_colon:  return "a '::'";
-    case Type::ampersand:     return "a '&'";
-    case Type::asterisk:      return "a '*'";
-    case Type::plus:          return "a '+'";
-    case Type::question:      return "a '?'";
-    case Type::equals:        return "a '='";
-    case Type::pipe:          return "a '|'";
-    case Type::lambda:        return "a '\\'";
-    case Type::left_arrow:    return "a '<-'";
-    case Type::right_arrow:   return "a '->'";
-    case Type::hole:          return "a hole";
-    case Type::paren_open:    return "a '('";
-    case Type::paren_close:   return "a ')'";
-    case Type::brace_open:    return "a '{'";
-    case Type::brace_close:   return "a '}'";
-    case Type::bracket_open:  return "a '['";
-    case Type::bracket_close: return "a ']'";
+    case Type::error:
+        return "a lexical error";
+    case Type::dot:
+        return "a '.'";
+    case Type::comma:
+        return "a ','";
+    case Type::colon:
+        return "a ':'";
+    case Type::semicolon:
+        return "a ';'";
+    case Type::double_colon:
+        return "a '::'";
+    case Type::ampersand:
+        return "a '&'";
+    case Type::asterisk:
+        return "a '*'";
+    case Type::plus:
+        return "a '+'";
+    case Type::question:
+        return "a '?'";
+    case Type::equals:
+        return "a '='";
+    case Type::pipe:
+        return "a '|'";
+    case Type::lambda:
+        return "a '\\'";
+    case Type::left_arrow:
+        return "a '<-'";
+    case Type::right_arrow:
+        return "a '->'";
+    case Type::hole:
+        return "a hole";
+    case Type::paren_open:
+        return "a '('";
+    case Type::paren_close:
+        return "a ')'";
+    case Type::brace_open:
+        return "a '{'";
+    case Type::brace_close:
+        return "a '}'";
+    case Type::bracket_open:
+        return "a '['";
+    case Type::bracket_close:
+        return "a ']'";
     case Type::let:
     case Type::mut:
     case Type::immut:
@@ -152,15 +216,24 @@ auto kieli::Lexical_token::description(Type const type)
     case Type::lower_self:
     case Type::upper_self:
         return "a keyword";
-    case Type::underscore:        return "a wildcard pattern";
-    case Type::lower_name:        return "an uncapitalized identifier";
-    case Type::upper_name:        return "a capitalized identifier";
-    case Type::operator_name:     return "an operator";
-    case Type::integer_literal:   return "an integer literal";
-    case Type::floating_literal:  return "a floating-point literal";
-    case Type::string_literal:    return "a string literal";
-    case Type::character_literal: return "a character literal";
-    case Type::boolean_literal:   return "a boolean literal";
+    case Type::underscore:
+        return "a wildcard pattern";
+    case Type::lower_name:
+        return "an uncapitalized identifier";
+    case Type::upper_name:
+        return "a capitalized identifier";
+    case Type::operator_name:
+        return "an operator";
+    case Type::integer_literal:
+        return "an integer literal";
+    case Type::floating_literal:
+        return "a floating-point literal";
+    case Type::string_literal:
+        return "a string literal";
+    case Type::character_literal:
+        return "a character literal";
+    case Type::boolean_literal:
+        return "a boolean literal";
     case Type::string_type:
     case Type::floating_type:
     case Type::character_type:
@@ -181,8 +254,8 @@ auto kieli::Lexical_token::description(Type const type)
     }
 }
 
-auto kieli::Lexical_token::type_string(kieli::Lexical_token::Type const type)
-    noexcept -> std::string_view
+auto kieli::Lexical_token::type_string(kieli::Lexical_token::Type const type) noexcept
+    -> std::string_view
 {
     static_assert(type_strings_array.size() == utl::enumerator_count<kieli::Lexical_token::Type>);
     return type_strings_array[utl::as_index(type)];

@@ -4,7 +4,6 @@
 #include <libresolve/resolve.hpp>
 #include <libreify/cir.hpp>
 
-
 namespace kieli {
 
     struct [[nodiscard]] Reify_result {
@@ -15,4 +14,4 @@ namespace kieli {
 
     auto reify(Resolve_result&&) -> Reify_result;
 
-}
+} // namespace kieli

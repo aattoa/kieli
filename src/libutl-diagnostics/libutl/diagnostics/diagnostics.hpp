@@ -4,7 +4,6 @@
 #include <libutl/source/source.hpp>
 #include <libutl/color/color.hpp>
 
-
 namespace utl::diagnostics {
 
     constexpr Color line_info_color = Color::dark_cyan;
@@ -26,6 +25,7 @@ namespace utl::diagnostics {
         std::string_view               message;
         tl::optional<std::string_view> help_note;
     };
+
     struct Message_arguments {
         std::string_view               message;
         tl::optional<std::string_view> help_note;
@@ -64,10 +64,10 @@ namespace utl::diagnostics {
 
         auto emit_error(Emit_arguments const&, Type) -> void;
 
-        [[nodiscard]] auto string() &&               noexcept -> std::string;
+        [[nodiscard]] auto string() && noexcept -> std::string;
         [[nodiscard]] auto has_emitted_error() const noexcept -> bool;
-        [[nodiscard]] auto note_level()        const noexcept -> Level;
-        [[nodiscard]] auto warning_level()     const noexcept -> Level;
+        [[nodiscard]] auto note_level() const noexcept -> Level;
+        [[nodiscard]] auto warning_level() const noexcept -> Level;
     };
 
     // Thrown when an irrecoverable diagnostic error is emitted
@@ -76,4 +76,4 @@ namespace utl::diagnostics {
         using Exception::operator=;
     };
 
-}
+} // namespace utl::diagnostics

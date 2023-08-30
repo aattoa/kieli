@@ -3,14 +3,13 @@
 #include <libutl/common/utilities.hpp>
 #include <libutl/common/wrapper.hpp>
 
-
 namespace utl {
 
     class [[nodiscard]] Source {
         std::filesystem::path m_file_path;
         std::string           m_file_content;
     public:
-        using Arena = utl::Wrapper_arena<Source>;
+        using Arena   = utl::Wrapper_arena<Source>;
         using Wrapper = utl::Wrapper<Source>;
 
         // Create a source with the given path and content
@@ -29,7 +28,7 @@ namespace utl {
 
         auto advance_with(char) noexcept -> void;
 
-        auto operator==(Source_position const&) const noexcept -> bool = default;
+        auto operator==(Source_position const&) const noexcept -> bool                  = default;
         auto operator<=>(Source_position const&) const noexcept -> std::strong_ordering = default;
     };
 
@@ -51,12 +50,12 @@ namespace utl {
         auto combine_with(Source_view const&) const noexcept -> Source_view;
     };
 
-}
-
+} // namespace utl
 
 template <>
 struct std::formatter<utl::Source_position> : utl::formatting::Formatter_base {
-    auto format(utl::Source_position const& position, auto& context) const {
+    auto format(utl::Source_position const& position, auto& context) const
+    {
         return std::format_to(context.out(), "{}:{}", position.line, position.column);
     }
 };

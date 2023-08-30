@@ -2,7 +2,6 @@
 
 #include <libutl/common/utilities.hpp>
 
-
 namespace utl {
 
     enum class Color {
@@ -34,12 +33,12 @@ namespace utl {
 
     auto operator<<(std::ostream&, Color) -> std::ostream&;
 
-}
-
+} // namespace utl
 
 template <>
 struct std::formatter<utl::Color> : std::formatter<std::string_view> {
-    auto format(utl::Color const& color, auto& context) const {
+    auto format(utl::Color const& color, auto& context) const
+    {
         return std::formatter<std::string_view>::format(utl::color_string(color), context);
     }
 };

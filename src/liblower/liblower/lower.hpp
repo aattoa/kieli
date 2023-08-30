@@ -4,7 +4,6 @@
 #include <libreify/reify.hpp>
 #include <liblower/lir.hpp>
 
-
 namespace kieli {
 
     struct [[nodiscard]] Lower_result {
@@ -15,4 +14,4 @@ namespace kieli {
 
     auto lower(Reify_result&&) -> Lower_result;
 
-}
+} // namespace kieli

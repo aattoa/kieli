@@ -6,31 +6,36 @@
 #define TEST(name) TEST_CASE(name, "[liblex][punctuation][operator]") // NOLINT
 
 namespace {
-    auto lex_success(std::string&& string) -> std::string {
+    auto lex_success(std::string&& string) -> std::string
+    {
         auto result = liblex::test_lex(std::move(string));
         REQUIRE(result.diagnostic_messages.empty());
         return result.formatted_tokens;
     }
+
     constexpr auto punctuation_strings = std::to_array<std::string_view>({
-        ".", ",", ":", ";", "::", "&", "*", "+", "?", "=", "|",
-        "\\", "<-", "->", "\?\?\?", "(", ")", "{", "}", "[", "]",
+        ".",  ",",  ":",  ";",      "::", "&", "*", "+", "?", "=", "|",
+        "\\", "<-", "->", "\?\?\?", "(",  ")", "{", "}", "[", "]",
     });
-}
+} // namespace
 
-
-TEST("punctuation and reserved operators") {
+TEST("punctuation and reserved operators")
+{
     for (auto const punctuation_string : punctuation_strings) {
-        REQUIRE(lex_success(std::string(punctuation_string)) ==
-            std::format("{}, end of input", punctuation_string));
+        REQUIRE(
+            lex_success(std::string(punctuation_string))
+            == std::format("{}, end of input", punctuation_string));
     }
 }
 
-TEST("available operators") {
-    REQUIRE(lex_success("-- %?% <$> ** @#") ==
-        "(op: --), (op: %?%), (op: <$>), (op: **), (op: @#), end of input");
+TEST("available operators")
+{
+    REQUIRE(
+        lex_success("-- %?% <$> ** @#")
+        == "(op: --), (op: %?%), (op: <$>), (op: **), (op: @#), end of input");
 }
 
-TEST("operators and punctuation tokens mixed") {
-    REQUIRE(lex_success("\n::\t,;(--?}@@") ==
-        "::, ,, ;, (, (op: --?), }, (op: @@), end of input");
+TEST("operators and punctuation tokens mixed")
+{
+    REQUIRE(lex_success("\n::\t,;(--?}@@") == "::, ,, ;, (, (op: --?), }, (op: @@), end of input");
 }

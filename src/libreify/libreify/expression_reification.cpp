@@ -3,37 +3,45 @@
 
 using namespace libreify;
 
-
 namespace {
     struct Expression_reification_visitor {
         libreify::Context& context;
 
-        auto recurse(hir::Expression const& expression) -> cir::Expression {
+        auto recurse(hir::Expression const& expression) -> cir::Expression
+        {
             return context.reify_expression(expression);
         }
-        auto recurse(utl::Wrapper<hir::Expression> const expression) -> utl::Wrapper<cir::Expression> {
+
+        auto recurse(utl::Wrapper<hir::Expression> const expression)
+            -> utl::Wrapper<cir::Expression>
+        {
             return context.wrap(recurse(*expression));
         }
-        [[nodiscard]]
-        auto recurse() noexcept {
+
+        [[nodiscard]] auto recurse() noexcept
+        {
             return [this](auto const& expression) { return recurse(expression); };
         }
 
         template <compiler::literal Literal>
-        auto operator()(Literal const& literal) -> cir::Expression::Variant {
+        auto operator()(Literal const& literal) -> cir::Expression::Variant
+        {
             return literal;
         }
 
-        auto operator()(hir::expression::Sizeof const& sizeof_) -> cir::Expression::Variant {
+        auto operator()(hir::expression::Sizeof const& sizeof_) -> cir::Expression::Variant
+        {
             cir::Type const inspected_type = context.reify_type(sizeof_.inspected_type);
             return compiler::Integer { inspected_type.size.get() };
         }
 
-        auto operator()(hir::expression::Block const& block) -> cir::Expression::Variant {
+        auto operator()(hir::expression::Block const& block) -> cir::Expression::Variant
+        {
             auto const result_object_frame_offset = context.current_frame_offset;
 
             // Reserve space for the result object
-            context.current_frame_offset += context.reify_type(block.result_expression->type).size.get();
+            context.current_frame_offset
+                += context.reify_type(block.result_expression->type).size.get();
 
             auto const old_frame_offset = context.current_frame_offset;
 
@@ -47,31 +55,41 @@ namespace {
                 .side_effect_expressions    = std::move(side_effects),
                 .result_expression          = std::move(result),
                 .scope_size                 = static_cast<utl::Safe_usize>(scope_size),
-                .result_object_frame_offset = result_object_frame_offset.get()
+                .result_object_frame_offset = result_object_frame_offset.get(),
             };
         }
 
-        auto operator()(hir::expression::Tuple const& tuple) -> cir::Expression::Variant {
+        auto operator()(hir::expression::Tuple const& tuple) -> cir::Expression::Variant
+        {
             return cir::expression::Tuple { .fields = utl::map(recurse(), tuple.fields) };
         }
-        auto operator()(hir::expression::Loop const& loop) -> cir::Expression::Variant {
+
+        auto operator()(hir::expression::Loop const& loop) -> cir::Expression::Variant
+        {
             return cir::expression::Loop { .body = recurse(loop.body) };
         }
-        auto operator()(hir::expression::Break const& break_) -> cir::Expression::Variant {
+
+        auto operator()(hir::expression::Break const& break_) -> cir::Expression::Variant
+        {
             return cir::expression::Break { .result = recurse(break_.result) };
         }
-        auto operator()(hir::expression::Continue const&) -> cir::Expression::Variant {
+
+        auto operator()(hir::expression::Continue const&) -> cir::Expression::Variant
+        {
             return cir::expression::Continue {};
         }
 
-        auto operator()(hir::expression::Let_binding const& binding) -> cir::Expression::Variant {
+        auto operator()(hir::expression::Let_binding const& binding) -> cir::Expression::Variant
+        {
             return cir::expression::Let_binding {
                 .pattern     = context.reify_pattern(*binding.pattern),
                 .initializer = recurse(binding.initializer),
             };
         }
 
-        auto operator()(hir::expression::Local_variable_reference const& local) -> cir::Expression::Variant {
+        auto operator()(hir::expression::Local_variable_reference const& local)
+            -> cir::Expression::Variant
+        {
             if (auto const* const frame_offset = context.variable_frame_offsets.find(local.tag)) {
                 return cir::expression::Local_variable_reference {
                     .frame_offset = frame_offset->get(),
@@ -81,7 +99,8 @@ namespace {
             utl::unreachable();
         }
 
-        auto operator()(hir::expression::Conditional const& conditional) -> cir::Expression::Variant {
+        auto operator()(hir::expression::Conditional const& conditional) -> cir::Expression::Variant
+        {
             return cir::expression::Conditional {
                 .condition    = recurse(conditional.condition),
                 .true_branch  = recurse(conditional.true_branch),
@@ -89,21 +108,23 @@ namespace {
             };
         }
 
-        auto operator()(hir::expression::Hole const&) -> cir::Expression::Variant {
+        auto operator()(hir::expression::Hole const&) -> cir::Expression::Variant
+        {
             return cir::expression::Hole {};
         }
 
-        auto operator()(auto const&) -> cir::Expression::Variant {
+        auto operator()(auto const&) -> cir::Expression::Variant
+        {
             utl::todo();
         }
     };
-}
+} // namespace
 
-
-auto libreify::Context::reify_expression(hir::Expression const& expression) -> cir::Expression {
+auto libreify::Context::reify_expression(hir::Expression const& expression) -> cir::Expression
+{
     return {
         .value       = std::visit(Expression_reification_visitor { *this }, expression.value),
         .type        = reify_type(expression.type),
-        .source_view = expression.source_view
+        .source_view = expression.source_view,
     };
 }

@@ -4,7 +4,6 @@
 #include <libutl/common/flatmap.hpp>
 #include <libcompiler-pipeline/compiler-pipeline.hpp>
 
-
 /*
 
     The Abstract Syntax Tree (AST) is a high level structured representation
@@ -19,21 +18,21 @@
 
 */
 
-
 namespace ast {
     struct [[nodiscard]] Expression;
     struct [[nodiscard]] Type;
     struct [[nodiscard]] Pattern;
     struct [[nodiscard]] Definition;
 
-
     struct Mutability {
         struct Concrete {
             utl::Explicit<bool> is_mutable;
         };
+
         struct Parameterized {
             compiler::Name_lower name;
         };
+
         using Variant = std::variant<Concrete, Parameterized>;
 
         Variant             value;
@@ -41,16 +40,13 @@ namespace ast {
         utl::Source_view    source_view;
     };
 
-
     struct Template_argument {
         struct Wildcard {
             utl::Source_view source_view;
         };
-        using Variant = std::variant<
-            utl::Wrapper<Type>,
-            utl::Wrapper<Expression>,
-            Mutability,
-            Wildcard>;
+
+        using Variant
+            = std::variant<utl::Wrapper<Type>, utl::Wrapper<Expression>, Mutability, Wildcard>;
         Variant value;
     };
 
@@ -62,6 +58,7 @@ namespace ast {
 
     struct Root_qualifier {
         struct Global {};
+
         using Variant = std::variant<Global, utl::Wrapper<Type>>;
         Variant value;
     };
@@ -71,7 +68,7 @@ namespace ast {
         tl::optional<Root_qualifier> root_qualifier;
         compiler::Name_dynamic       primary_name;
 
-        [[nodiscard]] auto is_upper      () const noexcept -> bool;
+        [[nodiscard]] auto is_upper() const noexcept -> bool;
         [[nodiscard]] auto is_unqualified() const noexcept -> bool;
     };
 
@@ -86,18 +83,17 @@ namespace ast {
             std::vector<Class_reference> classes;
             compiler::Name_upper         name;
         };
+
         struct Value_parameter {
             tl::optional<utl::Wrapper<Type>> type;
             compiler::Name_lower             name;
         };
+
         struct Mutability_parameter {
             compiler::Name_lower name;
         };
 
-        using Variant = std::variant<
-            Type_parameter,
-            Value_parameter,
-            Mutability_parameter>;
+        using Variant = std::variant<Type_parameter, Value_parameter, Mutability_parameter>;
 
         Variant                         value;
         tl::optional<Template_argument> default_argument;
@@ -115,63 +111,77 @@ namespace ast {
         tl::optional<utl::Wrapper<Expression>> default_argument;
     };
 
-
     namespace expression {
         struct Array_literal {
             std::vector<Expression> elements;
         };
+
         struct Self {};
+
         struct Variable {
             Qualified_name name;
         };
+
         struct Tuple {
             std::vector<Expression> fields;
         };
+
         struct Loop {
             enum class Source { plain_loop, while_loop, for_loop };
             utl::Wrapper<Expression> body;
             utl::Explicit<Source>    source;
         };
+
         struct Continue {};
+
         struct Break {
             utl::Wrapper<Expression> result;
         };
+
         struct Block {
             std::vector<Expression>  side_effect_expressions;
             utl::Wrapper<Expression> result_expression;
         };
+
         struct Invocation {
             std::vector<Function_argument> arguments;
             utl::Wrapper<Expression>       invocable;
         };
+
         struct Struct_initializer {
             utl::Flatmap<compiler::Name_lower, utl::Wrapper<Expression>> member_initializers;
             utl::Wrapper<Type>                                           struct_type;
         };
+
         struct Binary_operator_invocation {
             utl::Wrapper<Expression> left;
             utl::Wrapper<Expression> right;
             utl::Pooled_string       op;
         };
+
         struct Struct_field_access {
             utl::Wrapper<Expression> base_expression;
             compiler::Name_lower     field_name;
         };
+
         struct Tuple_field_access {
             utl::Wrapper<Expression>  base_expression;
             utl::Explicit<utl::Usize> field_index;
             utl::Source_view          field_index_source_view;
         };
+
         struct Array_index_access {
             utl::Wrapper<Expression> base_expression;
             utl::Wrapper<Expression> index_expression;
         };
+
         struct Method_invocation {
             std::vector<Function_argument>               function_arguments;
             tl::optional<std::vector<Template_argument>> template_arguments;
             utl::Wrapper<Expression>                     base_expression;
             compiler::Name_lower                         method_name;
         };
+
         struct Conditional {
             enum class Source { normal_conditional, elif_conditional, while_loop_body };
             utl::Wrapper<Expression> condition;
@@ -180,65 +190,82 @@ namespace ast {
             utl::Explicit<Source>    source;
             utl::Explicit<bool>      has_explicit_false_branch;
         };
+
         struct Match {
             struct Case {
                 utl::Wrapper<Pattern>    pattern;
                 utl::Wrapper<Expression> handler;
             };
+
             std::vector<Case>        cases;
             utl::Wrapper<Expression> matched_expression;
         };
+
         struct Template_application {
             std::vector<Template_argument> template_arguments;
             Qualified_name                 name;
         };
+
         struct Type_cast {
             utl::Wrapper<Expression> expression;
             utl::Wrapper<Type>       target_type;
         };
+
         struct Type_ascription {
             utl::Wrapper<Expression> expression;
             utl::Wrapper<Type>       ascribed_type;
         };
+
         struct Let_binding {
             utl::Wrapper<Pattern>            pattern;
             utl::Wrapper<Expression>         initializer;
             tl::optional<utl::Wrapper<Type>> type;
         };
+
         struct Local_type_alias {
             compiler::Name_upper alias_name;
             utl::Wrapper<Type>   aliased_type;
         };
+
         struct Ret {
             tl::optional<utl::Wrapper<Expression>> returned_expression;
         };
+
         struct Sizeof {
             utl::Wrapper<Type> inspected_type;
         };
+
         struct Reference {
             Mutability               mutability;
             utl::Wrapper<Expression> referenced_expression;
         };
+
         struct Reference_dereference {
             utl::Wrapper<Expression> dereferenced_expression;
         };
+
         struct Pointer_dereference {
             utl::Wrapper<Expression> pointer_expression;
         };
+
         struct Addressof {
             utl::Wrapper<Expression> lvalue_expression;
         };
+
         struct Unsafe {
             utl::Wrapper<Expression> expression;
         };
+
         struct Move {
             utl::Wrapper<Expression> lvalue;
         };
+
         struct Meta {
             utl::Wrapper<Expression> expression;
         };
+
         struct Hole {};
-    }
+    } // namespace expression
 
     struct Expression {
         using Variant = std::variant<
@@ -284,38 +311,43 @@ namespace ast {
         utl::Source_view source_view;
     };
 
-
-
     namespace pattern {
         struct Wildcard {};
+
         struct Name {
             compiler::Name_lower name;
             Mutability           mutability;
         };
+
         struct Constructor {
             Qualified_name                      constructor_name;
             tl::optional<utl::Wrapper<Pattern>> payload_pattern;
         };
+
         struct Abbreviated_constructor {
             compiler::Name_lower                constructor_name;
             tl::optional<utl::Wrapper<Pattern>> payload_pattern;
         };
+
         struct Tuple {
             std::vector<Pattern> field_patterns;
         };
+
         struct Slice {
             std::vector<Pattern> element_patterns;
         };
+
         struct Alias {
             compiler::Name_lower  alias_name;
             Mutability            alias_mutability;
             utl::Wrapper<Pattern> aliased_pattern;
         };
+
         struct Guarded {
             utl::Wrapper<Pattern> guarded_pattern;
             Expression            guard;
         };
-    }
+    } // namespace pattern
 
     struct Pattern {
         using Variant = std::variant<
@@ -337,47 +369,56 @@ namespace ast {
         utl::Source_view source_view;
     };
 
-
-
     namespace type {
         struct Wildcard {};
+
         struct Self {};
+
         struct Typename {
             Qualified_name name;
         };
+
         struct Tuple {
             std::vector<Type> field_types;
         };
+
         struct Array {
             utl::Wrapper<Type>       element_type;
             utl::Wrapper<Expression> array_length;
         };
+
         struct Slice {
             utl::Wrapper<Type> element_type;
         };
+
         struct Function {
             std::vector<Type>  argument_types;
             utl::Wrapper<Type> return_type;
         };
+
         struct Typeof {
             utl::Wrapper<Expression> inspected_expression;
         };
+
         struct Reference {
             utl::Wrapper<Type> referenced_type;
             Mutability         mutability;
         };
+
         struct Pointer {
             utl::Wrapper<Type> pointed_to_type;
             Mutability         mutability;
         };
+
         struct Instance_of {
             std::vector<Class_reference> classes;
         };
+
         struct Template_application {
             std::vector<Template_argument> arguments;
             Qualified_name                 name;
         };
-    }
+    } // namespace type
 
     struct Type {
         using Variant = std::variant<
@@ -403,7 +444,6 @@ namespace ast {
         utl::Source_view source_view;
     };
 
-
     struct Self_parameter {
         Mutability          mutability;
         utl::Explicit<bool> is_reference;
@@ -424,12 +464,12 @@ namespace ast {
         compiler::Name_upper            name;
     };
 
-
     namespace definition {
         struct Function {
             Function_signature signature;
             Expression         body;
         };
+
         struct Struct {
             struct Member {
                 compiler::Name_lower name;
@@ -437,36 +477,44 @@ namespace ast {
                 utl::Explicit<bool>  is_public;
                 utl::Source_view     source_view;
             };
+
             std::vector<Member>  members;
             compiler::Name_upper name;
         };
+
         struct Enum {
             struct Constructor {
                 compiler::Name_lower                          name;
                 tl::optional<std::vector<utl::Wrapper<Type>>> payload_types;
                 utl::Source_view                              source_view;
             };
+
             std::vector<Constructor> constructors;
             compiler::Name_upper     name;
         };
+
         struct Alias {
             compiler::Name_upper name;
             Type                 type;
         };
+
         struct Typeclass {
             std::vector<Function_signature> function_signatures;
             std::vector<Type_signature>     type_signatures;
             compiler::Name_upper            name;
         };
+
         struct Implementation {
             Type                    type;
             std::vector<Definition> definitions;
         };
+
         struct Instantiation {
             Class_reference         typeclass;
             Type                    self_type;
             std::vector<Definition> definitions;
         };
+
         struct Namespace {
             std::vector<Definition> definitions;
             compiler::Name_lower    name;
@@ -477,6 +525,7 @@ namespace ast {
             T                               definition;
             std::vector<Template_parameter> parameters;
         };
+
         using Struct_template         = Template<Struct>;
         using Enum_template           = Template<Enum>;
         using Alias_template          = Template<Alias>;
@@ -484,7 +533,7 @@ namespace ast {
         using Implementation_template = Template<Implementation>;
         using Instantiation_template  = Template<Instantiation>;
         using Namespace_template      = Template<Namespace>;
-    }
+    } // namespace definition
 
     struct Definition {
         using Variant = std::variant<
@@ -508,7 +557,6 @@ namespace ast {
         utl::Source_view source_view;
     };
 
-
     template <class T>
     concept node = utl::one_of<T, Expression, Type, Pattern>;
 
@@ -518,25 +566,24 @@ namespace ast {
         std::vector<Definition> definitions;
     };
 
-
-    auto format_to(Expression         const&, std::string&) -> void;
-    auto format_to(Pattern            const&, std::string&) -> void;
-    auto format_to(Type               const&, std::string&) -> void;
-    auto format_to(Definition         const&, std::string&) -> void;
-    auto format_to(Mutability         const&, std::string&) -> void;
-    auto format_to(Qualified_name     const&, std::string&) -> void;
-    auto format_to(Class_reference    const&, std::string&) -> void;
+    auto format_to(Expression const&, std::string&) -> void;
+    auto format_to(Pattern const&, std::string&) -> void;
+    auto format_to(Type const&, std::string&) -> void;
+    auto format_to(Definition const&, std::string&) -> void;
+    auto format_to(Mutability const&, std::string&) -> void;
+    auto format_to(Qualified_name const&, std::string&) -> void;
+    auto format_to(Class_reference const&, std::string&) -> void;
     auto format_to(Function_parameter const&, std::string&) -> void;
-    auto format_to(Function_argument  const&, std::string&) -> void;
+    auto format_to(Function_argument const&, std::string&) -> void;
     auto format_to(Template_parameter const&, std::string&) -> void;
-    auto format_to(Template_argument  const&, std::string&) -> void;
+    auto format_to(Template_argument const&, std::string&) -> void;
 
     inline constexpr auto to_string = [](auto const& x) -> std::string
-        requires requires (std::string out) { ast::format_to(x, out); }
+        requires requires(std::string out) { ast::format_to(x, out); }
     {
         std::string output;
         ast::format_to(x, output);
         return output;
     };
 
-}
+} // namespace ast

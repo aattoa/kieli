@@ -2,10 +2,10 @@
 #include <libutl/diagnostics/diagnostics.hpp>
 #include <libutl/cli/cli.hpp>
 
-
 namespace {
 
-    constexpr auto to_lower(char const c) noexcept -> char {
+    constexpr auto to_lower(char const c) noexcept -> char
+    {
         return ('A' <= c && c <= 'Z') ? c + 32 : c;
     }
 
@@ -13,26 +13,31 @@ namespace {
     static_assert(to_lower('z') == 'z');
     static_assert(to_lower('%') == '%');
 
-
     template <class T>
-    constexpr auto type_description() noexcept -> std::string_view {
-        if constexpr (std::same_as<T, cli::types::Int>)
+    constexpr auto type_description() noexcept -> std::string_view
+    {
+        if constexpr (std::same_as<T, cli::types::Int>) {
             return "int";
-        else if constexpr (std::same_as<T, cli::types::Float>)
+        }
+        else if constexpr (std::same_as<T, cli::types::Float>) {
             return "float";
-        else if constexpr (std::same_as<T, cli::types::Bool>)
+        }
+        else if constexpr (std::same_as<T, cli::types::Bool>) {
             return "bool";
-        else if constexpr (std::same_as<T, cli::types::Str>)
+        }
+        else if constexpr (std::same_as<T, cli::types::Str>) {
             return "str";
-        else
+        }
+        else {
             static_assert(utl::always_false<T>);
+        }
     }
 
     template <class... Ts>
-    constexpr auto type_description(std::variant<Ts...> const& variant) noexcept -> std::string_view {
+    constexpr auto type_description(std::variant<Ts...> const& variant) noexcept -> std::string_view
+    {
         return std::visit([]<class T>(T const&) { return type_description<T>(); }, variant);
     }
-
 
     struct Parse_context {
         std::string_view const* pointer;
@@ -40,37 +45,41 @@ namespace {
         std::string_view const* stop;
 
         explicit Parse_context(std::span<std::string_view const> const span) noexcept
-            : pointer { span.data()         }
-            , start   { pointer             }
-            , stop    { start + span.size() } {}
+            : pointer { span.data() }
+            , start { pointer }
+            , stop { start + span.size() }
+        {}
 
-        [[nodiscard]]
-        auto is_finished() const noexcept -> bool {
+        [[nodiscard]] auto is_finished() const noexcept -> bool
+        {
             return pointer == stop;
         }
-        [[nodiscard]]
-        auto current() const noexcept -> std::string_view {
+
+        [[nodiscard]] auto current() const noexcept -> std::string_view
+        {
             return *pointer;
         }
-        [[nodiscard]]
-        auto extract() noexcept -> std::string_view {
+
+        [[nodiscard]] auto extract() noexcept -> std::string_view
+        {
             return *pointer++;
         }
-        auto advance() noexcept -> void {
+
+        auto advance() noexcept -> void
+        {
             ++pointer;
         }
-        auto retreat() noexcept -> void {
+
+        auto retreat() noexcept -> void
+        {
             --pointer;
         }
 
-        [[nodiscard]]
-        auto make_error(utl::diagnostics::Message_arguments const arguments) const
+        [[nodiscard]] auto make_error(utl::diagnostics::Message_arguments const arguments) const
             -> utl::diagnostics::Builder
         {
             std::string command_line_string
-                = std::span { start, stop }
-                | ranges::views::join(' ')
-                | ranges::to<std::string>();
+                = std::span { start, stop } | ranges::views::join(' ') | ranges::to<std::string>();
 
             utl::disable_short_string_optimization(command_line_string);
 
@@ -82,49 +91,54 @@ namespace {
                 }
                 else {
                     char const* view_begin = command_line_string.data();
-                    for (auto const* view = start; view != pointer; ++view)
+                    for (auto const* view = start; view != pointer; ++view) {
                         view_begin += view->size() + 1; // +1 for the whitespace delimiter
+                    }
                     return std::string_view { view_begin, pointer->size() };
                 }
             });
 
-            auto fake_source_arena = utl::Source::Arena::with_page_size(1);
-            auto const fake_source = fake_source_arena.wrap("[command line]", std::move(command_line_string));
+            auto       fake_source_arena = utl::Source::Arena::with_page_size(1);
+            auto const fake_source
+                = fake_source_arena.wrap("[command line]", std::move(command_line_string));
 
             utl::diagnostics::Builder builder;
             builder.emit_error(
                 arguments.add_source_view(
-                    utl::Source_view {
-                        fake_source,
-                        erroneous_view,
-                        utl::Source_position {},
-                        utl::Source_position { 1, 1 + utl::unsigned_distance(fake_source->string().data(), erroneous_view.data()) }
-                    }),
+                    utl::Source_view { fake_source,
+                                       erroneous_view,
+                                       utl::Source_position {},
+                                       utl::Source_position { 1,
+                                                              1
+                                                                  + utl::unsigned_distance(
+                                                                      fake_source->string().data(),
+                                                                      erroneous_view.data()) } }),
                 utl::diagnostics::Type::recoverable); // Prevent exception
             return builder;
         }
 
-        [[noreturn]]
-        auto error(utl::diagnostics::Message_arguments const arguments) const -> void {
+        [[noreturn]] auto error(utl::diagnostics::Message_arguments const arguments) const -> void
+        {
             throw utl::diagnostics::Error { make_error(arguments).string() };
         }
 
-        [[noreturn]]
-        auto expected(std::string_view const expectation) const -> void {
+        [[noreturn]] auto expected(std::string_view const expectation) const -> void
+        {
             error({ std::format("Expected {}", expectation) });
         }
 
-        [[nodiscard]]
-        auto unrecognized_option() const -> cli::Unrecognized_option {
+        [[nodiscard]] auto unrecognized_option() const -> cli::Unrecognized_option
+        {
             return cli::Unrecognized_option { make_error({ "Unrecognized option" }).string() };
         }
     };
 
-
     template <class T>
-    auto extract_value(Parse_context& context) -> tl::optional<T> {
-        if (context.is_finished())
+    auto extract_value(Parse_context& context) -> tl::optional<T>
+    {
+        if (context.is_finished()) {
             return tl::nullopt;
+        }
 
         std::string_view const view = context.extract();
 
@@ -138,18 +152,19 @@ namespace {
             switch (ec) {
             case std::errc {}:
             {
-                if (ptr == stop) return value;
+                if (ptr == stop) {
+                    return value;
+                }
                 context.retreat();
-                context.error({ std::format("Unexpected suffix: '{}'", std::string_view { ptr, stop }) });
+                context.error(
+                    { std::format("Unexpected suffix: '{}'", std::string_view { ptr, stop }) });
             }
             case std::errc::result_out_of_range:
             {
                 context.retreat();
-                context.error({
-                    std::format(
-                        "The given value is too large to be represented by a {}-bit value",
-                        sizeof(T) * CHAR_BIT)
-                });
+                context.error({ std::format(
+                    "The given value is too large to be represented by a {}-bit value",
+                    sizeof(T) * CHAR_BIT) });
             }
             case std::errc::invalid_argument:
             {
@@ -165,9 +180,7 @@ namespace {
             input.reserve(view.size());
             ranges::copy(view | ranges::views::transform(to_lower), std::back_inserter(input));
 
-            auto const is_one_of = [&](auto const&... args) {
-                return ((input == args) || ...);
-            };
+            auto const is_one_of = [&](auto const&... args) { return ((input == args) || ...); };
 
             if (is_one_of("true", "yes", "1")) {
                 return true;
@@ -193,41 +206,45 @@ namespace {
         arguments.reserve(parameter.values.size());
 
         for (auto const& value : parameter.values) {
-            std::visit([&]<class T>(cli::Value<T> const& value) {
-                auto argument = extract_value<T>(context);
-                if (!argument)
-                    context.error({ std::format("Expected an argument [{}]", type_description<T>()) });
-
-                if (value.minimum_value) {
-                    if (*argument < *value.minimum_value) {
-                        context.retreat();
-                        context.error({ std::format("The minimum allowed value is {}", *value.minimum_value) });
+            std::visit(
+                [&]<class T>(cli::Value<T> const& value) {
+                    auto argument = extract_value<T>(context);
+                    if (!argument) {
+                        context.error(
+                            { std::format("Expected an argument [{}]", type_description<T>()) });
                     }
-                }
-                if (value.maximum_value) {
-                    if (*argument > *value.maximum_value) {
-                        context.retreat();
-                        context.error({ std::format("The maximum allowed value is {}", *value.maximum_value) });
-                    }
-                }
 
-                arguments.push_back(std::move(*argument));
-            }, value);
+                    if (value.minimum_value) {
+                        if (*argument < *value.minimum_value) {
+                            context.retreat();
+                            context.error({ std::format(
+                                "The minimum allowed value is {}", *value.minimum_value) });
+                        }
+                    }
+                    if (value.maximum_value) {
+                        if (*argument > *value.maximum_value) {
+                            context.retreat();
+                            context.error({ std::format(
+                                "The maximum allowed value is {}", *value.maximum_value) });
+                        }
+                    }
+
+                    arguments.push_back(std::move(*argument));
+                },
+                value);
         }
 
         return arguments;
     }
 
-}
-
+} // namespace
 
 auto cli::parse_command_line(
-    int                 const  argc,
-    char const* const*  const  argv,
-    Options_description const& description) -> tl::expected<Options, Unrecognized_option>
+    int const argc, char const* const* const argv, Options_description const& description)
+    -> tl::expected<Options, Unrecognized_option>
 {
     std::vector<std::string_view> const command_line(argv + 1, argv + argc);
-    Options options { .program_name_as_invoked = *argv };
+    Options                             options { .program_name_as_invoked = *argv };
 
     Parse_context context { command_line };
 
@@ -239,10 +256,12 @@ auto cli::parse_command_line(
 
             if (view.starts_with("--")) {
                 view.remove_prefix(2);
-                if (view.empty())
+                if (view.empty()) {
                     context.expected("a flag name");
-                else
+                }
+                else {
                     name = std::string(view);
+                }
             }
             else if (view.starts_with('-')) {
                 view.remove_prefix(1);
@@ -260,7 +279,8 @@ auto cli::parse_command_line(
                     }
                 default:
                     context.retreat();
-                    context.expected("a single-character flag name; use '--' instead of '-' if this was intended");
+                    context.expected("a single-character flag name; use '--' instead of '-' if "
+                                     "this was intended");
                 }
             }
             else {
@@ -311,74 +331,69 @@ auto cli::parse_command_line(
     return options;
 }
 
-
 template <class T>
-auto cli::Value<T>::default_to(T&& value) noexcept -> Value {
-    auto copy = *this;
+auto cli::Value<T>::default_to(T&& value) noexcept -> Value
+{
+    auto copy          = *this;
     copy.default_value = std::move(value);
     return copy;
 }
 
 template <class T>
-auto cli::Value<T>::min(T&& value) noexcept -> Value {
-    auto copy = *this;
+auto cli::Value<T>::min(T&& value) noexcept -> Value
+{
+    auto copy          = *this;
     copy.minimum_value = std::move(value);
     return copy;
 }
 
 template <class T>
-auto cli::Value<T>::max(T&& value) noexcept -> Value {
-    auto copy = *this;
+auto cli::Value<T>::max(T&& value) noexcept -> Value
+{
+    auto copy          = *this;
     copy.maximum_value = std::move(value);
     return copy;
 }
 
-template struct cli::Value<cli::types::Int  >;
+template struct cli::Value<cli::types::Int>;
 template struct cli::Value<cli::types::Float>;
-template struct cli::Value<cli::types::Bool >;
-template struct cli::Value<cli::types::Str  >;
-
+template struct cli::Value<cli::types::Bool>;
+template struct cli::Value<cli::types::Str>;
 
 cli::Parameter::Name::Name(
-    char const*        const long_name,
-    tl::optional<char> const short_name) noexcept
-    : long_form  { long_name  }
-    , short_form { short_name } {}
+    char const* const long_name, tl::optional<char> const short_name) noexcept
+    : long_form { long_name }
+    , short_form { short_name }
+{}
 
-
-auto cli::Options_description::Option_adder::map_short_to_long(Parameter::Name const& name) noexcept -> void {
-    if (name.short_form.has_value())
+auto cli::Options_description::Option_adder::map_short_to_long(Parameter::Name const& name) noexcept
+    -> void
+{
+    if (name.short_form.has_value()) {
         self->long_forms.add_or_assign(*name.short_form, name.long_form);
+    }
 }
 
-
 auto cli::Options_description::Option_adder::operator()(
-    Parameter::Name&&              name,
-    tl::optional<std::string_view> description) noexcept -> Option_adder
+    Parameter::Name&& name, tl::optional<std::string_view> description) noexcept -> Option_adder
 {
     map_short_to_long(name);
-    self->parameters.push_back({
-        .name        = std::move(name),
-        .description = description
-    });
+    self->parameters.push_back({ .name = std::move(name), .description = description });
     return *this;
 }
 
 template <class T>
 auto cli::Options_description::Option_adder::operator()(
-    Parameter::Name&&              name,
-    Value<T>&&                     value,
-    tl::optional<std::string_view> description) noexcept -> Option_adder
+    Parameter::Name&& name, Value<T>&& value, tl::optional<std::string_view> description) noexcept
+    -> Option_adder
 {
     map_short_to_long(name);
     bool const is_defaulted = value.default_value.has_value();
 
-    self->parameters.push_back({
-        .name        = std::move(name),
-        .values      { std::move(value) },
-        .description = description,
-        .defaulted   = is_defaulted
-    });
+    self->parameters.push_back({ .name = std::move(name),
+                                 .values { std::move(value) },
+                                 .description = description,
+                                 .defaulted   = is_defaulted });
     return *this;
 }
 
@@ -390,20 +405,21 @@ auto cli::Options_description::Option_adder::operator()(
     map_short_to_long(name);
 
     auto const has_default = [](auto const& variant) {
-        return std::visit([](auto& alternative) {
-            return alternative.default_value.has_value();
-        }, variant);
+        return std::visit(
+            [](auto& alternative) { return alternative.default_value.has_value(); }, variant);
     };
 
     bool is_defaulted = false;
     if (!values.empty()) {
         is_defaulted = has_default(values.front());
-        auto rest = values | ranges::views::drop(1);
+        auto rest    = values | ranges::views::drop(1);
 
-        if (is_defaulted)
+        if (is_defaulted) {
             utl::always_assert(ranges::all_of(rest, has_default));
-        else
+        }
+        else {
             utl::always_assert(ranges::none_of(rest, has_default));
+        }
     }
 
     self->parameters.push_back(Parameter {
@@ -415,112 +431,110 @@ auto cli::Options_description::Option_adder::operator()(
     return *this;
 }
 
-template auto cli::Options_description::Option_adder::operator()(Parameter::Name&&, Value<types::Int  >&&, tl::optional<std::string_view>) -> Option_adder;
-template auto cli::Options_description::Option_adder::operator()(Parameter::Name&&, Value<types::Float>&&, tl::optional<std::string_view>) -> Option_adder;
-template auto cli::Options_description::Option_adder::operator()(Parameter::Name&&, Value<types::Bool >&&, tl::optional<std::string_view>) -> Option_adder;
-template auto cli::Options_description::Option_adder::operator()(Parameter::Name&&, Value<types::Str  >&&, tl::optional<std::string_view>) -> Option_adder;
-
+template auto cli::Options_description::Option_adder::operator()(
+    Parameter::Name&&, Value<types::Int>&&, tl::optional<std::string_view>) -> Option_adder;
+template auto cli::Options_description::Option_adder::operator()(
+    Parameter::Name&&, Value<types::Float>&&, tl::optional<std::string_view>) -> Option_adder;
+template auto cli::Options_description::Option_adder::operator()(
+    Parameter::Name&&, Value<types::Bool>&&, tl::optional<std::string_view>) -> Option_adder;
+template auto cli::Options_description::Option_adder::operator()(
+    Parameter::Name&&, Value<types::Str>&&, tl::optional<std::string_view>) -> Option_adder;
 
 namespace {
     template <class T>
-    auto get_arg(cli::Options::Argument_proxy const& self) -> T const* {
+    auto get_arg(cli::Options::Argument_proxy const& self) -> T const*
+    {
         if (self.pointer) {
             switch (self.count) {
             case 0:
-                utl::abort(
-                    "Attempted to access value of non-existent "
-                    "argument of nullary cli option --{}"_format(self.name));
+                utl::abort("Attempted to access value of non-existent "
+                           "argument of nullary cli option --{}"_format(self.name));
             case 1:
                 break;
             default:
-                utl::abort(
-                    "Attempted to access value of multi-argument "
-                    "cli option --{} without indexing"_format(self.name));
+                utl::abort("Attempted to access value of multi-argument "
+                           "cli option --{} without indexing"_format(self.name));
             }
 
             if (T* const pointer = std::get_if<T>(self.pointer)) {
                 return pointer;
             }
             else {
-                utl::abort(
-                    "Attempted to access a parameter of cli "
-                    "option --{} as {}, but it is {}"_format(
-                        self.name,
-                        type_description<T>(),
-                        type_description(*self.pointer)));
+                utl::abort("Attempted to access a parameter of cli "
+                           "option --{} as {}, but it is {}"_format(
+                               self.name, type_description<T>(), type_description(*self.pointer)));
             }
         }
         else {
             return nullptr;
         }
     }
-}
+} // namespace
 
-
-cli::Options::Argument_proxy::operator cli::types::Int const*() const {
+cli::Options::Argument_proxy::operator cli::types::Int const*() const
+{
     return get_arg<types::Int>(*this);
 }
-cli::Options::Argument_proxy::operator cli::types::Float const*() const {
+
+cli::Options::Argument_proxy::operator cli::types::Float const*() const
+{
     return get_arg<types::Float>(*this);
 }
-cli::Options::Argument_proxy::operator cli::types::Bool const*() const {
+
+cli::Options::Argument_proxy::operator cli::types::Bool const*() const
+{
     return get_arg<types::Bool>(*this);
 }
-cli::Options::Argument_proxy::operator cli::types::Str const*() const {
+
+cli::Options::Argument_proxy::operator cli::types::Str const*() const
+{
     return get_arg<types::Str>(*this);
 }
 
-
-cli::Options::Argument_proxy::operator bool() const noexcept {
+cli::Options::Argument_proxy::operator bool() const noexcept
+{
     return !empty;
 }
 
-
-auto cli::Options::Argument_proxy::operator[](utl::Usize const index) -> Argument_proxy {
-    if (indexed)
+auto cli::Options::Argument_proxy::operator[](utl::Usize const index) -> Argument_proxy
+{
+    if (indexed) {
         utl::abort("Attempted to index into an already indexed argument proxy");
+    }
 
     if (index < count) {
         return {
-            .name    = name,
-            .pointer = pointer + index,
-            .count   = 1,
-            .indexed = true,
-            .empty   = false
+            .name = name, .pointer = pointer + index, .count = 1, .indexed = true, .empty = false
         };
     }
     else {
-        utl::abort(
-            "The cli option --{} does not have a {} parameter"_format(
-                name,
-                utl::formatting::integer_with_ordinal_indicator(index + 1)));
+        utl::abort("The cli option --{} does not have a {} parameter"_format(
+            name, utl::formatting::integer_with_ordinal_indicator(index + 1)));
     }
 }
 
-
-auto cli::Options::operator[](std::string_view const name) noexcept -> Argument_proxy {
+auto cli::Options::operator[](std::string_view const name) noexcept -> Argument_proxy
+{
     auto const it = ranges::find(named_arguments, name, &Named_argument::name);
     if (it != named_arguments.end()) {
-        return {
-            .name    = name,
-            .pointer = it->values.data(),
-            .count   = it->values.size(),
-            .indexed = false,
-            .empty   = false
-        };
+        return { .name    = name,
+                 .pointer = it->values.data(),
+                 .count   = it->values.size(),
+                 .indexed = false,
+                 .empty   = false };
     }
     return { .empty = true };
 }
 
-
-auto cli::to_string(cli::Options_description const& options_description) -> std::string {
+auto cli::to_string(cli::Options_description const& options_description) -> std::string
+{
     std::vector<utl::Pair<std::string, tl::optional<std::string_view>>> lines;
     lines.reserve(options_description.parameters.size());
     utl::Usize max_length = 0;
 
     for (auto const& [name, arguments, description, _] : options_description.parameters) {
         std::string line;
-        auto line_out = std::back_inserter(line);
+        auto        line_out = std::back_inserter(line);
 
         std::format_to(
             line_out,
@@ -529,9 +543,14 @@ auto cli::to_string(cli::Options_description const& options_description) -> std:
             name.short_form ? std::format(", -{}", *name.short_form) : "");
 
         for (auto const& argument : arguments) {
-            std::format_to(line_out, " [{}]", std::visit([]<class T>(cli::Value<T> const& value) {
-                return value.name.empty() ? type_description<T>() : value.name;
-            }, argument));
+            std::format_to(
+                line_out,
+                " [{}]",
+                std::visit(
+                    []<class T>(cli::Value<T> const& value) {
+                        return value.name.empty() ? type_description<T>() : value.name;
+                    },
+                    argument));
         }
 
         max_length = std::max(max_length, line.size());
@@ -539,15 +558,11 @@ auto cli::to_string(cli::Options_description const& options_description) -> std:
     }
 
     std::string output;
-    auto out = std::back_inserter(output);
+    auto        out = std::back_inserter(output);
 
     for (auto& [names, description] : lines) {
         out = std::format_to(
-            out,
-            "\t{:{}}{}\n",
-            names,
-            max_length,
-            description ? " : {}"_format(*description) : "");
+            out, "\t{:{}}{}\n", names, max_length, description ? " : {}"_format(*description) : "");
     }
 
     return output;

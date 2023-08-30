@@ -2,12 +2,12 @@
 #include <libformat/format_internals.hpp>
 #include <libformat/format.hpp>
 
-
 namespace {
     struct Definition_format_visitor {
         libformat::State& state;
 
-        auto operator()(cst::definition::Function const& function) const -> void {
+        auto operator()(cst::definition::Function const& function) const -> void
+        {
             state.format("fn {}", function.signature.name);
             if (function.signature.template_parameters.has_value()) {
                 state.format("[TODO]");
@@ -24,7 +24,9 @@ namespace {
             }
             case kieli::Format_configuration::Function_body::normalize_to_equals_sign:
             {
-                if (auto const* const block = std::get_if<cst::expression::Block>(&function.body->value)) {
+                if (auto const* const block
+                    = std::get_if<cst::expression::Block>(&function.body->value))
+                {
                     if (block->result_expression.has_value() && block->side_effects.empty()) {
                         state.format(" = ");
                         state.format(**block->result_expression);
@@ -58,34 +60,46 @@ namespace {
             }
         }
 
-        auto operator()(cst::definition::Struct const&) -> void {
+        auto operator()(cst::definition::Struct const&) -> void
+        {
             utl::todo();
         }
-        auto operator()(cst::definition::Enum const&) -> void {
+
+        auto operator()(cst::definition::Enum const&) -> void
+        {
             utl::todo();
         }
-        auto operator()(cst::definition::Typeclass const&) -> void {
+
+        auto operator()(cst::definition::Typeclass const&) -> void
+        {
             utl::todo();
         }
-        auto operator()(cst::definition::Implementation const&) -> void {
+
+        auto operator()(cst::definition::Implementation const&) -> void
+        {
             utl::todo();
         }
-        auto operator()(cst::definition::Instantiation const&) -> void {
+
+        auto operator()(cst::definition::Instantiation const&) -> void
+        {
             utl::todo();
         }
-        auto operator()(cst::definition::Alias const&) -> void {
+
+        auto operator()(cst::definition::Alias const&) -> void
+        {
             utl::todo();
         }
-        auto operator()(cst::definition::Namespace const&) -> void {
+
+        auto operator()(cst::definition::Namespace const&) -> void
+        {
             utl::todo();
         }
     };
 
-    auto format_node_impl(
-        auto const& node,
-        kieli::Format_configuration const& configuration) -> std::string
+    auto format_node_impl(auto const& node, kieli::Format_configuration const& configuration)
+        -> std::string
     {
-        std::string output_string;
+        std::string      output_string;
         libformat::State state {
             .configuration       = configuration,
             .string              = output_string,
@@ -94,14 +108,12 @@ namespace {
         state.format(node);
         return output_string;
     }
-}
-
+} // namespace
 
 auto kieli::format_module(
-    cst::Module                 const& module,
-    kieli::Format_configuration const& configuration) -> std::string
+    cst::Module const& module, kieli::Format_configuration const& configuration) -> std::string
 {
-    std::string output_string;
+    std::string      output_string;
     libformat::State state {
         .configuration       = configuration,
         .string              = output_string,
@@ -115,22 +127,19 @@ auto kieli::format_module(
 }
 
 auto kieli::format_expression(
-    cst::Expression      const& expression,
-    Format_configuration const& configuration) -> std::string
+    cst::Expression const& expression, Format_configuration const& configuration) -> std::string
 {
     return format_node_impl(expression, configuration);
 }
 
-auto kieli::format_pattern(
-    cst::Pattern         const& pattern,
-    Format_configuration const& configuration) -> std::string
+auto kieli::format_pattern(cst::Pattern const& pattern, Format_configuration const& configuration)
+    -> std::string
 {
     return format_node_impl(pattern, configuration);
 }
 
-auto kieli::format_type(
-    cst::Type            const& type,
-    Format_configuration const& configuration) -> std::string
+auto kieli::format_type(cst::Type const& type, Format_configuration const& configuration)
+    -> std::string
 {
     return format_node_impl(type, configuration);
 }

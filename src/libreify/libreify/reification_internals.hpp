@@ -5,7 +5,6 @@
 #include <libresolve/hir.hpp>
 #include <libreify/cir.hpp>
 
-
 namespace libreify {
 
     struct [[nodiscard]] Reification_constants {
@@ -34,54 +33,56 @@ namespace libreify {
         utl::Safe_isize                                        current_frame_offset;
 
         explicit Context(
-            compiler::Compilation_info&& compilation_info,
-            cir::Node_arena           && node_arena) noexcept
+            compiler::Compilation_info&& compilation_info, cir::Node_arena&& node_arena) noexcept
             : compilation_info { std::move(compilation_info) }
-            , node_arena       { std::move(node_arena) }
-            , constants        { this->node_arena } {}
-
+            , node_arena { std::move(node_arena) }
+            , constants { this->node_arena }
+        {}
 
         template <class Node>
         auto wrap(Node&& node) -> utl::Wrapper<Node>
-            requires requires { node_arena.wrap<Node>(std::move(node)); } && (!std::is_reference_v<Node>)
+            requires requires { node_arena.wrap<Node>(std::move(node)); }
+                  && (!std::is_reference_v<Node>)
         {
             return node_arena.wrap<Node>(std::move(node));
         }
-        [[nodiscard]]
-        auto wrap() noexcept {
-            return [this]<class Arg>(Arg&& arg) -> utl::Wrapper<Arg>
-                requires requires (Context context) { context.wrap(std::move(arg)); } && (!std::is_reference_v<Arg>)
+
+        [[nodiscard]] auto wrap() noexcept
+        {
+            return [this]<class Arg>(Arg && arg) -> utl::Wrapper<Arg>
+                       requires requires(Context context) { context.wrap(std::move(arg)); }
+                             && (!std::is_reference_v<Arg>)
             {
                 return wrap(std::move(arg));
             };
         }
 
         // `wrap_type(x)` is shorthand for `utl::wrap(cir::Type::Variant { x })`
-        auto wrap_type(cir::Type::Variant&& value) -> utl::Wrapper<cir::Type::Variant> {
+        auto wrap_type(cir::Type::Variant&& value) -> utl::Wrapper<cir::Type::Variant>
+        {
             return wrap(std::move(value));
         }
 
         auto reify_expression(hir::Expression const&) -> cir::Expression;
-        auto reify_pattern   (hir::Pattern    const&) -> cir::Pattern;
-        auto reify_type      (hir::Type             ) -> cir::Type;
+        auto reify_pattern(hir::Pattern const&) -> cir::Pattern;
+        auto reify_type(hir::Type) -> cir::Type;
 
-        [[noreturn]]
-        auto error(utl::Source_view, utl::diagnostics::Message_arguments) -> void;
+        [[noreturn]] auto error(utl::Source_view, utl::diagnostics::Message_arguments) -> void;
 
-        auto unit_type     (utl::Source_view) -> cir::Type;
-        auto i8_type       (utl::Source_view) -> cir::Type;
-        auto i16_type      (utl::Source_view) -> cir::Type;
-        auto i32_type      (utl::Source_view) -> cir::Type;
-        auto i64_type      (utl::Source_view) -> cir::Type;
-        auto u8_type       (utl::Source_view) -> cir::Type;
-        auto u16_type      (utl::Source_view) -> cir::Type;
-        auto u32_type      (utl::Source_view) -> cir::Type;
-        auto u64_type      (utl::Source_view) -> cir::Type;
-        auto floating_type (utl::Source_view) -> cir::Type;
+        auto unit_type(utl::Source_view) -> cir::Type;
+        auto i8_type(utl::Source_view) -> cir::Type;
+        auto i16_type(utl::Source_view) -> cir::Type;
+        auto i32_type(utl::Source_view) -> cir::Type;
+        auto i64_type(utl::Source_view) -> cir::Type;
+        auto u8_type(utl::Source_view) -> cir::Type;
+        auto u16_type(utl::Source_view) -> cir::Type;
+        auto u32_type(utl::Source_view) -> cir::Type;
+        auto u64_type(utl::Source_view) -> cir::Type;
+        auto floating_type(utl::Source_view) -> cir::Type;
         auto character_type(utl::Source_view) -> cir::Type;
-        auto boolean_type  (utl::Source_view) -> cir::Type;
-        auto string_type   (utl::Source_view) -> cir::Type;
-        auto size_type     (utl::Source_view) -> cir::Type;
+        auto boolean_type(utl::Source_view) -> cir::Type;
+        auto string_type(utl::Source_view) -> cir::Type;
+        auto size_type(utl::Source_view) -> cir::Type;
     };
 
-}
+} // namespace libreify

@@ -5,7 +5,6 @@
 #include <libdesugar/ast.hpp>
 #include <libparse/parse.hpp>
 
-
 namespace kieli {
 
     struct [[nodiscard]] Desugar_result {
@@ -16,4 +15,4 @@ namespace kieli {
 
     auto desugar(Parse_result&&) -> Desugar_result;
 
-}
+} // namespace kieli

@@ -2,11 +2,15 @@
 
 #include <libutl/common/utilities.hpp>
 
-
 namespace utl {
 
-#define BU_NOISY_LOG(op, f, ...) \
-f noexcept { op live_count; utl::print("[{},{}] utl::Noisy::" #f "\n", live_count, static_cast<void const*>(this)); __VA_ARGS__ }
+#define BU_NOISY_LOG(op, f, ...)                                                                \
+    f noexcept                                                                                  \
+    {                                                                                           \
+        op live_count;                                                                          \
+        utl::print("[{},{}] utl::Noisy::" #f "\n", live_count, static_cast<void const*>(this)); \
+        __VA_ARGS__                                                                             \
+    }
 
     struct Noisy {
         inline static constinit Usize live_count = 0;
@@ -20,4 +24,4 @@ f noexcept { op live_count; utl::print("[{},{}] utl::Noisy::" #f "\n", live_coun
 
 #undef BU_NOISY_LOG
 
-}
+} // namespace utl
