@@ -21,8 +21,9 @@ namespace {
         while (Lexical_token const* const token = context.try_extract(Token_type::string_literal)) {
             combined_string += token->as_string().view();
         }
-        return compiler::String { context.compilation_info.get()->string_literal_pool.make(
-            combined_string) };
+        return compiler::String {
+            context.compilation_info.get()->string_literal_pool.make(combined_string),
+        };
     }
 
     auto parse_struct_member_initializer(Parse_context& context)

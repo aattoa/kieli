@@ -38,29 +38,35 @@ namespace {
         auto const mutability_error
             = [&](std::string_view const message, utl::Pair<std::string_view> const notes) {
                   context.diagnostics().emit_error({
-                      .sections = utl::to_vector<utl::diagnostics::Text_section>(
-                          { { .source_view = actual_mutability.source_view(),
+                      .sections = utl::to_vector<utl::diagnostics::Text_section>({
+                          {
+                              .source_view = actual_mutability.source_view(),
                               .note        = notes.first,
-                              .note_color  = utl::diagnostics::warning_color },
-                            { .source_view = requested_mutability.source_view(),
+                              .note_color  = utl::diagnostics::warning_color,
+                          },
+                          {
+                              .source_view = requested_mutability.source_view(),
                               .note        = notes.second,
-                              .note_color  = utl::diagnostics::error_color } }),
-                      .message = message,
+                              .note_color  = utl::diagnostics::error_color,
+                          },
+                      }),
+                      .message  = message,
                   });
               };
 
         auto const solve_mutability_quality_constraint = [&] {
-            context.solve(
-                constraint::Mutability_equality { .constrainer_mutability = actual_mutability,
-                                                  .constrained_mutability = requested_mutability,
-                                                  .constrainer_note {
-                                                      requested_mutability.source_view(),
-                                                      "Requested mutability ({1})",
-                                                  },
-                                                  .constrained_note {
-                                                      actual_mutability.source_view(),
-                                                      "Actual mutability ({0})",
-                                                  } });
+            context.solve(constraint::Mutability_equality {
+                .constrainer_mutability = actual_mutability,
+                .constrained_mutability = requested_mutability,
+                .constrainer_note {
+                    requested_mutability.source_view(),
+                    "Requested mutability ({1})",
+                },
+                .constrained_note {
+                    actual_mutability.source_view(),
+                    "Actual mutability ({0})",
+                },
+            });
         };
 
         // Just solving the mutability equality constraint would be sufficient,
@@ -204,12 +210,13 @@ namespace {
                 });
             }
 
-            return { .value
-                     = hir::expression::Direct_invocation { .function  = { .info = function.info },
-                                                            .arguments = std::move(arguments) },
-                     .type        = signature.return_type.with(this_expression.source_view),
-                     .source_view = this_expression.source_view,
-                     .mutability  = context.immut_constant(this_expression.source_view) };
+            return {
+                .value = hir::expression::Direct_invocation { .function = { .info = function.info },
+                                                              .arguments = std::move(arguments), },
+                .type  = signature.return_type.with(this_expression.source_view),
+                .source_view = this_expression.source_view,
+                .mutability  = context.immut_constant(this_expression.source_view),
+            };
         }
 
         auto resolve_indirect_invocation(
@@ -238,13 +245,14 @@ namespace {
                 }
             });
 
-            return { .value
-                     = hir::expression::Indirect_invocation { .arguments = std::move(arguments),
-                                                              .invocable = context.wrap(
-                                                                  std::move(invocable)) },
-                     .type        = return_type,
-                     .source_view = this_expression.source_view,
-                     .mutability  = context.immut_constant(this_expression.source_view) };
+            return {
+                .value = hir::expression::Indirect_invocation { .arguments = std::move(arguments),
+                                                                .invocable = context.wrap(
+                                                                    std::move(invocable)), },
+                .type  = return_type,
+                .source_view = this_expression.source_view,
+                .mutability  = context.immut_constant(this_expression.source_view),
+            };
         }
 
         auto
@@ -419,11 +427,13 @@ namespace {
                     }
                 },
                 [this](hir::Enum_constructor const constructor) -> hir::Expression {
-                    return { .value = hir::expression::Enum_constructor_reference { constructor },
-                             .type  = constructor.function_type.value_or(constructor.enum_type)
-                                         .with(this_expression.source_view),
-                             .source_view = this_expression.source_view,
-                             .mutability  = context.immut_constant(this_expression.source_view) };
+                    return {
+                        .value = hir::expression::Enum_constructor_reference { constructor },
+                        .type  = constructor.function_type.value_or(constructor.enum_type)
+                                    .with(this_expression.source_view),
+                        .source_view = this_expression.source_view,
+                        .mutability  = context.immut_constant(this_expression.source_view),
+                    };
                 },
                 [this](utl::Wrapper<Namespace>) -> hir::Expression {
                     context.error(
@@ -574,7 +584,7 @@ namespace {
                 .value
                 = hir::expression::Block { .side_effect_expressions = std::move(side_effects),
                                            .result_expression
-                                           = context.wrap(std::move(block_result)) },
+                                           = context.wrap(std::move(block_result)), },
                 .type        = result_type,
                 .source_view = this_expression.source_view,
                 .mutability  = context.immut_constant(this_expression.source_view),
@@ -587,9 +597,11 @@ namespace {
             scope.bind_type(
                 context,
                 alias.alias_name.identifier,
-                { .type               = context.resolve_type(*alias.aliased_type, scope, space),
-                  .has_been_mentioned = false,
-                  .source_view        = this_expression.source_view });
+                {
+                    .type               = context.resolve_type(*alias.aliased_type, scope, space),
+                    .has_been_mentioned = false,
+                    .source_view        = this_expression.source_view,
+                });
             return {
                 .value          = hir::expression::Tuple {},
                 .type           = context.unit_type(this_expression.source_view),
@@ -667,13 +679,14 @@ namespace {
         {
             hir::Expression condition = recurse(*conditional.condition);
 
-            context.solve(constraint::Type_equality { .constrainer_type
-                                                      = context.boolean_type(condition.source_view),
-                                                      .constrained_type = condition.type,
-                                                      .constrained_note {
-                                                          condition.source_view,
-                                                          "This should be of type {0}, not {1}",
-                                                      } });
+            context.solve(constraint::Type_equality {
+                .constrainer_type = context.boolean_type(condition.source_view),
+                .constrained_type = condition.type,
+                .constrained_note {
+                    condition.source_view,
+                    "This should be of type {0}, not {1}",
+                },
+            });
 
             hir::Expression true_branch  = recurse(*conditional.true_branch);
             hir::Expression false_branch = recurse(*conditional.false_branch);
@@ -731,7 +744,7 @@ namespace {
                                                  .true_branch
                                                  = context.wrap(std::move(true_branch)),
                                                  .false_branch
-                                                 = context.wrap(std::move(false_branch)) },
+                                                 = context.wrap(std::move(false_branch)), },
                 .type        = result_type.with(this_expression.source_view),
                 .source_view = this_expression.source_view,
                 .mutability  = context.immut_constant(this_expression.source_view),
@@ -985,13 +998,15 @@ namespace {
             hir::Type const field_type
                 = context.fresh_general_unification_type_variable(this_expression.source_view);
 
-            context.solve(constraint::Tuple_field { .tuple_type  = base_expression.type,
-                                                    .field_type  = field_type,
-                                                    .field_index = access.field_index.get(),
-                                                    .explanation {
-                                                        access.field_index_source_view,
-                                                        "Invalid indexed field access",
-                                                    } });
+            context.solve(constraint::Tuple_field {
+                .tuple_type  = base_expression.type,
+                .field_type  = field_type,
+                .field_index = access.field_index.get(),
+                .explanation {
+                    access.field_index_source_view,
+                    "Invalid indexed field access",
+                },
+            });
             return {
                 .value = hir::expression::Tuple_field_access {
                     .base_expression         = context.wrap(std::move(base_expression)),
@@ -1055,8 +1070,10 @@ namespace {
                     = context.fresh_unification_mutability_variable(this_expression.source_view);
 
                 hir::Type const reference_type {
-                    context.wrap_type(hir::type::Reference { .mutability = reference_mutability,
-                                                             .referenced_type = referenced_type }),
+                    context.wrap_type(hir::type::Reference {
+                        .mutability      = reference_mutability,
+                        .referenced_type = referenced_type,
+                    }),
                     referenced_type.source_view(),
                 };
 
@@ -1066,9 +1083,10 @@ namespace {
                     .constrainer_note
                     = constraint::Explanation { this_expression.source_view,
                                                 "Only expressions of reference types (&T or &mut "
-                                                "T) can be dereferenced" },
+                                                "T) can be dereferenced", },
                     .constrained_note { dereferenced_expression.source_view,
-                                        "But this expression is of type {0}" } });
+                                        "But this expression is of type {0}", },
+                });
 
                 return {
                     .value          = hir::expression::Dereference { context.wrap(
@@ -1090,8 +1108,10 @@ namespace {
                 context, lvalue, "The address of a temporary object can not be taken");
 
             hir::Type const pointer_type {
-                context.wrap_type(hir::type::Pointer { .mutability      = lvalue.mutability,
-                                                       .pointed_to_type = lvalue.type }),
+                context.wrap_type(hir::type::Pointer {
+                    .mutability      = lvalue.mutability,
+                    .pointed_to_type = lvalue.type,
+                }),
                 this_expression.source_view,
             };
 
@@ -1126,8 +1146,10 @@ namespace {
                 = context.fresh_unification_mutability_variable(this_expression.source_view);
 
             hir::Type const pointer_type {
-                context.wrap_type(hir::type::Pointer { .mutability      = lvalue_mutability,
-                                                       .pointed_to_type = lvalue_type }),
+                context.wrap_type(hir::type::Pointer {
+                    .mutability      = lvalue_mutability,
+                    .pointed_to_type = lvalue_type,
+                }),
                 pointer.source_view,
             };
 
@@ -1136,7 +1158,7 @@ namespace {
                 .constrained_type = pointer.type,
                 .constrainer_note = constraint::
                     Explanation { this_expression.source_view,
-                                  "The operand of unsafe dereference must be of a pointer type" },
+                                  "The operand of unsafe dereference must be of a pointer type", },
                 .constrained_note { pointer.source_view, "But this expression is of type {1}" } });
 
             return {

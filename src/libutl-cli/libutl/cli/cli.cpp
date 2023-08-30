@@ -104,15 +104,16 @@ namespace {
 
             utl::diagnostics::Builder builder;
             builder.emit_error(
-                arguments.add_source_view(
-                    utl::Source_view { fake_source,
-                                       erroneous_view,
-                                       utl::Source_position {},
-                                       utl::Source_position { 1,
-                                                              1
-                                                                  + utl::unsigned_distance(
-                                                                      fake_source->string().data(),
-                                                                      erroneous_view.data()) } }),
+                arguments.add_source_view(utl::Source_view {
+                    fake_source,
+                    erroneous_view,
+                    utl::Source_position {},
+                    utl::Source_position {
+                        1,
+                        1
+                            + utl::unsigned_distance(
+                                fake_source->string().data(), erroneous_view.data()) },
+                }),
                 utl::diagnostics::Type::recoverable); // Prevent exception
             return builder;
         }
@@ -390,10 +391,12 @@ auto cli::Options_description::Option_adder::operator()(
     map_short_to_long(name);
     bool const is_defaulted = value.default_value.has_value();
 
-    self->parameters.push_back({ .name = std::move(name),
-                                 .values { std::move(value) },
-                                 .description = description,
-                                 .defaulted   = is_defaulted });
+    self->parameters.push_back({
+        .name        = std::move(name),
+        .values      = { std::move(value) },
+        .description = description,
+        .defaulted   = is_defaulted,
+    });
     return *this;
 }
 
@@ -405,8 +408,8 @@ auto cli::Options_description::Option_adder::operator()(
     map_short_to_long(name);
 
     auto const has_default = [](auto const& variant) {
-        return std::visit(
-            [](auto& alternative) { return alternative.default_value.has_value(); }, variant);
+        return utl::match(
+            variant, [](auto& alternative) { return alternative.default_value.has_value(); });
     };
 
     bool is_defaulted = false;
@@ -517,11 +520,13 @@ auto cli::Options::operator[](std::string_view const name) noexcept -> Argument_
 {
     auto const it = ranges::find(named_arguments, name, &Named_argument::name);
     if (it != named_arguments.end()) {
-        return { .name    = name,
-                 .pointer = it->values.data(),
-                 .count   = it->values.size(),
-                 .indexed = false,
-                 .empty   = false };
+        return {
+            .name    = name,
+            .pointer = it->values.data(),
+            .count   = it->values.size(),
+            .indexed = false,
+            .empty   = false,
+        };
     }
     return { .empty = true };
 }

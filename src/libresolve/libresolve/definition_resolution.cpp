@@ -260,10 +260,11 @@ namespace {
         Scope                    scope,
         utl::Wrapper<Namespace>  home_namespace) -> hir::Struct
     {
-        hir::Struct hir_structure { .members = utl::vector_with_capacity(structure.members.size()),
-                                    .name    = structure.name,
-                                    .associated_namespace
-                                    = context.wrap(Namespace { .parent = home_namespace }) };
+        hir::Struct hir_structure {
+            .members              = utl::vector_with_capacity(structure.members.size()),
+            .name                 = structure.name,
+            .associated_namespace = context.wrap(Namespace { .parent = home_namespace }),
+        };
 
         for (ast::definition::Struct::Member& member : structure.members) {
             hir::Type const member_type = context.resolve_type(member.type, scope, *home_namespace);
@@ -357,7 +358,6 @@ auto libresolve::Context::resolve_function_signature(Function_info& info)
     if (auto* const function = std::get_if<ast::definition::Function>(&info.value)) {
         resolve_function_signature_impl(*this, info, std::move(*function));
     }
-
     if (auto* const function = std::get_if<Partially_resolved_function>(&info.value)) {
         return function->resolved_signature;
     }
@@ -386,9 +386,11 @@ auto libresolve::Context::resolve_struct(utl::Wrapper<Struct_info> const wrapped
     Struct_info& info = *wrapped_info;
 
     if (auto* const structure = std::get_if<ast::definition::Struct>(&info.value)) {
-        Definition_state_guard const state_guard { *this,
-                                                   info.state,
-                                                   structure->name.as_dynamic() };
+        Definition_state_guard const state_guard {
+            *this,
+            info.state,
+            structure->name.as_dynamic(),
+        };
         info.value = resolve_struct_impl(*structure, *this, Scope {}, info.home_namespace);
     }
 
@@ -400,9 +402,11 @@ auto libresolve::Context::resolve_enum(utl::Wrapper<Enum_info> const wrapped_inf
     Enum_info& info = *wrapped_info;
 
     if (auto* const enumeration = std::get_if<ast::definition::Enum>(&info.value)) {
-        Definition_state_guard const state_guard { *this,
-                                                   info.state,
-                                                   enumeration->name.as_dynamic() };
+        Definition_state_guard const state_guard {
+            *this,
+            info.state,
+            enumeration->name.as_dynamic(),
+        };
         info.value = resolve_enum_impl(
             *enumeration, *this, Scope {}, info.home_namespace, info.enumeration_type);
     }
@@ -436,11 +440,15 @@ auto libresolve::Context::resolve_typeclass(utl::Wrapper<Typeclass_info> const w
     if (auto* const ast_typeclass = std::get_if<ast::definition::Typeclass>(&info.value)) {
         utl::always_assert(ast_typeclass->type_signatures.empty());
 
-        Definition_state_guard const state_guard { *this,
-                                                   info.state,
-                                                   ast_typeclass->name.as_dynamic() };
-        Self_type_guard const        self_type_guard { *this,
-                                                self_placeholder_type(info.name.source_view) };
+        Definition_state_guard const state_guard {
+            *this,
+            info.state,
+            ast_typeclass->name.as_dynamic(),
+        };
+        Self_type_guard const self_type_guard {
+            *this,
+            self_placeholder_type(info.name.source_view),
+        };
 
         hir::Typeclass hir_typeclass { .name = info.name };
 
@@ -476,8 +484,7 @@ auto libresolve::Context::resolve_implementation(
     Implementation_info& info = *wrapped_info;
 
     if (auto* const implementation = std::get_if<ast::definition::Implementation>(&info.value)) {
-        // Definition_state_guard is not needed because an implementation block can not be referred
-        // to
+        // State guard is not needed because an implementation block can not be referred to
 
         Scope           scope;
         hir::Type const self_type = resolve_type(implementation->type, scope, *info.home_namespace);

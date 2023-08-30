@@ -25,15 +25,23 @@ namespace {
 
         auto const emit_ambiguity_error = [&](utl::Pair<utl::Source_view> const views) {
             context.diagnostics().emit_error({
-                .sections = utl::to_vector<utl::diagnostics::Text_section>(
-                    { { .source_view = method_name.source_view, .note = "Ambiguity here" },
-                      { .source_view = views.first,
+                .sections = utl::to_vector<utl::diagnostics::Text_section>({
+                    {
+                        .source_view = method_name.source_view,
+                        .note        = "Ambiguity here",
+                    },
+                    {
+                        .source_view = views.first,
                         .note        = "Could be referring to this",
-                        .note_color  = utl::diagnostics::warning_color },
-                      { .source_view = views.second,
+                        .note_color  = utl::diagnostics::warning_color,
+                    },
+                    {
+                        .source_view = views.second,
                         .note        = "or this",
-                        .note_color  = utl::diagnostics::warning_color } }),
-                .message = "Ambiguous method: {}"_format(method_name),
+                        .note_color  = utl::diagnostics::warning_color,
+                    },
+                }),
+                .message  = "Ambiguous method: {}"_format(method_name),
             });
         };
 
@@ -53,8 +61,10 @@ namespace {
             {
                 if (is_implementation_for(context, implementation.self_type, inspected_type)) {
                     if (return_value.has_value()) {
-                        emit_ambiguity_error({ return_value->method_info->name.source_view,
-                                               (*function)->name.source_view });
+                        emit_ambiguity_error({
+                            return_value->method_info->name.source_view,
+                            (*function)->name.source_view,
+                        });
                     }
                     else {
                         return_value = Method_lookup_result { *function, implementation_info };

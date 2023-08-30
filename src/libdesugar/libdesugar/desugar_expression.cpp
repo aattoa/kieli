@@ -447,8 +447,9 @@ namespace {
 
         auto operator()(cst::expression::Sizeof const& sizeof_) -> ast::Expression::Variant
         {
-            return ast::expression::Sizeof { .inspected_type
-                                             = context.desugar(sizeof_.inspected_type.value) };
+            return ast::expression::Sizeof {
+                .inspected_type = context.desugar(sizeof_.inspected_type.value),
+            };
         }
 
         auto operator()(cst::expression::Reference const& reference) -> ast::Expression::Variant

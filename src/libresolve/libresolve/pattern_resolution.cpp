@@ -88,7 +88,8 @@ namespace {
                             return context.fresh_general_unification_type_variable(
                                 pattern.source_view);
                         },
-                        tuple.field_patterns) }),
+                        tuple.field_patterns),
+                }),
                 this_pattern.source_view,
             };
             solve_pattern_type_constraint(hir_tuple_type);
@@ -96,8 +97,9 @@ namespace {
             std::span<hir::Type const> const field_types
                 = utl::get<hir::type::Tuple>(*hir_tuple_type.pure_value()).field_types;
 
-            hir::pattern::Tuple hir_tuple_pattern { .field_patterns = utl::vector_with_capacity(
-                                                        tuple.field_patterns.size()) };
+            hir::pattern::Tuple hir_tuple_pattern {
+                .field_patterns = utl::vector_with_capacity(tuple.field_patterns.size()),
+            };
             for (auto&& [pattern, type] : ranges::views::zip(tuple.field_patterns, field_types)) {
                 hir_tuple_pattern.field_patterns.push_back(recurse(pattern, type));
             }
@@ -167,7 +169,7 @@ namespace {
                 .value                   = hir::pattern::Enum_constructor { .payload_pattern
                                                           = std::move(hir_payload_pattern)
                                                                 .transform(context.wrap()),
-                                                                            .constructor = constructor },
+                                                                            .constructor = constructor, },
                 .is_exhaustive_by_itself = is_exhaustive,
                 .source_view             = this_pattern.source_view,
             };

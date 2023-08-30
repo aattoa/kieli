@@ -19,7 +19,7 @@ namespace {
             context.error(
                 this_type.source_view(),
                 {
-                    .message = std::format(
+                    std::format(
                         "Found an unsolved type variable: {}",
                         hir::to_string(variable.state->as_unsolved().tag)),
                 });

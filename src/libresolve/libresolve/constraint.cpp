@@ -52,8 +52,8 @@ namespace {
     {
         context.error(
             constraint.constrained_type.source_view(),
-            { "Recursive unification variable solution: {} = {}"_format(
-                hir::to_string(variable), hir::to_string(solution)) });
+            { .message = "Recursive unification variable solution: {} = {}"_format(
+                  hir::to_string(variable), hir::to_string(solution)) });
     }
 
     auto report_mutability_unification_failure(
@@ -121,12 +121,14 @@ auto libresolve::Context::solve(constraint::Struct_field const& constraint) -> v
         hir::Struct const& structure = resolve_struct(type->info);
         for (hir::Struct::Member const& member : structure.members) {
             if (constraint.field_identifier == member.name.identifier) {
-                solve(constraint::Type_equality { .constrainer_type = member.type,
-                                                  .constrained_type = constraint.field_type,
-                                                  .constrained_note {
-                                                      constraint.explanation.source_view,
-                                                      "(this message should never be visible)",
-                                                  } });
+                solve(constraint::Type_equality {
+                    .constrainer_type = member.type,
+                    .constrained_type = constraint.field_type,
+                    .constrained_note {
+                        constraint.explanation.source_view,
+                        "(this message should never be visible)",
+                    },
+                });
                 return;
             }
         }
@@ -169,13 +171,14 @@ auto libresolve::Context::solve(constraint::Tuple_field const& constraint) -> vo
                             constraint.field_index.get() + 1)),
                 });
         }
-        solve(constraint::Type_equality { .constrainer_type = constraint.field_type,
-                                          .constrained_type
-                                          = type->field_types[constraint.field_index.get()],
-                                          .constrained_note {
-                                              constraint.explanation.source_view,
-                                              "(this message should never be visible)",
-                                          } });
+        solve(constraint::Type_equality {
+            .constrainer_type = constraint.field_type,
+            .constrained_type = type->field_types[constraint.field_index.get()],
+            .constrained_note {
+                constraint.explanation.source_view,
+                "(this message should never be visible)",
+            },
+        });
     }
     else {
         error(

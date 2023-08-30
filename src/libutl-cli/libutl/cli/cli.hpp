@@ -53,9 +53,9 @@ namespace cli {
             std::string        long_form;
             tl::optional<char> short_form;
 
-            /*implicit*/ Name(
+            Name(
                 char const*        long_name,
-                tl::optional<char> short_name = tl::nullopt) noexcept; // NOLINT
+                tl::optional<char> short_name = tl::nullopt) noexcept; // NOLINT: implicit
         };
 
         using Variant = std::variant<
@@ -123,10 +123,10 @@ namespace cli {
             bool                     indexed = false;
             bool                     empty   = true;
 
-            /* implicit */ operator types::Int const*() const;
-            /* implicit */ operator types::Float const*() const;
-            /* implicit */ operator types::Bool const*() const;
-            /* implicit */ operator types::Str const*() const;
+            operator types::Int const*() const;   // NOLINT: implicit
+            operator types::Float const*() const; // NOLINT: implicit
+            operator types::Bool const*() const;  // NOLINT: implicit
+            operator types::Str const*() const;   // NOLINT: implicit
 
             [[nodiscard]] explicit operator bool() const noexcept;
 
