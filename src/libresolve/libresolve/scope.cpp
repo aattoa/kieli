@@ -10,8 +10,9 @@ namespace {
                 continue;
             }
             context.diagnostics().emit_warning({
-                .sections = utl::to_vector(
-                    { utl::diagnostics::Text_section { .source_view = binding.source_view } }),
+                .sections  = utl::to_vector({ utl::diagnostics::Text_section {
+                     .source_view = binding.source_view,
+                } }),
                 .message   = "Unused local {}"_format(description),
                 .help_note = "If this is intentional, prefix the {} with an underscore: _{}"_format(
                     description, name),
@@ -41,23 +42,24 @@ namespace {
                 && context.diagnostics().warning_level() != utl::diagnostics::Level::suppress)
             {
                 context.diagnostics().emit_warning({
-                    .sections = utl::to_vector<utl::diagnostics::Text_section>(
-                        { {
-                              .source_view = it->second.source_view,
-                              .note        = "First declared here",
-                          },
-                          {
-                              .source_view = binding.source_view,
-                              .note        = "Later shadowed here",
-                          } }),
+                    .sections = utl::to_vector<utl::diagnostics::Text_section>({
+                        {
+                            .source_view = it->second.source_view,
+                            .note        = "First declared here",
+                        },
+                        {
+                            .source_view = binding.source_view,
+                            .note        = "Later shadowed here",
+                        },
+                    }),
                     .message
                     = "Local {} shadows an unused local {}"_format(description, description),
                     .help_note
                     = "If this is intentional, prefix the first {} with an underscore: _{}"_format(
                         description, it->first),
                 });
-                it->second.has_been_mentioned
-                    = true; // Prevent a second warning about the same variable
+                // Prevent a second warning about the same variable
+                it->second.has_been_mentioned = true;
             }
             bindings.emplace(it, identifier, std::forward<decltype(binding)>(binding));
         }

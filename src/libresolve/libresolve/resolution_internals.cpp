@@ -38,11 +38,17 @@ auto libresolve::Context::fresh_unification_mutability_variable(utl::Source_view
     -> hir::Mutability
 {
     return hir::Mutability {
-        wrap(hir::Mutability::Variant { hir::Mutability::Variable {
-            .state = node_arena.wrap(hir::Unification_mutability_variable_state {
-                hir::Unification_mutability_variable_state::Unsolved {
-                    .tag = hir::Unification_variable_tag { current_unification_variable_tag++
-                                                               .get() } } }) } }),
+        wrap(hir::Mutability::Variant {
+            hir::Mutability::Variable {
+                .state = node_arena.wrap(hir::Unification_mutability_variable_state {
+                    hir::Unification_mutability_variable_state::Unsolved {
+                        .tag = hir::Unification_variable_tag {
+                            current_unification_variable_tag++.get(),
+                        },
+                    },
+                }),
+            },
+        }),
         source_view,
     };
 }
@@ -62,9 +68,10 @@ auto libresolve::Context::fresh_general_unification_type_variable(
     utl::Source_view const source_view) -> hir::Type
 {
     return hir::Type {
-        wrap_type(
-            hir::type::Unification_variable { .state = fresh_unification_type_variable_state(
-                                                  hir::Unification_type_variable_kind::general) }),
+        wrap_type(hir::type::Unification_variable {
+            .state
+            = fresh_unification_type_variable_state(hir::Unification_type_variable_kind::general),
+        }),
         source_view,
     };
 }
@@ -225,17 +232,18 @@ namespace {
     {
         if (auto* const existing = (space.*table).find(name.identifier)) {
             context.diagnostics().emit_error({
-                .sections = utl::to_vector<utl::diagnostics::Text_section>(
-                    { {
-                          .source_view = std::visit(get_name_from_variant, *existing).source_view,
-                          .note        = "Originally defined here",
-                          .note_color  = utl::diagnostics::warning_color,
-                      },
-                      {
-                          .source_view = name.source_view,
-                          .note        = "Later defined here",
-                      } }),
-                .message = "{} erroneously redefined"_format(name),
+                .sections = utl::to_vector<utl::diagnostics::Text_section>({
+                    {
+                        .source_view = std::visit(get_name_from_variant, *existing).source_view,
+                        .note        = "Originally defined here",
+                        .note_color  = utl::diagnostics::warning_color,
+                    },
+                    {
+                        .source_view = name.source_view,
+                        .note        = "Later defined here",
+                    },
+                }),
+                .message  = "{} erroneously redefined"_format(name),
             });
         }
         else {
@@ -252,9 +260,11 @@ auto libresolve::Context::add_to_namespace(
         space,
         name,
         std::move(lower),
-        utl::Overload { [](utl::Wrapper<Namespace> const space) { return utl::get(space->name); },
-                        [](hir::Enum_constructor const ctor) { return ctor.name; },
-                        [](utl::wrapper auto const info) { return info->name; } });
+        utl::Overload {
+            [](utl::Wrapper<Namespace> const space) { return utl::get(space->name); },
+            [](hir::Enum_constructor const ctor) { return ctor.name; },
+            [](utl::wrapper auto const info) { return info->name; },
+        });
 }
 
 auto libresolve::Context::add_to_namespace(

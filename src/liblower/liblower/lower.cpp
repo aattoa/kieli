@@ -182,10 +182,11 @@ auto kieli::lower(Reify_result&& reify_result) -> Lower_result
     for (cir::Function& function : reify_result.functions) {
         functions.push_back(lir::Function {
             .symbol = std::move(function.symbol),
-            .body   = std::visit(
+            .body   = utl::match(
+                function.body.value,
                 Expression_lowering_visitor {
-                    reify_result.compilation_info.get()->diagnostics, node_arena, function.body },
-                function.body.value) });
+                    reify_result.compilation_info.get()->diagnostics, node_arena, function.body }),
+        });
     }
 
     return Lower_result {

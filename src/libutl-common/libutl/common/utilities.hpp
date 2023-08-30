@@ -112,55 +112,23 @@ namespace utl {
 } // namespace utl
 
 namespace utl::inline literals {
-    consteval auto operator""_i8(unsigned long long const n) noexcept
-    {
-        return safe_cast<I8>(n);
-    }
 
-    consteval auto operator""_i16(unsigned long long const n) noexcept
-    {
-        return safe_cast<I16>(n);
+#define UTL_INTEGER_LITERAL(name, type)                          \
+    consteval auto operator""_##name(unsigned long long const n) \
+    {                                                            \
+        return safe_cast<type>(n);                               \
     }
-
-    consteval auto operator""_i32(unsigned long long const n) noexcept
-    {
-        return safe_cast<I32>(n);
-    }
-
-    consteval auto operator""_i64(unsigned long long const n) noexcept
-    {
-        return safe_cast<I64>(n);
-    }
-
-    consteval auto operator""_u8(unsigned long long const n) noexcept
-    {
-        return safe_cast<U8>(n);
-    }
-
-    consteval auto operator""_u16(unsigned long long const n) noexcept
-    {
-        return safe_cast<U16>(n);
-    }
-
-    consteval auto operator""_u32(unsigned long long const n) noexcept
-    {
-        return safe_cast<U32>(n);
-    }
-
-    consteval auto operator""_u64(unsigned long long const n) noexcept
-    {
-        return safe_cast<U64>(n);
-    }
-
-    consteval auto operator""_uz(unsigned long long const n) noexcept
-    {
-        return safe_cast<Usize>(n);
-    }
-
-    consteval auto operator""_iz(unsigned long long const n) noexcept
-    {
-        return safe_cast<Isize>(n);
-    }
+    UTL_INTEGER_LITERAL(uz, Usize)
+    UTL_INTEGER_LITERAL(iz, Isize)
+    UTL_INTEGER_LITERAL(i8, I8)
+    UTL_INTEGER_LITERAL(u8, U8)
+    UTL_INTEGER_LITERAL(i16, I16)
+    UTL_INTEGER_LITERAL(u16, U16)
+    UTL_INTEGER_LITERAL(i32, I32)
+    UTL_INTEGER_LITERAL(u32, U32)
+    UTL_INTEGER_LITERAL(i64, I64)
+    UTL_INTEGER_LITERAL(u64, U64)
+#undef UTL_INTEGER_LITERAL
 
     template <Metastring string>
     consteval auto operator""_format() noexcept

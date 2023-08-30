@@ -44,9 +44,10 @@ namespace {
                     return utl::Pair { Lookup_strategy::absolute, &*context.global_namespace };
                 },
                 [&](utl::Wrapper<ast::Type> type) {
-                    return utl::Pair { Lookup_strategy::absolute,
-                                       &*context.associated_namespace(
-                                           context.resolve_type(*type, scope, space)) };
+                    return utl::Pair {
+                        Lookup_strategy::absolute,
+                        &*context.associated_namespace(context.resolve_type(*type, scope, space)),
+                    };
                 });
         }
         return utl::Pair { Lookup_strategy::relative, &space };

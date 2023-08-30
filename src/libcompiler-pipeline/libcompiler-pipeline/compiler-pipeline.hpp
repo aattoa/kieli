@@ -77,15 +77,11 @@ namespace compiler {
 
     namespace built_in_type {
         enum class Integer {
-            i8,
-            i16,
-            i32,
-            i64,
-            u8,
-            u16,
-            u32,
-            u64,
+            // clang-format off
+            i8, i16, i32, i64,
+            u8, u16, u32, u64,
             _enumerator_count,
+            // clang-format on
         };
 
         struct Floating {};

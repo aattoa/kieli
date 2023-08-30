@@ -11,8 +11,10 @@ utl::Source::Source(std::filesystem::path&& file_path, std::string&& file_conten
 auto utl::Source::read(std::filesystem::path&& path) -> Source
 {
     if (std::ifstream file { path }) {
-        return Source { std::move(path),
-                        std::string { std::istreambuf_iterator<char> { file }, {} } };
+        return Source {
+            std::move(path),
+            std::string { std::istreambuf_iterator<char> { file }, {} },
+        };
     }
     else if (std::filesystem::exists(path)) {
         throw exception("Failed to open file '{}'", path.string());

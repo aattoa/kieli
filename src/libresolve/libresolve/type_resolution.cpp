@@ -73,9 +73,12 @@ namespace {
             if (tuple.field_types.empty()) {
                 return context.unit_type(this_type.source_view);
             }
-            return hir::Type { context.wrap_type(hir::type::Tuple {
-                                   .field_types = utl::map(recurse(), tuple.field_types) }),
-                               this_type.source_view };
+            return hir::Type {
+                context.wrap_type(hir::type::Tuple {
+                    .field_types = utl::map(recurse(), tuple.field_types),
+                }),
+                this_type.source_view,
+            };
         }
 
         auto operator()(ast::type::Array& array) -> hir::Type
@@ -89,10 +92,13 @@ namespace {
                 .constrained_note { length.source_view,
                                     "The array length must be of type {0}, but found {1}" } });
 
-            return hir::Type { context.wrap_type(hir::type::Array {
-                                   .element_type = element_type,
-                                   .array_length = context.wrap(std::move(length)) }),
-                               this_type.source_view };
+            return hir::Type {
+                context.wrap_type(hir::type::Array {
+                    .element_type = element_type,
+                    .array_length = context.wrap(std::move(length)),
+                }),
+                this_type.source_view,
+            };
         }
 
         auto operator()(ast::type::Typeof& typeof_) -> hir::Type

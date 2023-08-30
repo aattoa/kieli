@@ -38,11 +38,12 @@ namespace {
             // Convert function bodies defined with shorthand syntax into blocks
             ast::Expression function_body = context.desugar(*function.body);
             if (!std::holds_alternative<ast::expression::Block>(function_body.value)) {
-                function_body.value
-                    = ast::expression::Block { .result_expression = context.wrap(ast::Expression {
-                                                   .value       = std::move(function_body.value),
-                                                   .source_view = function_body.source_view,
-                                               }) };
+                function_body.value = ast::expression::Block {
+                    .result_expression = context.wrap(ast::Expression {
+                        .value       = std::move(function_body.value),
+                        .source_view = function_body.source_view,
+                    }),
+                };
             }
 
             return ast::definition::Function {

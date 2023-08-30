@@ -87,7 +87,9 @@ namespace {
                         compiler::built_in_type::String,
                         compiler::built_in_type::Character,
                         compiler::built_in_type::Boolean> auto const&) -> void
-        {}
+        {
+            // terminal
+        }
     };
 } // namespace
 

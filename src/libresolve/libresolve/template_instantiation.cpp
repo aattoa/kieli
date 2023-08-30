@@ -14,17 +14,18 @@ namespace {
             -> void
         {
             std::visit(
-                utl::Overload { [&](hir::Template_parameter::Type_parameter const&,
-                                    hir::Type const type_argument) {
-                                   type_substitutions.add_new_or_abort(
-                                       parameter.reference_tag, type_argument);
-                               },
-                                [&](hir::Template_parameter::Mutability_parameter,
-                                    hir::Mutability const mutability_argument) {
-                                    mutability_substitutions.add_new_or_abort(
-                                        parameter.reference_tag, mutability_argument);
-                                },
-                                [&](auto const&, auto const&) { utl::unreachable(); } },
+                utl::Overload {
+                    [&](hir::Template_parameter::Type_parameter const&,
+                        hir::Type const type_argument) {
+                        type_substitutions.add_new_or_abort(parameter.reference_tag, type_argument);
+                    },
+                    [&](hir::Template_parameter::Mutability_parameter,
+                        hir::Mutability const mutability_argument) {
+                        mutability_substitutions.add_new_or_abort(
+                            parameter.reference_tag, mutability_argument);
+                    },
+                    [&](auto const&, auto const&) { utl::unreachable(); },
+                },
                 parameter.value,
                 argument.value);
         }
@@ -160,8 +161,9 @@ namespace {
                     if (!type_parameter.classes.empty()) {
                         utl::todo();
                     }
-                    return hir::Template_argument { context.resolve_type(
-                        *type_argument, scope, space) };
+                    return hir::Template_argument {
+                        context.resolve_type(*type_argument, scope, space),
+                    };
                 },
                 [&](hir::Template_parameter::Type_parameter const& type_parameter,
                     ast::Template_argument::Wildcard const         wildcard) {
@@ -170,17 +172,20 @@ namespace {
                     state->as_unsolved().classes = type_parameter.classes;
                     return hir::Template_argument { hir::Type {
                         context.wrap_type(hir::type::Unification_variable { .state = state }),
-                        wildcard.source_view } };
+                        wildcard.source_view,
+                    } };
                 },
                 [&](hir::Template_parameter::Mutability_parameter,
                     ast::Mutability const mutability_argument) {
-                    return hir::Template_argument { context.resolve_mutability(
-                        mutability_argument, scope) };
+                    return hir::Template_argument {
+                        context.resolve_mutability(mutability_argument, scope),
+                    };
                 },
                 [&](hir::Template_parameter::Mutability_parameter,
                     ast::Template_argument::Wildcard const wildcard) {
-                    return hir::Template_argument { context.fresh_unification_mutability_variable(
-                        wildcard.source_view) };
+                    return hir::Template_argument {
+                        context.fresh_unification_mutability_variable(wildcard.source_view),
+                    };
                 },
                 [&](auto const&, auto const&) -> hir::Template_argument {
                     context.error(
@@ -283,10 +288,15 @@ namespace {
             arguments,
             instantiation_view);
 
-        Substitutions default_argument_substitutions { parameters.subspan(0, arguments.size()),
-                                                       hir_arguments };
+        Substitutions default_argument_substitutions {
+            parameters.subspan(0, arguments.size()),
+            hir_arguments,
+        };
         Substitution_context const default_argument_substitution_context {
-            default_argument_substitutions, context, scope, instantiation_space
+            default_argument_substitutions,
+            context,
+            scope,
+            instantiation_space,
         };
 
         resolve_defaulted_template_arguments(
@@ -310,8 +320,10 @@ namespace {
         Namespace&                            space) -> utl::Wrapper<Function_info>
     {
         utl::always_assert(function_template.signature.is_template());
-        Substitutions substitutions { function_template.signature.template_parameters,
-                                      template_arguments };
+        Substitutions substitutions {
+            function_template.signature.template_parameters,
+            template_arguments,
+        };
 
         Substitution_context const substitution_context {
             .substitutions      = substitutions,
@@ -474,16 +486,18 @@ namespace {
         }
 
         auto const concrete_info    = resolution_context.wrap(Enum_info {
-               .value                       = std::move(concrete_enum),
-               .home_namespace              = template_info->home_namespace,
-               .enumeration_type            = concrete_type,
-               .state                       = Definition_state::resolved,
-               .name                        = template_info->name,
-               .template_instantiation_info = Template_instantiation_info<Enum_template_info> {
-                template_info,
-                enum_template.parameters,
-                std::move(template_arguments),
-            } });
+               .value            = std::move(concrete_enum),
+               .home_namespace   = template_info->home_namespace,
+               .enumeration_type = concrete_type,
+               .state            = Definition_state::resolved,
+               .name             = template_info->name,
+               .template_instantiation_info
+               = Template_instantiation_info<Enum_template_info> {
+                   template_info,
+                   enum_template.parameters,
+                   std::move(template_arguments),
+               },
+        });
         *concrete_type.pure_value() = hir::type::Enumeration {
             .info           = concrete_info,
             .is_application = true,
@@ -881,14 +895,16 @@ namespace {
 
         auto operator()(hir::pattern::Tuple const& tuple) -> hir::Pattern::Variant
         {
-            return hir::pattern::Tuple { .field_patterns
-                                         = utl::map(context.recurse(), tuple.field_patterns) };
+            return hir::pattern::Tuple {
+                .field_patterns = utl::map(context.recurse(), tuple.field_patterns),
+            };
         }
 
         auto operator()(hir::pattern::Slice const& slice) -> hir::Pattern::Variant
         {
-            return hir::pattern::Slice { .element_patterns
-                                         = utl::map(context.recurse(), slice.element_patterns) };
+            return hir::pattern::Slice {
+                .element_patterns = utl::map(context.recurse(), slice.element_patterns),
+            };
         }
 
         template <class T>
