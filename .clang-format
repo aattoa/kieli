@@ -1,0 +1,142 @@
+---
+# Manually configured from scratch
+Language: Cpp
+AccessModifierOffset: -4
+AlignAfterOpenBracket: AlwaysBreak
+AlignArrayOfStructures: None # Interferes with nested struct initializers
+AlignConsecutiveAssignments:
+  Enabled:          true
+  AcrossEmptyLines: false
+  AcrossComments:   false
+  AlignCompound:    false
+  PadOperators:     true
+AlignConsecutiveBitFields:
+  Enabled:          false
+  AcrossEmptyLines: false
+  AcrossComments:   false
+  AlignCompound:    false
+  PadOperators:     false
+AlignConsecutiveDeclarations:
+  Enabled:          true
+  AcrossEmptyLines: false
+  AcrossComments:   false
+  AlignCompound:    false
+  PadOperators:     false
+AlignConsecutiveMacros:
+  Enabled:          true
+  AcrossEmptyLines: false
+  AcrossComments:   false
+  AlignCompound:    false
+  PadOperators:     false
+AlignEscapedNewlines: Left
+AlignOperands: AlignAfterOperator
+AlignTrailingComments: true
+AllowAllArgumentsOnNextLine: true
+AllowAllParametersOfDeclarationOnNextLine: true
+AllowShortEnumsOnASingleLine: true
+AllowShortBlocksOnASingleLine: Always
+AllowShortCaseLabelsOnASingleLine: false
+AllowShortFunctionsOnASingleLine: Empty
+AllowShortLambdasOnASingleLine: All
+AllowShortIfStatementsOnASingleLine: WithoutElse
+AllowShortLoopsOnASingleLine: true
+AlwaysBreakAfterReturnType: None
+AlwaysBreakBeforeMultilineStrings: false
+AlwaysBreakTemplateDeclarations: Yes
+BinPackArguments:  false
+BinPackParameters: false
+BraceWrapping:
+  AfterCaseLabel:        true
+  AfterClass:            false
+  AfterControlStatement: MultiLine
+  AfterEnum:             false
+  AfterFunction:         true
+  AfterNamespace:        false
+  AfterObjCDeclaration:  false
+  AfterStruct:           false
+  AfterUnion:            false
+  AfterExternBlock:      false
+  BeforeCatch:           true
+  BeforeElse:            true
+  BeforeLambdaBody:      false
+  BeforeWhile:           false
+  IndentBraces:          false
+  SplitEmptyFunction:    false
+  SplitEmptyRecord:      true
+  SplitEmptyNamespace:   true
+BreakAfterAttributes: Never
+BreakBeforeBinaryOperators: All
+BreakBeforeConceptDeclarations: Always
+BreakBeforeBraces: Custom
+BreakInheritanceList: BeforeComma
+BreakBeforeTernaryOperators: true
+BreakConstructorInitializers: BeforeComma
+BreakStringLiterals: true
+ColumnLimit: 100
+QualifierAlignment: Right
+CompactNamespaces: false
+ConstructorInitializerIndentWidth: 4
+ContinuationIndentWidth: 4
+Cpp11BracedListStyle: false
+DerivePointerAlignment: false
+DisableFormat: false
+EmptyLineAfterAccessModifier: Never
+EmptyLineBeforeAccessModifier: Never
+PackConstructorInitializers: CurrentLine
+FixNamespaceComments: true
+IncludeBlocks: Preserve
+IndentAccessModifiers: false
+IndentCaseLabels: false
+IndentCaseBlocks: false
+IndentGotoLabels: true
+IndentPPDirectives: None
+IndentExternBlock: AfterExternBlock
+IndentRequiresClause: true
+IndentWidth: 4
+IndentWrappedFunctionNames: false
+InsertBraces: true
+InsertTrailingCommas: Wrapped
+InsertNewlineAtEOF: true
+KeepEmptyLinesAtTheStartOfBlocks: false
+LambdaBodyIndentation: Signature
+MaxEmptyLinesToKeep: 1
+NamespaceIndentation: All
+PointerAlignment: Left
+PPIndentWidth: -1
+ReferenceAlignment: Pointer
+ReflowComments: true
+RequiresClausePosition: OwnLine
+RequiresExpressionIndentation: OuterScope
+SeparateDefinitionBlocks: Always
+ShortNamespaceLines: 1
+SortIncludes: Never
+SortUsingDeclarations: false
+SpaceAfterCStyleCast: false
+SpaceAfterLogicalNot: false
+SpaceAfterTemplateKeyword: true
+SpaceBeforeAssignmentOperators: true
+SpaceBeforeCaseColon: false
+SpaceBeforeCpp11BracedList: true
+SpaceBeforeCtorInitializerColon: true
+SpaceBeforeInheritanceColon: true
+SpaceBeforeParens: ControlStatements
+SpaceAroundPointerQualifiers: Default
+SpaceBeforeRangeBasedForLoopColon: true
+SpaceInEmptyBlock: false
+SpaceInEmptyParentheses: false
+SpacesBeforeTrailingComments: 1
+SpacesInAngles: Never
+SpacesInConditionalStatement: false
+SpacesInCStyleCastParentheses: false
+SpacesInLineCommentPrefix:
+  Minimum: 1
+  Maximum: 1
+SpacesInParentheses: false
+SpacesInSquareBrackets: false
+SpaceBeforeSquareBrackets: false
+BitFieldColonSpacing: Both
+Standard: c++20
+TabWidth: 4
+UseTab: Never
+...
+

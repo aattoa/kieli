@@ -14,20 +14,19 @@
 
 */
 
-
 namespace libresolve {
     struct [[nodiscard]] Namespace;
-    class  [[nodiscard]] Context;
-    class  [[nodiscard]] Scope;
+    class [[nodiscard]] Context;
+    class [[nodiscard]] Scope;
 
     template <class>
     struct Definition_info;
 
     using Function_info = Definition_info<ast::definition::Function>;
 
-#define DEFINE_INFO_NAME(name) \
-using name##_info          = Definition_info<ast::definition::name>; \
-using name##_template_info = Definition_info<ast::definition::name##_template>
+#define DEFINE_INFO_NAME(name)                                           \
+    using name##_info          = Definition_info<ast::definition::name>; \
+    using name##_template_info = Definition_info<ast::definition::name##_template>
     DEFINE_INFO_NAME(Struct);
     DEFINE_INFO_NAME(Enum);
     DEFINE_INFO_NAME(Alias);
@@ -35,9 +34,7 @@ using name##_template_info = Definition_info<ast::definition::name##_template>
     DEFINE_INFO_NAME(Implementation);
     DEFINE_INFO_NAME(Instantiation);
 #undef DEFINE_INFO_NAME
-}
-
-
+} // namespace libresolve
 
 namespace hir {
 
@@ -53,15 +50,21 @@ namespace hir {
     struct Template;
 
     namespace dtl {
-        template <class> struct From_AST_impl;
-        template <class> struct To_AST_impl;
-    }
-    template <class T> using From_AST = typename dtl::From_AST_impl<T>::type;
-    template <class T> using To_AST = typename dtl::To_AST_impl<T>::type;
+        template <class>
+        struct From_AST_impl;
+        template <class>
+        struct To_AST_impl;
+    } // namespace dtl
+    template <class T>
+    using From_AST = typename dtl::From_AST_impl<T>::type;
+    template <class T>
+    using To_AST = typename dtl::To_AST_impl<T>::type;
 
-#define IMPL_TO_FROM_AST(name) \
-template <> struct dtl::From_AST_impl<ast::definition::name> : std::type_identity<name> {}; \
-template <> struct dtl::To_AST_impl<name> : std::type_identity<ast::definition::name> {}
+#define IMPL_TO_FROM_AST(name)                                                      \
+    template <>                                                                     \
+    struct dtl::From_AST_impl<ast::definition::name> : std::type_identity<name> {}; \
+    template <>                                                                     \
+    struct dtl::To_AST_impl<name> : std::type_identity<ast::definition::name> {}
     IMPL_TO_FROM_AST(Function);
     IMPL_TO_FROM_AST(Struct);
     IMPL_TO_FROM_AST(Enum);
@@ -74,19 +77,18 @@ template <> struct dtl::To_AST_impl<name> : std::type_identity<ast::definition::
     template <class Definition>
     struct dtl::From_AST_impl<ast::definition::Template<Definition>>
         : std::type_identity<Template<From_AST<Definition>>> {};
+
     template <class Definition>
     struct dtl::To_AST_impl<Template<Definition>>
         : std::type_identity<ast::definition::Template<To_AST<Definition>>> {};
 
-
     struct [[nodiscard]] Expression;
     struct [[nodiscard]] Pattern;
-    class  [[nodiscard]] Type;
+    class [[nodiscard]] Type;
 
     struct [[nodiscard]] Function_parameter;
     struct [[nodiscard]] Template_parameter;
     struct [[nodiscard]] Template_argument;
-
 
     struct [[nodiscard]] Class_reference {
         utl::Wrapper<libresolve::Typeclass_info> info;
@@ -95,25 +97,32 @@ template <> struct dtl::To_AST_impl<name> : std::type_identity<ast::definition::
 
     struct [[nodiscard]] Unification_variable_tag {
         utl::Usize value;
+
         constexpr explicit Unification_variable_tag(utl::Usize const value) noexcept
-            : value { value } {}
-        [[nodiscard]] auto operator==(Unification_variable_tag const&) const noexcept -> bool = default;
+            : value { value }
+        {}
+
+        [[nodiscard]] auto operator==(Unification_variable_tag const&) const noexcept -> bool
+            = default;
     };
 
     struct [[nodiscard]] Template_parameter_tag {
         utl::Usize value;
-        constexpr explicit Template_parameter_tag(utl::Usize const value) noexcept
-            : value { value } {}
-        [[nodiscard]] auto operator==(Template_parameter_tag const&) const noexcept -> bool = default;
+
+        constexpr explicit Template_parameter_tag(utl::Usize const value) noexcept : value { value }
+        {}
+
+        [[nodiscard]] auto operator==(Template_parameter_tag const&) const noexcept -> bool
+            = default;
     };
 
     struct [[nodiscard]] Local_variable_tag {
         utl::Usize value;
-        constexpr explicit Local_variable_tag(utl::Usize const value) noexcept
-                : value { value } {}
+
+        constexpr explicit Local_variable_tag(utl::Usize const value) noexcept : value { value } {}
+
         [[nodiscard]] auto operator==(Local_variable_tag const&) const noexcept -> bool = default;
     };
-
 
     class [[nodiscard]] Unification_type_variable_state;
     class [[nodiscard]] Unification_mutability_variable_state;
@@ -123,14 +132,17 @@ template <> struct dtl::To_AST_impl<name> : std::type_identity<ast::definition::
         struct Concrete {
             utl::Explicit<bool> is_mutable;
         };
+
         struct Variable {
             utl::Wrapper<Unification_mutability_variable_state> state;
         };
+
         struct Parameterized {
             // The identifier serves no purpose other than debuggability
             utl::Pooled_string     identifier;
             Template_parameter_tag tag;
         };
+
         using Variant = std::variant<Concrete, Variable, Parameterized>;
     private:
         utl::Wrapper<Variant> m_value;
@@ -165,73 +177,80 @@ template <> struct dtl::To_AST_impl<name> : std::type_identity<ast::definition::
         auto with(utl::Source_view) const noexcept -> Type;
     };
 
-
     namespace type {
         // Self within a class
         struct Self_placeholder {};
+
         struct Tuple {
             std::vector<Type> field_types;
         };
+
         struct Array {
             Type                     element_type;
             utl::Wrapper<Expression> array_length;
         };
+
         struct Slice {
             Type element_type;
         };
+
         struct Function {
             std::vector<Type> parameter_types;
             Type              return_type;
         };
+
         struct Reference {
             Mutability mutability;
             Type       referenced_type;
         };
+
         struct Pointer {
             Mutability mutability;
             Type       pointed_to_type;
         };
+
         struct Structure {
             utl::Wrapper<libresolve::Struct_info> info;
             bool                                  is_application = false;
         };
+
         struct Enumeration {
             utl::Wrapper<libresolve::Enum_info> info;
             bool                                is_application = false;
         };
+
         struct Unification_variable {
             utl::Wrapper<Unification_type_variable_state> state;
         };
+
         struct Template_parameter_reference {
             // The identifier serves no purpose other than debuggability
             utl::Explicit<tl::optional<utl::Pooled_string>> identifier;
             Template_parameter_tag                          tag;
         };
-    }
+    } // namespace type
 
-
-    struct Type::Variant : std::variant<
-        compiler::built_in_type::Integer,
-        compiler::built_in_type::Floating,
-        compiler::built_in_type::Character,
-        compiler::built_in_type::Boolean,
-        compiler::built_in_type::String,
-        type::Self_placeholder,
-        type::Array,
-        type::Tuple,
-        type::Slice,
-        type::Function,
-        type::Reference,
-        type::Pointer,
-        type::Structure,
-        type::Enumeration,
-        type::Unification_variable,
-        type::Template_parameter_reference>
-    {
+    struct Type::Variant
+        : std::variant<
+              compiler::built_in_type::Integer,
+              compiler::built_in_type::Floating,
+              compiler::built_in_type::Character,
+              compiler::built_in_type::Boolean,
+              compiler::built_in_type::String,
+              type::Self_placeholder,
+              type::Array,
+              type::Tuple,
+              type::Slice,
+              type::Function,
+              type::Reference,
+              type::Pointer,
+              type::Structure,
+              type::Enumeration,
+              type::Unification_variable,
+              type::Template_parameter_reference> {
         using variant::variant;
         using variant::operator=;
     };
-
 
     struct Enum_constructor {
         compiler::Name_lower name;
@@ -244,96 +263,120 @@ template <> struct dtl::To_AST_impl<name> : std::type_identity<ast::definition::
         struct Array_literal {
             std::vector<Expression> elements;
         };
+
         struct Tuple {
             std::vector<Expression> fields;
         };
+
         struct Loop {
             utl::Wrapper<Expression> body;
         };
+
         struct Break {
             utl::Wrapper<Expression> result;
         };
+
         struct Continue {};
+
         struct Block {
             std::vector<Expression>  side_effect_expressions;
             utl::Wrapper<Expression> result_expression;
         };
+
         struct Let_binding {
             utl::Wrapper<Pattern>    pattern;
             hir::Type                type;
             utl::Wrapper<Expression> initializer;
         };
+
         struct Conditional {
             utl::Wrapper<Expression> condition;
             utl::Wrapper<Expression> true_branch;
             utl::Wrapper<Expression> false_branch;
         };
+
         struct Match {
             struct Case {
                 utl::Wrapper<Pattern>    pattern;
                 utl::Wrapper<Expression> handler;
             };
+
             std::vector<Case>        cases;
             utl::Wrapper<Expression> matched_expression;
         };
+
         struct Local_variable_reference {
             Local_variable_tag tag;
             utl::Pooled_string identifier;
         };
+
         struct Struct_initializer {
             std::vector<Expression> initializers;
             Type                    struct_type;
         };
+
         struct Struct_field_access {
             utl::Wrapper<Expression> base_expression;
             compiler::Name_lower     field_name;
         };
+
         struct Tuple_field_access {
             utl::Wrapper<Expression> base_expression;
             utl::Usize               field_index {};
             utl::Source_view         field_index_source_view;
         };
+
         struct Function_reference {
             utl::Wrapper<libresolve::Function_info> info;
-            bool                                   is_application = false;
+            bool                                    is_application = false;
         };
+
         struct Direct_invocation {
             Function_reference      function;
             std::vector<Expression> arguments;
         };
+
         struct Indirect_invocation {
-            std::vector<Expression> arguments;
+            std::vector<Expression>  arguments;
             utl::Wrapper<Expression> invocable;
         };
+
         struct Enum_constructor_reference {
             Enum_constructor constructor;
         };
+
         struct Direct_enum_constructor_invocation {
             Enum_constructor        constructor;
             std::vector<Expression> arguments;
         };
+
         struct Sizeof {
             Type inspected_type;
         };
+
         struct Reference {
             Mutability               mutability;
             utl::Wrapper<Expression> referenced_expression;
         };
+
         struct Dereference {
             utl::Wrapper<Expression> dereferenced_expression;
         };
+
         struct Addressof {
             utl::Wrapper<Expression> lvalue;
         };
+
         struct Unsafe_dereference {
             utl::Wrapper<Expression> pointer;
         };
+
         struct Move {
             utl::Wrapper<Expression> lvalue;
         };
-        struct Hole {};
-    }
 
+        struct Hole {};
+    } // namespace expression
 
     struct Expression {
         using Variant = std::variant<
@@ -376,8 +419,6 @@ template <> struct dtl::To_AST_impl<name> : std::type_identity<ast::definition::
         bool             is_pure        = false;
     };
 
-
-
     template <class Definition>
     struct Template {
         Definition                                                                 definition;
@@ -402,9 +443,11 @@ template <> struct dtl::To_AST_impl<name> : std::type_identity<ast::definition::
 
             [[nodiscard]] auto is_template() const noexcept -> bool;
         };
-        Signature                                            signature;
-        Expression                                           body;
-        std::vector<utl::Wrapper<libresolve::Function_info>> template_instantiations; // empty when not a template
+
+        Signature  signature;
+        Expression body;
+        std::vector<utl::Wrapper<libresolve::Function_info>>
+            template_instantiations; // empty when not a template
     };
 
     struct Struct {
@@ -413,10 +456,12 @@ template <> struct dtl::To_AST_impl<name> : std::type_identity<ast::definition::
             Type                 type;
             utl::Explicit<bool>  is_public;
         };
+
         std::vector<Member>                 members;
         compiler::Name_upper                name;
         utl::Wrapper<libresolve::Namespace> associated_namespace;
     };
+
     using Struct_template = Template<Struct>;
 
     struct Enum {
@@ -424,26 +469,31 @@ template <> struct dtl::To_AST_impl<name> : std::type_identity<ast::definition::
         compiler::Name_upper                name;
         utl::Wrapper<libresolve::Namespace> associated_namespace;
     };
+
     using Enum_template = Template<Enum>;
 
     struct Alias {
         compiler::Name_upper name;
         Type                 aliased_type;
     };
+
     using Alias_template = Template<Alias>;
 
     struct Typeclass {
         struct Type_signature {
             std::vector<Class_reference> classes;
         };
+
         struct Type_template_signature {
             Type_signature                       type_signature;
             std::vector<hir::Template_parameter> template_parameters;
         };
+
         utl::Flatmap<utl::Pooled_string, Function::Signature> function_signatures;
         utl::Flatmap<utl::Pooled_string, Type_signature>      type_signatures;
         compiler::Name_upper                                  name;
     };
+
     using Typeclass_template = Template<Typeclass>;
 
     struct Implementation {
@@ -459,9 +509,11 @@ template <> struct dtl::To_AST_impl<name> : std::type_identity<ast::definition::
             Map<libresolve::Alias_info>           aliases;
             Map<libresolve::Alias_template_info>  alias_templates;
         };
+
         Definitions definitions;
         Type        self_type;
     };
+
     using Implementation_template = Template<Implementation>;
 
     struct Instantiation {
@@ -470,36 +522,41 @@ template <> struct dtl::To_AST_impl<name> : std::type_identity<ast::definition::
         Class_reference class_reference;
         Type            self_type;
     };
+
     using Instantiation_template = Template<Instantiation>;
-
-
 
     namespace pattern {
         struct Wildcard {};
+
         struct Name {
             Local_variable_tag variable_tag;
             utl::Pooled_string identifier;
             Mutability         mutability;
         };
+
         struct Tuple {
             std::vector<Pattern> field_patterns;
         };
+
         struct Slice {
             std::vector<Pattern> element_patterns;
         };
+
         struct Enum_constructor {
             tl::optional<utl::Wrapper<Pattern>> payload_pattern;
             ::hir::Enum_constructor             constructor;
         };
+
         struct As {
             Name                  alias;
             utl::Wrapper<Pattern> aliased_pattern;
         };
+
         struct Guarded {
             utl::Wrapper<Pattern> guarded_pattern;
             Expression            guard;
         };
-    }
+    } // namespace pattern
 
     struct Pattern {
         using Variant = std::variant<
@@ -521,8 +578,6 @@ template <> struct dtl::To_AST_impl<name> : std::type_identity<ast::definition::
         utl::Source_view    source_view;
     };
 
-
-
     struct Template_argument {
         using Variant = std::variant<Type, Expression, Mutability>;
         Variant value;
@@ -538,10 +593,12 @@ template <> struct dtl::To_AST_impl<name> : std::type_identity<ast::definition::
             std::vector<Class_reference>       classes;
             tl::optional<compiler::Name_upper> name; // nullopt for implicit type parameters
         };
+
         struct Value_parameter {
             Type                 type;
             compiler::Name_lower name;
         };
+
         struct Mutability_parameter {
             compiler::Name_lower name;
         };
@@ -561,8 +618,6 @@ template <> struct dtl::To_AST_impl<name> : std::type_identity<ast::definition::
         Type    type;
     };
 
-
-
     enum class Unification_type_variable_kind { general, integral };
 
     class Unification_type_variable_state {
@@ -570,6 +625,7 @@ template <> struct dtl::To_AST_impl<name> : std::type_identity<ast::definition::
         struct Solved {
             Type solution;
         };
+
         struct Unsolved {
             Unification_variable_tag                      tag;
             utl::Explicit<Unification_type_variable_kind> kind;
@@ -581,9 +637,13 @@ template <> struct dtl::To_AST_impl<name> : std::type_identity<ast::definition::
         explicit Unification_type_variable_state(Unsolved&&) noexcept;
 
         auto solve_with(Type solution) -> void;
-        [[nodiscard]] auto as_unsolved(std::source_location = std::source_location::current())       noexcept -> Unsolved      &;
-        [[nodiscard]] auto as_unsolved(std::source_location = std::source_location::current()) const noexcept -> Unsolved const&;
-        [[nodiscard]] auto as_solved_if()       noexcept -> Solved      *;
+        [[nodiscard]] auto
+            as_unsolved(std::source_location = std::source_location::current()) noexcept
+            -> Unsolved&;
+        [[nodiscard]] auto
+            as_unsolved(std::source_location = std::source_location::current()) const noexcept
+            -> Unsolved const&;
+        [[nodiscard]] auto as_solved_if() noexcept -> Solved*;
         [[nodiscard]] auto as_solved_if() const noexcept -> Solved const*;
     };
 
@@ -592,6 +652,7 @@ template <> struct dtl::To_AST_impl<name> : std::type_identity<ast::definition::
         struct Solved {
             Mutability solution;
         };
+
         struct Unsolved {
             Unification_variable_tag tag;
         };
@@ -601,12 +662,15 @@ template <> struct dtl::To_AST_impl<name> : std::type_identity<ast::definition::
         explicit Unification_mutability_variable_state(Unsolved&&) noexcept;
 
         auto solve_with(Mutability solution) -> void;
-        [[nodiscard]] auto as_unsolved(std::source_location = std::source_location::current())       noexcept -> Unsolved      &;
-        [[nodiscard]] auto as_unsolved(std::source_location = std::source_location::current()) const noexcept -> Unsolved const&;
-        [[nodiscard]] auto as_solved_if()       noexcept -> Solved      *;
+        [[nodiscard]] auto
+            as_unsolved(std::source_location = std::source_location::current()) noexcept
+            -> Unsolved&;
+        [[nodiscard]] auto
+            as_unsolved(std::source_location = std::source_location::current()) const noexcept
+            -> Unsolved const&;
+        [[nodiscard]] auto as_solved_if() noexcept -> Solved*;
         [[nodiscard]] auto as_solved_if() const noexcept -> Solved const*;
     };
-
 
     using Node_arena = utl::Wrapper_arena<
         Expression,
@@ -632,29 +696,28 @@ template <> struct dtl::To_AST_impl<name> : std::type_identity<ast::definition::
         libresolve::Implementation_template_info,
         libresolve::Instantiation_template_info>;
 
-
-    auto format_to(Expression               const&, std::string&) -> void;
-    auto format_to(Type                     const&, std::string&) -> void;
-    auto format_to(Pattern                  const&, std::string&) -> void;
-    auto format_to(Mutability               const&, std::string&) -> void;
-    auto format_to(Function                 const&, std::string&) -> void;
-    auto format_to(Struct                   const&, std::string&) -> void;
-    auto format_to(Enum                     const&, std::string&) -> void;
-    auto format_to(Alias                    const&, std::string&) -> void;
-    auto format_to(Typeclass                const&, std::string&) -> void;
-    auto format_to(Implementation           const&, std::string&) -> void;
-    auto format_to(Instantiation            const&, std::string&) -> void;
+    auto format_to(Expression const&, std::string&) -> void;
+    auto format_to(Type const&, std::string&) -> void;
+    auto format_to(Pattern const&, std::string&) -> void;
+    auto format_to(Mutability const&, std::string&) -> void;
+    auto format_to(Function const&, std::string&) -> void;
+    auto format_to(Struct const&, std::string&) -> void;
+    auto format_to(Enum const&, std::string&) -> void;
+    auto format_to(Alias const&, std::string&) -> void;
+    auto format_to(Typeclass const&, std::string&) -> void;
+    auto format_to(Implementation const&, std::string&) -> void;
+    auto format_to(Instantiation const&, std::string&) -> void;
     auto format_to(Unification_variable_tag const&, std::string&) -> void;
-    auto format_to(Template_parameter       const&, std::string&) -> void;
-    auto format_to(Template_argument        const&, std::string&) -> void;
-    auto format_to(Function_parameter       const&, std::string&) -> void;
+    auto format_to(Template_parameter const&, std::string&) -> void;
+    auto format_to(Template_argument const&, std::string&) -> void;
+    auto format_to(Function_parameter const&, std::string&) -> void;
 
     inline constexpr auto to_string = [](auto const& x) -> std::string
-        requires requires (std::string out) { hir::format_to(x, out); }
+        requires requires(std::string out) { hir::format_to(x, out); }
     {
         std::string output;
         hir::format_to(x, output);
         return output;
     };
 
-}
+} // namespace hir

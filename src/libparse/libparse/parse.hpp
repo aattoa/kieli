@@ -1,9 +1,8 @@
 #pragma once
 
-#include <libutl/common/utilities.hpp>
-#include <libparse/cst.hpp>
 #include <liblex/lex.hpp>
-
+#include <libparse/cst.hpp>
+#include <libutl/common/utilities.hpp>
 
 namespace kieli {
 
@@ -15,4 +14,4 @@ namespace kieli {
 
     auto parse(Lex_result&&) -> Parse_result;
 
-}
+} // namespace kieli

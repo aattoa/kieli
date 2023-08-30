@@ -1,13 +1,12 @@
 #include <libutl/common/utilities.hpp>
 #include <libutl/diagnostics/diagnostics.hpp>
 
-
 namespace {
 
-    auto remove_surrounding_whitespace(std::vector<std::string_view>& lines) -> void {
-        static constexpr auto prefix_length = [](std::string_view const string) {
-            return string.find_first_not_of(' ');
-        };
+    auto remove_surrounding_whitespace(std::vector<std::string_view>& lines) -> void
+    {
+        static constexpr auto prefix_length
+            = [](std::string_view const string) { return string.find_first_not_of(' '); };
         static_assert(prefix_length("test") == 0);
         static_assert(prefix_length("  test") == 2);
 
@@ -18,15 +17,17 @@ namespace {
         static_assert(suffix_length("test  ") == 2);
 
         utl::always_assert(!lines.empty());
-        auto const shortest_prefix_length = ranges::min(lines | ranges::views::transform(prefix_length));
+        auto const shortest_prefix_length
+            = ranges::min(lines | ranges::views::transform(prefix_length));
 
         for (auto& line : lines) {
-            if (line.empty()) continue;
+            if (line.empty()) {
+                continue;
+            }
             line.remove_prefix(shortest_prefix_length);
             line.remove_suffix(suffix_length(line));
         }
     }
-
 
     auto lines_of_occurrence(std::string_view const file, std::string_view const view)
         -> std::vector<std::string_view>
@@ -42,14 +43,17 @@ namespace {
         std::vector<std::string_view> lines;
 
         char const* line_start = view_start;
-        for (; line_start != file_start && *line_start != '\n'; --line_start);
+        for (; line_start != file_start && *line_start != '\n'; --line_start)
+            ;
 
-        if (*line_start == '\n')
+        if (*line_start == '\n') {
             ++line_start;
+        }
 
-        for (char const* pointer = line_start; ; ++pointer) {
+        for (char const* pointer = line_start;; ++pointer) {
             if (pointer == view_stop) {
-                for (; pointer != file_stop && *pointer != '\n'; ++pointer);
+                for (; pointer != file_stop && *pointer != '\n'; ++pointer)
+                    ;
                 lines.emplace_back(line_start, pointer);
                 break;
             }
@@ -63,13 +67,13 @@ namespace {
         return lines;
     }
 
-
     auto format_highlighted_section(
-        std::back_insert_iterator<std::string> const  out,
-        utl::Color                             const  title_color,
-        utl::diagnostics::Text_section         const& section) -> void
+        std::back_insert_iterator<std::string> const out,
+        utl::Color const                             title_color,
+        utl::diagnostics::Text_section const&        section) -> void
     {
-        auto const lines       = lines_of_occurrence(section.source_view.source->string(), section.source_view.string);
+        auto const lines
+            = lines_of_occurrence(section.source_view.source->string(), section.source_view.string);
         auto const digit_count = utl::digit_count(section.source_view.stop_position.line);
         auto       line_number = section.source_view.start_position.line;
 
@@ -84,8 +88,8 @@ namespace {
             utl::Color::white);
 
         utl::always_assert(!lines.empty());
-        utl::Usize const longest_line_length =
-            ranges::max(lines | ranges::views::transform(utl::size));
+        utl::Usize const longest_line_length
+            = ranges::max(lines | ranges::views::transform(utl::size));
 
         for (auto const& line : lines) {
             std::format_to(
@@ -99,8 +103,8 @@ namespace {
 
             if (lines.size() > 1) {
                 if (&line == &lines.front()) {
-                    utl::Usize const source_view_offset =
-                        utl::unsigned_distance(line.data(), section.source_view.string.data());
+                    utl::Usize const source_view_offset
+                        = utl::unsigned_distance(line.data(), section.source_view.string.data());
 
                     std::format_to(
                         out,
@@ -111,10 +115,9 @@ namespace {
                         line.substr(source_view_offset));
                 }
                 else if (&line == &lines.back()) {
-                    utl::Usize const source_view_offset =
-                        utl::unsigned_distance(
-                            line.data(),
-                            section.source_view.string.data() + section.source_view.string.size());
+                    utl::Usize const source_view_offset = utl::unsigned_distance(
+                        line.data(),
+                        section.source_view.string.data() + section.source_view.string.size());
 
                     std::format_to(
                         out,
@@ -139,8 +142,9 @@ namespace {
                     std::string(longest_line_length - line.size(), ' '),
                     section.note_color.value_or(title_color));
 
-                if (&line == &lines.back())
+                if (&line == &lines.back()) {
                     std::format_to(out, " {}", section.note);
+                }
 
                 std::format_to(out, "{}", utl::Color::white);
             }
@@ -148,15 +152,13 @@ namespace {
 
         if (lines.size() == 1) {
             auto whitespace_length
-                = section.source_view.string.size()
-                + digit_count
-                + utl::unsigned_distance(
-                    lines.front().data(),
-                    section.source_view.string.data());
+                = section.source_view.string.size() + digit_count
+                + utl::unsigned_distance(lines.front().data(), section.source_view.string.data());
 
-            if (section.source_view.string.empty())
+            if (section.source_view.string.empty()) {
                 // Only reached if the error occurred at the end of input
                 ++whitespace_length;
+            }
 
             std::format_to(
                 out,
@@ -169,57 +171,54 @@ namespace {
         }
     }
 
-
     auto do_emit(
-        std::string                           & diagnostic_string,
+        std::string&                            diagnostic_string,
         utl::diagnostics::Emit_arguments const& arguments,
-        std::string_view                 const  title,
-        utl::Color                       const  title_color,
-        utl::diagnostics::Type           const  diagnostic_type = utl::diagnostics::Type::recoverable) -> void
+        std::string_view const                  title,
+        utl::Color const                        title_color,
+        utl::diagnostics::Type const diagnostic_type = utl::diagnostics::Type::recoverable) -> void
     {
         auto out = std::back_inserter(diagnostic_string);
 
-        if (!diagnostic_string.empty())
+        if (!diagnostic_string.empty()) {
             // There are previous diagnostic messages, insert newlines to separate them
             std::format_to(out, "\n\n\n");
+        }
 
-        std::format_to(
-            out,
-            "{}{}:{} {}",
-            title_color,
-            title,
-            utl::Color::white,
-            arguments.message);
+        std::format_to(out, "{}{}:{} {}", title_color, title, utl::Color::white, arguments.message);
 
-        if (!arguments.sections.empty())
+        if (!arguments.sections.empty()) {
             std::format_to(out, "\n\n");
+        }
 
         for (auto const& section : arguments.sections) {
             format_highlighted_section(out, title_color, section);
-            if (&section != &arguments.sections.back())
+            if (&section != &arguments.sections.back()) {
                 std::format_to(out, "\n\n");
+            }
         }
 
-        if (arguments.help_note)
+        if (arguments.help_note) {
             std::format_to(out, "\n\nHelpful note: {}", *arguments.help_note);
+        }
 
-        if (diagnostic_type == utl::diagnostics::Type::irrecoverable)
+        if (diagnostic_type == utl::diagnostics::Type::irrecoverable) {
             throw utl::diagnostics::Error { std::move(diagnostic_string) };
+        }
     }
 
-}
+} // namespace
 
-
-utl::diagnostics::Builder::Builder() noexcept
-    : Builder { Configuration {} } {}
+utl::diagnostics::Builder::Builder() noexcept : Builder { Configuration {} } {}
 
 utl::diagnostics::Builder::Builder(Configuration const configuration) noexcept
     : m_configuration { configuration }
-    , m_has_emitted_error { false } {}
+    , m_has_emitted_error { false }
+{}
 
 utl::diagnostics::Builder::Builder(Builder&& other) noexcept
     : m_diagnostic_string { std::move(other.m_diagnostic_string) }
-    , m_configuration     { other.m_configuration }
+    , m_configuration { other.m_configuration }
     , m_has_emitted_error { other.m_has_emitted_error }
 {
     other.m_diagnostic_string.clear();
@@ -229,26 +228,35 @@ utl::diagnostics::Builder::Builder(Builder&& other) noexcept
     // destructor relies on moved-from diagnostic strings being empty.
 }
 
-utl::diagnostics::Builder::~Builder() {
-    if (!m_diagnostic_string.empty())
+utl::diagnostics::Builder::~Builder()
+{
+    if (!m_diagnostic_string.empty()) {
         std::cout << m_diagnostic_string << "\n\n"; // TODO: improve
+    }
 }
 
-auto utl::diagnostics::Builder::string() && noexcept -> std::string {
+auto utl::diagnostics::Builder::string() && noexcept -> std::string
+{
     return std::move(m_diagnostic_string);
 }
-auto utl::diagnostics::Builder::has_emitted_error() const noexcept -> bool {
+
+auto utl::diagnostics::Builder::has_emitted_error() const noexcept -> bool
+{
     return m_has_emitted_error;
 }
-auto utl::diagnostics::Builder::note_level() const noexcept -> Level {
+
+auto utl::diagnostics::Builder::note_level() const noexcept -> Level
+{
     return m_configuration.note_level;
 }
-auto utl::diagnostics::Builder::warning_level() const noexcept -> Level {
+
+auto utl::diagnostics::Builder::warning_level() const noexcept -> Level
+{
     return m_configuration.warning_level;
 }
 
-
-auto utl::diagnostics::Builder::emit_note(Emit_arguments const& arguments) -> void {
+auto utl::diagnostics::Builder::emit_note(Emit_arguments const& arguments) -> void
+{
     switch (m_configuration.note_level) {
     case Level::normal:
         ++m_note_count;
@@ -256,7 +264,11 @@ auto utl::diagnostics::Builder::emit_note(Emit_arguments const& arguments) -> vo
     case Level::error:
         ++m_note_count;
         m_has_emitted_error = true;
-        return do_emit(m_diagnostic_string, arguments, "The following note is treated as an error", error_color);
+        return do_emit(
+            m_diagnostic_string,
+            arguments,
+            "The following note is treated as an error",
+            error_color);
     case Level::suppress:
         return;
     default:
@@ -264,7 +276,8 @@ auto utl::diagnostics::Builder::emit_note(Emit_arguments const& arguments) -> vo
     }
 }
 
-auto utl::diagnostics::Builder::emit_warning(Emit_arguments const& arguments) -> void {
+auto utl::diagnostics::Builder::emit_warning(Emit_arguments const& arguments) -> void
+{
     switch (m_configuration.warning_level) {
     case Level::normal:
         ++m_warning_count;
@@ -272,7 +285,11 @@ auto utl::diagnostics::Builder::emit_warning(Emit_arguments const& arguments) ->
     case Level::error:
         ++m_warning_count;
         m_has_emitted_error = true;
-        return do_emit(m_diagnostic_string, arguments, "The following warning is treated as an error", error_color);
+        return do_emit(
+            m_diagnostic_string,
+            arguments,
+            "The following warning is treated as an error",
+            error_color);
     case Level::suppress:
         return;
     default:
@@ -280,30 +297,41 @@ auto utl::diagnostics::Builder::emit_warning(Emit_arguments const& arguments) ->
     }
 }
 
-auto utl::diagnostics::Builder::emit_error(Emit_arguments const& arguments) -> void {
+auto utl::diagnostics::Builder::emit_error(Emit_arguments const& arguments) -> void
+{
     emit_error(arguments, Type::irrecoverable);
     utl::unreachable();
 }
 
-auto utl::diagnostics::Builder::emit_error(const Emit_arguments& arguments, Type const error_type) -> void {
+auto utl::diagnostics::Builder::emit_error(Emit_arguments const& arguments, Type const error_type)
+    -> void
+{
     ++m_error_count;
     m_has_emitted_error = true;
     do_emit(m_diagnostic_string, arguments, "Error", error_color, error_type);
 }
 
-
-auto utl::diagnostics::Builder::emit_note(utl::Source_view const view, Message_arguments const& arguments) -> void {
+auto utl::diagnostics::Builder::emit_note(
+    utl::Source_view const view, Message_arguments const& arguments) -> void
+{
     emit_note(arguments.add_source_view(view));
 }
-auto utl::diagnostics::Builder::emit_warning(utl::Source_view const view, Message_arguments const& arguments) -> void {
+
+auto utl::diagnostics::Builder::emit_warning(
+    utl::Source_view const view, Message_arguments const& arguments) -> void
+{
     emit_warning(arguments.add_source_view(view));
 }
-auto utl::diagnostics::Builder::emit_error(utl::Source_view const view, Message_arguments const& arguments) -> void {
+
+auto utl::diagnostics::Builder::emit_error(
+    utl::Source_view const view, Message_arguments const& arguments) -> void
+{
     emit_error(arguments.add_source_view(view));
 }
 
-
-auto utl::diagnostics::Message_arguments::add_source_view(utl::Source_view const erroneous_view) const -> Emit_arguments {
+auto utl::diagnostics::Message_arguments::add_source_view(
+    utl::Source_view const erroneous_view) const -> Emit_arguments
+{
     return {
         .sections  = utl::to_vector({ Text_section { .source_view = erroneous_view } }),
         .message   = message,

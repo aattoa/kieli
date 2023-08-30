@@ -1,10 +1,10 @@
 #include <libutl/common/utilities.hpp>
 #include <libutl/readline/readline.hpp>
 
-
 #if !__has_include(<readline/readline.h>) || !__has_include(<readline/history.h>)
 
-auto utl::readline(std::string const& prompt) -> std::string {
+auto utl::readline(std::string const& prompt) -> std::string
+{
     std::cout << prompt;
     std::string input;
     std::getline(std::cin, input);
@@ -21,7 +21,8 @@ auto utl::add_to_readline_history(std::string const&) -> void {}
 namespace {
     std::string previous_readline_input;
 
-    auto is_valid_history_file_path(std::filesystem::path const& path) -> bool {
+    auto is_valid_history_file_path(std::filesystem::path const& path) -> bool
+    {
         try {
             return !std::filesystem::exists(path) || std::filesystem::is_regular_file(path);
         }
@@ -30,30 +31,39 @@ namespace {
         }
     }
 
-    auto xdg_state_home_filename() -> tl::optional<std::filesystem::path> {
+    auto xdg_state_home_filename() -> tl::optional<std::filesystem::path>
+    {
         static constexpr auto filename = ".kieli_history";
-        if (char const* const state_home = std::getenv("XDG_STATE_HOME"))
+        if (char const* const state_home = std::getenv("XDG_STATE_HOME")) {
             return std::filesystem::path { state_home } / filename;
-        if (char const* const home = std::getenv("HOME"))
+        }
+        if (char const* const home = std::getenv("HOME")) {
             return std::filesystem::path { home } / ".local" / "state" / filename;
+        }
         return tl::nullopt;
     }
 
-    auto determine_history_file_path() -> tl::optional<std::filesystem::path> {
-        if (char const* const override = std::getenv("KIELI_HISTORY"))
+    auto determine_history_file_path() -> tl::optional<std::filesystem::path>
+    {
+        if (char const* const override = std::getenv("KIELI_HISTORY")) {
             return override;
-        else
+        }
+        else {
             return xdg_state_home_filename();
+        }
     }
 
-    auto read_history_file_to_current_history() -> void {
+    auto read_history_file_to_current_history() -> void
+    {
         tl::optional const path = determine_history_file_path();
-        if (!path.has_value() || !is_valid_history_file_path(*path))
+        if (!path.has_value() || !is_valid_history_file_path(*path)) {
             return;
+        }
 
         std::ifstream file { *path };
-        if (!file.is_open())
+        if (!file.is_open()) {
             return;
+        }
 
         std::string line;
         while (std::getline(file, line)) {
@@ -63,32 +73,36 @@ namespace {
         }
     }
 
-    auto add_line_to_history_file(std::string_view const line) -> void {
+    auto add_line_to_history_file(std::string_view const line) -> void
+    {
         tl::optional const path = determine_history_file_path();
-        if (!path.has_value() || !is_valid_history_file_path(*path))
+        if (!path.has_value() || !is_valid_history_file_path(*path)) {
             return;
+        }
 
         std::ofstream file { *path, std::ios_base::app };
-        if (!file.is_open())
+        if (!file.is_open()) {
             return;
+        }
 
         file << line << '\n';
     }
-}
+} // namespace
 
+auto utl::readline(std::string const& prompt) -> std::string
+{
+    [[maybe_unused]] static auto const history_reader = (read_history_file_to_current_history(), 0);
 
-auto utl::readline(std::string const& prompt) -> std::string {
-    [[maybe_unused]]
-    static auto const history_reader =
-        (read_history_file_to_current_history(), 0);
-
-    char* const raw_input = ::readline(prompt.c_str());
-    auto const input_guard = on_scope_exit([=] { std::free(raw_input); });
+    char* const raw_input   = ::readline(prompt.c_str());
+    auto const  input_guard = on_scope_exit([=] { std::free(raw_input); });
     return raw_input ? raw_input : std::string {};
 }
 
-auto utl::add_to_readline_history(std::string const& string) -> void {
-    if (previous_readline_input == string) return;
+auto utl::add_to_readline_history(std::string const& string) -> void
+{
+    if (previous_readline_input == string) {
+        return;
+    }
     ::add_history(string.c_str());
     add_line_to_history_file(string);
     previous_readline_input = string;

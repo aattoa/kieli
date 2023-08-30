@@ -3,7 +3,7 @@
 
 using namespace libreify;
 
-
-auto libreify::Context::reify_pattern(hir::Pattern const&) -> cir::Pattern {
+auto libreify::Context::reify_pattern(hir::Pattern const&) -> cir::Pattern
+{
     utl::todo();
 }

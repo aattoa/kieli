@@ -1,30 +1,28 @@
-#include <libutl/common/utilities.hpp>
 #include <libparse/parser_internals.hpp>
-
+#include <libutl/common/utilities.hpp>
 
 namespace {
 
     using namespace libparse;
 
-    auto extract_wildcard(Parse_context&)
-        -> cst::Pattern::Variant
+    auto extract_wildcard(Parse_context&) -> cst::Pattern::Variant
     {
         return cst::pattern::Wildcard {};
     };
 
     template <class T>
-    auto extract_literal(Parse_context& context)
-        -> cst::Pattern::Variant
+    auto extract_literal(Parse_context& context) -> cst::Pattern::Variant
     {
         // TODO: fix string literal extraction
-        if constexpr (std::is_same_v<T, utl::Pooled_string>)
+        if constexpr (std::is_same_v<T, utl::Pooled_string>) {
             return compiler::String { context.previous().value_as<T>() };
-        else
+        }
+        else {
             return context.previous().value_as<T>();
+        }
     };
 
-    auto extract_tuple(Parse_context& context)
-        -> cst::Pattern::Variant
+    auto extract_tuple(Parse_context& context) -> cst::Pattern::Variant
     {
         Lexical_token const* const open = context.pointer - 1;
         auto patterns = extract_comma_separated_zero_or_more<parse_pattern, "a pattern">(context);
@@ -45,14 +43,13 @@ namespace {
         }
     };
 
-    auto extract_slice(Parse_context& context)
-        -> cst::Pattern::Variant
+    auto extract_slice(Parse_context& context) -> cst::Pattern::Variant
     {
-        static constexpr auto extract_elements =
-            extract_comma_separated_zero_or_more<parse_pattern, "an element pattern">;
+        static constexpr auto extract_elements
+            = extract_comma_separated_zero_or_more<parse_pattern, "an element pattern">;
 
-        Lexical_token const* const open = context.pointer - 1;
-        auto patterns = extract_elements(context);
+        Lexical_token const* const open     = context.pointer - 1;
+        auto                       patterns = extract_elements(context);
 
         if (Lexical_token const* const close = context.try_extract(Token_type::bracket_close)) {
             return cst::pattern::Slice { {
@@ -61,44 +58,46 @@ namespace {
                 .close_token = cst::Token::from_lexical(close),
             } };
         }
-        if (patterns.elements.empty())
+        if (patterns.elements.empty()) {
             context.error_expected("a slice element pattern or a ']'");
-        else
+        }
+        else {
             context.error_expected("a ',' or a ']'");
+        }
     };
 
+    constexpr auto parse_constructor_pattern = parenthesized<parse_top_level_pattern, "a pattern">;
 
-    constexpr auto parse_constructor_pattern =
-        parenthesized<parse_top_level_pattern, "a pattern">;
-
-
-    auto parse_constructor_name(Parse_context& context) -> tl::optional<cst::Qualified_name> {
+    auto parse_constructor_name(Parse_context& context) -> tl::optional<cst::Qualified_name>
+    {
         switch (context.pointer->type) {
         case Token_type::lower_name:
         case Token_type::upper_name:
             return extract_qualified(context, {});
         case Token_type::global:
             ++context.pointer;
-            return extract_qualified(context, cst::Root_qualifier {
-                .value = cst::Root_qualifier::Global {},
-                .double_colon_token =
-                    cst::Token::from_lexical(context.extract_required(Token_type::double_colon)),
-            });
+            return extract_qualified(
+                context,
+                cst::Root_qualifier {
+                    .value = cst::Root_qualifier::Global {},
+                    .double_colon_token
+                    = cst::Token::from_lexical(context.extract_required(Token_type::double_colon)),
+                });
         default:
             if (auto type = parse_type(context)) {
-                return extract_qualified(context, cst::Root_qualifier {
-                    .value = *type,
-                    .double_colon_token =
-                        cst::Token::from_lexical(context.extract_required(Token_type::double_colon)),
-                });
+                return extract_qualified(
+                    context,
+                    cst::Root_qualifier {
+                        .value              = *type,
+                        .double_colon_token = cst::Token::from_lexical(
+                            context.extract_required(Token_type::double_colon)),
+                    });
             }
             return tl::nullopt;
         }
     }
 
-
-    auto extract_name(Parse_context& context)
-        -> cst::Pattern::Variant
+    auto extract_name(Parse_context& context) -> cst::Pattern::Variant
     {
         context.retreat();
         auto mutability = parse_mutability(context);
@@ -119,7 +118,9 @@ namespace {
             }
         }
 
-        if (!name) name = extract_lower_name(context, "a lowercase identifier");
+        if (!name) {
+            name = extract_lower_name(context, "a lowercase identifier");
+        }
 
         return cst::pattern::Name {
             .name       = std::move(*name),
@@ -127,8 +128,7 @@ namespace {
         };
     };
 
-    auto extract_qualified_constructor(Parse_context& context)
-        -> cst::Pattern::Variant
+    auto extract_qualified_constructor(Parse_context& context) -> cst::Pattern::Variant
     {
         context.retreat();
         if (auto name = parse_constructor_name(context)) {
@@ -140,8 +140,7 @@ namespace {
         utl::unreachable();
     };
 
-    auto extract_abbreviated_constructor(Parse_context& context)
-        -> cst::Pattern::Variant
+    auto extract_abbreviated_constructor(Parse_context& context) -> cst::Pattern::Variant
     {
         Lexical_token const* const double_colon = context.pointer - 1;
         return cst::pattern::Abbreviated_constructor {
@@ -151,8 +150,8 @@ namespace {
         };
     }
 
-
-    auto parse_normal_pattern(Parse_context& context) -> tl::optional<cst::Pattern::Variant> {
+    auto parse_normal_pattern(Parse_context& context) -> tl::optional<cst::Pattern::Variant>
+    {
         switch (context.extract().type) {
         case Token_type::underscore:
             return extract_wildcard(context);
@@ -183,14 +182,13 @@ namespace {
         }
     }
 
-
     auto parse_potentially_aliased_pattern(Parse_context& context)
         -> tl::optional<cst::Pattern::Variant>
     {
         if (auto pattern = parse_node<cst::Pattern, parse_normal_pattern>(context)) {
             if (Lexical_token const* const as_keyword = context.try_extract(Token_type::as)) {
                 auto mutability = parse_mutability(context);
-                auto name = extract_lower_name(context, "a pattern alias");
+                auto name       = extract_lower_name(context, "a pattern alias");
                 return cst::pattern::Alias {
                     .alias_name       = std::move(name),
                     .alias_mutability = std::move(mutability),
@@ -202,7 +200,6 @@ namespace {
         }
         return tl::nullopt;
     }
-
 
     auto parse_potentially_guarded_pattern(Parse_context& context)
         -> tl::optional<cst::Pattern::Variant>
@@ -223,9 +220,9 @@ namespace {
         return tl::nullopt;
     }
 
-}
+} // namespace
 
-
-auto libparse::parse_pattern(Parse_context& context) -> tl::optional<utl::Wrapper<cst::Pattern>> {
+auto libparse::parse_pattern(Parse_context& context) -> tl::optional<utl::Wrapper<cst::Pattern>>
+{
     return parse_node<cst::Pattern, parse_potentially_guarded_pattern>(context);
 }

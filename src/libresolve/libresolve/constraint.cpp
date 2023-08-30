@@ -1,25 +1,27 @@
 #include <libutl/common/utilities.hpp>
 #include <libresolve/resolution_internals.hpp>
 
-
 namespace {
 
     auto report_type_unification_failure(
         libresolve::Context&                        context,
         libresolve::constraint::Type_equality const constraint,
-        hir::Type                             const left,
-        hir::Type                             const right) -> void
+        hir::Type const                             left,
+        hir::Type const                             right) -> void
     {
-        auto sections = utl::vector_with_capacity<utl::diagnostics::Text_section>(2);
+        auto       sections = utl::vector_with_capacity<utl::diagnostics::Text_section>(2);
         auto const constrainer_string = hir::to_string(constraint.constrainer_type);
         auto const constrained_string = hir::to_string(constraint.constrained_type);
 
         auto const constrainer_note = constraint.constrainer_note.transform(
             [&](libresolve::constraint::Explanation const explanation) {
-                return std::vformat(explanation.explanatory_note, std::make_format_args(constrainer_string, constrained_string));
+                return std::vformat(
+                    explanation.explanatory_note,
+                    std::make_format_args(constrainer_string, constrained_string));
             });
-        auto const constrained_note =
-            std::vformat(constraint.constrained_note.explanatory_note, std::make_format_args(constrainer_string, constrained_string));
+        auto const constrained_note = std::vformat(
+            constraint.constrained_note.explanatory_note,
+            std::make_format_args(constrainer_string, constrained_string));
 
         if (constrainer_note.has_value()) {
             sections.push_back(utl::diagnostics::Text_section {
@@ -37,31 +39,34 @@ namespace {
 
         context.diagnostics().emit_error({
             .sections = std::move(sections),
-            .message  = "Could not unify {} ~ {}"_format(hir::to_string(left), hir::to_string(right)),
+            .message
+            = "Could not unify {} ~ {}"_format(hir::to_string(left), hir::to_string(right)),
         });
     }
 
     auto report_recursive_type(
         libresolve::Context&                        context,
         libresolve::constraint::Type_equality const constraint,
-        hir::Type                             const variable,
-        hir::Type                             const solution) -> void
+        hir::Type const                             variable,
+        hir::Type const                             solution) -> void
     {
-        context.error(constraint.constrained_type.source_view(),
-            { "Recursive unification variable solution: {} = {}"_format(hir::to_string(variable), hir::to_string(solution)) });
+        context.error(
+            constraint.constrained_type.source_view(),
+            { "Recursive unification variable solution: {} = {}"_format(
+                hir::to_string(variable), hir::to_string(solution)) });
     }
 
     auto report_mutability_unification_failure(
-        libresolve::Context&                              context,
-        libresolve::constraint::Mutability_equality const constraint) -> void
+        libresolve::Context& context, libresolve::constraint::Mutability_equality const constraint)
+        -> void
     {
         auto const left  = hir::to_string(constraint.constrainer_mutability);
         auto const right = hir::to_string(constraint.constrained_mutability);
 
-        std::string const constrainer_note =
-            std::vformat(constraint.constrainer_note.explanatory_note, std::make_format_args(left, right));
-        std::string const constrained_note =
-            std::vformat(constraint.constrained_note.explanatory_note, std::make_format_args(left, right));
+        std::string const constrainer_note = std::vformat(
+            constraint.constrainer_note.explanatory_note, std::make_format_args(left, right));
+        std::string const constrained_note = std::vformat(
+            constraint.constrained_note.explanatory_note, std::make_format_args(left, right));
 
         context.diagnostics().emit_error({
             .sections = utl::to_vector({
@@ -76,14 +81,14 @@ namespace {
                     .note_color  = utl::diagnostics::error_color,
                 },
             }),
-            .message = "Could not unify {} ~ {}"_format(left, right),
+            .message  = "Could not unify {} ~ {}"_format(left, right),
         });
     }
 
-}
+} // namespace
 
-
-auto libresolve::Context::solve(constraint::Type_equality const& constraint) -> void {
+auto libresolve::Context::solve(constraint::Type_equality const& constraint) -> void
+{
     utl::always_assert(unify_types({
         .constraint_to_be_tested    = constraint,
         .allow_coercion             = true,
@@ -93,8 +98,8 @@ auto libresolve::Context::solve(constraint::Type_equality const& constraint) -> 
     }));
 }
 
-
-auto libresolve::Context::solve(constraint::Mutability_equality const& constraint) -> void {
+auto libresolve::Context::solve(constraint::Mutability_equality const& constraint) -> void
+{
     utl::always_assert(unify_mutabilities({
         .constraint_to_be_tested    = constraint,
         .allow_coercion             = true,
@@ -103,73 +108,83 @@ auto libresolve::Context::solve(constraint::Mutability_equality const& constrain
     }));
 }
 
-
-auto libresolve::Context::solve(constraint::Instance const&) -> void {
+auto libresolve::Context::solve(constraint::Instance const&) -> void
+{
     utl::todo();
 }
 
-
-auto libresolve::Context::solve(constraint::Struct_field const& constraint) -> void {
-    if (auto const* const type = std::get_if<hir::type::Structure>(&*constraint.struct_type.flattened_value())) {
+auto libresolve::Context::solve(constraint::Struct_field const& constraint) -> void
+{
+    if (auto const* const type
+        = std::get_if<hir::type::Structure>(&*constraint.struct_type.flattened_value()))
+    {
         hir::Struct const& structure = resolve_struct(type->info);
         for (hir::Struct::Member const& member : structure.members) {
             if (constraint.field_identifier == member.name.identifier) {
-                solve(constraint::Type_equality {
-                    .constrainer_type = member.type,
-                    .constrained_type = constraint.field_type,
-                    .constrained_note {
-                        constraint.explanation.source_view,
-                        "(this message should never be visible)",
-                    }
-                });
+                solve(constraint::Type_equality { .constrainer_type = member.type,
+                                                  .constrained_type = constraint.field_type,
+                                                  .constrained_note {
+                                                      constraint.explanation.source_view,
+                                                      "(this message should never be visible)",
+                                                  } });
                 return;
             }
         }
-        error(constraint.explanation.source_view, {
-            .message   = constraint.explanation.explanatory_note,
-            .help_note = std::format(
-                "{} does not have a member '{}'",
-                hir::to_string(constraint.struct_type),
-                constraint.field_identifier),
-        });
+        error(
+            constraint.explanation.source_view,
+            {
+                .message   = constraint.explanation.explanatory_note,
+                .help_note = std::format(
+                    "{} does not have a member '{}'",
+                    hir::to_string(constraint.struct_type),
+                    constraint.field_identifier),
+            });
     }
     else {
-        error(constraint.explanation.source_view, {
-            .message   = constraint.explanation.explanatory_note,
-            .help_note = std::format(
-                "{} is not a struct type, so it does not have named fields",
-                hir::to_string(constraint.struct_type)),
-        });
+        error(
+            constraint.explanation.source_view,
+            {
+                .message   = constraint.explanation.explanatory_note,
+                .help_note = std::format(
+                    "{} is not a struct type, so it does not have named fields",
+                    hir::to_string(constraint.struct_type)),
+            });
     }
 }
 
-
-auto libresolve::Context::solve(constraint::Tuple_field const& constraint) -> void {
-    if (auto const* const type = std::get_if<hir::type::Tuple>(&*constraint.tuple_type.flattened_value())) {
+auto libresolve::Context::solve(constraint::Tuple_field const& constraint) -> void
+{
+    if (auto const* const type
+        = std::get_if<hir::type::Tuple>(&*constraint.tuple_type.flattened_value()))
+    {
         if (constraint.field_index.get() >= type->field_types.size()) {
-            error(constraint.explanation.source_view, {
-                .message   = constraint.explanation.explanatory_note,
-                .help_note = std::format(
-                    "{} does not have a {} field",
-                    hir::to_string(constraint.tuple_type),
-                    utl::formatting::integer_with_ordinal_indicator(constraint.field_index.get() + 1)),
-            });
-        }
-        solve(constraint::Type_equality {
-            .constrainer_type = constraint.field_type,
-            .constrained_type = type->field_types[constraint.field_index.get()],
-            .constrained_note {
+            error(
                 constraint.explanation.source_view,
-                "(this message should never be visible)",
-            }
-        });
+                {
+                    .message   = constraint.explanation.explanatory_note,
+                    .help_note = std::format(
+                        "{} does not have a {} field",
+                        hir::to_string(constraint.tuple_type),
+                        utl::formatting::integer_with_ordinal_indicator(
+                            constraint.field_index.get() + 1)),
+                });
+        }
+        solve(constraint::Type_equality { .constrainer_type = constraint.field_type,
+                                          .constrained_type
+                                          = type->field_types[constraint.field_index.get()],
+                                          .constrained_note {
+                                              constraint.explanation.source_view,
+                                              "(this message should never be visible)",
+                                          } });
     }
     else {
-        error(constraint.explanation.source_view, {
-            .message   = constraint.explanation.explanatory_note,
-            .help_note = std::format(
-                "{} is not a tuple type, so it does not have indexed fields",
-                hir::to_string(constraint.tuple_type)),
-        });
+        error(
+            constraint.explanation.source_view,
+            {
+                .message   = constraint.explanation.explanatory_note,
+                .help_note = std::format(
+                    "{} is not a tuple type, so it does not have indexed fields",
+                    hir::to_string(constraint.tuple_type)),
+            });
     }
 }

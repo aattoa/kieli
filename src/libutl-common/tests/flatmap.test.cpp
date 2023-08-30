@@ -4,8 +4,8 @@
 
 #define TEST(name) TEST_CASE(name, "[libutl][flatmap]")
 
-
-TEST("utl::Flatmap::add_or_assign") {
+TEST("utl::Flatmap::add_or_assign")
+{
     utl::Flatmap<std::string, int> map;
     REQUIRE(map.empty());
     REQUIRE(map.find("hello") == nullptr);

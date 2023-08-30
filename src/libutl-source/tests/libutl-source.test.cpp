@@ -4,14 +4,15 @@
 
 #define TEST(name) TEST_CASE(name, "[libutl][source]")
 
-
-TEST("utl::Source::Source") {
+TEST("utl::Source::Source")
+{
     utl::Source const source { "filename 123", "content 321" };
     REQUIRE(source.path().string() == "filename 123");
     REQUIRE(source.string() == "content 321");
 }
 
-TEST("utl::Source::read") {
+TEST("utl::Source::read")
+{
     auto path = std::filesystem::temp_directory_path() / "temp-kieli-libutl-source-read-test.txt";
     static constexpr std::string_view test_string = "test string 123456789";
 
@@ -21,16 +22,17 @@ TEST("utl::Source::read") {
         REQUIRE(file.is_open());
         file << test_string;
     }
-    [[maybe_unused]]
-    auto const file_remover = utl::on_scope_exit([path] { std::filesystem::remove(path); });
+    [[maybe_unused]] auto const file_remover
+        = utl::on_scope_exit([path] { std::filesystem::remove(path); });
 
     std::string const path_string = path.string();
-    utl::Source const source = utl::Source::read(std::move(path));
+    utl::Source const source      = utl::Source::read(std::move(path));
     REQUIRE(source.path().string() == path_string);
     REQUIRE(source.string() == test_string);
 }
 
-TEST("utl::Source_position::advance_with") {
+TEST("utl::Source_position::advance_with")
+{
     utl::Source_position position { .line = 5, .column = 7 };
     position.advance_with('a');
     REQUIRE(position == utl::Source_position { .line = 5, .column = 8 });
@@ -42,9 +44,10 @@ TEST("utl::Source_position::advance_with") {
     REQUIRE(position == utl::Source_position { .line = 6, .column = 2 });
 }
 
-TEST("utl::Source_view::combine_with") {
-    auto source_arena = utl::Source::Arena::with_page_size(1);
-    utl::wrapper auto const source = source_arena.wrap("test source", "Hello, world!");
+TEST("utl::Source_view::combine_with")
+{
+    auto                    source_arena = utl::Source::Arena::with_page_size(1);
+    utl::wrapper auto const source       = source_arena.wrap("test source", "Hello, world!");
     REQUIRE(source->string() == "Hello, world!");
 
     utl::Source_view const view_1 { source, source->string().substr(0, 5), {}, {} };
@@ -57,10 +60,10 @@ TEST("utl::Source_view::combine_with") {
     REQUIRE(combined_view.string.data() == view_1.string.data());
 }
 
-TEST("utl::Source_view::dummy") {
+TEST("utl::Source_view::dummy")
+{
     REQUIRE(utl::Source_view::dummy().source.is(utl::Source_view::dummy().source));
 }
-
 
 static_assert(!std::is_default_constructible_v<utl::Source>);
 static_assert(!std::is_default_constructible_v<utl::Source_view>);

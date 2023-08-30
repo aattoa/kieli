@@ -2,7 +2,6 @@
 
 #include <libutl/common/utilities.hpp>
 
-
 namespace utl {
 
     template <class Clock_type, class Duration_type>
@@ -12,10 +11,13 @@ namespace utl {
 
         typename Clock::time_point start = Clock::now();
 
-        auto restart(typename Clock::time_point const new_start = Clock::now()) noexcept -> void {
+        auto restart(typename Clock::time_point const new_start = Clock::now()) noexcept -> void
+        {
             start = new_start;
         }
-        auto elapsed() const noexcept -> Duration {
+
+        auto elapsed() const noexcept -> Duration
+        {
             return std::chrono::duration_cast<Duration>(Clock::now() - start);
         }
     };
@@ -29,21 +31,27 @@ namespace utl {
 
         Basic_logging_timer() noexcept
             : scope_exit_logger { [](Duration const duration) {
-                utl::print("[utl::Logging_timer::~Logging_timer]: Total elapsed time: {}\n", duration); }
-            } {}
+                utl::print(
+                    "[utl::Logging_timer::~Logging_timer]: Total elapsed time: {}\n", duration);
+            } }
+        {}
 
         explicit Basic_logging_timer(decltype(scope_exit_logger)&& scope_exit_logger) noexcept
-            : scope_exit_logger { std::move(scope_exit_logger) } {}
+            : scope_exit_logger { std::move(scope_exit_logger) }
+        {}
 
-        ~Basic_logging_timer() {
-            if (scope_exit_logger)
+        ~Basic_logging_timer()
+        {
+            if (scope_exit_logger) {
                 scope_exit_logger(Basic_timer<Clock, Duration>::elapsed());
-            else
+            }
+            else {
                 abort("utl::Logging_timer: scope_exit_logger was uninitialized");
+            }
         }
     };
 
-    using Timer         = Basic_timer        <std::chrono::steady_clock, std::chrono::milliseconds>;
+    using Timer         = Basic_timer<std::chrono::steady_clock, std::chrono::milliseconds>;
     using Logging_timer = Basic_logging_timer<std::chrono::steady_clock, std::chrono::milliseconds>;
 
-}
+} // namespace utl

@@ -2,19 +2,20 @@
 #include <libutl/common/safe_integer.hpp>
 #include <liblex/numeric.hpp>
 
-
 namespace {
     auto without_separators(std::string_view const digits)
         -> utl::Pair<std::string, std::string_view>
     {
-        if (!ranges::contains(digits, '\''))
+        if (!ranges::contains(digits, '\'')) {
             return { std::string {}, digits };
+        }
         std::string buffer;
         utl::disable_short_string_optimization(buffer);
         ranges::copy_if(digits, std::back_inserter(buffer), [](char const c) { return c != '\''; });
         std::string_view const view = buffer;
         return { std::move(buffer), view };
     }
+
     template <class T>
     auto parse_impl(std::string_view const raw_string, std::same_as<int> auto const... base)
         -> tl::expected<T, liblex::Numeric_error>
@@ -23,8 +24,8 @@ namespace {
         assert(!string.empty());
 
         char const* const begin = string.data();
-        char const* const end = begin + string.size();
-        T value {};
+        char const* const end   = begin + string.size();
+        T                 value {};
         auto const [ptr, ec] = std::from_chars(begin, end, value, base...);
 
         if (ptr != end) {
@@ -38,15 +39,15 @@ namespace {
             return value;
         }
     }
-}
-
+} // namespace
 
 auto liblex::apply_scientific_exponent(utl::Usize integer, utl::Usize const exponent)
     -> tl::expected<utl::Usize, Numeric_error>
 {
     for (utl::Usize i = 0; i != exponent; ++i) {
-        if (utl::would_multiplication_overflow(integer, 10_uz))
+        if (utl::would_multiplication_overflow(integer, 10_uz)) {
             return tl::unexpected { Numeric_error::out_of_range };
+        }
         integer *= 10;
     }
     return integer;
