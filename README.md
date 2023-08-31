@@ -3,7 +3,7 @@ A general-purpose programming language inspired by C++, Rust, and Haskell.
 
 This is a work in progress, and can not be used for anything yet.
 
-# Dependencies
+## Dependencies
 
 The following is a list of the required dependencies:
 
@@ -12,34 +12,16 @@ The following is a list of the required dependencies:
 * https://github.com/TartanLlama/optional
 * https://github.com/catchorg/Catch2
 
-# Cloning Kieli and its dependencies
+## Building Kieli
 
-Run the following commands to get all of the source code needed to build kieli:
+Requirements: `make`, `CMake`, and any C++20 compliant C++ toolchain.
+
+Run the following commands to clone and build Kieli and its dependencies:
 
 ```Shell
 git clone https://github.com/aattoa/kieli.git
 cd kieli
-mkdir dependencies
-cd dependencies
-git clone https://github.com/ericniebler/range-v3.git
-git clone https://github.com/TartanLlama/expected.git
-git clone https://github.com/TartanLlama/optional.git
-git clone https://github.com/catchorg/Catch2.git
-cd ..
-```
-
-# Building Kieli
-
-This assumes that you have already cloned Kieli and its dependencies as detailed above.
-
-Requirements: CMake and any C++20 compliant C++ toolchain.
-
-Run the following commands to build Kieli:
-
-```Shell
-cd kieli
-cmake -S . -B build
-cmake --build build -j 8
+make
 ```
 
 On Linux, these build steps have been tested with the following:
