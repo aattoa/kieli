@@ -1,13 +1,13 @@
 #pragma once
 
-#include <libcompiler-pipeline/compiler-pipeline.hpp>
+#include <libphase/phase.hpp>
 #include <libreify/reify.hpp>
 #include <liblower/lir.hpp>
 
 namespace kieli {
 
     struct [[nodiscard]] Lower_result {
-        compiler::Compilation_info compilation_info;
+        Compilation_info           compilation_info;
         lir::Node_arena            node_arena;
         std::vector<lir::Function> functions;
     };

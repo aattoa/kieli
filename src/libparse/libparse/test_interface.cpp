@@ -7,7 +7,7 @@ namespace {
     template <auto parse, auto format>
     auto test_parse(std::string&& string) -> libparse::Test_parse_result
     {
-        auto const [info, source] = compiler::test_info_and_source(std::move(string));
+        auto const [info, source] = kieli::test_info_and_source(std::move(string));
         libparse::Parse_context context { kieli::lex({ info, source }),
                                           cst::Node_arena::with_page_size(64) };
         if (auto node = parse(context)) {

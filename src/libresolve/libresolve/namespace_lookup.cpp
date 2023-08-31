@@ -13,7 +13,7 @@ namespace {
     }
 
     [[noreturn]] auto
-    relative_lookup_error(Context& context, compiler::Name_dynamic const erroneous_name) -> void
+    relative_lookup_error(Context& context, kieli::Name_dynamic const erroneous_name) -> void
     {
         context.error(
             erroneous_name.source_view,
@@ -21,9 +21,9 @@ namespace {
     }
 
     [[noreturn]] auto absolute_lookup_error(
-        Context&                     context,
-        std::string_view const       space_name,
-        compiler::Name_dynamic const erroneous_name) -> void
+        Context&                  context,
+        std::string_view const    space_name,
+        kieli::Name_dynamic const erroneous_name) -> void
     {
         context.error(
             erroneous_name.source_view,

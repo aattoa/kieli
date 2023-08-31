@@ -13,7 +13,7 @@ namespace {
     auto read_modules_to(
         Module_map&                               module_map,
         std::filesystem::path const&              source_directory,
-        compiler::Compilation_info const&         compilation_info,
+        kieli::Compilation_info const&            compilation_info,
         std::span<utl::Pooled_string const> const imports) -> void
     {
         for (utl::Pooled_string const import : imports) {
@@ -36,7 +36,7 @@ namespace {
 
 auto compiler::compile(Compile_arguments&& compile_arguments) -> Compilation_result
 {
-    Compilation_info compilation_info = std::make_shared<Shared_compilation_info>();
+    kieli::Compilation_info compilation_info = std::make_shared<kieli::Shared_compilation_info>();
 
     utl::Pooled_string const main_file_name
         = compilation_info.get()->string_literal_pool.make(compile_arguments.main_file_name);

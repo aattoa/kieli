@@ -9,6 +9,6 @@ target_sources(liblower
 
 target_link_libraries(liblower
     PUBLIC libreify
-    PUBLIC libcompiler-pipeline)
+    PUBLIC libphase)
 
 kieli_consume_libutl_common(liblower)

@@ -47,7 +47,7 @@ namespace {
             return utl::get<cst::expression::Block>(expression->value);
         }
 
-        template <compiler::literal Literal>
+        template <kieli::literal Literal>
         auto operator()(Literal const&)
         {
             state.format("{}", source_view.string);

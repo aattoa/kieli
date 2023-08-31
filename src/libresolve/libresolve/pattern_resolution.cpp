@@ -41,7 +41,7 @@ namespace {
             };
         }
 
-        template <compiler::literal Literal>
+        template <kieli::literal Literal>
         auto operator()(Literal const& literal) -> hir::Pattern
         {
             solve_pattern_type_constraint(context.literal_type<Literal>(this_pattern.source_view));

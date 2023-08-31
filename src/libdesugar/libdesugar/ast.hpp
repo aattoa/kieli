@@ -2,7 +2,7 @@
 
 #include <libutl/common/utilities.hpp>
 #include <libutl/common/flatmap.hpp>
-#include <libcompiler-pipeline/compiler-pipeline.hpp>
+#include <libphase/phase.hpp>
 
 /*
 
@@ -30,7 +30,7 @@ namespace ast {
         };
 
         struct Parameterized {
-            compiler::Name_lower name;
+            kieli::Name_lower name;
         };
 
         using Variant = std::variant<Concrete, Parameterized>;
@@ -52,7 +52,7 @@ namespace ast {
 
     struct Qualifier {
         tl::optional<std::vector<Template_argument>> template_arguments;
-        compiler::Name_dynamic                       name;
+        kieli::Name_dynamic                          name;
         utl::Source_view                             source_view;
     };
 
@@ -66,7 +66,7 @@ namespace ast {
     struct Qualified_name {
         std::vector<Qualifier>       middle_qualifiers;
         tl::optional<Root_qualifier> root_qualifier;
-        compiler::Name_dynamic       primary_name;
+        kieli::Name_dynamic          primary_name;
 
         [[nodiscard]] auto is_upper() const noexcept -> bool;
         [[nodiscard]] auto is_unqualified() const noexcept -> bool;
@@ -81,16 +81,16 @@ namespace ast {
     struct Template_parameter {
         struct Type_parameter {
             std::vector<Class_reference> classes;
-            compiler::Name_upper         name;
+            kieli::Name_upper            name;
         };
 
         struct Value_parameter {
             tl::optional<utl::Wrapper<Type>> type;
-            compiler::Name_lower             name;
+            kieli::Name_lower                name;
         };
 
         struct Mutability_parameter {
-            compiler::Name_lower name;
+            kieli::Name_lower name;
         };
 
         using Variant = std::variant<Type_parameter, Value_parameter, Mutability_parameter>;
@@ -101,8 +101,8 @@ namespace ast {
     };
 
     struct Function_argument {
-        utl::Wrapper<Expression>           expression;
-        tl::optional<compiler::Name_lower> argument_name;
+        utl::Wrapper<Expression>        expression;
+        tl::optional<kieli::Name_lower> argument_name;
     };
 
     struct Function_parameter {
@@ -149,8 +149,8 @@ namespace ast {
         };
 
         struct Struct_initializer {
-            utl::Flatmap<compiler::Name_lower, utl::Wrapper<Expression>> member_initializers;
-            utl::Wrapper<Type>                                           struct_type;
+            utl::Flatmap<kieli::Name_lower, utl::Wrapper<Expression>> member_initializers;
+            utl::Wrapper<Type>                                        struct_type;
         };
 
         struct Binary_operator_invocation {
@@ -161,7 +161,7 @@ namespace ast {
 
         struct Struct_field_access {
             utl::Wrapper<Expression> base_expression;
-            compiler::Name_lower     field_name;
+            kieli::Name_lower        field_name;
         };
 
         struct Tuple_field_access {
@@ -179,7 +179,7 @@ namespace ast {
             std::vector<Function_argument>               function_arguments;
             tl::optional<std::vector<Template_argument>> template_arguments;
             utl::Wrapper<Expression>                     base_expression;
-            compiler::Name_lower                         method_name;
+            kieli::Name_lower                            method_name;
         };
 
         struct Conditional {
@@ -223,8 +223,8 @@ namespace ast {
         };
 
         struct Local_type_alias {
-            compiler::Name_upper alias_name;
-            utl::Wrapper<Type>   aliased_type;
+            kieli::Name_upper  alias_name;
+            utl::Wrapper<Type> aliased_type;
         };
 
         struct Ret {
@@ -269,11 +269,11 @@ namespace ast {
 
     struct Expression {
         using Variant = std::variant<
-            compiler::Integer,
-            compiler::Floating,
-            compiler::Character,
-            compiler::Boolean,
-            compiler::String,
+            kieli::Integer,
+            kieli::Floating,
+            kieli::Character,
+            kieli::Boolean,
+            kieli::String,
             expression::Array_literal,
             expression::Self,
             expression::Variable,
@@ -315,8 +315,8 @@ namespace ast {
         struct Wildcard {};
 
         struct Name {
-            compiler::Name_lower name;
-            Mutability           mutability;
+            kieli::Name_lower name;
+            Mutability        mutability;
         };
 
         struct Constructor {
@@ -325,7 +325,7 @@ namespace ast {
         };
 
         struct Abbreviated_constructor {
-            compiler::Name_lower                constructor_name;
+            kieli::Name_lower                   constructor_name;
             tl::optional<utl::Wrapper<Pattern>> payload_pattern;
         };
 
@@ -338,7 +338,7 @@ namespace ast {
         };
 
         struct Alias {
-            compiler::Name_lower  alias_name;
+            kieli::Name_lower     alias_name;
             Mutability            alias_mutability;
             utl::Wrapper<Pattern> aliased_pattern;
         };
@@ -351,11 +351,11 @@ namespace ast {
 
     struct Pattern {
         using Variant = std::variant<
-            compiler::Integer,
-            compiler::Floating,
-            compiler::Character,
-            compiler::Boolean,
-            compiler::String,
+            kieli::Integer,
+            kieli::Floating,
+            kieli::Character,
+            kieli::Boolean,
+            kieli::String,
             pattern::Wildcard,
             pattern::Name,
             pattern::Constructor,
@@ -422,11 +422,11 @@ namespace ast {
 
     struct Type {
         using Variant = std::variant<
-            compiler::built_in_type::Integer,
-            compiler::built_in_type::Floating,
-            compiler::built_in_type::Character,
-            compiler::built_in_type::Boolean,
-            compiler::built_in_type::String,
+            kieli::built_in_type::Integer,
+            kieli::built_in_type::Floating,
+            kieli::built_in_type::Character,
+            kieli::built_in_type::Boolean,
+            kieli::built_in_type::String,
             type::Wildcard,
             type::Self,
             type::Typename,
@@ -455,13 +455,13 @@ namespace ast {
         std::vector<Function_parameter> function_parameters;
         tl::optional<Self_parameter>    self_parameter;
         tl::optional<Type>              return_type;
-        compiler::Name_lower            name;
+        kieli::Name_lower               name;
     };
 
     struct Type_signature {
         std::vector<Template_parameter> template_parameters;
         std::vector<Class_reference>    classes;
-        compiler::Name_upper            name;
+        kieli::Name_upper               name;
     };
 
     namespace definition {
@@ -472,36 +472,36 @@ namespace ast {
 
         struct Struct {
             struct Member {
-                compiler::Name_lower name;
-                Type                 type;
-                utl::Explicit<bool>  is_public;
-                utl::Source_view     source_view;
+                kieli::Name_lower   name;
+                Type                type;
+                utl::Explicit<bool> is_public;
+                utl::Source_view    source_view;
             };
 
-            std::vector<Member>  members;
-            compiler::Name_upper name;
+            std::vector<Member> members;
+            kieli::Name_upper   name;
         };
 
         struct Enum {
             struct Constructor {
-                compiler::Name_lower                          name;
+                kieli::Name_lower                             name;
                 tl::optional<std::vector<utl::Wrapper<Type>>> payload_types;
                 utl::Source_view                              source_view;
             };
 
             std::vector<Constructor> constructors;
-            compiler::Name_upper     name;
+            kieli::Name_upper        name;
         };
 
         struct Alias {
-            compiler::Name_upper name;
-            Type                 type;
+            kieli::Name_upper name;
+            Type              type;
         };
 
         struct Typeclass {
             std::vector<Function_signature> function_signatures;
             std::vector<Type_signature>     type_signatures;
-            compiler::Name_upper            name;
+            kieli::Name_upper               name;
         };
 
         struct Implementation {
@@ -517,7 +517,7 @@ namespace ast {
 
         struct Namespace {
             std::vector<Definition> definitions;
-            compiler::Name_lower    name;
+            kieli::Name_lower       name;
         };
 
         template <class T>

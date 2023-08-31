@@ -82,11 +82,11 @@ namespace {
         auto operator()(utl::one_of<
                         hir::type::Template_parameter_reference,
                         hir::type::Self_placeholder,
-                        compiler::built_in_type::Integer,
-                        compiler::built_in_type::Floating,
-                        compiler::built_in_type::String,
-                        compiler::built_in_type::Character,
-                        compiler::built_in_type::Boolean> auto const&) -> void
+                        kieli::built_in_type::Integer,
+                        kieli::built_in_type::Floating,
+                        kieli::built_in_type::String,
+                        kieli::built_in_type::Character,
+                        kieli::built_in_type::Boolean> auto const&) -> void
         {
             // terminal
         }

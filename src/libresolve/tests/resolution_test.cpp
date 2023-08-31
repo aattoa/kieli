@@ -20,8 +20,8 @@ namespace {
 
 auto libresolve::do_test_resolve(std::string string) -> Do_test_resolve_result
 {
-    compiler::Compilation_info test_info
-        = compiler::mock_compilation_info(utl::diagnostics::Level::normal);
+    kieli::Compilation_info test_info
+        = kieli::mock_compilation_info(utl::diagnostics::Level::normal);
     utl::wrapper auto const test_source
         = test_info.get()->source_arena.wrap("[test]", std::move(string));
 

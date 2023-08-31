@@ -4,33 +4,32 @@
 
 namespace {
     [[nodiscard]] auto make_integer_constant(
-        compiler::built_in_type::Integer const type, std::integral auto const integer)
+        kieli::built_in_type::Integer const type, std::integral auto const integer)
         -> lir::Expression
     {
-        using enum compiler::built_in_type::Integer;
         switch (type) {
-        case i8:
+        case kieli::built_in_type::Integer::i8:
             return utl::safe_cast<utl::I8>(integer);
-        case i16:
+        case kieli::built_in_type::Integer::i16:
             return utl::safe_cast<utl::I16>(integer);
-        case i32:
+        case kieli::built_in_type::Integer::i32:
             return utl::safe_cast<utl::I32>(integer);
-        case i64:
+        case kieli::built_in_type::Integer::i64:
             return utl::safe_cast<utl::I64>(integer);
-        case u8:
+        case kieli::built_in_type::Integer::u8:
             return utl::safe_cast<utl::U8>(integer);
-        case u16:
+        case kieli::built_in_type::Integer::u16:
             return utl::safe_cast<utl::U16>(integer);
-        case u32:
+        case kieli::built_in_type::Integer::u32:
             return utl::safe_cast<utl::U32>(integer);
-        case u64:
+        case kieli::built_in_type::Integer::u64:
             return utl::safe_cast<utl::U64>(integer);
         default:
             utl::unreachable();
         }
     }
 
-    [[nodiscard]] auto make_integer_range(compiler::built_in_type::Integer const type)
+    [[nodiscard]] auto make_integer_range(kieli::built_in_type::Integer const type)
         -> utl::Pair<std::variant<utl::Isize, utl::Usize>>
     {
         static constexpr auto range = []<std::integral T>(utl::Type<T>) {
@@ -40,7 +39,7 @@ namespace {
                 utl::safe_cast<U>(std::numeric_limits<T>::max()),
             };
         };
-        using enum compiler::built_in_type::Integer;
+        using enum kieli::built_in_type::Integer;
         switch (type) {
         case i8:
             return range(utl::type<utl::I8>);
@@ -86,10 +85,9 @@ namespace {
             return [this](auto const& expression) { return recurse(expression); };
         }
 
-        auto operator()(compiler::Integer const& integer_literal) -> lir::Expression
+        auto operator()(kieli::Integer const& integer_literal) -> lir::Expression
         {
-            auto const type
-                = utl::get<compiler::built_in_type::Integer>(*this_expression.type.value);
+            auto const type = utl::get<kieli::built_in_type::Integer>(*this_expression.type.value);
             try {
                 return make_integer_constant(type, integer_literal.value);
             }
@@ -107,7 +105,7 @@ namespace {
             }
         }
 
-        template <compiler::literal Literal>
+        template <kieli::literal Literal>
         auto operator()(Literal const& literal) -> lir::Expression
         {
             return literal;

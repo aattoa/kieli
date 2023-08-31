@@ -3,18 +3,18 @@
 
 libreify::Reification_constants::Reification_constants(cir::Node_arena& arena)
     : unit_type { arena.wrap<cir::Type::Variant>(cir::type::Tuple {}) }
-    , boolean_type { arena.wrap<cir::Type::Variant>(compiler::built_in_type::Boolean {}) }
-    , string_type { arena.wrap<cir::Type::Variant>(compiler::built_in_type::String {}) }
-    , character_type { arena.wrap<cir::Type::Variant>(compiler::built_in_type::Character {}) }
-    , i8_type { arena.wrap<cir::Type::Variant>(compiler::built_in_type::Integer::i8) }
-    , i16_type { arena.wrap<cir::Type::Variant>(compiler::built_in_type::Integer::i16) }
-    , i32_type { arena.wrap<cir::Type::Variant>(compiler::built_in_type::Integer::i32) }
-    , i64_type { arena.wrap<cir::Type::Variant>(compiler::built_in_type::Integer::i64) }
-    , u8_type { arena.wrap<cir::Type::Variant>(compiler::built_in_type::Integer::u8) }
-    , u16_type { arena.wrap<cir::Type::Variant>(compiler::built_in_type::Integer::u16) }
-    , u32_type { arena.wrap<cir::Type::Variant>(compiler::built_in_type::Integer::u32) }
-    , u64_type { arena.wrap<cir::Type::Variant>(compiler::built_in_type::Integer::u64) }
-    , floating_type { arena.wrap<cir::Type::Variant>(compiler::built_in_type::Floating {}) }
+    , boolean_type { arena.wrap<cir::Type::Variant>(kieli::built_in_type::Boolean {}) }
+    , string_type { arena.wrap<cir::Type::Variant>(kieli::built_in_type::String {}) }
+    , character_type { arena.wrap<cir::Type::Variant>(kieli::built_in_type::Character {}) }
+    , i8_type { arena.wrap<cir::Type::Variant>(kieli::built_in_type::Integer::i8) }
+    , i16_type { arena.wrap<cir::Type::Variant>(kieli::built_in_type::Integer::i16) }
+    , i32_type { arena.wrap<cir::Type::Variant>(kieli::built_in_type::Integer::i32) }
+    , i64_type { arena.wrap<cir::Type::Variant>(kieli::built_in_type::Integer::i64) }
+    , u8_type { arena.wrap<cir::Type::Variant>(kieli::built_in_type::Integer::u8) }
+    , u16_type { arena.wrap<cir::Type::Variant>(kieli::built_in_type::Integer::u16) }
+    , u32_type { arena.wrap<cir::Type::Variant>(kieli::built_in_type::Integer::u32) }
+    , u64_type { arena.wrap<cir::Type::Variant>(kieli::built_in_type::Integer::u64) }
+    , floating_type { arena.wrap<cir::Type::Variant>(kieli::built_in_type::Floating {}) }
 {}
 
 auto libreify::Context::unit_type(utl::Source_view const view) -> cir::Type

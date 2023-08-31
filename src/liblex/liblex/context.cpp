@@ -21,7 +21,7 @@ auto liblex::Context::remaining_input_size() const noexcept -> utl::Usize
 }
 
 liblex::Context::Context(
-    utl::Wrapper<utl::Source> const source, compiler::Compilation_info& compilation_info) noexcept
+    utl::Wrapper<utl::Source> const source, kieli::Compilation_info& compilation_info) noexcept
     : m_compilation_info { compilation_info }
     , m_source { source }
     , m_source_begin { source->string().data() }

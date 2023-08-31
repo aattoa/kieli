@@ -23,7 +23,7 @@ namespace {
             return [this](auto const& expression) { return recurse(expression); };
         }
 
-        template <compiler::literal Literal>
+        template <kieli::literal Literal>
         auto operator()(Literal const& literal) -> cir::Expression::Variant
         {
             return literal;
@@ -32,7 +32,7 @@ namespace {
         auto operator()(hir::expression::Sizeof const& sizeof_) -> cir::Expression::Variant
         {
             cir::Type const inspected_type = context.reify_type(sizeof_.inspected_type);
-            return compiler::Integer { inspected_type.size.get() };
+            return kieli::Integer { inspected_type.size.get() };
         }
 
         auto operator()(hir::expression::Block const& block) -> cir::Expression::Variant

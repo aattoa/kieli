@@ -11,7 +11,7 @@ namespace {
         int               initial_exception_count;
     public:
         Definition_state_guard(
-            Context& context, Definition_state& state, compiler::Name_dynamic const name)
+            Context& context, Definition_state& state, kieli::Name_dynamic const name)
             : definition_state { state }
             , initial_exception_count { std::uncaught_exceptions() }
         {
@@ -114,7 +114,7 @@ namespace {
 
     auto make_function_signature(
         Context&                               context,
-        compiler::Name_lower const             function_name,
+        kieli::Name_lower const                function_name,
         hir::Type const                        return_type,
         tl::optional<hir::Self_parameter>&&    self_parameter,
         std::vector<hir::Function_parameter>&& function_parameters,

@@ -13,7 +13,7 @@ namespace {
                 Pattern_desugaring_visitor { context }, parenthesized.pattern.value->value);
         }
 
-        template <compiler::literal Literal>
+        template <kieli::literal Literal>
         auto operator()(Literal const& literal) -> ast::Pattern::Variant
         {
             return literal;

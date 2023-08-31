@@ -16,10 +16,10 @@ target_sources(libdesugar
 
 target_link_libraries(libdesugar
     PUBLIC libparse
-    PUBLIC libcompiler-pipeline)
+    PUBLIC libphase)
 
 kieli_consume_libutl_common(libdesugar)
 
 kieli_add_tests(libdesugar
-    LINK libcompiler-pipeline liblex libparse
+    LINK libphase liblex libparse
     TESTS libdesugar)

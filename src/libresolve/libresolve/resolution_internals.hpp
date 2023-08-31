@@ -81,7 +81,7 @@ namespace libresolve {
         utl::Flatmap<utl::Pooled_string, Lower_variant> lower_table;
         utl::Flatmap<utl::Pooled_string, Upper_variant> upper_table;
         tl::optional<utl::Wrapper<Namespace>>           parent;
-        tl::optional<compiler::Name_lower>              name;
+        tl::optional<kieli::Name_lower>                 name;
     };
 
     enum class Definition_state {
@@ -94,7 +94,7 @@ namespace libresolve {
         hir::Function::Signature resolved_signature;
         Scope                    signature_scope;
         ast::Expression          unresolved_body;
-        compiler::Name_lower     name;
+        kieli::Name_lower        name;
     };
 
     template <class AST_representation>
@@ -138,7 +138,7 @@ namespace libresolve {
         Variant                 value;
         utl::Wrapper<Namespace> home_namespace;
         Definition_state        state = Definition_state::unresolved;
-        compiler::Name_lower    name;
+        kieli::Name_lower       name;
 
         tl::optional<Template_instantiation_info<Function_info>> template_instantiation_info;
     };
@@ -151,7 +151,7 @@ namespace libresolve {
         utl::Wrapper<Namespace> home_namespace;
         hir::Type               structure_type;
         Definition_state        state = Definition_state::unresolved;
-        compiler::Name_upper    name;
+        kieli::Name_upper       name;
 
         tl::optional<Template_instantiation_info<Struct_template_info>> template_instantiation_info;
     };
@@ -164,7 +164,7 @@ namespace libresolve {
         utl::Wrapper<Namespace> home_namespace;
         hir::Type               enumeration_type;
         Definition_state        state = Definition_state::unresolved;
-        compiler::Name_upper    name;
+        kieli::Name_upper       name;
 
         tl::optional<Template_instantiation_info<Enum_template_info>> template_instantiation_info;
 
@@ -304,7 +304,7 @@ namespace libresolve {
         utl::Safe_usize current_template_parameter_tag;
         utl::Safe_usize current_local_variable_tag;
     public:
-        compiler::Compilation_info   compilation_info;
+        kieli::Compilation_info      compilation_info;
         hir::Node_arena              node_arena;
         hir::Namespace_arena         namespace_arena;
         Resolution_constants         constants;
@@ -318,9 +318,9 @@ namespace libresolve {
         utl::Pooled_string self_variable_id = compilation_info.get()->identifier_pool.make("self");
 
         explicit Context(
-            compiler::Compilation_info&& compilation_info,
-            hir::Node_arena&&            node_arena,
-            hir::Namespace_arena&&       namespace_arena) noexcept
+            kieli::Compilation_info&& compilation_info,
+            hir::Node_arena&&         node_arena,
+            hir::Namespace_arena&&    namespace_arena) noexcept
             : compilation_info { std::move(compilation_info) }
             , node_arena { std::move(node_arena) }
             , namespace_arena { std::move(namespace_arena) }
@@ -434,7 +434,7 @@ namespace libresolve {
             -> hir::Class_reference;
 
         [[nodiscard]] auto resolve_method(
-            compiler::Name_lower method_name,
+            kieli::Name_lower method_name,
             tl::optional<std::span<ast::Template_argument const>>,
             hir::Type method_for,
             Scope&,
@@ -443,8 +443,8 @@ namespace libresolve {
         [[nodiscard]] auto find_lower(ast::Qualified_name&, Scope&, Namespace&) -> Lower_variant;
         [[nodiscard]] auto find_upper(ast::Qualified_name&, Scope&, Namespace&) -> Upper_variant;
 
-        auto add_to_namespace(Namespace&, compiler::Name_lower, Lower_variant) -> void;
-        auto add_to_namespace(Namespace&, compiler::Name_upper, Upper_variant) -> void;
+        auto add_to_namespace(Namespace&, kieli::Name_lower, Lower_variant) -> void;
+        auto add_to_namespace(Namespace&, kieli::Name_upper, Upper_variant) -> void;
 
         // Returns the associated namespace of the given type, or returns nullopt if the type does
         // not have one.
@@ -523,22 +523,22 @@ namespace libresolve {
         // Returns a type the value of which must be overwritten
         auto temporary_placeholder_type(utl::Source_view) -> hir::Type;
 
-        template <compiler::literal T>
+        template <kieli::literal T>
         auto literal_type(utl::Source_view const view) -> hir::Type
         {
-            if constexpr (std::same_as<T, compiler::Integer>) {
+            if constexpr (std::same_as<T, kieli::Integer>) {
                 return fresh_integral_unification_type_variable(view);
             }
-            else if constexpr (std::same_as<T, compiler::Floating>) {
+            else if constexpr (std::same_as<T, kieli::Floating>) {
                 return floating_type(view);
             }
-            else if constexpr (std::same_as<T, compiler::Character>) {
+            else if constexpr (std::same_as<T, kieli::Character>) {
                 return character_type(view);
             }
-            else if constexpr (std::same_as<T, compiler::Boolean>) {
+            else if constexpr (std::same_as<T, kieli::Boolean>) {
                 return boolean_type(view);
             }
-            else if constexpr (std::same_as<T, compiler::String>) {
+            else if constexpr (std::same_as<T, kieli::String>) {
                 return string_type(view);
             }
             else {

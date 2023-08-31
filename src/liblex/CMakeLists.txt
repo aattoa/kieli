@@ -13,7 +13,7 @@ target_sources(liblex
     PRIVATE liblex/token.hpp)
 
 target_link_libraries(liblex
-    PUBLIC libcompiler-pipeline)
+    PUBLIC libphase)
 
 kieli_consume_libutl_common(liblex)
 

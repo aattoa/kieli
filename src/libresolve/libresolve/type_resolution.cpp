@@ -20,7 +20,7 @@ namespace {
             return [this](ast::Type& type) -> hir::Type { return recurse(type); };
         }
 
-        auto operator()(compiler::built_in_type::Integer const integer) -> hir::Type
+        auto operator()(kieli::built_in_type::Integer const integer) -> hir::Type
         {
             static constexpr auto integers = std::to_array({
                 &Context::i8_type,
@@ -32,27 +32,26 @@ namespace {
                 &Context::u32_type,
                 &Context::u64_type,
             });
-            static_assert(
-                integers.size() == utl::enumerator_count<compiler::built_in_type::Integer>);
+            static_assert(integers.size() == utl::enumerator_count<kieli::built_in_type::Integer>);
             return (context.*integers[utl::as_index(integer)])(this_type.source_view);
         }
 
-        auto operator()(compiler::built_in_type::String) -> hir::Type
+        auto operator()(kieli::built_in_type::String) -> hir::Type
         {
             return context.string_type(this_type.source_view);
         }
 
-        auto operator()(compiler::built_in_type::Floating) -> hir::Type
+        auto operator()(kieli::built_in_type::Floating) -> hir::Type
         {
             return context.floating_type(this_type.source_view);
         }
 
-        auto operator()(compiler::built_in_type::Character) -> hir::Type
+        auto operator()(kieli::built_in_type::Character) -> hir::Type
         {
             return context.character_type(this_type.source_view);
         }
 
-        auto operator()(compiler::built_in_type::Boolean) -> hir::Type
+        auto operator()(kieli::built_in_type::Boolean) -> hir::Type
         {
             return context.boolean_type(this_type.source_view);
         }

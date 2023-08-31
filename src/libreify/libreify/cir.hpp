@@ -3,7 +3,7 @@
 #include <libutl/common/utilities.hpp>
 #include <libutl/common/wrapper.hpp>
 #include <libutl/common/safe_integer.hpp>
-#include <libcompiler-pipeline/compiler-pipeline.hpp>
+#include <libphase/phase.hpp>
 
 /*
 
@@ -46,11 +46,11 @@ namespace cir {
 
     struct Type::Variant
         : std::variant<
-              compiler::built_in_type::Integer,
-              compiler::built_in_type::Floating,
-              compiler::built_in_type::Character,
-              compiler::built_in_type::Boolean,
-              compiler::built_in_type::String,
+              kieli::built_in_type::Integer,
+              kieli::built_in_type::Floating,
+              kieli::built_in_type::Character,
+              kieli::built_in_type::Boolean,
+              kieli::built_in_type::String,
               type::Tuple,
               type::Struct_reference,
               type::Enum_reference,
@@ -69,11 +69,11 @@ namespace cir {
 
     struct Pattern {
         using Variant = std::variant<
-            compiler::Integer,
-            compiler::Floating,
-            compiler::Character,
-            compiler::Boolean,
-            compiler::String,
+            kieli::Integer,
+            kieli::Floating,
+            kieli::Character,
+            kieli::Boolean,
+            kieli::String,
             pattern::Tuple,
             pattern::Exhaustive>;
 
@@ -125,11 +125,11 @@ namespace cir {
 
     struct [[nodiscard]] Expression {
         using Variant = std::variant<
-            compiler::Integer,
-            compiler::Floating,
-            compiler::Character,
-            compiler::Boolean,
-            compiler::String,
+            kieli::Integer,
+            kieli::Floating,
+            kieli::Character,
+            kieli::Boolean,
+            kieli::String,
             expression::Block,
             expression::Tuple,
             expression::Loop,

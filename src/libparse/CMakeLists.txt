@@ -18,7 +18,7 @@ target_sources(libparse
 target_link_libraries(libparse
     PUBLIC liblex
     PUBLIC libformat
-    PUBLIC libcompiler-pipeline)
+    PUBLIC libphase)
 
 kieli_consume_libutl_common(libparse)
 

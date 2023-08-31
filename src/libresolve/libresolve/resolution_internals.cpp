@@ -6,18 +6,18 @@ libresolve::Resolution_constants::Resolution_constants(hir::Node_arena& arena)
         hir::Mutability::Concrete { .is_mutable = false }) }
     , mut { arena.wrap<hir::Mutability::Variant>(hir::Mutability::Concrete { .is_mutable = true }) }
     , unit_type { arena.wrap<hir::Type::Variant>(hir::type::Tuple {}) }
-    , i8_type { arena.wrap<hir::Type::Variant>(compiler::built_in_type::Integer::i8) }
-    , i16_type { arena.wrap<hir::Type::Variant>(compiler::built_in_type::Integer::i16) }
-    , i32_type { arena.wrap<hir::Type::Variant>(compiler::built_in_type::Integer::i32) }
-    , i64_type { arena.wrap<hir::Type::Variant>(compiler::built_in_type::Integer::i64) }
-    , u8_type { arena.wrap<hir::Type::Variant>(compiler::built_in_type::Integer::u8) }
-    , u16_type { arena.wrap<hir::Type::Variant>(compiler::built_in_type::Integer::u16) }
-    , u32_type { arena.wrap<hir::Type::Variant>(compiler::built_in_type::Integer::u32) }
-    , u64_type { arena.wrap<hir::Type::Variant>(compiler::built_in_type::Integer::u64) }
-    , floating_type { arena.wrap<hir::Type::Variant>(compiler::built_in_type::Floating {}) }
-    , character_type { arena.wrap<hir::Type::Variant>(compiler::built_in_type::Character {}) }
-    , boolean_type { arena.wrap<hir::Type::Variant>(compiler::built_in_type::Boolean {}) }
-    , string_type { arena.wrap<hir::Type::Variant>(compiler::built_in_type::String {}) }
+    , i8_type { arena.wrap<hir::Type::Variant>(kieli::built_in_type::Integer::i8) }
+    , i16_type { arena.wrap<hir::Type::Variant>(kieli::built_in_type::Integer::i16) }
+    , i32_type { arena.wrap<hir::Type::Variant>(kieli::built_in_type::Integer::i32) }
+    , i64_type { arena.wrap<hir::Type::Variant>(kieli::built_in_type::Integer::i64) }
+    , u8_type { arena.wrap<hir::Type::Variant>(kieli::built_in_type::Integer::u8) }
+    , u16_type { arena.wrap<hir::Type::Variant>(kieli::built_in_type::Integer::u16) }
+    , u32_type { arena.wrap<hir::Type::Variant>(kieli::built_in_type::Integer::u32) }
+    , u64_type { arena.wrap<hir::Type::Variant>(kieli::built_in_type::Integer::u64) }
+    , floating_type { arena.wrap<hir::Type::Variant>(kieli::built_in_type::Floating {}) }
+    , character_type { arena.wrap<hir::Type::Variant>(kieli::built_in_type::Character {}) }
+    , boolean_type { arena.wrap<hir::Type::Variant>(kieli::built_in_type::Boolean {}) }
+    , string_type { arena.wrap<hir::Type::Variant>(kieli::built_in_type::String {}) }
     , self_placeholder_type { arena.wrap<hir::Type::Variant>(hir::type::Self_placeholder {}) }
 {}
 
@@ -253,7 +253,7 @@ namespace {
 } // namespace
 
 auto libresolve::Context::add_to_namespace(
-    Namespace& space, compiler::Name_lower const name, Lower_variant lower) -> void
+    Namespace& space, kieli::Name_lower const name, Lower_variant lower) -> void
 {
     add_to_namespace_impl<&Namespace::lower_table>(
         *this,
@@ -268,7 +268,7 @@ auto libresolve::Context::add_to_namespace(
 }
 
 auto libresolve::Context::add_to_namespace(
-    Namespace& space, compiler::Name_upper const name, Upper_variant upper) -> void
+    Namespace& space, kieli::Name_upper const name, Upper_variant upper) -> void
 {
     add_to_namespace_impl<&Namespace::upper_table>(
         *this, space, name, std::move(upper), [](auto const& info) { return info->name; });

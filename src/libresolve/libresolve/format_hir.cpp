@@ -102,7 +102,7 @@ namespace {
 
         explicit Expression_format_visitor(Out&& out) noexcept : out { std::move(out) } {}
 
-        template <compiler::literal Literal>
+        template <kieli::literal Literal>
         auto operator()(Literal const& literal)
         {
             std::format_to(out, "{}", literal);
@@ -259,27 +259,27 @@ namespace {
 
         explicit Type_format_visitor(Out&& out) noexcept : out { std::move(out) } {}
 
-        auto operator()(compiler::built_in_type::Integer const integer)
+        auto operator()(kieli::built_in_type::Integer const integer)
         {
-            std::format_to(out, "{}", compiler::built_in_type::integer_string(integer));
+            std::format_to(out, "{}", kieli::built_in_type::integer_string(integer));
         }
 
-        auto operator()(compiler::built_in_type::Floating const&)
+        auto operator()(kieli::built_in_type::Floating const&)
         {
             std::format_to(out, "Float");
         }
 
-        auto operator()(compiler::built_in_type::Character const&)
+        auto operator()(kieli::built_in_type::Character const&)
         {
             std::format_to(out, "Char");
         }
 
-        auto operator()(compiler::built_in_type::Boolean const&)
+        auto operator()(kieli::built_in_type::Boolean const&)
         {
             std::format_to(out, "Bool");
         }
 
-        auto operator()(compiler::built_in_type::String const&)
+        auto operator()(kieli::built_in_type::String const&)
         {
             std::format_to(out, "String");
         }
@@ -350,7 +350,7 @@ namespace {
 
         explicit Pattern_format_visitor(Out&& out) noexcept : out { std::move(out) } {}
 
-        template <compiler::literal Literal>
+        template <kieli::literal Literal>
         auto operator()(Literal const& literal)
         {
             std::format_to(out, "{}", literal.value);

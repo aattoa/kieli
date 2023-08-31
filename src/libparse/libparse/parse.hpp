@@ -7,9 +7,9 @@
 namespace kieli {
 
     struct [[nodiscard]] Parse_result {
-        compiler::Compilation_info compilation_info;
-        cst::Node_arena            node_arena;
-        cst::Module                module;
+        Compilation_info compilation_info;
+        cst::Node_arena  node_arena;
+        cst::Module      module;
     };
 
     auto parse(Lex_result&&) -> Parse_result;
