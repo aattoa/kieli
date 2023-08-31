@@ -308,10 +308,10 @@ namespace {
             }
         }
         if (view == "true") {
-            return token_maker(compiler::Boolean { true }, Token::Type::boolean_literal);
+            return token_maker(kieli::Boolean { true }, Token::Type::boolean_literal);
         }
         else if (view == "false") {
-            return token_maker(compiler::Boolean { false }, Token::Type::boolean_literal);
+            return token_maker(kieli::Boolean { false }, Token::Type::boolean_literal);
         }
         else if (ranges::all_of(view, is_one_of<"_">)) {
             return token_maker({}, Token::Type::underscore);
@@ -353,7 +353,7 @@ namespace {
         }
 
         if (context.try_consume('\'')) {
-            return token_maker(compiler::Character { c }, Token::Type::character_literal);
+            return token_maker(kieli::Character { c }, Token::Type::character_literal);
         }
         else {
             context.error(context.pointer(), { "Expected a closing single-quote" });
@@ -448,7 +448,7 @@ namespace {
                 extraneous_suffix, { "Erroneous floating point literal alphabetic suffix" });
         }
 
-        return token_maker(compiler::Floating { floating.value() }, Token::Type::floating_literal);
+        return token_maker(kieli::Floating { floating.value() }, Token::Type::floating_literal);
     }
 
     auto extract_numeric_integer(
@@ -468,7 +468,7 @@ namespace {
 
         std::string_view const suffix = context.extract(is_alpha);
         if (suffix.empty()) {
-            return token_maker(compiler::Integer { integer.value() }, Token::Type::integer_literal);
+            return token_maker(kieli::Integer { integer.value() }, Token::Type::integer_literal);
         }
         else if (suffix != "e" && suffix != "E") {
             context.error(suffix, { "Erroneous integer literal alphabetic suffix" });
@@ -508,7 +508,7 @@ namespace {
                 utl::always_assert(result.has_value());
             }
 
-            return token_maker(compiler::Integer { result.value() }, Token::Type::integer_literal);
+            return token_maker(kieli::Integer { result.value() }, Token::Type::integer_literal);
         }
     }
 

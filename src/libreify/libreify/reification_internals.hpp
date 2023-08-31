@@ -26,14 +26,14 @@ namespace libreify {
     };
 
     struct [[nodiscard]] Context {
-        compiler::Compilation_info                             compilation_info;
+        kieli::Compilation_info                                compilation_info;
         cir::Node_arena                                        node_arena;
         Reification_constants                                  constants;
         utl::Flatmap<hir::Local_variable_tag, utl::Safe_isize> variable_frame_offsets;
         utl::Safe_isize                                        current_frame_offset;
 
         explicit Context(
-            compiler::Compilation_info&& compilation_info, cir::Node_arena&& node_arena) noexcept
+            kieli::Compilation_info&& compilation_info, cir::Node_arena&& node_arena) noexcept
             : compilation_info { std::move(compilation_info) }
             , node_arena { std::move(node_arena) }
             , constants { this->node_arena }

@@ -1,18 +1,13 @@
 #pragma once
 
 #include <libutl/common/utilities.hpp>
-#include <libcompiler-pipeline/compiler-pipeline.hpp>
+#include <libphase/phase.hpp>
 
 namespace kieli {
 
     struct [[nodiscard]] Lexical_token {
-        using Variant = std::variant<
-            std::monostate,
-            compiler::Integer,
-            compiler::Floating,
-            compiler::Character,
-            compiler::Boolean,
-            utl::Pooled_string>;
+        using Variant = std::
+            variant<std::monostate, Integer, Floating, Character, Boolean, utl::Pooled_string>;
 
         enum class Type {
             error,
@@ -129,11 +124,11 @@ namespace kieli {
             }
         }
 
-        [[nodiscard]] auto as_integer() const noexcept -> decltype(compiler::Integer::value);
-        [[nodiscard]] auto as_floating() const noexcept -> decltype(compiler::Floating::value);
-        [[nodiscard]] auto as_character() const noexcept -> decltype(compiler::Character::value);
-        [[nodiscard]] auto as_boolean() const noexcept -> decltype(compiler::Boolean::value);
-        [[nodiscard]] auto as_string() const noexcept -> decltype(compiler::String::value);
+        [[nodiscard]] auto as_integer() const noexcept -> decltype(Integer::value);
+        [[nodiscard]] auto as_floating() const noexcept -> decltype(Floating::value);
+        [[nodiscard]] auto as_character() const noexcept -> decltype(Character::value);
+        [[nodiscard]] auto as_boolean() const noexcept -> decltype(Boolean::value);
+        [[nodiscard]] auto as_string() const noexcept -> decltype(String::value);
 
         [[nodiscard]] static auto description(Type) noexcept -> std::string_view;
         [[nodiscard]] static auto type_string(Type) noexcept -> std::string_view;
@@ -143,7 +138,7 @@ namespace kieli {
 template <>
 struct std::formatter<kieli::Lexical_token::Type> : std::formatter<std::string_view> {
     auto format(kieli::Lexical_token::Type const type, auto& context) const
-    { // NOLINT
+    {
         return std::formatter<std::string_view>::format(
             kieli::Lexical_token::type_string(type), context);
     }
@@ -152,7 +147,7 @@ struct std::formatter<kieli::Lexical_token::Type> : std::formatter<std::string_v
 template <>
 struct std::formatter<kieli::Lexical_token> : std::formatter<std::string_view> {
     auto format(kieli::Lexical_token const& token, auto& context) const
-    { // NOLINT
+    {
         if (std::holds_alternative<std::monostate>(token.value)) {
             return std::formatter<std::string_view>::format(
                 kieli::Lexical_token::type_string(token.type), context);

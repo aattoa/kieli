@@ -102,24 +102,24 @@ namespace {
 
 static_assert(std::is_trivially_copyable_v<kieli::Lexical_token>);
 
-auto kieli::Lexical_token::as_integer() const noexcept -> decltype(compiler::Integer::value)
+auto kieli::Lexical_token::as_integer() const noexcept -> decltype(kieli::Integer::value)
 {
-    return value_as<compiler::Integer>().value;
+    return value_as<kieli::Integer>().value;
 }
 
-auto kieli::Lexical_token::as_floating() const noexcept -> decltype(compiler::Floating::value)
+auto kieli::Lexical_token::as_floating() const noexcept -> decltype(kieli::Floating::value)
 {
-    return value_as<compiler::Floating>().value;
+    return value_as<kieli::Floating>().value;
 }
 
-auto kieli::Lexical_token::as_character() const noexcept -> decltype(compiler::Character::value)
+auto kieli::Lexical_token::as_character() const noexcept -> decltype(kieli::Character::value)
 {
-    return value_as<compiler::Character>().value;
+    return value_as<kieli::Character>().value;
 }
 
-auto kieli::Lexical_token::as_boolean() const noexcept -> decltype(compiler::Boolean::value)
+auto kieli::Lexical_token::as_boolean() const noexcept -> decltype(kieli::Boolean::value)
 {
-    return value_as<compiler::Boolean>().value;
+    return value_as<kieli::Boolean>().value;
 }
 
 auto kieli::Lexical_token::as_string() const noexcept -> utl::Pooled_string

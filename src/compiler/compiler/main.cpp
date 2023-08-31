@@ -39,11 +39,8 @@ namespace {
             utl::add_to_readline_history(string);
 
             try {
-                compiler::Compilation_info repl_info
-                    = std::make_shared<compiler::Shared_compilation_info>(
-                        compiler::Shared_compilation_info {
-                            .source_arena = utl::Source::Arena::with_page_size(1),
-                        });
+                kieli::Compilation_info repl_info
+                    = kieli::mock_compilation_info(utl::diagnostics::Level::normal);
                 utl::wrapper auto const repl_source
                     = repl_info.get()->source_arena.wrap("[repl]", std::move(string));
                 f(kieli::lex({ .compilation_info = std::move(repl_info), .source = repl_source }));
@@ -145,14 +142,12 @@ try {
     }
 
     if (std::string_view const* const phase = options["debug"]) {
-        using namespace compiler;
-
         auto source_directory_path
             = std::filesystem::current_path().parent_path() / "sample-project" / "src";
 
         auto const do_resolve = [&] {
-            compiler::Compilation_info repl_info   = compiler::mock_compilation_info();
-            utl::wrapper auto const    repl_source = repl_info.get()->source_arena.wrap(
+            kieli::Compilation_info repl_info   = kieli::mock_compilation_info();
+            utl::wrapper auto const repl_source = repl_info.get()->source_arena.wrap(
                 utl::Source::read(source_directory_path / "main.kieli"));
             return kieli::resolve(kieli::desugar(kieli::parse(
                 kieli::lex({ .compilation_info = std::move(repl_info), .source = repl_source }))));

@@ -112,11 +112,11 @@ namespace {
         }
 
         auto operator()(utl::one_of<
-                        compiler::built_in_type::Integer,
-                        compiler::built_in_type::Floating,
-                        compiler::built_in_type::Character,
-                        compiler::built_in_type::Boolean,
-                        compiler::built_in_type::String,
+                        kieli::built_in_type::Integer,
+                        kieli::built_in_type::Floating,
+                        kieli::built_in_type::Character,
+                        kieli::built_in_type::Boolean,
+                        kieli::built_in_type::String,
                         hir::type::Template_parameter_reference,
                         hir::type::Self_placeholder> auto const&) const
         {
@@ -304,18 +304,18 @@ namespace {
         }
 
         template <utl::one_of<
-            compiler::built_in_type::Floating,
-            compiler::built_in_type::Character,
-            compiler::built_in_type::Boolean,
-            compiler::built_in_type::String> T>
+            kieli::built_in_type::Floating,
+            kieli::built_in_type::Character,
+            kieli::built_in_type::Boolean,
+            kieli::built_in_type::String> T>
         auto operator()(T, T) -> bool
         {
             return true;
         }
 
         auto operator()(
-            compiler::built_in_type::Integer const left,
-            compiler::built_in_type::Integer const right) -> bool
+            kieli::built_in_type::Integer const left, kieli::built_in_type::Integer const right)
+            -> bool
         {
             return left == right || unification_failure();
         }
@@ -351,7 +351,7 @@ namespace {
             utl::always_assert(unsolved.classes.empty());
 
             if (unsolved.kind.get() == hir::Unification_type_variable_kind::integral) {
-                if (!std::holds_alternative<compiler::built_in_type::Integer>(
+                if (!std::holds_alternative<kieli::built_in_type::Integer>(
                         *current_right_type.pure_value()))
                 {
                     return unification_failure();
@@ -372,7 +372,7 @@ namespace {
             utl::always_assert(unsolved.classes.empty());
 
             if (unsolved.kind.get() == hir::Unification_type_variable_kind::integral) {
-                if (!std::holds_alternative<compiler::built_in_type::Integer>(
+                if (!std::holds_alternative<kieli::built_in_type::Integer>(
                         *current_left_type.pure_value()))
                 {
                     return unification_failure();

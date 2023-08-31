@@ -187,29 +187,29 @@ namespace {
     {
         switch (context.extract().type) {
         case Lexical_token::Type::i8_type:
-            return compiler::built_in_type::Integer::i8;
+            return kieli::built_in_type::Integer::i8;
         case Lexical_token::Type::i16_type:
-            return compiler::built_in_type::Integer::i16;
+            return kieli::built_in_type::Integer::i16;
         case Lexical_token::Type::i32_type:
-            return compiler::built_in_type::Integer::i32;
+            return kieli::built_in_type::Integer::i32;
         case Lexical_token::Type::i64_type:
-            return compiler::built_in_type::Integer::i64;
+            return kieli::built_in_type::Integer::i64;
         case Lexical_token::Type::u8_type:
-            return compiler::built_in_type::Integer::u8;
+            return kieli::built_in_type::Integer::u8;
         case Lexical_token::Type::u16_type:
-            return compiler::built_in_type::Integer::u16;
+            return kieli::built_in_type::Integer::u16;
         case Lexical_token::Type::u32_type:
-            return compiler::built_in_type::Integer::u32;
+            return kieli::built_in_type::Integer::u32;
         case Lexical_token::Type::u64_type:
-            return compiler::built_in_type::Integer::u64;
+            return kieli::built_in_type::Integer::u64;
         case Lexical_token::Type::floating_type:
-            return compiler::built_in_type::Floating {};
+            return kieli::built_in_type::Floating {};
         case Lexical_token::Type::character_type:
-            return compiler::built_in_type::Character {};
+            return kieli::built_in_type::Character {};
         case Lexical_token::Type::boolean_type:
-            return compiler::built_in_type::Boolean {};
+            return kieli::built_in_type::Boolean {};
         case Lexical_token::Type::string_type:
-            return compiler::built_in_type::String {};
+            return kieli::built_in_type::String {};
         case Lexical_token::Type::underscore:
             return cst::type::Wildcard {};
         case Lexical_token::Type::upper_self:

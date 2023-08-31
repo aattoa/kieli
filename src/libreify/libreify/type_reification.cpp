@@ -25,7 +25,7 @@ namespace {
                 });
         }
 
-        auto operator()(compiler::built_in_type::Integer const integer) -> cir::Type
+        auto operator()(kieli::built_in_type::Integer const integer) -> cir::Type
         {
             static constexpr auto types = std::to_array({
                 &Context::i8_type,
@@ -37,26 +37,26 @@ namespace {
                 &Context::u32_type,
                 &Context::u64_type,
             });
-            static_assert(types.size() == utl::enumerator_count<compiler::built_in_type::Integer>);
+            static_assert(types.size() == utl::enumerator_count<kieli::built_in_type::Integer>);
             return (context.*types[utl::as_index(integer)])(this_type.source_view());
         }
 
-        auto operator()(compiler::built_in_type::Boolean const&) -> cir::Type
+        auto operator()(kieli::built_in_type::Boolean const&) -> cir::Type
         {
             return context.boolean_type(this_type.source_view());
         }
 
-        auto operator()(compiler::built_in_type::Floating const&) -> cir::Type
+        auto operator()(kieli::built_in_type::Floating const&) -> cir::Type
         {
             return context.floating_type(this_type.source_view());
         }
 
-        auto operator()(compiler::built_in_type::String const&) -> cir::Type
+        auto operator()(kieli::built_in_type::String const&) -> cir::Type
         {
             return context.string_type(this_type.source_view());
         }
 
-        auto operator()(compiler::built_in_type::Character const&) -> cir::Type
+        auto operator()(kieli::built_in_type::Character const&) -> cir::Type
         {
             return context.character_type(this_type.source_view());
         }

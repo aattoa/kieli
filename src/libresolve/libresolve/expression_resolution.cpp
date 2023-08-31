@@ -303,7 +303,7 @@ namespace {
             return tl::nullopt;
         }
 
-        template <compiler::literal Literal>
+        template <kieli::literal Literal>
         auto operator()(Literal const& literal) -> hir::Expression
         {
             return {
@@ -359,7 +359,7 @@ namespace {
                     context.wrap_type(hir::type::Array {
                         .element_type = element_type,
                         .array_length = context.wrap(hir::Expression {
-                            .value       = compiler::Integer { array_length },
+                            .value       = kieli::Integer { array_length },
                             .type        = context.size_type(this_expression.source_view),
                             .source_view = this_expression.source_view,
                             .mutability  = context.immut_constant(this_expression.source_view),

@@ -13,27 +13,27 @@ namespace {
             return utl::match(parenthesized.type.value->value, *this);
         }
 
-        auto operator()(compiler::built_in_type::Integer const& integer) -> ast::Type::Variant
+        auto operator()(kieli::built_in_type::Integer const& integer) -> ast::Type::Variant
         {
             return integer;
         }
 
-        auto operator()(compiler::built_in_type::String const& string) -> ast::Type::Variant
+        auto operator()(kieli::built_in_type::String const& string) -> ast::Type::Variant
         {
             return string;
         }
 
-        auto operator()(compiler::built_in_type::Floating const& floating) -> ast::Type::Variant
+        auto operator()(kieli::built_in_type::Floating const& floating) -> ast::Type::Variant
         {
             return floating;
         }
 
-        auto operator()(compiler::built_in_type::Character const& character) -> ast::Type::Variant
+        auto operator()(kieli::built_in_type::Character const& character) -> ast::Type::Variant
         {
             return character;
         }
 
-        auto operator()(compiler::built_in_type::Boolean const& boolean) -> ast::Type::Variant
+        auto operator()(kieli::built_in_type::Boolean const& boolean) -> ast::Type::Variant
         {
             return boolean;
         }

@@ -15,7 +15,7 @@ namespace {
     {
         // TODO: fix string literal extraction
         if constexpr (std::is_same_v<T, utl::Pooled_string>) {
-            return compiler::String { context.previous().value_as<T>() };
+            return kieli::String { context.previous().value_as<T>() };
         }
         else {
             return context.previous().value_as<T>();
@@ -102,7 +102,7 @@ namespace {
         context.retreat();
         auto mutability = parse_mutability(context);
 
-        tl::optional<compiler::Name_lower> name;
+        tl::optional<kieli::Name_lower> name;
 
         if (!mutability.has_value()) {
             if (auto ctor_name = parse_constructor_name(context)) {
@@ -156,13 +156,13 @@ namespace {
         case Token_type::underscore:
             return extract_wildcard(context);
         case Token_type::integer_literal:
-            return extract_literal<compiler::Integer>(context);
+            return extract_literal<kieli::Integer>(context);
         case Token_type::floating_literal:
-            return extract_literal<compiler::Floating>(context);
+            return extract_literal<kieli::Floating>(context);
         case Token_type::character_literal:
-            return extract_literal<compiler::Character>(context);
+            return extract_literal<kieli::Character>(context);
         case Token_type::boolean_literal:
-            return extract_literal<compiler::Boolean>(context);
+            return extract_literal<kieli::Boolean>(context);
         case Token_type::string_literal:
             return extract_literal<utl::Pooled_string>(context);
         case Token_type::paren_open:

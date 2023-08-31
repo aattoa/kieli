@@ -15,6 +15,6 @@ target_sources(libreify
 
 target_link_libraries(libreify
     PUBLIC libresolve
-    PUBLIC libcompiler-pipeline)
+    PUBLIC libphase)
 
 kieli_consume_libutl_common(libreify)

@@ -7,8 +7,8 @@
 namespace {
     auto desugar(std::string&& string) -> std::string
     {
-        compiler::Compilation_info test_info
-            = compiler::mock_compilation_info(utl::diagnostics::Level::suppress);
+        kieli::Compilation_info test_info
+            = kieli::mock_compilation_info(utl::diagnostics::Level::suppress);
         utl::wrapper auto const test_source
             = test_info.get()->source_arena.wrap("[test]", std::move(string));
         auto desugar_result = desugar(

@@ -2,19 +2,19 @@
 
 #include <libutl/common/utilities.hpp>
 #include <libutl/common/safe_integer.hpp>
-#include <libcompiler-pipeline/compiler-pipeline.hpp>
+#include <libphase/phase.hpp>
 #include <libparse/cst.hpp>
 #include <libdesugar/ast.hpp>
 
 namespace libdesugar {
     struct Desugar_context {
-        compiler::Compilation_info compilation_info;
-        ast::Node_arena            node_arena;
-        utl::Pooled_string         self_variable_identifier
+        kieli::Compilation_info compilation_info;
+        ast::Node_arena         node_arena;
+        utl::Pooled_string      self_variable_identifier
             = compilation_info.get()->identifier_pool.make("self");
 
         explicit Desugar_context(
-            compiler::Compilation_info&& compilation_info, ast::Node_arena&& node_arena) noexcept
+            kieli::Compilation_info&& compilation_info, ast::Node_arena&& node_arena) noexcept
             : compilation_info { std::move(compilation_info) }
             , node_arena { std::move(node_arena) }
         {}

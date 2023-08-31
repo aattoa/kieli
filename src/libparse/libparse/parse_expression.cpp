@@ -15,13 +15,13 @@ namespace {
     {
         auto const first_string = context.previous().as_string();
         if (context.pointer->type != Token_type::string_literal) {
-            return compiler::String { first_string };
+            return kieli::String { first_string };
         }
         std::string combined_string { first_string.view() };
         while (Lexical_token const* const token = context.try_extract(Token_type::string_literal)) {
             combined_string += token->as_string().view();
         }
-        return compiler::String {
+        return kieli::String {
             context.compilation_info.get()->string_literal_pool.make(combined_string),
         };
     }
@@ -560,13 +560,13 @@ namespace {
     {
         switch (context.extract().type) {
         case Token_type::integer_literal:
-            return extract_literal<compiler::Integer>(context);
+            return extract_literal<kieli::Integer>(context);
         case Token_type::floating_literal:
-            return extract_literal<compiler::Floating>(context);
+            return extract_literal<kieli::Floating>(context);
         case Token_type::character_literal:
-            return extract_literal<compiler::Character>(context);
+            return extract_literal<kieli::Character>(context);
         case Token_type::boolean_literal:
-            return extract_literal<compiler::Boolean>(context);
+            return extract_literal<kieli::Boolean>(context);
         case Token_type::string_literal:
             return extract_string_literal(context);
         case Token_type::lower_name:

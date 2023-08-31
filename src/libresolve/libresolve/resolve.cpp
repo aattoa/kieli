@@ -23,7 +23,7 @@ namespace {
             utl::match(
                 definition.value,
                 [&](ast::definition::Function& function) {
-                    // compiler::desugar should convert all function bodies to block form
+                    // libdesugar should convert all function bodies to block form
                     utl::always_assert(
                         std::holds_alternative<ast::expression::Block>(function.body.value));
 
@@ -204,7 +204,7 @@ namespace {
     {
         auto desugar_result = desugar(parse(lex(kieli::Lex_arguments {
             .compilation_info = context.compilation_info,
-            .source           = compiler::predefinitions_source(context.compilation_info),
+            .source           = kieli::predefinitions_source(context.compilation_info),
         })));
         output_ast_arena.merge_with(std::move(desugar_result.node_arena));
         register_namespace(context, desugar_result.module.definitions, context.global_namespace);

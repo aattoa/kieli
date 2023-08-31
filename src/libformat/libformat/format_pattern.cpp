@@ -6,7 +6,7 @@ namespace {
         libformat::State& state;
         utl::Source_view  source_view;
 
-        template <compiler::literal Literal>
+        template <kieli::literal Literal>
         auto operator()(Literal const&)
         {
             state.format("{}", source_view.string);

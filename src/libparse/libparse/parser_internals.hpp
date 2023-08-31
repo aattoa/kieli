@@ -14,7 +14,7 @@ namespace libparse {
     [[nodiscard]] auto optional_token(Lexical_token const*) -> tl::optional<cst::Token>;
 
     struct [[nodiscard]] Parse_context {
-        compiler::Compilation_info compilation_info;
+        kieli::Compilation_info    compilation_info;
         cst::Node_arena            node_arena;
         std::vector<Lexical_token> tokens;
         Lexical_token*             start;
@@ -235,8 +235,8 @@ namespace libparse {
         return tl::nullopt;
     }
 
-    constexpr auto parse_lower_name = parse_name<Token_type::lower_name, compiler::Name_lower>;
-    constexpr auto parse_upper_name = parse_name<Token_type::upper_name, compiler::Name_upper>;
+    constexpr auto parse_lower_name = parse_name<Token_type::lower_name, kieli::Name_lower>;
+    constexpr auto parse_upper_name = parse_name<Token_type::upper_name, kieli::Name_upper>;
 
     template <Token_type identifier_type, class Name>
     auto extract_name(Parse_context& context, std::string_view const description) -> Name
@@ -249,8 +249,8 @@ namespace libparse {
         }
     }
 
-    constexpr auto extract_lower_name = extract_name<Token_type::lower_name, compiler::Name_lower>;
-    constexpr auto extract_upper_name = extract_name<Token_type::upper_name, compiler::Name_upper>;
+    constexpr auto extract_lower_name = extract_name<Token_type::lower_name, kieli::Name_lower>;
+    constexpr auto extract_upper_name = extract_name<Token_type::upper_name, kieli::Name_upper>;
 
     template <class Node, parser auto parse>
     auto parse_node(Parse_context& context) -> tl::optional<utl::Wrapper<Node>>

@@ -729,7 +729,7 @@ namespace {
         }
 
         template <class T>
-            requires compiler::literal<T>
+            requires kieli::literal<T>
                   || utl::one_of<
                          T,
                          hir::expression::Enum_constructor_reference,
@@ -843,11 +843,11 @@ namespace {
         }
 
         auto operator()(utl::one_of<
-                        compiler::built_in_type::Integer,
-                        compiler::built_in_type::Floating,
-                        compiler::built_in_type::Character,
-                        compiler::built_in_type::Boolean,
-                        compiler::built_in_type::String,
+                        kieli::built_in_type::Integer,
+                        kieli::built_in_type::Floating,
+                        kieli::built_in_type::Character,
+                        kieli::built_in_type::Boolean,
+                        kieli::built_in_type::String,
                         hir::type::Self_placeholder,
                         hir::type::Unification_variable> auto const&) -> R
         {
@@ -909,8 +909,7 @@ namespace {
 
         template <class T>
         auto operator()(T const& terminal) -> hir::Pattern::Variant
-            requires compiler::literal<T>
-                  || utl::one_of<T, hir::pattern::Wildcard, hir::pattern::Name>
+            requires kieli::literal<T> || utl::one_of<T, hir::pattern::Wildcard, hir::pattern::Name>
         {
             return terminal;
         }
@@ -972,9 +971,11 @@ namespace {
     auto instantiate(hir::Self_parameter const& parameter, Substitution_context const context)
         -> hir::Self_parameter
     {
-        return hir::Self_parameter { .mutability   = instantiate(parameter.mutability, context),
-                                     .is_reference = parameter.is_reference,
-                                     .source_view  = parameter.source_view };
+        return hir::Self_parameter {
+            .mutability   = instantiate(parameter.mutability, context),
+            .is_reference = parameter.is_reference,
+            .source_view  = parameter.source_view,
+        };
     }
 
     [[nodiscard]] auto synthetize_arguments_for(

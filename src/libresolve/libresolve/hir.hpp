@@ -232,11 +232,11 @@ namespace hir {
 
     struct Type::Variant
         : std::variant<
-              compiler::built_in_type::Integer,
-              compiler::built_in_type::Floating,
-              compiler::built_in_type::Character,
-              compiler::built_in_type::Boolean,
-              compiler::built_in_type::String,
+              kieli::built_in_type::Integer,
+              kieli::built_in_type::Floating,
+              kieli::built_in_type::Character,
+              kieli::built_in_type::Boolean,
+              kieli::built_in_type::String,
               type::Self_placeholder,
               type::Array,
               type::Tuple,
@@ -253,10 +253,10 @@ namespace hir {
     };
 
     struct Enum_constructor {
-        compiler::Name_lower name;
-        tl::optional<Type>   payload_type;
-        tl::optional<Type>   function_type;
-        Type                 enum_type;
+        kieli::Name_lower  name;
+        tl::optional<Type> payload_type;
+        tl::optional<Type> function_type;
+        Type               enum_type;
     };
 
     namespace expression {
@@ -317,7 +317,7 @@ namespace hir {
 
         struct Struct_field_access {
             utl::Wrapper<Expression> base_expression;
-            compiler::Name_lower     field_name;
+            kieli::Name_lower        field_name;
         };
 
         struct Tuple_field_access {
@@ -380,11 +380,11 @@ namespace hir {
 
     struct Expression {
         using Variant = std::variant<
-            compiler::Integer,
-            compiler::Floating,
-            compiler::Character,
-            compiler::Boolean,
-            compiler::String,
+            kieli::Integer,
+            kieli::Floating,
+            kieli::Character,
+            kieli::Boolean,
+            kieli::String,
             expression::Array_literal,
             expression::Tuple,
             expression::Loop,
@@ -437,7 +437,7 @@ namespace hir {
             std::vector<hir::Template_parameter> template_parameters; // empty when not a template
             std::vector<hir::Function_parameter> parameters;
             tl::optional<Self_parameter>         self_parameter;
-            compiler::Name_lower                 name;
+            kieli::Name_lower                    name;
             hir::Type                            return_type;
             hir::Type                            function_type;
 
@@ -452,13 +452,13 @@ namespace hir {
 
     struct Struct {
         struct Member { // NOLINT
-            compiler::Name_lower name;
-            Type                 type;
-            utl::Explicit<bool>  is_public;
+            kieli::Name_lower   name;
+            Type                type;
+            utl::Explicit<bool> is_public;
         };
 
         std::vector<Member>                 members;
-        compiler::Name_upper                name;
+        kieli::Name_upper                   name;
         utl::Wrapper<libresolve::Namespace> associated_namespace;
     };
 
@@ -466,15 +466,15 @@ namespace hir {
 
     struct Enum {
         std::vector<Enum_constructor>       constructors;
-        compiler::Name_upper                name;
+        kieli::Name_upper                   name;
         utl::Wrapper<libresolve::Namespace> associated_namespace;
     };
 
     using Enum_template = Template<Enum>;
 
     struct Alias {
-        compiler::Name_upper name;
-        Type                 aliased_type;
+        kieli::Name_upper name;
+        Type              aliased_type;
     };
 
     using Alias_template = Template<Alias>;
@@ -491,7 +491,7 @@ namespace hir {
 
         utl::Flatmap<utl::Pooled_string, Function::Signature> function_signatures;
         utl::Flatmap<utl::Pooled_string, Type_signature>      type_signatures;
-        compiler::Name_upper                                  name;
+        kieli::Name_upper                                     name;
     };
 
     using Typeclass_template = Template<Typeclass>;
@@ -560,11 +560,11 @@ namespace hir {
 
     struct Pattern {
         using Variant = std::variant<
-            compiler::Integer,
-            compiler::Floating,
-            compiler::Character,
-            compiler::Boolean,
-            compiler::String,
+            kieli::Integer,
+            kieli::Floating,
+            kieli::Character,
+            kieli::Boolean,
+            kieli::String,
             pattern::Wildcard,
             pattern::Name,
             pattern::Tuple,
@@ -590,17 +590,17 @@ namespace hir {
 
     struct Template_parameter {
         struct Type_parameter {
-            std::vector<Class_reference>       classes;
-            tl::optional<compiler::Name_upper> name; // nullopt for implicit type parameters
+            std::vector<Class_reference>    classes;
+            tl::optional<kieli::Name_upper> name; // nullopt for implicit type parameters
         };
 
         struct Value_parameter {
-            Type                 type;
-            compiler::Name_lower name;
+            Type              type;
+            kieli::Name_lower name;
         };
 
         struct Mutability_parameter {
-            compiler::Name_lower name;
+            kieli::Name_lower name;
         };
 
         using Variant = std::variant<Type_parameter, Value_parameter, Mutability_parameter>;

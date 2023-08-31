@@ -67,7 +67,7 @@ namespace {
         Desugar_context&       context;
         cst::Expression const& this_expression;
 
-        template <compiler::literal Literal>
+        template <kieli::literal Literal>
         auto operator()(Literal const literal) -> ast::Expression::Variant
         {
             return literal;

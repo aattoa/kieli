@@ -6,27 +6,27 @@ namespace {
         libformat::State& state;
         utl::Source_view  source_view;
 
-        auto operator()(compiler::built_in_type::Integer const integer)
+        auto operator()(kieli::built_in_type::Integer const integer)
         {
-            state.format("{}", compiler::built_in_type::integer_string(integer));
+            state.format("{}", kieli::built_in_type::integer_string(integer));
         }
 
-        auto operator()(compiler::built_in_type::Floating const&)
+        auto operator()(kieli::built_in_type::Floating const&)
         {
             state.format("Float");
         }
 
-        auto operator()(compiler::built_in_type::Character const&)
+        auto operator()(kieli::built_in_type::Character const&)
         {
             state.format("Char");
         }
 
-        auto operator()(compiler::built_in_type::Boolean const&)
+        auto operator()(kieli::built_in_type::Boolean const&)
         {
             state.format("Bool");
         }
 
-        auto operator()(compiler::built_in_type::String const&)
+        auto operator()(kieli::built_in_type::String const&)
         {
             state.format("String");
         }

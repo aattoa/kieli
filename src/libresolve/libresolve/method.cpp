@@ -18,7 +18,7 @@ namespace {
     };
 
     auto lookup_method(
-        Context& context, compiler::Name_lower const method_name, hir::Type const inspected_type)
+        Context& context, kieli::Name_lower const method_name, hir::Type const inspected_type)
         -> Method_lookup_result
     {
         tl::optional<Method_lookup_result> return_value;
@@ -84,7 +84,7 @@ namespace {
 } // namespace
 
 auto libresolve::Context::resolve_method(
-    compiler::Name_lower const                                  method_name,
+    kieli::Name_lower const                                     method_name,
     tl::optional<std::span<ast::Template_argument const>> const template_arguments,
     hir::Type const                                             type,
     Scope&                                                      scope,

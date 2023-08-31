@@ -5,7 +5,7 @@
 #include <libutl/source/source.hpp>
 #include <libutl/diagnostics/diagnostics.hpp>
 
-namespace compiler {
+namespace kieli {
     struct [[nodiscard]] Shared_compilation_info {
         utl::diagnostics::Builder diagnostics;
         utl::Source::Arena        source_arena = utl::Source::Arena::with_page_size(8);
@@ -15,11 +15,6 @@ namespace compiler {
     };
 
     using Compilation_info = utl::Explicit<std::shared_ptr<Shared_compilation_info>>;
-
-    struct [[nodiscard]] Compile_arguments {
-        std::filesystem::path source_directory_path;
-        std::string           main_file_name;
-    };
 
     auto predefinitions_source(Compilation_info&) -> utl::Wrapper<utl::Source>;
     auto mock_compilation_info(utl::diagnostics::Level = utl::diagnostics::Level::suppress)
@@ -94,9 +89,9 @@ namespace compiler {
 
         auto integer_string(Integer) noexcept -> std::string_view;
     } // namespace built_in_type
-} // namespace compiler
+} // namespace kieli
 
-template <utl::one_of<compiler::Name_dynamic, compiler::Name_lower, compiler::Name_upper> Name>
+template <utl::one_of<kieli::Name_dynamic, kieli::Name_lower, kieli::Name_upper> Name>
 struct std::formatter<Name> : std::formatter<utl::Pooled_string> {
     auto format(Name const& name, auto& context) const
     {
@@ -104,7 +99,7 @@ struct std::formatter<Name> : std::formatter<utl::Pooled_string> {
     }
 };
 
-template <utl::one_of<compiler::Integer, compiler::Floating, compiler::Boolean> Literal>
+template <utl::one_of<kieli::Integer, kieli::Floating, kieli::Boolean> Literal>
 struct std::formatter<Literal> : std::formatter<decltype(Literal::value)> {
     auto format(Literal const literal, auto& context) const
     {
@@ -112,14 +107,14 @@ struct std::formatter<Literal> : std::formatter<decltype(Literal::value)> {
     }
 };
 
-template <utl::one_of<compiler::Character, compiler::String> Literal>
+template <utl::one_of<kieli::Character, kieli::String> Literal>
 struct std::formatter<Literal> : utl::formatting::Formatter_base {
     auto format(Literal const& literal, auto& context) const
     {
-        if constexpr (std::is_same_v<Literal, compiler::Character>) {
+        if constexpr (std::is_same_v<Literal, kieli::Character>) {
             return std::format_to(context.out(), "'{}'", literal.value);
         }
-        else if constexpr (std::is_same_v<Literal, compiler::String>) {
+        else if constexpr (std::is_same_v<Literal, kieli::String>) {
             return std::format_to(context.out(), "\"{}\"", literal.value);
         }
         else {
