@@ -68,7 +68,7 @@ namespace {
 
     constexpr auto parse_constructor_pattern = parenthesized<parse_top_level_pattern, "a pattern">;
 
-    auto parse_constructor_name(Parse_context& context) -> tl::optional<cst::Qualified_name>
+    auto parse_constructor_name(Parse_context& context) -> std::optional<cst::Qualified_name>
     {
         switch (context.pointer->type) {
         case Token_type::lower_name:
@@ -93,7 +93,7 @@ namespace {
                             context.extract_required(Token_type::double_colon)),
                     });
             }
-            return tl::nullopt;
+            return std::nullopt;
         }
     }
 
@@ -102,7 +102,7 @@ namespace {
         context.retreat();
         auto mutability = parse_mutability(context);
 
-        tl::optional<kieli::Name_lower> name;
+        std::optional<kieli::Name_lower> name;
 
         if (!mutability.has_value()) {
             if (auto ctor_name = parse_constructor_name(context)) {
@@ -150,7 +150,7 @@ namespace {
         };
     }
 
-    auto parse_normal_pattern(Parse_context& context) -> tl::optional<cst::Pattern::Variant>
+    auto parse_normal_pattern(Parse_context& context) -> std::optional<cst::Pattern::Variant>
     {
         switch (context.extract().type) {
         case Token_type::underscore:
@@ -178,12 +178,12 @@ namespace {
             return extract_abbreviated_constructor(context);
         default:
             context.retreat();
-            return tl::nullopt;
+            return std::nullopt;
         }
     }
 
     auto parse_potentially_aliased_pattern(Parse_context& context)
-        -> tl::optional<cst::Pattern::Variant>
+        -> std::optional<cst::Pattern::Variant>
     {
         if (auto pattern = parse_node<cst::Pattern, parse_normal_pattern>(context)) {
             if (Lexical_token const* const as_keyword = context.try_extract(Token_type::as)) {
@@ -198,11 +198,11 @@ namespace {
             }
             return std::move((*pattern)->value);
         }
-        return tl::nullopt;
+        return std::nullopt;
     }
 
     auto parse_potentially_guarded_pattern(Parse_context& context)
-        -> tl::optional<cst::Pattern::Variant>
+        -> std::optional<cst::Pattern::Variant>
     {
         if (auto pattern = parse_node<cst::Pattern, parse_potentially_aliased_pattern>(context)) {
             if (Lexical_token const* const if_keyword = context.try_extract(Token_type::if_)) {
@@ -217,12 +217,12 @@ namespace {
             }
             return std::move((*pattern)->value);
         }
-        return tl::nullopt;
+        return std::nullopt;
     }
 
 } // namespace
 
-auto libparse::parse_pattern(Parse_context& context) -> tl::optional<utl::Wrapper<cst::Pattern>>
+auto libparse::parse_pattern(Parse_context& context) -> std::optional<utl::Wrapper<cst::Pattern>>
 {
     return parse_node<cst::Pattern, parse_potentially_guarded_pattern>(context);
 }

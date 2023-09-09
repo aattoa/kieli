@@ -339,7 +339,7 @@ namespace {
             };
         };
 
-        tl::optional<hir::Self_parameter> concrete_self_parameter
+        std::optional<hir::Self_parameter> concrete_self_parameter
             = function_template.signature.self_parameter.transform(substitution_context.recurse());
 
         std::vector<hir::Function_parameter> concrete_function_parameters

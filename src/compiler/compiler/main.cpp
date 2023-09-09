@@ -149,8 +149,10 @@ try {
             kieli::Compilation_info repl_info   = kieli::mock_compilation_info();
             utl::wrapper auto const repl_source = repl_info.get()->source_arena.wrap(
                 utl::Source::read(source_directory_path / "main.kieli"));
-            return kieli::resolve(kieli::desugar(kieli::parse(
-                kieli::lex({ .compilation_info = std::move(repl_info), .source = repl_source }))));
+            return kieli::resolve(kieli::desugar(kieli::parse(kieli::lex({
+                .compilation_info = std::move(repl_info),
+                .source           = repl_source,
+            }))));
         };
 
         if (*phase == "low") {
@@ -166,8 +168,10 @@ try {
                     utl::map(hir::to_string, do_resolve().functions), "\n\n"));
         }
         else if (*phase == "comp") {
-            (void)compiler::compile({ .source_directory_path = std::move(source_directory_path),
-                                      .main_file_name        = "main.kieli" });
+            (void)compiler::compile({
+                .source_directory_path = std::move(source_directory_path),
+                .main_file_name        = "main.kieli",
+            });
         }
         else {
             throw utl::exception("The phase must be one of low|rei|res|comp, not '{}'", *phase);

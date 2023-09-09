@@ -66,7 +66,7 @@ auto libformat::State::format(cst::Mutability const& mutability) -> void
         });
 }
 
-auto libformat::State::format(tl::optional<cst::Template_arguments> const& arguments) -> void
+auto libformat::State::format(std::optional<cst::Template_arguments> const& arguments) -> void
 {
     if (!arguments.has_value()) {
         return;
@@ -97,7 +97,7 @@ auto libformat::State::format(
 }
 
 auto libformat::State::format_mutability_with_trailing_whitespace(
-    tl::optional<cst::Mutability> const& mutability) -> void
+    std::optional<cst::Mutability> const& mutability) -> void
 {
     if (!mutability.has_value()) {
         return;

@@ -225,8 +225,8 @@ namespace hir {
 
         struct Template_parameter_reference {
             // The identifier serves no purpose other than debuggability
-            utl::Explicit<tl::optional<utl::Pooled_string>> identifier;
-            Template_parameter_tag                          tag;
+            utl::Explicit<std::optional<utl::Pooled_string>> identifier;
+            Template_parameter_tag                           tag;
         };
     } // namespace type
 
@@ -253,10 +253,10 @@ namespace hir {
     };
 
     struct Enum_constructor {
-        kieli::Name_lower  name;
-        tl::optional<Type> payload_type;
-        tl::optional<Type> function_type;
-        Type               enum_type;
+        kieli::Name_lower   name;
+        std::optional<Type> payload_type;
+        std::optional<Type> function_type;
+        Type                enum_type;
     };
 
     namespace expression {
@@ -436,7 +436,7 @@ namespace hir {
         struct Signature {
             std::vector<hir::Template_parameter> template_parameters; // empty when not a template
             std::vector<hir::Function_parameter> parameters;
-            tl::optional<Self_parameter>         self_parameter;
+            std::optional<Self_parameter>        self_parameter;
             kieli::Name_lower                    name;
             hir::Type                            return_type;
             hir::Type                            function_type;
@@ -543,8 +543,8 @@ namespace hir {
         };
 
         struct Enum_constructor {
-            tl::optional<utl::Wrapper<Pattern>> payload_pattern;
-            ::hir::Enum_constructor             constructor;
+            std::optional<utl::Wrapper<Pattern>> payload_pattern;
+            ::hir::Enum_constructor              constructor;
         };
 
         struct As {
@@ -590,8 +590,8 @@ namespace hir {
 
     struct Template_parameter {
         struct Type_parameter {
-            std::vector<Class_reference>    classes;
-            tl::optional<kieli::Name_upper> name; // nullopt for implicit type parameters
+            std::vector<Class_reference>     classes;
+            std::optional<kieli::Name_upper> name; // nullopt for implicit type parameters
         };
 
         struct Value_parameter {
@@ -605,10 +605,10 @@ namespace hir {
 
         using Variant = std::variant<Type_parameter, Value_parameter, Mutability_parameter>;
 
-        Variant                                 value;
-        tl::optional<Template_default_argument> default_argument;
-        Template_parameter_tag                  reference_tag;
-        utl::Source_view                        source_view;
+        Variant                                  value;
+        std::optional<Template_default_argument> default_argument;
+        Template_parameter_tag                   reference_tag;
+        utl::Source_view                         source_view;
 
         [[nodiscard]] auto is_implicit() const noexcept -> bool;
     };

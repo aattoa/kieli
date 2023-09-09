@@ -7,7 +7,7 @@ namespace {
 
 #ifdef _WIN32
 
-// Copied the necessary declarations from Windows.h, this allows not #including it,
+// Copied the necessary declarations from Windows.h. This allows not #including it,
 // which would fail to compile because it requires some MS-specific compiler extensions.
 
 extern "C" {

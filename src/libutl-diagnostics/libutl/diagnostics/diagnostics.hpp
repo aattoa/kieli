@@ -15,20 +15,20 @@ namespace utl::diagnostics {
     enum class Type { recoverable, irrecoverable };
 
     struct Text_section {
-        Source_view         source_view;
-        std::string_view    note = "Here";
-        tl::optional<Color> note_color;
+        Source_view          source_view;
+        std::string_view     note = "Here";
+        std::optional<Color> note_color;
     };
 
     struct [[nodiscard]] Emit_arguments {
-        std::vector<Text_section>      sections;
-        std::string_view               message;
-        tl::optional<std::string_view> help_note;
+        std::vector<Text_section>       sections;
+        std::string_view                message;
+        std::optional<std::string_view> help_note;
     };
 
     struct Message_arguments {
-        std::string_view               message;
-        tl::optional<std::string_view> help_note;
+        std::string_view                message;
+        std::optional<std::string_view> help_note;
 
         auto add_source_view(utl::Source_view) const -> Emit_arguments;
     };

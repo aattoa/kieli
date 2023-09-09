@@ -32,6 +32,7 @@
 
 #include <tuple>
 #include <variant>
+#include <optional>
 
 #include <string>
 #include <format>
@@ -42,7 +43,6 @@
 #include <algorithm>
 
 #include <range/v3/all.hpp>
-#include <tl/optional.hpp>
 #include <tl/expected.hpp>
 
 // 8-bit bytes are assumed
@@ -145,13 +145,6 @@ using namespace utl::literals;
 using namespace std::literals;
 
 namespace bootleg {
-    template <class E>
-        requires std::is_enum_v<E>
-    auto to_underlying(E const e) noexcept
-    {
-        return static_cast<std::underlying_type_t<E>>(e);
-    }
-
     // Implementation copied from https://en.cppreference.com/w/cpp/utility/forward_like
     template <class T, class U>
     [[nodiscard]] constexpr auto&& forward_like(U&& x) noexcept

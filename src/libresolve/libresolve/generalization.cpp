@@ -103,7 +103,7 @@ auto libresolve::Context::generalize_to(
         output.push_back(hir::Template_parameter {
             .value = hir::Template_parameter::Type_parameter {
                 .classes = std::move(unsolved.classes),
-                .name    = tl::nullopt, // Implicit template parameters have no name
+                .name    = std::nullopt, // Implicit template parameters have no name
             },
             .default_argument = hir::Template_default_argument {
                 .argument = { ast::Template_argument::Wildcard { type.source_view() } },
@@ -114,7 +114,7 @@ auto libresolve::Context::generalize_to(
         });
         state.solve_with(hir::Type {
             wrap_type(hir::type::Template_parameter_reference {
-                .identifier = { tl::nullopt },
+                .identifier = { std::nullopt },
                 .tag        = tag,
             }),
             type.source_view(),

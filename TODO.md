@@ -20,9 +20,9 @@
 - The resolution phase should only get an immutable view of the AST
 - Improve scope performance
 - If explicit function return type is generalizable, then:
-    - immediately resolve the function body
-    - unify the type of the body with the return type
-    - only then generalize the return type
+    1. immediately resolve the function body
+    2. unify the type of the body with the return type
+    3. only then generalize the return type
 
 ## Redesign
 - libutl-cli &rarr; libcli
@@ -41,3 +41,11 @@
 ## Miscellaneous
 - Parameters: in, inout, out, move, forward ?
 - Fix compilation phase `#include` leakage
+- Unify phase testing
+- libbuild
+- libconfigure
+- User generated compile-time messages
+- Remove `noexcept` speficiation from functions with preconditions
+
+## Long-term
+- LSP support

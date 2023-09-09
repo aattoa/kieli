@@ -80,8 +80,8 @@ namespace libresolve {
         std::vector<Definition_variant>                 definitions_in_order;
         utl::Flatmap<utl::Pooled_string, Lower_variant> lower_table;
         utl::Flatmap<utl::Pooled_string, Upper_variant> upper_table;
-        tl::optional<utl::Wrapper<Namespace>>           parent;
-        tl::optional<kieli::Name_lower>                 name;
+        std::optional<utl::Wrapper<Namespace>>          parent;
+        std::optional<kieli::Name_lower>                name;
     };
 
     enum class Definition_state {
@@ -140,7 +140,7 @@ namespace libresolve {
         Definition_state        state = Definition_state::unresolved;
         kieli::Name_lower       name;
 
-        tl::optional<Template_instantiation_info<Function_info>> template_instantiation_info;
+        std::optional<Template_instantiation_info<Function_info>> template_instantiation_info;
     };
 
     template <>
@@ -153,7 +153,8 @@ namespace libresolve {
         Definition_state        state = Definition_state::unresolved;
         kieli::Name_upper       name;
 
-        tl::optional<Template_instantiation_info<Struct_template_info>> template_instantiation_info;
+        std::optional<Template_instantiation_info<Struct_template_info>>
+            template_instantiation_info;
     };
 
     template <>
@@ -166,7 +167,7 @@ namespace libresolve {
         Definition_state        state = Definition_state::unresolved;
         kieli::Name_upper       name;
 
-        tl::optional<Template_instantiation_info<Enum_template_info>> template_instantiation_info;
+        std::optional<Template_instantiation_info<Enum_template_info>> template_instantiation_info;
 
         [[nodiscard]] auto constructor_count() const noexcept -> utl::Usize;
     };
@@ -215,10 +216,10 @@ namespace libresolve {
         };
 
         struct Type_equality {
-            hir::Type                 constrainer_type;
-            hir::Type                 constrained_type;
-            tl::optional<Explanation> constrainer_note;
-            Explanation               constrained_note;
+            hir::Type                  constrainer_type;
+            hir::Type                  constrained_type;
+            std::optional<Explanation> constrainer_note;
+            Explanation                constrained_note;
         };
 
         struct Mutability_equality {
@@ -304,14 +305,14 @@ namespace libresolve {
         utl::Safe_usize current_template_parameter_tag;
         utl::Safe_usize current_local_variable_tag;
     public:
-        kieli::Compilation_info      compilation_info;
-        hir::Node_arena              node_arena;
-        hir::Namespace_arena         namespace_arena;
-        Resolution_constants         constants;
-        tl::optional<Predefinitions> predefinitions_value;
-        utl::Wrapper<Namespace>      global_namespace;
-        Nameless_entities            nameless_entities;
-        tl::optional<hir::Type>      current_self_type;
+        kieli::Compilation_info       compilation_info;
+        hir::Node_arena               node_arena;
+        hir::Namespace_arena          namespace_arena;
+        Resolution_constants          constants;
+        std::optional<Predefinitions> predefinitions_value;
+        utl::Wrapper<Namespace>       global_namespace;
+        Nameless_entities             nameless_entities;
+        std::optional<hir::Type>      current_self_type;
 
         std::vector<utl::Wrapper<Function_info>> output_functions;
 
@@ -435,7 +436,7 @@ namespace libresolve {
 
         [[nodiscard]] auto resolve_method(
             kieli::Name_lower method_name,
-            tl::optional<std::span<ast::Template_argument const>>,
+            std::optional<std::span<ast::Template_argument const>>,
             hir::Type method_for,
             Scope&,
             Namespace&) -> utl::Wrapper<Function_info>;
@@ -448,7 +449,7 @@ namespace libresolve {
 
         // Returns the associated namespace of the given type, or returns nullopt if the type does
         // not have one.
-        auto associated_namespace_if(hir::Type) -> tl::optional<utl::Wrapper<Namespace>>;
+        auto associated_namespace_if(hir::Type) -> std::optional<utl::Wrapper<Namespace>>;
         // Returns the associated namespace of the given type, or emits an error diagnostic if the
         // type does not have one.
         auto associated_namespace(hir::Type) -> utl::Wrapper<Namespace>;

@@ -6,8 +6,9 @@ auto libdesugar::Desugar_context::desugar(cst::Function_argument const& argument
     -> ast::Function_argument
 {
     return {
-        .expression    = desugar(argument.expression),
-        .argument_name = argument.argument_name.transform(&cst::Name_lower_equals::name),
+        .expression = desugar(argument.expression),
+        .argument_name
+        = argument.argument_name.transform([](auto const& syntax) { return syntax.name; }),
     };
 }
 
@@ -171,7 +172,7 @@ auto libdesugar::Desugar_context::desugar(
 }
 
 auto libdesugar::Desugar_context::desugar_mutability(
-    tl::optional<cst::Mutability> const& mutability, utl::Source_view const source_view)
+    std::optional<cst::Mutability> const& mutability, utl::Source_view const source_view)
     -> ast::Mutability
 {
     if (mutability.has_value()) {
@@ -208,7 +209,7 @@ auto libdesugar::Desugar_context::normalize_self_parameter(
             },
             .mutability = desugar_mutability(
                 self_parameter.is_reference()
-                    ? tl::nullopt
+                    ? std::nullopt
                     : self_parameter.mutability,
                 self_parameter.source_view),
         },

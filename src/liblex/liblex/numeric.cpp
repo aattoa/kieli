@@ -6,7 +6,7 @@ namespace {
     auto without_separators(std::string_view const digits)
         -> utl::Pair<std::string, std::string_view>
     {
-        if (!ranges::contains(digits, '\'')) {
+        if (!digits.contains('\'')) {
             return { std::string {}, digits };
         }
         std::string buffer;

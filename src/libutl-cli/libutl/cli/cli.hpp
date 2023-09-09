@@ -12,9 +12,9 @@ namespace cli {
 
         std::string_view name;
 
-        tl::optional<T> default_value;
-        tl::optional<T> minimum_value;
-        tl::optional<T> maximum_value;
+        std::optional<T> default_value;
+        std::optional<T> minimum_value;
+        std::optional<T> maximum_value;
 
         auto default_to(T&&) noexcept -> Value;
         auto min(T&&) noexcept -> Value;
@@ -50,12 +50,12 @@ namespace cli {
 
     struct [[nodiscard]] Parameter {
         struct Name {
-            std::string        long_form;
-            tl::optional<char> short_form;
+            std::string         long_form;
+            std::optional<char> short_form;
 
             Name(
-                char const*        long_name,
-                tl::optional<char> short_name = tl::nullopt) noexcept; // NOLINT: implicit
+                char const*         long_name,
+                std::optional<char> short_name = std::nullopt) noexcept; // NOLINT: implicit
         };
 
         using Variant = std::variant<
@@ -64,10 +64,10 @@ namespace cli {
             decltype(boolean()),
             decltype(string())>;
 
-        Name                           name;
-        std::vector<Variant>           values;
-        tl::optional<std::string_view> description;
-        bool                           defaulted = false;
+        Name                            name;
+        std::vector<Variant>            values;
+        std::optional<std::string_view> description;
+        bool                            defaulted = false;
     };
 
     struct [[nodiscard]] Named_argument {
@@ -90,19 +90,22 @@ namespace cli {
             auto map_short_to_long(Parameter::Name const&) noexcept -> void;
 
             auto operator()(
-                Parameter::Name&&              name,
-                tl::optional<std::string_view> description = tl::nullopt) noexcept -> Option_adder;
+                Parameter::Name&&               name,
+                std::optional<std::string_view> description = std::nullopt) noexcept
+                -> Option_adder;
 
             template <class T>
             auto operator()(
-                Parameter::Name&&              name,
-                Value<T>&&                     value,
-                tl::optional<std::string_view> description = tl::nullopt) noexcept -> Option_adder;
+                Parameter::Name&&               name,
+                Value<T>&&                      value,
+                std::optional<std::string_view> description = std::nullopt) noexcept
+                -> Option_adder;
 
             auto operator()(
                 Parameter::Name&&                 name,
                 std::vector<Parameter::Variant>&& values,
-                tl::optional<std::string_view> description = tl::nullopt) noexcept -> Option_adder;
+                std::optional<std::string_view>   description = std::nullopt) noexcept
+                -> Option_adder;
         };
     public:
         auto add_options() noexcept -> Option_adder

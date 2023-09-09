@@ -6,7 +6,7 @@ using namespace libresolve;
 namespace {
 
     struct [[nodiscard]] Loop_info {
-        tl::optional<hir::Type>                      break_return_type;
+        std::optional<hir::Type>                     break_return_type;
         utl::Explicit<ast::expression::Loop::Source> loop_source;
     };
 
@@ -144,12 +144,12 @@ namespace {
     }
 
     struct Expression_resolution_visitor {
-        Context&                 context;
-        Scope&                   scope;
-        Namespace&               space;
-        ast::Expression&         this_expression;
-        tl::optional<Loop_info>& current_loop_info;
-        Safety_status&           current_safety_status;
+        Context&                  context;
+        Scope&                    scope;
+        Namespace&                space;
+        ast::Expression&          this_expression;
+        std::optional<Loop_info>& current_loop_info;
+        Safety_status&            current_safety_status;
 
         auto recurse(ast::Expression& expression, Scope* const new_scope = nullptr)
         {
@@ -286,7 +286,7 @@ namespace {
         }
 
         auto try_resolve_local_variable_reference(utl::Pooled_string const identifier)
-            -> tl::optional<hir::Expression>
+            -> std::optional<hir::Expression>
         {
             if (auto* const binding = scope.find_variable(identifier)) {
                 binding->has_been_mentioned = true;
@@ -300,7 +300,7 @@ namespace {
                     .is_pure        = true,
                 };
             }
-            return tl::nullopt;
+            return std::nullopt;
         }
 
         template <kieli::literal Literal>
@@ -760,7 +760,7 @@ namespace {
             auto            cases
                 = utl::vector_with_capacity<hir::expression::Match::Case>(match.cases.size());
 
-            tl::optional<hir::Type> previous_case_result_type;
+            std::optional<hir::Type> previous_case_result_type;
 
             for (ast::expression::Match::Case& match_case : match.cases) {
                 Scope case_scope = scope.make_child();
@@ -1235,8 +1235,8 @@ namespace {
 auto libresolve::Context::resolve_expression(
     ast::Expression& expression, Scope& scope, Namespace& space) -> hir::Expression
 {
-    tl::optional<Loop_info> expression_loop_info;
-    Safety_status           expression_safety_status = Safety_status::safe;
+    std::optional<Loop_info> expression_loop_info;
+    Safety_status            expression_safety_status = Safety_status::safe;
     return std::visit(
         Expression_resolution_visitor {
             .context               = *this,

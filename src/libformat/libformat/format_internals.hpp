@@ -26,12 +26,12 @@ namespace libformat {
         auto format(cst::Template_argument const&) -> void;
         auto format(cst::Function_argument const&) -> void;
         auto format(cst::Mutability const&) -> void;
-        auto format(tl::optional<cst::Template_arguments> const&) -> void;
+        auto format(std::optional<cst::Template_arguments> const&) -> void;
         auto format(cst::Function_arguments const&) -> void;
         auto format(cst::Class_reference const&) -> void;
         auto format(cst::expression::Struct_initializer::Member_initializer const&) -> void;
 
-        auto format_mutability_with_trailing_whitespace(tl::optional<cst::Mutability> const&)
+        auto format_mutability_with_trailing_whitespace(std::optional<cst::Mutability> const&)
             -> void;
 
         auto format(utl::wrapper auto const wrapper) -> void

@@ -9,7 +9,8 @@ namespace {
 
         template <class Definition>
         auto definition(
-            Definition&& definition, tl::optional<cst::Template_parameters> const& parameters) const
+            Definition&&                                   definition,
+            std::optional<cst::Template_parameters> const& parameters) const
             -> ast::Definition::Variant
         {
             if (parameters.has_value()) {

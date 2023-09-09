@@ -31,10 +31,10 @@ namespace {
     }
 
     auto apply_root_qualifier(
-        Context&                                 context,
-        Scope&                                   scope,
-        Namespace&                               space,
-        tl::optional<ast::Root_qualifier> const& qualifier)
+        Context&                                  context,
+        Scope&                                    scope,
+        Namespace&                                space,
+        std::optional<ast::Root_qualifier> const& qualifier)
         -> utl::Pair<Lookup_strategy, Namespace*>
     {
         if (qualifier.has_value()) {

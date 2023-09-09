@@ -422,7 +422,7 @@ namespace {
                         .value = ast::expression::Let_binding {
                             .pattern     = context.wildcard_pattern(this_expression.source_view),
                             .initializer = context.desugar(discard.discarded_expression),
-                            .type        = tl::nullopt,
+                            .type        = std::nullopt,
                         },
                         .source_view = this_expression.source_view,
                     }

@@ -134,11 +134,11 @@ namespace {
         }
 
         auto handle_constructor_pattern(
-            hir::Enum_constructor const                    constructor,
-            tl::optional<utl::Wrapper<ast::Pattern>> const ast_payload_pattern) -> hir::Pattern
+            hir::Enum_constructor const                     constructor,
+            std::optional<utl::Wrapper<ast::Pattern>> const ast_payload_pattern) -> hir::Pattern
         {
             solve_pattern_type_constraint(constructor.enum_type);
-            tl::optional<hir::Pattern> hir_payload_pattern;
+            std::optional<hir::Pattern> hir_payload_pattern;
 
             if (ast_payload_pattern.has_value()) {
                 if (constructor.payload_type.has_value()) {

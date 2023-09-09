@@ -82,7 +82,7 @@ namespace {
     template <utl::Metastring string>
     constexpr auto is_one_of(char const c) noexcept -> bool
     {
-        return ranges::contains(string.view(), c);
+        return string.view().contains(c);
     }
 
     template <char a, char b>
@@ -387,7 +387,7 @@ namespace {
         }
     }
 
-    auto try_extract_numeric_base(liblex::Context& context) -> tl::optional<int>
+    auto try_extract_numeric_base(liblex::Context& context) -> std::optional<int>
     {
         if (context.try_consume("0b")) {
             return 2; // binary
@@ -404,7 +404,7 @@ namespace {
         if (context.try_consume("0x")) {
             return 16; // hexadecimal
         }
-        return tl::nullopt;
+        return std::nullopt;
     }
 
     auto extract_numeric_floating(
@@ -515,7 +515,7 @@ namespace {
     auto extract_numeric(Token_maker const& token_maker, liblex::Context& context) -> Token
     {
         char const* const      anchor               = context.pointer();
-        tl::optional const     base                 = try_extract_numeric_base(context);
+        std::optional const    base                 = try_extract_numeric_base(context);
         auto const             digit_predicate      = digit_predicate_for(base.value_or(10));
         std::string_view const first_digit_sequence = context.extract(digit_predicate);
 

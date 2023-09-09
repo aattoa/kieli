@@ -5,7 +5,7 @@
 
 namespace project {
 
-    using Configuration = utl::Flatmap<std::string, tl::optional<std::string>>;
+    using Configuration = utl::Flatmap<std::string, std::optional<std::string>>;
 
     auto to_string(Configuration const&) -> std::string;
 
