@@ -6,14 +6,13 @@ dependencies:
 update: dependencies
 	tools/update-deps.sh
 
-configure: dependencies
+kieli: dependencies
 	cmake -S . -B out/default
-
-kieli: configure
 	cmake --build out/default -j 8
 
-test: kieli
-	cmake --build out/default --target test
+test: dependencies
+	cmake -S . -B out/default -DKIELI_BUILD_TESTS=ON
+	cmake --build out/default -j 8 --target all test
 
 clean:
-	rm -rf out dependencies
+	rm -rf out

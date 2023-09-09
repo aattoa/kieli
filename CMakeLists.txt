@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.24)
-project(kieli)
+project(kieli CXX)
 
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -26,15 +26,21 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
     add_compile_options(-fsized-deallocation)
 endif ()
 
-# Enable CTest registration
-add_subdirectory(dependencies/Catch2)
-list(APPEND CMAKE_MODULE_PATH dependencies/Catch2/extras)
-include(CTest)
-include(Catch)
+# Make default build easier by not building tests by default
+option(KIELI_BUILD_TESTS "Build kieli tests" OFF)
+
+if (${KIELI_BUILD_TESTS})
+    find_package(Catch2 3 REQUIRED)
+    include(CTest)
+    include(Catch)
+endif ()
 
 # Convenience function for registering Kieli component tests
 function (kieli_add_tests component)
     cmake_parse_arguments(PARSE_ARGV 1 "" "" "" "EXTRA_SOURCES;LINK;TESTS")
+    if (NOT ${KIELI_BUILD_TESTS})
+        return ()
+    endif ()
     foreach (test IN LISTS _TESTS)
         set(executable ${component}-test-${test})
         add_executable(${executable}
