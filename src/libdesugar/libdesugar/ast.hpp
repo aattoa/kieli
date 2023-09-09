@@ -51,9 +51,9 @@ namespace ast {
     };
 
     struct Qualifier {
-        tl::optional<std::vector<Template_argument>> template_arguments;
-        kieli::Name_dynamic                          name;
-        utl::Source_view                             source_view;
+        std::optional<std::vector<Template_argument>> template_arguments;
+        kieli::Name_dynamic                           name;
+        utl::Source_view                              source_view;
     };
 
     struct Root_qualifier {
@@ -64,18 +64,18 @@ namespace ast {
     };
 
     struct Qualified_name {
-        std::vector<Qualifier>       middle_qualifiers;
-        tl::optional<Root_qualifier> root_qualifier;
-        kieli::Name_dynamic          primary_name;
+        std::vector<Qualifier>        middle_qualifiers;
+        std::optional<Root_qualifier> root_qualifier;
+        kieli::Name_dynamic           primary_name;
 
         [[nodiscard]] auto is_upper() const noexcept -> bool;
         [[nodiscard]] auto is_unqualified() const noexcept -> bool;
     };
 
     struct Class_reference {
-        tl::optional<std::vector<Template_argument>> template_arguments;
-        Qualified_name                               name;
-        utl::Source_view                             source_view;
+        std::optional<std::vector<Template_argument>> template_arguments;
+        Qualified_name                                name;
+        utl::Source_view                              source_view;
     };
 
     struct Template_parameter {
@@ -85,8 +85,8 @@ namespace ast {
         };
 
         struct Value_parameter {
-            tl::optional<utl::Wrapper<Type>> type;
-            kieli::Name_lower                name;
+            std::optional<utl::Wrapper<Type>> type;
+            kieli::Name_lower                 name;
         };
 
         struct Mutability_parameter {
@@ -95,20 +95,20 @@ namespace ast {
 
         using Variant = std::variant<Type_parameter, Value_parameter, Mutability_parameter>;
 
-        Variant                         value;
-        tl::optional<Template_argument> default_argument;
-        utl::Source_view                source_view;
+        Variant                          value;
+        std::optional<Template_argument> default_argument;
+        utl::Source_view                 source_view;
     };
 
     struct Function_argument {
-        utl::Wrapper<Expression>        expression;
-        tl::optional<kieli::Name_lower> argument_name;
+        utl::Wrapper<Expression>         expression;
+        std::optional<kieli::Name_lower> argument_name;
     };
 
     struct Function_parameter {
-        utl::Wrapper<Pattern>                  pattern;
-        tl::optional<utl::Wrapper<Type>>       type;
-        tl::optional<utl::Wrapper<Expression>> default_argument;
+        utl::Wrapper<Pattern>                   pattern;
+        std::optional<utl::Wrapper<Type>>       type;
+        std::optional<utl::Wrapper<Expression>> default_argument;
     };
 
     namespace expression {
@@ -176,10 +176,10 @@ namespace ast {
         };
 
         struct Method_invocation {
-            std::vector<Function_argument>               function_arguments;
-            tl::optional<std::vector<Template_argument>> template_arguments;
-            utl::Wrapper<Expression>                     base_expression;
-            kieli::Name_lower                            method_name;
+            std::vector<Function_argument>                function_arguments;
+            std::optional<std::vector<Template_argument>> template_arguments;
+            utl::Wrapper<Expression>                      base_expression;
+            kieli::Name_lower                             method_name;
         };
 
         struct Conditional {
@@ -217,9 +217,9 @@ namespace ast {
         };
 
         struct Let_binding {
-            utl::Wrapper<Pattern>            pattern;
-            utl::Wrapper<Expression>         initializer;
-            tl::optional<utl::Wrapper<Type>> type;
+            utl::Wrapper<Pattern>             pattern;
+            utl::Wrapper<Expression>          initializer;
+            std::optional<utl::Wrapper<Type>> type;
         };
 
         struct Local_type_alias {
@@ -228,7 +228,7 @@ namespace ast {
         };
 
         struct Ret {
-            tl::optional<utl::Wrapper<Expression>> returned_expression;
+            std::optional<utl::Wrapper<Expression>> returned_expression;
         };
 
         struct Sizeof {
@@ -320,13 +320,13 @@ namespace ast {
         };
 
         struct Constructor {
-            Qualified_name                      constructor_name;
-            tl::optional<utl::Wrapper<Pattern>> payload_pattern;
+            Qualified_name                       constructor_name;
+            std::optional<utl::Wrapper<Pattern>> payload_pattern;
         };
 
         struct Abbreviated_constructor {
-            kieli::Name_lower                   constructor_name;
-            tl::optional<utl::Wrapper<Pattern>> payload_pattern;
+            kieli::Name_lower                    constructor_name;
+            std::optional<utl::Wrapper<Pattern>> payload_pattern;
         };
 
         struct Tuple {
@@ -453,8 +453,8 @@ namespace ast {
     struct Function_signature {
         std::vector<Template_parameter> template_parameters;
         std::vector<Function_parameter> function_parameters;
-        tl::optional<Self_parameter>    self_parameter;
-        tl::optional<Type>              return_type;
+        std::optional<Self_parameter>   self_parameter;
+        std::optional<Type>             return_type;
         kieli::Name_lower               name;
     };
 
@@ -484,9 +484,9 @@ namespace ast {
 
         struct Enum {
             struct Constructor {
-                kieli::Name_lower                             name;
-                tl::optional<std::vector<utl::Wrapper<Type>>> payload_types;
-                utl::Source_view                              source_view;
+                kieli::Name_lower                              name;
+                std::optional<std::vector<utl::Wrapper<Type>>> payload_types;
+                utl::Source_view                               source_view;
             };
 
             std::vector<Constructor> constructors;

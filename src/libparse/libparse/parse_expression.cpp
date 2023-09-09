@@ -27,7 +27,7 @@ namespace {
     }
 
     auto parse_struct_member_initializer(Parse_context& context)
-        -> tl::optional<cst::expression::Struct_initializer::Member_initializer>
+        -> std::optional<cst::expression::Struct_initializer::Member_initializer>
     {
         if (auto member_name = parse_lower_name(context)) {
             Lexical_token const* const equals_sign = context.extract_required(Token_type::equals);
@@ -37,7 +37,7 @@ namespace {
                 .equals_sign_token = cst::Token::from_lexical(equals_sign),
             };
         }
-        return tl::nullopt;
+        return std::nullopt;
     }
 
     auto extract_struct_initializer(Parse_context& context, utl::Wrapper<cst::Type> const type)
@@ -129,7 +129,7 @@ namespace {
     }
 
     auto extract_qualified_lower_name_or_struct_initializer(
-        Parse_context& context, tl::optional<cst::Root_qualifier>&& root)
+        Parse_context& context, std::optional<cst::Root_qualifier>&& root)
         -> cst::Expression::Variant
     {
         Lexical_token* const anchor = context.pointer;
@@ -255,9 +255,7 @@ namespace {
                 return *branch;
             }
             context.error_expected(
-                "a '{'",
-                "the branches of a conditional expression must be block "
-                "expressions");
+                "a '{'", "the branches of a conditional expression must be block expressions");
         };
 
         Lexical_token const* const if_keyword = context.pointer - 1;
@@ -266,7 +264,7 @@ namespace {
         utl::wrapper auto const primary_condition = extract_condition(context);
         utl::wrapper auto const true_branch       = extract_branch(context);
 
-        tl::optional<cst::expression::Conditional::False_branch> false_branch;
+        std::optional<cst::expression::Conditional::False_branch> false_branch;
 
         if (Lexical_token const* const elif_keyword = context.try_extract(Token_type::elif)) {
             auto elif_conditional = extract_conditional(context, Conditional_kind::elif);
@@ -370,7 +368,7 @@ namespace {
         context.error_expected("a parenthesized pointer expression");
     }
 
-    auto parse_match_case(Parse_context& context) -> tl::optional<cst::expression::Match::Case>
+    auto parse_match_case(Parse_context& context) -> std::optional<cst::expression::Match::Case>
     {
         if (auto pattern = parse_top_level_pattern(context)) {
             Lexical_token const* const arrow   = context.extract_required(Token_type::right_arrow);
@@ -383,7 +381,7 @@ namespace {
                 .optional_semicolon_token = optional_token(semicolon),
             };
         }
-        return tl::nullopt;
+        return std::nullopt;
     }
 
     auto extract_match(Parse_context& context) -> cst::Expression::Variant
@@ -506,7 +504,7 @@ namespace {
     {
         Lexical_token const* const                       open_brace = context.pointer - 1;
         std::vector<cst::expression::Block::Side_effect> side_effects;
-        tl::optional<utl::Wrapper<cst::Expression>>      result_expression;
+        std::optional<utl::Wrapper<cst::Expression>>     result_expression;
         assert(open_brace->source_view.string == "{");
 
         while (auto expression = parse_expression(context)) {
@@ -531,7 +529,7 @@ namespace {
         };
     }
 
-    auto parse_complicated_type(Parse_context& context) -> tl::optional<cst::Expression::Variant>
+    auto parse_complicated_type(Parse_context& context) -> std::optional<cst::Expression::Variant>
     {
         context.retreat();
         Lexical_token const* const anchor = context.pointer;
@@ -553,10 +551,10 @@ namespace {
                 context.make_source_view(anchor, context.pointer),
                 { "Expected an expression, but found a type" });
         }
-        return tl::nullopt;
+        return std::nullopt;
     }
 
-    auto parse_normal_expression(Parse_context& context) -> tl::optional<cst::Expression::Variant>
+    auto parse_normal_expression(Parse_context& context) -> std::optional<cst::Expression::Variant>
     {
         switch (context.extract().type) {
         case Token_type::integer_literal:
@@ -627,7 +625,7 @@ namespace {
         }
     }
 
-    auto parse_argument(Parse_context& context) -> tl::optional<cst::Function_argument>
+    auto parse_argument(Parse_context& context) -> std::optional<cst::Function_argument>
     {
         if (auto name = parse_lower_name(context)) {
             if (Lexical_token const* const equals_sign = context.try_extract(Token_type::equals)) {
@@ -662,7 +660,7 @@ namespace {
     }
 
     auto parse_potential_invocation(Parse_context& context)
-        -> tl::optional<utl::Wrapper<cst::Expression>>
+        -> std::optional<utl::Wrapper<cst::Expression>>
     {
         Lexical_token const* const anchor = context.pointer;
         auto potential_invocable = parse_node<cst::Expression, parse_normal_expression>(context);
@@ -682,10 +680,10 @@ namespace {
     }
 
     auto parse_potential_member_access(Parse_context& context)
-        -> tl::optional<utl::Wrapper<cst::Expression>>
+        -> std::optional<utl::Wrapper<cst::Expression>>
     {
         Lexical_token const* const anchor     = context.pointer;
-        tl::optional               expression = parse_potential_invocation(context);
+        std::optional              expression = parse_potential_invocation(context);
         if (expression) {
             while (Lexical_token const* const dot = context.try_extract(Token_type::dot)) {
                 if (auto field_name = parse_lower_name(context)) {
@@ -750,7 +748,7 @@ namespace {
     }
 
     auto parse_potential_type_cast(Parse_context& context)
-        -> tl::optional<utl::Wrapper<cst::Expression>>
+        -> std::optional<utl::Wrapper<cst::Expression>>
     {
         Lexical_token const* const anchor = context.pointer;
 
@@ -787,10 +785,10 @@ namespace {
                 }
             }
         }
-        return tl::nullopt;
+        return std::nullopt;
     }
 
-    auto parse_operator(Parse_context& context) -> tl::optional<utl::Pooled_string>
+    auto parse_operator(Parse_context& context) -> std::optional<utl::Pooled_string>
     {
         switch (context.extract().type) {
         case Token_type::operator_name:
@@ -801,12 +799,12 @@ namespace {
             return context.plus_id;
         default:
             context.retreat();
-            return tl::nullopt;
+            return std::nullopt;
         }
     }
 
     auto parse_binary_operator_invocation_sequence(Parse_context& context)
-        -> tl::optional<utl::Wrapper<cst::Expression>>
+        -> std::optional<utl::Wrapper<cst::Expression>>
     {
         Lexical_token const* const anchor = context.pointer;
         if (auto leftmost_operand = parse_potential_type_cast(context)) {
@@ -837,19 +835,19 @@ namespace {
             });
             }
         }
-        return tl::nullopt;
+        return std::nullopt;
     }
 
 } // namespace
 
 auto libparse::parse_expression(Parse_context& context)
-    -> tl::optional<utl::Wrapper<cst::Expression>>
+    -> std::optional<utl::Wrapper<cst::Expression>>
 {
     return parse_binary_operator_invocation_sequence(context);
 }
 
 auto libparse::parse_block_expression(Parse_context& context)
-    -> tl::optional<utl::Wrapper<cst::Expression>>
+    -> std::optional<utl::Wrapper<cst::Expression>>
 {
     if (context.try_consume(Token_type::brace_open)) {
         Lexical_token const* const anchor = context.pointer;
@@ -858,5 +856,5 @@ auto libparse::parse_block_expression(Parse_context& context)
             .source_view = context.make_source_view(anchor - 1, context.pointer - 1),
         });
     }
-    return tl::nullopt;
+    return std::nullopt;
 }

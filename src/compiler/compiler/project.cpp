@@ -70,9 +70,9 @@ auto project::default_configuration() -> Configuration
     configuration.add_new_or_abort("language version"s, "0"s);
     configuration.add_new_or_abort("source directory"s, "src"s);
     configuration.add_new_or_abort("stack capacity"s, "1048576 // 2^20"s);
-    configuration.add_new_or_abort("name"s, tl::nullopt);
-    configuration.add_new_or_abort("version"s, tl::nullopt);
-    configuration.add_new_or_abort("authors"s, tl::nullopt);
+    configuration.add_new_or_abort("name"s, std::nullopt);
+    configuration.add_new_or_abort("version"s, std::nullopt);
+    configuration.add_new_or_abort("authors"s, std::nullopt);
     configuration.add_new_or_abort("created"s, "{:%d-%m-%Y}"_format(utl::local_time()));
     return configuration;
 }
@@ -135,7 +135,7 @@ auto project::read_configuration() -> Configuration
 
             configuration.add_or_assign(
                 std::string(key),
-                value.empty() ? tl::make_optional(std::string(value)) : tl::nullopt);
+                value.empty() ? std::make_optional(std::string(value)) : std::nullopt);
         }
 
         return configuration;

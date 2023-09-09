@@ -197,7 +197,7 @@ auto libresolve::Context::temporary_placeholder_type(utl::Source_view const view
 }
 
 auto libresolve::Context::associated_namespace_if(hir::Type const type)
-    -> tl::optional<utl::Wrapper<Namespace>>
+    -> std::optional<utl::Wrapper<Namespace>>
 {
     auto const& value = *type.flattened_value();
     if (auto const* const structure = std::get_if<hir::type::Structure>(&value)) {
@@ -207,13 +207,13 @@ auto libresolve::Context::associated_namespace_if(hir::Type const type)
         return resolve_enum(enumeration->info).associated_namespace;
     }
     else {
-        return tl::nullopt;
+        return std::nullopt;
     }
 }
 
 auto libresolve::Context::associated_namespace(hir::Type type) -> utl::Wrapper<Namespace>
 {
-    if (tl::optional space = associated_namespace_if(type)) {
+    if (std::optional space = associated_namespace_if(type)) {
         return *space;
     }
     error(

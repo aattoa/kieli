@@ -11,7 +11,7 @@ namespace libparse {
 
     [[nodiscard]] auto is_name_token_type(Token_type) noexcept -> bool;
 
-    [[nodiscard]] auto optional_token(Lexical_token const*) -> tl::optional<cst::Token>;
+    [[nodiscard]] auto optional_token(Lexical_token const*) -> std::optional<cst::Token>;
 
     struct [[nodiscard]] Parse_context {
         kieli::Compilation_info    compilation_info;
@@ -54,11 +54,11 @@ namespace libparse {
             -> void;
         [[noreturn]] auto error(utl::diagnostics::Message_arguments const&) -> void;
         [[noreturn]] auto error_expected(
-            utl::Source_view               erroneous_view,
-            std::string_view               expectation,
-            tl::optional<std::string_view> help = tl::nullopt) -> void;
+            utl::Source_view                erroneous_view,
+            std::string_view                expectation,
+            std::optional<std::string_view> help = std::nullopt) -> void;
         [[noreturn]] auto error_expected(
-            std::string_view expectation, tl::optional<std::string_view> help = tl::nullopt)
+            std::string_view expectation, std::optional<std::string_view> help = std::nullopt)
             -> void;
 
         auto make_source_view(Lexical_token const*, Lexical_token const*) noexcept
@@ -69,7 +69,7 @@ namespace libparse {
     concept parser = requires(P p, Parse_context context) {
         {
             p(context)
-        } -> utl::specialization_of<tl::optional>;
+        } -> utl::specialization_of<std::optional>;
     };
 
     template <parser auto p>
@@ -96,12 +96,12 @@ namespace libparse {
             return parse_one_of<ps...>(context);
         }
         else {
-            return tl::nullopt;
+            return std::nullopt;
         }
     }
 
     template <parser auto p, utl::Metastring description, Token_type open, Token_type close>
-    auto parse_surrounded(Parse_context& context) -> tl::optional<cst::Surrounded<Parse_result<p>>>
+    auto parse_surrounded(Parse_context& context) -> std::optional<cst::Surrounded<Parse_result<p>>>
     {
         if (Lexical_token const* const open_token = context.try_extract(open)) {
             if (auto result = p(context)) {
@@ -116,7 +116,7 @@ namespace libparse {
             }
             context.error_expected(description.view());
         }
-        return tl::nullopt;
+        return std::nullopt;
     }
 
     template <parser auto p, utl::Metastring description>
@@ -153,11 +153,11 @@ namespace libparse {
 
     template <parser auto p, Token_type separator, utl::Metastring description>
     auto parse_separated_one_or_more(Parse_context& context)
-        -> tl::optional<cst::Separated_sequence<Parse_result<p>>>
+        -> std::optional<cst::Separated_sequence<Parse_result<p>>>
     {
         auto sequence = extract_separated_zero_or_more<p, separator, description>(context);
         if (sequence.elements.empty()) {
-            return tl::nullopt;
+            return std::nullopt;
         }
         else {
             return sequence;
@@ -171,27 +171,27 @@ namespace libparse {
     constexpr auto parse_comma_separated_one_or_more
         = parse_separated_one_or_more<p, Token_type::comma, description>;
 
-    auto parse_expression(Parse_context&) -> tl::optional<utl::Wrapper<cst::Expression>>;
-    auto parse_pattern(Parse_context&) -> tl::optional<utl::Wrapper<cst::Pattern>>;
-    auto parse_type(Parse_context&) -> tl::optional<utl::Wrapper<cst::Type>>;
+    auto parse_expression(Parse_context&) -> std::optional<utl::Wrapper<cst::Expression>>;
+    auto parse_pattern(Parse_context&) -> std::optional<utl::Wrapper<cst::Pattern>>;
+    auto parse_type(Parse_context&) -> std::optional<utl::Wrapper<cst::Type>>;
 
     constexpr auto extract_expression = extract_required<parse_expression, "an expression">;
     constexpr auto extract_pattern    = extract_required<parse_pattern, "a pattern">;
     constexpr auto extract_type       = extract_required<parse_type, "a type">;
 
-    auto parse_top_level_pattern(Parse_context&) -> tl::optional<utl::Wrapper<cst::Pattern>>;
-    auto parse_block_expression(Parse_context&) -> tl::optional<utl::Wrapper<cst::Expression>>;
-    auto parse_template_arguments(Parse_context&) -> tl::optional<cst::Template_arguments>;
-    auto parse_template_parameters(Parse_context&) -> tl::optional<cst::Template_parameters>;
-    auto parse_class_reference(Parse_context&) -> tl::optional<cst::Class_reference>;
-    auto parse_mutability(Parse_context&) -> tl::optional<cst::Mutability>;
-    auto parse_type_annotation(Parse_context&) -> tl::optional<cst::Type_annotation>;
+    auto parse_top_level_pattern(Parse_context&) -> std::optional<utl::Wrapper<cst::Pattern>>;
+    auto parse_block_expression(Parse_context&) -> std::optional<utl::Wrapper<cst::Expression>>;
+    auto parse_template_arguments(Parse_context&) -> std::optional<cst::Template_arguments>;
+    auto parse_template_parameters(Parse_context&) -> std::optional<cst::Template_parameters>;
+    auto parse_class_reference(Parse_context&) -> std::optional<cst::Class_reference>;
+    auto parse_mutability(Parse_context&) -> std::optional<cst::Mutability>;
+    auto parse_type_annotation(Parse_context&) -> std::optional<cst::Type_annotation>;
 
     auto extract_function_parameters(Parse_context&)
         -> cst::Separated_sequence<cst::Function_parameter>;
     auto extract_class_references(Parse_context&) -> cst::Separated_sequence<cst::Class_reference>;
 
-    auto extract_qualified(Parse_context&, tl::optional<cst::Root_qualifier>&&)
+    auto extract_qualified(Parse_context&, std::optional<cst::Root_qualifier>&&)
         -> cst::Qualified_name;
 
     template <Token_type identifier_type>
@@ -210,13 +210,13 @@ namespace libparse {
     constexpr auto extract_upper_id = extract_id<Token_type::upper_name>;
 
     template <Token_type identifier_type>
-    auto parse_id(Parse_context& context) -> tl::optional<utl::Pooled_string>
+    auto parse_id(Parse_context& context) -> std::optional<utl::Pooled_string>
     {
         if (Lexical_token const* const token = context.try_extract(identifier_type)) {
             return token->as_string();
         }
         else {
-            return tl::nullopt;
+            return std::nullopt;
         }
     }
 
@@ -224,7 +224,7 @@ namespace libparse {
     constexpr auto parse_upper_id = parse_id<Token_type::upper_name>;
 
     template <Token_type identifier_type, class Name>
-    auto parse_name(Parse_context& context) -> tl::optional<Name>
+    auto parse_name(Parse_context& context) -> std::optional<Name>
     {
         if (Lexical_token const* const token = context.try_extract(identifier_type)) {
             return Name {
@@ -232,7 +232,7 @@ namespace libparse {
                 .source_view = token->source_view,
             };
         }
-        return tl::nullopt;
+        return std::nullopt;
     }
 
     constexpr auto parse_lower_name = parse_name<Token_type::lower_name, kieli::Name_lower>;
@@ -253,7 +253,7 @@ namespace libparse {
     constexpr auto extract_upper_name = extract_name<Token_type::upper_name, kieli::Name_upper>;
 
     template <class Node, parser auto parse>
-    auto parse_node(Parse_context& context) -> tl::optional<utl::Wrapper<Node>>
+    auto parse_node(Parse_context& context) -> std::optional<utl::Wrapper<Node>>
     {
         Lexical_token const* const anchor = context.pointer;
         if (auto node_value = parse(context)) {
@@ -261,7 +261,7 @@ namespace libparse {
                                        context.make_source_view(anchor, context.pointer - 1) });
         }
         else {
-            return tl::nullopt;
+            return std::nullopt;
         }
     }
 

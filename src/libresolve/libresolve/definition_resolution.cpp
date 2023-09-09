@@ -35,8 +35,8 @@ namespace {
 
     // Sets and resets the Self type within classes and impl/inst blocks
     class Self_type_guard {
-        tl::optional<hir::Type>& current_self_type;
-        tl::optional<hir::Type>  previous_self_type;
+        std::optional<hir::Type>& current_self_type;
+        std::optional<hir::Type>  previous_self_type;
     public:
         Self_type_guard(Context& context, hir::Type new_self_type)
             : current_self_type { context.current_self_type }
@@ -100,8 +100,8 @@ namespace {
     }
 
     auto resolve_self_parameter(
-        Context& context, Scope& scope, tl::optional<ast::Self_parameter> const& self)
-        -> tl::optional<hir::Self_parameter>
+        Context& context, Scope& scope, std::optional<ast::Self_parameter> const& self)
+        -> std::optional<hir::Self_parameter>
     {
         return self.transform([&](ast::Self_parameter const& self) {
             return hir::Self_parameter {
@@ -116,7 +116,7 @@ namespace {
         Context&                               context,
         kieli::Name_lower const                function_name,
         hir::Type const                        return_type,
-        tl::optional<hir::Self_parameter>&&    self_parameter,
+        std::optional<hir::Self_parameter>&&   self_parameter,
         std::vector<hir::Function_parameter>&& function_parameters,
         std::vector<hir::Template_parameter>&& template_parameters) -> hir::Function::Signature
     {
@@ -490,7 +490,7 @@ auto libresolve::Context::resolve_implementation(
         hir::Type const self_type = resolve_type(implementation->type, scope, *info.home_namespace);
 
         utl::Wrapper<Namespace> self_type_associated_namespace = std::invoke([&] {
-            if (tl::optional space = associated_namespace_if(self_type)) {
+            if (std::optional space = associated_namespace_if(self_type)) {
                 return *space;
             }
             error(

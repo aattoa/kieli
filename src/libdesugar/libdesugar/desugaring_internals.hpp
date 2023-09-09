@@ -87,7 +87,7 @@ namespace libdesugar {
             return [this](utl::wrapper auto const node) { return desugar(*node); };
         }
 
-        auto desugar_mutability(tl::optional<cst::Mutability> const&, utl::Source_view)
+        auto desugar_mutability(std::optional<cst::Mutability> const&, utl::Source_view)
             -> ast::Mutability;
         auto desugar_mutability(cst::Mutability const&, utl::Source_view) = delete;
 

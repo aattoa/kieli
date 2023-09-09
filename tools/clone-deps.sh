@@ -6,5 +6,4 @@ clone () {
 
 clone ericniebler range-v3
 clone TartanLlama expected
-clone TartanLlama optional
 clone catchorg    Catch2

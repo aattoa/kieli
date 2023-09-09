@@ -135,10 +135,10 @@ namespace {
     };
 
     template <class T>
-    auto extract_value(Parse_context& context) -> tl::optional<T>
+    auto extract_value(Parse_context& context) -> std::optional<T>
     {
         if (context.is_finished()) {
-            return tl::nullopt;
+            return std::nullopt;
         }
 
         std::string_view const view = context.extract();
@@ -170,7 +170,7 @@ namespace {
             case std::errc::invalid_argument:
             {
                 context.retreat();
-                return tl::nullopt;
+                return std::nullopt;
             }
             default:
                 utl::todo();
@@ -191,7 +191,7 @@ namespace {
             }
             else {
                 context.retreat();
-                return tl::nullopt;
+                return std::nullopt;
             }
         }
         else {
@@ -250,7 +250,7 @@ auto cli::parse_command_line(
     Parse_context context { command_line };
 
     while (!context.is_finished()) {
-        tl::optional<std::string> name;
+        std::optional<std::string> name;
 
         {
             std::string_view view = context.extract();
@@ -362,7 +362,7 @@ template struct cli::Value<cli::types::Bool>;
 template struct cli::Value<cli::types::Str>;
 
 cli::Parameter::Name::Name(
-    char const* const long_name, tl::optional<char> const short_name) noexcept
+    char const* const long_name, std::optional<char> const short_name) noexcept
     : long_form { long_name }
     , short_form { short_name }
 {}
@@ -376,7 +376,7 @@ auto cli::Options_description::Option_adder::map_short_to_long(Parameter::Name c
 }
 
 auto cli::Options_description::Option_adder::operator()(
-    Parameter::Name&& name, tl::optional<std::string_view> description) noexcept -> Option_adder
+    Parameter::Name&& name, std::optional<std::string_view> description) noexcept -> Option_adder
 {
     map_short_to_long(name);
     self->parameters.push_back({ .name = std::move(name), .description = description });
@@ -385,7 +385,7 @@ auto cli::Options_description::Option_adder::operator()(
 
 template <class T>
 auto cli::Options_description::Option_adder::operator()(
-    Parameter::Name&& name, Value<T>&& value, tl::optional<std::string_view> description) noexcept
+    Parameter::Name&& name, Value<T>&& value, std::optional<std::string_view> description) noexcept
     -> Option_adder
 {
     map_short_to_long(name);
@@ -403,7 +403,7 @@ auto cli::Options_description::Option_adder::operator()(
 auto cli::Options_description::Option_adder::operator()(
     Parameter::Name&&                 name,
     std::vector<Parameter::Variant>&& values,
-    tl::optional<std::string_view>    description) noexcept -> Option_adder
+    std::optional<std::string_view>   description) noexcept -> Option_adder
 {
     map_short_to_long(name);
 
@@ -435,13 +435,13 @@ auto cli::Options_description::Option_adder::operator()(
 }
 
 template auto cli::Options_description::Option_adder::operator()(
-    Parameter::Name&&, Value<types::Int>&&, tl::optional<std::string_view>) -> Option_adder;
+    Parameter::Name&&, Value<types::Int>&&, std::optional<std::string_view>) -> Option_adder;
 template auto cli::Options_description::Option_adder::operator()(
-    Parameter::Name&&, Value<types::Float>&&, tl::optional<std::string_view>) -> Option_adder;
+    Parameter::Name&&, Value<types::Float>&&, std::optional<std::string_view>) -> Option_adder;
 template auto cli::Options_description::Option_adder::operator()(
-    Parameter::Name&&, Value<types::Bool>&&, tl::optional<std::string_view>) -> Option_adder;
+    Parameter::Name&&, Value<types::Bool>&&, std::optional<std::string_view>) -> Option_adder;
 template auto cli::Options_description::Option_adder::operator()(
-    Parameter::Name&&, Value<types::Str>&&, tl::optional<std::string_view>) -> Option_adder;
+    Parameter::Name&&, Value<types::Str>&&, std::optional<std::string_view>) -> Option_adder;
 
 namespace {
     template <class T>
@@ -533,7 +533,7 @@ auto cli::Options::operator[](std::string_view const name) noexcept -> Argument_
 
 auto cli::to_string(cli::Options_description const& options_description) -> std::string
 {
-    std::vector<utl::Pair<std::string, tl::optional<std::string_view>>> lines;
+    std::vector<utl::Pair<std::string, std::optional<std::string_view>>> lines;
     lines.reserve(options_description.parameters.size());
     utl::Usize max_length = 0;
 

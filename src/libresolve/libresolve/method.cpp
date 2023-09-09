@@ -21,7 +21,7 @@ namespace {
         Context& context, kieli::Name_lower const method_name, hir::Type const inspected_type)
         -> Method_lookup_result
     {
-        tl::optional<Method_lookup_result> return_value;
+        std::optional<Method_lookup_result> return_value;
 
         auto const emit_ambiguity_error = [&](utl::Pair<utl::Source_view> const views) {
             context.diagnostics().emit_error({
@@ -84,10 +84,10 @@ namespace {
 } // namespace
 
 auto libresolve::Context::resolve_method(
-    kieli::Name_lower const                                     method_name,
-    tl::optional<std::span<ast::Template_argument const>> const template_arguments,
-    hir::Type const                                             type,
-    Scope&                                                      scope,
+    kieli::Name_lower const                                      method_name,
+    std::optional<std::span<ast::Template_argument const>> const template_arguments,
+    hir::Type const                                              type,
+    Scope&                                                       scope,
     Namespace& space) -> utl::Wrapper<Function_info>
 {
     Method_lookup_result const lookup_result = lookup_method(*this, method_name, type);

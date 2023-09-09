@@ -6,7 +6,7 @@ namespace {
     using namespace libparse;
 
     auto
-    extract_qualified_typename(Parse_context& context, tl::optional<cst::Root_qualifier>&& root)
+    extract_qualified_typename(Parse_context& context, std::optional<cst::Root_qualifier>&& root)
         -> cst::Type::Variant
     {
         Lexical_token const* const anchor = context.pointer;
@@ -183,7 +183,7 @@ namespace {
         };
     }
 
-    auto parse_normal_type(Parse_context& context) -> tl::optional<cst::Type::Variant>
+    auto parse_normal_type(Parse_context& context) -> std::optional<cst::Type::Variant>
     {
         switch (context.extract().type) {
         case Lexical_token::Type::i8_type:
@@ -235,13 +235,13 @@ namespace {
             return extract_global_typename(context);
         default:
             context.retreat();
-            return tl::nullopt;
+            return std::nullopt;
         }
     }
 
 } // namespace
 
-auto libparse::parse_type(Parse_context& context) -> tl::optional<utl::Wrapper<cst::Type>>
+auto libparse::parse_type(Parse_context& context) -> std::optional<utl::Wrapper<cst::Type>>
 {
     Lexical_token const* const type_anchor = context.pointer;
     if (auto type_value = parse_normal_type(context)) {
@@ -281,5 +281,5 @@ auto libparse::parse_type(Parse_context& context) -> tl::optional<utl::Wrapper<c
         }
         return type;
     }
-    return tl::nullopt;
+    return std::nullopt;
 }

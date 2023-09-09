@@ -9,12 +9,11 @@ The following is a list of the required dependencies:
 
 * https://github.com/ericniebler/range-v3
 * https://github.com/TartanLlama/expected
-* https://github.com/TartanLlama/optional
 * https://github.com/catchorg/Catch2
 
 ## Building Kieli
 
-Requirements: `make`, `CMake`, and any C++20 compliant C++ toolchain.
+Requirements: make, CMake, and any C++23 compliant C++ toolchain.
 
 Run the following commands to clone and build Kieli and its dependencies:
 

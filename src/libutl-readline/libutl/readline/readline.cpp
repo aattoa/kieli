@@ -31,7 +31,7 @@ namespace {
         }
     }
 
-    auto xdg_state_home_filename() -> tl::optional<std::filesystem::path>
+    auto xdg_state_home_filename() -> std::optional<std::filesystem::path>
     {
         static constexpr auto filename = ".kieli_history";
         if (char const* const state_home = std::getenv("XDG_STATE_HOME")) {
@@ -40,10 +40,10 @@ namespace {
         if (char const* const home = std::getenv("HOME")) {
             return std::filesystem::path { home } / ".local" / "state" / filename;
         }
-        return tl::nullopt;
+        return std::nullopt;
     }
 
-    auto determine_history_file_path() -> tl::optional<std::filesystem::path>
+    auto determine_history_file_path() -> std::optional<std::filesystem::path>
     {
         if (char const* const override = std::getenv("KIELI_HISTORY")) {
             return override;
@@ -55,7 +55,7 @@ namespace {
 
     auto read_history_file_to_current_history() -> void
     {
-        tl::optional const path = determine_history_file_path();
+        std::optional const path = determine_history_file_path();
         if (!path.has_value() || !is_valid_history_file_path(*path)) {
             return;
         }
@@ -75,7 +75,7 @@ namespace {
 
     auto add_line_to_history_file(std::string_view const line) -> void
     {
-        tl::optional const path = determine_history_file_path();
+        std::optional const path = determine_history_file_path();
         if (!path.has_value() || !is_valid_history_file_path(*path)) {
             return;
         }

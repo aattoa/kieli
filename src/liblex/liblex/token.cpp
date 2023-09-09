@@ -250,7 +250,7 @@ auto kieli::Lexical_token::description(Type const type) noexcept -> std::string_
     case Type::end_of_input:
         return "the end of input";
     default:
-        utl::abort("Unimplemented for {}"_format(bootleg::to_underlying(type)));
+        utl::abort("Unimplemented for {}"_format(std::to_underlying(type)));
     }
 }
 
