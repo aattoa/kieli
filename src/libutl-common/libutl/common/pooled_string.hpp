@@ -9,14 +9,13 @@ namespace utl {
     public:
         friend class String_pool;
     private:
-        Usize              m_index;
-        Usize              m_size;
+        Relative_string    m_relative;
         std::string const* m_pool;
-        explicit Pooled_string(Usize index, Usize size, std::string const* pool); // NOLINT
+        explicit Pooled_string(Relative_string relative, std::string const* pool);
     public:
         [[nodiscard]] auto view() const noexcept -> std::string_view;
         [[nodiscard]] auto size() const noexcept -> Usize;
-        [[nodiscard]] auto operator==(Pooled_string const&) const -> bool = default;
+        [[nodiscard]] auto operator==(Pooled_string const&) const -> bool;
     };
 
     class [[nodiscard]] String_pool {

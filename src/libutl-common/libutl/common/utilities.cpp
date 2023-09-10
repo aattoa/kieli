@@ -83,3 +83,9 @@ auto utl::local_time() -> std::chrono::local_time<std::chrono::system_clock::dur
 {
     return std::chrono::current_zone()->to_local(std::chrono::system_clock::now());
 }
+
+auto utl::Relative_string::view_in(std::string_view const string) const -> std::string_view
+{
+    always_assert(string.size() >= (offset + length));
+    return string.substr(offset, length);
+}
