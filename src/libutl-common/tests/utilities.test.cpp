@@ -1,7 +1,7 @@
 #include <libutl/common/utilities.hpp>
 #include <catch2/catch_test_macros.hpp>
 
-#define TEST(name) TEST_CASE(name, "[libutl][utilities]")
+#define TEST(name) TEST_CASE("libutl " name, "[libutl][utilities]")
 
 namespace {
     struct Move_only {
@@ -35,7 +35,7 @@ TEST("vector capacity operations")
     REQUIRE(vector.capacity() == 0);
 }
 
-TEST("utl::to_vector")
+TEST("to_vector")
 {
     std::vector<Move_only> vector;
     vector.push_back(10_mov);
@@ -44,7 +44,7 @@ TEST("utl::to_vector")
     REQUIRE(vector == utl::to_vector({ 10_mov, 20_mov, 30_mov }));
 }
 
-TEST("utl::resize_down_vector")
+TEST("resize_down_vector")
 {
     auto vector = utl::to_vector({ 20_mov, 40_mov, 60_mov, 80_mov });
     utl::resize_down_vector(vector, 2);
@@ -55,7 +55,7 @@ TEST("utl::resize_down_vector")
     REQUIRE(vector.capacity() >= 4);
 }
 
-TEST("utl::append_vector")
+TEST("append_vector")
 {
     SECTION("from rvalue")
     {
@@ -85,7 +85,28 @@ TEST("utl::map")
         == utl::to_vector({ 1_mov, 4_mov, 9_mov }));
 }
 
-TEST("utl::filename_without_path")
+TEST("Relative_string")
+{
+    SECTION("view_in")
+    {
+        static constexpr utl::Relative_string rs {
+            .offset = 2,
+            .length = 3,
+        };
+        REQUIRE(rs.view_in("abcdefg") == "cde");
+    }
+    SECTION("format_to")
+    {
+        std::string s  = "abc";
+        auto const  rs = utl::Relative_string::format_to(s, "d{}fg", 'e');
+        REQUIRE(s == "abcdefg");
+        REQUIRE(rs.offset == 3);
+        REQUIRE(rs.length == 4);
+        REQUIRE(rs.view_in(s) == "defg");
+    }
+}
+
+TEST("filename_without_path")
 {
     REQUIRE(utl::filename_without_path("aaa/bbb/ccc") == "ccc");
     REQUIRE(utl::filename_without_path("aaa\\bbb\\ccc") == "ccc");

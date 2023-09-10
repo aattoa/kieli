@@ -139,8 +139,7 @@ namespace utl::inline literals {
     }
 } // namespace utl::inline literals
 
-// Literal operators are useless when not easily accessible, so let's make them available
-// everywhere.
+// Literal operators are useless when not easily accessible.
 using namespace utl::literals;
 using namespace std::literals;
 
@@ -621,6 +620,23 @@ namespace utl {
     }
 
     [[nodiscard]] auto local_time() -> std::chrono::local_time<std::chrono::system_clock::duration>;
+
+    struct [[nodiscard]] Relative_string {
+        utl::Usize offset {};
+        utl::Usize length {};
+
+        [[nodiscard]] auto view_in(std::string_view) const -> std::string_view;
+
+        template <class... Args>
+        static auto
+        format_to(std::string& string, std::format_string<Args...> const fmt, Args&&... args)
+            -> Relative_string
+        {
+            Usize const old_size = string.size();
+            std::format_to(std::back_inserter(string), fmt, std::forward<Args>(args)...);
+            return { .offset = old_size, .length = string.size() - old_size };
+        }
+    };
 
     namespace formatting {
         struct Formatter_base {
