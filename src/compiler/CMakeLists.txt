@@ -13,6 +13,7 @@ target_link_libraries(kieli
     PRIVATE libutl-cli
     PRIVATE libutl-color
     PRIVATE libutl-readline
+    PRIVATE libutl-diag
     PRIVATE liblex
     PRIVATE libparse
     PRIVATE libdesugar
