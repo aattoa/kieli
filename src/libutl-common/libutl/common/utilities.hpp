@@ -598,6 +598,29 @@ namespace utl {
         return digits;
     }
 
+    template <
+        std::input_or_output_iterator     It,
+        std::sentinel_for<It>             Se,
+        std::indirect_unary_predicate<It> F>
+    [[nodiscard]] constexpr auto find_nth_if(It it, Se const se, Usize const n, F f) -> It
+    {
+        for (utl::Usize count = 0;; ++count, ++it) {
+            it = std::find_if(it, se, f);
+            if (it == se || count == n) {
+                return it;
+            }
+        }
+    }
+
+    template <
+        std::input_or_output_iterator                        It,
+        std::sentinel_for<It>                                Se,
+        std::equality_comparable_with<std::iter_value_t<It>> T>
+    [[nodiscard]] constexpr auto find_nth(It it, Se se, Usize const n, T const& x) -> It
+    {
+        return find_nth_if(std::move(it), std::move(se), n, [&x](auto const& y) { return x == y; });
+    }
+
     template <class F, class Vector>
     constexpr auto map(F&& f, Vector&& input)
         requires std::is_invocable_v<F&&, decltype(bootleg::forward_like<Vector>(input.front()))>

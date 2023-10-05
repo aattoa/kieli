@@ -73,7 +73,25 @@ TEST("append_vector")
     }
 }
 
-TEST("utl::map")
+TEST("find_nth_if")
+{
+    static constexpr auto array   = std::to_array({ 1, 2, 3, 4, 5 });
+    static constexpr auto is_even = [](auto const x) { return x % 2 == 0; };
+    REQUIRE(utl::find_nth_if(array.begin(), array.end(), 0, is_even) == array.begin() + 1);
+    REQUIRE(utl::find_nth_if(array.begin(), array.end(), 1, is_even) == array.begin() + 3);
+    REQUIRE(utl::find_nth_if(array.begin(), array.end(), 2, is_even) == array.end());
+}
+
+TEST("find_nth")
+{
+    static constexpr std::string_view string = "hello, world!";
+    REQUIRE(utl::find_nth(string.begin(), string.end(), 0, 'l') == string.begin() + 2);
+    REQUIRE(utl::find_nth(string.begin(), string.end(), 1, 'l') == string.begin() + 3);
+    REQUIRE(utl::find_nth(string.begin(), string.end(), 2, 'l') == string.begin() + 10);
+    REQUIRE(utl::find_nth(string.begin(), string.end(), 3, 'l') == string.end());
+}
+
+TEST("map")
 {
     static constexpr auto square
         = [](Move_only const x) { return Move_only { x.value * x.value }; };
