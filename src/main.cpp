@@ -13,8 +13,6 @@
 #include <libreify/reify.hpp>
 #include <liblower/lower.hpp>
 #include <libformat/format.hpp>
-#include <compiler/compiler.hpp>
-#include <compiler/project.hpp>
 
 namespace {
 
@@ -109,12 +107,12 @@ namespace {
 auto main(int argc, char const** argv) -> int
 try {
     cli::Options_description description;
-    description.add_options()({ "help", 'h' }, "Show this text")(
-        { "version", 'v' },
-        "Show kieli version")("new", cli::string("project name"), "Create a new kieli project")(
-        "repl", cli::string("repl to run"), "Run the given repl")(
-        "debug", cli::string("phase to debug"))("nocolor", "Disable colored output")(
-        "time", "Print the execution time");
+    description.add_options()({ "help", 'h' }, "Show this text");
+    description.add_options()({ "version", 'v' }, "Show kieli version");
+    description.add_options()("repl", cli::string("repl to run"), "Run the given repl");
+    description.add_options()("debug", cli::string("phase to debug"));
+    description.add_options()("nocolor", "Disable colored output");
+    description.add_options()("time", "Print the execution time");
 
     cli::Options options = utl::expect(cli::parse_command_line(argc, argv, description));
 
@@ -135,10 +133,6 @@ try {
 
     if (options["version"]) {
         utl::print("kieli version 0, compiled on " __DATE__ ", " __TIME__ ".\n");
-    }
-
-    if (std::string_view const* const name = options["new"]) {
-        project::initialize(*name);
     }
 
     if (std::string_view const* const phase = options["debug"]) {
@@ -167,14 +161,8 @@ try {
                 utl::formatting::delimited_range(
                     utl::map(hir::to_string, do_resolve().functions), "\n\n"));
         }
-        else if (*phase == "comp") {
-            (void)compiler::compile({
-                .source_directory_path = std::move(source_directory_path),
-                .main_file_name        = "main.kieli",
-            });
-        }
         else {
-            throw utl::exception("The phase must be one of low|rei|res|comp, not '{}'", *phase);
+            throw utl::exception("The phase must be one of low|rei|res, not '{}'", *phase);
         }
 
         utl::print("Finished debugging phase {}\n", *phase);
