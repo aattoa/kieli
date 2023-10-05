@@ -84,4 +84,18 @@ add_subdirectory(src/libresolve)
 add_subdirectory(src/libreify)
 add_subdirectory(src/liblower)
 add_subdirectory(src/libformat)
-add_subdirectory(src/compiler)
+
+add_executable(debug-kieli src/main.cpp)
+target_link_libraries(debug-kieli
+    PRIVATE libutl-cli
+    PRIVATE libutl-color
+    PRIVATE libutl-readline
+    PRIVATE libutl-diag
+    PRIVATE liblex
+    PRIVATE libparse
+    PRIVATE libdesugar
+    PRIVATE libresolve
+    PRIVATE libreify
+    PRIVATE liblower
+    PRIVATE libformat)
+kieli_consume_libutl_common(debug-kieli)
