@@ -11,7 +11,6 @@
 #include <libresolve/resolve.hpp>
 #include <libresolve/resolution_internals.hpp>
 #include <libreify/reify.hpp>
-#include <liblower/lower.hpp>
 #include <libformat/format.hpp>
 
 namespace {
@@ -95,13 +94,6 @@ namespace {
         (void)reify(resolve(desugar(parse(std::move(lex_result)))));
     }>;
 
-    constexpr auto lowering_repl = generic_repl<[](kieli::Lex_result&& lex_result) {
-        auto lowering_result = lower(reify(resolve(desugar(kieli::parse(std::move(lex_result))))));
-        (void)lowering_result;
-        // for (lir::Function const& function : lowering_result.functions)
-        //     std::println("{}: {}", function.symbol, function.body);
-    }>;
-
 } // namespace
 
 auto main(int argc, char const** argv) -> int
@@ -149,10 +141,7 @@ try {
             }))));
         };
 
-        if (*phase == "low") {
-            (void)lower(reify(do_resolve()));
-        }
-        else if (*phase == "rei") {
+        if (*phase == "rei") {
             (void)reify(do_resolve());
         }
         else if (*phase == "res") {
@@ -162,7 +151,7 @@ try {
                     utl::map(hir::to_string, do_resolve().functions), "\n\n"));
         }
         else {
-            throw utl::exception("The phase must be one of low|rei|res, not '{}'", *phase);
+            throw utl::exception("The phase must be one of rei|res, not '{}'", *phase);
         }
 
         utl::print("Finished debugging phase {}\n", *phase);
@@ -176,7 +165,6 @@ try {
             { "des", desugaring_repl },
             { "res", resolution_repl },
             { "rei", reification_repl },
-            { "low", lowering_repl },
         } };
         if (auto const* const repl = repls.find(*name)) {
             (*repl)();
