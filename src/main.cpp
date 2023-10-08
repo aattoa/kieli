@@ -10,7 +10,6 @@
 #include <libdesugar/desugar.hpp>
 #include <libresolve/resolve.hpp>
 #include <libresolve/resolution_internals.hpp>
-#include <libreify/reify.hpp>
 #include <libformat/format.hpp>
 
 namespace {
@@ -90,10 +89,6 @@ namespace {
         }
     }>;
 
-    constexpr auto reification_repl = generic_repl<[](kieli::Lex_result&& lex_result) {
-        (void)reify(resolve(desugar(parse(std::move(lex_result)))));
-    }>;
-
 } // namespace
 
 auto main(int argc, char const** argv) -> int
@@ -141,17 +136,14 @@ try {
             }))));
         };
 
-        if (*phase == "rei") {
-            (void)reify(do_resolve());
-        }
-        else if (*phase == "res") {
+        if (*phase == "res") {
             utl::print(
                 "{}\n",
                 utl::formatting::delimited_range(
                     utl::map(hir::to_string, do_resolve().functions), "\n\n"));
         }
         else {
-            throw utl::exception("The phase must be one of rei|res, not '{}'", *phase);
+            throw utl::exception("The phase must be res, not '{}'", *phase);
         }
 
         utl::print("Finished debugging phase {}\n", *phase);
@@ -164,14 +156,12 @@ try {
             { "prog", program_parser_repl },
             { "des", desugaring_repl },
             { "res", resolution_repl },
-            { "rei", reification_repl },
         } };
         if (auto const* const repl = repls.find(*name)) {
             (*repl)();
         }
         else {
-            throw utl::exception(
-                "The repl must be one of lex|expr|prog|des|res|rei|low|gen, not '{}'", *name);
+            throw utl::exception("The repl must be one of lex|expr|prog|des|res, not '{}'", *name);
         }
     }
 
