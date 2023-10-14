@@ -22,40 +22,42 @@ namespace utl::diag {
 
     enum class Level { error, warning, note };
 
-    struct Diagnostic_arguments {
+    struct Diagnostic {
         std::vector<Text_section>      text_sections;
-        std::optional<Relative_string> message;
+        Relative_string                message;
         std::optional<Relative_string> help_note;
         utl::Explicit<Level>           level;
     };
 
-    struct Diagnostic {
-        // TODO
-        Level level;
+    struct Colors {
+        Color normal {};
+        Color error {};
+        Color warning {};
+        Color note {};
+        Color position_info {};
+
+        static auto defaults() noexcept -> Colors;
     };
 
-    struct Context {
-        struct Colors {
-            Color level_error   = Color::red;
-            Color level_warning = Color::dark_yellow;
-            Color level_note    = Color::cyan;
-            Color position_info = Color::dark_cyan;
-        };
+    class Context {
+        std::string m_diagnostics_buffer;
+    public:
+        // Format `diagnostic` to `output` according to `colors`.
+        auto format_diagnostic(
+            Diagnostic const& diagnostic, std::string& output, Colors colors = Colors::defaults())
+            -> void;
 
-        std::string diagnostics_buffer;
-        Colors      colors;
-
-        utl::Usize error_count {};
-        utl::Usize warning_count {};
-        utl::Usize note_count {};
+        // Format `diagnostic` to a new string according to `colors`.
+        auto format_diagnostic(Diagnostic const& diagnostic, Colors colors = Colors::defaults())
+            -> std::string;
 
         template <class... Args>
-        auto format(std::format_string<Args...> const fmt, Args&&... args) -> Relative_string
+        auto format_relative(std::format_string<Args...> const fmt, Args&&... args)
+            -> Relative_string
         {
-            return Relative_string::format_to(diagnostics_buffer, fmt, std::forward<Args>(args)...);
+            return Relative_string::format_to(
+                m_diagnostics_buffer, fmt, std::forward<Args>(args)...);
         }
-
-        auto make_diagnostic(Diagnostic_arguments const&) -> Diagnostic;
     };
 
 } // namespace utl::diag

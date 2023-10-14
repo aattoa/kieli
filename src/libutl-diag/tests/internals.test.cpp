@@ -7,7 +7,6 @@
 TEST("get_relevant_lines")
 {
     using Lines = std::vector<std::string_view>;
-
     REQUIRE(
         utl::diag::internal::get_relevant_lines("hello, world!", { 1, 2 }, { 1, 5 })
         == Lines { "hello, world!" });
