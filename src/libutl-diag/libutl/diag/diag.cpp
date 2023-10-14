@@ -7,7 +7,54 @@ namespace {
     {
         return position.line != 0 && position.column != 0;
     }
+
+    auto level_color(utl::diag::Level const level, utl::diag::Colors const colors) noexcept
+        -> utl::Color
+    {
+        switch (level) {
+        case utl::diag::Level::error:
+            return colors.error;
+        case utl::diag::Level::warning:
+            return colors.warning;
+        case utl::diag::Level::note:
+            return colors.note;
+        default:
+            utl::unreachable();
+        }
+    }
+
+    auto level_string(utl::diag::Level const level) noexcept -> std::string_view
+    {
+        switch (level) {
+        case utl::diag::Level::error:
+            return "Error";
+        case utl::diag::Level::warning:
+            return "Warning";
+        case utl::diag::Level::note:
+            return "Note";
+        default:
+            utl::unreachable();
+        }
+    }
+
+    auto format_section(utl::diag::Text_section const& section, std::string& output) -> void
+    {
+        (void)section;
+        (void)output;
+        utl::todo();
+    }
 } // namespace
+
+auto utl::diag::Colors::defaults() noexcept -> Colors
+{
+    return Colors {
+        .normal        = Color::white,
+        .error         = Color::red,
+        .warning       = Color::dark_yellow,
+        .note          = Color::cyan,
+        .position_info = Color::dark_cyan,
+    };
+}
 
 auto utl::diag::internal::get_relevant_lines(
     std::string_view const source_string, Position const section_start, Position const section_stop)
@@ -47,8 +94,40 @@ auto utl::diag::internal::get_relevant_lines(
     return lines;
 }
 
-auto utl::diag::Context::make_diagnostic(Diagnostic_arguments const& arguments) -> Diagnostic
+auto utl::diag::Context::format_diagnostic(
+    Diagnostic const& diagnostic, std::string& output, Colors const colors) -> void
 {
-    (void)arguments;
-    utl::todo();
+    auto const original_output_size = output.size();
+    try {
+        std::format_to(
+            std::back_inserter(output),
+            "{}{}:{} {}",
+            level_color(diagnostic.level, colors),
+            level_string(diagnostic.level),
+            colors.normal,
+            diagnostic.message.view_in(m_diagnostics_buffer));
+
+        for (Text_section const& section : diagnostic.text_sections) {
+            format_section(section, output);
+        }
+
+        if (diagnostic.help_note.has_value()) {
+            std::format_to(
+                std::back_inserter(output),
+                "\n\n{}",
+                diagnostic.help_note->view_in(m_diagnostics_buffer));
+        }
+    }
+    catch (...) {
+        output.resize(original_output_size);
+        throw;
+    }
+}
+
+auto utl::diag::Context::format_diagnostic(Diagnostic const& diagnostic, Colors const colors)
+    -> std::string
+{
+    auto output = utl::string_with_capacity(64);
+    format_diagnostic(diagnostic, output, colors);
+    return output;
 }
