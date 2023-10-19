@@ -1,7 +1,0 @@
-language version: 0
-source directory: src
-stack capacity: 1048576 // 2 ^ 20
-name: 
-version: 
-authors: 
-created: 16-06-2022

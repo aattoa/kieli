@@ -1,5 +1,0 @@
-import "int.kieli"
-
-fn f() {
-    let _: Int = std::id(5);
-}
