@@ -3,7 +3,6 @@
 #include <libutl/common/timer.hpp>
 #include <libutl/readline/readline.hpp>
 #include <libutl/color/color.hpp>
-#include <libutl/cli/cli.hpp>
 #include <liblex/lex.hpp>
 #include <libparse/parse.hpp>
 #include <libparse/parser_internals.hpp>
@@ -11,6 +10,7 @@
 #include <libresolve/resolve.hpp>
 #include <libresolve/resolution_internals.hpp>
 #include <libformat/format.hpp>
+#include <cppargs.hpp>
 
 namespace {
 
@@ -93,36 +93,37 @@ namespace {
 
 auto main(int argc, char const** argv) -> int
 try {
-    cli::Options_description description;
-    description.add_options()({ "help", 'h' }, "Show this text");
-    description.add_options()({ "version", 'v' }, "Show kieli version");
-    description.add_options()("repl", cli::string("repl to run"), "Run the given repl");
-    description.add_options()("debug", cli::string("phase to debug"));
-    description.add_options()("nocolor", "Disable colored output");
-    description.add_options()("time", "Print the execution time");
+    cppargs::Parameters parameters;
 
-    cli::Options options = utl::expect(cli::parse_command_line(argc, argv, description));
+    auto const help_flag    = parameters.add('h', "help", "Show this help text");
+    auto const version_flag = parameters.add('v', "version", "Show Kieli version");
+    auto const nocolor_flag = parameters.add("nocolor", "Disable colored output");
+    auto const time_flag    = parameters.add("time", "Print the execution time");
+    auto const repl_option  = parameters.add<std::string_view>("repl", "Run the given REPL");
+    auto const debug_option = parameters.add<std::string_view>("debug", "Debug the given phase");
 
-    utl::Logging_timer const execution_timer { [&options](auto const elapsed) {
-        if (options["time"]) {
+    cppargs::Arguments arguments = cppargs::parse({ argv, argv + argc }, parameters);
+
+    utl::Logging_timer const execution_timer { [&](auto const elapsed) {
+        if (arguments[time_flag]) {
             utl::print("Total execution time: {}\n", elapsed);
         }
     } };
 
-    if (options["nocolor"]) {
+    if (arguments[nocolor_flag]) {
         utl::set_color_formatting_state(false);
     }
 
-    if (options["help"]) {
-        utl::print("Valid options:\n\n{}\n", cli::to_string(description));
+    if (arguments[help_flag]) {
+        utl::print("Valid options:\n{}", parameters.help_string());
         return EXIT_SUCCESS;
     }
 
-    if (options["version"]) {
+    if (arguments[version_flag]) {
         utl::print("kieli version 0, compiled on " __DATE__ ", " __TIME__ ".\n");
     }
 
-    if (std::string_view const* const phase = options["debug"]) {
+    if (auto const phase = arguments[debug_option]) {
         auto source_directory_path
             = std::filesystem::current_path().parent_path() / "sample-project" / "src";
 
@@ -149,7 +150,7 @@ try {
         utl::print("Finished debugging phase {}\n", *phase);
     }
 
-    if (std::string_view const* const name = options["repl"]) {
+    if (auto const name = arguments[repl_option]) {
         utl::Flatmap<std::string_view, void (*)()> const repls { {
             { "lex", lexer_repl },
             { "expr", expression_parser_repl },
@@ -168,10 +169,6 @@ try {
     return EXIT_SUCCESS;
 }
 
-catch (cli::Unrecognized_option const& exception) {
-    std::cerr << exception.what() << "; use --help to see a list of valid options\n";
-    return EXIT_FAILURE;
-}
 catch (utl::diagnostics::Error const& error) {
     std::cerr << error.what() << '\n';
     return EXIT_FAILURE;
