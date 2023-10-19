@@ -40,9 +40,13 @@ FetchContent_Declare(
     Catch2
     GIT_REPOSITORY https://github.com/catchorg/Catch2.git
     GIT_TAG        766541d12d64845f5232a1ce4e34a85e83506b09)
+FetchContent_Declare(
+    cppargs
+    GIT_REPOSITORY https://github.com/aattoa/cppargs.git
+    GIT_TAG        e5d9d6a2d56122f7ad55091e8e1e46fbba1684ef)
 
 set(EXPECTED_BUILD_TESTS OFF)
-FetchContent_MakeAvailable(expected range-v3)
+FetchContent_MakeAvailable(expected range-v3 cppargs)
 
 # Build kieli tests by default
 option(KIELI_BUILD_TESTS "Build kieli tests" ON)
@@ -111,5 +115,6 @@ target_link_libraries(debug-kieli
     PRIVATE libparse
     PRIVATE libdesugar
     PRIVATE libresolve
-    PRIVATE libformat)
+    PRIVATE libformat
+    PRIVATE cppargs)
 kieli_consume_libutl_common(debug-kieli)

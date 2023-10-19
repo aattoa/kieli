@@ -7,6 +7,8 @@ This is a work in progress, and can not be used for anything yet.
 
 Dependencies are installed automatically with CMake's `FetchContent` functionality.
 
+- https://github.com/aattoa/cppargs
+    - Required, for the command line interface
 - https://github.com/ericniebler/range-v3
     - Required, until `std::ranges` is properly supported by compilers
 - https://github.com/TartanLlama/expected
