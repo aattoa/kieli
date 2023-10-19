@@ -1,10 +1,6 @@
 add_library(libutl-common STATIC)
 
-target_include_directories(libutl-common
-    PUBLIC .
-    PUBLIC ${PROJECT_SOURCE_DIR}/dependencies/range-v3/include
-    PUBLIC ${PROJECT_SOURCE_DIR}/dependencies/optional/include
-    PUBLIC ${PROJECT_SOURCE_DIR}/dependencies/expected/include)
+target_include_directories(libutl-common PUBLIC .)
 
 target_sources(libutl-common
     PRIVATE libutl/common/flatmap.hpp
@@ -17,6 +13,10 @@ target_sources(libutl-common
     PRIVATE libutl/common/utilities.cpp
     PRIVATE libutl/common/utilities.hpp
     PRIVATE libutl/common/wrapper.hpp)
+
+target_link_libraries(libutl-common
+    PUBLIC range-v3
+    PUBLIC tl::expected)
 
 target_precompile_headers(libutl-common
     PUBLIC libutl/common/utilities.hpp)
