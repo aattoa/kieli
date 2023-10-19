@@ -5,35 +5,40 @@ This is a work in progress, and can not be used for anything yet.
 
 ## Dependencies
 
-* https://github.com/ericniebler/range-v3
-    - Required, until `std::ranges` is properly supported
-* https://github.com/TartanLlama/expected
-    - Required, until `std::expected` is properly supported
-* https://github.com/catchorg/Catch2
+Dependencies are installed automatically with CMake's `FetchContent` functionality.
+
+- https://github.com/ericniebler/range-v3
+    - Required, until `std::ranges` is properly supported by compilers
+- https://github.com/TartanLlama/expected
+    - Required, until `std::expected` is properly supported by compilers
+- https://github.com/catchorg/Catch2
     - Optional, only for tests
 
 ## Building Kieli
 
-Requirements: make, CMake, and any C++23 compliant C++ toolchain.
+Prerequisites:
+
+- CMake
+- A build system, such as GNU make or Ninja
+- A `C++23` compliant C++ toolchain
 
 Run the following commands to clone and build Kieli and its dependencies:
 
 ```Shell
 git clone https://github.com/aattoa/kieli.git
 cd kieli
-make
+cmake -S . -B build
+cmake --build build -j 8
 ```
 
 These build steps have been tested with the following:
 
-* CMake `3.27.7`
-* Build systems: Ninja `1.11.1`, GNU Make `4.4.1`
-* Compilers: clang `16.0.6`, GCC `13.2.1`
+- CMake `3.27.7`
+- Build systems: Ninja `1.11.1`, GNU Make `4.4.1`
+- Compilers: clang `16.0.6`, GCC `13.2.1`
 
 ## Tests
 
-Tests can be enabled with the CMake option `KIELI_BUILD_TESTS`, i.e. `-DKIELI_BUILD_TESTS=ON`.
+Tests are enabled by default, but can disabled with the CMake option `KIELI_BUILD_TESTS`, i.e. `-DKIELI_BUILD_TESTS=OFF`.
 
-This requires Catch2 `>=3.0` to be installed on your system.
-
-To build and run tests with the default configuration, simply run `make test`.
+To run all tests associated with a build, build the `test` target with your build system of choice.

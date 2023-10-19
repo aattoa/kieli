@@ -26,11 +26,29 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
     add_compile_options(-fsized-deallocation)
 endif ()
 
-# Make default build easier by not building tests by default
-option(KIELI_BUILD_TESTS "Build kieli tests" OFF)
+# External dependencies
+include(FetchContent)
+FetchContent_Declare(
+    expected
+    GIT_REPOSITORY https://github.com/TartanLlama/expected.git
+    GIT_TAG        3f0ca7b19253129700a073abfa6d8638d9f7c80c)
+FetchContent_Declare(
+    range-v3
+    GIT_REPOSITORY https://github.com/ericniebler/range-v3.git
+    GIT_TAG        9aa41d6b8ded2cf5e8007e66a0efd1ab33dbf9a5)
+FetchContent_Declare(
+    Catch2
+    GIT_REPOSITORY https://github.com/catchorg/Catch2.git
+    GIT_TAG        766541d12d64845f5232a1ce4e34a85e83506b09)
+
+set(EXPECTED_BUILD_TESTS OFF)
+FetchContent_MakeAvailable(expected range-v3)
+
+# Build kieli tests by default
+option(KIELI_BUILD_TESTS "Build kieli tests" ON)
 
 if (${KIELI_BUILD_TESTS})
-    find_package(Catch2 3 REQUIRED)
+    FetchContent_MakeAvailable(Catch2)
     include(CTest)
     include(Catch)
 endif ()
