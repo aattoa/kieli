@@ -25,9 +25,8 @@
     3. only then generalize the return type
 
 ## Redesign
-- libutl-cli &rarr; libcli
 - libutl-diagnostics &rarr; libdiag
-- Use a separate name resolution phase before semantic analysis to enable last use analysis etc.?
+- libname
 
 ## Build process
 - Profile compilation with `-ftime-trace`

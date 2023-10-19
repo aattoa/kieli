@@ -95,7 +95,6 @@ add_subdirectory(src/libutl-common)
 add_subdirectory(src/libutl-readline)
 add_subdirectory(src/libutl-source)
 add_subdirectory(src/libutl-color)
-add_subdirectory(src/libutl-cli)
 add_subdirectory(src/libutl-diagnostics)
 add_subdirectory(src/libutl-diag)
 add_subdirectory(src/libphase)
@@ -107,7 +106,6 @@ add_subdirectory(src/libformat)
 
 add_executable(debug-kieli src/main.cpp)
 target_link_libraries(debug-kieli
-    PRIVATE libutl-cli
     PRIVATE libutl-color
     PRIVATE libutl-readline
     PRIVATE libutl-diag
