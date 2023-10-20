@@ -138,5 +138,6 @@ BitFieldColonSpacing: Both
 Standard: c++20
 TabWidth: 4
 UseTab: Never
+PenaltyReturnTypeOnItsOwnLine: 1000
 ...
 

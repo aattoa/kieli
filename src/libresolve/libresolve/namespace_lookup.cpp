@@ -12,8 +12,8 @@ namespace {
                             : "The global namespace";
     }
 
-    [[noreturn]] auto
-    relative_lookup_error(Context& context, kieli::Name_dynamic const erroneous_name) -> void
+    [[noreturn]] auto relative_lookup_error(
+        Context& context, kieli::Name_dynamic const erroneous_name) -> void
     {
         context.error(
             erroneous_name.source_view,
@@ -54,9 +54,8 @@ namespace {
     }
 
     // Returns nullptr if the qualifier couldn't be applied
-    auto
-    apply_qualifier(Context& context, Scope& scope, Namespace& space, ast::Qualifier& qualifier)
-        -> Namespace*
+    auto apply_qualifier(
+        Context& context, Scope& scope, Namespace& space, ast::Qualifier& qualifier) -> Namespace*
     {
         if (qualifier.name.is_upper.get()) {
             if (auto* const item = space.upper_table.find(qualifier.name.identifier)) {

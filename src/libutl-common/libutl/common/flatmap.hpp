@@ -62,12 +62,11 @@ namespace utl {
         template <class K, class V>
         constexpr auto add_new_unchecked(K&& key, V&& value) & -> Value&
             requires std::constructible_from<Key, K> && std::constructible_from<Value, V>
-                  && (utl::compiling_in_release_mode
-                      || std::is_invocable_r_v<
-                          bool,
-                          Key_equal &&,
-                          Key const&,
-                          decltype(std::as_const(key))>)
+                  && std::is_invocable_r_v<
+                         bool,
+                         Key_equal&&,
+                         Key const&,
+                         decltype(std::as_const(key))>
         {
             assert(find(std::as_const(key)) == nullptr);
             return m_container.emplace_back(std::forward<K>(key), std::forward<V>(value)).second;
@@ -88,8 +87,8 @@ namespace utl {
         }
 
         template <class K>
-        [[nodiscard]] constexpr auto
-        find(K const& key) noexcept(noexcept(const_cast<Flatmap const*>(this)->find(key))) -> Value*
+        [[nodiscard]] constexpr auto find(K const& key) noexcept(
+            noexcept(const_cast<Flatmap const*>(this)->find(key))) -> Value*
             requires requires { const_cast<Flatmap const*>(this)->find(key); }
         {
             return const_cast<Value*>(const_cast<Flatmap const*>(this)->find(key));

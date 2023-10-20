@@ -24,10 +24,10 @@ namespace utl {
         black,
         white,
 
-        _enumerator_count
+        _enumerator_count,
     };
 
-    auto color_string(utl::Color) noexcept -> std::string_view;
+    [[nodiscard]] auto color_string(Color) noexcept -> std::string_view;
 
     auto set_color_formatting_state(bool) noexcept -> void;
 

@@ -24,7 +24,7 @@ Prerequisites:
 - A build system, such as GNU make or Ninja
 - A `C++23` compliant C++ toolchain
 
-Run the following commands to clone and build Kieli and its dependencies:
+Run the following commands to clone and build Kieli:
 
 ```Shell
 git clone https://github.com/aattoa/kieli.git

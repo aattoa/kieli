@@ -33,7 +33,7 @@ namespace {
 
     auto xdg_state_home_filename() -> std::optional<std::filesystem::path>
     {
-        static constexpr auto filename = ".kieli_history";
+        static constexpr auto filename = ".kieli_history"sv;
         if (char const* const state_home = std::getenv("XDG_STATE_HOME")) {
             return std::filesystem::path { state_home } / filename;
         }

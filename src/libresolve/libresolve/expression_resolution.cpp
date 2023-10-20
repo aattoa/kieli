@@ -255,8 +255,8 @@ namespace {
             };
         }
 
-        auto
-        resolve_invocation(hir::Expression&& invocable, std::vector<hir::Expression>&& arguments)
+        auto resolve_invocation(
+            hir::Expression&& invocable, std::vector<hir::Expression>&& arguments)
             -> hir::Expression
         {
             if (auto* const function

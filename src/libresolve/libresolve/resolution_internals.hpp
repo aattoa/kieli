@@ -384,8 +384,8 @@ namespace libresolve {
 
         // Returns a scope with local bindings for the template parameters and the HIR
         // representations of the parameters themselves.
-        [[nodiscard]] auto
-        resolve_template_parameters(std::span<ast::Template_parameter>, Namespace&)
+        [[nodiscard]] auto resolve_template_parameters(
+            std::span<ast::Template_parameter>, Namespace&)
             -> utl::Pair<Scope, std::vector<hir::Template_parameter>>;
 
         // Returns the signature of the function. Resolves the function body only if the return type
@@ -416,9 +416,8 @@ namespace libresolve {
             -> hir::Alias_template&;
         [[nodiscard]] auto resolve_typeclass_template(utl::Wrapper<Typeclass_template_info>)
             -> hir::Typeclass_template&;
-        [[nodiscard]] auto
-            resolve_implementation_template(utl::Wrapper<Implementation_template_info>)
-                -> hir::Implementation_template&;
+        [[nodiscard]] auto resolve_implementation_template(
+            utl::Wrapper<Implementation_template_info>) -> hir::Implementation_template&;
         [[nodiscard]] auto resolve_instantiation_template(utl::Wrapper<Instantiation_template_info>)
             -> hir::Instantiation_template&;
 

@@ -1,13 +1,9 @@
 #include <libutl/common/utilities.hpp>
 #include <libutl/color/color.hpp>
 
-namespace {
-    constinit bool color_formatting_state = true;
-}
-
 #ifdef _WIN32
 
-// Copied the necessary declarations from Windows.h. This allows not #including it,
+// Copied the necessary declarations from <Windows.h>. This allows not #including it,
 // which would fail to compile because it requires some MS-specific compiler extensions.
 
 extern "C" {
@@ -26,41 +22,44 @@ BOOL __declspec(dllimport) GetConsoleMode(HANDLE, LPDWORD);
 #define INVALID_HANDLE_VALUE               ((HANDLE)(LONG_PTR)-1)
 #define ENABLE_VIRTUAL_TERMINAL_PROCESSING 0x0004
 
+#endif
+
 namespace {
+    constinit bool color_formatting_state = true;
+
+    // Enable colored output in cmd.exe on Windows
     auto enable_virtual_terminal_processing() -> void
     {
-        static bool has_been_enabled = false;
+#ifdef _WIN32
+        static thread_local bool has_been_enabled = false;
 
-        if (!has_been_enabled) {
-            has_been_enabled = true;
-
-            // If the win32api calls fail, silently fall back and disable color formatting
-
-            HANDLE const console = GetStdHandle(STD_OUTPUT_HANDLE);
-            if (console == INVALID_HANDLE_VALUE) {
-                color_formatting_state = false;
-                return;
-            }
-
-            DWORD mode;
-            if (!GetConsoleMode(console, &mode)) {
-                color_formatting_state = false;
-                return;
-            }
-
-            if (!(mode & ENABLE_VIRTUAL_TERMINAL_PROCESSING)) {
-                if (!SetConsoleMode(console, mode | ENABLE_VIRTUAL_TERMINAL_PROCESSING)) {
-                    color_formatting_state = false;
-                    return;
-                }
-            }
+        if (has_been_enabled) {
+            return;
         }
+        has_been_enabled = true;
+
+        // If the win32api calls fail, silently fall back and disable color formatting
+
+        HANDLE const console = GetStdHandle(STD_OUTPUT_HANDLE);
+        if (console == INVALID_HANDLE_VALUE) {
+            color_formatting_state = false;
+            return;
+        }
+
+        DWORD mode;
+        if (!GetConsoleMode(console, &mode)) {
+            color_formatting_state = false;
+            return;
+        }
+        if (mode & ENABLE_VIRTUAL_TERMINAL_PROCESSING) {
+            return;
+        }
+        if (!SetConsoleMode(console, mode | ENABLE_VIRTUAL_TERMINAL_PROCESSING)) {
+            color_formatting_state = false;
+        }
+#endif
     }
 } // namespace
-
-#else
-#define enable_virtual_terminal_processing() ((void)0)
-#endif
 
 auto utl::color_string(utl::Color const color) noexcept -> std::string_view
 {
