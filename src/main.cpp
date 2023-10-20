@@ -102,7 +102,7 @@ try {
     auto const repl_option  = parameters.add<std::string_view>("repl", "Run the given REPL");
     auto const debug_option = parameters.add<std::string_view>("debug", "Debug the given phase");
 
-    cppargs::Arguments arguments = cppargs::parse({ argv, argv + argc }, parameters);
+    cppargs::Arguments arguments = cppargs::parse(argc, argv, parameters);
 
     utl::Logging_timer const execution_timer { [&](auto const elapsed) {
         if (arguments[time_flag]) {
