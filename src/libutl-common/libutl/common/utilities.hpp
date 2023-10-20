@@ -33,6 +33,7 @@
 #include <tuple>
 #include <variant>
 #include <optional>
+#include <tl/expected.hpp>
 
 #include <string>
 #include <format>
@@ -41,12 +42,7 @@
 
 #include <numeric>
 #include <algorithm>
-
 #include <range/v3/all.hpp>
-#include <tl/expected.hpp>
-
-// 8-bit bytes are assumed
-static_assert(CHAR_BIT == 8);
 
 // A tag to search for when C++23 EOP are supported
 #define APPLY_EXPLICIT_OBJECT_PARAMETER_HERE
@@ -78,8 +74,8 @@ namespace utl {
     };
 
     template <std::integral To, std::integral From>
-    [[nodiscard]] constexpr auto
-    safe_cast(From const from) noexcept(losslessly_convertible_to<From, To>) -> To
+    [[nodiscard]] constexpr auto safe_cast(From const from) noexcept(
+        losslessly_convertible_to<From, To>) -> To
     {
         if constexpr (losslessly_convertible_to<From, To>) {
             return static_cast<To>(from);
@@ -193,32 +189,6 @@ namespace utl {
     template <class T>
     constexpr bool always_false = dtl::Always_false<T>::value;
 
-    template <class E>
-        requires std::is_enum_v<E> && requires { E::_enumerator_count; }
-    constexpr Usize enumerator_count = static_cast<Usize>(E::_enumerator_count);
-
-    template <class E, E min = E {}, E max = E::_enumerator_count>
-    [[nodiscard]] constexpr auto is_valid_enumerator(E const e) noexcept -> bool
-        requires std::is_enum_v<E>
-    {
-        return min <= e && max > e;
-    }
-
-    [[nodiscard]] constexpr auto as_index(auto const e) noexcept -> Usize
-        requires requires { is_valid_enumerator(e); }
-    {
-        assert(is_valid_enumerator(e));
-        return static_cast<Usize>(e);
-    }
-
-    inline constexpr bool compiling_in_debug_mode =
-#ifdef NDEBUG
-        false;
-#else
-        true;
-#endif
-    inline constexpr bool compiling_in_release_mode = !compiling_in_debug_mode;
-
     class [[nodiscard]] Exception : public std::exception {
         std::string m_message;
     public:
@@ -235,13 +205,7 @@ namespace utl {
     template <class... Args>
     auto print(std::format_string<Args...> const fmt, Args&&... args) -> void
     {
-        if constexpr (sizeof...(Args) == 0) {
-            std::cout << fmt.get();
-        }
-        else {
-            std::format_to(
-                std::ostreambuf_iterator { std::cout }, fmt, std::forward<Args>(args)...);
-        }
+        std::format_to(std::ostreambuf_iterator { std::cout }, fmt, std::forward<Args>(args)...);
     }
 
     [[noreturn]] auto abort(
@@ -252,10 +216,27 @@ namespace utl {
 
     [[noreturn]] auto unreachable(std::source_location = std::source_location::current()) -> void;
 
-    auto always_assert(bool condition, std::source_location = std::source_location::current())
-        -> void;
-
     auto trace(std::source_location = std::source_location::current()) -> void;
+
+    auto always_assert(bool, std::source_location = std::source_location::current()) -> void;
+
+    template <class E>
+        requires std::is_enum_v<E> && requires { E::_enumerator_count; }
+    constexpr Usize enumerator_count = static_cast<Usize>(E::_enumerator_count);
+
+    template <class E, E min = E {}, E max = E::_enumerator_count>
+    [[nodiscard]] constexpr auto is_valid_enumerator(E const e) noexcept -> bool
+        requires std::is_enum_v<E>
+    {
+        return min <= e && max > e;
+    }
+
+    [[nodiscard]] constexpr auto as_index(auto const e) noexcept -> Usize
+        requires requires { is_valid_enumerator(e); }
+    {
+        always_assert(is_valid_enumerator(e));
+        return static_cast<Usize>(e);
+    }
 
     template <class Fst, class Snd = Fst>
     struct [[nodiscard]] Pair {
@@ -407,8 +388,8 @@ namespace utl {
     constexpr bool variant_has_alternative = Variant_has_alternative<Variant, Alternative>::value;
 
     template <class T, class V>
-    [[nodiscard]] constexpr decltype(auto)
-    get(V&& variant, std::source_location const caller = std::source_location::current()) noexcept
+    [[nodiscard]] constexpr decltype(auto) get(
+        V&& variant, std::source_location const caller = std::source_location::current()) noexcept
         requires requires { std::get_if<T>(&variant); }
     {
         if (auto* const alternative = std::get_if<T>(&variant)) [[likely]] {
@@ -420,8 +401,8 @@ namespace utl {
     }
 
     template <Usize n, class V>
-    [[nodiscard]] constexpr decltype(auto)
-    get(V&& variant, std::source_location const caller = std::source_location::current()) noexcept
+    [[nodiscard]] constexpr decltype(auto) get(
+        V&& variant, std::source_location const caller = std::source_location::current()) noexcept
         requires requires { std::get_if<n>(&variant); }
     {
         return ::utl::get<std::variant_alternative_t<n, std::remove_cvref_t<V>>>(
@@ -429,8 +410,8 @@ namespace utl {
     }
 
     template <class O>
-    [[nodiscard]] constexpr decltype(auto)
-    get(O&& optional, std::source_location const caller = std::source_location::current()) noexcept
+    [[nodiscard]] constexpr decltype(auto) get(
+        O&& optional, std::source_location const caller = std::source_location::current()) noexcept
         requires requires { optional.has_value(); }
     {
         if (optional.has_value()) [[likely]] {
@@ -466,17 +447,6 @@ namespace utl {
             abort("utl::match was invoked with a valueless variant");
         }
         return std::visit(Overload { std::forward<Arms>(arms)... }, std::forward<Variant>(variant));
-    }
-
-    template <class Ok, std::derived_from<std::exception> Err>
-    constexpr auto expect(tl::expected<Ok, Err>&& expected) -> Ok&&
-    {
-        if (expected) {
-            return std::move(*expected);
-        }
-        else {
-            throw std::move(expected.error());
-        }
     }
 
     template <std::invocable Callback>
@@ -651,8 +621,8 @@ namespace utl {
         [[nodiscard]] auto view_in(std::string_view) const -> std::string_view;
 
         template <class... Args>
-        static auto
-        format_to(std::string& string, std::format_string<Args...> const fmt, Args&&... args)
+        static auto format_to(
+            std::string& string, std::format_string<Args...> const fmt, Args&&... args)
             -> Relative_string
         {
             Usize const old_size = string.size();

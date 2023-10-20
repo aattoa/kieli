@@ -5,8 +5,8 @@ using namespace libresolve;
 
 namespace {
 
-    [[nodiscard]] auto
-    is_implementation_for(Context& context, hir::Type const self, hir::Type const inspected) -> bool
+    [[nodiscard]] auto is_implementation_for(
+        Context& context, hir::Type const self, hir::Type const inspected) -> bool
     {
         return context.pure_equality_compare(self, inspected);
     }

@@ -5,9 +5,8 @@ namespace {
 
     using namespace libparse;
 
-    auto
-    extract_qualified_typename(Parse_context& context, std::optional<cst::Root_qualifier>&& root)
-        -> cst::Type::Variant
+    auto extract_qualified_typename(
+        Parse_context& context, std::optional<cst::Root_qualifier>&& root) -> cst::Type::Variant
     {
         Lexical_token const* const anchor = context.pointer;
         auto                       name   = extract_qualified(context, std::move(root));

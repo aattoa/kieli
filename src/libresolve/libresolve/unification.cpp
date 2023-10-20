@@ -7,8 +7,8 @@ namespace {
 
     struct Wrapper_shallow_equality {
         template <class T>
-        [[nodiscard]] auto
-        operator()(utl::Wrapper<T> const l, utl::Wrapper<T> const r) const noexcept -> bool
+        [[nodiscard]] auto operator()(
+            utl::Wrapper<T> const l, utl::Wrapper<T> const r) const noexcept -> bool
         {
             return l.is(r);
         }

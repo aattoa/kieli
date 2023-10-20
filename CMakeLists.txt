@@ -16,7 +16,10 @@ if (MSVC)
         "/wd4063") # Invalid value for switch
 else ()
     add_compile_options(
-        "-Wall" "-Wextra" "-Wpedantic"
+        "-Wall"
+        "-Wextra"
+        "-Wpedantic"
+        "-Werror"
         "-Wno-missing-field-initializers"
         "-Wno-switch")
 endif ()
@@ -46,6 +49,7 @@ FetchContent_Declare(
     GIT_TAG        e5d9d6a2d56122f7ad55091e8e1e46fbba1684ef)
 
 set(EXPECTED_BUILD_TESTS OFF)
+set(CPPARGS_BUILD_TESTS OFF)
 FetchContent_MakeAvailable(expected range-v3 cppargs)
 
 # Build kieli tests by default

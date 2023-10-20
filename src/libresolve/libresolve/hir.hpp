@@ -636,13 +636,11 @@ namespace hir {
     public:
         explicit Unification_type_variable_state(Unsolved&&) noexcept;
 
-        auto solve_with(Type solution) -> void;
-        [[nodiscard]] auto
-            as_unsolved(std::source_location = std::source_location::current()) noexcept
-            -> Unsolved&;
-        [[nodiscard]] auto
-            as_unsolved(std::source_location = std::source_location::current()) const noexcept
-            -> Unsolved const&;
+        auto               solve_with(Type solution) -> void;
+        [[nodiscard]] auto as_unsolved(
+            std::source_location = std::source_location::current()) noexcept -> Unsolved&;
+        [[nodiscard]] auto as_unsolved(std::source_location = std::source_location::current())
+            const noexcept -> Unsolved const&;
         [[nodiscard]] auto as_solved_if() noexcept -> Solved*;
         [[nodiscard]] auto as_solved_if() const noexcept -> Solved const*;
     };
@@ -661,13 +659,11 @@ namespace hir {
     public:
         explicit Unification_mutability_variable_state(Unsolved&&) noexcept;
 
-        auto solve_with(Mutability solution) -> void;
-        [[nodiscard]] auto
-            as_unsolved(std::source_location = std::source_location::current()) noexcept
-            -> Unsolved&;
-        [[nodiscard]] auto
-            as_unsolved(std::source_location = std::source_location::current()) const noexcept
-            -> Unsolved const&;
+        auto               solve_with(Mutability solution) -> void;
+        [[nodiscard]] auto as_unsolved(
+            std::source_location = std::source_location::current()) noexcept -> Unsolved&;
+        [[nodiscard]] auto as_unsolved(std::source_location = std::source_location::current())
+            const noexcept -> Unsolved const&;
         [[nodiscard]] auto as_solved_if() noexcept -> Solved*;
         [[nodiscard]] auto as_solved_if() const noexcept -> Solved const*;
     };
