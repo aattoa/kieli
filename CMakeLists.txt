@@ -46,7 +46,7 @@ FetchContent_Declare(
 FetchContent_Declare(
     cppargs
     GIT_REPOSITORY https://github.com/aattoa/cppargs.git
-    GIT_TAG        e5d9d6a2d56122f7ad55091e8e1e46fbba1684ef)
+    GIT_TAG        1bbcf103b1ea99eaa8477c7c0e75c7986aede49d)
 
 set(EXPECTED_BUILD_TESTS OFF)
 set(CPPARGS_BUILD_TESTS OFF)
