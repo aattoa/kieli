@@ -25,7 +25,7 @@
     3. only then generalize the return type
 
 ## Redesign
-- libutl-diagnostics &rarr; libdiag
+- Remove libutl-diagnostics and use cppdiag instead
 - libname
 
 ## Build process
