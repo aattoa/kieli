@@ -26,7 +26,7 @@ endif ()
 
 # Enable sized deallocation functions on Clang
 if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-    add_compile_options(-fsized-deallocation)
+    add_compile_options("-fsized-deallocation")
 endif ()
 
 # External dependencies
@@ -46,11 +46,16 @@ FetchContent_Declare(
 FetchContent_Declare(
     cppargs
     GIT_REPOSITORY https://github.com/aattoa/cppargs.git
-    GIT_TAG        1bbcf103b1ea99eaa8477c7c0e75c7986aede49d)
+    GIT_TAG        41efd63095008de1ac151202b6e02327c5344b92)
+FetchContent_Declare(
+    cppdiag
+    GIT_REPOSITORY https://github.com/aattoa/cppdiag.git
+    GIT_TAG        19f0658a4d667e870b64899ffe36dd21138632e3)
 
 set(EXPECTED_BUILD_TESTS OFF)
 set(CPPARGS_BUILD_TESTS OFF)
-FetchContent_MakeAvailable(expected range-v3 cppargs)
+set(CPPDIAG_BUILD_TESTS OFF)
+FetchContent_MakeAvailable(expected range-v3 cppargs cppdiag)
 
 # Build kieli tests by default
 option(KIELI_BUILD_TESTS "Build kieli tests" ON)
@@ -116,5 +121,6 @@ target_link_libraries(debug-kieli
     PRIVATE libdesugar
     PRIVATE libresolve
     PRIVATE libformat
-    PRIVATE cppargs)
+    PRIVATE cppargs
+    PRIVATE cppdiag)
 kieli_consume_libutl_common(debug-kieli)
