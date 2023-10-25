@@ -327,9 +327,6 @@ namespace utl {
 
     auto filename_without_path(std::string_view path) noexcept -> std::string_view;
 
-    inline constexpr auto size
-        = [](auto const& x) noexcept(noexcept(std::size(x))) -> Usize { return std::size(x); };
-
     template <class T>
     constexpr auto make = []<class... Args>(Args&&... args) noexcept(
                               std::is_nothrow_constructible_v<T, Args&&...>) -> T {
@@ -422,18 +419,6 @@ namespace utl {
         }
     }
 
-    template <class O>
-    [[nodiscard]] constexpr auto value_or_default(O&& optional)
-        requires requires { optional.has_value(); }
-    {
-        if (optional.has_value()) {
-            return bootleg::forward_like<O>(*optional);
-        }
-        else {
-            return typename std::remove_cvref_t<O>::value_type {};
-        }
-    }
-
     [[nodiscard]] constexpr auto visitable(auto const&... variants) noexcept -> bool
     {
         return (!variants.valueless_by_exception() && ...);
@@ -447,29 +432,6 @@ namespace utl {
             abort("utl::match was invoked with a valueless variant");
         }
         return std::visit(Overload { std::forward<Arms>(arms)... }, std::forward<Variant>(variant));
-    }
-
-    template <std::invocable Callback>
-    class [[nodiscard]] Scope_success_handler {
-        Callback callback;
-        int      exception_count;
-    public:
-        explicit Scope_success_handler(Callback callback)
-            : callback { std::move(callback) }
-            , exception_count { std::uncaught_exceptions() }
-        {}
-
-        ~Scope_success_handler() noexcept(std::is_nothrow_invocable_v<Callback>)
-        {
-            if (exception_count == std::uncaught_exceptions()) {
-                std::invoke(callback);
-            }
-        }
-    };
-
-    auto on_scope_success(std::invocable auto callback)
-    {
-        return Scope_success_handler { std::move(callback) };
     }
 
     template <std::invocable Callback>
@@ -558,28 +520,15 @@ namespace utl {
         return static_cast<Usize>(std::distance(start, stop));
     }
 
-    [[nodiscard]] constexpr auto digit_count(std::integral auto integer) noexcept -> Usize
-    {
-        Usize digits = 0;
-        do {
-            integer /= 10;
-            ++digits;
-        } while (integer != 0);
-        return digits;
-    }
-
     template <
         std::input_or_output_iterator     It,
         std::sentinel_for<It>             Se,
         std::indirect_unary_predicate<It> F>
-    [[nodiscard]] constexpr auto find_nth_if(It it, Se const se, Usize const n, F f) -> It
+    [[nodiscard]] constexpr auto find_nth_if(It it, Se se, Usize const n, F f) -> It
     {
-        for (utl::Usize count = 0;; ++count, ++it) {
-            it = std::find_if(it, se, f);
-            if (it == se || count == n) {
-                return it;
-            }
-        }
+        return ranges::find_if(std::move(it), std::move(se), [&f, n, i = 0](auto const& x) mutable {
+            return f(x) && (i++ == n);
+        });
     }
 
     template <
@@ -611,8 +560,6 @@ namespace utl {
             return map(std::forward<F>(f), std::forward<Vector>(input));
         };
     }
-
-    [[nodiscard]] auto local_time() -> std::chrono::local_time<std::chrono::system_clock::duration>;
 
     struct [[nodiscard]] Relative_string {
         utl::Usize offset {};

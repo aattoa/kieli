@@ -3,6 +3,21 @@
 
 namespace {
 
+    constexpr auto digit_count(std::integral auto integer) noexcept -> utl::Usize
+    {
+        utl::Usize digits = 0;
+        do {
+            integer /= 10;
+            ++digits;
+        } while (integer != 0);
+        return digits;
+    }
+
+    static_assert(digit_count(0) == 1);
+    static_assert(digit_count(-10) == 2);
+    static_assert(digit_count(-999) == 3);
+    static_assert(digit_count(12345) == 5);
+
     auto remove_surrounding_whitespace(std::vector<std::string_view>& lines) -> void
     {
         static constexpr auto prefix_length
@@ -74,13 +89,13 @@ namespace {
     {
         auto const lines
             = lines_of_occurrence(section.source_view.source->string(), section.source_view.string);
-        auto const digit_count = utl::digit_count(section.source_view.stop_position.line);
-        auto       line_number = section.source_view.start_position.line;
+        auto const line_info_width = digit_count(section.source_view.stop_position.line);
+        auto       line_number     = section.source_view.start_position.line;
 
         std::format_to(
             out,
             "{}{} --> {}:{}-{}{}\n",
-            std::string(digit_count, ' '),
+            std::string(line_info_width, ' '),
             utl::diagnostics::line_info_color,
             utl::filename_without_path(section.source_view.source->path().string()),
             section.source_view.start_position,
@@ -89,7 +104,7 @@ namespace {
 
         utl::always_assert(!lines.empty());
         utl::Usize const longest_line_length
-            = ranges::max(lines | ranges::views::transform(utl::size));
+            = ranges::max(ranges::views::transform(lines, [](auto const& x) { return x.size(); }));
 
         for (auto const& line : lines) {
             std::format_to(
@@ -97,7 +112,7 @@ namespace {
                 "\n {}{:<{}} |{} ",
                 utl::diagnostics::line_info_color,
                 line_number++,
-                digit_count,
+                line_info_width,
                 utl::Color::white,
                 line);
 
@@ -152,7 +167,7 @@ namespace {
 
         if (lines.size() == 1) {
             auto whitespace_length
-                = section.source_view.string.size() + digit_count
+                = section.source_view.string.size() + line_info_width
                 + utl::unsigned_distance(lines.front().data(), section.source_view.string.data());
 
             if (section.source_view.string.empty()) {
