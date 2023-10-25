@@ -182,17 +182,11 @@ catch (cppargs::Exception const& exception) {
             .note           = context.message(cppargs::Parse_error_info::kind_to_string(info.kind)),
         } },
         .message   = context.message("Command line parse failure"),
-        .help_note = context.message("Use --help to see a list of valid options\n"),
-        .level     = cppdiag::Level::error,
+        .help_note = context.format_message(
+            "To see a list of valid options, use `{} --help`", *argv ? *argv : "kieli"),
+        .level = cppdiag::Level::error,
     };
-    cppdiag::Colors const colors {
-        .normal        = { .code = utl::color_string(utl::Color::white) },
-        .error         = { .code = utl::color_string(utl::Color::red) },
-        .warning       = { .code = utl::color_string(utl::Color::dark_yellow) },
-        .note          = { .code = utl::color_string(utl::Color::cyan) },
-        .position_info = { .code = utl::color_string(utl::Color::dark_cyan) },
-    };
-    std::cerr << context.format_diagnostic(diagnostic, colors);
+    std::cerr << context.format_diagnostic(diagnostic);
     return EXIT_FAILURE;
 }
 catch (utl::diagnostics::Error const& error) {
