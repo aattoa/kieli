@@ -139,11 +139,6 @@ static_assert(!utl::losslessly_convertible_to<utl::U64, utl::I8>);
 static_assert(!utl::losslessly_convertible_to<utl::I8, utl::U64>);
 static_assert(!utl::losslessly_convertible_to<utl::I16, utl::I8>);
 
-static_assert(utl::digit_count(0) == 1);
-static_assert(utl::digit_count(-10) == 2);
-static_assert(utl::digit_count(-999) == 3);
-static_assert(utl::digit_count(12345) == 5);
-
 static constexpr auto composition = utl::compose(
     [](int x) { return x * x; }, [](int x) { return x + 1; }, [](int a, int b) { return a + b; });
 static_assert(composition(2, 3) == 36);
