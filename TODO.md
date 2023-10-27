@@ -2,6 +2,7 @@
 
 ## liblex
 - Test token description
+- Reject identifiers that are unreasonably long (100 chars?)
 
 ## libparse
 - Test definition parsing
@@ -25,8 +26,8 @@
     3. only then generalize the return type
 
 ## Redesign
-- Remove libutl-diagnostics and use cppdiag instead
 - libname
+- libtype
 
 ## Build process
 - Profile compilation with `-ftime-trace`
@@ -45,6 +46,15 @@
 - libconfigure
 - User generated compile-time messages
 - Remove `noexcept` speficiation from functions with preconditions
+- Use libtommath for arbitrary precision integers
+- AST error node
+
+## To-remove
+- `utl::always_false`, when `static_assert(false)` is supported by compilers
+- `utl::Flatmap`, when `std::flat_map` is supported by compilers
+- `bootleg::forward_like`, when `std::forward_like` is supported by compilers
+- `libutl-diagnostics`, when `cppdiag` has been fully integrated
+- `libutl-color`, when `cppdiag` has been fully integrated
 
 ## Long-term
 - LSP support
