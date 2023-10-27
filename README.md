@@ -9,6 +9,8 @@ Dependencies are installed automatically with CMake's `FetchContent` functionali
 
 - https://github.com/aattoa/cppargs
     - Required, for the command line interface
+- https://github.com/aattoa/cppdiag
+    - Required, for diagnostic messages
 - https://github.com/ericniebler/range-v3
     - Required, until `std::ranges` is properly supported by compilers
 - https://github.com/TartanLlama/expected
@@ -22,7 +24,7 @@ Prerequisites:
 
 - CMake
 - A build system, such as GNU make or Ninja
-- A `C++23` compliant C++ toolchain
+- A C++23 compliant C++ toolchain
 
 Run the following commands to clone and build Kieli:
 
@@ -43,4 +45,4 @@ These build steps have been tested with the following:
 
 Tests are enabled by default, but can disabled with the CMake option `KIELI_BUILD_TESTS`, i.e. `-DKIELI_BUILD_TESTS=OFF`.
 
-To run all tests associated with a build, build the `test` target with your build system of choice.
+To run all tests associated with a build, build the `test` target with your build system of choice, or use CMake abstraction: `cmake --build build --target test`
