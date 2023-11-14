@@ -36,10 +36,9 @@ TEST("block expression")
 
 TEST("function body normalization")
 {
-    static constexpr std::string_view normalized = "fn f() { 5 }";
-    REQUIRE(normalized == desugar("fn f() { 5 }"));
-    REQUIRE(normalized == desugar("fn f() = 5"));
-    REQUIRE(normalized == desugar("fn f() = { 5 }"));
+    REQUIRE("fn f() { 5 }" == desugar("fn f() { 5 }"));
+    REQUIRE("fn f() { 5 }" == desugar("fn f() = 5"));
+    REQUIRE("fn f() { 5 }" == desugar("fn f() = { 5 }"));
 }
 
 TEST("operator precedence")
@@ -67,7 +66,7 @@ TEST("operator precedence")
     REQUIRE(desugar("fn f() { a + b + c + d }") == "fn f() { (((a + b) + c) + d) }");
 }
 
-TEST("desugar while loop expression")
+TEST("while loop expression")
 {
     REQUIRE(desugar("fn f() { while x { y } }") == "fn f() { loop { if x { y } else break () } }");
     REQUIRE(
@@ -75,7 +74,7 @@ TEST("desugar while loop expression")
         == "fn f() { loop { match y { immut x -> { z } _ -> break () } } }");
 }
 
-TEST("desugar conditional expression")
+TEST("conditional expression")
 {
     REQUIRE(desugar("fn f() { if x { y } }") == "fn f() { if x { y } else () }");
     REQUIRE(desugar("fn f() { if x { y } else { z } }") == "fn f() { if x { y } else { z } }");
@@ -87,7 +86,7 @@ TEST("desugar conditional expression")
         == "fn f() { match b { immut a -> { c } _ -> { d } } }");
 }
 
-TEST("desugar discard expression")
+TEST("discard expression")
 {
     REQUIRE(desugar("fn f() { discard x; }") == "fn f() { { let _ = x; () }; () }");
 }

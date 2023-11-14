@@ -86,8 +86,8 @@ namespace {
     }
 
     template <char a, char b>
-        requires(a < b)
     constexpr auto is_in_range(char const c) noexcept -> bool
+        requires(a < b)
     {
         return a <= c && c <= b;
     }
@@ -159,12 +159,7 @@ namespace {
         return Token {
             .value       = value,
             .type        = type,
-            .source_view = utl::Source_view {
-                source,
-                string_view,
-                start_position,
-                stop_position,
-            },
+            .source_view = utl::Source_view { source, string_view, start_position, stop_position },
         };
     }
 
@@ -253,7 +248,7 @@ namespace {
         }
     }
 
-    auto skip_comment_block(char const* const anchor, liblex::Context& context) -> void
+    auto skip_block_comment(char const* const anchor, liblex::Context& context) -> void
     {
         for (utl::Usize depth = 1; depth != 0;) {
             skip_string_literal_within_comment(context);
@@ -263,7 +258,11 @@ namespace {
                 --depth;
             }
             else if (context.try_consume("/*")) {
-                assert(depth != std::numeric_limits<utl::Usize>::max());
+                if (depth == 50) {
+                    context.error(
+                        { context.pointer() - 2, 2 },
+                        { "This block comment is too deeply nested" });
+                }
                 ++depth;
             }
             else if (context.is_finished()) {
@@ -289,7 +288,7 @@ namespace {
                 context.consume([](char const c) { return c != '\n'; });
             }
             else if (context.try_consume("/*")) {
-                skip_comment_block(anchor, context);
+                skip_block_comment(anchor, context);
             }
             else {
                 break;
@@ -522,7 +521,6 @@ namespace {
         if (base.has_value()) {
             if (first_digit_sequence.find_first_not_of('\'') == std::string_view::npos) {
                 context.error(
-                    context.pointer(),
                     { "Expected one or more digits after the base-{} specifier"_format(*base) });
             }
         }
@@ -531,12 +529,13 @@ namespace {
             error_if_trailing_separator(first_digit_sequence, context);
         }
 
-        auto const has_preceding_dot = [&] {
-            // If the literal is preceded by a dot, don't attempt to extract a float.
-            // This enables nested tuple field access: x.0.0
-            return anchor != context.source_begin() && anchor[-1] == '.';
-        };
-        if (!has_preceding_dot() && context.try_consume('.')) {
+        // If the literal is preceded by a dot, don't attempt to extract a float.
+        // This enables nested tuple field access: x.0.0
+
+        bool const has_preceding_dot
+            = std::invoke([&] { return anchor != context.source_begin() && anchor[-1] == '.'; });
+
+        if (!has_preceding_dot && context.try_consume('.')) {
             if (base.has_value()) {
                 context.consume(is_digit10);
                 context.error(
@@ -610,6 +609,7 @@ auto kieli::lex(Lex_arguments&& lex_arguments) -> Lex_result
 {
     std::string_view const source_string = lex_arguments.source->string();
     utl::always_assert(source_string.data() != nullptr);
+
     auto             tokens = utl::vector_with_capacity<Token>(1024);
     std::string_view current_trivia;
 
