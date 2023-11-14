@@ -50,7 +50,7 @@ FetchContent_Declare(
 FetchContent_Declare(
     cppdiag
     GIT_REPOSITORY https://github.com/aattoa/cppdiag.git
-    GIT_TAG        3660bcc5c9869b2a79351f4f760a09323907437c)
+    GIT_TAG        063f6926a4c79e7d35bf8350d58ad85b4357b10d)
 
 set(EXPECTED_BUILD_TESTS OFF)
 set(CPPARGS_BUILD_TESTS OFF)

@@ -107,7 +107,7 @@ auto liblex::Context::try_consume(std::string_view const string) noexcept -> boo
 auto liblex::Context::error(
     std::string_view const view, utl::diagnostics::Message_arguments const arguments) -> void
 {
-    m_compilation_info.get()->diagnostics.emit_error(
+    m_compilation_info.get()->old_diagnostics.emit_error(
         arguments.add_source_view(source_view_for(view)), utl::diagnostics::Type::recoverable);
     throw Token_extraction_failure {};
 }
