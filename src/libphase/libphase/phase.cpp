@@ -16,21 +16,13 @@ auto kieli::predefinitions_source(Compilation_info& compilation_info) -> utl::Wr
     return compilation_info.get()->source_arena.wrap("[predefined]", std::string(source_string));
 }
 
-auto kieli::mock_compilation_info(utl::diagnostics::Level const level) -> Compilation_info
-{
-    return std::make_shared<kieli::Shared_compilation_info>(kieli::Shared_compilation_info {
-        .diagnostics  = utl::diagnostics::Builder { utl::diagnostics::Builder::Configuration {
-             .note_level    = level,
-             .warning_level = level,
-        } },
-        .source_arena = utl::Source::Arena::with_page_size(1),
-    });
-}
-
 auto kieli::test_info_and_source(std::string&& source_string)
     -> utl::Pair<Compilation_info, utl::Source::Wrapper>
 {
-    kieli::Compilation_info test_info = mock_compilation_info(utl::diagnostics::Level::suppress);
+    Compilation_info test_info = std::make_shared<Shared_compilation_info>(Shared_compilation_info {
+        .diagnostics  = utl::diagnostics::Builder {},
+        .source_arena = utl::Source::Arena::with_page_size(1),
+    });
     utl::wrapper auto const test_source
         = test_info.get()->source_arena.wrap("[test]", std::move(source_string));
     return { std::move(test_info), test_source };

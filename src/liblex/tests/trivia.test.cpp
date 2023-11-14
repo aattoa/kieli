@@ -5,11 +5,9 @@
 namespace {
     auto lex(std::string&& string) -> std::string
     {
-        kieli::Compilation_info test_info = kieli::mock_compilation_info();
-        utl::wrapper auto const test_source
-            = test_info.get()->source_arena.wrap("[test]", std::move(string));
+        auto [info, source] = kieli::test_info_and_source(std::move(string));
         auto const lex_result
-            = kieli::lex({ .compilation_info = std::move(test_info), .source = test_source });
+            = kieli::lex({ .compilation_info = std::move(info), .source = source });
 
         std::string output;
         for (auto const& token : lex_result.tokens) {

@@ -17,9 +17,9 @@ namespace kieli {
     using Compilation_info = utl::Explicit<std::shared_ptr<Shared_compilation_info>>;
 
     auto predefinitions_source(Compilation_info&) -> utl::Wrapper<utl::Source>;
-    auto mock_compilation_info(utl::diagnostics::Level = utl::diagnostics::Level::suppress)
-        -> Compilation_info;
-    auto test_info_and_source(std::string&&) -> utl::Pair<Compilation_info, utl::Source::Wrapper>;
+
+    auto test_info_and_source(std::string&& source_string)
+        -> utl::Pair<Compilation_info, utl::Source::Wrapper>;
 
     struct [[nodiscard]] Name_upper;
     struct [[nodiscard]] Name_lower;

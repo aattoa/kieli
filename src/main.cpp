@@ -34,11 +34,8 @@ namespace {
             utl::add_to_readline_history(string);
 
             try {
-                kieli::Compilation_info repl_info
-                    = kieli::mock_compilation_info(utl::diagnostics::Level::normal);
-                utl::wrapper auto const repl_source
-                    = repl_info.get()->source_arena.wrap("[repl]", std::move(string));
-                f(kieli::lex({ .compilation_info = std::move(repl_info), .source = repl_source }));
+                auto [info, source] = kieli::test_info_and_source(std::move(string));
+                f(kieli::lex({ .compilation_info = std::move(info), .source = source }));
             }
             catch (utl::diagnostics::Error const& error) {
                 std::cerr << error.what() << "\n\n";

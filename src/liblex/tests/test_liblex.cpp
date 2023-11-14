@@ -4,11 +4,8 @@
 
 auto liblex::test_lex(std::string&& string) -> Test_lex_result
 {
-    kieli::Compilation_info test_info = kieli::mock_compilation_info();
-    utl::wrapper auto const test_source
-        = test_info.get()->source_arena.wrap("[test]", std::move(string));
-    auto const lex_result
-        = kieli::lex({ .compilation_info = std::move(test_info), .source = test_source });
+    auto [info, source]   = kieli::test_info_and_source(std::move(string));
+    auto const lex_result = kieli::lex({ .compilation_info = std::move(info), .source = source });
     return {
         .formatted_tokens    = std::format("{}", lex_result.tokens),
         .diagnostic_messages = std::move(lex_result.compilation_info.get()->diagnostics).string(),

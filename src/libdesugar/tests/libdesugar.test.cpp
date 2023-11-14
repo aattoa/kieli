@@ -7,12 +7,9 @@
 namespace {
     auto desugar(std::string&& string) -> std::string
     {
-        kieli::Compilation_info test_info
-            = kieli::mock_compilation_info(utl::diagnostics::Level::suppress);
-        utl::wrapper auto const test_source
-            = test_info.get()->source_arena.wrap("[test]", std::move(string));
-        auto desugar_result = desugar(
-            parse(kieli::lex({ .compilation_info = std::move(test_info), .source = test_source })));
+        auto [info, source] = kieli::test_info_and_source(std::move(string));
+        auto desugar_result
+            = desugar(parse(kieli::lex({ .compilation_info = std::move(info), .source = source })));
         std::string output;
         for (ast::Definition const& definition : desugar_result.module.definitions) {
             ast::format_to(definition, output);
