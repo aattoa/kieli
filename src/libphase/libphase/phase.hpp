@@ -4,19 +4,51 @@
 #include <libutl/common/pooled_string.hpp>
 #include <libutl/source/source.hpp>
 #include <libutl/diagnostics/diagnostics.hpp>
+#include <cppdiag.hpp>
 
 namespace kieli {
-    struct [[nodiscard]] Shared_compilation_info {
-        utl::diagnostics::Builder diagnostics;
+    auto text_section(
+        utl::Source_view                       section_view,
+        std::optional<cppdiag::Message_string> section_note = std::nullopt,
+        std::optional<cppdiag::Color>          note_color = std::nullopt) -> cppdiag::Text_section;
+
+    // Thrown when an unrecoverable error is encountered
+    struct Compilation_failure : std::exception {
+        auto what() const noexcept -> char const* override;
+    };
+
+    struct Diagnostics {
+        cppdiag::Context                 context;
+        std::vector<cppdiag::Diagnostic> vector;
+
+        template <class... Args>
+        [[noreturn]] auto error(
+            utl::Source_view const view, std::format_string<Args...> const fmt, Args&&... args)
+            -> void
+        {
+            vector.push_back(cppdiag::Diagnostic {
+                .text_sections = utl::to_vector({ text_section(view) }),
+                .message       = context.format_message(fmt, std::forward<Args>(args)...),
+                .level         = cppdiag::Level::error,
+            });
+            throw Compilation_failure {};
+        }
+    };
+
+    struct Shared_compilation_info {
+        utl::diagnostics::Builder old_diagnostics;
+        Diagnostics               diagnostics;
         utl::Source::Arena        source_arena = utl::Source::Arena::with_page_size(8);
         utl::String_pool          string_literal_pool;
         utl::String_pool          operator_pool;
         utl::String_pool          identifier_pool;
+
+        auto format_diagnostics() const -> std::string;
     };
 
     using Compilation_info = utl::Explicit<std::shared_ptr<Shared_compilation_info>>;
 
-    auto predefinitions_source(Compilation_info&) -> utl::Wrapper<utl::Source>;
+    auto predefinitions_source(Compilation_info&) -> utl::Source::Wrapper;
 
     auto test_info_and_source(std::string&& source_string)
         -> utl::Pair<Compilation_info, utl::Source::Wrapper>;
@@ -71,13 +103,7 @@ namespace kieli {
     concept literal = utl::one_of<T, Integer, Floating, Boolean, Character, String>;
 
     namespace built_in_type {
-        enum class Integer {
-            // clang-format off
-            i8, i16, i32, i64,
-            u8, u16, u32, u64,
-            _enumerator_count,
-            // clang-format on
-        };
+        enum class Integer { i8, i16, i32, i64, u8, u16, u32, u64, _enumerator_count };
 
         struct Floating {};
 

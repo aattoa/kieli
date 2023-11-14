@@ -454,7 +454,7 @@ auto libparse::Parse_context::retreat() noexcept -> void
 
 auto libparse::Parse_context::diagnostics() noexcept -> utl::diagnostics::Builder&
 {
-    return compilation_info.get()->diagnostics;
+    return compilation_info.get()->old_diagnostics;
 }
 
 auto libparse::Parse_context::error(

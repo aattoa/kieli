@@ -292,14 +292,10 @@ namespace {
                     duplicate != it)
                 {
                     // TODO: point to individual initializer source views
-                    context.error(
+                    context.diagnostics().error(
                         this_expression.source_view,
-                        {
-                            .message = std::format(
-                                "Struct initializer expression contains more than one initializer "
-                                "for {}",
-                                it->name),
-                        });
+                        "Struct initializer expression contains more than one initializer for {}",
+                        it->name);
                 }
                 ast_struct_initializer.member_initializers.add_new_unchecked(
                     it->name, context.desugar(it->expression));
@@ -506,7 +502,8 @@ namespace {
 
         auto operator()(cst::expression::For_loop const&) -> ast::Expression::Variant
         {
-            context.error(this_expression.source_view, { "For loops are not supported yet" });
+            context.diagnostics().error(
+                this_expression.source_view, "For loops are not supported yet");
         }
 
         auto operator()(cst::expression::Conditional_let const&) -> ast::Expression::Variant

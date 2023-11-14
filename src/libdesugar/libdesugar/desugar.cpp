@@ -245,11 +245,9 @@ auto libdesugar::Desugar_context::false_pattern(utl::Source_view const view)
     return wrap(ast::Pattern { .value = kieli::Boolean { false }, .source_view = view });
 }
 
-auto libdesugar::Desugar_context::error(
-    utl::Source_view const erroneous_view, utl::diagnostics::Message_arguments const arguments)
-    -> void
+auto libdesugar::Desugar_context::diagnostics() -> kieli::Diagnostics&
 {
-    compilation_info.get()->diagnostics.emit_error(arguments.add_source_view(erroneous_view));
+    return compilation_info.get()->diagnostics;
 }
 
 auto kieli::desugar(kieli::Parse_result&& parse_result) -> Desugar_result

@@ -98,6 +98,6 @@ namespace libdesugar {
         auto true_pattern(utl::Source_view) -> utl::Wrapper<ast::Pattern>;
         auto false_pattern(utl::Source_view) -> utl::Wrapper<ast::Pattern>;
 
-        [[noreturn]] auto error(utl::Source_view, utl::diagnostics::Message_arguments) -> void;
+        [[nodiscard]] auto diagnostics() -> kieli::Diagnostics&;
     };
 } // namespace libdesugar
