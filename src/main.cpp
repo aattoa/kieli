@@ -7,8 +7,6 @@
 #include <libparse/parse.hpp>
 #include <libparse/parser_internals.hpp>
 #include <libdesugar/desugar.hpp>
-#include <libresolve/resolve.hpp>
-#include <libresolve/resolution_internals.hpp>
 #include <libformat/format.hpp>
 #include <cppargs.hpp>
 #include <cppdiag.hpp>
@@ -83,13 +81,6 @@ namespace {
         utl::print("{}\n\n", output);
     }>;
 
-    constexpr auto resolution_repl = generic_repl<[](kieli::Lex_result&& lex_result) {
-        auto resolve_result = resolve(desugar(parse(std::move(lex_result))));
-        for (auto const& function : resolve_result.functions) {
-            utl::print("{}\n\n", hir::to_string(function));
-        }
-    }>;
-
 } // namespace
 
 auto main(int argc, char const** argv) -> int
@@ -101,7 +92,6 @@ try {
     auto const nocolor_flag = parameters.add("nocolor", "Disable colored output");
     auto const time_flag    = parameters.add("time", "Print the execution time");
     auto const repl_option  = parameters.add<std::string_view>("repl", "Run the given REPL");
-    auto const debug_option = parameters.add<std::string_view>("debug", "Debug the given phase");
 
     cppargs::Arguments arguments = cppargs::parse(argc, argv, parameters);
 
@@ -124,40 +114,12 @@ try {
         utl::print("kieli version 0, compiled on " __DATE__ ", " __TIME__ ".\n");
     }
 
-    if (auto const phase = arguments[debug_option]) {
-        auto source_directory_path
-            = std::filesystem::current_path().parent_path() / "sample-project" / "src";
-
-        auto const do_resolve = [&] {
-            kieli::Compilation_info repl_info   = kieli::mock_compilation_info();
-            utl::wrapper auto const repl_source = repl_info.get()->source_arena.wrap(
-                utl::Source::read(source_directory_path / "main.kieli"));
-            return kieli::resolve(kieli::desugar(kieli::parse(kieli::lex({
-                .compilation_info = std::move(repl_info),
-                .source           = repl_source,
-            }))));
-        };
-
-        if (*phase == "res") {
-            utl::print(
-                "{}\n",
-                utl::formatting::delimited_range(
-                    utl::map(hir::to_string, do_resolve().functions), "\n\n"));
-        }
-        else {
-            throw utl::exception("The phase must be res, not '{}'", *phase);
-        }
-
-        utl::print("Finished debugging phase {}\n", *phase);
-    }
-
     if (auto const name = arguments[repl_option]) {
         utl::Flatmap<std::string_view, void (*)()> const repls { {
             { "lex", lexer_repl },
             { "expr", expression_parser_repl },
             { "prog", program_parser_repl },
             { "des", desugaring_repl },
-            { "res", resolution_repl },
         } };
         if (auto const* const repl = repls.find(*name)) {
             (*repl)();
