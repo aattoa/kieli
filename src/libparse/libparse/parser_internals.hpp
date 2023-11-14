@@ -17,8 +17,8 @@ namespace libparse {
         kieli::Compilation_info    compilation_info;
         cst::Node_arena            node_arena;
         std::vector<Lexical_token> tokens;
-        Lexical_token*             start;
-        Lexical_token*             pointer;
+        Lexical_token*             start {};
+        Lexical_token*             pointer {};
         utl::Pooled_string         plus_id;
         utl::Pooled_string         asterisk_id;
 
@@ -37,39 +37,32 @@ namespace libparse {
         template <cst::node Node>
         auto wrap(Node&& node) -> utl::Wrapper<Node>
         {
-            return node_arena.wrap(
-                std::move(node)); // NOLINT: std::move is correct due to constraint
+            return node_arena.wrap(std::move(node));
         }
 
         [[nodiscard]] auto wrap() noexcept
         {
             return [this]<cst::node Node>(Node&& node) -> utl::Wrapper<Node> {
-                return wrap(std::move(node)); // NOLINT: std::move is correct due to constraint
+                return wrap(std::move(node));
             };
         }
 
-        [[nodiscard]] auto diagnostics() noexcept -> utl::diagnostics::Builder&;
+        [[noreturn]] auto error_expected(
+            utl::Source_view erroneous_view, std::string_view expectation) -> void;
 
-        [[noreturn]] auto error(utl::Source_view, utl::diagnostics::Message_arguments const&)
-            -> void;
-        [[noreturn]] auto error(utl::diagnostics::Message_arguments const&) -> void;
-        [[noreturn]] auto error_expected(
-            utl::Source_view                erroneous_view,
-            std::string_view                expectation,
-            std::optional<std::string_view> help = std::nullopt) -> void;
-        [[noreturn]] auto error_expected(
-            std::string_view expectation, std::optional<std::string_view> help = std::nullopt)
-            -> void;
+        [[noreturn]] auto error_expected(std::string_view expectation) -> void;
+
+        [[nodiscard]] auto diagnostics() noexcept -> kieli::Diagnostics&;
 
         auto make_source_view(Lexical_token const*, Lexical_token const*) noexcept
             -> utl::Source_view;
     };
 
-    template <class P>
-    concept parser = requires(P p, Parse_context context) {
-        {
-            p(context)
-        } -> utl::specialization_of<std::optional>;
+    template <class Parse>
+    concept parser = requires(Parse parse, Parse_context context) {
+        // clang-format off
+        { parse(context) } -> utl::specialization_of<std::optional>;
+        // clang-format on
     };
 
     template <parser auto p>

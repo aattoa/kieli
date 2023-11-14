@@ -86,7 +86,7 @@ namespace {
             return *body;
         }
         else {
-            context.error_expected("the loop body", "the loop body must be a block expression");
+            context.error_expected("the loop body, which must be a block expression");
         }
     }
 
@@ -163,9 +163,9 @@ namespace {
                     .source_view = context.make_source_view(anchor, context.pointer - 1),
                 }));
         }
-        context.error(
+        context.diagnostics().error(
             context.make_source_view(anchor, context.pointer),
-            { "Expected an expression, but found a type" });
+            "Expected an expression, but found a type");
     }
 
     auto extract_identifier(Parse_context& context) -> cst::Expression::Variant
@@ -254,8 +254,7 @@ namespace {
             if (auto branch = parse_block_expression(context)) {
                 return *branch;
             }
-            context.error_expected(
-                "a '{'", "the branches of a conditional expression must be block expressions");
+            context.error_expected("a block expression");
         };
 
         Lexical_token const* const if_keyword = context.pointer - 1;
@@ -268,12 +267,14 @@ namespace {
 
         if (Lexical_token const* const elif_keyword = context.try_extract(Token_type::elif)) {
             auto elif_conditional = extract_conditional(context, Conditional_kind::elif);
-            false_branch          = cst::expression::Conditional::False_branch {
-                         .body                       = context.wrap(cst::Expression {
-                                                   .value       = std::move(elif_conditional),
-                                                   .source_view = context.make_source_view(elif_keyword, context.pointer - 1),
+
+            false_branch = cst::expression::Conditional::False_branch {
+                .body = context.wrap(cst::Expression {
+                    .value       = std::move(elif_conditional),
+                    .source_view = context.make_source_view(elif_keyword, context.pointer - 1),
                 }),
-                         .else_or_elif_keyword_token = cst::Token::from_lexical(elif_keyword),
+
+                .else_or_elif_keyword_token = cst::Token::from_lexical(elif_keyword),
             };
         }
         else if (Lexical_token const* const else_keyword = context.try_extract(Token_type::else_)) {
@@ -547,9 +548,9 @@ namespace {
             else if (context.try_consume(Token_type::brace_open)) {
                 return extract_struct_initializer(context, std::move(*type));
             }
-            context.error(
+            context.diagnostics().error(
                 context.make_source_view(anchor, context.pointer),
-                { "Expected an expression, but found a type" });
+                "Expected an expression, but found a type");
         }
         return std::nullopt;
     }

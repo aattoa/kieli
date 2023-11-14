@@ -40,8 +40,8 @@ namespace {
 
         if (Lexical_token const* const ampersand = context.try_extract(Token_type::ampersand)) {
             if (mutability.has_value()) {
-                context.error(
-                    mutability->source_view, { "A mutability specifier can not appear here" });
+                context.diagnostics().error(
+                    mutability->source_view, "A mutability specifier can not appear here");
             }
             std::optional reference_mutability = parse_mutability(context);
             if (Lexical_token const* const self = context.try_extract(Token_type::lower_self)) {
@@ -131,7 +131,7 @@ namespace {
                 return extract_expression(context);
             }
             else {
-                context.error_expected("the function body", "'=' or '{{'");
+                context.error_expected("the function body: '=' or '{'");
             }
         });
 
@@ -406,7 +406,8 @@ namespace {
     {
         auto const module_string = token.as_string();
         if (module_string.view().find(".."sv) != std::string_view::npos) {
-            context.error(token.source_view, { "A module name or path can not contain '..'" });
+            context.diagnostics().error(
+                token.source_view, "A module name or path can not contain '..'");
         }
         return module_string;
     }
