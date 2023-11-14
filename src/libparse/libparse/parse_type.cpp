@@ -11,9 +11,9 @@ namespace {
         Lexical_token const* const anchor = context.pointer;
         auto                       name   = extract_qualified(context, std::move(root));
         if (!name.is_upper()) {
-            context.error(
+            context.diagnostics().error(
                 context.make_source_view(anchor, context.pointer - 1),
-                { "Expected a typename, but found a lowercase identifier" });
+                "Expected a typename, but found a lowercase identifier");
         }
         if (auto template_arguments = parse_template_arguments(context)) {
             return cst::type::Template_application {
@@ -86,7 +86,7 @@ namespace {
                     };
                 }
                 context.error_expected(
-                    "the array length", "Remove the ';' if a slice type was intended");
+                    "the array length; remove the ';' if a slice type was intended");
             }
             Lexical_token const* const close_bracket
                 = context.extract_required(Token_type::bracket_close);

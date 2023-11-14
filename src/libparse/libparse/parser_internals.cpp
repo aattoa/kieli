@@ -87,14 +87,12 @@ namespace {
                 if (!is_valid_template_parameter_default_argument(
                         value, default_argument->argument.value))
                 {
-                    context.error(
+                    context.diagnostics().error(
                         default_argument->argument.source_view(),
-                        { std::format(
-                            "A template {0} parameter's default argument must "
-                            "be a {0} argument, but this is a {1} argument",
-                            template_parameter_kind_description(value),
-                            template_argument_kind_description(
-                                default_argument->argument.value)) });
+                        "A template {0} parameter's default argument must be a {0} argument, but "
+                        "found a {1} argument",
+                        template_parameter_kind_description(value),
+                        template_argument_kind_description(default_argument->argument.value));
                 }
             }
             return cst::Template_parameter {
@@ -292,9 +290,9 @@ auto libparse::parse_mutability(Parse_context& context) -> std::optional<cst::Mu
         }
     }
     else if (Lexical_token const* const immut_keyword = context.try_extract(Token_type::immut)) {
-        context.error(
+        context.diagnostics().error(
             immut_keyword->source_view,
-            { "Immutability may not be specified here, as it is the default" });
+            "Immutability may not be specified here, as it is the default");
     }
     else {
         return std::nullopt;
@@ -343,9 +341,9 @@ auto libparse::parse_class_reference(Parse_context& context) -> std::optional<cs
             return name;
         }
 
-        context.error(
+        context.diagnostics().error(
             context.make_source_view(anchor, context.pointer),
-            { "Expected a class name, but found a lowercase identifier" });
+            "Expected a class name, but found a lowercase identifier");
     });
 
     if (name.has_value()) {
@@ -452,43 +450,24 @@ auto libparse::Parse_context::retreat() noexcept -> void
     --pointer;
 }
 
-auto libparse::Parse_context::diagnostics() noexcept -> utl::diagnostics::Builder&
-{
-    return compilation_info.get()->old_diagnostics;
-}
-
-auto libparse::Parse_context::error(
-    utl::Source_view const erroneous_view, utl::diagnostics::Message_arguments const& arguments)
-    -> void
-{
-    diagnostics().emit_error(arguments.add_source_view(erroneous_view));
-}
-
-auto libparse::Parse_context::error(utl::diagnostics::Message_arguments const& arguments) -> void
-{
-    error(make_source_view(pointer, pointer + 1), arguments);
-}
-
 auto libparse::Parse_context::error_expected(
-    utl::Source_view const                erroneous_view,
-    std::string_view const                expectation,
-    std::optional<std::string_view> const help) -> void
+    utl::Source_view const erroneous_view, std::string_view const expectation) -> void
 {
-    error(
+    diagnostics().error(
         erroneous_view,
-        {
-            .message = std::format(
-                "Expected {}, but found {}",
-                expectation,
-                kieli::Lexical_token::description(pointer->type)),
-            .help_note = help,
-        });
+        "Expected {}, but found {}",
+        expectation,
+        kieli::Lexical_token::description(pointer->type));
 }
 
-auto libparse::Parse_context::error_expected(
-    std::string_view const expectation, std::optional<std::string_view> const help) -> void
+auto libparse::Parse_context::error_expected(std::string_view const expectation) -> void
 {
-    error_expected(pointer->source_view, expectation, help);
+    error_expected(pointer->source_view, expectation);
+}
+
+auto libparse::Parse_context::diagnostics() noexcept -> kieli::Diagnostics&
+{
+    return compilation_info.get()->diagnostics;
 }
 
 auto libparse::Parse_context::make_source_view(
