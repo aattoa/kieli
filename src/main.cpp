@@ -35,7 +35,8 @@ namespace {
 
             try {
                 auto [info, source] = kieli::test_info_and_source(std::move(string));
-                f(kieli::lex({ .compilation_info = std::move(info), .source = source }));
+                f(kieli::lex({ .compilation_info = info, .source = source }));
+                std::cerr << info.get()->diagnostics.format_all();
             }
             catch (utl::diagnostics::Error const& error) {
                 std::cerr << error.what() << "\n\n";

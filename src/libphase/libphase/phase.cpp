@@ -49,11 +49,12 @@ auto kieli::Compilation_failure::what() const noexcept -> char const*
     return "kieli::Compilation_failure";
 }
 
-auto kieli::Shared_compilation_info::format_diagnostics() const -> std::string
+auto kieli::Diagnostics::format_all() const -> std::string
 {
     std::string output;
-    for (cppdiag::Diagnostic const& diagnostic : diagnostics.vector) {
-        diagnostics.context.format_diagnostic(diagnostic, output);
+    for (cppdiag::Diagnostic const& diagnostic : vector) {
+        context.format_diagnostic(diagnostic, output);
+        output.push_back('\n');
     }
     return output;
 }

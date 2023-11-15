@@ -31,9 +31,9 @@ namespace liblex {
         [[nodiscard]] auto try_consume(char) noexcept -> bool;
         [[nodiscard]] auto try_consume(std::string_view) noexcept -> bool;
 
-        [[noreturn]] auto error(std::string_view, utl::diagnostics::Message_arguments) -> void;
-        [[noreturn]] auto error(char const*, utl::diagnostics::Message_arguments) -> void;
-        [[noreturn]] auto error(utl::diagnostics::Message_arguments) -> void;
+        [[noreturn]] auto error(std::string_view position, std::string_view message) -> void;
+        [[noreturn]] auto error(char const* position, std::string_view message) -> void;
+        [[noreturn]] auto error(std::string_view message) -> void;
 
         auto advance(utl::Usize offset = 1) noexcept -> void;
 

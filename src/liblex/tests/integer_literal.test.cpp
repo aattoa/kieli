@@ -105,5 +105,5 @@ TEST("integer literal digit separators")
     REQUIRE_THAT(
         lex_failure("1'"), contains("expected one or more digits after the digit separator"));
     REQUIRE_THAT(
-        lex_failure("0x'"), contains("expected one or more digits after the base-16 specifier"));
+        lex_failure("0x'"), contains("expected one or more digits after the base specifier"));
 }
