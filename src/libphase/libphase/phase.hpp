@@ -33,7 +33,7 @@ namespace kieli {
             throw Compilation_failure {};
         }
 
-        [[nodiscard]] auto format_all() const -> std::string;
+        [[nodiscard]] auto format_all(cppdiag::Colors) const -> std::string;
     };
 
     struct Shared_compilation_info {
