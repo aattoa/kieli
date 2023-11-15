@@ -90,39 +90,40 @@ auto main(int argc, char const** argv) -> int
         auto const time_flag    = parameters.add("time", "Print the execution time");
         auto const repl_option  = parameters.add<std::string_view>("repl", "Run the given REPL");
 
-        cppargs::Arguments arguments = cppargs::parse(argc, argv, parameters);
+        cppargs::parse(argc, argv, parameters);
 
         utl::Logging_timer const execution_timer { [&](auto const elapsed) {
-            if (arguments[time_flag]) {
+            if (time_flag) {
                 utl::print("Total execution time: {}\n", elapsed);
             }
         } };
 
-        if (arguments[nocolor_flag]) {
+        if (nocolor_flag) {
             colors = cppdiag::Colors {};
         }
 
-        if (arguments[help_flag]) {
+        if (help_flag) {
             utl::print("Valid options:\n{}", parameters.help_string());
             return EXIT_SUCCESS;
         }
 
-        if (arguments[version_flag]) {
+        if (version_flag) {
             utl::print("kieli version 0, compiled on " __DATE__ ", " __TIME__ ".\n");
         }
 
-        if (auto const name = arguments[repl_option]) {
+        if (repl_option) {
             utl::Flatmap<std::string_view, void (*)(cppdiag::Colors)> const repls { {
                 { "lex", lexer_repl },
                 { "expr", expression_parser_repl },
                 { "prog", program_parser_repl },
                 { "des", desugaring_repl },
             } };
-            if (auto const* const repl = repls.find(*name)) {
+            if (auto const* const repl = repls.find(repl_option.value())) {
                 (*repl)(colors);
             }
             else {
-                throw utl::exception("The repl must be one of lex|expr|prog|des, not '{}'", *name);
+                throw utl::exception(
+                    "The repl must be one of lex|expr|prog|des, not '{}'", repl_option.value());
             }
         }
 

@@ -46,7 +46,7 @@ FetchContent_Declare(
 FetchContent_Declare(
     cppargs
     GIT_REPOSITORY https://github.com/aattoa/cppargs.git
-    GIT_TAG        41efd63095008de1ac151202b6e02327c5344b92)
+    GIT_TAG        e698c7a5295afea828f83dc570c9aba98b928769)
 FetchContent_Declare(
     cppdiag
     GIT_REPOSITORY https://github.com/aattoa/cppdiag.git
