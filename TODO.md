@@ -44,7 +44,6 @@
 - `utl::always_false`, when `static_assert(false)` is supported by compilers
 - `utl::Flatmap`, when `std::flat_map` is supported by compilers
 - `bootleg::forward_like`, when `std::forward_like` is supported by compilers
-- `libutl-diagnostics`, when `cppdiag` has been fully integrated
 - `libutl-color`, when `cppdiag` has been fully integrated
 
 ## Long-term

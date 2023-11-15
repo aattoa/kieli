@@ -3,7 +3,6 @@
 #include <libutl/common/wrapper.hpp>
 #include <libutl/common/pooled_string.hpp>
 #include <libutl/source/source.hpp>
-#include <libutl/diagnostics/diagnostics.hpp>
 #include <cppdiag.hpp>
 
 namespace kieli {
@@ -38,12 +37,11 @@ namespace kieli {
     };
 
     struct Shared_compilation_info {
-        utl::diagnostics::Builder old_diagnostics;
-        Diagnostics               diagnostics;
-        utl::Source::Arena        source_arena = utl::Source::Arena::with_page_size(8);
-        utl::String_pool          string_literal_pool;
-        utl::String_pool          operator_pool;
-        utl::String_pool          identifier_pool;
+        Diagnostics        diagnostics;
+        utl::Source::Arena source_arena = utl::Source::Arena::with_page_size(8);
+        utl::String_pool   string_literal_pool;
+        utl::String_pool   operator_pool;
+        utl::String_pool   identifier_pool;
     };
 
     using Compilation_info = utl::Explicit<std::shared_ptr<Shared_compilation_info>>;

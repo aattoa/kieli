@@ -8,7 +8,6 @@ target_sources(libphase
 
 target_link_libraries(libphase
     PUBLIC libutl-source
-    PUBLIC libutl-diagnostics
     PUBLIC cppdiag)
 
 kieli_consume_libutl_common(libphase)
