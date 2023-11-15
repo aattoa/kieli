@@ -8,6 +8,6 @@ auto liblex::test_lex(std::string&& string) -> Test_lex_result
     auto const lex_result = kieli::lex({ .compilation_info = std::move(info), .source = source });
     return {
         .formatted_tokens    = std::format("{}", lex_result.tokens),
-        .diagnostic_messages = lex_result.compilation_info.get()->diagnostics.format_all(),
+        .diagnostic_messages = lex_result.compilation_info.get()->diagnostics.format_all({}),
     };
 }
