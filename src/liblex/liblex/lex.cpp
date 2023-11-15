@@ -130,22 +130,18 @@ namespace {
 
     constexpr auto digit_predicate_for(int const base) noexcept -> bool (*)(char)
     {
+        // clang-format off
         switch (base) {
-        case 2:
-            return is_digit_or_separator<is_digit2>;
-        case 4:
-            return is_digit_or_separator<is_digit4>;
-        case 8:
-            return is_digit_or_separator<is_digit8>;
-        case 10:
-            return is_digit_or_separator<is_digit10>;
-        case 12:
-            return is_digit_or_separator<is_digit12>;
-        case 16:
-            return is_digit_or_separator<is_digit16>;
+        case 2:  return is_digit_or_separator<is_digit2>;
+        case 4:  return is_digit_or_separator<is_digit4>;
+        case 8:  return is_digit_or_separator<is_digit8>;
+        case 10: return is_digit_or_separator<is_digit10>;
+        case 12: return is_digit_or_separator<is_digit12>;
+        case 16: return is_digit_or_separator<is_digit16>;
         default:
             utl::unreachable();
         }
+        // clang-format on
     }
 
     auto make_token(
@@ -191,39 +187,31 @@ namespace {
         if (string.empty() || string.back() != '\'') {
             return;
         }
-        context.error({ "Expected one or more digits after the digit separator" });
+        context.error("Expected one or more digits after the digit separator");
     }
 
     auto handle_escape_sequence(liblex::Context& context) -> char
     {
         char const* const anchor = context.pointer();
         if (context.is_finished()) {
-            context.error(anchor, { "Expected an escape sequence, but found the end of input" });
+            context.error(anchor, "Expected an escape sequence, but found the end of input");
         }
+        // clang-format off
         switch (context.extract_current()) {
-        case 'a':
-            return '\a';
-        case 'b':
-            return '\b';
-        case 'f':
-            return '\f';
-        case 'n':
-            return '\n';
-        case 'r':
-            return '\r';
-        case 't':
-            return '\t';
-        case 'v':
-            return '\v';
-        case '\'':
-            return '\'';
-        case '\"':
-            return '\"';
-        case '\\':
-            return '\\';
+        case 'a':  return '\a';
+        case 'b':  return '\b';
+        case 'f':  return '\f';
+        case 'n':  return '\n';
+        case 'r':  return '\r';
+        case 't':  return '\t';
+        case 'v':  return '\v';
+        case '\'': return '\'';
+        case '\"': return '\"';
+        case '\\': return '\\';
         default:
-            context.error(anchor, { "Unrecognized escape sequence" });
+            context.error(anchor, "Unrecognized escape sequence");
         }
+        // clang-format on
     }
 
     auto skip_string_literal_within_comment(liblex::Context& context) -> void
@@ -234,7 +222,7 @@ namespace {
         }
         for (;;) {
             if (context.is_finished()) {
-                context.error(anchor, { "Unterminating string literal within comment block" });
+                context.error(anchor, "Unterminating string literal within comment block");
             }
             switch (context.extract_current()) {
             case '"':
@@ -260,18 +248,13 @@ namespace {
             else if (context.try_consume("/*")) {
                 if (depth == 50) {
                     context.error(
-                        { context.pointer() - 2, 2 },
-                        { "This block comment is too deeply nested" });
+                        { context.pointer() - 2, 2 }, "This block comment is too deeply nested");
                 }
                 ++depth;
             }
             else if (context.is_finished()) {
-                context.error(
-                    anchor,
-                    {
-                        .message   = "Unterminating comment block",
-                        .help_note = "Comments starting with '/*' must be terminated with '*/'",
-                    });
+                // TODO: help note: "Comments starting with '/*' must be terminated with '*/'"
+                context.error(anchor, "Unterminating comment block");
             }
             else {
                 context.advance();
@@ -343,7 +326,7 @@ namespace {
         context.advance();
 
         if (context.is_finished()) {
-            context.error(anchor, { "Unterminating character literal" });
+            context.error(anchor, "Unterminating character literal");
         }
 
         char c = context.extract_current();
@@ -355,7 +338,7 @@ namespace {
             return token_maker(kieli::Character { c }, Token::Type::character_literal);
         }
         else {
-            context.error(context.pointer(), { "Expected a closing single-quote" });
+            context.error("Expected a closing single-quote");
         }
     }
 
@@ -370,9 +353,8 @@ namespace {
 
         for (;;) {
             if (context.is_finished()) {
-                context.error(anchor, { "Unterminating string literal" });
+                context.error(anchor, "Unterminating string literal");
             }
-
             switch (char c = context.extract_current()) {
             case '"':
                 return token_maker(
@@ -411,7 +393,7 @@ namespace {
     {
         static constexpr auto digit_predicate = is_digit_or_separator<is_digit10>;
         if (context.is_finished() || !digit_predicate(context.current())) {
-            context.error({ "Expected one or more digits after the decimal separator" });
+            context.error("Expected one or more digits after the decimal separator");
         }
         std::string_view const second_digit_sequence = context.extract(digit_predicate);
         error_if_trailing_separator(second_digit_sequence, context);
@@ -419,11 +401,11 @@ namespace {
         std::string_view const suffix = context.extract(is_alpha);
         if (!suffix.empty()) {
             if (suffix != "e" && suffix != "E") {
-                context.error(suffix, { "Erroneous floating point literal alphabetic suffix" });
+                context.error(suffix, "Erroneous floating point literal alphabetic suffix");
             }
             (void)context.try_consume('-');
             if (context.is_finished() || !is_digit10(context.current())) {
-                context.error({ "Expected an exponent" });
+                context.error("Expected an exponent");
             }
             else {
                 std::string_view const exponent_digits = context.extract(digit_predicate);
@@ -435,7 +417,7 @@ namespace {
         std::string_view const floating_string { anchor, context.pointer() };
         auto const             floating = liblex::parse_floating(floating_string);
         if (floating == tl::unexpected { liblex::Numeric_error::out_of_range }) {
-            context.error(floating_string, { "Floating point literal is too large" });
+            context.error(floating_string, "Floating point literal is too large");
         }
         else {
             utl::always_assert(floating.has_value());
@@ -443,8 +425,7 @@ namespace {
 
         std::string_view const extraneous_suffix = context.extract(is_alpha);
         if (!extraneous_suffix.empty()) {
-            context.error(
-                extraneous_suffix, { "Erroneous floating point literal alphabetic suffix" });
+            context.error(extraneous_suffix, "Erroneous floating point literal alphabetic suffix");
         }
 
         return token_maker(kieli::Floating { floating.value() }, Token::Type::floating_literal);
@@ -459,7 +440,7 @@ namespace {
     {
         auto integer = liblex::parse_integer(digit_sequence, base);
         if (integer == tl::unexpected { liblex::Numeric_error::out_of_range }) {
-            context.error(digit_sequence, { "Integer literal is too large" });
+            context.error(digit_sequence, "Integer literal is too large");
         }
         else {
             utl::always_assert(integer.has_value());
@@ -470,14 +451,14 @@ namespace {
             return token_maker(kieli::Integer { integer.value() }, Token::Type::integer_literal);
         }
         else if (suffix != "e" && suffix != "E") {
-            context.error(suffix, { "Erroneous integer literal alphabetic suffix" });
+            context.error(suffix, "Erroneous integer literal alphabetic suffix");
         }
         else if (context.try_consume('-')) {
             context.consume(is_digit10);
-            context.error({ "An integer literal may not have a negative exponent" });
+            context.error("An integer literal may not have a negative exponent");
         }
         else if (context.is_finished() || !is_digit10(context.current())) {
-            context.error({ "Expected an exponent" });
+            context.error("Expected an exponent");
         }
         else {
             std::string_view const exponent_digit_sequence = context.extract(is_digit10);
@@ -486,12 +467,12 @@ namespace {
 
             std::string_view const extraneous_suffix = context.extract(is_alpha);
             if (!extraneous_suffix.empty()) {
-                context.error(extraneous_suffix, { "Erroneous integer literal alphabetic suffix" });
+                context.error(extraneous_suffix, "Erroneous integer literal alphabetic suffix");
             }
 
             auto const exponent = liblex::parse_integer(exponent_digit_sequence);
             if (exponent == tl::unexpected { liblex::Numeric_error::out_of_range }) {
-                context.error(exponent_digit_sequence, { "Exponent is too large" });
+                context.error(exponent_digit_sequence, "Exponent is too large");
             }
             else {
                 utl::always_assert(exponent.has_value());
@@ -501,7 +482,7 @@ namespace {
             if (result == tl::unexpected { liblex::Numeric_error::out_of_range }) {
                 context.error(
                     { anchor, context.pointer() },
-                    { "Integer literal is too large after applying scientific exponent" });
+                    "Integer literal is too large after applying scientific exponent");
             }
             else {
                 utl::always_assert(result.has_value());
@@ -520,8 +501,8 @@ namespace {
 
         if (base.has_value()) {
             if (first_digit_sequence.find_first_not_of('\'') == std::string_view::npos) {
-                context.error(
-                    { "Expected one or more digits after the base-{} specifier"_format(*base) });
+                // FIXME: Specify base value in message
+                context.error("Expected one or more digits after the base specifier");
             }
         }
         else {
@@ -539,7 +520,7 @@ namespace {
             if (base.has_value()) {
                 context.consume(is_digit10);
                 context.error(
-                    { anchor, 2 }, { "A floating point literal may not have a base specifier" });
+                    { anchor, 2 }, "A floating point literal may not have a base specifier");
             }
             return extract_numeric_floating(token_maker, anchor, context);
         }
@@ -593,8 +574,7 @@ namespace {
                 }
                 else {
                     context.error(
-                        context.extract(is_invalid_character),
-                        { "Unable to extract lexical token" });
+                        context.extract(is_invalid_character), "Unable to extract lexical token");
                 }
             }
         }

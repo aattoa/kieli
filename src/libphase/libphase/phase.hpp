@@ -33,6 +33,8 @@ namespace kieli {
             });
             throw Compilation_failure {};
         }
+
+        [[nodiscard]] auto format_all() const -> std::string;
     };
 
     struct Shared_compilation_info {
@@ -42,8 +44,6 @@ namespace kieli {
         utl::String_pool          string_literal_pool;
         utl::String_pool          operator_pool;
         utl::String_pool          identifier_pool;
-
-        auto format_diagnostics() const -> std::string;
     };
 
     using Compilation_info = utl::Explicit<std::shared_ptr<Shared_compilation_info>>;

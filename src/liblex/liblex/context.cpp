@@ -104,26 +104,6 @@ auto liblex::Context::try_consume(std::string_view const string) noexcept -> boo
     return false;
 }
 
-auto liblex::Context::error(
-    std::string_view const view, utl::diagnostics::Message_arguments const arguments) -> void
-{
-    m_compilation_info.get()->old_diagnostics.emit_error(
-        arguments.add_source_view(source_view_for(view)), utl::diagnostics::Type::recoverable);
-    throw Token_extraction_failure {};
-}
-
-auto liblex::Context::error(
-    char const* const location, utl::diagnostics::Message_arguments const arguments) -> void
-{
-    assert(location != nullptr);
-    error({ location, location != m_source_end ? location + 1 : location }, arguments);
-}
-
-auto liblex::Context::error(utl::diagnostics::Message_arguments const arguments) -> void
-{
-    error(pointer(), arguments);
-}
-
 auto liblex::Context::make_string_literal(std::string_view const string) -> utl::Pooled_string
 {
     return m_compilation_info.get()->string_literal_pool.make(string);
@@ -137,4 +117,24 @@ auto liblex::Context::make_operator(std::string_view const string) -> utl::Poole
 auto liblex::Context::make_identifier(std::string_view const string) -> utl::Pooled_string
 {
     return m_compilation_info.get()->identifier_pool.make(string);
+}
+
+auto liblex::Context::error(std::string_view const position, std::string_view const message) -> void
+{
+    m_compilation_info.get()->diagnostics.vector.push_back(cppdiag::Diagnostic {
+        .text_sections = utl::to_vector({ kieli::text_section(source_view_for(position)) }),
+        .message       = m_compilation_info.get()->diagnostics.context.message(message),
+        .level         = cppdiag::Level::error,
+    });
+    throw Token_extraction_failure {};
+}
+
+auto liblex::Context::error(char const* const position, std::string_view const message) -> void
+{
+    error({ position, position }, message);
+}
+
+auto liblex::Context::error(std::string_view const message) -> void
+{
+    error(pointer(), message);
 }
