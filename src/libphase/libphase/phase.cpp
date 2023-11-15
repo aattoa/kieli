@@ -21,8 +21,7 @@ auto kieli::test_info_and_source(std::string&& source_string)
     -> utl::Pair<Compilation_info, utl::Source::Wrapper>
 {
     Compilation_info test_info = std::make_shared<Shared_compilation_info>(Shared_compilation_info {
-        .old_diagnostics = utl::diagnostics::Builder {},
-        .source_arena    = utl::Source::Arena::with_page_size(1),
+        .source_arena = utl::Source::Arena::with_page_size(1),
     });
     utl::Source::Wrapper const test_source
         = test_info.get()->source_arena.wrap("[test]", std::move(source_string));

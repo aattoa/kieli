@@ -38,9 +38,6 @@ namespace {
                 f(kieli::lex({ .compilation_info = info, .source = source }));
                 std::cerr << info.get()->diagnostics.format_all();
             }
-            catch (utl::diagnostics::Error const& error) {
-                std::cerr << error.what() << "\n\n";
-            }
             catch (std::exception const& exception) {
                 error_stream() << exception.what() << "\n\n";
             }
@@ -147,10 +144,6 @@ catch (cppargs::Exception const& exception) {
         .level = cppdiag::Level::error,
     };
     std::cerr << context.format_diagnostic(diagnostic);
-    return EXIT_FAILURE;
-}
-catch (utl::diagnostics::Error const& error) {
-    std::cerr << error.what() << '\n';
     return EXIT_FAILURE;
 }
 catch (std::exception const& exception) {
