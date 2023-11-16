@@ -32,14 +32,17 @@ namespace {
 
             utl::add_to_readline_history(string);
 
+            auto [info, source] = kieli::test_info_and_source(std::move(string));
             try {
-                auto [info, source] = kieli::test_info_and_source(std::move(string));
                 f(kieli::lex({ .compilation_info = info, .source = source }));
-                std::cerr << info.get()->diagnostics.format_all(colors);
+            }
+            catch (kieli::Compilation_failure const&) {
+                // do nothing
             }
             catch (std::exception const& exception) {
                 error_stream(colors) << exception.what() << "\n\n";
             }
+            std::cerr << info.get()->diagnostics.format_all(colors);
         }
     }
 
