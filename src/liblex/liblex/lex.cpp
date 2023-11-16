@@ -148,13 +148,15 @@ namespace {
         utl::Source_position const start_position,
         utl::Source_position const stop_position,
         std::string_view const     string_view,
+        utl::Source::Wrapper const source,
         Token::Variant const&      value,
         Token::Type const          type,
-        utl::Source::Wrapper const source) -> Token
+        std::string_view const     preceding_trivia) -> Token
     {
         return Token {
-            .value       = value,
-            .type        = type,
+            .value            = value,
+            .type             = type,
+            .preceding_trivia = preceding_trivia,
             .source_view = utl::Source_view { source, string_view, start_position, stop_position },
         };
     }
@@ -162,11 +164,13 @@ namespace {
     class [[nodiscard]] Token_maker {
         char const*          m_old_pointer;
         utl::Source_position m_old_position;
+        std::string_view     m_trivia;
         liblex::Context&     m_context;
     public:
-        explicit Token_maker(liblex::Context& context) noexcept
+        explicit Token_maker(std::string_view const trivia, liblex::Context& context) noexcept
             : m_old_pointer { context.pointer() }
             , m_old_position { context.position() }
+            , m_trivia { trivia }
             , m_context { context }
         {}
 
@@ -176,25 +180,30 @@ namespace {
                 m_old_position,
                 m_context.position(),
                 { m_old_pointer, m_context.pointer() },
+                m_context.source(),
                 std::move(value),
                 type,
-                m_context.source());
+                m_trivia);
         }
     };
 
-    auto error_if_trailing_separator(std::string_view const string, liblex::Context& context)
+    [[nodiscard]] auto error_if_trailing_separator(
+        std::string_view const string, liblex::Context& context)
+        -> std::optional<tl::unexpected<liblex::Token_extraction_failure>>
     {
         if (string.empty() || string.back() != '\'') {
-            return;
+            return std::nullopt;
         }
-        context.error("Expected one or more digits after the digit separator");
+        else {
+            return context.error("Expected one or more digits after the digit separator");
+        }
     }
 
-    auto handle_escape_sequence(liblex::Context& context) -> char
+    [[nodiscard]] auto handle_escape_sequence(liblex::Context& context) -> liblex::Expected<char>
     {
         char const* const anchor = context.pointer();
         if (context.is_finished()) {
-            context.error(anchor, "Expected an escape sequence, but found the end of input");
+            return context.error(anchor, "Expected an escape sequence, but found the end of input");
         }
         // clang-format off
         switch (context.extract_current()) {
@@ -209,24 +218,24 @@ namespace {
         case '\"': return '\"';
         case '\\': return '\\';
         default:
-            context.error(anchor, "Unrecognized escape sequence");
+            return context.error(anchor, "Unrecognized escape sequence");
         }
         // clang-format on
     }
 
-    auto skip_string_literal_within_comment(liblex::Context& context) -> void
+    auto skip_string_literal_within_comment(liblex::Context& context) -> liblex::Expected<void>
     {
         char const* const anchor = context.pointer();
         if (!context.try_consume('"')) {
-            return;
+            return {};
         }
         for (;;) {
             if (context.is_finished()) {
-                context.error(anchor, "Unterminating string literal within comment block");
+                return context.error(anchor, "Unterminating string literal within comment block");
             }
             switch (context.extract_current()) {
             case '"':
-                return;
+                return {};
             case '\\':
                 (void)handle_escape_sequence(context);
                 [[fallthrough]];
@@ -236,7 +245,8 @@ namespace {
         }
     }
 
-    auto skip_block_comment(char const* const anchor, liblex::Context& context) -> void
+    auto skip_block_comment(char const* const anchor, liblex::Context& context)
+        -> liblex::Expected<void>
     {
         for (utl::Usize depth = 1; depth != 0;) {
             skip_string_literal_within_comment(context);
@@ -247,19 +257,20 @@ namespace {
             }
             else if (context.try_consume("/*")) {
                 if (depth == 50) {
-                    context.error(
+                    return context.error(
                         { context.pointer() - 2, 2 }, "This block comment is too deeply nested");
                 }
                 ++depth;
             }
             else if (context.is_finished()) {
                 // TODO: help note: "Comments starting with '/*' must be terminated with '*/'"
-                context.error(anchor, "Unterminating comment block");
+                return context.error(anchor, "Unterminating comment block");
             }
             else {
                 context.advance();
             }
         }
+        return {};
     }
 
     auto extract_comments_and_whitespace(liblex::Context& context) -> std::string_view
@@ -280,69 +291,76 @@ namespace {
         return std::string_view { anchor, context.pointer() };
     }
 
-    auto extract_identifier(Token_maker const& token_maker, liblex::Context& context) -> Token
+    auto extract_identifier(Token_maker const& make_token, liblex::Context& context) -> Token
     {
         std::string_view const view = context.extract(is_identifier_tail);
         assert(!view.empty());
-        for (auto const& [keyword, token_type] : keyword_token_map) { // NOLINT
-            if (view == keyword) {
-                return token_maker({}, token_type);
-            }
+
+        if (auto const it = ranges::find(keyword_token_map, view, utl::first);
+            it != keyword_token_map.end())
+        {
+            return make_token({}, it->second);
         }
+
         if (view == "true") {
-            return token_maker(kieli::Boolean { true }, Token::Type::boolean_literal);
+            return make_token(kieli::Boolean { true }, Token::Type::boolean_literal);
         }
         else if (view == "false") {
-            return token_maker(kieli::Boolean { false }, Token::Type::boolean_literal);
+            return make_token(kieli::Boolean { false }, Token::Type::boolean_literal);
         }
         else if (ranges::all_of(view, is_one_of<"_">)) {
-            return token_maker({}, Token::Type::underscore);
+            return make_token({}, Token::Type::underscore);
         }
         else if (is_upper(view[view.find_first_not_of('_')])) {
-            return token_maker(context.make_identifier(view), Token::Type::upper_name);
+            return make_token(context.make_identifier(view), Token::Type::upper_name);
         }
         else {
-            return token_maker(context.make_identifier(view), Token::Type::lower_name);
+            return make_token(context.make_identifier(view), Token::Type::lower_name);
         }
     }
 
-    auto extract_operator(Token_maker const& token_maker, liblex::Context& context) -> Token
+    auto extract_operator(Token_maker const& make_token, liblex::Context& context) -> Token
     {
         std::string_view const view = context.extract(is_operator);
-        assert(!view.empty());
-        for (auto const& [operator_name, token_type] : punctuation_token_map) { // NOLINT
-            if (view == operator_name) {
-                return token_maker({}, token_type);
-            }
+        if (auto const it = ranges::find(punctuation_token_map, view, utl::first);
+            it != punctuation_token_map.end())
+        {
+            return make_token({}, it->second);
         }
-        return token_maker(context.make_operator(view), Token::Type::operator_name);
+        return make_token(context.make_operator(view), Token::Type::operator_name);
     }
 
-    auto extract_character_literal(Token_maker const& token_maker, liblex::Context& context)
-        -> Token
+    auto extract_character_literal(Token_maker const& make_token, liblex::Context& context)
+        -> liblex::Expected<Token>
     {
         char const* const anchor = context.pointer();
         assert(context.current() == '\'');
         context.advance();
 
         if (context.is_finished()) {
-            context.error(anchor, "Unterminating character literal");
+            return context.error(anchor, "Unterminating character literal");
         }
 
         char c = context.extract_current();
         if (c == '\\') {
-            c = handle_escape_sequence(context);
+            if (auto const character = handle_escape_sequence(context)) {
+                c = character.value();
+            }
+            else {
+                return tl::unexpected { character.error() };
+            }
         }
 
         if (context.try_consume('\'')) {
-            return token_maker(kieli::Character { c }, Token::Type::character_literal);
+            return make_token(kieli::Character { c }, Token::Type::character_literal);
         }
         else {
-            context.error("Expected a closing single-quote");
+            return context.error("Expected a closing single-quote");
         }
     }
 
-    auto extract_string_literal(Token_maker const& token_maker, liblex::Context& context) -> Token
+    auto extract_string_literal(Token_maker const& make_token, liblex::Context& context)
+        -> liblex::Expected<Token>
     {
         char const* const anchor = context.pointer();
         assert(context.current() == '"');
@@ -353,14 +371,18 @@ namespace {
 
         for (;;) {
             if (context.is_finished()) {
-                context.error(anchor, "Unterminating string literal");
+                return context.error(anchor, "Unterminating string literal");
             }
             switch (char c = context.extract_current()) {
             case '"':
-                return token_maker(
-                    context.make_string_literal(string), Token::Type::string_literal);
+                return make_token(context.make_string_literal(string), Token::Type::string_literal);
             case '\\':
-                c = handle_escape_sequence(context);
+                if (auto const character = handle_escape_sequence(context)) {
+                    c = character.value();
+                }
+                else {
+                    return tl::unexpected { character.error() };
+                }
                 [[fallthrough]];
             default:
                 string.push_back(c);
@@ -370,54 +392,51 @@ namespace {
 
     auto try_extract_numeric_base(liblex::Context& context) -> std::optional<int>
     {
-        if (context.try_consume("0b")) {
-            return 2; // binary
-        }
-        if (context.try_consume("0q")) {
-            return 4; // quaternary
-        }
-        if (context.try_consume("0o")) {
-            return 8; // octal
-        }
-        if (context.try_consume("0d")) {
-            return 12; // duodecimal
-        }
-        if (context.try_consume("0x")) {
-            return 16; // hexadecimal
-        }
+        // clang-format off
+        if (context.try_consume("0b")) return 2;  // binary
+        if (context.try_consume("0q")) return 4;  // quaternary
+        if (context.try_consume("0o")) return 8;  // octal
+        if (context.try_consume("0d")) return 12; // duodecimal
+        if (context.try_consume("0x")) return 16; // hexadecimal
         return std::nullopt;
+        // clang-format on
     }
 
     auto extract_numeric_floating(
-        Token_maker const& token_maker, char const* const anchor, liblex::Context& context) -> Token
+        Token_maker const& make_token, char const* const anchor, liblex::Context& context)
+        -> liblex::Expected<Token>
     {
         static constexpr auto digit_predicate = is_digit_or_separator<is_digit10>;
         if (context.is_finished() || !digit_predicate(context.current())) {
-            context.error("Expected one or more digits after the decimal separator");
+            return context.error("Expected one or more digits after the decimal separator");
         }
+
         std::string_view const second_digit_sequence = context.extract(digit_predicate);
-        error_if_trailing_separator(second_digit_sequence, context);
+        if (auto const error = error_if_trailing_separator(second_digit_sequence, context)) {
+            return error.value();
+        }
 
         std::string_view const suffix = context.extract(is_alpha);
         if (!suffix.empty()) {
             if (suffix != "e" && suffix != "E") {
-                context.error(suffix, "Erroneous floating point literal alphabetic suffix");
+                return context.error(suffix, "Erroneous floating point literal alphabetic suffix");
             }
             (void)context.try_consume('-');
             if (context.is_finished() || !is_digit10(context.current())) {
-                context.error("Expected an exponent");
+                return context.error("Expected an exponent");
             }
             else {
                 std::string_view const exponent_digits = context.extract(digit_predicate);
-                assert(!exponent_digits.empty());
-                error_if_trailing_separator(exponent_digits, context);
+                if (auto const error = error_if_trailing_separator(exponent_digits, context)) {
+                    return error.value();
+                }
             }
         }
 
         std::string_view const floating_string { anchor, context.pointer() };
         auto const             floating = liblex::parse_floating(floating_string);
         if (floating == tl::unexpected { liblex::Numeric_error::out_of_range }) {
-            context.error(floating_string, "Floating point literal is too large");
+            return context.error(floating_string, "Floating point literal is too large");
         }
         else {
             utl::always_assert(floating.has_value());
@@ -425,22 +444,23 @@ namespace {
 
         std::string_view const extraneous_suffix = context.extract(is_alpha);
         if (!extraneous_suffix.empty()) {
-            context.error(extraneous_suffix, "Erroneous floating point literal alphabetic suffix");
+            return context.error(
+                extraneous_suffix, "Erroneous floating point literal alphabetic suffix");
         }
 
-        return token_maker(kieli::Floating { floating.value() }, Token::Type::floating_literal);
+        return make_token(kieli::Floating { floating.value() }, Token::Type::floating_literal);
     }
 
     auto extract_numeric_integer(
-        Token_maker const&     token_maker,
+        Token_maker const&     make_token,
         char const* const      anchor,
         std::string_view const digit_sequence,
         int const              base,
-        liblex::Context&       context) -> Token
+        liblex::Context&       context) -> liblex::Expected<Token>
     {
         auto integer = liblex::parse_integer(digit_sequence, base);
         if (integer == tl::unexpected { liblex::Numeric_error::out_of_range }) {
-            context.error(digit_sequence, "Integer literal is too large");
+            return context.error(digit_sequence, "Integer literal is too large");
         }
         else {
             utl::always_assert(integer.has_value());
@@ -448,31 +468,33 @@ namespace {
 
         std::string_view const suffix = context.extract(is_alpha);
         if (suffix.empty()) {
-            return token_maker(kieli::Integer { integer.value() }, Token::Type::integer_literal);
+            return make_token(kieli::Integer { integer.value() }, Token::Type::integer_literal);
         }
         else if (suffix != "e" && suffix != "E") {
-            context.error(suffix, "Erroneous integer literal alphabetic suffix");
+            return context.error(suffix, "Erroneous integer literal alphabetic suffix");
         }
         else if (context.try_consume('-')) {
             context.consume(is_digit10);
-            context.error("An integer literal may not have a negative exponent");
+            return context.error("An integer literal may not have a negative exponent");
         }
         else if (context.is_finished() || !is_digit10(context.current())) {
-            context.error("Expected an exponent");
+            return context.error("Expected an exponent");
         }
         else {
             std::string_view const exponent_digit_sequence = context.extract(is_digit10);
-            assert(!exponent_digit_sequence.empty());
-            error_if_trailing_separator(exponent_digit_sequence, context);
+            if (auto const error = error_if_trailing_separator(exponent_digit_sequence, context)) {
+                return error.value();
+            }
 
             std::string_view const extraneous_suffix = context.extract(is_alpha);
             if (!extraneous_suffix.empty()) {
-                context.error(extraneous_suffix, "Erroneous integer literal alphabetic suffix");
+                return context.error(
+                    extraneous_suffix, "Erroneous integer literal alphabetic suffix");
             }
 
             auto const exponent = liblex::parse_integer(exponent_digit_sequence);
             if (exponent == tl::unexpected { liblex::Numeric_error::out_of_range }) {
-                context.error(exponent_digit_sequence, "Exponent is too large");
+                return context.error(exponent_digit_sequence, "Exponent is too large");
             }
             else {
                 utl::always_assert(exponent.has_value());
@@ -480,7 +502,7 @@ namespace {
 
             auto const result = liblex::apply_scientific_exponent(*integer, *exponent);
             if (result == tl::unexpected { liblex::Numeric_error::out_of_range }) {
-                context.error(
+                return context.error(
                     { anchor, context.pointer() },
                     "Integer literal is too large after applying scientific exponent");
             }
@@ -488,11 +510,12 @@ namespace {
                 utl::always_assert(result.has_value());
             }
 
-            return token_maker(kieli::Integer { result.value() }, Token::Type::integer_literal);
+            return make_token(kieli::Integer { result.value() }, Token::Type::integer_literal);
         }
     }
 
-    auto extract_numeric(Token_maker const& token_maker, liblex::Context& context) -> Token
+    auto extract_numeric(Token_maker const& make_token, liblex::Context& context)
+        -> liblex::Expected<Token>
     {
         char const* const      anchor               = context.pointer();
         std::optional const    base                 = try_extract_numeric_base(context);
@@ -502,12 +525,14 @@ namespace {
         if (base.has_value()) {
             if (first_digit_sequence.find_first_not_of('\'') == std::string_view::npos) {
                 // FIXME: Specify base value in message
-                context.error("Expected one or more digits after the base specifier");
+                return context.error("Expected one or more digits after the base specifier");
             }
         }
         else {
             assert(!first_digit_sequence.empty());
-            error_if_trailing_separator(first_digit_sequence, context);
+            if (auto const error = error_if_trailing_separator(first_digit_sequence, context)) {
+                return error.value();
+            }
         }
 
         // If the literal is preceded by a dot, don't attempt to extract a float.
@@ -519,67 +544,62 @@ namespace {
         if (!has_preceding_dot && context.try_consume('.')) {
             if (base.has_value()) {
                 context.consume(is_digit10);
-                context.error(
+                return context.error(
                     { anchor, 2 }, "A floating point literal may not have a base specifier");
             }
-            return extract_numeric_floating(token_maker, anchor, context);
+            return extract_numeric_floating(make_token, anchor, context);
         }
         return extract_numeric_integer(
-            token_maker, anchor, first_digit_sequence, base.value_or(10), context);
+            make_token, anchor, first_digit_sequence, base.value_or(10), context);
     }
 
-    auto extract_token(liblex::Context& context) -> Token
+    auto extract_token(Token_maker const& token, liblex::Context& context)
+        -> liblex::Expected<Token>
     {
         assert(!context.is_finished());
-        Token_maker const token { context };
-        try {
-            switch (char const current = context.current()) {
-            case '(':
-                context.advance();
-                return token({}, Token::Type::paren_open);
-            case ')':
-                context.advance();
-                return token({}, Token::Type::paren_close);
-            case '{':
-                context.advance();
-                return token({}, Token::Type::brace_open);
-            case '}':
-                context.advance();
-                return token({}, Token::Type::brace_close);
-            case '[':
-                context.advance();
-                return token({}, Token::Type::bracket_open);
-            case ']':
-                context.advance();
-                return token({}, Token::Type::bracket_close);
-            case ';':
-                context.advance();
-                return token({}, Token::Type::semicolon);
-            case ',':
-                context.advance();
-                return token({}, Token::Type::comma);
-            case '\'':
-                return extract_character_literal(token, context);
-            case '\"':
-                return extract_string_literal(token, context);
-            default:
-                if (is_identifier_head(current)) {
-                    return extract_identifier(token, context);
-                }
-                else if (is_operator(current)) {
-                    return extract_operator(token, context);
-                }
-                else if (is_digit10(current)) {
-                    return extract_numeric(token, context);
-                }
-                else {
-                    context.error(
-                        context.extract(is_invalid_character), "Unable to extract lexical token");
-                }
+        switch (char const current = context.current()) {
+        case '(':
+            context.advance();
+            return token({}, Token::Type::paren_open);
+        case ')':
+            context.advance();
+            return token({}, Token::Type::paren_close);
+        case '{':
+            context.advance();
+            return token({}, Token::Type::brace_open);
+        case '}':
+            context.advance();
+            return token({}, Token::Type::brace_close);
+        case '[':
+            context.advance();
+            return token({}, Token::Type::bracket_open);
+        case ']':
+            context.advance();
+            return token({}, Token::Type::bracket_close);
+        case ';':
+            context.advance();
+            return token({}, Token::Type::semicolon);
+        case ',':
+            context.advance();
+            return token({}, Token::Type::comma);
+        case '\'':
+            return extract_character_literal(token, context);
+        case '\"':
+            return extract_string_literal(token, context);
+        default:
+            if (is_identifier_head(current)) {
+                return extract_identifier(token, context);
             }
-        }
-        catch (liblex::Token_extraction_failure const&) {
-            return token({}, Token::Type::error);
+            else if (is_operator(current)) {
+                return extract_operator(token, context);
+            }
+            else if (is_digit10(current)) {
+                return extract_numeric(token, context);
+            }
+            else {
+                return context.error(
+                    context.extract(is_invalid_character), "Unable to extract lexical token");
+            }
         }
     }
 
@@ -590,8 +610,9 @@ auto kieli::lex(Lex_arguments&& lex_arguments) -> Lex_result
     std::string_view const source_string = lex_arguments.source->string();
     utl::always_assert(source_string.data() != nullptr);
 
-    auto             tokens = utl::vector_with_capacity<Token>(1024);
-    std::string_view current_trivia;
+    std::string_view   current_trivia;
+    std::vector<Token> tokens;
+    tokens.reserve(1024);
 
     liblex::Context context { lex_arguments.source, lex_arguments.compilation_info };
     for (;;) {
@@ -599,19 +620,23 @@ auto kieli::lex(Lex_arguments&& lex_arguments) -> Lex_result
         if (context.is_finished()) {
             break;
         }
-        Token token            = extract_token(context);
-        token.preceding_trivia = current_trivia;
-        tokens.push_back(token);
+        Token_maker make_token { current_trivia, context };
+        if (auto token = extract_token(make_token, context)) {
+            tokens.push_back(std::move(*token));
+        }
+        else {
+            tokens.push_back(make_token({}, Token::Type::error));
+        }
     }
 
     Token end_of_input_token = make_token(
         context.position(),
         context.position(),
         { source_string.data() + source_string.size(), 0 },
+        lex_arguments.source,
         Token::Variant {},
         Token::Type::end_of_input,
-        lex_arguments.source);
-    end_of_input_token.preceding_trivia = current_trivia;
+        current_trivia);
     tokens.push_back(std::move(end_of_input_token));
 
     return Lex_result {

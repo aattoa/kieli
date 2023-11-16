@@ -3,8 +3,10 @@
 #include <liblex/lex.hpp>
 
 namespace liblex {
-    // Thrown on a lexical error, caught by the token extraction loop
-    struct [[nodiscard]] Token_extraction_failure {};
+    struct Token_extraction_failure {};
+
+    template <class T>
+    using Expected = tl::expected<T, Token_extraction_failure>;
 
     class [[nodiscard]] Context {
         kieli::Compilation_info& m_compilation_info;
@@ -31,9 +33,12 @@ namespace liblex {
         [[nodiscard]] auto try_consume(char) noexcept -> bool;
         [[nodiscard]] auto try_consume(std::string_view) noexcept -> bool;
 
-        [[noreturn]] auto error(std::string_view position, std::string_view message) -> void;
-        [[noreturn]] auto error(char const* position, std::string_view message) -> void;
-        [[noreturn]] auto error(std::string_view message) -> void;
+        [[nodiscard]] auto error(std::string_view position, std::string_view message)
+            -> tl::unexpected<Token_extraction_failure>;
+        [[nodiscard]] auto error(char const* position, std::string_view message)
+            -> tl::unexpected<Token_extraction_failure>;
+        [[nodiscard]] auto error(std::string_view message)
+            -> tl::unexpected<Token_extraction_failure>;
 
         auto advance(utl::Usize offset = 1) noexcept -> void;
 

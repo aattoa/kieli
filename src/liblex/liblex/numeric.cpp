@@ -3,29 +3,28 @@
 #include <liblex/numeric.hpp>
 
 namespace {
-    auto without_separators(std::string_view const digits)
-        -> utl::Pair<std::string, std::string_view>
+    auto without_separators(std::string_view const digits) -> std::string_view
     {
         if (!digits.contains('\'')) {
-            return { std::string {}, digits };
+            return digits;
         }
-        std::string buffer;
-        utl::disable_short_string_optimization(buffer);
+        static thread_local std::string buffer;
+        buffer.clear();
         ranges::copy_if(digits, std::back_inserter(buffer), [](char const c) { return c != '\''; });
-        std::string_view const view = buffer;
-        return { std::move(buffer), view };
+        return buffer;
     }
 
     template <class T>
     auto parse_impl(std::string_view const raw_string, std::same_as<int> auto const... base)
         -> tl::expected<T, liblex::Numeric_error>
     {
-        auto const [buffer, string] = without_separators(raw_string);
+        auto const string = without_separators(raw_string);
         assert(!string.empty());
 
         char const* const begin = string.data();
         char const* const end   = begin + string.size();
-        T                 value {};
+
+        T value {};
         auto const [ptr, ec] = std::from_chars(begin, end, value, base...);
 
         if (ptr != end) {

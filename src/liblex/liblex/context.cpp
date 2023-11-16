@@ -111,30 +111,35 @@ auto liblex::Context::make_string_literal(std::string_view const string) -> utl:
 
 auto liblex::Context::make_operator(std::string_view const string) -> utl::Pooled_string
 {
+    assert(!string.empty());
     return m_compilation_info.get()->operator_pool.make(string);
 }
 
 auto liblex::Context::make_identifier(std::string_view const string) -> utl::Pooled_string
 {
+    assert(!string.empty());
     return m_compilation_info.get()->identifier_pool.make(string);
 }
 
-auto liblex::Context::error(std::string_view const position, std::string_view const message) -> void
+auto liblex::Context::error(std::string_view const position, std::string_view const message)
+    -> tl::unexpected<Token_extraction_failure>
 {
     m_compilation_info.get()->diagnostics.vector.push_back(cppdiag::Diagnostic {
         .text_sections = utl::to_vector({ kieli::text_section(source_view_for(position)) }),
         .message       = m_compilation_info.get()->diagnostics.context.message(message),
         .level         = cppdiag::Level::error,
     });
-    throw Token_extraction_failure {};
+    return tl::unexpected { Token_extraction_failure {} };
 }
 
-auto liblex::Context::error(char const* const position, std::string_view const message) -> void
+auto liblex::Context::error(char const* const position, std::string_view const message)
+    -> tl::unexpected<Token_extraction_failure>
 {
-    error({ position, position }, message);
+    return error({ position, position }, message);
 }
 
-auto liblex::Context::error(std::string_view const message) -> void
+auto liblex::Context::error(std::string_view const message)
+    -> tl::unexpected<Token_extraction_failure>
 {
-    error(pointer(), message);
+    return error(pointer(), message);
 }
