@@ -33,11 +33,10 @@ namespace utl::dtl {
 
         ~Wrapper_arena_page()
         {
-            if (!m_buffer) {
-                return;
+            if (m_buffer) {
+                std::destroy(m_buffer, m_slot);
+                ::operator delete(m_buffer, sizeof(T) * m_page_size, alignment);
             }
-            std::destroy(m_buffer, m_slot);
-            ::operator delete(m_buffer, sizeof(T) * m_page_size, alignment);
         }
 
         Wrapper_arena_page(Wrapper_arena_page const&) = delete;
@@ -49,7 +48,7 @@ namespace utl::dtl {
         }
 
         template <class... Args>
-        [[nodiscard]] auto unsafe_emplace_arena_element(Args&&... args) noexcept(
+        [[nodiscard]] auto unsafe_emplace_back(Args&&... args) noexcept(
             std::is_nothrow_constructible_v<T, Args&&...>) -> T*
         {
             assert(!is_at_capacity());
@@ -57,12 +56,18 @@ namespace utl::dtl {
             return m_slot++;
         }
     };
+
+    template <class>
+    struct Is_wrapper : std::false_type {};
 } // namespace utl::dtl
 
 namespace utl {
 
-    template <class T>
+    enum class Wrapper_mutability { yes, no };
+
+    template <class T, Wrapper_mutability = Wrapper_mutability::no>
     class [[nodiscard]] Wrapper;
+
     template <class...>
     class [[nodiscard]] Wrapper_arena;
 
@@ -84,17 +89,17 @@ namespace utl {
             return with_page_size(1024);
         }
 
-        template <class... Args>
-        auto wrap(Args&&... args) -> Wrapper<T>
+        template <Wrapper_mutability mut = Wrapper_mutability::no, class... Args>
+        auto wrap(Args&&... args) -> Wrapper<T, mut>
         {
             auto const it   = ranges::find_if_not(m_pages, &Page::is_at_capacity);
             Page&      page = it != m_pages.end() ? *it : m_pages.emplace_back(m_page_size);
-            return Wrapper<T> { page.unsafe_emplace_arena_element(std::forward<Args>(args)...) };
+            return Wrapper<T, mut> { page.unsafe_emplace_back(std::forward<Args>(args)...) };
         }
 
         auto merge_with(Wrapper_arena&& other) & -> void
         {
-            utl::append_vector(m_pages, std::move(other.m_pages));
+            append_vector(m_pages, std::move(other.m_pages));
         }
     };
 
@@ -115,17 +120,10 @@ namespace utl {
             return Wrapper_arena { Wrapper_arena<Ts>::with_default_page_size()... };
         }
 
-        template <one_of<Ts...> T, class... Args>
-        auto wrap(Args&&... args) -> Wrapper<T>
+        template <one_of<Ts...> T, Wrapper_mutability mut = Wrapper_mutability::no, class... Args>
+        auto wrap(Args&&... args) -> Wrapper<T, mut>
         {
-            return Wrapper_arena<T>::wrap(std::forward<Args>(args)...);
-        }
-
-        template <class Arg>
-        auto wrap(Arg&& arg) -> utl::Wrapper<std::remove_cvref_t<Arg>>
-            requires utl::one_of<std::remove_cvref_t<Arg>, Ts...>
-        {
-            return Wrapper_arena<std::remove_cvref_t<Arg>>::wrap(std::forward<Arg>(arg));
+            return Wrapper_arena<T>::template wrap<mut>(std::forward<Args>(args)...);
         }
 
         auto merge_with(Wrapper_arena&& other) & -> void
@@ -134,7 +132,7 @@ namespace utl {
         }
     };
 
-    template <class T>
+    template <class T, Wrapper_mutability mut>
     class [[nodiscard]] Wrapper {
         T* m_pointer;
 
@@ -142,16 +140,16 @@ namespace utl {
 
         friend Wrapper_arena<T>;
     public:
-        [[nodiscard]] auto operator*() const noexcept -> T&
+        [[nodiscard]] auto operator*() const noexcept -> T const&
         {
             APPLY_EXPLICIT_OBJECT_PARAMETER_HERE;
             return *m_pointer;
         }
 
-        [[nodiscard]] auto operator->() const noexcept -> T*
+        [[nodiscard]] auto operator->() const noexcept -> T const*
         {
             APPLY_EXPLICIT_OBJECT_PARAMETER_HERE;
-            return std::addressof(**this);
+            return m_pointer;
         }
 
         [[nodiscard]] auto is(Wrapper const other) const noexcept -> bool
@@ -163,16 +161,22 @@ namespace utl {
         {
             return m_pointer != other.m_pointer;
         }
+
+        [[nodiscard]] auto as_mutable() const noexcept
+            -> T& requires(mut == Wrapper_mutability::yes) { return *m_pointer; }
     };
 
     template <class T>
-    concept wrapper = specialization_of<T, Wrapper>;
+    concept wrapper = dtl::Is_wrapper<T>::value;
 
 } // namespace utl
 
-template <class T>
-struct std::formatter<utl::Wrapper<T>> : formatter<T> {
-    auto format(utl::Wrapper<T> const wrapper, auto& context) const
+template <class T, utl::Wrapper_mutability mut>
+struct utl::dtl::Is_wrapper<utl::Wrapper<T, mut>> : std::true_type {};
+
+template <class T, utl::Wrapper_mutability mut>
+struct std::formatter<utl::Wrapper<T, mut>> : formatter<T> {
+    auto format(utl::Wrapper<T, mut> const wrapper, auto& context) const
     {
         return formatter<T>::format(*wrapper, context);
     }

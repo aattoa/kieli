@@ -37,7 +37,7 @@ namespace libparse {
         template <cst::node Node>
         auto wrap(Node&& node) -> utl::Wrapper<Node>
         {
-            return node_arena.wrap(std::move(node));
+            return node_arena.wrap<Node>(std::move(node));
         }
 
         [[nodiscard]] auto wrap() noexcept
