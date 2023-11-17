@@ -2,6 +2,8 @@
 
 #include <libutl/common/utilities.hpp>
 
+// TODO: C++23: EOP
+
 namespace utl::dtl {
     template <class T>
     class [[nodiscard]] Wrapper_arena_page {
@@ -142,13 +144,11 @@ namespace utl {
     public:
         [[nodiscard]] auto operator*() const noexcept -> T const&
         {
-            APPLY_EXPLICIT_OBJECT_PARAMETER_HERE;
             return *m_pointer;
         }
 
         [[nodiscard]] auto operator->() const noexcept -> T const*
         {
-            APPLY_EXPLICIT_OBJECT_PARAMETER_HERE;
             return m_pointer;
         }
 

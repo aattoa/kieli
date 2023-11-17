@@ -6,7 +6,8 @@ namespace {
     constexpr auto parse = libparse::test_parse_type;
 }
 
-#define TEST(name)                   TEST_CASE("parse-type " name, "[libparse][type]") // NOLINT
+#define TEST(name) TEST_CASE("parse-type " name, "[libparse][type]") // NOLINT
+
 #define REQUIRE_SIMPLE_PARSE(string) REQUIRE(parse(string) == (string))
 
 TEST("built in types")

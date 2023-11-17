@@ -4,7 +4,6 @@
 #include <libutl/common/wrapper.hpp>
 
 namespace utl {
-
     class [[nodiscard]] Source {
         std::filesystem::path m_file_path;
         std::string           m_file_content;
@@ -39,7 +38,7 @@ namespace utl {
         Source_position  stop_position;
 
         explicit Source_view(
-            Wrapper<Source>  source,
+            Source::Wrapper  source,
             std::string_view string,
             Source_position  start,
             Source_position  stop) noexcept;
@@ -49,13 +48,4 @@ namespace utl {
 
         auto combine_with(Source_view const&) const noexcept -> Source_view;
     };
-
 } // namespace utl
-
-template <>
-struct std::formatter<utl::Source_position> : utl::formatting::Formatter_base {
-    auto format(utl::Source_position const& position, auto& context) const
-    {
-        return std::format_to(context.out(), "{}:{}", position.line, position.column);
-    }
-};

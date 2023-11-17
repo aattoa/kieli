@@ -48,23 +48,18 @@ auto utl::String_pool::make(std::string_view const string) -> Pooled_string
     if (it == m_string->end()) {
         return make_guaranteed_new_string(string);
     }
-    else {
-        return Pooled_string {
-            Relative_string {
-                .offset = unsigned_distance(m_string->begin(), it),
-                .length = string.size(),
-            },
-            m_string.get(),
-        };
-    }
+    return Pooled_string {
+        Relative_string {
+            .offset = unsigned_distance(m_string->begin(), it),
+            .length = string.size(),
+        },
+        m_string.get(),
+    };
 }
 
 auto utl::String_pool::make_guaranteed_new_string(std::string_view const string) -> Pooled_string
 {
-    Relative_string const relative {
-        .offset = m_string->size(),
-        .length = string.size(),
-    };
+    Relative_string const relative { .offset = m_string->size(), .length = string.size() };
     m_string->append(string);
     return Pooled_string { relative, m_string.get() };
 }

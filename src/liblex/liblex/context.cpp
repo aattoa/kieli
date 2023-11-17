@@ -87,7 +87,7 @@ auto liblex::Context::try_consume(char const c) noexcept -> bool
     if (is_finished()) {
         return false;
     }
-    else if (current() == c) {
+    if (current() == c) {
         ++m_position.column;
         ++m_pointer;
         return true;

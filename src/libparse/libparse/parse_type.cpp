@@ -57,13 +57,11 @@ namespace {
                 .close_token = cst::Token::from_lexical(close_parenthesis),
             } };
         }
-        else {
-            return cst::type::Tuple { {
-                .value       = std::move(types),
-                .open_token  = cst::Token::from_lexical(open_parenthesis),
-                .close_token = cst::Token::from_lexical(close_parenthesis),
-            } };
-        }
+        return cst::type::Tuple { {
+            .value       = std::move(types),
+            .open_token  = cst::Token::from_lexical(open_parenthesis),
+            .close_token = cst::Token::from_lexical(close_parenthesis),
+        } };
     }
 
     auto extract_array_or_slice(Parse_context& context) -> cst::Type::Variant
@@ -273,10 +271,8 @@ auto libparse::parse_type(Parse_context& context) -> std::optional<utl::Wrapper<
                     .source_view = context.make_source_view(anchor, context.pointer - 1),
                 });
             }
-            else {
-                // Not a qualified type, retreat
-                context.pointer = anchor;
-            }
+            // Not a qualified type, retreat
+            context.pointer = anchor;
         }
         return type;
     }

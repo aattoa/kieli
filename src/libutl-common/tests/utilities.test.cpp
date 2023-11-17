@@ -1,7 +1,7 @@
 #include <libutl/common/utilities.hpp>
 #include <catch2/catch_test_macros.hpp>
 
-#define TEST(name) TEST_CASE("libutl " name, "[libutl][utilities]")
+#define TEST(name) TEST_CASE("libutl " name, "[libutl][utilities]") // NOLINT
 
 namespace {
     struct Move_only {
@@ -9,6 +9,7 @@ namespace {
 
         explicit constexpr Move_only(int const value) noexcept : value(value) {}
 
+        ~Move_only()                                       = default;
         Move_only(Move_only const&)                        = delete;
         auto operator=(Move_only const&)                   = delete;
         Move_only(Move_only&&) noexcept                    = default;
@@ -107,10 +108,7 @@ TEST("Relative_string")
 {
     SECTION("view_in")
     {
-        static constexpr utl::Relative_string rs {
-            .offset = 2,
-            .length = 3,
-        };
+        static constexpr utl::Relative_string rs { .offset = 2, .length = 3 };
         REQUIRE(rs.view_in("abcdefg") == "cde");
     }
     SECTION("format_to")

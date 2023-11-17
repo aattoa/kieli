@@ -2,7 +2,7 @@
 
 #include <libutl/common/utilities.hpp>
 
-APPLY_EXPLICIT_OBJECT_PARAMETER_HERE;
+// TODO: C++23: EOP
 
 namespace utl {
 
@@ -117,12 +117,10 @@ namespace utl {
         template <std::integral U>
         [[nodiscard]] explicit constexpr operator U() const
         {
-            if (std::in_range<U>(m_value)) {
-                return static_cast<U>(m_value);
-            }
-            else {
+            if (!std::in_range<U>(m_value)) {
                 throw Safe_integer_out_of_range {};
             }
+            return static_cast<U>(m_value);
         }
 
         [[nodiscard]] constexpr auto get() const noexcept -> T

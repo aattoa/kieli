@@ -340,7 +340,7 @@ namespace {
 
         auto operator()(cst::expression::Hole const&)
         {
-            state.format("\?\?\?");
+            state.format(R"(???)");
         }
 
         auto operator()(cst::expression::Self const&)

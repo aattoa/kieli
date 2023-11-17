@@ -2,7 +2,7 @@
 #include <libutl/common/flatmap.hpp>
 #include <catch2/catch_test_macros.hpp>
 
-#define TEST(name) TEST_CASE(name, "[libutl][flatmap]")
+#define TEST(name) TEST_CASE(name, "[libutl][flatmap]") // NOLINT
 
 TEST("utl::Flatmap::add_or_assign")
 {

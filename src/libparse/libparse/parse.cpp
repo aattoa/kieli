@@ -12,7 +12,7 @@ namespace {
     {
         std::vector<cst::Definition> definitions = utl::vector_with_capacity(16);
         while (auto definition = parse_definition(context)) {
-            definitions.push_back(std::move(*definition));
+            definitions.push_back(std::move(*definition)); // NOLINT: false positive
         }
         return definitions;
     }
@@ -127,12 +127,11 @@ namespace {
             if (auto expression = parse_block_expression(context)) {
                 return *expression;
             }
-            else if ((equals_sign = context.try_extract(Token_type::equals))) {
+            equals_sign = context.try_extract(Token_type::equals);
+            if (equals_sign) {
                 return extract_expression(context);
             }
-            else {
-                context.error_expected("the function body: '=' or '{'");
-            }
+            context.error_expected("the function body: '=' or '{'");
         });
 
         return cst::definition::Function {
@@ -405,7 +404,7 @@ namespace {
         -> utl::Pooled_string
     {
         auto const module_string = token.as_string();
-        if (module_string.view().find(".."sv) != std::string_view::npos) {
+        if (module_string.view().contains(".."sv)) {
             context.diagnostics().error(
                 token.source_view, "A module name or path can not contain '..'");
         }

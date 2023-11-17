@@ -13,7 +13,7 @@ namespace kieli {
 
     // Thrown when an unrecoverable error is encountered
     struct Compilation_failure : std::exception {
-        auto what() const noexcept -> char const* override;
+        [[nodiscard]] auto what() const noexcept -> char const* override;
     };
 
     struct Diagnostics {

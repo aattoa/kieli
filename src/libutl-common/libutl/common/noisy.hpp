@@ -3,7 +3,7 @@
 #include <libutl/common/utilities.hpp>
 
 namespace utl {
-
+    // NOLINTBEGIN
 #define BU_NOISY_LOG(op, f, ...)                                                                \
     f noexcept                                                                                  \
     {                                                                                           \
@@ -23,5 +23,5 @@ namespace utl {
     };
 
 #undef BU_NOISY_LOG
-
+    // NOLINTEND
 } // namespace utl

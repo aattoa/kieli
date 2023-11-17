@@ -35,10 +35,7 @@ namespace utl {
             if (Value* const existing = find(std::as_const(key))) {
                 return *existing = std::forward<V>(value);
             }
-            else {
-                return m_container.emplace_back(std::forward<K>(key), std::forward<V>(value))
-                    .second;
-            }
+            return m_container.emplace_back(std::forward<K>(key), std::forward<V>(value)).second;
         }
 
         template <class K, class V>

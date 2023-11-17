@@ -69,7 +69,7 @@ namespace {
             Lexical_token const* const equals_sign = context.extract_required(Token_type::equals);
             return context.wrap(cst::Expression {
             .value = cst::expression::Conditional_let {
-                .pattern = std::move(pattern),
+                .pattern = pattern,
                 .initializer = extract_expression(context),
                 .let_keyword_token = cst::Token::from_lexical(let_keyword),
                 .equals_sign_token = cst::Token::from_lexical(equals_sign),
@@ -85,9 +85,7 @@ namespace {
         if (auto body = parse_block_expression(context)) {
             return *body;
         }
-        else {
-            context.error_expected("the loop body, which must be a block expression");
-        }
+        context.error_expected("the loop body, which must be a block expression");
     }
 
     auto extract_infinite_loop(Parse_context& context) -> cst::Expression::Variant
@@ -106,7 +104,7 @@ namespace {
         assert(while_keyword->source_view.string == "while");
         utl::wrapper auto const condition = extract_condition(context);
         return cst::expression::While_loop {
-            .condition           = std::move(condition),
+            .condition           = condition,
             .body                = extract_loop_body(context),
             .while_keyword_token = cst::Token::from_lexical(while_keyword),
         };
@@ -120,8 +118,8 @@ namespace {
         utl::wrapper auto const    iterable    = extract_expression(context);
         assert(for_keyword->source_view.string == "for");
         return cst::expression::For_loop {
-            .iterator          = std::move(iterator),
-            .iterable          = std::move(iterable),
+            .iterator          = iterator,
+            .iterable          = iterable,
             .body              = extract_loop_body(context),
             .for_keyword_token = cst::Token::from_lexical(for_keyword),
             .in_keyword_token  = cst::Token::from_lexical(in_keyword),
@@ -146,7 +144,7 @@ namespace {
             }
             return cst::expression::Variable { std::move(name) };
         }
-        else if (context.try_consume(Token_type::brace_open)) {
+        if (context.try_consume(Token_type::brace_open)) {
             auto value = std::invoke([&]() -> cst::Type::Variant {
                 if (template_arguments) {
                     return cst::type::Template_application {
@@ -215,13 +213,11 @@ namespace {
                 .close_token = cst::Token::from_lexical(close),
             } };
         }
-        else {
-            return cst::expression::Tuple { {
-                .value       = std::move(expressions),
-                .open_token  = cst::Token::from_lexical(open),
-                .close_token = cst::Token::from_lexical(close),
-            } };
-        }
+        return cst::expression::Tuple { {
+            .value       = std::move(expressions),
+            .open_token  = cst::Token::from_lexical(open),
+            .close_token = cst::Token::from_lexical(close),
+        } };
     }
 
     auto extract_array(Parse_context& context) -> cst::Expression::Variant
@@ -394,7 +390,7 @@ namespace {
 
         std::vector<cst::expression::Match::Case> cases;
         while (auto match_case = parse_match_case(context)) {
-            cases.push_back(*match_case);
+            cases.push_back(std::move(*match_case)); // NOLINT: false positive
         }
 
         if (cases.empty()) {
@@ -511,12 +507,12 @@ namespace {
         while (auto expression = parse_expression(context)) {
             if (Lexical_token const* const semicolon = context.try_extract(Token_type::semicolon)) {
                 side_effects.push_back({
-                    .expression               = *expression,
+                    .expression               = *expression, // NOLINT: false positive
                     .trailing_semicolon_token = cst::Token::from_lexical(semicolon),
                 });
             }
             else {
-                result_expression = *expression;
+                result_expression = *expression; // NOLINT: false positive
                 break;
             }
         }
@@ -545,7 +541,7 @@ namespace {
                         .double_colon_token = cst::Token::from_lexical(double_colon),
                     });
             }
-            else if (context.try_consume(Token_type::brace_open)) {
+            if (context.try_consume(Token_type::brace_open)) {
                 return extract_struct_initializer(context, std::move(*type));
             }
             context.diagnostics().error(
@@ -642,7 +638,7 @@ namespace {
         }
         return parse_expression(context).transform(
             [](utl::Wrapper<cst::Expression> const expression) {
-                return cst::Function_argument { .expression = std::move(expression) };
+                return cst::Function_argument { .expression = expression };
             });
     }
 
@@ -814,7 +810,7 @@ namespace {
                 Lexical_token const* const op_token = context.pointer - 1;
                 if (auto right_operand = parse_potential_type_cast(context)) {
                     tail.push_back({
-                        .operator_name  = *op,
+                        .operator_name  = *op, // NOLINT: false positive
                         .operator_token = cst::Token::from_lexical(op_token),
                         .right_operand  = *right_operand,
                     });
@@ -826,15 +822,13 @@ namespace {
             if (tail.empty()) {
                 return leftmost_operand;
             }
-            else {
-                return context.wrap(cst::Expression {
+            return context.wrap(cst::Expression {
                 .value = cst::expression::Binary_operator_invocation_sequence {
                     .sequence_tail = std::move(tail),
                     .leftmost_operand = *leftmost_operand,
                 },
                 .source_view = context.make_source_view(anchor, context.pointer - 1),
             });
-            }
         }
         return std::nullopt;
     }

@@ -26,7 +26,7 @@ namespace {
             if (string.empty()) {
                 continue;
             }
-            else if (string == "q") {
+            if (string == "q") {
                 break;
             }
 
@@ -51,8 +51,10 @@ namespace {
     }>;
 
     constexpr auto expression_parser_repl = generic_repl<[](kieli::Lex_result&& lex_result) {
-        libparse::Parse_context context { std::move(lex_result),
-                                          cst::Node_arena::with_default_page_size() };
+        libparse::Parse_context context {
+            std::move(lex_result),
+            cst::Node_arena::with_default_page_size(),
+        };
         if (auto result = parse_expression(context)) {
             utl::print("Result: {}\n", kieli::format_expression(**result, {}));
             if (!context.pointer->source_view.string.empty()) {
@@ -82,17 +84,17 @@ namespace {
 
 auto main(int argc, char const** argv) -> int
 {
+    cppargs::Parameters parameters;
+
+    auto const help_flag    = parameters.add('h', "help", "Show this help text");
+    auto const version_flag = parameters.add('v', "version", "Show Kieli version");
+    auto const nocolor_flag = parameters.add("nocolor", "Disable colored output");
+    auto const time_flag    = parameters.add("time", "Print the execution time");
+    auto const repl_option  = parameters.add<std::string_view>("repl", "Run the given REPL");
+
     cppdiag::Colors colors = cppdiag::Colors::defaults();
 
     try {
-        cppargs::Parameters parameters;
-
-        auto const help_flag    = parameters.add('h', "help", "Show this help text");
-        auto const version_flag = parameters.add('v', "version", "Show Kieli version");
-        auto const nocolor_flag = parameters.add("nocolor", "Disable colored output");
-        auto const time_flag    = parameters.add("time", "Print the execution time");
-        auto const repl_option  = parameters.add<std::string_view>("repl", "Run the given REPL");
-
         cppargs::parse(argc, argv, parameters);
 
         utl::Logging_timer const execution_timer { [&](auto const elapsed) {

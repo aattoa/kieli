@@ -1,6 +1,6 @@
 #pragma once
 
-// This file is intended to be included by every single translation unit in the project
+// This file is intended to be included by every translation unit in the project
 
 #include <cstdlib>
 #include <cstring>
@@ -44,9 +44,6 @@
 #include <algorithm>
 #include <range/v3/all.hpp>
 
-// A tag to search for when C++23 EOP are supported
-#define APPLY_EXPLICIT_OBJECT_PARAMETER_HERE
-
 namespace utl {
     using I8  = std::int8_t;
     using I16 = std::int16_t;
@@ -77,15 +74,12 @@ namespace utl {
     [[nodiscard]] constexpr auto safe_cast(From const from) noexcept(
         losslessly_convertible_to<From, To>) -> To
     {
-        if constexpr (losslessly_convertible_to<From, To>) {
-            return static_cast<To>(from);
+        if constexpr (!losslessly_convertible_to<From, To>) {
+            if (!std::in_range<To>(from)) {
+                throw Safe_cast_argument_out_of_range {};
+            }
         }
-        else if (std::in_range<To>(from)) {
-            return static_cast<To>(from);
-        }
-        else {
-            throw Safe_cast_argument_out_of_range {};
-        }
+        return static_cast<To>(from);
     }
 
     template <Usize length>
@@ -108,24 +102,6 @@ namespace utl {
 } // namespace utl
 
 namespace utl::inline literals {
-
-#define UTL_INTEGER_LITERAL(name, type)                          \
-    consteval auto operator""_##name(unsigned long long const n) \
-    {                                                            \
-        return safe_cast<type>(n);                               \
-    }
-    UTL_INTEGER_LITERAL(uz, Usize)
-    UTL_INTEGER_LITERAL(iz, Isize)
-    UTL_INTEGER_LITERAL(i8, I8)
-    UTL_INTEGER_LITERAL(u8, U8)
-    UTL_INTEGER_LITERAL(i16, I16)
-    UTL_INTEGER_LITERAL(u16, U16)
-    UTL_INTEGER_LITERAL(i32, I32)
-    UTL_INTEGER_LITERAL(u32, U32)
-    UTL_INTEGER_LITERAL(i64, I64)
-    UTL_INTEGER_LITERAL(u64, U64)
-#undef UTL_INTEGER_LITERAL
-
     template <Metastring string>
     consteval auto operator""_format() noexcept
     {
@@ -142,7 +118,7 @@ using namespace std::literals;
 namespace bootleg {
     // Implementation copied from https://en.cppreference.com/w/cpp/utility/forward_like
     template <class T, class U>
-    [[nodiscard]] constexpr auto&& forward_like(U&& x) noexcept
+    [[nodiscard]] constexpr auto&& forward_like(U&& x) noexcept // NOLINT
     {
         constexpr bool is_adding_const = std::is_const_v<std::remove_reference_t<T>>;
         if constexpr (std::is_lvalue_reference_v<T&&>) {
@@ -158,7 +134,7 @@ namespace bootleg {
                 return std::move(std::as_const(x));
             }
             else {
-                return std::move(x);
+                return std::move(x); // NOLINT
             }
         }
     }
@@ -283,46 +259,20 @@ namespace utl {
             : m_value { std::move(value) }
         {}
 
-        APPLY_EXPLICIT_OBJECT_PARAMETER_HERE
-        [[nodiscard]] constexpr auto get() const& -> T const&
-        {
-            return m_value;
-        }
+        // TODO: C++23: EOP
 
-        [[nodiscard]] constexpr auto get() & -> T&
-        {
-            return m_value;
-        }
+        // clang-format off
 
-        [[nodiscard]] constexpr auto get() const&& -> T const&&
-        {
-            return std::move(m_value);
-        }
+        [[nodiscard]] constexpr auto get() const&  -> T const&  { return m_value; }
+        [[nodiscard]] constexpr auto get()      &  -> T      &  { return m_value; }
+        [[nodiscard]] constexpr auto get() const&& -> T const&& { return std::move(m_value); }
+        [[nodiscard]] constexpr auto get()      && -> T      && { return std::move(m_value); }
+        [[nodiscard]] constexpr operator T const&  ()   const&  { return m_value; }
+        [[nodiscard]] constexpr operator T      &  ()        &  { return m_value; }
+        [[nodiscard]] constexpr operator T const&& ()   const&& { return std::move(m_value); }
+        [[nodiscard]] constexpr operator T      && ()        && { return std::move(m_value); }
 
-        [[nodiscard]] constexpr auto get() && -> T&&
-        {
-            return std::move(m_value);
-        }
-
-        [[nodiscard]] constexpr operator T const&() const&
-        {
-            return m_value;
-        }
-
-        [[nodiscard]] constexpr operator T&() &
-        {
-            return m_value;
-        }
-
-        [[nodiscard]] constexpr operator T const&&() const&&
-        {
-            return std::move(m_value);
-        }
-
-        [[nodiscard]] constexpr operator T&&() &&
-        {
-            return std::move(m_value);
-        }
+        // clang-format on
     };
 
     auto filename_without_path(std::string_view path) noexcept -> std::string_view;
@@ -357,6 +307,7 @@ namespace utl {
 
     template <class>
     struct Type {};
+
     template <class T>
     constexpr Type<T> type;
 
@@ -366,27 +317,10 @@ namespace utl {
     template <auto x>
     constexpr Value<x> value;
 
-    template <class Variant, class Alternative>
-    struct Alternative_index;
-
-    template <class... Ts, class T>
-    struct Alternative_index<std::variant<Ts...>, T>
-        : std::integral_constant<Usize, std::variant<Type<Ts>...> { Type<T> {} }.index()> {};
-    template <class Variant, class Alternative>
-    constexpr Usize alternative_index = Alternative_index<Variant, Alternative>::value;
-
-    template <class Variant, class Alternative>
-    struct Variant_has_alternative;
-
-    template <class... Ts, class T>
-    struct Variant_has_alternative<std::variant<Ts...>, T>
-        : std::bool_constant<one_of<T, Ts...>> {};
-    template <class Variant, class Alternative>
-    constexpr bool variant_has_alternative = Variant_has_alternative<Variant, Alternative>::value;
-
     template <class T, class V>
-    [[nodiscard]] constexpr decltype(auto) get(
+    [[nodiscard]] constexpr auto get(
         V&& variant, std::source_location const caller = std::source_location::current()) noexcept
+        -> decltype(auto)
         requires requires { std::get_if<T>(&variant); }
     {
         if (auto* const alternative = std::get_if<T>(&variant)) [[likely]] {
@@ -398,8 +332,9 @@ namespace utl {
     }
 
     template <Usize n, class V>
-    [[nodiscard]] constexpr decltype(auto) get(
+    [[nodiscard]] constexpr auto get(
         V&& variant, std::source_location const caller = std::source_location::current()) noexcept
+        -> decltype(auto)
         requires requires { std::get_if<n>(&variant); }
     {
         return ::utl::get<std::variant_alternative_t<n, std::remove_cvref_t<V>>>(
@@ -407,8 +342,9 @@ namespace utl {
     }
 
     template <class O>
-    [[nodiscard]] constexpr decltype(auto) get(
+    [[nodiscard]] constexpr auto get(
         O&& optional, std::source_location const caller = std::source_location::current()) noexcept
+        -> decltype(auto)
         requires requires { optional.has_value(); }
     {
         if (optional.has_value()) [[likely]] {
@@ -425,8 +361,9 @@ namespace utl {
     }
 
     template <class Variant, class... Arms>
-    constexpr decltype(auto) match(Variant&& variant, Arms&&... arms) noexcept(noexcept(
+    constexpr auto match(Variant&& variant, Arms&&... arms) noexcept(noexcept(
         std::visit(Overload { std::forward<Arms>(arms)... }, std::forward<Variant>(variant))))
+        -> decltype(auto)
     {
         if (variant.valueless_by_exception()) [[unlikely]] {
             abort("utl::match was invoked with a valueless variant");
@@ -435,7 +372,7 @@ namespace utl {
     }
 
     template <std::invocable Callback>
-    class [[nodiscard]] Scope_exit_handler {
+    class [[nodiscard]] Scope_exit_handler { // NOLINT: smf
         Callback callback;
     public:
         explicit Scope_exit_handler(Callback callback) : callback { std::move(callback) } {}
@@ -470,7 +407,7 @@ namespace utl {
             template <class T>
             [[nodiscard]] operator std::vector<T>() const // NOLINT: implicit
             {
-                APPLY_EXPLICIT_OBJECT_PARAMETER_HERE;
+                // TODO: C++23: EOP
                 return vector_with_capacity<T>(capacity);
             }
         };

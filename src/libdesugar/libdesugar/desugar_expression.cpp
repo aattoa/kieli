@@ -129,30 +129,29 @@ namespace {
                 */
 
                 return ast::expression::Match {
-                    .cases              = utl::to_vector<ast::expression::Match::Case>({
+                    .cases = utl::to_vector<ast::expression::Match::Case>({
                         {
-                                         .pattern = context.desugar(let->pattern),
-                                         .handler = context.desugar(conditional.true_branch),
+                            .pattern = context.desugar(let->pattern),
+                            .handler = context.desugar(conditional.true_branch),
                         },
                         {
-                                         .pattern = context.wildcard_pattern(let->pattern->source_view),
-                                         .handler = false_branch,
+                            .pattern = context.wildcard_pattern(let->pattern->source_view),
+                            .handler = false_branch,
                         },
                     }),
+
                     .matched_expression = context.desugar(let->initializer),
                 };
             }
-            else {
-                return ast::expression::Conditional {
-                    .condition                 = context.desugar(conditional.condition),
-                    .true_branch               = context.desugar(conditional.true_branch),
-                    .false_branch              = false_branch,
-                    .source                    = conditional.is_elif_conditional
-                                                   ? ast::expression::Conditional::Source::elif_conditional
-                                                   : ast::expression::Conditional::Source::normal_conditional,
-                    .has_explicit_false_branch = conditional.false_branch.has_value(),
-                };
-            }
+            return ast::expression::Conditional {
+                .condition                 = context.desugar(conditional.condition),
+                .true_branch               = context.desugar(conditional.true_branch),
+                .false_branch              = false_branch,
+                .source                    = conditional.is_elif_conditional
+                                               ? ast::expression::Conditional::Source::elif_conditional
+                                               : ast::expression::Conditional::Source::normal_conditional,
+                .has_explicit_false_branch = conditional.false_branch.has_value(),
+            };
         }
 
         auto operator()(cst::expression::Match const& match) -> ast::Expression::Variant
@@ -182,12 +181,10 @@ namespace {
                     .result_expression       = context.desugar(*block.result_expression),
                 };
             }
-            else {
-                return ast::expression::Block {
-                    .side_effect_expressions = std::move(side_effects),
-                    .result_expression = context.unit_value(block.close_brace_token.source_view),
-                };
-            }
+            return ast::expression::Block {
+                .side_effect_expressions = std::move(side_effects),
+                .result_expression       = context.unit_value(block.close_brace_token.source_view),
+            };
         }
 
         auto operator()(cst::expression::While_loop const& loop) -> ast::Expression::Variant

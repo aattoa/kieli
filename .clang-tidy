@@ -1,0 +1,34 @@
+FormatStyle: "file"
+
+Checks: "
+  *,
+  -llvm*,
+  -altera-*,
+  -android-*,
+  -fuchsia-*,
+  -google-*,
+  -hicpp-*,
+  -readability-named-parameter,
+  -readability-identifier-length,
+  -readability-implicit-bool-conversion,
+  -readability-qualified-auto,
+  -readability-braces-around-statements,
+  -readability-static-accessed-through-instance,
+  -cppcoreguidelines-macro-usage,
+  -cppcoreguidelines-avoid-do-while,
+  -cppcoreguidelines-avoid-const-or-ref-data-members,
+  -cppcoreguidelines-avoid-c-arrays, -modernize-avoid-c-arrays,
+  -cppcoreguidelines-avoid-magic-numbers, -readability-magic-numbers,
+  -cppcoreguidelines-pro-type-const-cast,
+  -cppcoreguidelines-pro-type-member-init,
+  -cppcoreguidelines-pro-bounds-pointer-arithmetic,
+  -cppcoreguidelines-pro-bounds-constant-array-index,
+  -bugprone-easily-swappable-parameters,
+  -misc-no-recursion,
+  -cert-dcl58-cpp,
+  "
+
+CheckOptions:
+  misc-non-private-member-variables-in-classes.IgnoreClassesWithAllMemberVariablesBeingPublic: true
+  performance-move-const-arg.CheckTriviallyCopyableMove: false
+  cppcoreguidelines-macro-usage.CheckCapsOnly: true

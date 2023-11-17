@@ -119,9 +119,7 @@ namespace kieli {
             if (T const* const pointer = std::get_if<T>(&value)) {
                 return *pointer;
             }
-            else {
-                utl::abort();
-            }
+            utl::abort();
         }
 
         [[nodiscard]] auto as_integer() const noexcept -> decltype(Integer::value);
@@ -152,11 +150,9 @@ struct std::formatter<kieli::Lexical_token> : std::formatter<std::string_view> {
             return std::formatter<std::string_view>::format(
                 kieli::Lexical_token::type_string(token.type), context);
         }
-        else if (token.type == kieli::Lexical_token::Type::string_literal) {
+        if (token.type == kieli::Lexical_token::Type::string_literal) {
             return std::format_to(context.out(), "({}: '{}')", token.type, token.value);
         }
-        else {
-            return std::format_to(context.out(), "({}: {})", token.type, token.value);
-        }
+        return std::format_to(context.out(), "({}: {})", token.type, token.value);
     }
 };

@@ -155,7 +155,7 @@ namespace {
 
         auto operator()(ast::expression::Hole const&)
         {
-            std::format_to(out, "\?\?\?");
+            std::format_to(out, R"(???)");
         }
 
         auto operator()(ast::expression::Invocation const& invocation)

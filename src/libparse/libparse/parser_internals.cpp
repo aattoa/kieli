@@ -12,14 +12,13 @@ namespace {
                 .source_view = wildcard->source_view,
             } };
         }
-        else if (auto type = parse_type(context)) {
+        if (auto type = parse_type(context)) {
             return cst::Template_argument { std::move(*type) };
         }
-        else if (auto expression = parse_expression(context)) {
+        if (auto expression = parse_expression(context)) {
             return cst::Template_argument { *expression };
         }
-        else if (Lexical_token const* const immut_keyword = context.try_extract(Token_type::immut))
-        {
+        if (Lexical_token const* const immut_keyword = context.try_extract(Token_type::immut)) {
             return cst::Template_argument {
                 cst::Mutability {
                     .value                      = cst::Mutability::Concrete { .is_mutable = false },
@@ -28,11 +27,9 @@ namespace {
                 },
             };
         }
-        else {
-            return parse_mutability(context).transform([](cst::Mutability&& mutability) {
-                return cst::Template_argument { std::move(mutability) };
-            });
-        }
+        return parse_mutability(context).transform([](cst::Mutability&& mutability) {
+            return cst::Template_argument { std::move(mutability) };
+        });
     }
 
     auto is_valid_template_parameter_default_argument(
@@ -111,7 +108,7 @@ namespace {
                         .mut_keyword_token = cst::Token::from_lexical(mut_keyword),
                     });
                 }
-                else if (auto type = parse_type(context)) {
+                if (auto type = parse_type(context)) {
                     return template_parameter(cst::Template_parameter::Value_parameter {
                         .type = *type,
                         .name = std::move(*name),
@@ -250,20 +247,16 @@ auto libparse::extract_qualified(Parse_context& context, std::optional<cst::Root
                 });
                 continue;
             }
-            else {
-                // Primary name encountered
-                context.pointer = template_argument_anchor;
-                return cst::Qualified_name {
-                    .middle_qualifiers = std::move(middle_qualifiers),
-                    .root_qualifier    = std::move(root),
-                    .primary_name      = qualifier_name,
-                };
-            }
+            // Primary name encountered
+            context.pointer = template_argument_anchor;
+            return cst::Qualified_name {
+                .middle_qualifiers = std::move(middle_qualifiers),
+                .root_qualifier    = std::move(root),
+                .primary_name      = qualifier_name,
+            };
         }
-        else {
-            context.retreat();
-            context.error_expected("an identifier");
-        }
+        context.retreat();
+        context.error_expected("an identifier");
     }
 }
 
@@ -281,22 +274,18 @@ auto libparse::parse_mutability(Parse_context& context) -> std::optional<cst::Mu
                 .mut_or_immut_keyword_token = cst::Token::from_lexical(mut_keyword),
             };
         }
-        else {
-            return cst::Mutability {
-                .value                      = cst::Mutability::Concrete { .is_mutable = true },
-                .source_view                = mut_keyword->source_view,
-                .mut_or_immut_keyword_token = cst::Token::from_lexical(mut_keyword),
-            };
-        }
+        return cst::Mutability {
+            .value                      = cst::Mutability::Concrete { .is_mutable = true },
+            .source_view                = mut_keyword->source_view,
+            .mut_or_immut_keyword_token = cst::Token::from_lexical(mut_keyword),
+        };
     }
-    else if (Lexical_token const* const immut_keyword = context.try_extract(Token_type::immut)) {
+    if (Lexical_token const* const immut_keyword = context.try_extract(Token_type::immut)) {
         context.diagnostics().error(
             immut_keyword->source_view,
             "Immutability may not be specified here, as it is the default");
     }
-    else {
-        return std::nullopt;
-    }
+    return std::nullopt;
 }
 
 auto libparse::parse_type_annotation(libparse::Parse_context& context)
@@ -366,9 +355,7 @@ auto libparse::extract_class_references(Parse_context& context)
     if (classes.has_value()) {
         return std::move(*classes);
     }
-    else {
-        context.error_expected("one or more '+'-separated class names");
-    }
+    context.error_expected("one or more '+'-separated class names");
 }
 
 auto libparse::is_name_token_type(Token_type const type) noexcept -> bool
@@ -381,9 +368,7 @@ auto libparse::optional_token(kieli::Lexical_token const* const token) -> std::o
     if (token) {
         return std::optional<cst::Token> { cst::Token::from_lexical(token) };
     }
-    else {
-        return std::nullopt;
-    }
+    return std::nullopt;
 }
 
 libparse::Parse_context::Parse_context(
@@ -426,9 +411,7 @@ auto libparse::Parse_context::extract_required(Token_type const type) -> Lexical
     if (pointer->type == type) {
         return pointer++;
     }
-    else {
-        error_expected("'{}'"_format(type));
-    }
+    error_expected("'{}'"_format(type));
 }
 
 auto libparse::Parse_context::consume_required(Token_type const type) -> void
@@ -474,7 +457,7 @@ auto libparse::Parse_context::make_source_view(
     Lexical_token const* const first, Lexical_token const* const last) noexcept -> utl::Source_view
 {
     assert(first && last);
-    assert(std::invoke(std::less_equal {}, first, last));
-    assert(std::invoke(std::less {}, last, std::to_address(tokens.end())));
+    assert(std::less_equal()(first, last));
+    assert(std::less()(last, std::to_address(tokens.end())));
     return first->source_view.combine_with(last->source_view);
 }

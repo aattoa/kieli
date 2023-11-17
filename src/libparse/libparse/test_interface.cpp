@@ -16,9 +16,7 @@ namespace {
             if (context.is_finished()) {
                 return format(**node, kieli::Format_configuration {});
             }
-            else {
-                return tl::unexpected(libparse::Test_parse_failure::unconsumed_input);
-            }
+            return tl::unexpected(libparse::Test_parse_failure::unconsumed_input);
         }
         return tl::unexpected(libparse::Test_parse_failure::no_parse);
     }
@@ -56,7 +54,5 @@ auto libparse::operator<<(std::ostream& os, Test_parse_result const& result) -> 
     if (result.has_value()) {
         return os << '"' << result.value() << '"';
     }
-    else {
-        return os << failure_string(result.error());
-    }
+    return os << failure_string(result.error());
 }

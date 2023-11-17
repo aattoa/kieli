@@ -2,7 +2,7 @@
 #include <libutl/common/safe_integer.hpp>
 #include <catch2/catch_test_macros.hpp>
 
-#define TEST(name) TEST_CASE(name, "[libutl][safe_integer]")
+#define TEST(name) TEST_CASE(name, "[libutl][safe_integer]") // NOLINT
 
 namespace {
     template <class T>

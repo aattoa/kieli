@@ -16,12 +16,10 @@ auto utl::Source::read(std::filesystem::path&& path) -> Source
             std::string { std::istreambuf_iterator<char> { file }, {} },
         };
     }
-    else if (std::filesystem::exists(path)) {
+    if (std::filesystem::exists(path)) {
         throw exception("Failed to open file '{}'", path.string());
     }
-    else {
-        throw exception("File '{}' does not exist", path.string());
-    }
+    throw exception("File '{}' does not exist", path.string());
 }
 
 auto utl::Source::path() const noexcept -> std::filesystem::path const&
@@ -45,7 +43,7 @@ auto utl::Source_position::advance_with(char const c) noexcept -> void
 }
 
 utl::Source_view::Source_view(
-    Wrapper<Source> const  source,
+    Source::Wrapper const  source,
     std::string_view const string,
     Source_position const  start,
     Source_position const  stop) noexcept
@@ -59,10 +57,9 @@ utl::Source_view::Source_view(
 
 auto utl::Source_view::dummy() -> Source_view
 {
-    static auto               dummy_source_arena = Source::Arena::with_page_size(1);
-    static wrapper auto const dummy_source
-        = dummy_source_arena.wrap("[dummy]", "dummy file content");
-    return Source_view { dummy_source, dummy_source->string(), {}, {} };
+    static Source::Arena         source_arena   = Source::Arena::with_page_size(1);
+    static Source::Wrapper const wrapped_source = source_arena.wrap("[dummy]", "dummy content");
+    return Source_view { wrapped_source, wrapped_source->string(), {}, {} };
 }
 
 auto utl::Source_view::combine_with(Source_view const& other) const noexcept -> Source_view
@@ -76,7 +73,7 @@ auto utl::Source_view::combine_with(Source_view const& other) const noexcept -> 
         return other;
     }
 
-    always_assert(std::invoke(std::less_equal {}, &string.front(), &other.string.back()));
+    always_assert(std::less_equal()(&string.front(), &other.string.back()));
     return Source_view {
         source,
         std::string_view { string.data(), other.string.data() + other.string.size() },

@@ -30,13 +30,11 @@ namespace {
         if (ptr != end) {
             return tl::unexpected { liblex::Numeric_error::invalid_argument };
         }
-        else if (ec != std::errc {}) {
+        if (ec != std::errc {}) {
             utl::always_assert(ec == std::errc::result_out_of_range);
             return tl::unexpected { liblex::Numeric_error::out_of_range };
         }
-        else {
-            return value;
-        }
+        return value;
     }
 } // namespace
 
@@ -44,7 +42,7 @@ auto liblex::apply_scientific_exponent(utl::Usize integer, utl::Usize const expo
     -> tl::expected<utl::Usize, Numeric_error>
 {
     for (utl::Usize i = 0; i != exponent; ++i) {
-        if (utl::would_multiplication_overflow(integer, 10_uz)) {
+        if (utl::would_multiplication_overflow(integer, 10UZ)) {
             return tl::unexpected { Numeric_error::out_of_range };
         }
         integer *= 10;
@@ -52,10 +50,10 @@ auto liblex::apply_scientific_exponent(utl::Usize integer, utl::Usize const expo
     return integer;
 }
 
-auto liblex::parse_integer(std::string_view const raw_string, int const base)
+auto liblex::parse_integer(std::string_view const digits, int const base)
     -> tl::expected<utl::Usize, Numeric_error>
 {
-    return parse_impl<utl::Usize>(raw_string, base);
+    return parse_impl<utl::Usize>(digits, base);
 }
 
 auto liblex::parse_floating(std::string_view const raw_string)

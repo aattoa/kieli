@@ -113,8 +113,9 @@ namespace {
 
         auto operator()(cst::type::Instance_of const& instance_of) -> ast::Type::Variant
         {
-            return ast::type::Instance_of { .classes
-                                            = context.desugar(instance_of.classes.elements) };
+            return ast::type::Instance_of {
+                .classes = context.desugar(instance_of.classes.elements),
+            };
         }
 
         auto operator()(cst::type::Template_application const& application) -> ast::Type::Variant

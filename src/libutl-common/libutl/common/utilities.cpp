@@ -36,7 +36,7 @@ auto utl::abort(std::string_view const message, std::source_location const calle
         caller.column(),
         message,
         caller.function_name());
-    std::exit(EXIT_FAILURE);
+    std::quick_exit(EXIT_FAILURE);
 }
 
 auto utl::todo(std::source_location const caller) -> void

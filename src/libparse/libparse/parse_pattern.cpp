@@ -34,13 +34,11 @@ namespace {
                 .close_token = cst::Token::from_lexical(close),
             } };
         }
-        else {
-            return cst::pattern::Tuple { {
-                .value       = std::move(patterns),
-                .open_token  = cst::Token::from_lexical(open),
-                .close_token = cst::Token::from_lexical(close),
-            } };
-        }
+        return cst::pattern::Tuple { {
+            .value       = std::move(patterns),
+            .open_token  = cst::Token::from_lexical(open),
+            .close_token = cst::Token::from_lexical(close),
+        } };
     };
 
     auto extract_slice(Parse_context& context) -> cst::Pattern::Variant
@@ -112,9 +110,7 @@ namespace {
                         .payload_pattern  = parse_constructor_pattern(context),
                     };
                 }
-                else {
-                    name = ctor_name->primary_name.as_lower();
-                }
+                name = ctor_name->primary_name.as_lower();
             }
         }
 
@@ -185,18 +181,22 @@ namespace {
     auto parse_potentially_aliased_pattern(Parse_context& context)
         -> std::optional<cst::Pattern::Variant>
     {
-        if (auto pattern = parse_node<cst::Pattern, parse_normal_pattern>(context)) {
+        Lexical_token const* const anchor = context.pointer;
+        if (auto pattern = parse_normal_pattern(context)) {
             if (Lexical_token const* const as_keyword = context.try_extract(Token_type::as)) {
                 auto mutability = parse_mutability(context);
                 auto name       = extract_lower_name(context, "a pattern alias");
                 return cst::pattern::Alias {
                     .alias_name       = std::move(name),
                     .alias_mutability = std::move(mutability),
-                    .aliased_pattern  = *pattern,
+                    .aliased_pattern  = context.wrap(cst::Pattern {
+                         .value       = std::move(*pattern),
+                         .source_view = context.make_source_view(anchor, as_keyword - 1),
+                    }),
                     .as_keyword_token = cst::Token::from_lexical(as_keyword),
                 };
             }
-            return std::move((*pattern)->value);
+            return pattern;
         }
         return std::nullopt;
     }
@@ -204,18 +204,22 @@ namespace {
     auto parse_potentially_guarded_pattern(Parse_context& context)
         -> std::optional<cst::Pattern::Variant>
     {
-        if (auto pattern = parse_node<cst::Pattern, parse_potentially_aliased_pattern>(context)) {
+        Lexical_token const* const anchor = context.pointer;
+        if (auto pattern = parse_potentially_aliased_pattern(context)) {
             if (Lexical_token const* const if_keyword = context.try_extract(Token_type::if_)) {
                 if (auto guard = parse_expression(context)) {
                     return cst::pattern::Guarded {
-                        .guarded_pattern  = *pattern,
+                        .guarded_pattern  = context.wrap(cst::Pattern {
+                             .value       = std::move(*pattern),
+                             .source_view = context.make_source_view(anchor, if_keyword - 1),
+                        }),
                         .guard_expression = *guard,
                         .if_keyword_token = cst::Token::from_lexical(if_keyword),
                     };
                 }
                 context.error_expected("a guard expression");
             }
-            return std::move((*pattern)->value);
+            return pattern;
         }
         return std::nullopt;
     }

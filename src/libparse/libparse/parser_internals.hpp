@@ -37,12 +37,14 @@ namespace libparse {
         template <cst::node Node>
         auto wrap(Node&& node) -> utl::Wrapper<Node>
         {
+            // NOLINTNEXTLINE: move is valid due to constraint
             return node_arena.wrap<Node>(std::move(node));
         }
 
         [[nodiscard]] auto wrap() noexcept
         {
             return [this]<cst::node Node>(Node&& node) -> utl::Wrapper<Node> {
+                // NOLINTNEXTLINE: move is valid due to constraint
                 return wrap(std::move(node));
             };
         }
@@ -74,9 +76,7 @@ namespace libparse {
         if (auto result = p(context)) {
             return std::move(*result);
         }
-        else {
-            context.error_expected(description.view());
-        }
+        context.error_expected(description.view());
     }
 
     template <parser auto p, parser auto... ps>
@@ -85,7 +85,7 @@ namespace libparse {
         if (auto result = p(context)) {
             return result;
         }
-        else if constexpr (sizeof...(ps) != 0) {
+        if constexpr (sizeof...(ps) != 0) {
             return parse_one_of<ps...>(context);
         }
         else {
@@ -139,9 +139,7 @@ namespace libparse {
         if (sequence.elements.empty()) {
             return sequence;
         }
-        else {
-            context.error_expected(description.view());
-        }
+        context.error_expected(description.view());
     }
 
     template <parser auto p, Token_type separator, utl::Metastring description>
@@ -152,9 +150,7 @@ namespace libparse {
         if (sequence.elements.empty()) {
             return std::nullopt;
         }
-        else {
-            return sequence;
-        }
+        return sequence;
     }
 
     template <parser auto p, utl::Metastring description>
@@ -194,9 +190,7 @@ namespace libparse {
         if (Lexical_token const* const token = context.try_extract(identifier_type)) {
             return token->as_string();
         }
-        else {
-            context.error_expected(description);
-        }
+        context.error_expected(description);
     }
 
     constexpr auto extract_lower_id = extract_id<Token_type::lower_name>;
@@ -208,9 +202,7 @@ namespace libparse {
         if (Lexical_token const* const token = context.try_extract(identifier_type)) {
             return token->as_string();
         }
-        else {
-            return std::nullopt;
-        }
+        return std::nullopt;
     }
 
     constexpr auto parse_lower_id = parse_id<Token_type::lower_name>;
@@ -237,9 +229,7 @@ namespace libparse {
         if (auto name = parse_name<identifier_type, Name>(context)) {
             return std::move(*name);
         }
-        else {
-            context.error_expected(description);
-        }
+        context.error_expected(description);
     }
 
     constexpr auto extract_lower_name = extract_name<Token_type::lower_name, kieli::Name_lower>;
@@ -250,12 +240,12 @@ namespace libparse {
     {
         Lexical_token const* const anchor = context.pointer;
         if (auto node_value = parse(context)) {
-            return context.wrap(Node { std::move(*node_value),
-                                       context.make_source_view(anchor, context.pointer - 1) });
+            return context.wrap(Node {
+                std::move(*node_value),
+                context.make_source_view(anchor, context.pointer - 1),
+            });
         }
-        else {
-            return std::nullopt;
-        }
+        return std::nullopt;
     }
 
 } // namespace libparse

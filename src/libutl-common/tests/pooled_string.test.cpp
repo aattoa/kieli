@@ -2,7 +2,7 @@
 #include <libutl/common/pooled_string.hpp>
 #include <catch2/catch_test_macros.hpp>
 
-#define TEST(name) TEST_CASE("pooled-string " name, "[libutl][pooled_string]")
+#define TEST(name) TEST_CASE("pooled-string " name, "[libutl][pooled_string]") // NOLINT
 
 TEST("equality")
 {

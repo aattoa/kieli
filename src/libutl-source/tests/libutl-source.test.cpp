@@ -2,7 +2,7 @@
 #include <libutl/source/source.hpp>
 #include <catch2/catch_test_macros.hpp>
 
-#define TEST(name) TEST_CASE(name, "[libutl][source]")
+#define TEST(name) TEST_CASE(name, "[libutl][source]") // NOLINT
 
 TEST("utl::Source::Source")
 {

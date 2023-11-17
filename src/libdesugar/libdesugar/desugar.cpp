@@ -40,7 +40,7 @@ auto libdesugar::Desugar_context::desugar(cst::Template_argument const& argument
         .value = utl::match(
             argument.value,
             [this](auto const& argument) -> ast::Template_argument::Variant {
-                return desugar(argument);
+                return this->desugar(argument);
             },
             [](cst::Template_argument::Wildcard const wildcard) -> ast::Template_argument::Variant {
                 return ast::Template_argument::Wildcard { .source_view = wildcard.source_view };

@@ -22,13 +22,13 @@ namespace libdesugar {
         template <ast::node Node>
         auto wrap(Node&& node) -> utl::Wrapper<Node>
         {
-            return node_arena.wrap<Node>(std::move(node));
+            return node_arena.wrap<Node>(std::move(node)); // NOLINT: move is correct
         }
 
         [[nodiscard]] auto wrap() noexcept
         {
             return [this]<ast::node Node>(Node&& node) -> utl::Wrapper<Node> {
-                return wrap(std::move(node));
+                return wrap(std::move(node)); // NOLINT: move is correct
             };
         }
 
@@ -39,7 +39,6 @@ namespace libdesugar {
 
         auto desugar(cst::Function_argument const&) -> ast::Function_argument;
         auto desugar(cst::Function_parameter const&) -> ast::Function_parameter;
-        auto desugar(cst::Self_parameter const&) -> ast::Self_parameter;
         auto desugar(cst::Template_argument const&) -> ast::Template_argument;
         auto desugar(cst::Template_parameter const&) -> ast::Template_parameter;
         auto desugar(cst::Qualifier const&) -> ast::Qualifier;
@@ -47,7 +46,9 @@ namespace libdesugar {
         auto desugar(cst::Class_reference const&) -> ast::Class_reference;
         auto desugar(cst::Function_signature const&) -> ast::Function_signature;
         auto desugar(cst::Type_signature const&) -> ast::Type_signature;
-        auto desugar(cst::Mutability const&) -> ast::Mutability;
+
+        static auto desugar(cst::Self_parameter const&) -> ast::Self_parameter;
+        static auto desugar(cst::Mutability const&) -> ast::Mutability;
 
         auto desugar(cst::Type_annotation const&) -> ast::Type;
         auto desugar(cst::Function_parameter::Default_argument const&)
@@ -61,7 +62,7 @@ namespace libdesugar {
 
         auto desugar() noexcept
         {
-            return [this](auto const& node) { return desugar(node); };
+            return [this](auto const& node) { return this->desugar(node); };
         }
 
         template <class T>
@@ -84,11 +85,12 @@ namespace libdesugar {
 
         auto deref_desugar()
         {
-            return [this](utl::wrapper auto const node) { return desugar(*node); };
+            return [this](utl::wrapper auto const node) { return this->desugar(*node); };
         }
 
-        auto desugar_mutability(std::optional<cst::Mutability> const&, utl::Source_view)
+        static auto desugar_mutability(std::optional<cst::Mutability> const&, utl::Source_view)
             -> ast::Mutability;
+
         auto desugar_mutability(cst::Mutability const&, utl::Source_view) = delete;
 
         auto normalize_self_parameter(cst::Self_parameter const&) -> ast::Function_parameter;
