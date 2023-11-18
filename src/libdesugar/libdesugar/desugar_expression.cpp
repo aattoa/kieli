@@ -95,9 +95,7 @@ namespace {
 
         auto operator()(cst::expression::Variable const& variable) -> ast::Expression::Variant
         {
-            return ast::expression::Variable {
-                .name = context.desugar(variable.name),
-            };
+            return ast::expression::Variable { .name = context.desugar(variable.name) };
         }
 
         auto operator()(cst::expression::Tuple const& tuple) -> ast::Expression::Variant
@@ -143,8 +141,19 @@ namespace {
                     .matched_expression = context.desugar(let->initializer),
                 };
             }
+
+            utl::wrapper auto condition = context.desugar(conditional.condition);
+            if (std::holds_alternative<kieli::Boolean>(condition->value)) {
+                context.diagnostics().vector.push_back(cppdiag::Diagnostic {
+                    .text_sections = utl::to_vector({
+                        kieli::text_section(condition->source_view),
+                    }),
+                    .message       = context.diagnostics().context.message("Constant condition"),
+                    .level         = cppdiag::Level::note,
+                });
+            }
             return ast::expression::Conditional {
-                .condition                 = context.desugar(conditional.condition),
+                .condition                 = condition,
                 .true_branch               = context.desugar(conditional.true_branch),
                 .false_branch              = false_branch,
                 .source                    = conditional.is_elif_conditional
@@ -239,11 +248,24 @@ namespace {
                 loop { if a { b } else { break } }
             */
 
+            utl::wrapper auto const condition = context.desugar(loop.condition);
+            if (auto const* const boolean = std::get_if<kieli::Boolean>(&condition->value)) {
+                std::string_view const message = boolean->value
+                                                   ? "Consider using `loop` instead of `while true`"
+                                                   : "Loop body will never be executed";
+                context.diagnostics().vector.push_back(cppdiag::Diagnostic {
+                    .text_sections = utl::to_vector({
+                        kieli::text_section(condition->source_view),
+                    }),
+                    .message       = context.diagnostics().context.message(message),
+                    .level         = cppdiag::Level::note,
+                });
+            }
             return ast::expression::Loop {
                 .body = context.wrap(ast::Expression {
                     .value = ast::expression::Conditional {
-                        .condition = context.desugar(loop.condition),
-                        .true_branch = context.desugar(loop.body),
+                        .condition    = condition,
+                        .true_branch  = context.desugar(loop.body),
                         .false_branch = context.wrap(ast::Expression {
                             .value = ast::expression::Break {
                                 .result = context.unit_value(this_expression.source_view),

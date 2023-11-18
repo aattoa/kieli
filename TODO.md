@@ -12,7 +12,6 @@
 - AST error node
 
 ## libdesugar
-- Emit warnings on constant conditionals
 - Emit errors on:
     - member redefinition
     - constructor redefinition

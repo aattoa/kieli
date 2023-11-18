@@ -111,9 +111,8 @@ namespace cst {
     struct Root_qualifier {
         struct Global {};
 
-        using Variant = std::variant<
-            Global,              // global::id
-            utl::Wrapper<Type>>; // Type::id
+        using Variant = std::variant<Global, utl::Wrapper<Type>>;
+
         Variant value;
         Token   double_colon_token;
     };
