@@ -15,14 +15,12 @@ namespace {
     }
 
     template <class T>
-    auto parse_impl(std::string_view const raw_string, std::same_as<int> auto const... base)
+    auto parse_impl(std::string_view const string, std::same_as<int> auto const... base)
         -> tl::expected<T, liblex::Numeric_error>
     {
-        auto const string = without_separators(raw_string);
-        assert(!string.empty());
-
         char const* const begin = string.data();
         char const* const end   = begin + string.size();
+        utl::always_assert(begin != end);
 
         T value {};
         auto const [ptr, ec] = std::from_chars(begin, end, value, base...);
@@ -53,11 +51,11 @@ auto liblex::apply_scientific_exponent(utl::Usize integer, utl::Usize const expo
 auto liblex::parse_integer(std::string_view const digits, int const base)
     -> tl::expected<utl::Usize, Numeric_error>
 {
-    return parse_impl<utl::Usize>(digits, base);
+    return parse_impl<utl::Usize>(without_separators(digits), base);
 }
 
-auto liblex::parse_floating(std::string_view const raw_string)
+auto liblex::parse_floating(std::string_view const digits)
     -> tl::expected<utl::Float, Numeric_error>
 {
-    return parse_impl<utl::Float>(raw_string);
+    return parse_impl<utl::Float>(without_separators(digits));
 }

@@ -8,7 +8,7 @@ namespace {
     auto test_parse(std::string&& string) -> libparse::Test_parse_result
     {
         auto [info, source] = kieli::test_info_and_source(std::move(string));
-        libparse::Parse_context context {
+        libparse::Context context {
             kieli::lex({ info, source }),
             cst::Node_arena::with_page_size(64),
         };

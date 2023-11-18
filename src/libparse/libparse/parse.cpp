@@ -6,9 +6,9 @@ namespace {
 
     using namespace libparse;
 
-    auto parse_definition(Parse_context&) -> std::optional<cst::Definition>;
+    auto parse_definition(Context&) -> std::optional<cst::Definition>;
 
-    auto extract_definition_sequence(Parse_context& context) -> std::vector<cst::Definition>
+    auto extract_definition_sequence(Context& context) -> std::vector<cst::Definition>
     {
         std::vector<cst::Definition> definitions = utl::vector_with_capacity(16);
         while (auto definition = parse_definition(context)) {
@@ -17,7 +17,7 @@ namespace {
         return definitions;
     }
 
-    auto extract_braced_definition_sequence(Parse_context& context) -> std::vector<cst::Definition>
+    auto extract_braced_definition_sequence(Context& context) -> std::vector<cst::Definition>
     {
         context.consume_required(Token_type::brace_open);
         auto definitions = extract_definition_sequence(context);
@@ -25,7 +25,7 @@ namespace {
         return definitions;
     }
 
-    auto parse_self_parameter(Parse_context& context) -> std::optional<cst::Self_parameter>
+    auto parse_self_parameter(Context& context) -> std::optional<cst::Self_parameter>
     {
         Lexical_token* const anchor = context.pointer;
 
@@ -58,8 +58,7 @@ namespace {
         return std::nullopt;
     }
 
-    auto parse_function_parameters(Parse_context& context)
-        -> std::optional<cst::Function_parameters>
+    auto parse_function_parameters(Context& context) -> std::optional<cst::Function_parameters>
     {
         Lexical_token const* const open = context.try_extract(Token_type::paren_open);
         if (!open) {
@@ -90,7 +89,7 @@ namespace {
         };
     }
 
-    auto extract_function_signature(Parse_context& context) -> cst::Function_signature
+    auto extract_function_signature(Context& context) -> cst::Function_signature
     {
         Lexical_token const* const fn_keyword = context.pointer - 1;
 
@@ -117,7 +116,7 @@ namespace {
         };
     }
 
-    auto extract_function(Parse_context& context) -> cst::Definition::Variant
+    auto extract_function(Context& context) -> cst::Definition::Variant
     {
         Lexical_token const* const fn_keyword  = context.pointer - 1;
         Lexical_token const*       equals_sign = nullptr;
@@ -142,8 +141,7 @@ namespace {
         };
     };
 
-    auto parse_struct_member(Parse_context& context)
-        -> std::optional<cst::definition::Struct::Member>
+    auto parse_struct_member(Context& context) -> std::optional<cst::definition::Struct::Member>
     {
         Lexical_token const* const anchor    = context.pointer;
         bool const                 is_public = context.try_consume(Token_type::pub);
@@ -167,7 +165,7 @@ namespace {
         }
     }
 
-    auto extract_struct(Parse_context& context) -> cst::Definition::Variant
+    auto extract_struct(Context& context) -> cst::Definition::Variant
     {
         static constexpr auto parse_members
             = parse_comma_separated_one_or_more<parse_struct_member, "a struct member">;
@@ -191,7 +189,7 @@ namespace {
         context.error_expected("one or more struct members");
     };
 
-    auto parse_enum_constructor(Parse_context& context)
+    auto parse_enum_constructor(Context& context)
         -> std::optional<cst::definition::Enum::Constructor>
     {
         Lexical_token const* const anchor = context.pointer;
@@ -220,7 +218,7 @@ namespace {
         return std::nullopt;
     }
 
-    auto extract_enum(Parse_context& context) -> cst::Definition::Variant
+    auto extract_enum(Context& context) -> cst::Definition::Variant
     {
         static constexpr auto parse_constructors = parse_separated_one_or_more<
             parse_enum_constructor,
@@ -245,7 +243,7 @@ namespace {
         context.error_expected("one or more enum constructors");
     };
 
-    auto extract_alias(Parse_context& context) -> cst::Definition::Variant
+    auto extract_alias(Context& context) -> cst::Definition::Variant
     {
         Lexical_token const* const alias_keyword = context.pointer - 1;
 
@@ -262,7 +260,7 @@ namespace {
         };
     };
 
-    auto extract_implementation(Parse_context& context) -> cst::Definition::Variant
+    auto extract_implementation(Context& context) -> cst::Definition::Variant
     {
         Lexical_token const* const impl_keyword = context.pointer - 1;
 
@@ -278,7 +276,7 @@ namespace {
         };
     };
 
-    auto extract_instantiation(Parse_context& context) -> cst::Definition::Variant
+    auto extract_instantiation(Context& context) -> cst::Definition::Variant
     {
         Lexical_token const* const inst_keyword        = context.pointer - 1;
         auto                       template_parameters = parse_template_parameters(context);
@@ -301,7 +299,7 @@ namespace {
         context.error_expected("a class name");
     };
 
-    auto extract_type_signature(Parse_context& context) -> cst::Type_signature
+    auto extract_type_signature(Context& context) -> cst::Type_signature
     {
         Lexical_token const* const alias_keyword = context.pointer - 1;
         auto                       name          = extract_upper_name(context, "an alias name");
@@ -318,7 +316,7 @@ namespace {
         return signature;
     }
 
-    auto extract_class(Parse_context& context) -> cst::Definition::Variant
+    auto extract_class(Context& context) -> cst::Definition::Variant
     {
         Lexical_token const* const class_keyword = context.pointer - 1;
 
@@ -355,7 +353,7 @@ namespace {
         }
     };
 
-    auto extract_namespace(Parse_context& context) -> cst::Definition::Variant
+    auto extract_namespace(Context& context) -> cst::Definition::Variant
     {
         Lexical_token const* const namespace_keyword = context.pointer - 1;
         auto                       name = extract_lower_name(context, "a namespace name");
@@ -369,7 +367,7 @@ namespace {
         };
     };
 
-    auto parse_definition(Parse_context& context) -> std::optional<cst::Definition>
+    auto parse_definition(Context& context) -> std::optional<cst::Definition>
     {
         auto const definition = [&, anchor = context.pointer](cst::Definition::Variant&& value) {
             return cst::Definition {
@@ -400,7 +398,7 @@ namespace {
         }
     }
 
-    auto validate_module_name_or_path(Parse_context& context, Lexical_token const& token)
+    auto validate_module_name_or_path(Context& context, Lexical_token const& token)
         -> utl::Pooled_string
     {
         auto const module_string = token.as_string();
@@ -415,7 +413,7 @@ namespace {
 
 auto kieli::parse(Lex_result&& lex_result) -> Parse_result
 {
-    Parse_context context { std::move(lex_result), cst::Node_arena::with_default_page_size() };
+    Context context { std::move(lex_result), cst::Node_arena::with_default_page_size() };
 
     std::vector<utl::Pooled_string>   module_imports;
     std::optional<utl::Pooled_string> module_name;

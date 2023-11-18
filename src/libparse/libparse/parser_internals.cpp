@@ -5,7 +5,7 @@ namespace {
 
     using namespace libparse;
 
-    auto parse_template_argument(Parse_context& context) -> std::optional<cst::Template_argument>
+    auto parse_template_argument(Context& context) -> std::optional<cst::Template_argument>
     {
         if (Lexical_token const* const wildcard = context.try_extract(Token_type::underscore)) {
             return cst::Template_argument { cst::Template_argument::Wildcard {
@@ -67,7 +67,7 @@ namespace {
             [](cst::Mutability const&) { return "mutability"; });
     }
 
-    auto parse_template_parameter(Parse_context& context) -> std::optional<cst::Template_parameter>
+    auto parse_template_parameter(Context& context) -> std::optional<cst::Template_parameter>
     {
         auto const template_parameter = [&, anchor = context.pointer](
                                             cst::Template_parameter::Variant&& value,
@@ -137,7 +137,7 @@ namespace {
         return std::nullopt;
     }
 
-    auto parse_function_parameter(Parse_context& context) -> std::optional<cst::Function_parameter>
+    auto parse_function_parameter(Context& context) -> std::optional<cst::Function_parameter>
     {
         if (auto pattern = parse_pattern(context)) {
             auto type_annotation = parse_type_annotation(context);
@@ -159,7 +159,7 @@ namespace {
 
 } // namespace
 
-auto libparse::parse_top_level_pattern(Parse_context& context)
+auto libparse::parse_top_level_pattern(Context& context)
     -> std::optional<utl::Wrapper<cst::Pattern>>
 {
     return parse_comma_separated_one_or_more<parse_pattern, "a pattern">(context).transform(
@@ -177,8 +177,7 @@ auto libparse::parse_top_level_pattern(Parse_context& context)
         });
 }
 
-auto libparse::parse_template_arguments(Parse_context& context)
-    -> std::optional<cst::Template_arguments>
+auto libparse::parse_template_arguments(Context& context) -> std::optional<cst::Template_arguments>
 {
     static constexpr auto extract_arguments
         = extract_comma_separated_zero_or_more<parse_template_argument, "a template argument">;
@@ -195,7 +194,7 @@ auto libparse::parse_template_arguments(Parse_context& context)
     };
 }
 
-auto libparse::parse_template_parameters(Parse_context& context)
+auto libparse::parse_template_parameters(Context& context)
     -> std::optional<cst::Template_parameters>
 {
     static constexpr auto extract_parameters
@@ -214,14 +213,14 @@ auto libparse::parse_template_parameters(Parse_context& context)
     return std::nullopt;
 }
 
-auto libparse::extract_function_parameters(Parse_context& context)
+auto libparse::extract_function_parameters(Context& context)
     -> cst::Separated_sequence<cst::Function_parameter>
 {
     return extract_comma_separated_zero_or_more<parse_function_parameter, "a function parameter">(
         context);
 }
 
-auto libparse::extract_qualified(Parse_context& context, std::optional<cst::Root_qualifier>&& root)
+auto libparse::extract_qualified(Context& context, std::optional<cst::Root_qualifier>&& root)
     -> cst::Qualified_name
 {
     cst::Separated_sequence<cst::Qualifier> middle_qualifiers;
@@ -260,7 +259,7 @@ auto libparse::extract_qualified(Parse_context& context, std::optional<cst::Root
     }
 }
 
-auto libparse::parse_mutability(Parse_context& context) -> std::optional<cst::Mutability>
+auto libparse::parse_mutability(Context& context) -> std::optional<cst::Mutability>
 {
     if (Lexical_token const* const mut_keyword = context.try_extract(Token_type::mut)) {
         if (Lexical_token const* const question_mark = context.try_extract(Token_type::question)) {
@@ -288,7 +287,7 @@ auto libparse::parse_mutability(Parse_context& context) -> std::optional<cst::Mu
     return std::nullopt;
 }
 
-auto libparse::parse_type_annotation(libparse::Parse_context& context)
+auto libparse::parse_type_annotation(libparse::Context& context)
     -> std::optional<cst::Type_annotation>
 {
     if (Lexical_token const* const colon = context.try_extract(Token_type::colon)) {
@@ -300,7 +299,7 @@ auto libparse::parse_type_annotation(libparse::Parse_context& context)
     return std::nullopt;
 }
 
-auto libparse::parse_class_reference(Parse_context& context) -> std::optional<cst::Class_reference>
+auto libparse::parse_class_reference(Context& context) -> std::optional<cst::Class_reference>
 {
     Lexical_token const* const anchor = context.pointer;
 
@@ -346,7 +345,7 @@ auto libparse::parse_class_reference(Parse_context& context) -> std::optional<cs
     return std::nullopt;
 }
 
-auto libparse::extract_class_references(Parse_context& context)
+auto libparse::extract_class_references(Context& context)
     -> cst::Separated_sequence<cst::Class_reference>
 {
     auto classes
@@ -371,8 +370,7 @@ auto libparse::optional_token(kieli::Lexical_token const* const token) -> std::o
     return std::nullopt;
 }
 
-libparse::Parse_context::Parse_context(
-    kieli::Lex_result&& lex_result, cst::Node_arena&& node_arena) noexcept
+libparse::Context::Context(kieli::Lex_result&& lex_result, cst::Node_arena&& node_arena) noexcept
     : compilation_info { std::move(lex_result.compilation_info) }
     , node_arena { std::move(node_arena) }
     , tokens { std::move(lex_result.tokens) }
@@ -385,28 +383,28 @@ libparse::Parse_context::Parse_context(
     utl::always_assert(!tokens.empty() && tokens.back().type == Token_type::end_of_input);
 }
 
-auto libparse::Parse_context::is_finished() const noexcept -> bool
+auto libparse::Context::is_finished() const noexcept -> bool
 {
     return pointer->type == Token_type::end_of_input;
 }
 
-auto libparse::Parse_context::try_extract(Token_type const type) noexcept -> Lexical_token const*
+auto libparse::Context::try_extract(Token_type const type) noexcept -> Lexical_token const*
 {
     return pointer->type == type ? pointer++ : nullptr;
 }
 
-auto libparse::Parse_context::extract() noexcept -> Lexical_token const&
+auto libparse::Context::extract() noexcept -> Lexical_token const&
 {
     return *pointer++;
 }
 
-auto libparse::Parse_context::previous() const noexcept -> Lexical_token const&
+auto libparse::Context::previous() const noexcept -> Lexical_token const&
 {
     assert(pointer && pointer != start);
     return pointer[-1];
 }
 
-auto libparse::Parse_context::extract_required(Token_type const type) -> Lexical_token const*
+auto libparse::Context::extract_required(Token_type const type) -> Lexical_token const*
 {
     if (pointer->type == type) {
         return pointer++;
@@ -414,12 +412,12 @@ auto libparse::Parse_context::extract_required(Token_type const type) -> Lexical
     error_expected("'{}'"_format(type));
 }
 
-auto libparse::Parse_context::consume_required(Token_type const type) -> void
+auto libparse::Context::consume_required(Token_type const type) -> void
 {
     (void)extract_required(type);
 }
 
-auto libparse::Parse_context::try_consume(Token_type const type) noexcept -> bool
+auto libparse::Context::try_consume(Token_type const type) noexcept -> bool
 {
     bool const eq = pointer->type == type;
     if (eq) {
@@ -428,12 +426,12 @@ auto libparse::Parse_context::try_consume(Token_type const type) noexcept -> boo
     return eq;
 }
 
-auto libparse::Parse_context::retreat() noexcept -> void
+auto libparse::Context::retreat() noexcept -> void
 {
     --pointer;
 }
 
-auto libparse::Parse_context::error_expected(
+auto libparse::Context::error_expected(
     utl::Source_view const erroneous_view, std::string_view const expectation) -> void
 {
     diagnostics().error(
@@ -443,17 +441,17 @@ auto libparse::Parse_context::error_expected(
         kieli::Lexical_token::description(pointer->type));
 }
 
-auto libparse::Parse_context::error_expected(std::string_view const expectation) -> void
+auto libparse::Context::error_expected(std::string_view const expectation) -> void
 {
     error_expected(pointer->source_view, expectation);
 }
 
-auto libparse::Parse_context::diagnostics() noexcept -> kieli::Diagnostics&
+auto libparse::Context::diagnostics() noexcept -> kieli::Diagnostics&
 {
     return compilation_info.get()->diagnostics;
 }
 
-auto libparse::Parse_context::make_source_view(
+auto libparse::Context::make_source_view(
     Lexical_token const* const first, Lexical_token const* const last) noexcept -> utl::Source_view
 {
     assert(first && last);

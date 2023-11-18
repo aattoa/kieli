@@ -5,8 +5,8 @@ namespace {
 
     using namespace libparse;
 
-    auto extract_qualified_typename(
-        Parse_context& context, std::optional<cst::Root_qualifier>&& root) -> cst::Type::Variant
+    auto extract_qualified_typename(Context& context, std::optional<cst::Root_qualifier>&& root)
+        -> cst::Type::Variant
     {
         Lexical_token const* const anchor = context.pointer;
         auto                       name   = extract_qualified(context, std::move(root));
@@ -24,13 +24,13 @@ namespace {
         return cst::type::Typename { std::move(name) };
     }
 
-    auto extract_typename(Parse_context& context) -> cst::Type::Variant
+    auto extract_typename(Context& context) -> cst::Type::Variant
     {
         context.retreat();
         return extract_qualified_typename(context, {});
     }
 
-    auto extract_global_typename(Parse_context& context) -> cst::Type::Variant
+    auto extract_global_typename(Context& context) -> cst::Type::Variant
     {
         assert(context.pointer[-1].source_view.string == "global");
         return extract_qualified_typename(
@@ -42,7 +42,7 @@ namespace {
             });
     }
 
-    auto extract_tuple(Parse_context& context) -> cst::Type::Variant
+    auto extract_tuple(Context& context) -> cst::Type::Variant
     {
         Lexical_token const* const open_parenthesis = context.pointer - 1;
         assert(open_parenthesis->source_view.string == "(");
@@ -64,7 +64,7 @@ namespace {
         } };
     }
 
-    auto extract_array_or_slice(Parse_context& context) -> cst::Type::Variant
+    auto extract_array_or_slice(Context& context) -> cst::Type::Variant
     {
         Lexical_token const* const open_bracket = context.pointer - 1;
         assert(open_bracket->source_view.string == "[");
@@ -98,7 +98,7 @@ namespace {
         return type;
     }
 
-    auto extract_function(Parse_context& context) -> cst::Type::Variant
+    auto extract_function(Context& context) -> cst::Type::Variant
     {
         Lexical_token const* const fn_keyword = context.pointer - 1;
         assert(fn_keyword->source_view.string == "fn");
@@ -125,7 +125,7 @@ namespace {
         context.error_expected("a parenthesized list of argument types");
     }
 
-    auto extract_typeof(Parse_context& context) -> cst::Type::Variant
+    auto extract_typeof(Context& context) -> cst::Type::Variant
     {
         Lexical_token const* const typeof_keyword = context.pointer - 1;
         assert(typeof_keyword->source_view.string == "typeof");
@@ -146,7 +146,7 @@ namespace {
         context.error_expected("a parenthesized expression");
     }
 
-    auto extract_instance_of(Parse_context& context) -> cst::Type::Variant
+    auto extract_instance_of(Context& context) -> cst::Type::Variant
     {
         Lexical_token const* const inst_keyword = context.pointer - 1;
         assert(inst_keyword->source_view.string == "inst");
@@ -156,7 +156,7 @@ namespace {
         };
     }
 
-    auto extract_reference(Parse_context& context) -> cst::Type::Variant
+    auto extract_reference(Context& context) -> cst::Type::Variant
     {
         Lexical_token const* const ampersand = context.pointer - 1;
         assert(ampersand->source_view.string == "&");
@@ -168,7 +168,7 @@ namespace {
         };
     }
 
-    auto extract_pointer(Parse_context& context) -> cst::Type::Variant
+    auto extract_pointer(Context& context) -> cst::Type::Variant
     {
         Lexical_token const* const asterisk = context.pointer - 1;
         assert(asterisk->source_view.string == "*");
@@ -180,7 +180,7 @@ namespace {
         };
     }
 
-    auto parse_normal_type(Parse_context& context) -> std::optional<cst::Type::Variant>
+    auto parse_normal_type(Context& context) -> std::optional<cst::Type::Variant>
     {
         switch (context.extract().type) {
         case Lexical_token::Type::i8_type:
@@ -238,7 +238,7 @@ namespace {
 
 } // namespace
 
-auto libparse::parse_type(Parse_context& context) -> std::optional<utl::Wrapper<cst::Type>>
+auto libparse::parse_type(Context& context) -> std::optional<utl::Wrapper<cst::Type>>
 {
     Lexical_token const* const type_anchor = context.pointer;
     if (auto type_value = parse_normal_type(context)) {

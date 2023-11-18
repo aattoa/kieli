@@ -20,7 +20,7 @@ namespace {
 
     template <utl::Usize precedence = lowest_operator_precedence>
     auto desugar_binary_operator_invocation_sequence(
-        Desugar_context&                    context,
+        Context&                            context,
         utl::Wrapper<cst::Expression> const leftmost_expression,
         Operator_and_operand const*&        tail_begin,
         Operator_and_operand const* const   tail_end) -> ast::Expression
@@ -64,7 +64,7 @@ namespace {
     }
 
     struct Expression_desugaring_visitor {
-        Desugar_context&       context;
+        Context&               context;
         cst::Expression const& this_expression;
 
         template <kieli::literal Literal>
@@ -512,7 +512,7 @@ namespace {
     };
 } // namespace
 
-auto libdesugar::Desugar_context::desugar(cst::Expression const& expression) -> ast::Expression
+auto libdesugar::Context::desugar(cst::Expression const& expression) -> ast::Expression
 {
     return {
         .value = utl::match(expression.value, Expression_desugaring_visitor { *this, expression }),

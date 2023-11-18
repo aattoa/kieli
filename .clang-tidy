@@ -14,7 +14,6 @@ Checks: "
   -readability-qualified-auto,
   -readability-braces-around-statements,
   -readability-static-accessed-through-instance,
-  -cppcoreguidelines-macro-usage,
   -cppcoreguidelines-avoid-do-while,
   -cppcoreguidelines-avoid-const-or-ref-data-members,
   -cppcoreguidelines-avoid-c-arrays, -modernize-avoid-c-arrays,

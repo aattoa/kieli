@@ -5,7 +5,7 @@ using namespace libdesugar;
 
 namespace {
     struct Definition_desugaring_visitor {
-        Desugar_context& context;
+        Context& context;
 
         template <class Definition>
         auto definition(
@@ -157,7 +157,7 @@ namespace {
     };
 } // namespace
 
-auto libdesugar::Desugar_context::desugar(cst::Definition const& definition) -> ast::Definition
+auto libdesugar::Context::desugar(cst::Definition const& definition) -> ast::Definition
 {
     utl::always_assert(!definition.value.valueless_by_exception());
     return {

@@ -6,12 +6,12 @@ namespace {
     using namespace libparse;
 
     template <class T>
-    auto extract_literal(Parse_context& context) -> cst::Expression::Variant
+    auto extract_literal(Context& context) -> cst::Expression::Variant
     {
         return context.previous().value_as<T>();
     }
 
-    auto extract_string_literal(Parse_context& context) -> cst::Expression::Variant
+    auto extract_string_literal(Context& context) -> cst::Expression::Variant
     {
         auto const first_string = context.previous().as_string();
         if (context.pointer->type != Token_type::string_literal) {
@@ -26,7 +26,7 @@ namespace {
         };
     }
 
-    auto parse_struct_member_initializer(Parse_context& context)
+    auto parse_struct_member_initializer(Context& context)
         -> std::optional<cst::expression::Struct_initializer::Member_initializer>
     {
         if (auto member_name = parse_lower_name(context)) {
@@ -40,7 +40,7 @@ namespace {
         return std::nullopt;
     }
 
-    auto extract_struct_initializer(Parse_context& context, utl::Wrapper<cst::Type> const type)
+    auto extract_struct_initializer(Context& context, utl::Wrapper<cst::Type> const type)
         -> cst::Expression::Variant
     {
         static constexpr auto extract_member_initializers = extract_comma_separated_zero_or_more<
@@ -61,7 +61,7 @@ namespace {
         };
     }
 
-    auto extract_condition(Parse_context& context) -> utl::Wrapper<cst::Expression>
+    auto extract_condition(Context& context) -> utl::Wrapper<cst::Expression>
     {
         Lexical_token const* const anchor = context.pointer;
         if (Lexical_token const* const let_keyword = context.try_extract(Token_type::let)) {
@@ -80,7 +80,7 @@ namespace {
         return extract_expression(context);
     }
 
-    auto extract_loop_body(Parse_context& context) -> utl::Wrapper<cst::Expression>
+    auto extract_loop_body(Context& context) -> utl::Wrapper<cst::Expression>
     {
         if (auto body = parse_block_expression(context)) {
             return *body;
@@ -88,7 +88,7 @@ namespace {
         context.error_expected("the loop body, which must be a block expression");
     }
 
-    auto extract_infinite_loop(Parse_context& context) -> cst::Expression::Variant
+    auto extract_infinite_loop(Context& context) -> cst::Expression::Variant
     {
         Lexical_token const* const loop_keyword = context.pointer - 1;
         assert(loop_keyword->source_view.string == "loop");
@@ -98,7 +98,7 @@ namespace {
         };
     }
 
-    auto extract_while_loop(Parse_context& context) -> cst::Expression::Variant
+    auto extract_while_loop(Context& context) -> cst::Expression::Variant
     {
         Lexical_token const* const while_keyword = context.pointer - 1;
         assert(while_keyword->source_view.string == "while");
@@ -110,7 +110,7 @@ namespace {
         };
     }
 
-    auto extract_for_loop(Parse_context& context) -> cst::Expression::Variant
+    auto extract_for_loop(Context& context) -> cst::Expression::Variant
     {
         Lexical_token const* const for_keyword = context.pointer - 1;
         utl::wrapper auto const    iterator    = extract_pattern(context);
@@ -127,8 +127,7 @@ namespace {
     }
 
     auto extract_qualified_lower_name_or_struct_initializer(
-        Parse_context& context, std::optional<cst::Root_qualifier>&& root)
-        -> cst::Expression::Variant
+        Context& context, std::optional<cst::Root_qualifier>&& root) -> cst::Expression::Variant
     {
         Lexical_token* const anchor = context.pointer;
         auto                 name   = extract_qualified(context, std::move(root));
@@ -166,13 +165,13 @@ namespace {
             "Expected an expression, but found a type");
     }
 
-    auto extract_identifier(Parse_context& context) -> cst::Expression::Variant
+    auto extract_identifier(Context& context) -> cst::Expression::Variant
     {
         context.retreat();
         return extract_qualified_lower_name_or_struct_initializer(context, {});
     }
 
-    auto extract_global_identifier(Parse_context& context) -> cst::Expression::Variant
+    auto extract_global_identifier(Context& context) -> cst::Expression::Variant
     {
         assert(context.pointer[-1].source_view.string == "global");
         return extract_qualified_lower_name_or_struct_initializer(
@@ -184,12 +183,12 @@ namespace {
             });
     }
 
-    auto extract_self(Parse_context&) -> cst::Expression::Variant
+    auto extract_self(Context&) -> cst::Expression::Variant
     {
         return cst::expression::Self {};
     }
 
-    auto extract_reference_dereference(Parse_context& context) -> cst::Expression::Variant
+    auto extract_reference_dereference(Context& context) -> cst::Expression::Variant
     {
         Lexical_token const* const asterisk = context.pointer - 1;
         assert(asterisk->source_view.string == "*");
@@ -199,7 +198,7 @@ namespace {
         };
     }
 
-    auto extract_tuple(Parse_context& context) -> cst::Expression::Variant
+    auto extract_tuple(Context& context) -> cst::Expression::Variant
     {
         Lexical_token const* const open = context.pointer - 1;
         assert(open->source_view.string == "(");
@@ -220,7 +219,7 @@ namespace {
         } };
     }
 
-    auto extract_array(Parse_context& context) -> cst::Expression::Variant
+    auto extract_array(Context& context) -> cst::Expression::Variant
     {
         Lexical_token const* const open = context.pointer - 1;
         assert(open->source_view.string == "[");
@@ -243,10 +242,10 @@ namespace {
 
     enum class Conditional_kind { if_, elif };
 
-    auto extract_conditional(Parse_context& context, Conditional_kind const kind)
+    auto extract_conditional(Context& context, Conditional_kind const kind)
         -> cst::Expression::Variant
     {
-        static constexpr auto extract_branch = [](Parse_context& context) -> utl::wrapper auto {
+        static constexpr auto extract_branch = [](Context& context) -> utl::wrapper auto {
             if (auto branch = parse_block_expression(context)) {
                 return *branch;
             }
@@ -289,7 +288,7 @@ namespace {
         };
     }
 
-    auto extract_let_binding(Parse_context& context) -> cst::Expression::Variant
+    auto extract_let_binding(Context& context) -> cst::Expression::Variant
     {
         Lexical_token const* const let_keyword = context.pointer - 1;
         auto pattern = extract_required<parse_top_level_pattern, "a pattern">(context);
@@ -305,7 +304,7 @@ namespace {
         };
     }
 
-    auto extract_local_type_alias(Parse_context& context) -> cst::Expression::Variant
+    auto extract_local_type_alias(Context& context) -> cst::Expression::Variant
     {
         Lexical_token const* const alias_keyword = context.pointer - 1;
         assert(alias_keyword->source_view.string == "alias");
@@ -319,12 +318,12 @@ namespace {
         };
     }
 
-    auto extract_hole(Parse_context&) -> cst::Expression::Variant
+    auto extract_hole(Context&) -> cst::Expression::Variant
     {
         return cst::expression::Hole {};
     }
 
-    auto extract_sizeof(Parse_context& context) -> cst::Expression::Variant
+    auto extract_sizeof(Context& context) -> cst::Expression::Variant
     {
         Lexical_token const* const sizeof_keyword = context.pointer - 1;
         assert(sizeof_keyword->source_view.string == "sizeof");
@@ -337,7 +336,7 @@ namespace {
         context.error_expected("a parenthesized type");
     }
 
-    auto extract_addressof(Parse_context& context) -> cst::Expression::Variant
+    auto extract_addressof(Context& context) -> cst::Expression::Variant
     {
         Lexical_token const* const addressof_keyword = context.pointer - 1;
         assert(addressof_keyword->source_view.string == "addressof");
@@ -350,7 +349,7 @@ namespace {
         context.error_expected("a parenthesized addressable expression");
     }
 
-    auto extract_pointer_dereference(Parse_context& context) -> cst::Expression::Variant
+    auto extract_pointer_dereference(Context& context) -> cst::Expression::Variant
     {
         Lexical_token const* const dereference_keyword = context.pointer - 1;
         assert(dereference_keyword->source_view.string == "dereference");
@@ -365,7 +364,7 @@ namespace {
         context.error_expected("a parenthesized pointer expression");
     }
 
-    auto parse_match_case(Parse_context& context) -> std::optional<cst::expression::Match::Case>
+    auto parse_match_case(Context& context) -> std::optional<cst::expression::Match::Case>
     {
         if (auto pattern = parse_top_level_pattern(context)) {
             Lexical_token const* const arrow   = context.extract_required(Token_type::right_arrow);
@@ -381,7 +380,7 @@ namespace {
         return std::nullopt;
     }
 
-    auto extract_match(Parse_context& context) -> cst::Expression::Variant
+    auto extract_match(Context& context) -> cst::Expression::Variant
     {
         Lexical_token const* const match_keyword = context.pointer - 1;
         auto                       expression    = extract_expression(context);
@@ -410,7 +409,7 @@ namespace {
         };
     }
 
-    auto extract_continue(Parse_context& context) -> cst::Expression::Variant
+    auto extract_continue(Context& context) -> cst::Expression::Variant
     {
         Lexical_token const* const continue_keyword = context.pointer - 1;
         assert(continue_keyword->source_view.string == "continue");
@@ -419,7 +418,7 @@ namespace {
         };
     }
 
-    auto extract_break(Parse_context& context) -> cst::Expression::Variant
+    auto extract_break(Context& context) -> cst::Expression::Variant
     {
         Lexical_token const* const break_keyword = context.pointer - 1;
         assert(break_keyword->source_view.string == "break");
@@ -429,7 +428,7 @@ namespace {
         };
     }
 
-    auto extract_ret(Parse_context& context) -> cst::Expression::Variant
+    auto extract_ret(Context& context) -> cst::Expression::Variant
     {
         Lexical_token const* const ret_keyword = context.pointer - 1;
         assert(ret_keyword->source_view.string == "ret");
@@ -439,7 +438,7 @@ namespace {
         };
     }
 
-    auto extract_discard(Parse_context& context) -> cst::Expression::Variant
+    auto extract_discard(Context& context) -> cst::Expression::Variant
     {
         Lexical_token const* const discard_keyword = context.pointer - 1;
         assert(discard_keyword->source_view.string == "discard");
@@ -449,7 +448,7 @@ namespace {
         };
     }
 
-    auto extract_reference(Parse_context& context) -> cst::Expression::Variant
+    auto extract_reference(Context& context) -> cst::Expression::Variant
     {
         Lexical_token const* const ampersand = context.pointer - 1;
         assert(ampersand->source_view.string == "&");
@@ -461,7 +460,7 @@ namespace {
         };
     }
 
-    auto extract_unsafe_block(Parse_context& context) -> cst::Expression::Variant
+    auto extract_unsafe_block(Context& context) -> cst::Expression::Variant
     {
         Lexical_token const* const unsafe_keyword = context.pointer - 1;
         assert(unsafe_keyword->source_view.string == "unsafe");
@@ -474,7 +473,7 @@ namespace {
         context.error_expected("an unsafe block expression");
     }
 
-    auto extract_move(Parse_context& context) -> cst::Expression::Variant
+    auto extract_move(Context& context) -> cst::Expression::Variant
     {
         Lexical_token const* const mov_keyword = context.pointer - 1;
         assert(mov_keyword->source_view.string == "mov");
@@ -484,7 +483,7 @@ namespace {
         };
     }
 
-    auto extract_meta(Parse_context& context) -> cst::Expression::Variant
+    auto extract_meta(Context& context) -> cst::Expression::Variant
     {
         Lexical_token const* const meta_keyword = context.pointer - 1;
         assert(meta_keyword->source_view.string == "meta");
@@ -497,7 +496,7 @@ namespace {
         context.error_expected("a parenthesized expression");
     }
 
-    auto extract_block_expression(Parse_context& context) -> cst::Expression::Variant
+    auto extract_block_expression(Context& context) -> cst::Expression::Variant
     {
         Lexical_token const* const                       open_brace = context.pointer - 1;
         std::vector<cst::expression::Block::Side_effect> side_effects;
@@ -526,7 +525,7 @@ namespace {
         };
     }
 
-    auto parse_complicated_type(Parse_context& context) -> std::optional<cst::Expression::Variant>
+    auto parse_complicated_type(Context& context) -> std::optional<cst::Expression::Variant>
     {
         context.retreat();
         Lexical_token const* const anchor = context.pointer;
@@ -551,7 +550,7 @@ namespace {
         return std::nullopt;
     }
 
-    auto parse_normal_expression(Parse_context& context) -> std::optional<cst::Expression::Variant>
+    auto parse_normal_expression(Context& context) -> std::optional<cst::Expression::Variant>
     {
         switch (context.extract().type) {
         case Token_type::integer_literal:
@@ -622,7 +621,7 @@ namespace {
         }
     }
 
-    auto parse_argument(Parse_context& context) -> std::optional<cst::Function_argument>
+    auto parse_argument(Context& context) -> std::optional<cst::Function_argument>
     {
         if (auto name = parse_lower_name(context)) {
             if (Lexical_token const* const equals_sign = context.try_extract(Token_type::equals)) {
@@ -642,7 +641,7 @@ namespace {
             });
     }
 
-    auto extract_arguments(Parse_context& context) -> cst::Function_arguments
+    auto extract_arguments(Context& context) -> cst::Function_arguments
     {
         Lexical_token const* const open = context.pointer - 1;
         assert(open->source_view.string == "(");
@@ -656,7 +655,7 @@ namespace {
         };
     }
 
-    auto parse_potential_invocation(Parse_context& context)
+    auto parse_potential_invocation(Context& context)
         -> std::optional<utl::Wrapper<cst::Expression>>
     {
         Lexical_token const* const anchor = context.pointer;
@@ -676,7 +675,7 @@ namespace {
         return potential_invocable;
     }
 
-    auto parse_potential_member_access(Parse_context& context)
+    auto parse_potential_member_access(Context& context)
         -> std::optional<utl::Wrapper<cst::Expression>>
     {
         Lexical_token const* const anchor     = context.pointer;
@@ -744,8 +743,7 @@ namespace {
         return expression;
     }
 
-    auto parse_potential_type_cast(Parse_context& context)
-        -> std::optional<utl::Wrapper<cst::Expression>>
+    auto parse_potential_type_cast(Context& context) -> std::optional<utl::Wrapper<cst::Expression>>
     {
         Lexical_token const* const anchor = context.pointer;
 
@@ -785,7 +783,7 @@ namespace {
         return std::nullopt;
     }
 
-    auto parse_operator(Parse_context& context) -> std::optional<utl::Pooled_string>
+    auto parse_operator(Context& context) -> std::optional<utl::Pooled_string>
     {
         switch (context.extract().type) {
         case Token_type::operator_name:
@@ -800,7 +798,7 @@ namespace {
         }
     }
 
-    auto parse_binary_operator_invocation_sequence(Parse_context& context)
+    auto parse_binary_operator_invocation_sequence(Context& context)
         -> std::optional<utl::Wrapper<cst::Expression>>
     {
         Lexical_token const* const anchor = context.pointer;
@@ -835,13 +833,12 @@ namespace {
 
 } // namespace
 
-auto libparse::parse_expression(Parse_context& context)
-    -> std::optional<utl::Wrapper<cst::Expression>>
+auto libparse::parse_expression(Context& context) -> std::optional<utl::Wrapper<cst::Expression>>
 {
     return parse_binary_operator_invocation_sequence(context);
 }
 
-auto libparse::parse_block_expression(Parse_context& context)
+auto libparse::parse_block_expression(Context& context)
     -> std::optional<utl::Wrapper<cst::Expression>>
 {
     if (context.try_consume(Token_type::brace_open)) {

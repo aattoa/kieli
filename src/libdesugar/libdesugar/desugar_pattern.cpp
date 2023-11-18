@@ -5,7 +5,7 @@ using namespace libdesugar;
 
 namespace {
     struct Pattern_desugaring_visitor {
-        Desugar_context& context;
+        Context& context;
 
         auto operator()(cst::pattern::Parenthesized const& parenthesized) -> ast::Pattern::Variant
         {
@@ -90,7 +90,7 @@ namespace {
     };
 } // namespace
 
-auto libdesugar::Desugar_context::desugar(cst::Pattern const& pattern) -> ast::Pattern
+auto libdesugar::Context::desugar(cst::Pattern const& pattern) -> ast::Pattern
 {
     return {
         .value       = std::visit(Pattern_desugaring_visitor { *this }, pattern.value),

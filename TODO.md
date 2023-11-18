@@ -3,11 +3,13 @@
 ## liblex
 - Test token description
 - Reject identifiers that are unreasonably long (100 chars?)
+- Generate a token stream (begin+end?) instead of producing a vector of tokens
 
 ## libparse
 - Test definition parsing
 - Test rejection of invalid template parameter/argument combinations
 - Use a safe `Token_iterator` type instead of `Lexical_token const*`
+- AST error node
 
 ## libdesugar
 - Emit warnings on constant conditionals
@@ -32,13 +34,11 @@
 ## Miscellaneous
 - Parameters: in, inout, out, move, forward ?
 - Fix compilation phase `#include` leakage
-- Unify phase testing
 - libbuild
 - libconfigure
 - User generated compile-time messages
 - Remove `noexcept` speficiation from functions with preconditions
 - Use libtommath for arbitrary precision integers
-- AST error node
 
 ## To-remove
 - `utl::always_false`, when `static_assert(false)` is supported by compilers
@@ -46,4 +46,4 @@
 - `bootleg::forward_like`, when `std::forward_like` is supported by compilers
 
 ## Long-term
-- LSP support
+- Language server

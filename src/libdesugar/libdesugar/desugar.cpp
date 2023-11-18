@@ -2,8 +2,7 @@
 #include <libdesugar/desugar.hpp>
 #include <libdesugar/desugaring_internals.hpp>
 
-auto libdesugar::Desugar_context::desugar(cst::Function_argument const& argument)
-    -> ast::Function_argument
+auto libdesugar::Context::desugar(cst::Function_argument const& argument) -> ast::Function_argument
 {
     return {
         .expression = desugar(argument.expression),
@@ -12,7 +11,7 @@ auto libdesugar::Desugar_context::desugar(cst::Function_argument const& argument
     };
 }
 
-auto libdesugar::Desugar_context::desugar(cst::Function_parameter const& parameter)
+auto libdesugar::Context::desugar(cst::Function_parameter const& parameter)
     -> ast::Function_parameter
 {
     return ast::Function_parameter {
@@ -22,8 +21,7 @@ auto libdesugar::Desugar_context::desugar(cst::Function_parameter const& paramet
     };
 }
 
-auto libdesugar::Desugar_context::desugar(cst::Self_parameter const& self_parameter)
-    -> ast::Self_parameter
+auto libdesugar::Context::desugar(cst::Self_parameter const& self_parameter) -> ast::Self_parameter
 {
     return ast::Self_parameter {
         .mutability = desugar_mutability(
@@ -33,8 +31,7 @@ auto libdesugar::Desugar_context::desugar(cst::Self_parameter const& self_parame
     };
 }
 
-auto libdesugar::Desugar_context::desugar(cst::Template_argument const& argument)
-    -> ast::Template_argument
+auto libdesugar::Context::desugar(cst::Template_argument const& argument) -> ast::Template_argument
 {
     return {
         .value = utl::match(
@@ -48,7 +45,7 @@ auto libdesugar::Desugar_context::desugar(cst::Template_argument const& argument
     };
 }
 
-auto libdesugar::Desugar_context::desugar(cst::Template_parameter const& parameter)
+auto libdesugar::Context::desugar(cst::Template_parameter const& parameter)
     -> ast::Template_parameter
 {
     return {
@@ -79,7 +76,7 @@ auto libdesugar::Desugar_context::desugar(cst::Template_parameter const& paramet
     };
 }
 
-auto libdesugar::Desugar_context::desugar(cst::Qualifier const& qualifier) -> ast::Qualifier
+auto libdesugar::Context::desugar(cst::Qualifier const& qualifier) -> ast::Qualifier
 {
     return {
         .template_arguments = qualifier.template_arguments.transform(desugar()),
@@ -88,7 +85,7 @@ auto libdesugar::Desugar_context::desugar(cst::Qualifier const& qualifier) -> as
     };
 }
 
-auto libdesugar::Desugar_context::desugar(cst::Qualified_name const& name) -> ast::Qualified_name
+auto libdesugar::Context::desugar(cst::Qualified_name const& name) -> ast::Qualified_name
 {
     return {
         .middle_qualifiers = desugar(name.middle_qualifiers.elements),
@@ -107,8 +104,7 @@ auto libdesugar::Desugar_context::desugar(cst::Qualified_name const& name) -> as
     };
 }
 
-auto libdesugar::Desugar_context::desugar(cst::Class_reference const& reference)
-    -> ast::Class_reference
+auto libdesugar::Context::desugar(cst::Class_reference const& reference) -> ast::Class_reference
 {
     return {
         .template_arguments = reference.template_arguments.transform(desugar()),
@@ -117,7 +113,7 @@ auto libdesugar::Desugar_context::desugar(cst::Class_reference const& reference)
     };
 }
 
-auto libdesugar::Desugar_context::desugar(cst::Function_signature const& signature)
+auto libdesugar::Context::desugar(cst::Function_signature const& signature)
     -> ast::Function_signature
 {
     return {
@@ -128,8 +124,7 @@ auto libdesugar::Desugar_context::desugar(cst::Function_signature const& signatu
     };
 }
 
-auto libdesugar::Desugar_context::desugar(cst::Type_signature const& signature)
-    -> ast::Type_signature
+auto libdesugar::Context::desugar(cst::Type_signature const& signature) -> ast::Type_signature
 {
     return {
         .classes = desugar(signature.classes.elements),
@@ -137,7 +132,7 @@ auto libdesugar::Desugar_context::desugar(cst::Type_signature const& signature)
     };
 }
 
-auto libdesugar::Desugar_context::desugar(cst::Mutability const& mutability) -> ast::Mutability
+auto libdesugar::Context::desugar(cst::Mutability const& mutability) -> ast::Mutability
 {
     return ast::Mutability {
         .value = utl::match(
@@ -153,25 +148,24 @@ auto libdesugar::Desugar_context::desugar(cst::Mutability const& mutability) -> 
     };
 }
 
-auto libdesugar::Desugar_context::desugar(cst::Type_annotation const& annotation) -> ast::Type
+auto libdesugar::Context::desugar(cst::Type_annotation const& annotation) -> ast::Type
 {
     return desugar(*annotation.type);
 }
 
-auto libdesugar::Desugar_context::desugar(
-    cst::Function_parameter::Default_argument const& default_argument)
+auto libdesugar::Context::desugar(cst::Function_parameter::Default_argument const& default_argument)
     -> utl::Wrapper<ast::Expression>
 {
     return desugar(default_argument.expression);
 }
 
-auto libdesugar::Desugar_context::desugar(
-    cst::Template_parameter::Default_argument const& default_argument) -> ast::Template_argument
+auto libdesugar::Context::desugar(cst::Template_parameter::Default_argument const& default_argument)
+    -> ast::Template_argument
 {
     return desugar(default_argument.argument);
 }
 
-auto libdesugar::Desugar_context::desugar_mutability(
+auto libdesugar::Context::desugar_mutability(
     std::optional<cst::Mutability> const& mutability, utl::Source_view const source_view)
     -> ast::Mutability
 {
@@ -185,8 +179,8 @@ auto libdesugar::Desugar_context::desugar_mutability(
     };
 }
 
-auto libdesugar::Desugar_context::normalize_self_parameter(
-    cst::Self_parameter const& self_parameter) -> ast::Function_parameter
+auto libdesugar::Context::normalize_self_parameter(cst::Self_parameter const& self_parameter)
+    -> ast::Function_parameter
 {
     ast::Type self_type {
         .value       = ast::type::Self {},
@@ -221,38 +215,35 @@ auto libdesugar::Desugar_context::normalize_self_parameter(
     };
 }
 
-auto libdesugar::Desugar_context::unit_value(utl::Source_view const view)
-    -> utl::Wrapper<ast::Expression>
+auto libdesugar::Context::unit_value(utl::Source_view const view) -> utl::Wrapper<ast::Expression>
 {
     return wrap(ast::Expression { .value = ast::expression::Tuple {}, .source_view = view });
 }
 
-auto libdesugar::Desugar_context::wildcard_pattern(utl::Source_view const view)
+auto libdesugar::Context::wildcard_pattern(utl::Source_view const view)
     -> utl::Wrapper<ast::Pattern>
 {
     return wrap(ast::Pattern { .value = ast::pattern::Wildcard {}, .source_view = view });
 }
 
-auto libdesugar::Desugar_context::true_pattern(utl::Source_view const view)
-    -> utl::Wrapper<ast::Pattern>
+auto libdesugar::Context::true_pattern(utl::Source_view const view) -> utl::Wrapper<ast::Pattern>
 {
     return wrap(ast::Pattern { .value = kieli::Boolean { true }, .source_view = view });
 }
 
-auto libdesugar::Desugar_context::false_pattern(utl::Source_view const view)
-    -> utl::Wrapper<ast::Pattern>
+auto libdesugar::Context::false_pattern(utl::Source_view const view) -> utl::Wrapper<ast::Pattern>
 {
     return wrap(ast::Pattern { .value = kieli::Boolean { false }, .source_view = view });
 }
 
-auto libdesugar::Desugar_context::diagnostics() noexcept -> kieli::Diagnostics&
+auto libdesugar::Context::diagnostics() noexcept -> kieli::Diagnostics&
 {
     return compilation_info.get()->diagnostics;
 }
 
 auto kieli::desugar(kieli::Parse_result&& parse_result) -> Desugar_result
 {
-    libdesugar::Desugar_context context {
+    libdesugar::Context context {
         std::move(parse_result.compilation_info),
         ast::Node_arena::with_default_page_size(),
     };

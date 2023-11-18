@@ -5,13 +5,13 @@ namespace {
 
     using namespace libparse;
 
-    auto extract_wildcard(Parse_context&) -> cst::Pattern::Variant
+    auto extract_wildcard(Context&) -> cst::Pattern::Variant
     {
         return cst::pattern::Wildcard {};
     };
 
     template <class T>
-    auto extract_literal(Parse_context& context) -> cst::Pattern::Variant
+    auto extract_literal(Context& context) -> cst::Pattern::Variant
     {
         // TODO: fix string literal extraction
         if constexpr (std::is_same_v<T, utl::Pooled_string>) {
@@ -22,7 +22,7 @@ namespace {
         }
     };
 
-    auto extract_tuple(Parse_context& context) -> cst::Pattern::Variant
+    auto extract_tuple(Context& context) -> cst::Pattern::Variant
     {
         Lexical_token const* const open = context.pointer - 1;
         auto patterns = extract_comma_separated_zero_or_more<parse_pattern, "a pattern">(context);
@@ -41,7 +41,7 @@ namespace {
         } };
     };
 
-    auto extract_slice(Parse_context& context) -> cst::Pattern::Variant
+    auto extract_slice(Context& context) -> cst::Pattern::Variant
     {
         static constexpr auto extract_elements
             = extract_comma_separated_zero_or_more<parse_pattern, "an element pattern">;
@@ -66,7 +66,7 @@ namespace {
 
     constexpr auto parse_constructor_pattern = parenthesized<parse_top_level_pattern, "a pattern">;
 
-    auto parse_constructor_name(Parse_context& context) -> std::optional<cst::Qualified_name>
+    auto parse_constructor_name(Context& context) -> std::optional<cst::Qualified_name>
     {
         switch (context.pointer->type) {
         case Token_type::lower_name:
@@ -95,7 +95,7 @@ namespace {
         }
     }
 
-    auto extract_name(Parse_context& context) -> cst::Pattern::Variant
+    auto extract_name(Context& context) -> cst::Pattern::Variant
     {
         context.retreat();
         auto mutability = parse_mutability(context);
@@ -124,7 +124,7 @@ namespace {
         };
     };
 
-    auto extract_qualified_constructor(Parse_context& context) -> cst::Pattern::Variant
+    auto extract_qualified_constructor(Context& context) -> cst::Pattern::Variant
     {
         context.retreat();
         if (auto name = parse_constructor_name(context)) {
@@ -136,7 +136,7 @@ namespace {
         utl::unreachable();
     };
 
-    auto extract_abbreviated_constructor(Parse_context& context) -> cst::Pattern::Variant
+    auto extract_abbreviated_constructor(Context& context) -> cst::Pattern::Variant
     {
         Lexical_token const* const double_colon = context.pointer - 1;
         return cst::pattern::Abbreviated_constructor {
@@ -146,7 +146,7 @@ namespace {
         };
     }
 
-    auto parse_normal_pattern(Parse_context& context) -> std::optional<cst::Pattern::Variant>
+    auto parse_normal_pattern(Context& context) -> std::optional<cst::Pattern::Variant>
     {
         switch (context.extract().type) {
         case Token_type::underscore:
@@ -178,8 +178,7 @@ namespace {
         }
     }
 
-    auto parse_potentially_aliased_pattern(Parse_context& context)
-        -> std::optional<cst::Pattern::Variant>
+    auto parse_potentially_aliased_pattern(Context& context) -> std::optional<cst::Pattern::Variant>
     {
         Lexical_token const* const anchor = context.pointer;
         if (auto pattern = parse_normal_pattern(context)) {
@@ -201,8 +200,7 @@ namespace {
         return std::nullopt;
     }
 
-    auto parse_potentially_guarded_pattern(Parse_context& context)
-        -> std::optional<cst::Pattern::Variant>
+    auto parse_potentially_guarded_pattern(Context& context) -> std::optional<cst::Pattern::Variant>
     {
         Lexical_token const* const anchor = context.pointer;
         if (auto pattern = parse_potentially_aliased_pattern(context)) {
@@ -226,7 +224,7 @@ namespace {
 
 } // namespace
 
-auto libparse::parse_pattern(Parse_context& context) -> std::optional<utl::Wrapper<cst::Pattern>>
+auto libparse::parse_pattern(Context& context) -> std::optional<utl::Wrapper<cst::Pattern>>
 {
     return parse_node<cst::Pattern, parse_potentially_guarded_pattern>(context);
 }

@@ -51,7 +51,7 @@ namespace {
     }>;
 
     constexpr auto expression_parser_repl = generic_repl<[](kieli::Lex_result&& lex_result) {
-        libparse::Parse_context context {
+        libparse::Context context {
             std::move(lex_result),
             cst::Node_arena::with_default_page_size(),
         };
