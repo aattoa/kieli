@@ -59,18 +59,22 @@ namespace utl {
     [[nodiscard]] constexpr auto would_multiplication_overflow(T const a, T const b) noexcept
         -> bool
     {
-        return b != 0
-            && (((b > 0) && (a > 0) && (a > std::numeric_limits<T>::max() / b))
-                || ((b < 0) && (a < 0) && (a < std::numeric_limits<T>::max() / b)));
+        if (b == 0) {
+            return false;
+        }
+        return ((b > 0) && (a > 0) && (a > std::numeric_limits<T>::max() / b))
+            || ((b < 0) && (a < 0) && (a < std::numeric_limits<T>::max() / b));
     }
 
     template <std::integral T>
     [[nodiscard]] constexpr auto would_multiplication_underflow(T const a, T const b) noexcept
         -> bool
     {
-        return b != 0
-            && (((b > 0) && (a < 0) && (a < std::numeric_limits<T>::min() / b))
-                || ((b < 0) && (a > 0) && (a > std::numeric_limits<T>::min() / b)));
+        if (b == 0) {
+            return false;
+        }
+        return ((b > 0) && (a < 0) && (a < std::numeric_limits<T>::min() / b))
+            || ((b < 0) && (a > 0) && (a > std::numeric_limits<T>::min() / b));
     }
 
     template <std::integral T>
@@ -79,16 +83,16 @@ namespace utl {
         return (a == std::numeric_limits<T>::min()) && (b == -1) && (a != 0);
     }
 
-    template <std::integral X>
-    [[nodiscard]] constexpr auto would_increment_overflow(X const x) noexcept -> bool
+    template <std::integral T>
+    [[nodiscard]] constexpr auto would_increment_overflow(T const x) noexcept -> bool
     {
-        return x == std::numeric_limits<X>::max();
+        return x == std::numeric_limits<T>::max();
     }
 
-    template <std::integral X>
-    [[nodiscard]] constexpr auto would_decrement_underflow(X const x) noexcept -> bool
+    template <std::integral T>
+    [[nodiscard]] constexpr auto would_decrement_underflow(T const x) noexcept -> bool
     {
-        return x == std::numeric_limits<X>::min();
+        return x == std::numeric_limits<T>::min();
     }
 
     template <std::integral T>
@@ -97,16 +101,14 @@ namespace utl {
     public:
         using Underlying_integer = T;
 
-        Safe_integer() noexcept = default;
+        Safe_integer() = default;
 
-        /*implicit*/ constexpr Safe_integer(std::integral auto const value)
-        { // NOLINT
-            if (std::in_range<T>(value)) {
-                m_value = static_cast<T>(value);
-            }
-            else {
+        constexpr Safe_integer(std::integral auto const value) // NOLINT: implicit
+        {
+            if (!std::in_range<T>(value)) {
                 throw Safe_integer_out_of_range {};
             }
+            m_value = static_cast<T>(value);
         }
 
         template <std::integral U>
@@ -136,15 +138,13 @@ namespace utl {
             if (would_addition_underflow(m_value, other.m_value)) {
                 throw Safe_integer_underflow {};
             }
-
             m_value += other.m_value;
             return *this;
         }
 
         constexpr auto operator+(Safe_integer const other) const -> Safe_integer
         {
-            auto copy = *this;
-            return copy += other;
+            return Safe_integer { *this } += other;
         }
 
         constexpr auto operator-=(Safe_integer const other) -> Safe_integer&
@@ -155,15 +155,13 @@ namespace utl {
             if (would_subtraction_underflow(m_value, other.m_value)) [[unlikely]] {
                 throw Safe_integer_underflow {};
             }
-
             m_value -= other.m_value;
             return *this;
         }
 
         constexpr auto operator-(Safe_integer const other) const -> Safe_integer
         {
-            auto copy = *this;
-            return copy -= other;
+            return Safe_integer { *this } -= other;
         }
 
         constexpr auto operator*=(Safe_integer const other) -> Safe_integer&
@@ -174,15 +172,13 @@ namespace utl {
             if (would_multiplication_underflow(m_value, other.m_value)) [[unlikely]] {
                 throw Safe_integer_underflow {};
             }
-
             m_value *= other.m_value;
             return *this;
         }
 
         constexpr auto operator*(Safe_integer const other) const -> Safe_integer
         {
-            auto copy = *this;
-            return copy *= other;
+            return Safe_integer { *this } *= other;
         }
 
         constexpr auto operator/=(Safe_integer const other) -> Safe_integer&
@@ -193,15 +189,13 @@ namespace utl {
             if (would_division_overflow(m_value, other.m_value)) [[unlikely]] {
                 throw Safe_integer_overflow {};
             }
-
             m_value /= other.m_value;
             return *this;
         }
 
         constexpr auto operator/(Safe_integer const other) const -> Safe_integer
         {
-            auto copy = *this;
-            return copy /= other;
+            return Safe_integer { *this } /= other;
         }
 
         constexpr auto operator%=(Safe_integer const other) -> Safe_integer&
@@ -209,15 +203,13 @@ namespace utl {
             if (would_division_overflow(m_value, other.m_value)) [[unlikely]] {
                 throw Safe_integer_overflow {};
             }
-
             m_value %= other.m_value;
             return *this;
         }
 
         constexpr auto operator%(Safe_integer const other) -> Safe_integer
         {
-            auto copy = *this;
-            return copy %= other;
+            return Safe_integer { *this } %= other;
         }
 
         constexpr auto operator++() -> Safe_integer&
@@ -225,7 +217,6 @@ namespace utl {
             if (would_increment_overflow(m_value)) [[unlikely]] {
                 throw Safe_integer_overflow {};
             }
-
             ++m_value;
             return *this;
         }
@@ -242,7 +233,6 @@ namespace utl {
             if (would_decrement_underflow(m_value)) [[unlikely]] {
                 throw Safe_integer_underflow {};
             }
-
             --m_value;
             return *this;
         }
@@ -254,14 +244,13 @@ namespace utl {
             return copy;
         }
 
-        [[nodiscard]] constexpr explicit operator bool() const noexcept
+        [[nodiscard]] explicit constexpr operator bool() const noexcept
         {
             return m_value != 0;
         }
 
         [[nodiscard]] auto operator==(Safe_integer const&) const noexcept -> bool = default;
-        [[nodiscard]] auto operator<=>(Safe_integer const&) const noexcept -> std::strong_ordering
-            = default;
+        [[nodiscard]] auto operator<=>(Safe_integer const&) const noexcept        = default;
     };
 
     using Safe_i8  = Safe_integer<I8>;
@@ -282,7 +271,7 @@ namespace utl {
 template <class T>
 struct std::formatter<utl::Safe_integer<T>> : std::formatter<T> {
     auto format(utl::Safe_integer<T> const value, auto& context) const
-    { // NOLINT
+    {
         return formatter<T>::format(value.get(), context);
     }
 };
