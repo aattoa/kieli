@@ -9,7 +9,7 @@ namespace kieli {
     auto text_section(
         utl::Source_view                       section_view,
         std::optional<cppdiag::Message_string> section_note = std::nullopt,
-        std::optional<cppdiag::Color>          note_color = std::nullopt) -> cppdiag::Text_section;
+        std::optional<cppdiag::Severity>       severity = std::nullopt) -> cppdiag::Text_section;
 
     // Thrown when an unrecoverable error is encountered
     struct Compilation_failure : std::exception {
@@ -28,7 +28,7 @@ namespace kieli {
             vector.push_back(cppdiag::Diagnostic {
                 .text_sections = utl::to_vector({ text_section(view) }),
                 .message       = context.format_message(fmt, std::forward<Args>(args)...),
-                .level         = cppdiag::Level::error,
+                .severity      = cppdiag::Severity::error,
             });
             throw Compilation_failure {};
         }

@@ -127,7 +127,7 @@ auto liblex::Context::error(std::string_view const position, std::string_view co
     m_compilation_info.get()->diagnostics.vector.push_back(cppdiag::Diagnostic {
         .text_sections = utl::to_vector({ kieli::text_section(source_view_for(position)) }),
         .message       = m_compilation_info.get()->diagnostics.context.message(message),
-        .level         = cppdiag::Level::error,
+        .severity      = cppdiag::Severity::error,
     });
     return tl::unexpected { Token_extraction_failure {} };
 }

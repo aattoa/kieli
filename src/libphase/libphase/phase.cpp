@@ -31,7 +31,7 @@ auto kieli::test_info_and_source(std::string&& source_string)
 auto kieli::text_section(
     utl::Source_view const                       section_view,
     std::optional<cppdiag::Message_string> const section_note,
-    std::optional<cppdiag::Color> const          note_color) -> cppdiag::Text_section
+    std::optional<cppdiag::Severity> const       severity) -> cppdiag::Text_section
 {
     return cppdiag::Text_section {
         .source_string  = section_view.source->string(),
@@ -39,7 +39,7 @@ auto kieli::text_section(
         .start_position = { section_view.start_position.line, section_view.start_position.column },
         .stop_position  = { section_view.stop_position.line, section_view.stop_position.column },
         .note           = section_note,
-        .note_color     = note_color,
+        .note_severity  = severity,
     };
 }
 

@@ -149,7 +149,7 @@ namespace {
                         kieli::text_section(condition->source_view),
                     }),
                     .message       = context.diagnostics().context.message("Constant condition"),
-                    .level         = cppdiag::Level::note,
+                    .severity      = cppdiag::Severity::information,
                 });
             }
             return ast::expression::Conditional {
@@ -258,7 +258,7 @@ namespace {
                         kieli::text_section(condition->source_view),
                     }),
                     .message       = context.diagnostics().context.message(message),
-                    .level         = cppdiag::Level::note,
+                    .severity      = cppdiag::Severity::information,
                 });
             }
             return ast::expression::Loop {

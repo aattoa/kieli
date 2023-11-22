@@ -149,7 +149,7 @@ auto main(int argc, char const** argv) -> int
             .message   = context.message("Command line parse failure"),
             .help_note = context.format_message(
                 "To see a list of valid options, use `{} --help`", *argv ? *argv : "kieli"),
-            .level = cppdiag::Level::error,
+            .severity = cppdiag::Severity::error,
         };
         std::cerr << context.format_diagnostic(diagnostic, colors);
         return EXIT_FAILURE;
