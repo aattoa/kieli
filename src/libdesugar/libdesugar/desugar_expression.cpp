@@ -307,14 +307,26 @@ namespace {
             for (auto it = initializers.begin(); it != initializers.end(); ++it) {
                 static constexpr auto projection
                     = &cst::expression::Struct_initializer::Member_initializer::name;
-                if (auto duplicate = ranges::find(initializers.begin(), it, it->name, projection);
-                    duplicate != it)
+                if (auto duplicate = ranges::find(it + 1, initializers.end(), it->name, projection);
+                    duplicate != initializers.end())
                 {
-                    // TODO: point to individual initializer source views
-                    context.diagnostics().error(
-                        this_expression.source_view,
-                        "Struct initializer expression contains more than one initializer for {}",
+                    auto const message = context.diagnostics().context.format_message(
+                        "Struct initializer contains more than one initializer for member {}",
                         it->name);
+                    context.diagnostics().vector.push_back(cppdiag::Diagnostic {
+                        .text_sections = utl::to_vector({
+                            kieli::text_section(
+                                it->name.source_view,
+                                context.diagnostics().context.message("First specified here"),
+                                cppdiag::Severity::information),
+                            kieli::text_section(
+                                duplicate->name.source_view,
+                                context.diagnostics().context.message("Later specified here")),
+                        }),
+                        .message       = message,
+                        .severity      = cppdiag::Severity::error,
+                    });
+                    throw kieli::Compilation_failure {};
                 }
                 ast_struct_initializer.member_initializers.add_new_unchecked(
                     it->name, context.desugar(it->expression));

@@ -15,7 +15,6 @@
 - Emit errors on:
     - member redefinition
     - constructor redefinition
-    - duplicate member initializer
 
 ## Redesign
 - libname
