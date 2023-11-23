@@ -64,7 +64,7 @@ namespace libformat {
         utl::Usize indentation {};
     };
 
-    struct Indentation { // NOLINT: smf
+    struct Indentation {
         State& state;
         ~Indentation();
     };

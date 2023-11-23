@@ -372,7 +372,7 @@ namespace utl {
     }
 
     template <std::invocable Callback>
-    class [[nodiscard]] Scope_exit_handler { // NOLINT: smf
+    class [[nodiscard]] Scope_exit_handler {
         Callback callback;
     public:
         explicit Scope_exit_handler(Callback callback) : callback { std::move(callback) } {}

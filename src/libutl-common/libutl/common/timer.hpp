@@ -23,7 +23,7 @@ namespace utl {
     };
 
     template <class Clock_type, class Duration_type>
-    struct Basic_logging_timer : Basic_timer<Clock_type, Duration_type> { // NOLINT: smf
+    struct Basic_logging_timer : Basic_timer<Clock_type, Duration_type> {
         using Clock    = Clock_type;
         using Duration = Duration_type;
 
