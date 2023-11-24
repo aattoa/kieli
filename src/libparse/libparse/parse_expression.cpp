@@ -22,7 +22,7 @@ namespace {
             combined_string += token->as_string().view();
         }
         return kieli::String {
-            context.compilation_info.get()->string_literal_pool.make(combined_string),
+            context.compile_info.string_literal_pool.make(combined_string),
         };
     }
 
@@ -129,8 +129,8 @@ namespace {
     auto extract_qualified_lower_name_or_struct_initializer(
         Context& context, std::optional<cst::Root_qualifier>&& root) -> cst::Expression::Variant
     {
-        Lexical_token* const anchor = context.pointer;
-        auto                 name   = extract_qualified(context, std::move(root));
+        Lexical_token const* const anchor = context.pointer;
+        auto                       name   = extract_qualified(context, std::move(root));
 
         auto template_arguments = parse_template_arguments(context);
 

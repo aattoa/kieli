@@ -8,15 +8,13 @@
 
 namespace libdesugar {
     struct Context {
-        kieli::Compilation_info compilation_info;
-        ast::Node_arena         node_arena;
-        utl::Pooled_string      self_variable_identifier
-            = compilation_info.get()->identifier_pool.make("self");
+        kieli::Compile_info& compile_info;
+        ast::Node_arena&     node_arena;
+        utl::Pooled_string   self_variable_identifier = compile_info.identifier_pool.make("self");
 
-        explicit Context(
-            kieli::Compilation_info&& compilation_info, ast::Node_arena&& node_arena) noexcept
-            : compilation_info { std::move(compilation_info) }
-            , node_arena { std::move(node_arena) }
+        explicit Context(kieli::Compile_info& compile_info, ast::Node_arena& node_arena) noexcept
+            : compile_info { compile_info }
+            , node_arena { node_arena }
         {}
 
         template <ast::node Node>

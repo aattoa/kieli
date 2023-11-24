@@ -232,7 +232,7 @@ auto libparse::extract_qualified(Context& context, std::optional<cst::Root_quali
                 .source_view = token.source_view,
                 .is_upper    = token.type == Token_type::upper_name,
             };
-            Lexical_token* const       template_argument_anchor = context.pointer;
+            Lexical_token const* const template_argument_anchor = context.pointer;
             auto                       template_arguments       = parse_template_arguments(context);
             Lexical_token const* const double_colon = context.try_extract(Token_type::double_colon);
             if (double_colon) {
@@ -370,14 +370,17 @@ auto libparse::optional_token(kieli::Lexical_token const* const token) -> std::o
     return std::nullopt;
 }
 
-libparse::Context::Context(kieli::Lex_result&& lex_result, cst::Node_arena&& node_arena) noexcept
-    : compilation_info { std::move(lex_result.compilation_info) }
-    , node_arena { std::move(node_arena) }
-    , tokens { std::move(lex_result.tokens) }
-    , start { tokens.data() }
-    , pointer { start }
-    , plus_id { compilation_info.get()->operator_pool.make("+") }
-    , asterisk_id { compilation_info.get()->operator_pool.make("*") }
+libparse::Context::Context(
+    std::span<Lexical_token const> const tokens,
+    cst::Node_arena&                     node_arena,
+    kieli::Compile_info&                 compile_info) noexcept
+    : compile_info { compile_info }
+    , node_arena { node_arena }
+    , begin { tokens.data() }
+    , end { begin + tokens.size() }
+    , pointer { begin }
+    , plus_id { compile_info.operator_pool.make("+") }
+    , asterisk_id { compile_info.operator_pool.make("*") }
 {
     // The end-of-input token should always be present
     utl::always_assert(!tokens.empty() && tokens.back().type == Token_type::end_of_input);
@@ -400,7 +403,7 @@ auto libparse::Context::extract() noexcept -> Lexical_token const&
 
 auto libparse::Context::previous() const noexcept -> Lexical_token const&
 {
-    assert(pointer && pointer != start);
+    assert(pointer && pointer != begin);
     return pointer[-1];
 }
 
@@ -448,14 +451,15 @@ auto libparse::Context::error_expected(std::string_view const expectation) -> vo
 
 auto libparse::Context::diagnostics() noexcept -> kieli::Diagnostics&
 {
-    return compilation_info.get()->diagnostics;
+    return compile_info.diagnostics;
 }
 
 auto libparse::Context::make_source_view(
-    Lexical_token const* const first, Lexical_token const* const last) noexcept -> utl::Source_view
+    Lexical_token const* const first, Lexical_token const* const last) const noexcept
+    -> utl::Source_view
 {
     assert(first && last);
     assert(std::less_equal()(first, last));
-    assert(std::less()(last, std::to_address(tokens.end())));
+    assert(std::less()(last, end));
     return first->source_view.combine_with(last->source_view);
 }

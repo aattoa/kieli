@@ -6,11 +6,10 @@ namespace {
     auto lex(std::string&& string) -> std::string
     {
         auto [info, source] = kieli::test_info_and_source(std::move(string));
-        auto const lex_result
-            = kieli::lex({ .compilation_info = std::move(info), .source = source });
+        auto const tokens   = kieli::lex(source, info);
 
         std::string output;
-        for (auto const& token : lex_result.tokens) {
+        for (auto const& token : tokens) {
             std::format_to(
                 std::back_inserter(output), "('{}' {})", token.preceding_trivia, token.type);
         }

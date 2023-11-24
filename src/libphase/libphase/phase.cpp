@@ -11,20 +11,20 @@ namespace {
     )";
 }
 
-auto kieli::predefinitions_source(Compilation_info& compilation_info) -> utl::Wrapper<utl::Source>
+auto kieli::predefinitions_source(Compile_info& compile_info) -> utl::Wrapper<utl::Source>
 {
-    return compilation_info.get()->source_arena.wrap(
+    return compile_info.source_arena.wrap(
         "[predefined]", std::string(predefinitions_source_string));
 }
 
 auto kieli::test_info_and_source(std::string&& source_string)
-    -> utl::Pair<Compilation_info, utl::Source::Wrapper>
+    -> utl::Pair<Compile_info, utl::Source::Wrapper>
 {
-    Compilation_info test_info = std::make_shared<Shared_compilation_info>(Shared_compilation_info {
+    Compile_info test_info {
         .source_arena = utl::Source::Arena::with_page_size(1),
-    });
+    };
     utl::Source::Wrapper const test_source
-        = test_info.get()->source_arena.wrap("[test]", std::move(source_string));
+        = test_info.source_arena.wrap("[test]", std::move(source_string));
     return { std::move(test_info), test_source };
 }
 

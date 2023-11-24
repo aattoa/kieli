@@ -238,19 +238,16 @@ auto libdesugar::Context::false_pattern(utl::Source_view const view) -> utl::Wra
 
 auto libdesugar::Context::diagnostics() noexcept -> kieli::Diagnostics&
 {
-    return compilation_info.get()->diagnostics;
+    return compile_info.diagnostics;
 }
 
-auto kieli::desugar(kieli::Parse_result&& parse_result) -> Desugar_result
+auto kieli::desugar(cst::Module const& module, Compile_info& compile_info) -> ast::Module
 {
-    libdesugar::Context context {
-        std::move(parse_result.compilation_info),
-        ast::Node_arena::with_default_page_size(),
-    };
-    auto desugared_definitions = context.desugar(parse_result.module.definitions);
-    return Desugar_result {
-        .compilation_info = std::move(context.compilation_info),
-        .node_arena       = std::move(context.node_arena),
-        .module           = { .definitions = std::move(desugared_definitions) },
+    auto                node_arena = ast::Node_arena::with_default_page_size();
+    libdesugar::Context context { compile_info, node_arena };
+    auto                definitions = context.desugar(module.definitions);
+    return ast::Module {
+        .definitions = std::move(definitions),
+        .node_arena  = std::move(context.node_arena),
     };
 }

@@ -27,7 +27,7 @@ namespace {
 
     auto parse_self_parameter(Context& context) -> std::optional<cst::Self_parameter>
     {
-        Lexical_token* const anchor = context.pointer;
+        Lexical_token const* const anchor = context.pointer;
 
         std::optional mutability = parse_mutability(context);
         if (Lexical_token const* const self = context.try_extract(Token_type::lower_self)) {
@@ -411,9 +411,11 @@ namespace {
 
 } // namespace
 
-auto kieli::parse(Lex_result&& lex_result) -> Parse_result
+auto kieli::parse(std::span<Lexical_token const> const tokens, Compile_info& compile_info)
+    -> cst::Module
 {
-    Context context { std::move(lex_result), cst::Node_arena::with_default_page_size() };
+    auto    node_arena = cst::Node_arena::with_default_page_size();
+    Context context { tokens, node_arena, compile_info };
 
     std::vector<utl::Pooled_string>   module_imports;
     std::optional<utl::Pooled_string> module_name;
@@ -442,13 +444,10 @@ auto kieli::parse(Lex_result&& lex_result) -> Parse_result
         context.error_expected("fn, struct, enum, alias, class, impl, inst, or namespace");
     }
 
-    return Parse_result {
-        .compilation_info = std::move(context.compilation_info),
-        .node_arena       = std::move(context.node_arena),
-        .module {
-            .definitions = std::move(definitions),
-            .name        = std::move(module_name),
-            .imports     = std::move(module_imports),
-        },
+    return cst::Module {
+        .definitions = std::move(definitions),
+        .name        = std::move(module_name),
+        .imports     = std::move(module_imports),
+        .node_arena  = std::move(node_arena),
     };
 }

@@ -1,6 +1,6 @@
 #pragma once
 
-#include <liblex/lex.hpp>
+#include <liblex/token.hpp>
 #include <libparse/cst.hpp>
 #include <libutl/common/utilities.hpp>
 
@@ -14,15 +14,16 @@ namespace libparse {
     [[nodiscard]] auto optional_token(Lexical_token const*) -> std::optional<cst::Token>;
 
     struct [[nodiscard]] Context {
-        kieli::Compilation_info    compilation_info;
-        cst::Node_arena            node_arena;
-        std::vector<Lexical_token> tokens;
-        Lexical_token*             start {};
-        Lexical_token*             pointer {};
-        utl::Pooled_string         plus_id;
-        utl::Pooled_string         asterisk_id;
+        kieli::Compile_info& compile_info;
+        cst::Node_arena&     node_arena;
+        Lexical_token const* begin {};
+        Lexical_token const* end {};
+        Lexical_token const* pointer {};
+        utl::Pooled_string   plus_id;
+        utl::Pooled_string   asterisk_id;
 
-        explicit Context(kieli::Lex_result&&, cst::Node_arena&&) noexcept;
+        explicit Context(
+            std::span<Lexical_token const>, cst::Node_arena&, kieli::Compile_info&) noexcept;
 
         [[nodiscard]] auto is_finished() const noexcept -> bool;
         [[nodiscard]] auto previous() const noexcept -> Lexical_token const&;
@@ -54,7 +55,7 @@ namespace libparse {
 
         [[nodiscard]] auto diagnostics() noexcept -> kieli::Diagnostics&;
 
-        auto make_source_view(Lexical_token const*, Lexical_token const*) noexcept
+        auto make_source_view(Lexical_token const*, Lexical_token const*) const noexcept
             -> utl::Source_view;
     };
 

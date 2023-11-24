@@ -564,6 +564,7 @@ namespace ast {
 
     struct Module {
         std::vector<Definition> definitions;
+        Node_arena              node_arena;
     };
 
     auto format_to(Expression const&, std::string&) -> void;

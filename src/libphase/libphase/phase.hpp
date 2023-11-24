@@ -16,7 +16,7 @@ namespace kieli {
         [[nodiscard]] auto what() const noexcept -> char const* override;
     };
 
-    struct Diagnostics {
+    struct [[nodiscard]] Diagnostics {
         cppdiag::Context                 context;
         std::vector<cppdiag::Diagnostic> vector;
 
@@ -36,7 +36,7 @@ namespace kieli {
         [[nodiscard]] auto format_all(cppdiag::Colors) const -> std::string;
     };
 
-    struct Shared_compilation_info {
+    struct [[nodiscard]] Compile_info {
         Diagnostics        diagnostics;
         utl::Source::Arena source_arena = utl::Source::Arena::with_page_size(8);
         utl::String_pool   string_literal_pool;
@@ -44,12 +44,10 @@ namespace kieli {
         utl::String_pool   identifier_pool;
     };
 
-    using Compilation_info = utl::Explicit<std::shared_ptr<Shared_compilation_info>>;
-
-    auto predefinitions_source(Compilation_info&) -> utl::Source::Wrapper;
+    auto predefinitions_source(Compile_info&) -> utl::Source::Wrapper;
 
     auto test_info_and_source(std::string&& source_string)
-        -> utl::Pair<Compilation_info, utl::Source::Wrapper>;
+        -> utl::Pair<Compile_info, utl::Source::Wrapper>;
 
     struct [[nodiscard]] Name_upper;
     struct [[nodiscard]] Name_lower;

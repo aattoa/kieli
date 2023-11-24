@@ -1,17 +1,9 @@
 #pragma once
 
-#include <liblex/lex.hpp>
-#include <libparse/cst.hpp>
 #include <libutl/common/utilities.hpp>
+#include <libparse/cst.hpp>
+#include <liblex/token.hpp>
 
 namespace kieli {
-
-    struct [[nodiscard]] Parse_result {
-        Compilation_info compilation_info;
-        cst::Node_arena  node_arena;
-        cst::Module      module;
-    };
-
-    auto parse(Lex_result&&) -> Parse_result;
-
-} // namespace kieli
+    auto parse(std::span<Lexical_token const>, Compile_info&) -> cst::Module;
+}

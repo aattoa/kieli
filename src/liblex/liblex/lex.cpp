@@ -585,16 +585,17 @@ namespace {
 
 } // namespace
 
-auto kieli::lex(Lex_arguments&& lex_arguments) -> Lex_result
+auto kieli::lex(utl::Source::Wrapper const source, Compile_info& compile_info)
+    -> std::vector<Lexical_token>
 {
-    std::string_view const source_string = lex_arguments.source->string();
+    std::string_view const source_string = source->string();
     utl::always_assert(source_string.data() != nullptr);
 
     std::string_view   current_trivia;
     std::vector<Token> tokens;
     tokens.reserve(1024);
 
-    liblex::Context context { lex_arguments.source, lex_arguments.compilation_info };
+    liblex::Context context { source, compile_info };
     for (;;) {
         current_trivia = extract_comments_and_whitespace(context);
         if (context.is_finished()) {
@@ -613,14 +614,11 @@ auto kieli::lex(Lex_arguments&& lex_arguments) -> Lex_result
         context.position(),
         context.position(),
         { source_string.data() + source_string.size(), 0 },
-        lex_arguments.source,
+        source,
         Token::Variant {},
         Token::Type::end_of_input,
         current_trivia);
     tokens.push_back(std::move(end_of_input_token));
 
-    return Lex_result {
-        .compilation_info = std::move(lex_arguments.compilation_info),
-        .tokens           = std::move(tokens),
-    };
+    return tokens;
 }

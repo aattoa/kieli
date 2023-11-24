@@ -1,17 +1,17 @@
 #include <libformat/format.hpp>
 #include <libparse/parser_internals.hpp>
 #include <libparse/test_interface.hpp>
+#include <liblex/lex.hpp>
 #include <libutl/common/utilities.hpp>
 
 namespace {
     template <auto parse, auto format>
     auto test_parse(std::string&& string) -> libparse::Test_parse_result
     {
-        auto [info, source] = kieli::test_info_and_source(std::move(string));
-        libparse::Context context {
-            kieli::lex({ info, source }),
-            cst::Node_arena::with_page_size(64),
-        };
+        auto node_arena          = cst::Node_arena::with_page_size(64);
+        auto [info, source]      = kieli::test_info_and_source(std::move(string));
+        auto const        tokens = kieli::lex(source, info);
+        libparse::Context context { tokens, node_arena, info };
         if (auto node = parse(context)) {
             if (context.is_finished()) {
                 return format(**node, kieli::Format_configuration {});

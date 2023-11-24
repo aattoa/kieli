@@ -746,6 +746,7 @@ namespace cst {
         std::vector<Definition>           definitions;
         std::optional<utl::Pooled_string> name;
         std::vector<utl::Pooled_string>   imports;
+        Node_arena                        node_arena;
     };
 
 } // namespace cst

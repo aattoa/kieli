@@ -4,7 +4,6 @@
 #include <libutl/readline/readline.hpp>
 #include <liblex/lex.hpp>
 #include <libparse/parse.hpp>
-#include <libparse/parser_internals.hpp>
 #include <libdesugar/desugar.hpp>
 #include <libformat/format.hpp>
 #include <cppargs.hpp>
@@ -17,7 +16,7 @@ namespace {
         return std::cerr << colors.error.code << "Error: " << colors.normal.code;
     }
 
-    template <void (*f)(kieli::Lex_result&&)>
+    template <void (*f)(utl::Source::Wrapper, kieli::Compile_info&)>
     auto generic_repl(cppdiag::Colors const colors)
     {
         for (;;) {
@@ -34,51 +33,41 @@ namespace {
 
             auto [info, source] = kieli::test_info_and_source(std::move(string));
             try {
-                f(kieli::lex({ .compilation_info = info, .source = source }));
+                f(source, info);
             }
             catch (kieli::Compilation_failure const&) {
-                // do nothing
+                (void)0; // do nothing
             }
             catch (std::exception const& exception) {
                 error_stream(colors) << exception.what() << "\n\n";
             }
-            std::cerr << info.get()->diagnostics.format_all(colors);
+            std::cerr << info.diagnostics.format_all(colors);
         }
     }
 
-    constexpr auto lexer_repl = generic_repl<[](kieli::Lex_result&& lex_result) {
-        utl::print("Tokens: {}\n", lex_result.tokens);
-    }>;
+    constexpr auto lex_repl
+        = generic_repl<[](utl::Source::Wrapper const source, kieli::Compile_info& info) {
+              utl::print("Tokens: {}\n", kieli::lex(source, info));
+          }>;
 
-    constexpr auto expression_parser_repl = generic_repl<[](kieli::Lex_result&& lex_result) {
-        libparse::Context context {
-            std::move(lex_result),
-            cst::Node_arena::with_default_page_size(),
-        };
-        if (auto result = parse_expression(context)) {
-            utl::print("Result: {}\n", kieli::format_expression(**result, {}));
-            if (!context.pointer->source_view.string.empty()) {
-                utl::print("Remaining input: '{}'\n", context.pointer->source_view.string.data());
-            }
-        }
-        else {
-            utl::print("No parse\n");
-        }
-    }>;
+    constexpr auto parse_repl
+        = generic_repl<[](utl::Source::Wrapper const source, kieli::Compile_info& info) {
+              auto const tokens = kieli::lex(source, info);
+              auto const module = kieli::parse(tokens, info);
+              utl::print("{}", kieli::format_module(module, {}));
+          }>;
 
-    constexpr auto program_parser_repl = generic_repl<[](kieli::Lex_result&& lex_result) {
-        auto parse_result = parse(std::move(lex_result));
-        utl::print("{}", kieli::format_module(parse_result.module, {}));
-    }>;
+    constexpr auto desugar_repl
+        = generic_repl<[](utl::Source::Wrapper const source, kieli::Compile_info& info) {
+              auto const tokens = kieli::lex(source, info);
+              auto const module = kieli::desugar(kieli::parse(tokens, info), info);
 
-    constexpr auto desugaring_repl = generic_repl<[](kieli::Lex_result&& lex_result) {
-        auto        desugar_result = desugar(parse(std::move(lex_result)));
-        std::string output;
-        for (ast::Definition const& definition : desugar_result.module.definitions) {
-            ast::format_to(definition, output);
-        }
-        utl::print("{}\n\n", output);
-    }>;
+              std::string output;
+              for (ast::Definition const& definition : module.definitions) {
+                  ast::format_to(definition, output);
+              }
+              utl::print("{}\n\n", output);
+          }>;
 
 } // namespace
 
@@ -118,17 +107,16 @@ auto main(int argc, char const** argv) -> int
 
         if (repl_option) {
             utl::Flatmap<std::string_view, void (*)(cppdiag::Colors)> const repls { {
-                { "lex", lexer_repl },
-                { "expr", expression_parser_repl },
-                { "prog", program_parser_repl },
-                { "des", desugaring_repl },
+                { "lex", lex_repl },
+                { "par", parse_repl },
+                { "des", desugar_repl },
             } };
             if (auto const* const repl = repls.find(repl_option.value())) {
                 (*repl)(colors);
             }
             else {
                 throw utl::exception(
-                    "The repl must be one of lex|expr|prog|des, not '{}'", repl_option.value());
+                    "The repl must be one of lex|par|des, not '{}'", repl_option.value());
             }
         }
 

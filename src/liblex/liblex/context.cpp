@@ -21,15 +21,13 @@ auto liblex::Context::remaining_input_size() const noexcept -> utl::Usize
 }
 
 liblex::Context::Context(
-    utl::Wrapper<utl::Source> const source, kieli::Compilation_info& compilation_info) noexcept
-    : m_compilation_info { compilation_info }
+    utl::Wrapper<utl::Source> const source, kieli::Compile_info& compile_info) noexcept
+    : m_compile_info { compile_info }
     , m_source { source }
     , m_source_begin { source->string().data() }
     , m_source_end { m_source_begin + source->string().size() }
     , m_pointer { m_source_begin }
-{
-    utl::always_assert(m_compilation_info.get() != nullptr);
-}
+{}
 
 auto liblex::Context::source() const noexcept -> utl::Source::Wrapper
 {
@@ -106,27 +104,27 @@ auto liblex::Context::try_consume(std::string_view const string) noexcept -> boo
 
 auto liblex::Context::make_string_literal(std::string_view const string) -> utl::Pooled_string
 {
-    return m_compilation_info.get()->string_literal_pool.make(string);
+    return m_compile_info.string_literal_pool.make(string);
 }
 
 auto liblex::Context::make_operator(std::string_view const string) -> utl::Pooled_string
 {
     assert(!string.empty());
-    return m_compilation_info.get()->operator_pool.make(string);
+    return m_compile_info.operator_pool.make(string);
 }
 
 auto liblex::Context::make_identifier(std::string_view const string) -> utl::Pooled_string
 {
     assert(!string.empty());
-    return m_compilation_info.get()->identifier_pool.make(string);
+    return m_compile_info.identifier_pool.make(string);
 }
 
 auto liblex::Context::error(std::string_view const position, std::string_view const message)
     -> tl::unexpected<Token_extraction_failure>
 {
-    m_compilation_info.get()->diagnostics.vector.push_back(cppdiag::Diagnostic {
+    m_compile_info.diagnostics.vector.push_back(cppdiag::Diagnostic {
         .text_sections = utl::to_vector({ kieli::text_section(source_view_for(position)) }),
-        .message       = m_compilation_info.get()->diagnostics.context.message(message),
+        .message       = m_compile_info.diagnostics.context.message(message),
         .severity      = cppdiag::Severity::error,
     });
     return tl::unexpected { Token_extraction_failure {} };
