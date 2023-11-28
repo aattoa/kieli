@@ -4,6 +4,28 @@
 using namespace libdesugar;
 
 namespace {
+    template <class T>
+    auto ensure_no_duplicates(
+        Context& context, std::string_view const description, std::vector<T> const& elements)
+    {
+        for (auto it = elements.begin(); it != elements.end(); ++it) {
+            auto const duplicate = ranges::find(it + 1, elements.end(), it->name, &T::name);
+            if (duplicate != elements.end()) {
+                auto const message = context.diagnostics().context.format_message(
+                    "More than one definition for {} {}", description, it->name);
+                context.diagnostics().vector.push_back(cppdiag::Diagnostic {
+                    .text_sections = utl::to_vector({
+                        kieli::text_section(it->name.source_view),
+                        kieli::text_section(duplicate->name.source_view),
+                    }),
+                    .message       = message,
+                    .severity      = cppdiag::Severity::error,
+                });
+                throw kieli::Compilation_failure {};
+            }
+        }
+    }
+
     struct Definition_desugaring_visitor {
         Context& context;
 
@@ -65,6 +87,7 @@ namespace {
 
         auto operator()(cst::definition::Struct const& structure) -> ast::Definition::Variant
         {
+            ensure_no_duplicates(context, "member", structure.members.elements);
             auto const desugar_member = [this](cst::definition::Struct::Member const& member)
                 -> ast::definition::Struct::Member {
                 return {
@@ -84,14 +107,15 @@ namespace {
 
         auto operator()(cst::definition::Enum const& enumeration) -> ast::Definition::Variant
         {
-            auto const desugar_constructor
-                = [this](cst::definition::Enum::Constructor const& ctor) {
-                      return ast::definition::Enum::Constructor {
-                          .name          = ctor.name,
-                          .payload_types = ctor.payload_types.transform(context.desugar()),
-                          .source_view   = ctor.source_view,
-                      };
-                  };
+            ensure_no_duplicates(context, "constructor", enumeration.constructors.elements);
+            auto const desugar_constructor = [this](cst::definition::Enum::Constructor const& ctor)
+                -> ast::definition::Enum::Constructor {
+                return {
+                    .name          = ctor.name,
+                    .payload_types = ctor.payload_types.transform(context.desugar()),
+                    .source_view   = ctor.source_view,
+                };
+            };
             return definition(
                 ast::definition::Enum {
                     .constructors

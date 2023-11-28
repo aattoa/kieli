@@ -11,11 +11,6 @@
 - Use a safe `Token_iterator` type instead of `Lexical_token const*`
 - AST error node
 
-## libdesugar
-- Emit errors on:
-    - member redefinition
-    - constructor redefinition
-
 ## Redesign
 - libname
 - libtype
