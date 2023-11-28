@@ -1,6 +1,6 @@
 #include <libutl/common/utilities.hpp>
 
-auto utl::filename_without_path(std::string_view path) noexcept -> std::string_view
+auto utl::basename(std::string_view path) noexcept -> std::string_view
 {
     auto const trim_if = [&](char const c) {
         if (auto const pos = path.find_last_of(c); pos != std::string_view::npos) {
@@ -27,11 +27,21 @@ auto utl::Exception::what() const noexcept -> char const*
     return m_message.c_str();
 }
 
+auto utl::vprint(std::FILE* const file, std::string_view const fmt, std::format_args const args)
+    -> void
+{
+    static std::string string;
+    string.clear();
+    std::vformat_to(std::back_inserter(string), fmt, args);
+    auto const count = std::fwrite(string.data(), 1, string.size(), file);
+    always_assert(count == string.size() || string.empty());
+}
+
 auto utl::abort(std::string_view const message, std::source_location const caller) -> void
 {
     print(
         "[{}:{}:{}] {}, in function '{}'\n",
-        filename_without_path(caller.file_name()),
+        basename(caller.file_name()),
         caller.line(),
         caller.column(),
         message,
@@ -61,7 +71,7 @@ auto utl::trace(std::source_location const caller) -> void
     print(
         "utl::trace: Reached line {} in {}, in function '{}'\n",
         caller.line(),
-        filename_without_path(caller.file_name()),
+        basename(caller.file_name()),
         caller.function_name());
 }
 

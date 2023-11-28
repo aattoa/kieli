@@ -122,10 +122,10 @@ TEST("Relative_string")
     }
 }
 
-TEST("filename_without_path")
+TEST("basename")
 {
-    REQUIRE(utl::filename_without_path("aaa/bbb/ccc") == "ccc");
-    REQUIRE(utl::filename_without_path("aaa\\bbb\\ccc") == "ccc");
+    REQUIRE(utl::basename("aaa/bbb/ccc") == "ccc");
+    REQUIRE(utl::basename("aaa\\bbb\\ccc") == "ccc");
 }
 
 static_assert(utl::losslessly_convertible_to<utl::I8, utl::I16>);

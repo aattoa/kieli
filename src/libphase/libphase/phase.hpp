@@ -21,15 +21,25 @@ namespace kieli {
         std::vector<cppdiag::Diagnostic> vector;
 
         template <class... Args>
-        [[noreturn]] auto error(
-            utl::Source_view const view, std::format_string<Args...> const fmt, Args&&... args)
-            -> void
+        auto emit(
+            cppdiag::Severity const           severity,
+            utl::Source_view const            view,
+            std::format_string<Args...> const fmt,
+            Args&&... args) -> void
         {
             vector.push_back(cppdiag::Diagnostic {
                 .text_sections = utl::to_vector({ text_section(view) }),
                 .message       = context.format_message(fmt, std::forward<Args>(args)...),
-                .severity      = cppdiag::Severity::error,
+                .severity      = severity,
             });
+        }
+
+        template <class... Args>
+        [[noreturn]] auto error(
+            utl::Source_view const view, std::format_string<Args...> const fmt, Args&&... args)
+            -> void
+        {
+            emit(cppdiag::Severity::error, view, fmt, std::forward<Args>(args)...);
             throw Compilation_failure {};
         }
 

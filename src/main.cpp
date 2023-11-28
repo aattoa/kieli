@@ -11,27 +11,27 @@
 
 namespace {
 
-    [[nodiscard]] auto error_stream(cppdiag::Colors const colors) -> std::ostream&
+    [[nodiscard]] auto error_header(cppdiag::Colors const colors) -> std::string
     {
-        return std::cerr << colors.error.code << "Error: " << colors.normal.code;
+        return std::format("{}Error:{}", colors.error.code, colors.normal.code);
     }
 
     template <void (*f)(utl::Source::Wrapper, kieli::Compile_info&)>
-    auto generic_repl(cppdiag::Colors const colors)
+    auto generic_repl(cppdiag::Colors const colors) -> void
     {
         for (;;) {
-            std::string string = utl::readline(">>> ");
+            auto input = utl::readline(">>> ");
 
-            if (string.empty()) {
-                continue;
-            }
-            if (string == "q") {
+            if (!input || input == "q") {
                 break;
             }
+            if (input.value().find_first_not_of(' ') == std::string::npos) {
+                continue;
+            }
 
-            utl::add_to_readline_history(string);
+            utl::add_to_readline_history(input.value());
 
-            auto [info, source] = kieli::test_info_and_source(std::move(string));
+            auto [info, source] = kieli::test_info_and_source(std::move(input.value()));
             try {
                 f(source, info);
             }
@@ -39,9 +39,9 @@ namespace {
                 (void)0; // do nothing
             }
             catch (std::exception const& exception) {
-                error_stream(colors) << exception.what() << "\n\n";
+                utl::print(stderr, "{} {}\n\n", error_header(colors), exception.what());
             }
-            std::cerr << info.diagnostics.format_all(colors);
+            utl::print(stderr, "{}", info.diagnostics.format_all(colors));
         }
     }
 
@@ -139,15 +139,15 @@ auto main(int argc, char const** argv) -> int
                 "To see a list of valid options, use `{} --help`", *argv ? *argv : "kieli"),
             .severity = cppdiag::Severity::error,
         };
-        std::cerr << context.format_diagnostic(diagnostic, colors);
+        utl::print(stderr, "{}", context.format_diagnostic(diagnostic, colors));
         return EXIT_FAILURE;
     }
     catch (std::exception const& exception) {
-        error_stream(colors) << exception.what() << '\n';
+        utl::print(stderr, "{} {}\n", error_header(colors), exception.what());
         return EXIT_FAILURE;
     }
     catch (...) {
-        error_stream(colors) << "Caught unrecognized exception\n";
+        utl::print(stderr, "{} Caught unrecognized exception\n", error_header(colors));
         throw;
     }
 }

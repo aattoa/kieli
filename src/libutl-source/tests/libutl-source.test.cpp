@@ -1,5 +1,6 @@
 #include <libutl/common/utilities.hpp>
 #include <libutl/source/source.hpp>
+#include <cpputil/io.hpp>
 #include <catch2/catch_test_macros.hpp>
 
 #define TEST(name) TEST_CASE(name, "[libutl][source]") // NOLINT
@@ -18,12 +19,11 @@ TEST("utl::Source::read")
 
     {
         REQUIRE(!std::filesystem::exists(path));
-        std::ofstream file { path };
+        auto file = cpputil::io::File::open_write(path.c_str());
         REQUIRE(file.is_open());
-        file << test_string;
+        REQUIRE(cpputil::io::write(file.get(), test_string));
     }
-    [[maybe_unused]] auto const file_remover
-        = utl::on_scope_exit([path] { std::filesystem::remove(path); });
+    [[maybe_unused]] auto const _ = utl::on_scope_exit([path] { std::filesystem::remove(path); });
 
     std::string const path_string = path.string();
     utl::Source const source      = utl::Source::read(std::move(path));

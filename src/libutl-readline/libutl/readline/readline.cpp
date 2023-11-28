@@ -1,17 +1,20 @@
 #include <libutl/common/utilities.hpp>
 #include <libutl/readline/readline.hpp>
+#include <cpputil/io.hpp>
 
 #if !__has_include(<readline/readline.h>) || !__has_include(<readline/history.h>)
 
-auto utl::readline(std::string const& prompt) -> std::string
+auto utl::readline(std::string const& prompt) -> std::optional<std::string>
 {
-    std::cout << prompt;
-    std::string input;
-    std::getline(std::cin, input);
-    return input;
+    (void)cpputil::io::write(stdout, prompt);
+    (void)std::fflush(stdout);
+    return cpputil::io::read_line(stdin);
 }
 
-auto utl::add_to_readline_history(std::string const&) -> void {}
+auto utl::add_to_readline_history(std::string const&) -> void
+{
+    // Do nothing
+}
 
 #else
 
@@ -33,7 +36,7 @@ namespace {
 
     auto xdg_state_home_filename() -> std::optional<std::filesystem::path>
     {
-        static constexpr auto filename = ".kieli_history"sv;
+        static constexpr std::string_view filename = "kieli_history";
         if (char const* const state_home = std::getenv("XDG_STATE_HOME")) { // NOLINT
             return std::filesystem::path { state_home } / filename;
         }
@@ -54,46 +57,44 @@ namespace {
     auto read_history_file_to_current_history() -> void
     {
         std::optional const path = determine_history_file_path();
-        if (!path.has_value() || !is_valid_history_file_path(*path)) {
+        if (!path.has_value() || !is_valid_history_file_path(path.value())) {
             return;
         }
-
-        std::ifstream file { *path };
-        if (!file.is_open()) {
+        auto file = cpputil::io::File::open_read(path.value().c_str());
+        if (!file) {
             return;
         }
-
         std::string line;
-        while (std::getline(file, line)) {
+        while (cpputil::io::read_line(file.get(), line)) {
             ::add_history(line.c_str());
-            // `line` is cleared when getline fails, so previous input has to be set every time.
             previous_readline_input = line;
+            line.clear();
         }
     }
 
     auto add_line_to_history_file(std::string_view const line) -> void
     {
         std::optional const path = determine_history_file_path();
-        if (!path.has_value() || !is_valid_history_file_path(*path)) {
+        if (!path.has_value() || !is_valid_history_file_path(path.value())) {
             return;
         }
-
-        std::ofstream file { *path, std::ios_base::app };
-        if (!file.is_open()) {
-            return;
+        if (auto file = cpputil::io::File::open_append(path.value().c_str())) {
+            (void)cpputil::io::write_line(file.get(), line);
         }
-
-        file << line << '\n';
     }
 } // namespace
 
-auto utl::readline(std::string const& prompt) -> std::string
+auto utl::readline(std::string const& prompt) -> std::optional<std::string>
 {
-    [[maybe_unused]] static auto const history_reader = (read_history_file_to_current_history(), 0);
-
-    char* const raw_input   = ::readline(prompt.c_str());
-    auto const  input_guard = on_scope_exit([=] { std::free(raw_input); }); // NOLINT: manual free
-    return raw_input ? raw_input : std::string {};
+    {
+        [[maybe_unused]] static auto const _ = (read_history_file_to_current_history(), 0);
+    }
+    char* const input = ::readline(prompt.c_str());
+    auto const  guard = on_scope_exit([=] { std::free(input); }); // NOLINT: manual free
+    if (input) {
+        return input;
+    }
+    return std::nullopt;
 }
 
 auto utl::add_to_readline_history(std::string const& string) -> void

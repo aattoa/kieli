@@ -2,42 +2,35 @@
 
 // This file is intended to be included by every translation unit in the project
 
+#include <cstdio>
 #include <cstdlib>
 #include <cstring>
 #include <cstddef>
 #include <cstdint>
-#include <climits>
 #include <cassert>
 
 #include <new>
 #include <limits>
 #include <memory>
-#include <chrono>
 #include <utility>
-#include <typeinfo>
 #include <concepts>
 #include <exception>
+#include <filesystem>
 #include <functional>
 #include <type_traits>
 #include <source_location>
 
-#include <fstream>
-#include <iostream>
-#include <filesystem>
-
 #include <span>
 #include <array>
 #include <vector>
-#include <unordered_map>
 
 #include <tuple>
 #include <variant>
 #include <optional>
 #include <tl/expected.hpp>
 
-#include <string>
 #include <format>
-#include <charconv>
+#include <string>
 #include <string_view>
 
 #include <numeric>
@@ -178,10 +171,18 @@ namespace utl {
         return Exception { std::format(fmt, std::forward<Args>(args)...) };
     }
 
+    auto vprint(std::FILE*, std::string_view, std::format_args) -> void;
+
+    template <class... Args>
+    auto print(std::FILE* const file, std::format_string<Args...> const fmt, Args&&... args) -> void
+    {
+        vprint(file, fmt.get(), std::make_format_args(std::forward<Args>(args)...));
+    }
+
     template <class... Args>
     auto print(std::format_string<Args...> const fmt, Args&&... args) -> void
     {
-        std::format_to(std::ostreambuf_iterator { std::cout }, fmt, std::forward<Args>(args)...);
+        print(stdout, fmt, std::forward<Args>(args)...);
     }
 
     [[noreturn]] auto abort(
@@ -275,7 +276,8 @@ namespace utl {
         // clang-format on
     };
 
-    auto filename_without_path(std::string_view path) noexcept -> std::string_view;
+    // Filename without path
+    auto basename(std::string_view full_path) noexcept -> std::string_view;
 
     template <class T>
     constexpr auto make = []<class... Args>(Args&&... args) noexcept(

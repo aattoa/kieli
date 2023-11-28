@@ -1,5 +1,6 @@
 #include <libutl/common/utilities.hpp>
 #include <libutl/source/source.hpp>
+#include <cpputil/io.hpp>
 
 utl::Source::Source(std::filesystem::path&& file_path, std::string&& file_content)
     : m_file_path { std::move(file_path) }
@@ -10,16 +11,17 @@ utl::Source::Source(std::filesystem::path&& file_path, std::string&& file_conten
 
 auto utl::Source::read(std::filesystem::path&& path) -> Source
 {
-    if (std::ifstream file { path }) {
-        return Source {
-            std::move(path),
-            std::string { std::istreambuf_iterator<char> { file }, {} },
-        };
+    if (auto file = cpputil::io::File::open_read(path.c_str())) {
+        if (auto content = cpputil::io::read(file.get())) {
+            disable_short_string_optimization(content.value());
+            return Source { std::move(path), std::move(content.value()) };
+        }
+        throw exception("Failed to read file '{}'", path.c_str());
     }
     if (std::filesystem::exists(path)) {
-        throw exception("Failed to open file '{}'", path.string());
+        throw exception("Failed to open file '{}'", path.c_str());
     }
-    throw exception("File '{}' does not exist", path.string());
+    throw exception("File '{}' does not exist", path.c_str());
 }
 
 auto utl::Source::path() const noexcept -> std::filesystem::path const&

@@ -46,16 +46,20 @@ FetchContent_Declare(
 FetchContent_Declare(
     cppargs
     GIT_REPOSITORY https://github.com/aattoa/cppargs.git
-    GIT_TAG        e698c7a5295afea828f83dc570c9aba98b928769)
+    GIT_TAG        7499a98c9605256281f0d14101d2269e86541b32)
 FetchContent_Declare(
     cppdiag
     GIT_REPOSITORY https://github.com/aattoa/cppdiag.git
-    GIT_TAG        570d956af0f32c00323a261debf3e47450af748f)
+    GIT_TAG        383bc5ac34c7a7ec986ef8c8243bd2457638cb4d)
+FetchContent_Declare(
+    cpputil
+    GIT_REPOSITORY https://github.com/aattoa/cpputil.git
+    GIT_TAG        a58e242866895a632601a3b07c8037d7c997e29f)
 
 set(EXPECTED_BUILD_TESTS OFF)
 set(CPPARGS_BUILD_TESTS OFF)
 set(CPPDIAG_BUILD_TESTS OFF)
-FetchContent_MakeAvailable(expected range-v3 cppargs cppdiag)
+FetchContent_MakeAvailable(expected range-v3 cppargs cppdiag cpputil)
 
 # Build kieli tests by default
 option(KIELI_BUILD_TESTS "Build kieli tests" ON)
@@ -117,5 +121,6 @@ target_link_libraries(debug-kieli
     PRIVATE libdesugar
     PRIVATE libformat
     PRIVATE cppargs
-    PRIVATE cppdiag)
+    PRIVATE cppdiag
+    PRIVATE cpputil)
 kieli_consume_libutl_common(debug-kieli)

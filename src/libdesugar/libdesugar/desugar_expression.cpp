@@ -144,13 +144,8 @@ namespace {
 
             utl::wrapper auto condition = context.desugar(conditional.condition);
             if (std::holds_alternative<kieli::Boolean>(condition->value)) {
-                context.diagnostics().vector.push_back(cppdiag::Diagnostic {
-                    .text_sections = utl::to_vector({
-                        kieli::text_section(condition->source_view),
-                    }),
-                    .message       = context.diagnostics().context.message("Constant condition"),
-                    .severity      = cppdiag::Severity::information,
-                });
+                context.diagnostics().emit(
+                    cppdiag::Severity::information, condition->source_view, "Constant condition");
             }
             return ast::expression::Conditional {
                 .condition                 = condition,
@@ -250,16 +245,12 @@ namespace {
 
             utl::wrapper auto const condition = context.desugar(loop.condition);
             if (auto const* const boolean = std::get_if<kieli::Boolean>(&condition->value)) {
-                std::string_view const message = boolean->value
-                                                   ? "Consider using `loop` instead of `while true`"
-                                                   : "Loop body will never be executed";
-                context.diagnostics().vector.push_back(cppdiag::Diagnostic {
-                    .text_sections = utl::to_vector({
-                        kieli::text_section(condition->source_view),
-                    }),
-                    .message       = context.diagnostics().context.message(message),
-                    .severity      = cppdiag::Severity::information,
-                });
+                context.diagnostics().emit(
+                    cppdiag::Severity::information,
+                    condition->source_view,
+                    "Constant condition: {}",
+                    boolean->value ? "consider using `loop` instead of `while true`"
+                                   : "loop body will never be executed");
             }
             return ast::expression::Loop {
                 .body = context.wrap(ast::Expression {

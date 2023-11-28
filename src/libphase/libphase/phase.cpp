@@ -11,7 +11,7 @@ namespace {
     )";
 }
 
-auto kieli::predefinitions_source(Compile_info& compile_info) -> utl::Wrapper<utl::Source>
+auto kieli::predefinitions_source(Compile_info& compile_info) -> utl::Source::Wrapper
 {
     return compile_info.source_arena.wrap(
         "[predefined]", std::string(predefinitions_source_string));

@@ -16,7 +16,8 @@ target_sources(libutl-common
 
 target_link_libraries(libutl-common
     PUBLIC range-v3
-    PUBLIC tl::expected)
+    PUBLIC tl::expected
+    PUBLIC cpputil)
 
 target_precompile_headers(libutl-common
     PUBLIC libutl/common/utilities.hpp)

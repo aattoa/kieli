@@ -19,7 +19,7 @@ namespace liblex {
         [[nodiscard]] auto source_view_for(std::string_view) const noexcept -> utl::Source_view;
         [[nodiscard]] auto remaining_input_size() const noexcept -> utl::Usize;
     public:
-        explicit Context(utl::Wrapper<utl::Source>, kieli::Compile_info&) noexcept;
+        explicit Context(utl::Source::Wrapper, kieli::Compile_info&) noexcept;
 
         [[nodiscard]] auto source() const noexcept -> utl::Source::Wrapper;
         [[nodiscard]] auto source_begin() const noexcept -> char const*;
