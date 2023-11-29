@@ -301,23 +301,15 @@ namespace {
                 if (auto duplicate = ranges::find(it + 1, initializers.end(), it->name, projection);
                     duplicate != initializers.end())
                 {
-                    auto const message = context.diagnostics().context.format_message(
+                    context.diagnostics().error(
+                        {
+                            { it->name.source_view,
+                              "First specified here",
+                              cppdiag::Severity::information },
+                            { duplicate->name.source_view, "Later specified here" },
+                        },
                         "Struct initializer contains more than one initializer for member {}",
                         it->name);
-                    context.diagnostics().vector.push_back(cppdiag::Diagnostic {
-                        .text_sections = utl::to_vector({
-                            kieli::text_section(
-                                it->name.source_view,
-                                context.diagnostics().context.message("First specified here"),
-                                cppdiag::Severity::information),
-                            kieli::text_section(
-                                duplicate->name.source_view,
-                                context.diagnostics().context.message("Later specified here")),
-                        }),
-                        .message       = message,
-                        .severity      = cppdiag::Severity::error,
-                    });
-                    throw kieli::Compilation_failure {};
                 }
                 ast_struct_initializer.member_initializers.add_new_unchecked(
                     it->name, context.desugar(it->expression));

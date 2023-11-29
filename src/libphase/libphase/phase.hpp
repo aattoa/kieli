@@ -6,19 +6,45 @@
 #include <cppdiag.hpp>
 
 namespace kieli {
-    auto text_section(
-        utl::Source_view                       section_view,
-        std::optional<cppdiag::Message_string> section_note = std::nullopt,
-        std::optional<cppdiag::Severity>       severity = std::nullopt) -> cppdiag::Text_section;
-
     // Thrown when an unrecoverable error is encountered
     struct Compilation_failure : std::exception {
         [[nodiscard]] auto what() const noexcept -> char const* override;
     };
 
+    struct Simple_text_section {
+        utl::Source_view                 source_view;
+        std::optional<std::string_view>  note;
+        std::optional<cppdiag::Severity> severity;
+    };
+
+    auto text_section(
+        utl::Source_view                       section_view,
+        std::optional<cppdiag::Message_string> section_note = std::nullopt,
+        std::optional<cppdiag::Severity>       severity = std::nullopt) -> cppdiag::Text_section;
+
     struct [[nodiscard]] Diagnostics {
         cppdiag::Context                 context;
         std::vector<cppdiag::Diagnostic> vector;
+
+        template <utl::Usize n, class... Args>
+        auto emit(
+            cppdiag::Severity const severity,
+            Simple_text_section (&&sections)[n],
+            std::format_string<Args...> const fmt,
+            Args&&... args) -> void
+        {
+            vector.push_back(cppdiag::Diagnostic {
+                .text_sections =
+                    [&]<utl::Usize... is>(std::index_sequence<is...>) {
+                        return utl::to_vector({ text_section(
+                            sections[is].source_view,
+                            sections[is].note.transform(
+                                std::bind_front(&cppdiag::Context::message, &context)))... });
+                    }(std::make_index_sequence<n> {}),
+                .message  = context.format_message(fmt, std::forward<Args>(args)...),
+                .severity = severity,
+            });
+        }
 
         template <class... Args>
         auto emit(
@@ -27,11 +53,17 @@ namespace kieli {
             std::format_string<Args...> const fmt,
             Args&&... args) -> void
         {
-            vector.push_back(cppdiag::Diagnostic {
-                .text_sections = utl::to_vector({ text_section(view) }),
-                .message       = context.format_message(fmt, std::forward<Args>(args)...),
-                .severity      = severity,
-            });
+            emit(severity, { Simple_text_section { view } }, fmt, std::forward<Args>(args)...);
+        }
+
+        template <utl::Usize n, class... Args>
+        [[noreturn]] auto error(
+            Simple_text_section (&&sections)[n],
+            std::format_string<Args...> const fmt,
+            Args&&... args) -> void
+        {
+            emit(cppdiag::Severity::error, std::move(sections), fmt, std::forward<Args>(args)...);
+            throw Compilation_failure {};
         }
 
         template <class... Args>
@@ -39,8 +71,7 @@ namespace kieli {
             utl::Source_view const view, std::format_string<Args...> const fmt, Args&&... args)
             -> void
         {
-            emit(cppdiag::Severity::error, view, fmt, std::forward<Args>(args)...);
-            throw Compilation_failure {};
+            error({ Simple_text_section { view } }, fmt, std::forward<Args>(args)...);
         }
 
         [[nodiscard]] auto format_all(cppdiag::Colors) const -> std::string;

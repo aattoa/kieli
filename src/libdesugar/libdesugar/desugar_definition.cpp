@@ -11,17 +11,14 @@ namespace {
         for (auto it = elements.begin(); it != elements.end(); ++it) {
             auto const duplicate = ranges::find(it + 1, elements.end(), it->name, &T::name);
             if (duplicate != elements.end()) {
-                auto const message = context.diagnostics().context.format_message(
-                    "More than one definition for {} {}", description, it->name);
-                context.diagnostics().vector.push_back(cppdiag::Diagnostic {
-                    .text_sections = utl::to_vector({
-                        kieli::text_section(it->name.source_view),
-                        kieli::text_section(duplicate->name.source_view),
-                    }),
-                    .message       = message,
-                    .severity      = cppdiag::Severity::error,
-                });
-                throw kieli::Compilation_failure {};
+                context.diagnostics().error(
+                    {
+                        { it->name.source_view, "First specified here" },
+                        { duplicate->name.source_view, "Later specified here" },
+                    },
+                    "More than one definition for {} {}",
+                    description,
+                    it->name);
             }
         }
     }
