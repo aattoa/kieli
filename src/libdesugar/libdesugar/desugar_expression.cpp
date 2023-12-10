@@ -36,8 +36,10 @@ namespace {
                 if constexpr (precedence != lowest_operator_precedence) {
                     static constexpr auto current_operator_group
                         = std::get<precedence>(operator_precedence_table);
-                    if (!ranges::contains(
-                            current_operator_group, operator_and_operand.operator_name.view()))
+
+                    if (std::ranges::find(
+                            current_operator_group, operator_and_operand.operator_name.view())
+                        == current_operator_group.end())
                     {
                         return left;
                     }
@@ -298,7 +300,8 @@ namespace {
             for (auto it = initializers.begin(); it != initializers.end(); ++it) {
                 static constexpr auto projection
                     = &cst::expression::Struct_initializer::Member_initializer::name;
-                if (auto duplicate = ranges::find(it + 1, initializers.end(), it->name, projection);
+                if (auto duplicate
+                    = std::ranges::find(it + 1, initializers.end(), it->name, projection);
                     duplicate != initializers.end())
                 {
                     context.diagnostics().error(

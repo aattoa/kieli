@@ -92,7 +92,7 @@ namespace utl {
         template <Wrapper_mutability mut = Wrapper_mutability::no, class... Args>
         auto wrap(Args&&... args) -> Wrapper<T, mut>
         {
-            auto const it   = ranges::find_if_not(m_pages, &Page::is_at_capacity);
+            auto const it   = std::ranges::find_if_not(m_pages, &Page::is_at_capacity);
             Page&      page = it != m_pages.end() ? *it : m_pages.emplace_back(m_page_size);
             return Wrapper<T, mut> { page.unsafe_emplace_back(std::forward<Args>(args)...) };
         }

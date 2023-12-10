@@ -15,7 +15,6 @@ target_sources(libutl-common
     PRIVATE libutl/common/wrapper.hpp)
 
 target_link_libraries(libutl-common
-    PUBLIC range-v3
     PUBLIC cpputil)
 
 target_precompile_headers(libutl-common

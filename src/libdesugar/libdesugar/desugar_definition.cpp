@@ -9,7 +9,7 @@ namespace {
         Context& context, std::string_view const description, std::vector<T> const& elements)
     {
         for (auto it = elements.begin(); it != elements.end(); ++it) {
-            auto const duplicate = ranges::find(it + 1, elements.end(), it->name, &T::name);
+            auto const duplicate = std::ranges::find(it + 1, elements.end(), it->name, &T::name);
             if (duplicate != elements.end()) {
                 context.diagnostics().error(
                     {
@@ -48,8 +48,8 @@ namespace {
                     *function.signature.function_parameters.self_parameter));
             }
 
-            ranges::move(
-                ranges::views::transform(
+            std::ranges::move(
+                std::views::transform(
                     function.signature.function_parameters.normal_parameters.elements,
                     context.desugar()),
                 std::back_inserter(parameters));

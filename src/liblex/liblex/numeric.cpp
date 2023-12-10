@@ -11,7 +11,8 @@ namespace {
         }
         static thread_local std::string buffer;
         buffer.clear();
-        ranges::copy_if(digits, std::back_inserter(buffer), [](char const c) { return c != '\''; });
+        std::ranges::copy_if(
+            digits, std::back_inserter(buffer), [](char const c) { return c != '\''; });
         return buffer;
     }
 

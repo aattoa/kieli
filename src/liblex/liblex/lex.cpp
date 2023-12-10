@@ -294,7 +294,7 @@ namespace {
         std::string_view const view = context.extract(is_identifier_tail);
         assert(!view.empty());
 
-        if (auto const it = ranges::find(keyword_token_map, view, utl::first);
+        if (auto const it = std::ranges::find(keyword_token_map, view, utl::first);
             it != keyword_token_map.end())
         {
             return make_token({}, it->second);
@@ -306,7 +306,7 @@ namespace {
         if (view == "false") {
             return make_token(kieli::Boolean { false }, Token::Type::boolean_literal);
         }
-        if (ranges::all_of(view, is_one_of<"_">)) {
+        if (std::ranges::all_of(view, is_one_of<"_">)) {
             return make_token({}, Token::Type::underscore);
         }
         if (is_upper(view[view.find_first_not_of('_')])) {
@@ -318,7 +318,7 @@ namespace {
     auto extract_operator(Token_maker const& make_token, liblex::Context& context) -> Token
     {
         std::string_view const view = context.extract(is_operator);
-        if (auto const it = ranges::find(punctuation_token_map, view, utl::first);
+        if (auto const it = std::ranges::find(punctuation_token_map, view, utl::first);
             it != punctuation_token_map.end())
         {
             return make_token({}, it->second);

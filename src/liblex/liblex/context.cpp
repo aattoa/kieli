@@ -95,7 +95,7 @@ auto liblex::Context::try_consume(char const c) noexcept -> bool
 
 auto liblex::Context::try_consume(std::string_view const string) noexcept -> bool
 {
-    if (ranges::starts_with(std::string_view { m_pointer, m_source_end }, string)) {
+    if (std::ranges::starts_with(std::string_view { m_pointer, m_source_end }, string)) {
         advance(string.size());
         return true;
     }

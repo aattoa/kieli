@@ -13,8 +13,6 @@ Dependencies are installed automatically with CMake's `FetchContent` functionali
     - Required, for diagnostic messages
 - https://github.com/aattoa/cpputil
     - Required, for general utilities
-- https://github.com/ericniebler/range-v3
-    - Required, until `std::ranges` is properly supported by compilers
 - https://github.com/catchorg/Catch2
     - Optional, only for tests
 

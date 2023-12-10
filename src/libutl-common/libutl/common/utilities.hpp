@@ -34,9 +34,9 @@
 #include <string>
 #include <string_view>
 
+#include <ranges>
 #include <numeric>
 #include <algorithm>
-#include <range/v3/all.hpp>
 
 namespace utl {
     using I8  = std::int8_t;
@@ -374,7 +374,7 @@ namespace utl {
     template <class T, Usize n>
     [[nodiscard]] constexpr auto to_vector(T (&&array)[n]) -> std::vector<T>
     {
-        return ranges::to<std::vector>(ranges::views::move(array));
+        return std::ranges::to<std::vector>(std::views::as_rvalue(array));
     }
 
     // Unlike `std::vector<T>::resize`, this does not require `T` to be default constructible.
@@ -409,9 +409,10 @@ namespace utl {
         std::indirect_unary_predicate<It> F>
     [[nodiscard]] constexpr auto find_nth_if(It it, Se se, Usize const n, F f) -> It
     {
-        return ranges::find_if(std::move(it), std::move(se), [&f, n, i = 0](auto const& x) mutable {
-            return f(x) && (i++ == n);
-        });
+        return std::ranges::find_if(
+            std::move(it), std::move(se), [&f, n, i = 0](auto const& x) mutable {
+                return f(x) && (i++ == n);
+            });
     }
 
     template <
@@ -482,13 +483,13 @@ namespace utl {
             return { .integer = integer };
         }
 
-        template <ranges::sized_range Range>
+        template <std::ranges::sized_range Range>
         struct Range_formatter_closure {
             Range const*     range {};
             std::string_view delimiter;
         };
 
-        template <ranges::sized_range Range>
+        template <std::ranges::sized_range Range>
         auto delimited_range(Range const& range, std::string_view const delimiter)
             -> Range_formatter_closure<Range>
         {
@@ -541,8 +542,8 @@ struct std::formatter<utl::formatting::Range_formatter_closure<Range>>
             return context.out();
         }
 
-        auto       it  = ranges::begin(*closure.range);
-        auto const end = ranges::end(*closure.range);
+        auto       it  = std::ranges::begin(*closure.range);
+        auto const end = std::ranges::end(*closure.range);
         auto       out = std::format_to(context.out(), "{}", *it++);
 
         while (it != end) {
