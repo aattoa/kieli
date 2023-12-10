@@ -13,7 +13,7 @@ TEST("liblex::apply_scientific_exponent")
     REQUIRE(liblex::apply_scientific_exponent(max_usize, 0) == max_usize);
     REQUIRE(
         liblex::apply_scientific_exponent(max_usize, 1)
-        == tl::unexpected { liblex::Numeric_error::out_of_range });
+        == std::unexpected { liblex::Numeric_error::out_of_range });
 }
 
 TEST("liblex::parse_integer")
@@ -23,14 +23,14 @@ TEST("liblex::parse_integer")
     REQUIRE(liblex::parse_integer("100", 20) == 400);
     REQUIRE(
         liblex::parse_integer("3", 2)
-        == tl::unexpected { liblex::Numeric_error::invalid_argument });
+        == std::unexpected { liblex::Numeric_error::invalid_argument });
     REQUIRE(
         liblex::parse_integer("9999999999999999999999999999")
-        == tl::unexpected { liblex::Numeric_error::out_of_range });
+        == std::unexpected { liblex::Numeric_error::out_of_range });
     REQUIRE(
-        liblex::parse_integer("5w") == tl::unexpected { liblex::Numeric_error::invalid_argument });
+        liblex::parse_integer("5w") == std::unexpected { liblex::Numeric_error::invalid_argument });
     REQUIRE(
-        liblex::parse_integer("w5") == tl::unexpected { liblex::Numeric_error::invalid_argument });
+        liblex::parse_integer("w5") == std::unexpected { liblex::Numeric_error::invalid_argument });
 }
 
 TEST("liblex::parse_floating")
@@ -41,5 +41,5 @@ TEST("liblex::parse_floating")
     REQUIRE(liblex::parse_floating("3.14e2") == 314.);
     REQUIRE(
         liblex::parse_floating("3.14e9999999999999999999999999999")
-        == tl::unexpected { liblex::Numeric_error::out_of_range });
+        == std::unexpected { liblex::Numeric_error::out_of_range });
 }

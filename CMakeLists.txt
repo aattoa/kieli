@@ -32,10 +32,6 @@ endif ()
 # External dependencies
 include(FetchContent)
 FetchContent_Declare(
-    expected
-    GIT_REPOSITORY https://github.com/TartanLlama/expected.git
-    GIT_TAG        3f0ca7b19253129700a073abfa6d8638d9f7c80c)
-FetchContent_Declare(
     range-v3
     GIT_REPOSITORY https://github.com/ericniebler/range-v3.git
     GIT_TAG        9aa41d6b8ded2cf5e8007e66a0efd1ab33dbf9a5)
@@ -56,10 +52,9 @@ FetchContent_Declare(
     GIT_REPOSITORY https://github.com/aattoa/cpputil.git
     GIT_TAG        a58e242866895a632601a3b07c8037d7c997e29f)
 
-set(EXPECTED_BUILD_TESTS OFF)
 set(CPPARGS_BUILD_TESTS OFF)
 set(CPPDIAG_BUILD_TESTS OFF)
-FetchContent_MakeAvailable(expected range-v3 cppargs cppdiag cpputil)
+FetchContent_MakeAvailable(range-v3 cppargs cppdiag cpputil)
 
 # Build kieli tests by default
 option(KIELI_BUILD_TESTS "Build kieli tests" ON)

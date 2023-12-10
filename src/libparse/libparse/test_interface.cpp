@@ -16,9 +16,9 @@ namespace {
             if (context.is_finished()) {
                 return format(**node, kieli::Format_configuration {});
             }
-            return tl::unexpected(libparse::Test_parse_failure::unconsumed_input);
+            return std::unexpected(libparse::Test_parse_failure::unconsumed_input);
         }
-        return tl::unexpected(libparse::Test_parse_failure::no_parse);
+        return std::unexpected(libparse::Test_parse_failure::no_parse);
     }
 
     auto failure_string(libparse::Test_parse_failure const failure) -> std::string_view

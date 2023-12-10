@@ -189,7 +189,7 @@ namespace {
 
     [[nodiscard]] auto error_if_trailing_separator(
         std::string_view const string, liblex::Context& context)
-        -> std::optional<tl::unexpected<liblex::Token_extraction_failure>>
+        -> std::optional<std::unexpected<liblex::Token_extraction_failure>>
     {
         if (!string.empty() && string.back() == '\'') {
             return context.error("Expected one or more digits after the digit separator");
@@ -343,7 +343,7 @@ namespace {
                 c = character.value();
             }
             else {
-                return tl::unexpected { character.error() };
+                return std::unexpected { character.error() };
             }
         }
 
@@ -375,7 +375,7 @@ namespace {
                     c = character.value();
                 }
                 else {
-                    return tl::unexpected { character.error() };
+                    return std::unexpected { character.error() };
                 }
                 [[fallthrough]];
             default:
@@ -397,8 +397,9 @@ namespace {
     }
 
     auto extract_numeric_floating(
-        Token_maker const& make_token, char const* const anchor, liblex::Context& context)
-        -> liblex::Expected<Token>
+        Token_maker const& make_token,
+        char const* const  anchor,
+        liblex::Context&   context) -> liblex::Expected<Token>
     {
         static constexpr auto digit_predicate = is_digit_or_separator<is_digit10>;
         if (context.is_finished() || !digit_predicate(context.current())) {
@@ -427,7 +428,7 @@ namespace {
 
         std::string_view const floating_string { anchor, context.pointer() };
         auto const             floating = liblex::parse_floating(floating_string);
-        if (floating == tl::unexpected { liblex::Numeric_error::out_of_range }) {
+        if (floating == std::unexpected { liblex::Numeric_error::out_of_range }) {
             return context.error(floating_string, "Floating point literal is too large");
         }
         utl::always_assert(floating.has_value());
@@ -449,7 +450,7 @@ namespace {
         liblex::Context&       context) -> liblex::Expected<Token>
     {
         auto integer = liblex::parse_integer(digit_sequence, base);
-        if (integer == tl::unexpected { liblex::Numeric_error::out_of_range }) {
+        if (integer == std::unexpected { liblex::Numeric_error::out_of_range }) {
             return context.error(digit_sequence, "Integer literal is too large");
         }
         utl::always_assert(integer.has_value());
@@ -478,13 +479,13 @@ namespace {
             return context.error(extraneous_suffix, "Erroneous integer literal alphabetic suffix");
         }
         auto const exponent = liblex::parse_integer(exponent_digit_sequence);
-        if (exponent == tl::unexpected { liblex::Numeric_error::out_of_range }) {
+        if (exponent == std::unexpected { liblex::Numeric_error::out_of_range }) {
             return context.error(exponent_digit_sequence, "Exponent is too large");
         }
         utl::always_assert(exponent.has_value());
 
         auto const result = liblex::apply_scientific_exponent(*integer, *exponent);
-        if (result == tl::unexpected { liblex::Numeric_error::out_of_range }) {
+        if (result == std::unexpected { liblex::Numeric_error::out_of_range }) {
             return context.error(
                 { anchor, context.pointer() },
                 "Integer literal is too large after applying scientific exponent");

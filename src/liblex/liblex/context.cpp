@@ -120,21 +120,21 @@ auto liblex::Context::make_identifier(std::string_view const string) -> utl::Poo
 }
 
 auto liblex::Context::error(std::string_view const position, std::string_view const message)
-    -> tl::unexpected<Token_extraction_failure>
+    -> std::unexpected<Token_extraction_failure>
 {
     m_compile_info.diagnostics.emit(
         cppdiag::Severity::error, source_view_for(position), "{}", message);
-    return tl::unexpected { Token_extraction_failure {} };
+    return std::unexpected { Token_extraction_failure {} };
 }
 
 auto liblex::Context::error(char const* const position, std::string_view const message)
-    -> tl::unexpected<Token_extraction_failure>
+    -> std::unexpected<Token_extraction_failure>
 {
     return error({ position, position }, message);
 }
 
 auto liblex::Context::error(std::string_view const message)
-    -> tl::unexpected<Token_extraction_failure>
+    -> std::unexpected<Token_extraction_failure>
 {
     return error(pointer(), message);
 }

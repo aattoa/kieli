@@ -4,7 +4,7 @@
 
 namespace libparse {
     enum class Test_parse_failure { unconsumed_input, no_parse };
-    using Test_parse_result = tl::expected<std::string, Test_parse_failure>;
+    using Test_parse_result = std::expected<std::string, Test_parse_failure>;
 
     auto test_parse_expression(std::string&&) -> Test_parse_result;
     auto test_parse_pattern(std::string&&) -> Test_parse_result;

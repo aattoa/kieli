@@ -166,8 +166,8 @@ auto libdesugar::Context::desugar(cst::Template_parameter::Default_argument cons
 }
 
 auto libdesugar::Context::desugar_mutability(
-    std::optional<cst::Mutability> const& mutability, utl::Source_view const source_view)
-    -> ast::Mutability
+    std::optional<cst::Mutability> const& mutability,
+    utl::Source_view const                source_view) -> ast::Mutability
 {
     if (mutability.has_value()) {
         return desugar(*mutability);

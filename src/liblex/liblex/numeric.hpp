@@ -8,9 +8,9 @@ namespace liblex {
         invalid_argument,
     };
     [[nodiscard]] auto apply_scientific_exponent(utl::Usize integer, utl::Usize exponent)
-        -> tl::expected<utl::Usize, Numeric_error>;
+        -> std::expected<utl::Usize, Numeric_error>;
     [[nodiscard]] auto parse_integer(std::string_view digits, int base = 10)
-        -> tl::expected<utl::Usize, Numeric_error>;
+        -> std::expected<utl::Usize, Numeric_error>;
     [[nodiscard]] auto parse_floating(std::string_view digits)
-        -> tl::expected<double, Numeric_error>;
+        -> std::expected<double, Numeric_error>;
 } // namespace liblex

@@ -28,9 +28,8 @@ namespace {
 
         template <class Definition>
         auto definition(
-            Definition&&                                   definition,
-            std::optional<cst::Template_parameters> const& parameters) const
-            -> ast::Definition::Variant
+            Definition&& definition, std::optional<cst::Template_parameters> const& parameters)
+            const -> ast::Definition::Variant
         {
             if (parameters.has_value()) {
                 return ast::definition::Template<std::remove_reference_t<Definition>> {

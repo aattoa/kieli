@@ -455,8 +455,8 @@ auto libparse::Context::diagnostics() noexcept -> kieli::Diagnostics&
 }
 
 auto libparse::Context::make_source_view(
-    Lexical_token const* const first, Lexical_token const* const last) const noexcept
-    -> utl::Source_view
+    Lexical_token const* const first,
+    Lexical_token const* const last) const noexcept -> utl::Source_view
 {
     assert(first && last);
     assert(std::less_equal()(first, last));
