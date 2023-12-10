@@ -35,9 +35,9 @@ cmake --build build -j 8
 
 These build steps have been tested with the following:
 
-- CMake `3.27.8`
+- CMake `3.28.0`
 - Build systems: Ninja `1.11.1`, GNU Make `4.4.1`
-- Compilers: clang `16.0.6`, GCC `13.2.1`
+- Compilers: clang `18.0.0`
 
 ## Tests
 
