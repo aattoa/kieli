@@ -68,8 +68,9 @@ namespace kieli {
 
         template <class... Args>
         [[noreturn]] auto error(
-            utl::Source_view const view, std::format_string<Args...> const fmt, Args&&... args)
-            -> void
+            utl::Source_view const            view,
+            std::format_string<Args...> const fmt,
+            Args&&... args) -> void
         {
             error({ Simple_text_section { view } }, fmt, std::forward<Args>(args)...);
         }
@@ -121,7 +122,7 @@ namespace kieli {
     };
 
     struct Floating {
-        utl::Float value {};
+        double value {};
     };
 
     struct Boolean {
@@ -181,7 +182,7 @@ struct std::formatter<Literal> : utl::formatting::Formatter_base {
             return std::format_to(context.out(), "\"{}\"", literal.value);
         }
         else {
-            static_assert(utl::always_false<Literal>);
+            static_assert(false);
         }
     }
 };

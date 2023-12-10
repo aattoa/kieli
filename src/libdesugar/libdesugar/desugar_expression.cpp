@@ -151,7 +151,7 @@ namespace {
                 .condition                 = condition,
                 .true_branch               = context.desugar(conditional.true_branch),
                 .false_branch              = false_branch,
-                .source                    = conditional.is_elif_conditional
+                .source                    = conditional.is_elif_conditional.get()
                                                ? ast::expression::Conditional::Source::elif_conditional
                                                : ast::expression::Conditional::Source::normal_conditional,
                 .has_explicit_false_branch = conditional.false_branch.has_value(),

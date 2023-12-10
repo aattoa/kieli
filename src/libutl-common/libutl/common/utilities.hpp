@@ -10,6 +10,7 @@
 #include <cassert>
 
 #include <new>
+#include <print>
 #include <limits>
 #include <memory>
 #include <utility>
@@ -50,9 +51,6 @@ namespace utl {
 
     using Usize = std::size_t;
     using Isize = std::make_signed_t<Usize>;
-
-    using Char  = char;
-    using Float = double;
 
     template <class From, class To>
     concept losslessly_convertible_to = std::integral<From> && std::integral<To>
@@ -108,40 +106,12 @@ namespace utl::inline literals {
 using namespace utl::literals;
 using namespace std::literals;
 
-namespace bootleg {
-    // Implementation copied from https://en.cppreference.com/w/cpp/utility/forward_like
-    template <class T, class U>
-    [[nodiscard]] constexpr auto&& forward_like(U&& x) noexcept // NOLINT
-    {
-        constexpr bool is_adding_const = std::is_const_v<std::remove_reference_t<T>>;
-        if constexpr (std::is_lvalue_reference_v<T&&>) {
-            if constexpr (is_adding_const) {
-                return std::as_const(x);
-            }
-            else {
-                return static_cast<U&>(x);
-            }
-        }
-        else {
-            if constexpr (is_adding_const) {
-                return std::move(std::as_const(x));
-            }
-            else {
-                return std::move(x); // NOLINT
-            }
-        }
-    }
-} // namespace bootleg
-
 namespace utl::dtl {
     template <class, template <class...> class>
     struct Is_specialization_of : std::false_type {};
 
     template <class... Ts, template <class...> class F>
     struct Is_specialization_of<F<Ts...>, F> : std::true_type {};
-
-    template <class>
-    struct Always_false : std::false_type {};
 } // namespace utl::dtl
 
 namespace utl {
@@ -152,11 +122,6 @@ namespace utl {
     concept one_of = std::disjunction_v<std::is_same<T, Ts>...>;
     template <class T>
     concept trivial = std::is_trivial_v<T>;
-    template <class T>
-    concept trivially_copyable = std::is_trivially_copyable_v<T>;
-
-    template <class T>
-    constexpr bool always_false = dtl::Always_false<T>::value;
 
     class [[nodiscard]] Exception : public std::exception {
         std::string m_message;
@@ -169,20 +134,6 @@ namespace utl {
     auto exception(std::format_string<Args...> const fmt, Args&&... args) -> Exception
     {
         return Exception { std::format(fmt, std::forward<Args>(args)...) };
-    }
-
-    auto vprint(std::FILE*, std::string_view, std::format_args) -> void;
-
-    template <class... Args>
-    auto print(std::FILE* const file, std::format_string<Args...> const fmt, Args&&... args) -> void
-    {
-        vprint(file, fmt.get(), std::make_format_args(std::forward<Args>(args)...));
-    }
-
-    template <class... Args>
-    auto print(std::format_string<Args...> const fmt, Args&&... args) -> void
-    {
-        print(stdout, fmt, std::forward<Args>(args)...);
     }
 
     [[noreturn]] auto abort(
@@ -224,7 +175,7 @@ namespace utl {
 
         template <class F, class S>
         constexpr Pair(F&& f, S&& s) noexcept(
-            std::is_nothrow_constructible_v<Fst, F>&& std::is_nothrow_constructible_v<Snd, S>)
+            std::is_nothrow_constructible_v<Fst, F> && std::is_nothrow_constructible_v<Snd, S>)
             requires std::constructible_from<Fst, F> && std::constructible_from<Snd, S>
             : first { std::forward<F>(f) }
             , second { std::forward<S>(s) }
@@ -237,10 +188,10 @@ namespace utl {
     Pair(Fst, Snd) -> Pair<std::remove_cvref_t<Fst>, std::remove_cvref_t<Snd>>;
 
     inline constexpr auto first = [](auto&& pair) noexcept -> decltype(auto) {
-        return bootleg::forward_like<decltype(pair)>(pair.first);
+        return std::forward_like<decltype(pair)>(pair.first);
     };
     inline constexpr auto second = [](auto&& pair) noexcept -> decltype(auto) {
-        return bootleg::forward_like<decltype(pair)>(pair.second);
+        return std::forward_like<decltype(pair)>(pair.second);
     };
 
     // Value wrapper that is used to disable default constructors
@@ -260,20 +211,11 @@ namespace utl {
             : m_value { std::move(value) }
         {}
 
-        // TODO: C++23: EOP
-
-        // clang-format off
-
-        [[nodiscard]] constexpr auto get() const&  -> T const&  { return m_value; }
-        [[nodiscard]] constexpr auto get()      &  -> T      &  { return m_value; }
-        [[nodiscard]] constexpr auto get() const&& -> T const&& { return std::move(m_value); }
-        [[nodiscard]] constexpr auto get()      && -> T      && { return std::move(m_value); }
-        [[nodiscard]] constexpr operator T const&  ()   const&  { return m_value; }
-        [[nodiscard]] constexpr operator T      &  ()        &  { return m_value; }
-        [[nodiscard]] constexpr operator T const&& ()   const&& { return std::move(m_value); }
-        [[nodiscard]] constexpr operator T      && ()        && { return std::move(m_value); }
-
-        // clang-format on
+        template <class Self>
+        [[nodiscard]] constexpr auto get(this Self&& self) noexcept -> decltype(auto)
+        {
+            return std::forward_like<Self>(self.m_value);
+        }
     };
 
     // Filename without path
@@ -321,12 +263,13 @@ namespace utl {
 
     template <class T, class V>
     [[nodiscard]] constexpr auto get(
-        V&& variant, std::source_location const caller = std::source_location::current()) noexcept
-        -> decltype(auto)
+        V&&                        variant,
+        std::source_location const caller
+        = std::source_location::current()) noexcept -> decltype(auto)
         requires requires { std::get_if<T>(&variant); }
     {
         if (auto* const alternative = std::get_if<T>(&variant)) [[likely]] {
-            return bootleg::forward_like<V>(*alternative);
+            return std::forward_like<V>(*alternative);
         }
         else [[unlikely]] {
             abort("Bad variant access", caller);
@@ -335,8 +278,9 @@ namespace utl {
 
     template <Usize n, class V>
     [[nodiscard]] constexpr auto get(
-        V&& variant, std::source_location const caller = std::source_location::current()) noexcept
-        -> decltype(auto)
+        V&&                        variant,
+        std::source_location const caller
+        = std::source_location::current()) noexcept -> decltype(auto)
         requires requires { std::get_if<n>(&variant); }
     {
         return ::utl::get<std::variant_alternative_t<n, std::remove_cvref_t<V>>>(
@@ -345,12 +289,13 @@ namespace utl {
 
     template <class O>
     [[nodiscard]] constexpr auto get(
-        O&& optional, std::source_location const caller = std::source_location::current()) noexcept
-        -> decltype(auto)
+        O&&                        optional,
+        std::source_location const caller
+        = std::source_location::current()) noexcept -> decltype(auto)
         requires requires { optional.has_value(); }
     {
         if (optional.has_value()) [[likely]] {
-            return bootleg::forward_like<O>(*optional);
+            return std::forward_like<O>(*optional);
         }
         else [[unlikely]] {
             abort("Bad optional access", caller);
@@ -363,9 +308,9 @@ namespace utl {
     }
 
     template <class Variant, class... Arms>
-    constexpr auto match(Variant&& variant, Arms&&... arms) noexcept(noexcept(
-        std::visit(Overload { std::forward<Arms>(arms)... }, std::forward<Variant>(variant))))
-        -> decltype(auto)
+    constexpr auto match(Variant&& variant, Arms&&... arms) noexcept(noexcept(std::visit(
+        Overload { std::forward<Arms>(arms)... },
+        std::forward<Variant>(variant)))) -> decltype(auto)
     {
         if (variant.valueless_by_exception()) [[unlikely]] {
             abort("utl::match was invoked with a valueless variant");
@@ -407,10 +352,9 @@ namespace utl {
             Usize capacity;
 
             template <class T>
-            [[nodiscard]] operator std::vector<T>() const // NOLINT: implicit
+            [[nodiscard]] operator std::vector<T>(this auto const self) // NOLINT: implicit
             {
-                // TODO: C++23: EOP
-                return vector_with_capacity<T>(capacity);
+                return vector_with_capacity<T>(self.capacity);
             }
         };
     } // namespace dtl
@@ -481,13 +425,13 @@ namespace utl {
 
     template <class F, class Vector>
     constexpr auto map(F&& f, Vector&& input)
-        requires std::is_invocable_v<F&&, decltype(bootleg::forward_like<Vector>(input.front()))>
+        requires std::is_invocable_v<F&&, decltype(std::forward_like<Vector>(input.front()))>
     {
         using Result = std::remove_cvref_t<decltype(std::invoke(
-            f, bootleg::forward_like<Vector>(input.front())))>;
+            f, std::forward_like<Vector>(input.front())))>;
         auto output  = vector_with_capacity<Result>(input.size());
         for (auto& element : input) {
-            output.push_back(std::invoke(f, bootleg::forward_like<Vector>(element)));
+            output.push_back(std::invoke(f, std::forward_like<Vector>(element)));
         }
         return output;
     }
@@ -508,8 +452,9 @@ namespace utl {
 
         template <class... Args>
         static auto format_to(
-            std::string& string, std::format_string<Args...> const fmt, Args&&... args)
-            -> Relative_string
+            std::string&                      string,
+            std::format_string<Args...> const fmt,
+            Args&&... args) -> Relative_string
         {
             Usize const old_size = string.size();
             std::format_to(std::back_inserter(string), fmt, std::forward<Args>(args)...);

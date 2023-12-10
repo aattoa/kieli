@@ -8,12 +8,12 @@
     }
 
 #define DEFINE_FORMATTER(...)                                                         \
-    auto ast::format_to(__VA_ARGS__ const& value, std::string& string)->void          \
+    auto ast::format_to(__VA_ARGS__ const& value, std::string& string) -> void        \
     {                                                                                 \
         std::format_to(std::back_inserter(string), "{}", value);                      \
     }                                                                                 \
     auto std::formatter<__VA_ARGS__>::format(__VA_ARGS__ const& value, auto& context) \
-        const->decltype(context.out())
+        const -> decltype(context.out())
 
 DECLARE_FORMATTER(ast::Expression);
 DECLARE_FORMATTER(ast::Pattern);
@@ -483,7 +483,7 @@ DEFINE_FORMATTER(ast::Mutability)
     utl::match(
         value.value,
         [&](ast::Mutability::Concrete const concrete) {
-            std::format_to(context.out(), "{}", concrete.is_mutable ? "mut" : "immut");
+            std::format_to(context.out(), "{}", concrete.is_mutable.get() ? "mut" : "immut");
         },
         [&](ast::Mutability::Parameterized const parameterized) {
             std::format_to(context.out(), "mut?{}", parameterized.name);

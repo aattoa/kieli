@@ -34,9 +34,7 @@
 - Use libtommath for arbitrary precision integers
 
 ## To-remove
-- `utl::always_false`, when `static_assert(false)` is supported by compilers
 - `utl::Flatmap`, when `std::flat_map` is supported by compilers
-- `bootleg::forward_like`, when `std::forward_like` is supported by compilers
 
 ## Long-term
 - Language server

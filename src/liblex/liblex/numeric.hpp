@@ -12,5 +12,5 @@ namespace liblex {
     [[nodiscard]] auto parse_integer(std::string_view digits, int base = 10)
         -> tl::expected<utl::Usize, Numeric_error>;
     [[nodiscard]] auto parse_floating(std::string_view digits)
-        -> tl::expected<utl::Float, Numeric_error>;
+        -> tl::expected<double, Numeric_error>;
 } // namespace liblex

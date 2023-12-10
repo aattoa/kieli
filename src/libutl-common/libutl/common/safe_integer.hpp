@@ -2,8 +2,6 @@
 
 #include <libutl/common/utilities.hpp>
 
-// TODO: C++23: EOP
-
 namespace utl {
 
     struct Safe_integer_error : std::exception {};
@@ -117,17 +115,17 @@ namespace utl {
         {}
 
         template <std::integral U>
-        [[nodiscard]] explicit constexpr operator U() const
+        [[nodiscard]] explicit constexpr operator U(this Safe_integer const self)
         {
-            if (!std::in_range<U>(m_value)) {
+            if (!std::in_range<U>(self.m_value)) {
                 throw Safe_integer_out_of_range {};
             }
-            return static_cast<U>(m_value);
+            return static_cast<U>(self.m_value);
         }
 
-        [[nodiscard]] constexpr auto get() const noexcept -> T
+        [[nodiscard]] constexpr auto get(this Safe_integer const self) noexcept -> T
         {
-            return m_value;
+            return self.m_value;
         }
 
         constexpr auto operator+=(Safe_integer const other) -> Safe_integer&
@@ -142,9 +140,9 @@ namespace utl {
             return *this;
         }
 
-        constexpr auto operator+(Safe_integer const other) const -> Safe_integer
+        constexpr auto operator+(this Safe_integer self, Safe_integer const other) -> Safe_integer
         {
-            return Safe_integer { *this } += other;
+            return self += other;
         }
 
         constexpr auto operator-=(Safe_integer const other) -> Safe_integer&
@@ -159,9 +157,9 @@ namespace utl {
             return *this;
         }
 
-        constexpr auto operator-(Safe_integer const other) const -> Safe_integer
+        constexpr auto operator-(this Safe_integer self, Safe_integer const other) -> Safe_integer
         {
-            return Safe_integer { *this } -= other;
+            return self -= other;
         }
 
         constexpr auto operator*=(Safe_integer const other) -> Safe_integer&
@@ -176,9 +174,9 @@ namespace utl {
             return *this;
         }
 
-        constexpr auto operator*(Safe_integer const other) const -> Safe_integer
+        constexpr auto operator*(this Safe_integer self, Safe_integer const other) -> Safe_integer
         {
-            return Safe_integer { *this } *= other;
+            return self *= other;
         }
 
         constexpr auto operator/=(Safe_integer const other) -> Safe_integer&
@@ -193,9 +191,9 @@ namespace utl {
             return *this;
         }
 
-        constexpr auto operator/(Safe_integer const other) const -> Safe_integer
+        constexpr auto operator/(this Safe_integer self, Safe_integer const other) -> Safe_integer
         {
-            return Safe_integer { *this } /= other;
+            return self /= other;
         }
 
         constexpr auto operator%=(Safe_integer const other) -> Safe_integer&
@@ -207,9 +205,9 @@ namespace utl {
             return *this;
         }
 
-        constexpr auto operator%(Safe_integer const other) -> Safe_integer
+        constexpr auto operator%(this Safe_integer self, Safe_integer const other) -> Safe_integer
         {
-            return Safe_integer { *this } %= other;
+            return self %= other;
         }
 
         constexpr auto operator++() -> Safe_integer&
@@ -244,9 +242,9 @@ namespace utl {
             return copy;
         }
 
-        [[nodiscard]] explicit constexpr operator bool() const noexcept
+        [[nodiscard]] explicit constexpr operator bool(this Safe_integer const self) noexcept
         {
-            return m_value != 0;
+            return self.m_value != 0;
         }
 
         [[nodiscard]] auto operator==(Safe_integer const&) const noexcept -> bool = default;

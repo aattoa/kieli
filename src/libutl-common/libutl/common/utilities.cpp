@@ -27,16 +27,6 @@ auto utl::Exception::what() const noexcept -> char const*
     return m_message.c_str();
 }
 
-auto utl::vprint(std::FILE* const file, std::string_view const fmt, std::format_args const args)
-    -> void
-{
-    static std::string string;
-    string.clear();
-    std::vformat_to(std::back_inserter(string), fmt, args);
-    auto const count = std::fwrite(string.data(), 1, string.size(), file);
-    always_assert(count == string.size() || string.empty());
-}
-
 auto utl::abort(std::string_view const message, std::source_location const caller) -> void
 {
     print(

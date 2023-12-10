@@ -312,7 +312,7 @@ namespace {
             if (auto const* const else_conditional
                 = std::get_if<cst::expression::Conditional>(&conditional.false_branch->body->value))
             {
-                if (else_conditional->is_elif_conditional) {
+                if (else_conditional->is_elif_conditional.get()) {
                     state.format("{}", state.newline());
                     state.format(conditional.false_branch->body);
                     return;

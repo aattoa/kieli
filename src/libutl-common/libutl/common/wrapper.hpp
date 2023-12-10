@@ -2,8 +2,6 @@
 
 #include <libutl/common/utilities.hpp>
 
-// TODO: C++23: EOP
-
 namespace utl::dtl {
     template <class T>
     class [[nodiscard]] Wrapper_arena_page {
@@ -81,12 +79,12 @@ namespace utl {
 
         explicit Wrapper_arena(Usize const page_size) noexcept : m_page_size { page_size } {}
     public:
-        static auto with_page_size(Usize const page_size) -> Wrapper_arena<T>
+        static auto with_page_size(Usize const page_size) -> Wrapper_arena
         {
-            return Wrapper_arena<T> { page_size };
+            return Wrapper_arena { page_size };
         }
 
-        static auto with_default_page_size() -> Wrapper_arena<T>
+        static auto with_default_page_size() -> Wrapper_arena
         {
             return with_page_size(1024);
         }
@@ -142,28 +140,28 @@ namespace utl {
 
         friend Wrapper_arena<T>;
     public:
-        [[nodiscard]] auto operator*() const noexcept -> T const&
+        [[nodiscard]] auto operator*(this Wrapper const self) noexcept -> T const&
         {
-            return *m_pointer;
+            return *self.m_pointer;
         }
 
-        [[nodiscard]] auto operator->() const noexcept -> T const*
+        [[nodiscard]] auto operator->(this Wrapper const self) noexcept -> T const*
         {
-            return m_pointer;
+            return self.m_pointer;
         }
 
-        [[nodiscard]] auto is(Wrapper const other) const noexcept -> bool
+        [[nodiscard]] auto is(this Wrapper const self, Wrapper const other) noexcept -> bool
         {
-            return m_pointer == other.m_pointer;
+            return self.m_pointer == other.m_pointer;
         }
 
-        [[nodiscard]] auto is_not(Wrapper const other) const noexcept -> bool
+        [[nodiscard]] auto is_not(this Wrapper const self, Wrapper const other) noexcept -> bool
         {
-            return m_pointer != other.m_pointer;
+            return self.m_pointer != other.m_pointer;
         }
 
-        [[nodiscard]] auto as_mutable() const noexcept
-            -> T& requires(mut == Wrapper_mutability::yes) { return *m_pointer; }
+        [[nodiscard]] auto as_mutable(this Wrapper const self) noexcept
+            -> T& requires(mut == Wrapper_mutability::yes) { return *self.m_pointer; }
     };
 
     template <class T>

@@ -32,7 +32,7 @@ namespace utl {
 
         Basic_logging_timer() noexcept
             : scope_exit_logger { [](Duration const duration) {
-                utl::print(
+                std::print(
                     "[utl::Logging_timer::~Logging_timer]: Total elapsed time: {}\n", duration);
             } }
         {}

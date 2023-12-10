@@ -39,22 +39,22 @@ namespace {
                 (void)0; // do nothing
             }
             catch (std::exception const& exception) {
-                utl::print(stderr, "{} {}\n\n", error_header(colors), exception.what());
+                std::print(stderr, "{} {}\n\n", error_header(colors), exception.what());
             }
-            utl::print(stderr, "{}", info.diagnostics.format_all(colors));
+            std::print(stderr, "{}", info.diagnostics.format_all(colors));
         }
     }
 
     constexpr auto lex_repl
         = generic_repl<[](utl::Source::Wrapper const source, kieli::Compile_info& info) {
-              utl::print("Tokens: {}\n", kieli::lex(source, info));
+              std::print("Tokens: {}\n", kieli::lex(source, info));
           }>;
 
     constexpr auto parse_repl
         = generic_repl<[](utl::Source::Wrapper const source, kieli::Compile_info& info) {
               auto const tokens = kieli::lex(source, info);
               auto const module = kieli::parse(tokens, info);
-              utl::print("{}", kieli::format_module(module, {}));
+              std::print("{}", kieli::format_module(module, {}));
           }>;
 
     constexpr auto desugar_repl
@@ -66,7 +66,7 @@ namespace {
               for (ast::Definition const& definition : module.definitions) {
                   ast::format_to(definition, output);
               }
-              utl::print("{}\n\n", output);
+              std::print("{}\n\n", output);
           }>;
 
 } // namespace
@@ -88,7 +88,7 @@ auto main(int argc, char const** argv) -> int
 
         utl::Logging_timer const execution_timer { [&](auto const elapsed) {
             if (time_flag) {
-                utl::print("Total execution time: {}\n", elapsed);
+                std::print("Total execution time: {}\n", elapsed);
             }
         } };
 
@@ -97,12 +97,12 @@ auto main(int argc, char const** argv) -> int
         }
 
         if (help_flag) {
-            utl::print("Valid options:\n{}", parameters.help_string());
+            std::print("Valid options:\n{}", parameters.help_string());
             return EXIT_SUCCESS;
         }
 
         if (version_flag) {
-            utl::print("kieli version 0, compiled on " __DATE__ ", " __TIME__ ".\n");
+            std::print("kieli version 0, compiled on " __DATE__ ", " __TIME__ ".\n");
         }
 
         if (repl_option) {
@@ -139,15 +139,15 @@ auto main(int argc, char const** argv) -> int
                 "To see a list of valid options, use `{} --help`", *argv ? *argv : "kieli"),
             .severity = cppdiag::Severity::error,
         };
-        utl::print(stderr, "{}", context.format_diagnostic(diagnostic, colors));
+        std::print(stderr, "{}", context.format_diagnostic(diagnostic, colors));
         return EXIT_FAILURE;
     }
     catch (std::exception const& exception) {
-        utl::print(stderr, "{} {}\n", error_header(colors), exception.what());
+        std::print(stderr, "{} {}\n", error_header(colors), exception.what());
         return EXIT_FAILURE;
     }
     catch (...) {
-        utl::print(stderr, "{} Caught unrecognized exception\n", error_header(colors));
+        std::print(stderr, "{} Caught unrecognized exception\n", error_header(colors));
         throw;
     }
 }

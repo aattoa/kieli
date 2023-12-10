@@ -55,8 +55,21 @@ auto liblex::parse_integer(std::string_view const digits, int const base)
     return parse_impl<utl::Usize>(without_separators(digits), base);
 }
 
-auto liblex::parse_floating(std::string_view const digits)
-    -> tl::expected<utl::Float, Numeric_error>
+auto liblex::parse_floating(std::string_view const digits) -> tl::expected<double, Numeric_error>
 {
-    return parse_impl<utl::Float>(without_separators(digits));
+    // TODO: when from_chars for floating points is supported:
+    // return parse_impl<double>(without_separators(digits));
+
+    static std::string float_digits;
+    float_digits = without_separators(digits);
+
+    try {
+        return std::stod(float_digits);
+    }
+    catch (std::out_of_range const&) {
+        return tl::unexpected { liblex::Numeric_error::out_of_range };
+    }
+    catch (std::invalid_argument const&) {
+        return tl::unexpected { liblex::Numeric_error::invalid_argument };
+    }
 }

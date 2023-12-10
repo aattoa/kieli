@@ -8,7 +8,7 @@ namespace utl {
     f noexcept                                                                                  \
     {                                                                                           \
         op live_count;                                                                          \
-        utl::print("[{},{}] utl::Noisy::" #f "\n", live_count, static_cast<void const*>(this)); \
+        std::print("[{},{}] utl::Noisy::" #f "\n", live_count, static_cast<void const*>(this)); \
         __VA_ARGS__                                                                             \
     }
 
