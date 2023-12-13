@@ -76,12 +76,10 @@ namespace utl {
     template <Usize length>
     struct [[nodiscard]] Metastring {
         char characters[length];
-
         consteval Metastring(char const* pointer) noexcept // NOLINT: implicit
         {
             std::copy_n(pointer, length, characters);
         }
-
         [[nodiscard]] consteval auto view() const noexcept -> std::string_view
         {
             return { characters, length - 1 };
@@ -109,7 +107,6 @@ using namespace std::literals;
 namespace utl::dtl {
     template <class, template <class...> class>
     struct Is_specialization_of : std::false_type {};
-
     template <class... Ts, template <class...> class F>
     struct Is_specialization_of<F<Ts...>, F> : std::true_type {};
 } // namespace utl::dtl
@@ -163,7 +160,6 @@ namespace utl {
                  && std::is_constructible_v<T, Arg&&>
             : m_value { std::forward<Arg>(arg) }
         {}
-
         [[nodiscard]] constexpr auto get(this auto&& self) noexcept -> decltype(auto)
         {
             return std::forward_like<decltype(self)>(self.m_value);
@@ -201,59 +197,6 @@ namespace utl {
     template <class... Fs>
     Overload(Fs...) -> Overload<Fs...>;
 
-    template <class>
-    struct Type {};
-
-    template <class T>
-    constexpr Type<T> type;
-
-    template <auto>
-    struct Value {};
-
-    template <auto x>
-    constexpr Value<x> value;
-
-    template <class T, class V>
-    [[nodiscard]] constexpr auto get(
-        V&&                        variant,
-        std::source_location const caller
-        = std::source_location::current()) noexcept -> decltype(auto)
-        requires requires { std::get_if<T>(&variant); }
-    {
-        if (auto* const alternative = std::get_if<T>(&variant)) [[likely]] {
-            return std::forward_like<V>(*alternative);
-        }
-        else [[unlikely]] {
-            abort("Bad variant access", caller);
-        }
-    }
-
-    template <Usize n, class V>
-    [[nodiscard]] constexpr auto get(
-        V&&                        variant,
-        std::source_location const caller
-        = std::source_location::current()) noexcept -> decltype(auto)
-        requires requires { std::get_if<n>(&variant); }
-    {
-        return ::utl::get<std::variant_alternative_t<n, std::remove_cvref_t<V>>>(
-            std::forward<V>(variant), caller);
-    }
-
-    template <class O>
-    [[nodiscard]] constexpr auto get(
-        O&&                        optional,
-        std::source_location const caller
-        = std::source_location::current()) noexcept -> decltype(auto)
-        requires requires { optional.has_value(); }
-    {
-        if (optional.has_value()) [[likely]] {
-            return std::forward_like<O>(*optional);
-        }
-        else [[unlikely]] {
-            abort("Bad optional access", caller);
-        }
-    }
-
     [[nodiscard]] constexpr auto visitable(auto const&... variants) noexcept -> bool
     {
         return (!variants.valueless_by_exception() && ...);
@@ -268,23 +211,6 @@ namespace utl {
             abort("utl::match was invoked with a valueless variant");
         }
         return std::visit(Overload { std::forward<Arms>(arms)... }, std::forward<Variant>(variant));
-    }
-
-    template <std::invocable Callback>
-    class [[nodiscard]] Scope_exit_handler {
-        Callback callback;
-    public:
-        explicit Scope_exit_handler(Callback callback) : callback { std::move(callback) } {}
-
-        ~Scope_exit_handler() noexcept(std::is_nothrow_invocable_v<Callback>)
-        {
-            std::invoke(callback);
-        }
-    };
-
-    auto on_scope_exit(std::invocable auto callback)
-    {
-        return Scope_exit_handler { std::move(callback) };
     }
 
     auto disable_short_string_optimization(std::string&) -> void;
@@ -420,7 +346,6 @@ namespace utl {
         struct Integer_with_ordinal_indicator_closure {
             Integer integer {};
         };
-
         template <std::integral Integer>
         constexpr auto integer_with_ordinal_indicator(Integer const integer) noexcept
             -> Integer_with_ordinal_indicator_closure<Integer>
@@ -433,7 +358,6 @@ namespace utl {
             Range*           range {};
             std::string_view delimiter;
         };
-
         template <std::ranges::input_range Range>
         auto join(Range&& range, std::string_view const delimiter)
         {
@@ -443,8 +367,8 @@ namespace utl {
 
 } // namespace utl
 
-template <class... Ts>
-struct std::formatter<std::variant<Ts...>> : utl::fmt::Formatter_base {
+template <class Char, std::formattable<Char>... Ts>
+struct std::formatter<std::variant<Ts...>, Char> : utl::fmt::Formatter_base {
     auto format(std::variant<Ts...> const& variant, auto& context) const
     {
         return utl::match(variant, [&](auto const& alternative) {
@@ -453,8 +377,8 @@ struct std::formatter<std::variant<Ts...>> : utl::fmt::Formatter_base {
     }
 };
 
-template <class Range>
-struct std::formatter<utl::fmt::Join_closure<Range>> : utl::fmt::Formatter_base {
+template <class Char, class Range>
+struct std::formatter<utl::fmt::Join_closure<Range>, Char> : utl::fmt::Formatter_base {
     auto format(auto const closure, auto& context) const
     {
         if (closure.range->empty()) {
@@ -470,8 +394,8 @@ struct std::formatter<utl::fmt::Join_closure<Range>> : utl::fmt::Formatter_base 
     }
 };
 
-template <class T>
-struct std::formatter<utl::fmt::Integer_with_ordinal_indicator_closure<T>>
+template <class Char, std::formattable<Char> T>
+struct std::formatter<utl::fmt::Integer_with_ordinal_indicator_closure<T>, Char>
     : utl::fmt::Formatter_base {
     auto format(auto const closure, auto& context) const
     {
@@ -480,17 +404,17 @@ struct std::formatter<utl::fmt::Integer_with_ordinal_indicator_closure<T>>
     }
 };
 
-template <class T>
-struct std::formatter<utl::Explicit<T>> : std::formatter<T> {
+template <class Char, std::formattable<Char> T>
+struct std::formatter<utl::Explicit<T>, Char> : std::formatter<T> {
     auto format(utl::Explicit<T> const& strong, auto& context) const
     {
         return std::formatter<T>::format(strong.get(), context);
     }
 };
 
-template <>
-struct std::formatter<std::monostate> : utl::fmt::Formatter_base {
-    auto format(std::monostate, auto& context) const
+template <class Char>
+struct std::formatter<std::monostate, Char> : utl::fmt::Formatter_base {
+    auto format(std::monostate const&, auto& context) const
     {
         return std::format_to(context.out(), "std::monostate");
     }

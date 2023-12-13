@@ -86,13 +86,10 @@ namespace {
 
 auto utl::readline(std::string const& prompt) -> std::optional<std::string>
 {
-    {
-        [[maybe_unused]] static auto const _ = (read_history_file_to_current_history(), 0);
-    }
-    char* const input = ::readline(prompt.c_str());
-    auto const  guard = on_scope_exit([=] { std::free(input); }); // NOLINT: manual free
-    if (input) {
-        return input;
+    [[maybe_unused]] static auto const _ = (read_history_file_to_current_history(), 0);
+    using Free_fn = decltype([](void* const ptr) { std::free(ptr); }); // NOLINT: manual free
+    if (std::unique_ptr<char, Free_fn> const input { ::readline(prompt.c_str()) }) {
+        return input.get();
     }
     return std::nullopt;
 }

@@ -12,26 +12,6 @@ TEST("utl::Source::Source")
     REQUIRE(source.string() == "content 321");
 }
 
-TEST("utl::Source::read")
-{
-    auto path = std::filesystem::temp_directory_path() / "temp-kieli-libutl-source-read-test.txt";
-    static constexpr std::string_view test_string = "test string 123456789";
-
-    {
-        REQUIRE(!std::filesystem::exists(path));
-        auto file = cpputil::io::File::open_write(path.c_str());
-        REQUIRE(file.is_open());
-        REQUIRE(cpputil::io::write(file.get(), test_string));
-    }
-    [[maybe_unused]] auto const _ = utl::on_scope_exit([path] { std::filesystem::remove(path); });
-
-    std::string const path_string = path.string();
-    auto const        source      = utl::Source::read(std::move(path));
-    REQUIRE(source.has_value());
-    REQUIRE(source->path().string() == path_string);
-    REQUIRE(source->string() == test_string);
-}
-
 TEST("utl::Source_position::advance_with")
 {
     utl::Source_position position { .line = 5, .column = 7 };

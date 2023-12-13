@@ -44,7 +44,9 @@ namespace {
         static auto as_block(utl::Wrapper<cst::Expression> const expression)
             -> cst::expression::Block const&
         {
-            return utl::get<cst::expression::Block>(expression->value);
+            auto const* const block = std::get_if<cst::expression::Block>(&expression->value);
+            utl::always_assert(block != nullptr);
+            return *block;
         }
 
         template <kieli::literal Literal>

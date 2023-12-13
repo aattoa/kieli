@@ -109,7 +109,7 @@ ReferenceAlignment: Pointer
 ReflowComments: true
 RequiresClausePosition: OwnLine
 RequiresExpressionIndentation: OuterScope
-SeparateDefinitionBlocks: Always
+SeparateDefinitionBlocks: Leave
 ShortNamespaceLines: 1
 SortIncludes: Never
 SortUsingDeclarations: false

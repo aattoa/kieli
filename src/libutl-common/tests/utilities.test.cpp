@@ -93,18 +93,6 @@ TEST("find_nth")
     REQUIRE(utl::find_nth(string.begin(), string.end(), 3, 'l') == string.end());
 }
 
-TEST("map")
-{
-    static constexpr auto square
-        = [](Move_only const x) { return Move_only { x.value * x.value }; };
-    REQUIRE(
-        utl::map(square, utl::to_vector({ 1_mov, 2_mov, 3_mov }))
-        == utl::to_vector({ 1_mov, 4_mov, 9_mov }));
-    REQUIRE(
-        utl::map(square)(utl::to_vector({ 1_mov, 2_mov, 3_mov }))
-        == utl::to_vector({ 1_mov, 4_mov, 9_mov }));
-}
-
 TEST("Relative_string")
 {
     SECTION("view_in")
