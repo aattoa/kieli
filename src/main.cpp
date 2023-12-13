@@ -47,7 +47,7 @@ namespace {
 
     constexpr auto lex_repl
         = generic_repl<[](utl::Source::Wrapper const source, kieli::Compile_info& info) {
-              std::print("Tokens: {}\n", kieli::lex(source, info));
+              std::println("Tokens: {}", kieli::lex(source, info));
           }>;
 
     constexpr auto parse_repl
@@ -88,7 +88,7 @@ auto main(int argc, char const** argv) -> int
 
         utl::Logging_timer const execution_timer { [&](auto const elapsed) {
             if (time_flag) {
-                std::print("Total execution time: {}\n", elapsed);
+                std::println("Total execution time: {}", elapsed);
             }
         } };
 
@@ -102,7 +102,7 @@ auto main(int argc, char const** argv) -> int
         }
 
         if (version_flag) {
-            std::print("kieli version 0, compiled on " __DATE__ ", " __TIME__ ".\n");
+            std::println("kieli version 0, compiled on " __DATE__ ", " __TIME__ ".");
         }
 
         if (repl_option) {
@@ -115,8 +115,9 @@ auto main(int argc, char const** argv) -> int
                 (*repl)(colors);
             }
             else {
-                throw utl::exception(
-                    "The repl must be one of lex|par|des, not '{}'", repl_option.value());
+                std::println(
+                    stderr, "The repl must be one of lex|par|des, not '{}'", repl_option.value());
+                return EXIT_FAILURE;
             }
         }
 
@@ -143,11 +144,11 @@ auto main(int argc, char const** argv) -> int
         return EXIT_FAILURE;
     }
     catch (std::exception const& exception) {
-        std::print(stderr, "{} {}\n", error_header(colors), exception.what());
+        std::println(stderr, "{} {}", error_header(colors), exception.what());
         return EXIT_FAILURE;
     }
     catch (...) {
-        std::print(stderr, "{} Caught unrecognized exception\n", error_header(colors));
+        std::println(stderr, "{} Caught unrecognized exception", error_header(colors));
         throw;
     }
 }

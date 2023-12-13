@@ -3,7 +3,7 @@
 
 #define DECLARE_FORMATTER(...)                                                           \
     template <>                                                                          \
-    struct std::formatter<__VA_ARGS__> : utl::formatting::Formatter_base {               \
+    struct std::formatter<__VA_ARGS__> : utl::fmt::Formatter_base {                      \
         auto format(__VA_ARGS__ const&, auto& context) const -> decltype(context.out()); \
     }
 
@@ -56,12 +56,12 @@ namespace {
 
         auto operator()(ast::expression::Tuple const& tuple)
         {
-            std::format_to(out, "({})", tuple.fields);
+            std::format_to(out, "({:n})", tuple.fields);
         }
 
         auto operator()(ast::expression::Template_application const& application)
         {
-            std::format_to(out, "{}[{}]", application.name, application.template_arguments);
+            std::format_to(out, "{}[{:n}]", application.name, application.template_arguments);
         }
 
         auto operator()(ast::expression::Reference const& reference)
@@ -336,7 +336,7 @@ namespace {
 
         auto operator()(ast::type::Function const& function)
         {
-            std::format_to(out, "fn({}): {}", function.argument_types, function.return_type);
+            std::format_to(out, "fn({:n}): {}", function.argument_types, function.return_type);
         }
 
         auto operator()(ast::type::Self const&)
@@ -346,7 +346,7 @@ namespace {
 
         auto operator()(ast::type::Tuple const& tuple)
         {
-            std::format_to(out, "({})", tuple.field_types);
+            std::format_to(out, "({:n})", tuple.field_types);
         }
 
         auto operator()(ast::type::Array const& array)
@@ -356,8 +356,7 @@ namespace {
 
         auto operator()(ast::type::Instance_of const& instance_of)
         {
-            std::format_to(
-                out, "inst {}", utl::formatting::delimited_range(instance_of.classes, " + "));
+            std::format_to(out, "inst {}", utl::fmt::join(instance_of.classes, " + "));
         }
 
         auto operator()(ast::type::Pointer const& pointer)
@@ -401,11 +400,11 @@ namespace {
         {
             std::format_to(out, "fn {}", function.signature.name);
             if (!function.signature.template_parameters.empty()) {
-                std::format_to(out, "[{}]", function.signature.template_parameters);
+                std::format_to(out, "[{:n}]", function.signature.template_parameters);
             }
-            std::format_to(out, "({})", function.signature.function_parameters);
+            std::format_to(out, "({:n})", function.signature.function_parameters);
             if (function.signature.return_type.has_value()) {
-                std::format_to(out, ": {}", *function.signature.return_type);
+                std::format_to(out, ": {}", function.signature.return_type.value());
             }
             assert(std::holds_alternative<ast::expression::Block>(function.body.value));
             std::format_to(out, " {}", function.body);
@@ -557,10 +556,7 @@ DEFINE_FORMATTER(ast::Template_parameter)
             if (type_parameter.classes.empty()) {
                 return;
             }
-            std::format_to(
-                context.out(),
-                ": {}",
-                utl::formatting::delimited_range(type_parameter.classes, " + "));
+            std::format_to(context.out(), ": {}", utl::fmt::join(type_parameter.classes, " + "));
         },
         [&](ast::Template_parameter::Value_parameter const& value_parameter) {
             std::format_to(context.out(), "{}", value_parameter.name);

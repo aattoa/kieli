@@ -89,7 +89,7 @@ namespace kieli {
     auto predefinitions_source(Compile_info&) -> utl::Source::Wrapper;
 
     auto test_info_and_source(std::string&& source_string)
-        -> utl::Pair<Compile_info, utl::Source::Wrapper>;
+        -> std::pair<Compile_info, utl::Source::Wrapper>;
 
     struct [[nodiscard]] Name_upper;
     struct [[nodiscard]] Name_lower;
@@ -172,7 +172,7 @@ struct std::formatter<Literal> : std::formatter<decltype(Literal::value)> {
 };
 
 template <utl::one_of<kieli::Character, kieli::String> Literal>
-struct std::formatter<Literal> : utl::formatting::Formatter_base {
+struct std::formatter<Literal> : utl::fmt::Formatter_base {
     auto format(Literal const& literal, auto& context) const
     {
         if constexpr (std::is_same_v<Literal, kieli::Character>) {

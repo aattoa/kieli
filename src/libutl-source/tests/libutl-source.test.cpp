@@ -26,9 +26,10 @@ TEST("utl::Source::read")
     [[maybe_unused]] auto const _ = utl::on_scope_exit([path] { std::filesystem::remove(path); });
 
     std::string const path_string = path.string();
-    utl::Source const source      = utl::Source::read(std::move(path));
-    REQUIRE(source.path().string() == path_string);
-    REQUIRE(source.string() == test_string);
+    auto const        source      = utl::Source::read(std::move(path));
+    REQUIRE(source.has_value());
+    REQUIRE(source->path().string() == path_string);
+    REQUIRE(source->string() == test_string);
 }
 
 TEST("utl::Source_position::advance_with")

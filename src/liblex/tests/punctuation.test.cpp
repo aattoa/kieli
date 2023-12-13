@@ -22,20 +22,17 @@ namespace {
 TEST("punctuation and reserved operators")
 {
     for (auto const punctuation_string : punctuation_strings) {
-        REQUIRE(
-            lex_success(std::string(punctuation_string))
-            == std::format("{}, end of input", punctuation_string));
+        REQUIRE(lex_success(std::string(punctuation_string)) == punctuation_string);
     }
 }
 
 TEST("available operators")
 {
     REQUIRE(
-        lex_success("-- %?% <$> ** @#")
-        == "(op: --), (op: %?%), (op: <$>), (op: **), (op: @#), end of input");
+        lex_success("-- %?% <$> ** @#") == "(op: --), (op: %?%), (op: <$>), (op: **), (op: @#)");
 }
 
 TEST("operators and punctuation tokens mixed")
 {
-    REQUIRE(lex_success("\n::\t,;(--?}@@") == "::, ,, ;, (, (op: --?), }, (op: @@), end of input");
+    REQUIRE(lex_success("\n::\t,;(--?}@@") == "::, ,, ;, (, (op: --?), }, (op: @@)");
 }

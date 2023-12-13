@@ -10,7 +10,8 @@ namespace {
 
     auto extract_definition_sequence(Context& context) -> std::vector<cst::Definition>
     {
-        std::vector<cst::Definition> definitions = utl::vector_with_capacity(16);
+        std::vector<cst::Definition> definitions;
+        definitions.reserve(16);
         while (auto definition = parse_definition(context)) {
             definitions.push_back(std::move(*definition)); // NOLINT: false positive
         }

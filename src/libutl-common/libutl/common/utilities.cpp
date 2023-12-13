@@ -17,19 +17,10 @@ utl::Safe_cast_argument_out_of_range::Safe_cast_argument_out_of_range()
     : invalid_argument { "utl::safe_cast argument out of target range" }
 {}
 
-utl::Exception::Exception(std::string&& message) noexcept : m_message { std::move(message) }
-{
-    disable_short_string_optimization(m_message);
-}
-
-auto utl::Exception::what() const noexcept -> char const*
-{
-    return m_message.c_str();
-}
-
 auto utl::abort(std::string_view const message, std::source_location const caller) -> void
 {
-    print(
+    std::print(
+        stderr,
         "[{}:{}:{}] {}, in function '{}'\n",
         basename(caller.file_name()),
         caller.line(),
@@ -58,7 +49,8 @@ auto utl::always_assert(bool const condition, std::source_location const caller)
 
 auto utl::trace(std::source_location const caller) -> void
 {
-    print(
+    std::print(
+        stderr,
         "utl::trace: Reached line {} in {}, in function '{}'\n",
         caller.line(),
         basename(caller.file_name()),
@@ -70,13 +62,6 @@ auto utl::disable_short_string_optimization(std::string& string) -> void
     if (string.capacity() <= sizeof(std::string)) {
         string.reserve(sizeof(std::string) + 1);
     }
-}
-
-auto utl::string_with_capacity(Usize const capacity) -> std::string
-{
-    std::string string;
-    string.reserve(capacity);
-    return string;
 }
 
 auto utl::Relative_string::view_in(std::string_view const string) const -> std::string_view

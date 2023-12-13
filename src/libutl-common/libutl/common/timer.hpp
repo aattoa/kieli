@@ -10,9 +10,9 @@ namespace utl {
         using Clock    = Clock_type;
         using Duration = Duration_type;
 
-        typename Clock::time_point start = Clock::now();
+        Clock::time_point start = Clock::now();
 
-        auto restart(typename Clock::time_point const new_start = Clock::now()) noexcept -> void
+        auto restart(Clock::time_point const new_start = Clock::now()) noexcept -> void
         {
             start = new_start;
         }

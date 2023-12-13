@@ -8,13 +8,13 @@ namespace utl {
         class Key,
         class Value,
         class Key_equal = std::equal_to<void>,
-        class Container = std::vector<Pair<Key, Value>>>
+        class Container = std::vector<std::pair<Key, Value>>>
     class Flatmap {
         Container m_container;
     public:
         using key_type    = Key;
         using mapped_type = Value;
-        using value_type  = typename Container::value_type;
+        using value_type  = Container::value_type;
 
         Flatmap() = default;
 
@@ -84,8 +84,8 @@ namespace utl {
         }
 
         template <class K>
-        [[nodiscard]] constexpr auto find(K const& key) noexcept(
-            noexcept(const_cast<Flatmap const*>(this)->find(key))) -> Value*
+        [[nodiscard]] constexpr auto find(K const& key)
+            noexcept(noexcept(const_cast<Flatmap const*>(this)->find(key))) -> Value*
             requires requires { const_cast<Flatmap const*>(this)->find(key); }
         {
             return const_cast<Value*>(const_cast<Flatmap const*>(this)->find(key));
@@ -140,8 +140,11 @@ namespace utl {
         [[nodiscard]] auto operator==(Flatmap const&) const noexcept -> bool = default;
     };
 
-    template <class Key, class Value>
-    Flatmap(std::vector<Pair<Key, Value>>)
-        -> Flatmap<Key, Value, std::equal_to<void>, std::vector<Pair<Key, Value>>>;
+    template <class Container>
+    Flatmap(Container) -> Flatmap<
+                           std::tuple_element_t<0, typename Container::value_type>,
+                           std::tuple_element_t<1, typename Container::value_type>,
+                           std::equal_to<void>,
+                           Container>;
 
 } // namespace utl

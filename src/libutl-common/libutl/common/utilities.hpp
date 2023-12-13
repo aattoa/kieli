@@ -10,7 +10,6 @@
 #include <cassert>
 
 #include <new>
-#include <print>
 #include <limits>
 #include <memory>
 #include <utility>
@@ -30,6 +29,7 @@
 #include <optional>
 #include <expected>
 
+#include <print>
 #include <format>
 #include <string>
 #include <string_view>
@@ -62,8 +62,8 @@ namespace utl {
     };
 
     template <std::integral To, std::integral From>
-    [[nodiscard]] constexpr auto safe_cast(From const from) noexcept(
-        losslessly_convertible_to<From, To>) -> To
+    [[nodiscard]] constexpr auto safe_cast(From const from)
+        noexcept(losslessly_convertible_to<From, To>) -> To
     {
         if constexpr (!losslessly_convertible_to<From, To>) {
             if (!std::in_range<To>(from)) {
@@ -120,21 +120,6 @@ namespace utl {
     concept specialization_of = dtl::Is_specialization_of<T, F>::value;
     template <class T, class... Ts>
     concept one_of = std::disjunction_v<std::is_same<T, Ts>...>;
-    template <class T>
-    concept trivial = std::is_trivial_v<T>;
-
-    class [[nodiscard]] Exception : public std::exception {
-        std::string m_message;
-    public:
-        explicit Exception(std::string&& message) noexcept;
-        [[nodiscard]] auto what() const noexcept -> char const* override;
-    };
-
-    template <class... Args>
-    auto exception(std::format_string<Args...> const fmt, Args&&... args) -> Exception
-    {
-        return Exception { std::format(fmt, std::forward<Args>(args)...) };
-    }
 
     [[noreturn]] auto abort(
         std::string_view message = "Invoked utl::abort",
@@ -166,55 +151,22 @@ namespace utl {
         return static_cast<Usize>(e);
     }
 
-    template <class Fst, class Snd = Fst>
-    struct [[nodiscard]] Pair {
-        Fst first {};
-        Snd second {};
-
-        Pair() = default;
-
-        template <class F, class S>
-        constexpr Pair(F&& f, S&& s) noexcept(
-            std::is_nothrow_constructible_v<Fst, F> && std::is_nothrow_constructible_v<Snd, S>)
-            requires std::constructible_from<Fst, F> && std::constructible_from<Snd, S>
-            : first { std::forward<F>(f) }
-            , second { std::forward<S>(s) }
-        {}
-
-        [[nodiscard]] auto operator==(Pair const&) const -> bool = default;
-    };
-
-    template <class Fst, class Snd>
-    Pair(Fst, Snd) -> Pair<std::remove_cvref_t<Fst>, std::remove_cvref_t<Snd>>;
-
-    inline constexpr auto first = [](auto&& pair) noexcept -> decltype(auto) {
-        return std::forward_like<decltype(pair)>(pair.first);
-    };
-    inline constexpr auto second = [](auto&& pair) noexcept -> decltype(auto) {
-        return std::forward_like<decltype(pair)>(pair.second);
-    };
-
     // Value wrapper that is used to disable default constructors
     template <class T>
     class [[nodiscard]] Explicit {
         T m_value;
     public:
-        constexpr Explicit(T const& value) // NOLINT: implicit
-            noexcept(std::is_nothrow_copy_constructible_v<T>)
-            requires std::is_copy_constructible_v<T>
-            : m_value { value }
+        template <class Arg>
+        constexpr Explicit(Arg&& arg) // NOLINT: implicit
+            noexcept(std::is_nothrow_constructible_v<T, Arg&&>)
+            requires(!std::is_same_v<Explicit, std::remove_cvref_t<Arg>>)
+                 && std::is_constructible_v<T, Arg&&>
+            : m_value { std::forward<Arg>(arg) }
         {}
 
-        constexpr Explicit(T&& value) // NOLINT: implicit
-            noexcept(std::is_nothrow_move_constructible_v<T>)
-            requires std::is_move_constructible_v<T>
-            : m_value { std::move(value) }
-        {}
-
-        template <class Self>
-        [[nodiscard]] constexpr auto get(this Self&& self) noexcept -> decltype(auto)
+        [[nodiscard]] constexpr auto get(this auto&& self) noexcept -> decltype(auto)
         {
-            return std::forward_like<Self>(self.m_value);
+            return std::forward_like<decltype(self)>(self.m_value);
         }
     };
 
@@ -337,34 +289,6 @@ namespace utl {
 
     auto disable_short_string_optimization(std::string&) -> void;
 
-    [[nodiscard]] auto string_with_capacity(Usize capacity) -> std::string;
-
-    template <class T>
-    [[nodiscard]] constexpr auto vector_with_capacity(Usize const capacity) -> std::vector<T>
-    {
-        std::vector<T> vector;
-        vector.reserve(capacity);
-        return vector;
-    }
-
-    namespace dtl {
-        struct Vector_with_capacity_closure {
-            Usize capacity;
-
-            template <class T>
-            [[nodiscard]] operator std::vector<T>(this auto const self) // NOLINT: implicit
-            {
-                return vector_with_capacity<T>(self.capacity);
-            }
-        };
-    } // namespace dtl
-
-    [[nodiscard]] constexpr auto vector_with_capacity(Usize const capacity) noexcept
-        -> dtl::Vector_with_capacity_closure
-    {
-        return { .capacity = capacity };
-    }
-
     template <class T>
     constexpr auto release_vector_memory(std::vector<T>& vector) noexcept -> void
     {
@@ -430,7 +354,8 @@ namespace utl {
     {
         using Result = std::remove_cvref_t<decltype(std::invoke(
             f, std::forward_like<Vector>(input.front())))>;
-        auto output  = vector_with_capacity<Result>(input.size());
+        std::vector<Result> output;
+        output.reserve(input.size());
         for (auto& element : input) {
             output.push_back(std::invoke(f, std::forward_like<Vector>(element)));
         }
@@ -445,6 +370,26 @@ namespace utl {
         };
     }
 
+    [[nodiscard]] constexpr auto ordinal_indicator(std::integral auto n) noexcept
+        -> std::string_view
+    {
+        // https://stackoverflow.com/questions/61786685/how-do-i-print-ordinal-indicators-in-a-c-program-cant-print-numbers-with-st
+        n %= 100;
+        if (n == 11 || n == 12 || n == 13) {
+            return "th";
+        }
+        switch (n % 10) {
+        case 1:
+            return "st";
+        case 2:
+            return "nd";
+        case 3:
+            return "rd";
+        default:
+            return "th";
+        }
+    }
+
     struct [[nodiscard]] Relative_string {
         utl::Usize offset {};
         utl::Usize length {};
@@ -453,17 +398,17 @@ namespace utl {
 
         template <class... Args>
         static auto format_to(
-            std::string&                      string,
+            std::string&                      out,
             std::format_string<Args...> const fmt,
             Args&&... args) -> Relative_string
         {
-            Usize const old_size = string.size();
-            std::format_to(std::back_inserter(string), fmt, std::forward<Args>(args)...);
-            return { .offset = old_size, .length = string.size() - old_size };
+            Usize const old_size = out.size();
+            std::format_to(std::back_inserter(out), fmt, std::forward<Args>(args)...);
+            return { .offset = old_size, .length = out.size() - old_size };
         }
     };
 
-    namespace formatting {
+    namespace fmt {
         struct Formatter_base {
             constexpr auto parse(auto& parse_context)
             {
@@ -472,35 +417,34 @@ namespace utl {
         };
 
         template <std::integral Integer>
-        struct Integer_with_ordinal_indicator_formatter_closure {
+        struct Integer_with_ordinal_indicator_closure {
             Integer integer {};
         };
 
         template <std::integral Integer>
         constexpr auto integer_with_ordinal_indicator(Integer const integer) noexcept
-            -> Integer_with_ordinal_indicator_formatter_closure<Integer>
+            -> Integer_with_ordinal_indicator_closure<Integer>
         {
             return { .integer = integer };
         }
 
-        template <std::ranges::sized_range Range>
-        struct Range_formatter_closure {
-            Range const*     range {};
+        template <std::ranges::input_range Range>
+        struct Join_closure {
+            Range*           range {};
             std::string_view delimiter;
         };
 
-        template <std::ranges::sized_range Range>
-        auto delimited_range(Range const& range, std::string_view const delimiter)
-            -> Range_formatter_closure<Range>
+        template <std::ranges::input_range Range>
+        auto join(Range&& range, std::string_view const delimiter)
         {
-            return { std::addressof(range), delimiter };
+            return Join_closure { std::addressof(range), delimiter };
         }
-    } // namespace formatting
+    } // namespace fmt
 
 } // namespace utl
 
 template <class... Ts>
-struct std::formatter<std::variant<Ts...>> : utl::formatting::Formatter_base {
+struct std::formatter<std::variant<Ts...>> : utl::fmt::Formatter_base {
     auto format(std::variant<Ts...> const& variant, auto& context) const
     {
         return utl::match(variant, [&](auto const& alternative) {
@@ -509,43 +453,16 @@ struct std::formatter<std::variant<Ts...>> : utl::formatting::Formatter_base {
     }
 };
 
-template <class T, utl::Usize n>
-struct std::formatter<std::span<T, n>> : utl::formatting::Formatter_base {
-    auto format(std::span<T, n> const span, auto& context) const
-    {
-        return std::format_to(context.out(), "{}", utl::formatting::delimited_range(span, ", "));
-    }
-};
-
-template <class T>
-struct std::formatter<std::vector<T>> : std::formatter<std::span<T>> {
-    auto format(std::vector<T> const& vector, auto& context) const
-    {
-        return std::format_to(context.out(), "{}", std::span { vector });
-    }
-};
-
-template <class F, class S>
-struct std::formatter<utl::Pair<F, S>> : utl::formatting::Formatter_base {
-    auto format(utl::Pair<F, S> const& pair, auto& context) const
-    {
-        return std::format_to(context.out(), "({}, {})", pair.first, pair.second);
-    }
-};
-
 template <class Range>
-struct std::formatter<utl::formatting::Range_formatter_closure<Range>>
-    : utl::formatting::Formatter_base {
+struct std::formatter<utl::fmt::Join_closure<Range>> : utl::fmt::Formatter_base {
     auto format(auto const closure, auto& context) const
     {
         if (closure.range->empty()) {
             return context.out();
         }
-
         auto       it  = std::ranges::begin(*closure.range);
         auto const end = std::ranges::end(*closure.range);
         auto       out = std::format_to(context.out(), "{}", *it++);
-
         while (it != end) {
             out = std::format_to(out, "{}{}", closure.delimiter, *it++);
         }
@@ -554,24 +471,12 @@ struct std::formatter<utl::formatting::Range_formatter_closure<Range>>
 };
 
 template <class T>
-struct std::formatter<utl::formatting::Integer_with_ordinal_indicator_formatter_closure<T>>
-    : utl::formatting::Formatter_base {
+struct std::formatter<utl::fmt::Integer_with_ordinal_indicator_closure<T>>
+    : utl::fmt::Formatter_base {
     auto format(auto const closure, auto& context) const
     {
-        // https://stackoverflow.com/questions/61786685/how-do-i-print-ordinal-indicators-in-a-c-program-cant-print-numbers-with-st
-        static constexpr auto suffixes
-            = std::to_array<std::string_view>({ "th", "st", "nd", "rd" });
-        T n = closure.integer % 100;
-        if (n == 11 || n == 12 || n == 13) {
-            n = 0;
-        }
-        else {
-            n %= 10;
-            if (n > 3) {
-                n = 0;
-            }
-        }
-        return std::format_to(context.out(), "{}{}", closure.integer, suffixes.at(n));
+        return std::format_to(
+            context.out(), "{}{}", closure.integer, utl::ordinal_indicator(closure.integer));
     }
 };
 
@@ -584,7 +489,7 @@ struct std::formatter<utl::Explicit<T>> : std::formatter<T> {
 };
 
 template <>
-struct std::formatter<std::monostate> : utl::formatting::Formatter_base {
+struct std::formatter<std::monostate> : utl::fmt::Formatter_base {
     auto format(std::monostate, auto& context) const
     {
         return std::format_to(context.out(), "std::monostate");

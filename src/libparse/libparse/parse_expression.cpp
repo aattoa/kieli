@@ -506,12 +506,12 @@ namespace {
         while (auto expression = parse_expression(context)) {
             if (Lexical_token const* const semicolon = context.try_extract(Token_type::semicolon)) {
                 side_effects.push_back({
-                    .expression               = *expression, // NOLINT: false positive
+                    .expression               = *expression,
                     .trailing_semicolon_token = cst::Token::from_lexical(semicolon),
                 });
             }
             else {
-                result_expression = *expression; // NOLINT: false positive
+                result_expression = *expression;
                 break;
             }
         }
@@ -808,7 +808,7 @@ namespace {
                 Lexical_token const* const op_token = context.pointer - 1;
                 if (auto right_operand = parse_potential_type_cast(context)) {
                     tail.push_back({
-                        .operator_name  = *op, // NOLINT: false positive
+                        .operator_name  = *op,
                         .operator_token = cst::Token::from_lexical(op_token),
                         .right_operand  = *right_operand,
                     });

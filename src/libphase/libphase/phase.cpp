@@ -18,7 +18,7 @@ auto kieli::predefinitions_source(Compile_info& compile_info) -> utl::Source::Wr
 }
 
 auto kieli::test_info_and_source(std::string&& source_string)
-    -> utl::Pair<Compile_info, utl::Source::Wrapper>
+    -> std::pair<Compile_info, utl::Source::Wrapper>
 {
     Compile_info test_info {
         .source_arena = utl::Source::Arena::with_page_size(1),

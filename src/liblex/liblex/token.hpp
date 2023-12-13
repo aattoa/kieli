@@ -116,10 +116,9 @@ namespace kieli {
         template <class T>
         [[nodiscard]] auto value_as() const noexcept -> T
         {
-            if (T const* const pointer = std::get_if<T>(&value)) {
-                return *pointer;
-            }
-            utl::abort();
+            T const* const pointer = std::get_if<T>(&value);
+            utl::always_assert(pointer != nullptr);
+            return *pointer;
         }
 
         [[nodiscard]] auto as_integer() const noexcept -> decltype(Integer::value);

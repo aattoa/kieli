@@ -15,7 +15,7 @@ namespace utl {
         explicit Source(std::filesystem::path&&, std::string&&);
 
         // Create a source with the given path and read the content from that file
-        static auto read(std::filesystem::path&&) -> Source;
+        static auto read(std::filesystem::path&&) -> std::expected<Source, std::string>;
 
         [[nodiscard]] auto path() const noexcept -> std::filesystem::path const&;
         [[nodiscard]] auto string() const noexcept -> std::string_view;

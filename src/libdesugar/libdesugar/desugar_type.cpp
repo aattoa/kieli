@@ -48,11 +48,9 @@ namespace {
             return ast::type::Self {};
         }
 
-        auto operator()(cst::type::Typename const& name) -> ast::Type::Variant
+        auto operator()(cst::type::Typename const& type) -> ast::Type::Variant
         {
-            return ast::type::Typename {
-                .name = context.desugar(name.name),
-            };
+            return ast::type::Typename { .name = context.desugar(type.name) };
         }
 
         auto operator()(cst::type::Tuple const& tuple) -> ast::Type::Variant
@@ -113,9 +111,7 @@ namespace {
 
         auto operator()(cst::type::Instance_of const& instance_of) -> ast::Type::Variant
         {
-            return ast::type::Instance_of {
-                .classes = context.desugar(instance_of.classes.elements),
-            };
+            return ast::type::Instance_of { context.desugar(instance_of.classes.elements) };
         }
 
         auto operator()(cst::type::Template_application const& application) -> ast::Type::Variant

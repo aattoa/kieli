@@ -28,8 +28,9 @@ namespace {
 
 TEST("vector capacity operations")
 {
-    auto vector = utl::vector_with_capacity<int>(10);
+    std::vector<int> vector;
     REQUIRE(vector.empty());
+    vector.reserve(10);
     REQUIRE(vector.capacity() >= 10);
     utl::release_vector_memory(vector);
     REQUIRE(vector.empty());

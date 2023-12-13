@@ -32,3 +32,4 @@ CheckOptions:
   misc-non-private-member-variables-in-classes.IgnoreClassesWithAllMemberVariablesBeingPublic: true
   performance-move-const-arg.CheckTriviallyCopyableMove: false
   cppcoreguidelines-macro-usage.CheckCapsOnly: true
+  bugprone-unused-return-value.AllowCastToVoid: true

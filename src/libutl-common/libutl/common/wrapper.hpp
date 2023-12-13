@@ -48,8 +48,8 @@ namespace utl::dtl {
         }
 
         template <class... Args>
-        [[nodiscard]] auto unsafe_emplace_back(Args&&... args) noexcept(
-            std::is_nothrow_constructible_v<T, Args&&...>) -> T*
+        [[nodiscard]] auto unsafe_emplace_back(Args&&... args)
+            noexcept(std::is_nothrow_constructible_v<T, Args&&...>) -> T*
         {
             assert(!is_at_capacity());
             std::construct_at(m_slot, std::forward<Args>(args)...);

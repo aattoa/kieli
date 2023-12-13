@@ -1,4 +1,5 @@
 #include <libutl/common/utilities.hpp>
+#include <libutl/common/flatmap.hpp>
 #include <liblex/context.hpp>
 #include <liblex/numeric.hpp>
 #include <liblex/lex.hpp>
@@ -7,77 +8,81 @@ namespace {
 
     using Token = kieli::Lexical_token;
 
-    constexpr auto punctuation_token_map = std::to_array<utl::Pair<std::string_view, Token::Type>>({
-        { ".", Token::Type::dot },
-        { ":", Token::Type::colon },
-        { "::", Token::Type::double_colon },
-        { "|", Token::Type::pipe },
-        { "=", Token::Type::equals },
-        { "&", Token::Type::ampersand },
-        { "*", Token::Type::asterisk },
-        { "+", Token::Type::plus },
-        { "?", Token::Type::question },
-        { "\\", Token::Type::lambda },
-        { "<-", Token::Type::left_arrow },
-        { "->", Token::Type::right_arrow },
-        { R"(???)", Token::Type::hole },
-    });
+    constexpr utl::Flatmap punctuation_token_map {
+        std::to_array<std::pair<std::string_view, Token::Type>>({
+            { ".", Token::Type::dot },
+            { ":", Token::Type::colon },
+            { "::", Token::Type::double_colon },
+            { "|", Token::Type::pipe },
+            { "=", Token::Type::equals },
+            { "&", Token::Type::ampersand },
+            { "*", Token::Type::asterisk },
+            { "+", Token::Type::plus },
+            { "?", Token::Type::question },
+            { "\\", Token::Type::lambda },
+            { "<-", Token::Type::left_arrow },
+            { "->", Token::Type::right_arrow },
+            { R"(???)", Token::Type::hole },
+        })
+    };
 
-    constexpr auto keyword_token_map = std::to_array<utl::Pair<std::string_view, Token::Type>>({
-        { "let", Token::Type::let },
-        { "mut", Token::Type::mut },
-        { "if", Token::Type::if_ },
-        { "else", Token::Type::else_ },
-        { "elif", Token::Type::elif },
-        { "for", Token::Type::for_ },
-        { "in", Token::Type::in },
-        { "while", Token::Type::while_ },
-        { "loop", Token::Type::loop },
-        { "continue", Token::Type::continue_ },
-        { "break", Token::Type::break_ },
-        { "match", Token::Type::match },
-        { "ret", Token::Type::ret },
-        { "discard", Token::Type::discard },
-        { "fn", Token::Type::fn },
-        { "as", Token::Type::as },
-        { "I8", Token::Type::i8_type },
-        { "I16", Token::Type::i16_type },
-        { "I32", Token::Type::i32_type },
-        { "I64", Token::Type::i64_type },
-        { "U8", Token::Type::u8_type },
-        { "U16", Token::Type::u16_type },
-        { "U32", Token::Type::u32_type },
-        { "U64", Token::Type::u64_type },
-        { "Float", Token::Type::floating_type },
-        { "Char", Token::Type::character_type },
-        { "Bool", Token::Type::boolean_type },
-        { "String", Token::Type::string_type },
-        { "self", Token::Type::lower_self },
-        { "Self", Token::Type::upper_self },
-        { "enum", Token::Type::enum_ },
-        { "struct", Token::Type::struct_ },
-        { "class", Token::Type::class_ },
-        { "inst", Token::Type::inst },
-        { "impl", Token::Type::impl },
-        { "alias", Token::Type::alias },
-        { "namespace", Token::Type::namespace_ },
-        { "import", Token::Type::import_ },
-        { "export", Token::Type::export_ },
-        { "module", Token::Type::module_ },
-        { "sizeof", Token::Type::sizeof_ },
-        { "typeof", Token::Type::typeof_ },
-        { "addressof", Token::Type::addressof },
-        { "dereference", Token::Type::dereference },
-        { "unsafe", Token::Type::unsafe },
-        { "mov", Token::Type::mov },
-        { "meta", Token::Type::meta },
-        { "where", Token::Type::where },
-        { "immut", Token::Type::immut },
-        { "dyn", Token::Type::dyn },
-        { "pub", Token::Type::pub },
-        { "macro", Token::Type::macro },
-        { "global", Token::Type::global },
-    });
+    constexpr utl::Flatmap keyword_token_map {
+        std::to_array<std::pair<std::string_view, Token::Type>>({
+            { "let", Token::Type::let },
+            { "mut", Token::Type::mut },
+            { "if", Token::Type::if_ },
+            { "else", Token::Type::else_ },
+            { "elif", Token::Type::elif },
+            { "for", Token::Type::for_ },
+            { "in", Token::Type::in },
+            { "while", Token::Type::while_ },
+            { "loop", Token::Type::loop },
+            { "continue", Token::Type::continue_ },
+            { "break", Token::Type::break_ },
+            { "match", Token::Type::match },
+            { "ret", Token::Type::ret },
+            { "discard", Token::Type::discard },
+            { "fn", Token::Type::fn },
+            { "as", Token::Type::as },
+            { "I8", Token::Type::i8_type },
+            { "I16", Token::Type::i16_type },
+            { "I32", Token::Type::i32_type },
+            { "I64", Token::Type::i64_type },
+            { "U8", Token::Type::u8_type },
+            { "U16", Token::Type::u16_type },
+            { "U32", Token::Type::u32_type },
+            { "U64", Token::Type::u64_type },
+            { "Float", Token::Type::floating_type },
+            { "Char", Token::Type::character_type },
+            { "Bool", Token::Type::boolean_type },
+            { "String", Token::Type::string_type },
+            { "self", Token::Type::lower_self },
+            { "Self", Token::Type::upper_self },
+            { "enum", Token::Type::enum_ },
+            { "struct", Token::Type::struct_ },
+            { "class", Token::Type::class_ },
+            { "inst", Token::Type::inst },
+            { "impl", Token::Type::impl },
+            { "alias", Token::Type::alias },
+            { "namespace", Token::Type::namespace_ },
+            { "import", Token::Type::import_ },
+            { "export", Token::Type::export_ },
+            { "module", Token::Type::module_ },
+            { "sizeof", Token::Type::sizeof_ },
+            { "typeof", Token::Type::typeof_ },
+            { "addressof", Token::Type::addressof },
+            { "dereference", Token::Type::dereference },
+            { "unsafe", Token::Type::unsafe },
+            { "mov", Token::Type::mov },
+            { "meta", Token::Type::meta },
+            { "where", Token::Type::where },
+            { "immut", Token::Type::immut },
+            { "dyn", Token::Type::dyn },
+            { "pub", Token::Type::pub },
+            { "macro", Token::Type::macro },
+            { "global", Token::Type::global },
+        })
+    };
 
     template <utl::Metastring string>
     constexpr auto is_one_of(char const c) noexcept -> bool
@@ -247,7 +252,7 @@ namespace {
         -> liblex::Expected<void>
     {
         for (utl::Usize depth = 1; depth != 0;) {
-            skip_string_literal_within_comment(context);
+            (void)skip_string_literal_within_comment(context);
 
             if (context.try_consume("*/")) {
                 assert(depth != 0);
@@ -280,7 +285,7 @@ namespace {
                 context.consume([](char const c) { return c != '\n'; });
             }
             else if (context.try_consume("/*")) {
-                skip_block_comment(anchor, context);
+                (void)skip_block_comment(anchor, context);
             }
             else {
                 break;
@@ -293,13 +298,9 @@ namespace {
     {
         std::string_view const view = context.extract(is_identifier_tail);
         assert(!view.empty());
-
-        if (auto const it = std::ranges::find(keyword_token_map, view, utl::first);
-            it != keyword_token_map.end())
-        {
-            return make_token({}, it->second);
+        if (Token::Type const* const type = keyword_token_map.find(view)) {
+            return make_token({}, *type);
         }
-
         if (view == "true") {
             return make_token(kieli::Boolean { true }, Token::Type::boolean_literal);
         }
@@ -318,10 +319,9 @@ namespace {
     auto extract_operator(Token_maker const& make_token, liblex::Context& context) -> Token
     {
         std::string_view const view = context.extract(is_operator);
-        if (auto const it = std::ranges::find(punctuation_token_map, view, utl::first);
-            it != punctuation_token_map.end())
-        {
-            return make_token({}, it->second);
+
+        if (Token::Type const* const type = punctuation_token_map.find(view)) {
+            return make_token({}, *type);
         }
         return make_token(context.make_operator(view), Token::Type::operator_name);
     }
@@ -360,7 +360,7 @@ namespace {
         assert(context.current() == '"');
         context.advance();
 
-        static thread_local std::string string = utl::string_with_capacity(50);
+        static thread_local std::string string;
         string.clear();
 
         for (;;) {

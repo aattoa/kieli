@@ -16,7 +16,7 @@ namespace {
     auto lex_failure(std::string&& string) -> std::string
     {
         auto result = liblex::test_lex(std::move(string));
-        REQUIRE(result.formatted_tokens == "lexical error, end of input");
+        REQUIRE(result.formatted_tokens == "lexical error");
         return result.diagnostic_messages;
     }
 
@@ -30,7 +30,7 @@ TEST("valid character literals")
 {
     REQUIRE(
         lex_success("'x' 'y' '\\t' '\\\\'")
-        == "(char: 'x'), (char: 'y'), (char: '\t'), (char: '\\'), end of input");
+        == "(char: 'x'), (char: 'y'), (char: '\t'), (char: '\\')");
 }
 
 TEST("unterminating character literal")
@@ -50,14 +50,14 @@ TEST("unrecognized escape sequence")
 
 TEST("quote-character literal")
 {
-    REQUIRE(lex_success("''' '\"'") == "(char: '''), (char: '\"'), end of input");
+    REQUIRE(lex_success("''' '\"'") == "(char: '''), (char: '\"')");
 }
 
 TEST("valid string literals")
 {
     REQUIRE(
         lex_success("\"test\t\\\",\", 'a', '\\\\'")
-        == "(str: 'test\t\",'), ,, (char: 'a'), ,, (char: '\\'), end of input");
+        == "(str: 'test\t\",'), ,, (char: 'a'), ,, (char: '\\')");
 }
 
 TEST("unterminating string literal")
@@ -67,10 +67,10 @@ TEST("unterminating string literal")
 
 TEST("comment within string literal")
 {
-    REQUIRE(lex_success("\" /* /* */ */ // \"") == "(str: ' /* /* */ */ // '), end of input");
+    REQUIRE(lex_success("\" /* /* */ */ // \"") == "(str: ' /* /* */ */ // ')");
 }
 
 TEST("adjacent string literals")
 {
-    REQUIRE(lex_success("\"hello\" \"world\"") == "(str: 'hello'), (str: 'world'), end of input");
+    REQUIRE(lex_success("\"hello\" \"world\"") == "(str: 'hello'), (str: 'world')");
 }

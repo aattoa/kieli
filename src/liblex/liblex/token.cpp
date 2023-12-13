@@ -129,51 +129,30 @@ auto kieli::Lexical_token::as_string() const noexcept -> utl::Pooled_string
 
 auto kieli::Lexical_token::description(Type const type) noexcept -> std::string_view
 {
+    // clang-format off
     switch (type) {
-    case Type::error:
-        return "a lexical error";
-    case Type::dot:
-        return "a '.'";
-    case Type::comma:
-        return "a ','";
-    case Type::colon:
-        return "a ':'";
-    case Type::semicolon:
-        return "a ';'";
-    case Type::double_colon:
-        return "a '::'";
-    case Type::ampersand:
-        return "a '&'";
-    case Type::asterisk:
-        return "a '*'";
-    case Type::plus:
-        return "a '+'";
-    case Type::question:
-        return "a '?'";
-    case Type::equals:
-        return "a '='";
-    case Type::pipe:
-        return "a '|'";
-    case Type::lambda:
-        return "a '\\'";
-    case Type::left_arrow:
-        return "a '<-'";
-    case Type::right_arrow:
-        return "a '->'";
-    case Type::hole:
-        return "a hole";
-    case Type::paren_open:
-        return "a '('";
-    case Type::paren_close:
-        return "a ')'";
-    case Type::brace_open:
-        return "a '{'";
-    case Type::brace_close:
-        return "a '}'";
-    case Type::bracket_open:
-        return "a '['";
-    case Type::bracket_close:
-        return "a ']'";
+    case Type::error:         return "a lexical error";
+    case Type::dot:           return "a '.'";
+    case Type::comma:         return "a ','";
+    case Type::colon:         return "a ':'";
+    case Type::semicolon:     return "a ';'";
+    case Type::double_colon:  return "a '::'";
+    case Type::ampersand:     return "a '&'";
+    case Type::asterisk:      return "a '*'";
+    case Type::plus:          return "a '+'";
+    case Type::question:      return "a '?'";
+    case Type::equals:        return "a '='";
+    case Type::pipe:          return "a '|'";
+    case Type::lambda:        return "a '\\'";
+    case Type::left_arrow:    return "a '<-'";
+    case Type::right_arrow:   return "a '->'";
+    case Type::hole:          return "a hole";
+    case Type::paren_open:    return "a '('";
+    case Type::paren_close:   return "a ')'";
+    case Type::brace_open:    return "a '{'";
+    case Type::brace_close:   return "a '}'";
+    case Type::bracket_open:  return "a '['";
+    case Type::bracket_close: return "a ']'";
     case Type::let:
     case Type::mut:
     case Type::immut:
@@ -214,26 +193,16 @@ auto kieli::Lexical_token::description(Type const type) noexcept -> std::string_
     case Type::macro:
     case Type::global:
     case Type::lower_self:
-    case Type::upper_self:
-        return "a keyword";
-    case Type::underscore:
-        return "a wildcard pattern";
-    case Type::lower_name:
-        return "an uncapitalized identifier";
-    case Type::upper_name:
-        return "a capitalized identifier";
-    case Type::operator_name:
-        return "an operator";
-    case Type::integer_literal:
-        return "an integer literal";
-    case Type::floating_literal:
-        return "a floating-point literal";
-    case Type::string_literal:
-        return "a string literal";
-    case Type::character_literal:
-        return "a character literal";
-    case Type::boolean_literal:
-        return "a boolean literal";
+    case Type::upper_self:        return "a keyword";
+    case Type::underscore:        return "a wildcard pattern";
+    case Type::lower_name:        return "an uncapitalized identifier";
+    case Type::upper_name:        return "a capitalized identifier";
+    case Type::operator_name:     return "an operator";
+    case Type::integer_literal:   return "an integer literal";
+    case Type::floating_literal:  return "a floating-point literal";
+    case Type::string_literal:    return "a string literal";
+    case Type::character_literal: return "a character literal";
+    case Type::boolean_literal:   return "a boolean literal";
     case Type::string_type:
     case Type::floating_type:
     case Type::character_type:
@@ -245,13 +214,12 @@ auto kieli::Lexical_token::description(Type const type) noexcept -> std::string_
     case Type::u8_type:
     case Type::u16_type:
     case Type::u32_type:
-    case Type::u64_type:
-        return "a primitive typename";
-    case Type::end_of_input:
-        return "the end of input";
+    case Type::u64_type:     return "a primitive typename";
+    case Type::end_of_input: return "the end of input";
     default:
-        utl::abort("Unimplemented for {}"_format(std::to_underlying(type)));
+        utl::unreachable();
     }
+    // clang-format on
 }
 
 auto kieli::Lexical_token::type_string(kieli::Lexical_token::Type const type) noexcept

@@ -29,6 +29,10 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
     add_compile_options("-fsized-deallocation")
 endif ()
 
+function (kieli_message message)
+    message(STATUS "<KIELI> ${message}")
+endfunction ()
+
 # External dependencies
 include(FetchContent)
 FetchContent_Declare(
@@ -50,12 +54,22 @@ FetchContent_Declare(
 
 set(CPPARGS_BUILD_TESTS OFF)
 set(CPPDIAG_BUILD_TESTS OFF)
-FetchContent_MakeAvailable(cppargs cppdiag cpputil)
+set(CPPUTIL_BUILD_TESTS OFF)
+
+function (fetch package)
+    kieli_message("Fetching ${package}")
+    FetchContent_MakeAvailable(${package})
+endfunction ()
+
+fetch(cppargs)
+fetch(cppdiag)
+fetch(cpputil)
 
 # Build kieli tests by default
 option(KIELI_BUILD_TESTS "Build kieli tests" ON)
 
 if (${KIELI_BUILD_TESTS})
+    kieli_message("Enabling tests and fetching Catch2")
     FetchContent_MakeAvailable(Catch2)
     include(CTest)
     include(Catch)
@@ -69,6 +83,7 @@ function (kieli_add_tests component)
     endif ()
     foreach (test IN LISTS _TESTS)
         set(executable ${component}-test-${test})
+        kieli_message("Adding test ${executable}")
         add_executable(${executable}
             ${CMAKE_CURRENT_SOURCE_DIR}/tests/${test}.test.cpp)
         target_include_directories(${executable}
@@ -86,7 +101,6 @@ function (kieli_add_tests component)
                 PRIVATE ${library})
         endforeach ()
         catch_discover_tests(${executable})
-        message(STATUS "<KIELI> Added test ${executable}")
     endforeach ()
 endfunction ()
 
