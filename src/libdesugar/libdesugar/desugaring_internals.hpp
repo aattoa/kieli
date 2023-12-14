@@ -10,7 +10,8 @@ namespace libdesugar {
     struct Context {
         kieli::Compile_info& compile_info;
         ast::Node_arena&     node_arena;
-        utl::Pooled_string   self_variable_identifier = compile_info.identifier_pool.make("self");
+        kieli::Identifier    self_variable_identifier
+            = kieli::Identifier { compile_info.identifier_pool.make("self") };
 
         explicit Context(kieli::Compile_info& compile_info, ast::Node_arena& node_arena) noexcept
             : compile_info { compile_info }
@@ -66,7 +67,7 @@ namespace libdesugar {
         template <class T>
         auto desugar(std::vector<T> const& vector)
         {
-            return utl::map(desugar(), vector);
+            return std::ranges::to<std::vector>(std::views::transform(vector, desugar()));
         }
 
         template <class T>

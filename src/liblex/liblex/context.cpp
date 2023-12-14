@@ -102,21 +102,21 @@ auto liblex::Context::try_consume(std::string_view const string) noexcept -> boo
     return false;
 }
 
-auto liblex::Context::make_string_literal(std::string_view const string) -> utl::Pooled_string
+auto liblex::Context::make_string_literal(std::string_view const string) -> kieli::String
 {
-    return m_compile_info.string_literal_pool.make(string);
+    return kieli::String { m_compile_info.string_literal_pool.make(string) };
 }
 
-auto liblex::Context::make_operator(std::string_view const string) -> utl::Pooled_string
+auto liblex::Context::make_operator_identifier(std::string_view const string) -> kieli::Identifier
 {
     assert(!string.empty());
-    return m_compile_info.operator_pool.make(string);
+    return kieli::Identifier { m_compile_info.operator_pool.make(string) };
 }
 
-auto liblex::Context::make_identifier(std::string_view const string) -> utl::Pooled_string
+auto liblex::Context::make_identifier(std::string_view const string) -> kieli::Identifier
 {
     assert(!string.empty());
-    return m_compile_info.identifier_pool.make(string);
+    return kieli::Identifier { m_compile_info.identifier_pool.make(string) };
 }
 
 auto liblex::Context::error(std::string_view const position, std::string_view const message)

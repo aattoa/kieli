@@ -399,11 +399,10 @@ namespace {
         }
     }
 
-    auto validate_module_name_or_path(Context& context, Lexical_token const& token)
-        -> utl::Pooled_string
+    auto validate_module_name_or_path(Context& context, Lexical_token const& token) -> kieli::String
     {
-        auto const module_string = token.as_string();
-        if (module_string.view().contains(".."sv)) {
+        auto const module_string = token.value_as<kieli::String>();
+        if (module_string.value.view().contains(".."sv)) {
             context.diagnostics().error(
                 token.source_view, "A module name or path can not contain '..'");
         }
@@ -418,8 +417,8 @@ auto kieli::parse(std::span<Lexical_token const> const tokens, Compile_info& com
     auto    node_arena = cst::Node_arena::with_default_page_size();
     Context context { tokens, node_arena, compile_info };
 
-    std::vector<utl::Pooled_string>   module_imports;
-    std::optional<utl::Pooled_string> module_name;
+    std::vector<String>   module_imports;
+    std::optional<String> module_name;
 
     if (context.try_consume(Token_type::module_)) {
         if (Lexical_token const* const name = context.try_extract(Token_type::string_literal)) {

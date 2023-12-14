@@ -99,7 +99,7 @@ namespace utl {
 
         auto merge_with(Wrapper_arena&& other) & -> void
         {
-            append_vector(m_pages, std::move(other.m_pages));
+            m_pages.append_range(std::views::as_rvalue(other.m_pages));
         }
     };
 

@@ -243,7 +243,7 @@ namespace cst {
 
         struct Binary_operator_invocation_sequence {
             struct Operator_and_operand {
-                utl::Pooled_string       operator_name;
+                kieli::Identifier        operator_name;
                 Token                    operator_token;
                 utl::Wrapper<Expression> right_operand;
             };
@@ -518,12 +518,12 @@ namespace cst {
 
     struct Pattern {
         using Variant = std::variant<
-            pattern::Parenthesized,
             kieli::Integer,
             kieli::Floating,
             kieli::Character,
             kieli::Boolean,
             kieli::String,
+            pattern::Parenthesized,
             pattern::Wildcard,
             pattern::Name,
             pattern::Constructor,
@@ -743,10 +743,10 @@ namespace cst {
     using Node_arena = utl::Wrapper_arena<Expression, Type, Pattern>;
 
     struct [[nodiscard]] Module {
-        std::vector<Definition>           definitions;
-        std::optional<utl::Pooled_string> name;
-        std::vector<utl::Pooled_string>   imports;
-        Node_arena                        node_arena;
+        std::vector<Definition>      definitions;
+        std::optional<kieli::String> name;
+        std::vector<kieli::String>   imports;
+        Node_arena                   node_arena;
     };
 
 } // namespace cst

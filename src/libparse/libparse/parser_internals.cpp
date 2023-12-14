@@ -228,7 +228,7 @@ auto libparse::extract_qualified(Context& context, std::optional<cst::Root_quali
         Lexical_token const& token = context.extract();
         if (is_name_token_type(token.type)) {
             kieli::Name_dynamic const qualifier_name {
-                .identifier  = token.as_string(),
+                .identifier  = token.value_as<kieli::Identifier>(),
                 .source_view = token.source_view,
                 .is_upper    = token.type == Token_type::upper_name,
             };

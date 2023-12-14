@@ -156,7 +156,7 @@ namespace ast {
         struct Binary_operator_invocation {
             utl::Wrapper<Expression> left;
             utl::Wrapper<Expression> right;
-            utl::Pooled_string       op;
+            kieli::Identifier        op;
         };
 
         struct Struct_field_access {
@@ -562,7 +562,7 @@ namespace ast {
 
     using Node_arena = utl::Wrapper_arena<Expression, Type, Pattern>;
 
-    struct Module {
+    struct [[nodiscard]] Module {
         std::vector<Definition> definitions;
         Node_arena              node_arena;
     };

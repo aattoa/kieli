@@ -13,13 +13,7 @@ namespace {
     template <class T>
     auto extract_literal(Context& context) -> cst::Pattern::Variant
     {
-        // TODO: fix string literal extraction
-        if constexpr (std::is_same_v<T, utl::Pooled_string>) {
-            return kieli::String { context.previous().value_as<T>() };
-        }
-        else {
-            return context.previous().value_as<T>();
-        }
+        return context.previous().value_as<T>();
     };
 
     auto extract_tuple(Context& context) -> cst::Pattern::Variant
@@ -160,7 +154,7 @@ namespace {
         case Token_type::boolean_literal:
             return extract_literal<kieli::Boolean>(context);
         case Token_type::string_literal:
-            return extract_literal<utl::Pooled_string>(context);
+            return extract_literal<kieli::String>(context);
         case Token_type::paren_open:
             return extract_tuple(context);
         case Token_type::bracket_open:

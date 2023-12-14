@@ -38,7 +38,7 @@ namespace {
                         = std::get<precedence>(operator_precedence_table);
 
                     if (std::ranges::find(
-                            current_operator_group, operator_and_operand.operator_name.view())
+                            current_operator_group, operator_and_operand.operator_name.name.view())
                         == current_operator_group.end())
                     {
                         return left;
@@ -86,7 +86,9 @@ namespace {
         auto operator()(cst::expression::Array_literal const& literal) -> ast::Expression::Variant
         {
             return ast::expression::Array_literal {
-                .elements = utl::map(context.deref_desugar(), literal.elements.value.elements),
+                .elements
+                = std::views::transform(literal.elements.value.elements, context.deref_desugar())
+                | std::ranges::to<std::vector>(),
             };
         }
 
@@ -103,7 +105,9 @@ namespace {
         auto operator()(cst::expression::Tuple const& tuple) -> ast::Expression::Variant
         {
             return ast::expression::Tuple {
-                .fields = utl::map(context.deref_desugar(), tuple.fields.value.elements),
+                .fields
+                = std::views::transform(tuple.fields.value.elements, context.deref_desugar())
+                | std::ranges::to<std::vector>(),
             };
         }
 
@@ -169,7 +173,8 @@ namespace {
                 };
             };
             return ast::expression::Match {
-                .cases              = utl::map(desugar_match_case, match.cases.value),
+                .cases = std::views::transform(match.cases.value, desugar_match_case)
+                       | std::ranges::to<std::vector>(),
                 .matched_expression = context.desugar(match.matched_expression),
             };
         }

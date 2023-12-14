@@ -13,13 +13,13 @@ namespace {
 
     auto extract_string_literal(Context& context) -> cst::Expression::Variant
     {
-        auto const first_string = context.previous().as_string();
+        auto const first_string = context.previous().value_as<kieli::String>();
         if (context.pointer->type != Token_type::string_literal) {
             return kieli::String { first_string };
         }
-        std::string combined_string { first_string.view() };
+        std::string combined_string { first_string.value.view() };
         while (Lexical_token const* const token = context.try_extract(Token_type::string_literal)) {
-            combined_string += token->as_string().view();
+            combined_string.append(token->value_as<kieli::String>().value.view());
         }
         return kieli::String {
             context.compile_info.string_literal_pool.make(combined_string),
@@ -664,12 +664,12 @@ namespace {
             while (context.try_consume(Token_type::paren_open)) {
                 auto arguments = extract_arguments(context);
                 *potential_invocable = context.wrap(cst::Expression {
-                .value = cst::expression::Invocation {
-                    .function_arguments = std::move(arguments),
-                    .function_expression = std::move(*potential_invocable),
-                },
-                .source_view = context.make_source_view(anchor, context.pointer - 1),
-            });
+                    .value = cst::expression::Invocation {
+                        .function_arguments = std::move(arguments),
+                        .function_expression = std::move(*potential_invocable),
+                    },
+                    .source_view = context.make_source_view(anchor, context.pointer - 1),
+                });
             }
         }
         return potential_invocable;
@@ -716,7 +716,7 @@ namespace {
                     *expression = context.wrap(cst::Expression {
                     .value = cst::expression::Tuple_field_access {
                         .base_expression = *expression,
-                        .field_index = field_index_token.as_integer(),
+                        .field_index = field_index_token.value_as<kieli::Integer>().value,
                         .field_index_source_view = field_index_token.source_view,
                         .dot_token = cst::Token::from_lexical(dot),
                     },
@@ -783,11 +783,11 @@ namespace {
         return std::nullopt;
     }
 
-    auto parse_operator(Context& context) -> std::optional<utl::Pooled_string>
+    auto parse_operator(Context& context) -> std::optional<kieli::Identifier>
     {
         switch (context.extract().type) {
         case Token_type::operator_name:
-            return context.previous().as_string();
+            return context.previous().value_as<kieli::Identifier>();
         case Token_type::asterisk:
             return context.asterisk_id;
         case Token_type::plus:

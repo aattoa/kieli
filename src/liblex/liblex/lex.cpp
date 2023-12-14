@@ -323,7 +323,7 @@ namespace {
         if (Token::Type const* const type = punctuation_token_map.find(view)) {
             return make_token({}, *type);
         }
-        return make_token(context.make_operator(view), Token::Type::operator_name);
+        return make_token(context.make_operator_identifier(view), Token::Type::operator_name);
     }
 
     auto extract_character_literal(Token_maker const& make_token, liblex::Context& context)

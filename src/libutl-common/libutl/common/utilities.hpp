@@ -227,23 +227,6 @@ namespace utl {
         return std::ranges::to<std::vector>(std::views::as_rvalue(array));
     }
 
-    // Unlike `std::vector<T>::resize`, this does not require `T` to be default constructible.
-    template <class T>
-    constexpr auto resize_down_vector(std::vector<T>& vector, Usize const new_size) -> void
-    {
-        always_assert(vector.size() >= new_size);
-        auto const offset = safe_cast<typename std::vector<T>::iterator::difference_type>(new_size);
-        vector.erase(vector.begin() + offset, vector.end());
-    }
-
-    template <class T>
-    constexpr auto append_vector(std::vector<T>& to, std::vector<T>&& from) -> void
-    {
-        always_assert(&to != &from);
-        to.insert(to.end(), std::move_iterator { from.begin() }, std::move_iterator { from.end() });
-        from.clear();
-    }
-
     [[nodiscard]] constexpr auto unsigned_distance(
         auto const                 start,
         auto const                 stop,
@@ -272,28 +255,6 @@ namespace utl {
     [[nodiscard]] constexpr auto find_nth(It it, Se se, Usize const n, T const& x) -> It
     {
         return find_nth_if(std::move(it), std::move(se), n, [&x](auto const& y) { return x == y; });
-    }
-
-    template <class F, class Vector>
-    constexpr auto map(F&& f, Vector&& input)
-        requires std::is_invocable_v<F&&, decltype(std::forward_like<Vector>(input.front()))>
-    {
-        using Result = std::remove_cvref_t<decltype(std::invoke(
-            f, std::forward_like<Vector>(input.front())))>;
-        std::vector<Result> output;
-        output.reserve(input.size());
-        for (auto& element : input) {
-            output.push_back(std::invoke(f, std::forward_like<Vector>(element)));
-        }
-        return output;
-    }
-
-    template <class F>
-    constexpr auto map(F&& f)
-    {
-        return [f = std::forward<F>(f)]<class Vector>(Vector&& input) mutable {
-            return map(std::forward<F>(f), std::forward<Vector>(input));
-        };
     }
 
     [[nodiscard]] constexpr auto ordinal_indicator(std::integral auto n) noexcept

@@ -306,7 +306,7 @@ namespace {
 
         auto operator()(kieli::built_in_type::Integer const integer)
         {
-            std::format_to(out, "{}", kieli::built_in_type::integer_string(integer));
+            std::format_to(out, "{}", kieli::built_in_type::integer_name(integer));
         }
 
         auto operator()(kieli::built_in_type::Floating const&)

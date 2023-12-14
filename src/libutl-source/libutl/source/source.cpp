@@ -11,17 +11,20 @@ utl::Source::Source(std::filesystem::path&& file_path, std::string&& file_conten
 
 auto utl::Source::read(std::filesystem::path&& path) -> std::expected<Source, std::string>
 {
+    auto const error = [&path](std::format_string<char const*> const fmt) {
+        return std::unexpected { std::format(fmt, path.c_str()) };
+    };
     if (auto file = cpputil::io::File::open_read(path.c_str())) {
         if (auto content = cpputil::io::read(file.get())) {
             disable_short_string_optimization(content.value());
             return Source { std::move(path), std::move(content.value()) };
         }
-        return std::unexpected { std::format("Failed to read file '{}'", path.c_str()) };
+        return error("Failed to read file '{}'");
     }
     if (std::filesystem::exists(path)) {
-        return std::unexpected { std::format("Failed to open file '{}'", path.c_str()) };
+        return error("Failed to open file '{}'");
     }
-    return std::unexpected { std::format("File '{}' does not exist", path.c_str()) };
+    return error("File '{}' does not exist");
 }
 
 auto utl::Source::path() const noexcept -> std::filesystem::path const&
@@ -37,7 +40,8 @@ auto utl::Source::string() const noexcept -> std::string_view
 auto utl::Source_position::advance_with(char const c) noexcept -> void
 {
     if (c == '\n') {
-        ++line, column = 1;
+        ++line;
+        column = 1;
     }
     else {
         ++column;

@@ -46,35 +46,6 @@ TEST("to_vector")
     REQUIRE(vector == utl::to_vector({ 10_mov, 20_mov, 30_mov }));
 }
 
-TEST("resize_down_vector")
-{
-    auto vector = utl::to_vector({ 20_mov, 40_mov, 60_mov, 80_mov });
-    utl::resize_down_vector(vector, 2);
-    REQUIRE(vector == utl::to_vector({ 20_mov, 40_mov }));
-    REQUIRE(vector.capacity() >= 4);
-    utl::resize_down_vector(vector, 0);
-    REQUIRE(vector.empty());
-    REQUIRE(vector.capacity() >= 4);
-}
-
-TEST("append_vector")
-{
-    SECTION("from rvalue")
-    {
-        auto vector = utl::to_vector({ 10_mov, 20_mov, 30_mov });
-        utl::append_vector(vector, utl::to_vector({ 40_mov, 50_mov, 60_mov }));
-        REQUIRE(vector == utl::to_vector({ 10_mov, 20_mov, 30_mov, 40_mov, 50_mov, 60_mov }));
-    }
-    SECTION("from lvalue")
-    {
-        auto to   = utl::to_vector({ 100_mov, 200_mov });
-        auto from = utl::to_vector({ 300_mov, 400_mov });
-        utl::append_vector(to, std::move(from));
-        REQUIRE(to == utl::to_vector({ 100_mov, 200_mov, 300_mov, 400_mov }));
-        REQUIRE(from.empty()); // NOLINT: use after move
-    }
-}
-
 TEST("find_nth_if")
 {
     static constexpr auto array   = std::to_array({ 1, 2, 3, 4, 5 });

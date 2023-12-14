@@ -84,9 +84,8 @@ namespace {
         auto operator()(cst::definition::Struct const& structure) -> ast::Definition::Variant
         {
             ensure_no_duplicates(context, "member", structure.members.elements);
-            auto const desugar_member = [this](cst::definition::Struct::Member const& member)
-                -> ast::definition::Struct::Member {
-                return {
+            auto const desugar_member = [this](cst::definition::Struct::Member const& member) {
+                return ast::definition::Struct::Member {
                     .name        = member.name,
                     .type        = context.desugar(member.type),
                     .is_public   = member.is_public,
@@ -95,8 +94,9 @@ namespace {
             };
             return definition(
                 ast::definition::Struct {
-                    .members = utl::map(desugar_member, structure.members.elements),
-                    .name    = structure.name,
+                    .members = std::views::transform(structure.members.elements, desugar_member)
+                             | std::ranges::to<std::vector>(),
+                    .name = structure.name,
                 },
                 structure.template_parameters);
         }
@@ -104,9 +104,8 @@ namespace {
         auto operator()(cst::definition::Enum const& enumeration) -> ast::Definition::Variant
         {
             ensure_no_duplicates(context, "constructor", enumeration.constructors.elements);
-            auto const desugar_constructor = [this](cst::definition::Enum::Constructor const& ctor)
-                -> ast::definition::Enum::Constructor {
-                return {
+            auto const desugar_ctor = [this](cst::definition::Enum::Constructor const& ctor) {
+                return ast::definition::Enum::Constructor {
                     .name          = ctor.name,
                     .payload_types = ctor.payload_types.transform(context.desugar()),
                     .source_view   = ctor.source_view,
@@ -115,7 +114,8 @@ namespace {
             return definition(
                 ast::definition::Enum {
                     .constructors
-                    = utl::map(desugar_constructor, enumeration.constructors.elements),
+                    = std::views::transform(enumeration.constructors.elements, desugar_ctor)
+                    | std::ranges::to<std::vector>(),
                     .name = enumeration.name,
                 },
                 enumeration.template_parameters);

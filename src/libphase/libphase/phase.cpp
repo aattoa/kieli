@@ -95,7 +95,7 @@ auto kieli::Name_upper::operator==(Name_upper const& other) const noexcept -> bo
     return identifier == other.identifier;
 }
 
-auto kieli::built_in_type::integer_string(Integer const integer) noexcept -> std::string_view
+auto kieli::built_in_type::integer_name(Integer const integer) noexcept -> std::string_view
 {
     // clang-format off
     switch (integer) {

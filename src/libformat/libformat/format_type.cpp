@@ -8,7 +8,7 @@ namespace {
 
         auto operator()(kieli::built_in_type::Integer const integer)
         {
-            state.format("{}", kieli::built_in_type::integer_string(integer));
+            state.format("{}", kieli::built_in_type::integer_name(integer));
         }
 
         auto operator()(kieli::built_in_type::Floating const&)

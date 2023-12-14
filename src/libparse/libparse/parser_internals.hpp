@@ -19,8 +19,8 @@ namespace libparse {
         Lexical_token const* begin {};
         Lexical_token const* end {};
         Lexical_token const* pointer {};
-        utl::Pooled_string   plus_id;
-        utl::Pooled_string   asterisk_id;
+        kieli::Identifier    plus_id;
+        kieli::Identifier    asterisk_id;
 
         explicit Context(
             std::span<Lexical_token const>, cst::Node_arena&, kieli::Compile_info&) noexcept;
@@ -181,10 +181,10 @@ namespace libparse {
     auto extract_qualified(Context&, std::optional<cst::Root_qualifier>&&) -> cst::Qualified_name;
 
     template <Token_type identifier_type>
-    auto extract_id(Context& context, std::string_view const description) -> utl::Pooled_string
+    auto extract_id(Context& context, std::string_view const description) -> kieli::Identifier
     {
         if (Lexical_token const* const token = context.try_extract(identifier_type)) {
-            return token->as_string();
+            return token->value_as<kieli::Identifier>();
         }
         context.error_expected(description);
     }
@@ -193,10 +193,10 @@ namespace libparse {
     constexpr auto extract_upper_id = extract_id<Token_type::upper_name>;
 
     template <Token_type identifier_type>
-    auto parse_id(Context& context) -> std::optional<utl::Pooled_string>
+    auto parse_id(Context& context) -> std::optional<kieli::Identifier>
     {
         if (Lexical_token const* const token = context.try_extract(identifier_type)) {
-            return token->as_string();
+            return token->value_as<kieli::Identifier>();
         }
         return std::nullopt;
     }
@@ -209,7 +209,7 @@ namespace libparse {
     {
         if (Lexical_token const* const token = context.try_extract(identifier_type)) {
             return Name {
-                .identifier  = token->as_string(),
+                .identifier  = token->value_as<kieli::Identifier>(),
                 .source_view = token->source_view,
             };
         }

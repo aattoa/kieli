@@ -94,8 +94,14 @@ namespace kieli {
     struct [[nodiscard]] Name_upper;
     struct [[nodiscard]] Name_lower;
 
+    struct [[nodiscard]] Identifier {
+        utl::Pooled_string name;
+
+        auto operator==(Identifier const&) const -> bool = default;
+    };
+
     struct [[nodiscard]] Name_dynamic {
-        utl::Pooled_string  identifier;
+        Identifier          identifier;
         utl::Source_view    source_view;
         utl::Explicit<bool> is_upper;
         auto                as_upper() const noexcept -> Name_upper;
@@ -104,14 +110,14 @@ namespace kieli {
     };
 
     struct [[nodiscard]] Name_upper {
-        utl::Pooled_string identifier;
+        Identifier         identifier;
         utl::Source_view   source_view;
         auto               as_dynamic() const noexcept -> Name_dynamic;
         [[nodiscard]] auto operator==(Name_upper const&) const noexcept -> bool;
     };
 
     struct [[nodiscard]] Name_lower {
-        utl::Pooled_string identifier;
+        Identifier         identifier;
         utl::Source_view   source_view;
         auto               as_dynamic() const noexcept -> Name_dynamic;
         [[nodiscard]] auto operator==(Name_lower const&) const noexcept -> bool;
@@ -120,19 +126,15 @@ namespace kieli {
     struct Integer {
         utl::U64 value {};
     };
-
     struct Floating {
         double value {};
     };
-
     struct Boolean {
         bool value {};
     };
-
     struct Character {
         char value {};
     };
-
     struct String {
         utl::Pooled_string value;
     };
@@ -142,24 +144,27 @@ namespace kieli {
 
     namespace built_in_type {
         enum class Integer { i8, i16, i32, i64, u8, u16, u32, u64, _enumerator_count };
-
         struct Floating {};
-
         struct Boolean {};
-
         struct Character {};
-
         struct String {};
-
-        auto integer_string(Integer) noexcept -> std::string_view;
+        auto integer_name(Integer) noexcept -> std::string_view;
     } // namespace built_in_type
 } // namespace kieli
+
+template <>
+struct std::formatter<kieli::Identifier> : std::formatter<utl::Pooled_string> {
+    auto format(kieli::Identifier const identifier, auto& context) const
+    {
+        return std::formatter<utl::Pooled_string>::format(identifier.name, context);
+    }
+};
 
 template <utl::one_of<kieli::Name_dynamic, kieli::Name_lower, kieli::Name_upper> Name>
 struct std::formatter<Name> : std::formatter<utl::Pooled_string> {
     auto format(Name const& name, auto& context) const
     {
-        return std::formatter<utl::Pooled_string>::format(name.identifier, context);
+        return std::formatter<utl::Pooled_string>::format(name.identifier.name, context);
     }
 };
 

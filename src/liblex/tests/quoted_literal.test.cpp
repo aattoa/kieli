@@ -57,7 +57,7 @@ TEST("valid string literals")
 {
     REQUIRE(
         lex_success("\"test\t\\\",\", 'a', '\\\\'")
-        == "(str: 'test\t\",'), ,, (char: 'a'), ,, (char: '\\')");
+        == "(str: \"test\t\",\"), ,, (char: 'a'), ,, (char: '\\')");
 }
 
 TEST("unterminating string literal")
@@ -67,10 +67,10 @@ TEST("unterminating string literal")
 
 TEST("comment within string literal")
 {
-    REQUIRE(lex_success("\" /* /* */ */ // \"") == "(str: ' /* /* */ */ // ')");
+    REQUIRE(lex_success("\" /* /* */ */ // \"") == "(str: \" /* /* */ */ // \")");
 }
 
 TEST("adjacent string literals")
 {
-    REQUIRE(lex_success("\"hello\" \"world\"") == "(str: 'hello'), (str: 'world')");
+    REQUIRE(lex_success("\"hello\" \"world\"") == "(str: \"hello\"), (str: \"world\")");
 }

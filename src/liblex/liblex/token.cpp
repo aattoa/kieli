@@ -1,6 +1,8 @@
 #include <libutl/common/utilities.hpp>
 #include <liblex/token.hpp>
 
+static_assert(std::is_trivially_copyable_v<kieli::Lexical_token>);
+
 namespace {
     constexpr auto type_strings_array = std::to_array<std::string_view>({
         "lexical error",
@@ -98,33 +100,6 @@ namespace {
 
         "end of input",
     });
-}
-
-static_assert(std::is_trivially_copyable_v<kieli::Lexical_token>);
-
-auto kieli::Lexical_token::as_integer() const noexcept -> decltype(kieli::Integer::value)
-{
-    return value_as<kieli::Integer>().value;
-}
-
-auto kieli::Lexical_token::as_floating() const noexcept -> decltype(kieli::Floating::value)
-{
-    return value_as<kieli::Floating>().value;
-}
-
-auto kieli::Lexical_token::as_character() const noexcept -> decltype(kieli::Character::value)
-{
-    return value_as<kieli::Character>().value;
-}
-
-auto kieli::Lexical_token::as_boolean() const noexcept -> decltype(kieli::Boolean::value)
-{
-    return value_as<kieli::Boolean>().value;
-}
-
-auto kieli::Lexical_token::as_string() const noexcept -> utl::Pooled_string
-{
-    return value_as<utl::Pooled_string>();
 }
 
 auto kieli::Lexical_token::description(Type const type) noexcept -> std::string_view

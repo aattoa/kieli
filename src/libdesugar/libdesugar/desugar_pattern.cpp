@@ -35,14 +35,18 @@ namespace {
         auto operator()(cst::pattern::Tuple const& tuple) -> ast::Pattern::Variant
         {
             return ast::pattern::Tuple {
-                .field_patterns = utl::map(context.deref_desugar(), tuple.patterns.value.elements),
+                .field_patterns
+                = std::views::transform(tuple.patterns.value.elements, context.deref_desugar())
+                | std::ranges::to<std::vector>(),
             };
         }
 
         auto operator()(cst::pattern::Top_level_tuple const& tuple) -> ast::Pattern::Variant
         {
             return ast::pattern::Tuple {
-                .field_patterns = utl::map(context.deref_desugar(), tuple.patterns.elements),
+                .field_patterns
+                = std::views::transform(tuple.patterns.elements, context.deref_desugar())
+                | std::ranges::to<std::vector>(),
             };
         }
 
@@ -50,7 +54,8 @@ namespace {
         {
             return ast::pattern::Slice {
                 .element_patterns
-                = utl::map(context.deref_desugar(), slice.patterns.value.elements),
+                = std::views::transform(slice.patterns.value.elements, context.deref_desugar())
+                | std::ranges::to<std::vector>(),
             };
         }
 
