@@ -26,20 +26,6 @@ namespace {
     struct Definition_desugaring_visitor {
         Context& context;
 
-        template <class Definition>
-        auto definition(
-            Definition&& definition, std::optional<cst::Template_parameters> const& parameters)
-            const -> ast::Definition::Variant
-        {
-            if (parameters.has_value()) {
-                return ast::definition::Template<std::remove_reference_t<Definition>> {
-                    .definition = std::forward<Definition>(definition),
-                    .parameters = context.desugar(parameters->value.elements),
-                };
-            }
-            return std::forward<Definition>(definition);
-        }
-
         auto operator()(cst::definition::Function const& function) -> ast::Definition::Variant
         {
             std::vector<ast::Function_parameter> parameters;
@@ -92,13 +78,12 @@ namespace {
                     .source_view = member.source_view,
                 };
             };
-            return definition(
-                ast::definition::Struct {
-                    .members = std::views::transform(structure.members.elements, desugar_member)
-                             | std::ranges::to<std::vector>(),
-                    .name = structure.name,
-                },
-                structure.template_parameters);
+            return ast::definition::Struct {
+                .members = std::views::transform(structure.members.elements, desugar_member)
+                         | std::ranges::to<std::vector>(),
+                .name                = structure.name,
+                .template_parameters = structure.template_parameters.transform(context.desugar()),
+            };
         }
 
         auto operator()(cst::definition::Enum const& enumeration) -> ast::Definition::Variant
@@ -111,68 +96,64 @@ namespace {
                     .source_view   = ctor.source_view,
                 };
             };
-            return definition(
-                ast::definition::Enum {
-                    .constructors
-                    = std::views::transform(enumeration.constructors.elements, desugar_ctor)
-                    | std::ranges::to<std::vector>(),
-                    .name = enumeration.name,
-                },
-                enumeration.template_parameters);
+            return ast::definition::Enum {
+                .constructors
+                = std::views::transform(enumeration.constructors.elements, desugar_ctor)
+                | std::ranges::to<std::vector>(),
+                .name                = enumeration.name,
+                .template_parameters = enumeration.template_parameters.transform(context.desugar()),
+            };
         }
 
         auto operator()(cst::definition::Alias const& alias) -> ast::Definition::Variant
         {
-            return definition(
-                ast::definition::Alias {
-                    .name = alias.name,
-                    .type = context.desugar(*alias.type),
-                },
-                alias.template_parameters);
+            return ast::definition::Alias {
+                .name                = alias.name,
+                .type                = context.desugar(*alias.type),
+                .template_parameters = alias.template_parameters.transform(context.desugar()),
+            };
         }
 
         auto operator()(cst::definition::Typeclass const& typeclass) -> ast::Definition::Variant
         {
-            return definition(
-                ast::definition::Typeclass {
-                    .function_signatures = context.desugar(typeclass.function_signatures),
-                    .type_signatures     = context.desugar(typeclass.type_signatures),
-                    .name                = typeclass.name,
-                },
-                typeclass.template_parameters);
+            return ast::definition::Typeclass {
+                .function_signatures = context.desugar(typeclass.function_signatures),
+                .type_signatures     = context.desugar(typeclass.type_signatures),
+                .name                = typeclass.name,
+                .template_parameters = typeclass.template_parameters.transform(context.desugar()),
+            };
         }
 
         auto operator()(cst::definition::Implementation const& implementation)
             -> ast::Definition::Variant
         {
-            return definition(
-                ast::definition::Implementation {
-                    .type        = context.desugar(*implementation.self_type),
-                    .definitions = context.desugar(implementation.definitions),
-                },
-                implementation.template_parameters);
+            return ast::definition::Implementation {
+                .type        = context.desugar(*implementation.self_type),
+                .definitions = context.desugar(implementation.definitions),
+                .template_parameters
+                = implementation.template_parameters.transform(context.desugar()),
+            };
         }
 
         auto operator()(cst::definition::Instantiation const& instantiation)
             -> ast::Definition::Variant
         {
-            return definition(
-                ast::definition::Instantiation {
-                    .typeclass   = context.desugar(instantiation.typeclass),
-                    .self_type   = context.desugar(*instantiation.self_type),
-                    .definitions = context.desugar(instantiation.definitions),
-                },
-                instantiation.template_parameters);
+            return ast::definition::Instantiation {
+                .typeclass   = context.desugar(instantiation.typeclass),
+                .self_type   = context.desugar(*instantiation.self_type),
+                .definitions = context.desugar(instantiation.definitions),
+                .template_parameters
+                = instantiation.template_parameters.transform(context.desugar()),
+            };
         }
 
         auto operator()(cst::definition::Namespace const& space) -> ast::Definition::Variant
         {
-            return definition(
-                ast::definition::Namespace {
-                    .definitions = context.desugar(space.definitions),
-                    .name        = space.name,
-                },
-                space.template_parameters);
+            return ast::definition::Namespace {
+                .definitions         = context.desugar(space.definitions),
+                .name                = space.name,
+                .template_parameters = space.template_parameters.transform(context.desugar()),
+            };
         }
     };
 } // namespace

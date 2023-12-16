@@ -19,6 +19,7 @@
 */
 
 namespace ast {
+
     struct [[nodiscard]] Expression;
     struct [[nodiscard]] Type;
     struct [[nodiscard]] Pattern;
@@ -465,9 +466,12 @@ namespace ast {
     };
 
     namespace definition {
+        using Template_parameters = std::optional<std::vector<Template_parameter>>;
+
         struct Function {
-            Function_signature signature;
-            Expression         body;
+            Function_signature  signature;
+            Expression          body;
+            Template_parameters template_parameters;
         };
 
         struct Struct {
@@ -480,6 +484,7 @@ namespace ast {
 
             std::vector<Member> members;
             kieli::Name_upper   name;
+            Template_parameters template_parameters;
         };
 
         struct Enum {
@@ -491,67 +496,52 @@ namespace ast {
 
             std::vector<Constructor> constructors;
             kieli::Name_upper        name;
+            Template_parameters      template_parameters;
         };
 
         struct Alias {
-            kieli::Name_upper name;
-            Type              type;
+            kieli::Name_upper   name;
+            Type                type;
+            Template_parameters template_parameters;
         };
 
         struct Typeclass {
             std::vector<Function_signature> function_signatures;
             std::vector<Type_signature>     type_signatures;
             kieli::Name_upper               name;
+            Template_parameters             template_parameters;
         };
 
         struct Implementation {
             Type                    type;
             std::vector<Definition> definitions;
+            Template_parameters     template_parameters;
         };
 
         struct Instantiation {
             Class_reference         typeclass;
             Type                    self_type;
             std::vector<Definition> definitions;
+            Template_parameters     template_parameters;
         };
 
         struct Namespace {
             std::vector<Definition> definitions;
             kieli::Name_lower       name;
+            Template_parameters     template_parameters;
         };
-
-        template <class T>
-        struct Template {
-            T                               definition;
-            std::vector<Template_parameter> parameters;
-        };
-
-        using Struct_template         = Template<Struct>;
-        using Enum_template           = Template<Enum>;
-        using Alias_template          = Template<Alias>;
-        using Typeclass_template      = Template<Typeclass>;
-        using Implementation_template = Template<Implementation>;
-        using Instantiation_template  = Template<Instantiation>;
-        using Namespace_template      = Template<Namespace>;
     } // namespace definition
 
     struct Definition {
         using Variant = std::variant<
             definition::Function,
             definition::Struct,
-            definition::Struct_template,
             definition::Enum,
-            definition::Enum_template,
             definition::Alias,
-            definition::Alias_template,
             definition::Typeclass,
-            definition::Typeclass_template,
             definition::Implementation,
-            definition::Implementation_template,
             definition::Instantiation,
-            definition::Instantiation_template,
-            definition::Namespace,
-            definition::Namespace_template>;
+            definition::Namespace>;
 
         Variant          value;
         utl::Source_view source_view;

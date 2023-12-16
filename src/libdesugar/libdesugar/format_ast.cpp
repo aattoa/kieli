@@ -444,12 +444,6 @@ namespace {
         {
             utl::todo();
         }
-
-        template <class T>
-        auto operator()(ast::definition::Template<T> const&)
-        {
-            utl::todo();
-        }
     };
 } // namespace
 
