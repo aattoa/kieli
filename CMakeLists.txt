@@ -24,11 +24,6 @@ else ()
         "-Wno-switch")
 endif ()
 
-# Enable sized deallocation functions on Clang
-if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-    add_compile_options("-fsized-deallocation")
-endif ()
-
 function (kieli_message message)
     message(STATUS "<KIELI> ${message}")
 endfunction ()
