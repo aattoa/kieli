@@ -165,6 +165,9 @@ namespace utl {
     };
 
     template <class T>
+    using Mutable_wrapper = Wrapper<T, Wrapper_mutability::yes>;
+
+    template <class T>
     concept wrapper = dtl::Is_wrapper<T>::value;
 
 } // namespace utl

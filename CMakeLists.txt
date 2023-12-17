@@ -112,6 +112,7 @@ add_subdirectory(src/liblex)
 add_subdirectory(src/libparse)
 add_subdirectory(src/libdesugar)
 add_subdirectory(src/libformat)
+add_subdirectory(src/libresolve)
 
 add_executable(debug-kieli src/main.cpp)
 target_link_libraries(debug-kieli
@@ -119,6 +120,7 @@ target_link_libraries(debug-kieli
     PRIVATE liblex
     PRIVATE libparse
     PRIVATE libdesugar
+    PRIVATE libresolve
     PRIVATE libformat
     PRIVATE cppargs
     PRIVATE cppdiag
