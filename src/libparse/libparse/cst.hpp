@@ -743,10 +743,13 @@ namespace cst {
     using Node_arena = utl::Wrapper_arena<Expression, Type, Pattern>;
 
     struct [[nodiscard]] Module {
-        std::vector<Definition>      definitions;
-        std::optional<kieli::String> name;
-        std::vector<kieli::String>   imports;
-        Node_arena                   node_arena;
+        struct Import {
+            utl::Pooled_string name;
+            utl::Source_view   source_view;
+        };
+        std::vector<Import>     imports;
+        std::vector<Definition> definitions;
+        Node_arena              node_arena;
     };
 
 } // namespace cst

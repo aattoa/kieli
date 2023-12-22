@@ -399,14 +399,16 @@ namespace {
         }
     }
 
-    auto validate_module_name_or_path(Context& context, Lexical_token const& token) -> kieli::String
+    auto make_import(Context& context, Lexical_token const& token) -> cst::Module::Import
     {
-        auto const module_string = token.value_as<kieli::String>();
-        if (module_string.value.view().contains(".."sv)) {
-            context.diagnostics().error(
-                token.source_view, "A module name or path can not contain '..'");
+        auto const path = token.value_as<kieli::String>();
+        if (path.value.view().contains("..")) {
+            context.diagnostics().error(token.source_view, "A module path must not contain '..'");
         }
-        return module_string;
+        return cst::Module::Import {
+            .name        = path.value,
+            .source_view = token.source_view,
+        };
     }
 
 } // namespace
@@ -417,21 +419,11 @@ auto kieli::parse(std::span<Lexical_token const> const tokens, Compile_info& com
     auto    node_arena = cst::Node_arena::with_default_page_size();
     Context context { tokens, node_arena, compile_info };
 
-    std::vector<String>   module_imports;
-    std::optional<String> module_name;
-
-    if (context.try_consume(Token_type::module_)) {
-        if (Lexical_token const* const name = context.try_extract(Token_type::string_literal)) {
-            module_name = validate_module_name_or_path(context, *name);
-        }
-        else {
-            context.error_expected("a module name");
-        }
-    }
+    std::vector<cst::Module::Import> imports;
 
     while (context.try_consume(Token_type::import_)) {
         if (Lexical_token const* const name = context.try_extract(Token_type::string_literal)) {
-            module_imports.push_back(validate_module_name_or_path(context, *name));
+            imports.push_back(make_import(context, *name));
         }
         else {
             context.error_expected("a module path");
@@ -445,9 +437,8 @@ auto kieli::parse(std::span<Lexical_token const> const tokens, Compile_info& com
     }
 
     return cst::Module {
+        .imports     = std::move(imports),
         .definitions = std::move(definitions),
-        .name        = std::move(module_name),
-        .imports     = std::move(module_imports),
         .node_arena  = std::move(node_arena),
     };
 }
