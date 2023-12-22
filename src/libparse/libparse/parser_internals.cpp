@@ -36,7 +36,6 @@ namespace {
         cst::Template_parameter::Variant const& parameter,
         cst::Template_argument::Variant const&  argument) -> bool
     {
-        assert(utl::visitable(parameter, argument));
         return std::holds_alternative<cst::Template_argument::Wildcard>(argument)
             || (std::holds_alternative<cst::Template_parameter::Type_parameter>(parameter)
                 && std::holds_alternative<utl::Wrapper<cst::Type>>(argument))

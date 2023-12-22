@@ -82,12 +82,6 @@ TEST("Relative_string")
     }
 }
 
-TEST("basename")
-{
-    REQUIRE(utl::basename("aaa/bbb/ccc") == "ccc");
-    REQUIRE(utl::basename("aaa\\bbb\\ccc") == "ccc");
-}
-
 static_assert(utl::losslessly_convertible_to<utl::I8, utl::I16>);
 static_assert(utl::losslessly_convertible_to<utl::I32, utl::I32>);
 static_assert(utl::losslessly_convertible_to<utl::U8, utl::I32>);

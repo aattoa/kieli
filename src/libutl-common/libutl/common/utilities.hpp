@@ -115,6 +115,7 @@ namespace utl {
 
     template <class T, template <class...> class F>
     concept specialization_of = dtl::Is_specialization_of<T, F>::value;
+
     template <class T, class... Ts>
     concept one_of = std::disjunction_v<std::is_same<T, Ts>...>;
 
@@ -166,15 +167,6 @@ namespace utl {
         }
     };
 
-    // Filename without path
-    auto basename(std::string_view full_path) noexcept -> std::string_view;
-
-    template <class T>
-    constexpr auto make = []<class... Args>(Args&&... args) noexcept(
-                              std::is_nothrow_constructible_v<T, Args&&...>) -> T {
-        return T(std::forward<Args>(args)...);
-    };
-
     template <class F, class G, class... Hs>
     [[nodiscard]] constexpr auto compose(F&& f, G&& g, Hs&&... hs)
     {
@@ -196,11 +188,6 @@ namespace utl {
     };
     template <class... Fs>
     Overload(Fs...) -> Overload<Fs...>;
-
-    [[nodiscard]] constexpr auto visitable(auto const&... variants) noexcept -> bool
-    {
-        return (!variants.valueless_by_exception() && ...);
-    }
 
     template <class Variant, class... Arms>
     constexpr auto match(Variant&& variant, Arms&&... arms) noexcept(noexcept(std::visit(

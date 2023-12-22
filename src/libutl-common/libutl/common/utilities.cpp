@@ -1,18 +1,5 @@
 #include <libutl/common/utilities.hpp>
 
-auto utl::basename(std::string_view path) noexcept -> std::string_view
-{
-    auto const trim_if = [&](char const c) {
-        if (auto const pos = path.find_last_of(c); pos != std::string_view::npos) {
-            path.remove_prefix(pos + 1);
-        }
-    };
-    trim_if('\\');
-    trim_if('/');
-    assert(!path.empty());
-    return path;
-}
-
 utl::Safe_cast_argument_out_of_range::Safe_cast_argument_out_of_range()
     : invalid_argument { "utl::safe_cast argument out of target range" }
 {}
@@ -22,7 +9,7 @@ auto utl::abort(std::string_view const message, std::source_location const calle
     std::print(
         stderr,
         "[{}:{}:{}] {}, in function '{}'\n",
-        basename(caller.file_name()),
+        std::filesystem::path(caller.file_name()).filename().c_str(),
         caller.line(),
         caller.column(),
         message,
@@ -53,7 +40,7 @@ auto utl::trace(std::source_location const caller) -> void
         stderr,
         "utl::trace: Reached line {} in {}, in function '{}'\n",
         caller.line(),
-        basename(caller.file_name()),
+        std::filesystem::path(caller.file_name()).filename().c_str(),
         caller.function_name());
 }
 
