@@ -9,22 +9,19 @@ utl::Source::Source(std::filesystem::path&& file_path, std::string&& file_conten
     disable_short_string_optimization(m_file_content);
 }
 
-auto utl::Source::read(std::filesystem::path&& path) -> std::expected<Source, std::string>
+auto utl::Source::read(std::filesystem::path&& path) -> std::expected<Source, Read_error>
 {
-    auto const error = [&path](std::format_string<char const*> const fmt) {
-        return std::unexpected { std::format(fmt, path.c_str()) };
-    };
     if (auto file = cpputil::io::File::open_read(path.c_str())) {
         if (auto content = cpputil::io::read(file.get())) {
             disable_short_string_optimization(content.value());
             return Source { std::move(path), std::move(content.value()) };
         }
-        return error("Failed to read file '{}'");
+        return std::unexpected { Read_error::failed_to_read };
     }
     if (std::filesystem::exists(path)) {
-        return error("Failed to open file '{}'");
+        return std::unexpected { Read_error::failed_to_open };
     }
-    return error("File '{}' does not exist");
+    return std::unexpected { Read_error::does_not_exist };
 }
 
 auto utl::Source::path() const noexcept -> std::filesystem::path const&

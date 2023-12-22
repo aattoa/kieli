@@ -4,6 +4,7 @@
 #include <libutl/common/wrapper.hpp>
 
 namespace utl {
+
     class [[nodiscard]] Source {
         std::filesystem::path m_file_path;
         std::string           m_file_content;
@@ -14,8 +15,10 @@ namespace utl {
         // Create a source with the given path and content
         explicit Source(std::filesystem::path&&, std::string&&);
 
-        // Create a source with the given path and read the content from that file
-        static auto read(std::filesystem::path&&) -> std::expected<Source, std::string>;
+        enum class Read_error { does_not_exist, failed_to_open, failed_to_read };
+
+        // Attempt to read a file with the given path
+        static auto read(std::filesystem::path&&) -> std::expected<Source, Read_error>;
 
         [[nodiscard]] auto path() const noexcept -> std::filesystem::path const&;
         [[nodiscard]] auto string() const noexcept -> std::string_view;
@@ -48,4 +51,5 @@ namespace utl {
 
         auto combine_with(Source_view const&) const noexcept -> Source_view;
     };
+
 } // namespace utl
