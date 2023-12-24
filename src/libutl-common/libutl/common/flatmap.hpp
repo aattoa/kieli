@@ -23,16 +23,17 @@ namespace utl {
         {}
 
         template <class K, class V>
-        constexpr auto add_or_assign(K&& key, V&& value) & -> Value&
-            requires std::constructible_from<Key, K> && std::assignable_from<Key&, K>
-                  && std::constructible_from<Value, V> && std::assignable_from<Value&, V>
+        constexpr auto add_or_assign(K&& key, V&& value) & -> mapped_type&
+            requires std::constructible_from<key_type, K> && std::assignable_from<key_type&, K>
+                  && std::constructible_from<mapped_type, V>
+                  && std::assignable_from<mapped_type&, V>
                   && std::is_invocable_r_v<
                          bool,
                          Key_equal&&,
-                         Key const&,
+                         key_type const&,
                          decltype(std::as_const(key))>
         {
-            if (Value* const existing = find(std::as_const(key))) {
+            if (mapped_type* const existing = find(std::as_const(key))) {
                 return *existing = std::forward<V>(value);
             }
             return m_container.emplace_back(std::forward<K>(key), std::forward<V>(value)).second;
@@ -42,12 +43,12 @@ namespace utl {
         constexpr auto add_new_or_abort(
             K&&                        key,
             V&&                        value,
-            std::source_location const caller = std::source_location::current()) & -> Value&
-            requires std::constructible_from<Key, K> && std::constructible_from<Value, V>
+            std::source_location const caller = std::source_location::current()) & -> mapped_type&
+            requires std::constructible_from<key_type, K> && std::constructible_from<mapped_type, V>
                   && std::is_invocable_r_v<
                          bool,
                          Key_equal&&,
-                         Key const&,
+                         key_type const&,
                          decltype(std::as_const(key))>
         {
             if (find(std::as_const(key)) != nullptr) {
@@ -57,25 +58,25 @@ namespace utl {
         }
 
         template <class K, class V>
-        constexpr auto add_new_unchecked(K&& key, V&& value) & -> Value&
-            requires std::constructible_from<Key, K> && std::constructible_from<Value, V>
+        constexpr auto add_new_unchecked(K&& key, V&& value) & -> mapped_type&
+            requires std::constructible_from<key_type, K> && std::constructible_from<mapped_type, V>
                   && std::is_invocable_r_v<
                          bool,
                          Key_equal&&,
-                         Key const&,
+                         key_type const&,
                          decltype(std::as_const(key))>
         {
             assert(find(std::as_const(key)) == nullptr);
             return m_container.emplace_back(std::forward<K>(key), std::forward<V>(value)).second;
         }
 
-        template <class K>
-        [[nodiscard]] constexpr auto find(K const& key) const
-            noexcept(std::is_nothrow_invocable_r_v<bool, Key_equal&&, Key const&, K const&>)
-                -> Value const*
-            requires std::is_invocable_r_v<bool, Key_equal&&, Key const&, K const&>
+        template <class Self, class K>
+        [[nodiscard]] constexpr auto find(this Self& self, K const& key)
+            noexcept(std::is_nothrow_invocable_v<Key_equal&&, key_type const&, K const&>)
+                -> std::conditional_t<std::is_const_v<Self>, mapped_type const, mapped_type>*
+            requires std::is_invocable_r_v<bool, Key_equal&&, key_type const&, K const&>
         {
-            for (auto& [k, v] : m_container) {
+            for (auto& [k, v] : self.m_container) {
                 if (std::invoke(Key_equal {}, k, key)) {
                     return std::addressof(v);
                 }
@@ -84,11 +85,13 @@ namespace utl {
         }
 
         template <class K>
-        [[nodiscard]] constexpr auto find(K const& key)
-            noexcept(noexcept(const_cast<Flatmap const*>(this)->find(key))) -> Value*
-            requires requires { const_cast<Flatmap const*>(this)->find(key); }
+        [[nodiscard]] constexpr auto operator[](this auto&& self, K const& key) -> decltype(auto)
+            requires std::is_invocable_r_v<bool, Key_equal&&, key_type const&, K const&>
         {
-            return const_cast<Value*>(const_cast<Flatmap const*>(this)->find(key));
+            if (auto* const pointer = self.find(key)) {
+                return std::forward_like<decltype(self)>(*pointer);
+            }
+            throw std::out_of_range { "utl::Flatmap::operator[] out of range" };
         }
 
         [[nodiscard]] constexpr auto size() const noexcept -> Usize
@@ -107,37 +110,22 @@ namespace utl {
             return { begin(), end() };
         }
 
-        [[nodiscard]] constexpr auto container() const noexcept -> Container const&
+        [[nodiscard]] constexpr auto container(this auto&& self) noexcept -> decltype(auto)
         {
-            return m_container;
+            return std::forward_like<decltype(self)>(self.m_container);
         }
 
-        [[nodiscard]] constexpr auto container() noexcept -> Container&
+        [[nodiscard]] constexpr auto begin(this auto& self)
         {
-            return m_container;
+            return self.m_container.begin();
         }
 
-        constexpr auto begin()
+        [[nodiscard]] constexpr auto end(this auto& self)
         {
-            return m_container.begin();
+            return self.m_container.end();
         }
 
-        constexpr auto begin() const
-        {
-            return m_container.begin();
-        }
-
-        constexpr auto end()
-        {
-            return m_container.end();
-        }
-
-        constexpr auto end() const
-        {
-            return m_container.end();
-        }
-
-        [[nodiscard]] auto operator==(Flatmap const&) const noexcept -> bool = default;
+        [[nodiscard]] auto operator==(Flatmap const&) const -> bool = default;
     };
 
     template <class Container>
