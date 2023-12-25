@@ -48,6 +48,14 @@ namespace libresolve {
         bool                                                     currently_resolving {};
     };
 
+    using Info_arena = utl::Wrapper_arena<
+        Structure_info,
+        Enumeration_info,
+        Typeclass_info,
+        Alias_info,
+        Function_info,
+        Namespace_info>;
+
     using Lower_info_variant
         = std::variant<utl::Mutable_wrapper<Function_info>, utl::Mutable_wrapper<Namespace_info>>;
 
@@ -57,11 +65,25 @@ namespace libresolve {
         utl::Mutable_wrapper<Typeclass_info>,
         utl::Mutable_wrapper<Alias_info>>;
 
-    struct Module_interface {};
+    struct Module {
+        utl::Wrapper<Environment> root_environment;
+    };
+
+    struct Module_info {
+        std::variant<ast::Module, Module> variant;
+        bool                              currently_resolving {};
+    };
+
+    using Module_map = utl::Flatmap<std::filesystem::path, Module_info>;
+
+    auto read_module_map(
+        kieli::Compile_info& compile_info, std::filesystem::path const& project_root) -> Module_map;
 
 } // namespace libresolve
 
-struct libresolve::Scope {};
+struct libresolve::Scope {
+    // TODO
+};
 
 struct libresolve::Environment {
     utl::Flatmap<kieli::Identifier, Upper_info_variant> upper_map;

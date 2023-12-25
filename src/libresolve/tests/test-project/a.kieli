@@ -1,0 +1,3 @@
+fn one() = "1"
+fn two() = "2"
+fn three() = "3"

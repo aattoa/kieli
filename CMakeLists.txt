@@ -72,7 +72,7 @@ endif ()
 
 # Convenience function for registering Kieli component tests
 function (kieli_add_tests component)
-    cmake_parse_arguments(PARSE_ARGV 1 "" "" "" "EXTRA_SOURCES;LINK;TESTS")
+    cmake_parse_arguments(PARSE_ARGV 1 "" "" "" "EXTRA_SOURCES;LINK;WORKING_DIR;TESTS")
     if (NOT ${KIELI_BUILD_TESTS})
         return ()
     endif ()
@@ -95,7 +95,11 @@ function (kieli_add_tests component)
             target_link_libraries(${executable}
                 PRIVATE ${library})
         endforeach ()
-        catch_discover_tests(${executable})
+        if (_WORKING_DIR)
+            catch_discover_tests(${executable} WORKING_DIRECTORY ${_WORKING_DIR})
+        else ()
+            catch_discover_tests(${executable})
+        endif ()
     endforeach ()
 endfunction ()
 
