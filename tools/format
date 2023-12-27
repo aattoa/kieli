@@ -4,6 +4,6 @@ if [ "$#" = "1" ] && [ -e "$1" ]
 then
     find "$1" -type f -name "*[ch]pp" -exec clang-format -i {} \;
 else
-    echo "format.sh: Invalid argument"
+    echo "Invalid argument" 1>&2
     exit 1
 fi
