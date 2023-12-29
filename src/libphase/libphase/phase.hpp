@@ -22,7 +22,7 @@ namespace kieli {
         std::optional<cppdiag::Message_string> section_note = std::nullopt,
         std::optional<cppdiag::Severity>       severity = std::nullopt) -> cppdiag::Text_section;
 
-    struct [[nodiscard]] Diagnostics {
+    struct Diagnostics {
         cppdiag::Context                 context;
         std::vector<cppdiag::Diagnostic> vector;
 
@@ -78,7 +78,7 @@ namespace kieli {
         [[nodiscard]] auto format_all(cppdiag::Colors) const -> std::string;
     };
 
-    struct [[nodiscard]] Compile_info {
+    struct Compile_info {
         Diagnostics        diagnostics;
         utl::Source::Arena source_arena = utl::Source::Arena::with_page_size(8);
         utl::String_pool   string_literal_pool;
@@ -91,36 +91,40 @@ namespace kieli {
     auto test_info_and_source(std::string&& source_string)
         -> std::pair<Compile_info, utl::Source::Wrapper>;
 
-    struct [[nodiscard]] Name_upper;
-    struct [[nodiscard]] Name_lower;
-
-    struct [[nodiscard]] Identifier {
+    struct Identifier {
         utl::Pooled_string name;
-
-        auto operator==(Identifier const&) const -> bool = default;
+        [[nodiscard]] auto operator==(Identifier const&) const -> bool = default;
     };
 
-    struct [[nodiscard]] Name_dynamic {
+    template <bool is_upper>
+    struct Basic_name;
+    using Name_upper = Basic_name<true>;
+    using Name_lower = Basic_name<false>;
+
+    struct Name_dynamic {
         Identifier          identifier;
         utl::Source_view    source_view;
         utl::Explicit<bool> is_upper;
-        auto                as_upper() const noexcept -> Name_upper;
-        auto                as_lower() const noexcept -> Name_lower;
-        [[nodiscard]] auto  operator==(Name_dynamic const&) const noexcept -> bool;
+        [[nodiscard]] auto  as_upper() const noexcept -> Name_upper;
+        [[nodiscard]] auto  as_lower() const noexcept -> Name_lower;
+        [[nodiscard]] auto  operator==(Name_dynamic const& other) const noexcept -> bool
+        {
+            return identifier == other.identifier;
+        }
     };
 
-    struct [[nodiscard]] Name_upper {
+    template <bool is_upper>
+    struct Basic_name {
         Identifier         identifier;
         utl::Source_view   source_view;
-        auto               as_dynamic() const noexcept -> Name_dynamic;
-        [[nodiscard]] auto operator==(Name_upper const&) const noexcept -> bool;
-    };
-
-    struct [[nodiscard]] Name_lower {
-        Identifier         identifier;
-        utl::Source_view   source_view;
-        auto               as_dynamic() const noexcept -> Name_dynamic;
-        [[nodiscard]] auto operator==(Name_lower const&) const noexcept -> bool;
+        [[nodiscard]] auto as_dynamic() const -> Name_dynamic
+        {
+            return Name_dynamic { identifier, source_view, is_upper };
+        }
+        [[nodiscard]] auto operator==(Basic_name const& other) const noexcept -> bool
+        {
+            return identifier == other.identifier;
+        }
     };
 
     struct Integer {

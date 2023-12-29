@@ -9,16 +9,23 @@ namespace {
     {
         return (std::filesystem::current_path() / path).replace_extension(".kieli");
     }
-    auto definition_count(libresolve::Module_info const& module_info) -> utl::Usize
+    auto definition_count(libresolve::Module const& module) -> utl::Usize
     {
-        return std::get<ast::Module>(module_info.variant).definitions.size();
+        return module.root_environment->lower_map.size()
+             + module.root_environment->upper_map.size();
     }
 } // namespace
 
 TEST("read module map")
 {
     kieli::Compile_info info;
-    auto const module_map = libresolve::read_module_map(info, std::filesystem::current_path());
+    libresolve::Context context {
+        .info_arena        = libresolve::Info_arena::with_page_size(16),
+        .ast_node_arena    = ast::Node_arena::with_page_size(0),
+        .environment_arena = utl::Wrapper_arena<libresolve::Environment>::with_page_size(16),
+    };
+    auto const module_map
+        = libresolve::read_module_map(info, context, std::filesystem::current_path());
     REQUIRE(info.diagnostics.vector.empty());
     REQUIRE(module_map.size() == 3);
     REQUIRE(definition_count(module_map[test_project_path("main")]) == 1);

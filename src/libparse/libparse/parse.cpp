@@ -402,8 +402,9 @@ namespace {
     auto make_import(Context& context, Lexical_token const& token) -> cst::Module::Import
     {
         auto const path = token.value_as<kieli::String>();
-        if (path.value.view().contains("..")) {
-            context.diagnostics().error(token.source_view, "A module path must not contain '..'");
+        if (path.value.view().contains('.')) {
+            context.diagnostics().emit(
+                cppdiag::Severity::error, token.source_view, "Module paths must not contain dots");
         }
         return cst::Module::Import {
             .name        = path.value,
