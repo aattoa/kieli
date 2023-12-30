@@ -67,7 +67,6 @@ namespace {
         "meta",
         "where",
         "dyn",
-        "pub",
         "macro",
         "global",
 
@@ -164,7 +163,6 @@ auto kieli::Lexical_token::description(Type const type) noexcept -> std::string_
     case Type::meta:
     case Type::where:
     case Type::dyn:
-    case Type::pub:
     case Type::macro:
     case Type::global:
     case Type::lower_self:

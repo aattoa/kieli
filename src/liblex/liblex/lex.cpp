@@ -78,7 +78,6 @@ namespace {
             { "where", Token::Type::where },
             { "immut", Token::Type::immut },
             { "dyn", Token::Type::dyn },
-            { "pub", Token::Type::pub },
             { "macro", Token::Type::macro },
             { "global", Token::Type::global },
         })
@@ -611,15 +610,14 @@ auto kieli::lex(utl::Source::Wrapper const source, Compile_info& compile_info)
         }
     }
 
-    Token end_of_input_token = make_token(
+    tokens.push_back(make_token(
         context.position(),
         context.position(),
         { source_string.data() + source_string.size(), 0 },
         source,
         Token::Variant {},
         Token::Type::end_of_input,
-        current_trivia);
-    tokens.push_back(std::move(end_of_input_token));
+        current_trivia));
 
     return tokens;
 }

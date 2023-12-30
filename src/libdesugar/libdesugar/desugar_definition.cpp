@@ -74,7 +74,6 @@ namespace {
                 return ast::definition::Struct::Member {
                     .name        = member.name,
                     .type        = context.desugar(member.type),
-                    .is_public   = member.is_public,
                     .source_view = member.source_view,
                 };
             };

@@ -476,10 +476,9 @@ namespace ast {
 
         struct Struct {
             struct Member {
-                kieli::Name_lower   name;
-                Type                type;
-                utl::Explicit<bool> is_public;
-                utl::Source_view    source_view;
+                kieli::Name_lower name;
+                Type              type;
+                utl::Source_view  source_view;
             };
 
             std::vector<Member> members;

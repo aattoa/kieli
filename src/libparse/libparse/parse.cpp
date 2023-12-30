@@ -144,26 +144,19 @@ namespace {
 
     auto parse_struct_member(Context& context) -> std::optional<cst::definition::Struct::Member>
     {
-        Lexical_token const* const anchor    = context.pointer;
-        bool const                 is_public = context.try_consume(Token_type::pub);
+        Lexical_token const* const anchor = context.pointer;
 
         if (auto name = parse_lower_name(context)) {
             if (auto type = parse_type_annotation(context)) {
                 return cst::definition::Struct::Member {
                     .name        = *name,
                     .type        = *type,
-                    .is_public   = is_public,
                     .source_view = context.make_source_view(anchor, context.pointer - 1),
                 };
             }
             context.error_expected("a ':' followed by a type");
         }
-        if (is_public) {
-            context.error_expected("a struct member name");
-        }
-        else {
-            return std::nullopt;
-        }
+        return std::nullopt;
     }
 
     auto extract_struct(Context& context) -> cst::Definition::Variant

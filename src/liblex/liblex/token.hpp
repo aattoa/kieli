@@ -72,7 +72,6 @@ namespace kieli {
             meta,
             where,
             dyn,
-            pub,
             macro,
             global,
 

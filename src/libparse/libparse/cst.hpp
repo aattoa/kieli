@@ -65,14 +65,11 @@ namespace cst {
         struct Concrete {
             bool is_mutable = false;
         };
-
         struct Parameterized {
             kieli::Name_lower name;
             Token             question_mark_token;
         };
-
         using Variant = std::variant<Concrete, Parameterized>;
-
         Variant          value;
         utl::Source_view source_view;
         Token            mut_or_immut_keyword_token;
@@ -91,7 +88,6 @@ namespace cst {
         struct Wildcard {
             utl::Source_view source_view;
         };
-
         using Variant
             = std::variant<utl::Wrapper<Type>, utl::Wrapper<Expression>, Mutability, Wildcard>;
         Variant value;
@@ -110,9 +106,7 @@ namespace cst {
 
     struct Root_qualifier {
         struct Global {};
-
         using Variant = std::variant<Global, utl::Wrapper<Type>>;
-
         Variant value;
         Token   double_colon_token;
     };
@@ -163,24 +157,19 @@ namespace cst {
             Separated_sequence<Class_reference> classes;
             kieli::Name_upper                   name;
         };
-
         struct Value_parameter {
             std::optional<utl::Wrapper<Type>> type;
             kieli::Name_lower                 name;
         };
-
         struct Mutability_parameter {
             kieli::Name_lower name;
             Token             mut_keyword_token;
         };
-
-        using Variant = std::variant<Type_parameter, Value_parameter, Mutability_parameter>;
-
         struct Default_argument {
             Template_argument argument;
             Token             equals_sign_token;
         };
-
+        using Variant = std::variant<Type_parameter, Value_parameter, Mutability_parameter>;
         Variant                         value;
         std::optional<Token>            colon_token;
         std::optional<Default_argument> default_argument;
@@ -652,12 +641,10 @@ namespace cst {
 
         struct Struct {
             struct Member {
-                kieli::Name_lower   name;
-                Type_annotation     type;
-                utl::Explicit<bool> is_public;
-                utl::Source_view    source_view;
+                kieli::Name_lower name;
+                Type_annotation   type;
+                utl::Source_view  source_view;
             };
-
             std::optional<Template_parameters> template_parameters;
             Separated_sequence<Member>         members;
             kieli::Name_upper                  name;
@@ -672,7 +659,6 @@ namespace cst {
                 kieli::Name_lower name;
                 utl::Source_view  source_view;
             };
-
             std::optional<Template_parameters> template_parameters;
             Separated_sequence<Constructor>    constructors;
             kieli::Name_upper                  name;
