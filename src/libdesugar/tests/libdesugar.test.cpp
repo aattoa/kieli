@@ -8,9 +8,7 @@ namespace {
     auto desugar(std::string&& string) -> std::string
     {
         auto [info, source] = kieli::test_info_and_source(std::move(string));
-        auto const tokens   = kieli::lex(source, info);
-        auto const module   = desugar(parse(tokens, info), info);
-
+        auto const  module  = desugar(parse(lex(source, info), info), info);
         std::string output;
         for (ast::Definition const& definition : module.definitions) {
             ast::format_to(definition, output);
@@ -20,6 +18,7 @@ namespace {
 } // namespace
 
 #define TEST(name) TEST_CASE("desugar " name, "[libdesugar]") // NOLINT
+#define REQUIRE_SIMPLE_DESUGAR(string) REQUIRE(desugar(string) == (string))
 
 // TODO: struct initializer expressions
 
@@ -87,4 +86,22 @@ TEST("conditional expression")
 TEST("discard expression")
 {
     REQUIRE(desugar("fn f() { discard x; }") == "fn f() { { let _ = x; () }; () }");
+}
+
+TEST("struct")
+{
+    REQUIRE_SIMPLE_DESUGAR("struct S = a: Int, b: Float");
+    REQUIRE_SIMPLE_DESUGAR("struct S[A, B] = a: A, b: B");
+}
+
+TEST("enum")
+{
+    REQUIRE_SIMPLE_DESUGAR("enum E = aaa | bbb(Int) | ccc(Float, Char)");
+    REQUIRE_SIMPLE_DESUGAR("enum Option[T] = none | some(T)");
+}
+
+TEST("alias")
+{
+    REQUIRE_SIMPLE_DESUGAR("alias T = U");
+    REQUIRE_SIMPLE_DESUGAR("alias A[B] = (B, B)");
 }

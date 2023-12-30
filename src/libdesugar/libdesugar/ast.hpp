@@ -567,6 +567,9 @@ namespace ast {
     auto format_to(Function_argument const&, std::string&) -> void;
     auto format_to(Template_parameter const&, std::string&) -> void;
     auto format_to(Template_argument const&, std::string&) -> void;
+    auto format_to(definition::Template_parameters const&, std::string&) -> void;
+    auto format_to(definition::Struct::Member const&, std::string&) -> void;
+    auto format_to(definition::Enum::Constructor const&, std::string&) -> void;
 
     inline constexpr auto to_string = [](auto const& x) -> std::string
         requires requires(std::string out) { ast::format_to(x, out); }

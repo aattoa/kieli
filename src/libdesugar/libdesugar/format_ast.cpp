@@ -26,6 +26,9 @@ DECLARE_FORMATTER(ast::Function_argument);
 DECLARE_FORMATTER(ast::Function_parameter);
 DECLARE_FORMATTER(ast::Template_argument);
 DECLARE_FORMATTER(ast::Template_parameter);
+DECLARE_FORMATTER(ast::definition::Template_parameters);
+DECLARE_FORMATTER(ast::definition::Struct::Member);
+DECLARE_FORMATTER(ast::definition::Enum::Constructor);
 
 namespace {
     template <class Out>
@@ -410,19 +413,30 @@ namespace {
             std::format_to(out, " {}", function.body);
         }
 
-        auto operator()(ast::definition::Struct const&)
+        auto operator()(ast::definition::Struct const& structure)
         {
-            utl::todo();
+            std::format_to(
+                out,
+                "struct {}{} = {:n}",
+                structure.name,
+                structure.template_parameters,
+                structure.members);
         }
 
-        auto operator()(ast::definition::Enum const&)
+        auto operator()(ast::definition::Enum const& enumeration)
         {
-            utl::todo();
+            std::format_to(
+                out,
+                "enum {}{} = {}",
+                enumeration.name,
+                enumeration.template_parameters,
+                utl::fmt::join(enumeration.constructors, " | "));
         }
 
-        auto operator()(ast::definition::Alias const&)
+        auto operator()(ast::definition::Alias const& alias)
         {
-            utl::todo();
+            std::format_to(
+                out, "alias {}{} = {}", alias.name, alias.template_parameters, alias.type);
         }
 
         auto operator()(ast::definition::Typeclass const&)
@@ -547,6 +561,7 @@ DEFINE_FORMATTER(ast::Template_parameter)
     utl::match(
         value.value,
         [&](ast::Template_parameter::Type_parameter const& type_parameter) {
+            std::format_to(context.out(), "{}", type_parameter.name);
             if (type_parameter.classes.empty()) {
                 return;
             }
@@ -565,4 +580,22 @@ DEFINE_FORMATTER(ast::Template_parameter)
         std::format_to(context.out(), " = {}", *value.default_argument);
     }
     return context.out();
+}
+
+DEFINE_FORMATTER(ast::definition::Template_parameters)
+{
+    return value.has_value() ? std::format_to(context.out(), "[{:n}]", value.value())
+                             : context.out();
+}
+
+DEFINE_FORMATTER(ast::definition::Struct::Member)
+{
+    return std::format_to(context.out(), "{}: {}", value.name, value.type);
+}
+
+DEFINE_FORMATTER(ast::definition::Enum::Constructor)
+{
+    return value.payload_types.has_value()
+             ? std::format_to(context.out(), "{}({:n})", value.name, value.payload_types.value())
+             : std::format_to(context.out(), "{}", value.name);
 }
