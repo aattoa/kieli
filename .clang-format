@@ -58,7 +58,7 @@ ReferenceAlignment: Pointer
 ReflowComments: true
 RequiresClausePosition: OwnLine
 RequiresExpressionIndentation: OuterScope
-SeparateDefinitionBlocks: Leave
+SeparateDefinitionBlocks: Always
 SortIncludes: Never
 SortUsingDeclarations: false
 SpaceBeforeCpp11BracedList: true

@@ -76,10 +76,12 @@ namespace utl {
     template <Usize length>
     struct [[nodiscard]] Metastring {
         char characters[length];
+
         consteval Metastring(char const* pointer) noexcept // NOLINT: implicit
         {
             std::copy_n(pointer, length, characters);
         }
+
         [[nodiscard]] consteval auto view() const noexcept -> std::string_view
         {
             return { characters, length - 1 };
@@ -107,6 +109,7 @@ using namespace std::literals;
 namespace utl::dtl {
     template <class, template <class...> class>
     struct Is_specialization_of : std::false_type {};
+
     template <class... Ts, template <class...> class F>
     struct Is_specialization_of<F<Ts...>, F> : std::true_type {};
 } // namespace utl::dtl
@@ -161,6 +164,7 @@ namespace utl {
                  && std::is_constructible_v<T, Arg&&>
             : m_value { std::forward<Arg>(arg) }
         {}
+
         [[nodiscard]] constexpr auto get(this auto&& self) noexcept -> decltype(auto)
         {
             return std::forward_like<decltype(self)>(self.m_value);
@@ -294,6 +298,7 @@ namespace utl {
         struct Integer_with_ordinal_indicator_closure {
             Integer integer {};
         };
+
         template <std::integral Integer>
         constexpr auto integer_with_ordinal_indicator(Integer const integer) noexcept
             -> Integer_with_ordinal_indicator_closure<Integer>
@@ -306,6 +311,7 @@ namespace utl {
             Range*           range {};
             std::string_view delimiter;
         };
+
         template <std::ranges::input_range Range>
         auto join(Range&& range, std::string_view const delimiter)
         {

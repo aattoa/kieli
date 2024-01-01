@@ -9,6 +9,7 @@ namespace {
     {
         return (std::filesystem::current_path() / path).replace_extension(".kieli");
     }
+
     auto definition_count(libresolve::Module const& module) -> utl::Usize
     {
         return module.root_environment->lower_map.size()

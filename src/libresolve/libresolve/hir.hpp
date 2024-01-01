@@ -8,6 +8,7 @@
 namespace libresolve::hir {
 
     namespace expression {}
+
     struct Expression {
         using Variant = std::monostate;
         Variant          variant;
@@ -16,10 +17,15 @@ namespace libresolve::hir {
     };
 
     struct Structure {};
+
     struct Enumeration {};
+
     struct Typeclass {};
+
     struct Alias {};
+
     struct Namespace {};
+
     struct Function {};
 
 } // namespace libresolve::hir

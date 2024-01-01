@@ -21,12 +21,12 @@ namespace {
         }
     }
 
-    template <class Info, bool is_upper>
+    template <class Info, class AST, bool is_upper>
     auto add_to_environment(
         libresolve::Context&                                context,
         utl::Mutable_wrapper<libresolve::Environment> const environment,
         kieli::Basic_name<is_upper> const                   name,
-        auto&&                                              ast) -> void
+        AST&&                                               ast) -> void
     {
         auto& map = std::invoke([environment] -> auto& {
             if constexpr (is_upper) {
@@ -39,7 +39,7 @@ namespace {
         map.add_new_or_abort(
             name.identifier,
             context.info_arena.wrap<Info, utl::Wrapper_mutability::yes>(Info {
-                .variant     = std::forward<decltype(ast)>(ast),
+                .variant     = std::forward<AST>(ast),
                 .environment = environment,
                 .name        = name,
             }));

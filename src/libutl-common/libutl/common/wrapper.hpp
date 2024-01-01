@@ -138,6 +138,8 @@ namespace utl {
 
         explicit Wrapper(T* const pointer) noexcept : m_pointer { pointer } {}
 
+        static constexpr bool is_mutable = (mut == Wrapper_mutability::yes);
+
         friend Wrapper_arena<T>;
     public:
         [[nodiscard]] auto operator*(this Wrapper const self) noexcept -> T const&
@@ -160,8 +162,11 @@ namespace utl {
             return self.m_pointer != other.m_pointer;
         }
 
-        [[nodiscard]] auto as_mutable(this Wrapper const self) noexcept
-            -> T& requires(mut == Wrapper_mutability::yes) { return *self.m_pointer; }
+        [[nodiscard]] auto as_mutable(this Wrapper const self) noexcept -> T&
+            requires is_mutable
+        {
+            return *self.m_pointer;
+        }
     };
 
     template <class T>

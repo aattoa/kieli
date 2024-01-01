@@ -107,7 +107,8 @@ namespace kieli {
         utl::Explicit<bool> is_upper;
         [[nodiscard]] auto  as_upper() const noexcept -> Name_upper;
         [[nodiscard]] auto  as_lower() const noexcept -> Name_lower;
-        [[nodiscard]] auto  operator==(Name_dynamic const& other) const noexcept -> bool
+
+        [[nodiscard]] auto operator==(Name_dynamic const& other) const noexcept -> bool
         {
             return identifier == other.identifier;
         }
@@ -115,12 +116,14 @@ namespace kieli {
 
     template <bool is_upper>
     struct Basic_name {
-        Identifier         identifier;
-        utl::Source_view   source_view;
+        Identifier       identifier;
+        utl::Source_view source_view;
+
         [[nodiscard]] auto as_dynamic() const -> Name_dynamic
         {
             return Name_dynamic { identifier, source_view, is_upper };
         }
+
         [[nodiscard]] auto operator==(Basic_name const& other) const noexcept -> bool
         {
             return identifier == other.identifier;
@@ -130,15 +133,19 @@ namespace kieli {
     struct Integer {
         utl::U64 value {};
     };
+
     struct Floating {
         double value {};
     };
+
     struct Boolean {
         bool value {};
     };
+
     struct Character {
         char value {};
     };
+
     struct String {
         utl::Pooled_string value;
     };
@@ -148,10 +155,15 @@ namespace kieli {
 
     namespace built_in_type {
         enum class Integer { i8, i16, i32, i64, u8, u16, u32, u64, _enumerator_count };
+
         struct Floating {};
+
         struct Boolean {};
+
         struct Character {};
+
         struct String {};
+
         auto integer_name(Integer) noexcept -> std::string_view;
     } // namespace built_in_type
 } // namespace kieli

@@ -19,6 +19,7 @@ namespace libresolve {
 
     struct Unification_variable_tag {
         utl::Usize value;
+
         explicit constexpr Unification_variable_tag(utl::Usize const value) noexcept
             : value { value }
         {}
@@ -28,10 +29,12 @@ namespace libresolve {
         struct Solved {
             Type type;
         };
+
         struct Unsolved {
             Unification_variable_tag     tag;
             std::vector<Type_constraint> constraints;
         };
+
         std::variant<Solved, Unsolved> value;
     };
 
