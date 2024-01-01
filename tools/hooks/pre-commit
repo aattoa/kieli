@@ -1,0 +1,8 @@
+#!/bin/sh
+
+# Symlink `.git/hooks/pre-commit` to this file
+
+if git diff --staged --unified=0 | grep --quiet --ignore-case --fixed-strings --regexp nocommit --regexp fixme; then
+    echo "nocommit string found" 1>&2
+    exit 1
+fi

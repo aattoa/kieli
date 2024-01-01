@@ -504,7 +504,7 @@ namespace {
 
         if (base.has_value()) {
             if (first_digit_sequence.find_first_not_of('\'') == std::string_view::npos) {
-                // FIXME: Specify base value in message
+                // TODO: Specify base value in message
                 return context.error("Expected one or more digits after the base specifier");
             }
         }

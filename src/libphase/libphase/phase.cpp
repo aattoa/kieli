@@ -35,7 +35,7 @@ auto kieli::text_section(
 {
     return cppdiag::Text_section {
         .source_string  = section_view.source->string(),
-        .source_name    = section_view.source->path().c_str(), // FIXME
+        .source_name    = section_view.source->path().c_str(), // TODO: cppdiag use owning path?
         .start_position = { section_view.start_position.line, section_view.start_position.column },
         .stop_position  = { section_view.stop_position.line, section_view.stop_position.column },
         .note           = section_note,
