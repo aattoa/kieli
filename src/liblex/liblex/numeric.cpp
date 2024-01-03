@@ -61,11 +61,8 @@ auto liblex::parse_floating(std::string_view const digits) -> std::expected<doub
     // TODO: when from_chars for floating points is supported:
     // return parse_impl<double>(without_separators(digits));
 
-    static std::string float_digits;
-    float_digits = without_separators(digits);
-
     try {
-        return std::stod(float_digits);
+        return std::stod(std::string(without_separators(digits)));
     }
     catch (std::out_of_range const&) {
         return std::unexpected { liblex::Numeric_error::out_of_range };

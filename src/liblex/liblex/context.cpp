@@ -61,31 +61,31 @@ auto liblex::Context::is_finished() const noexcept -> bool
 
 auto liblex::Context::current() const noexcept -> char
 {
-    assert(!is_finished());
+    utl::always_assert(!is_finished());
     return *m_pointer;
 }
 
 auto liblex::Context::extract_current() noexcept -> char
 {
-    assert(!is_finished());
+    utl::always_assert(!is_finished());
     return *m_pointer++;
 }
 
 auto liblex::Context::advance(utl::Usize const offset) noexcept -> void
 {
-    assert(offset <= remaining_input_size());
+    utl::always_assert(offset <= remaining_input_size());
     for (utl::Usize i = 0; i != offset; ++i) {
         m_position.advance_with(*m_pointer++);
     }
 }
 
-auto liblex::Context::try_consume(char const c) noexcept -> bool
+auto liblex::Context::try_consume(char const character) noexcept -> bool
 {
-    assert(c != '\n');
+    assert(character != '\n');
     if (is_finished()) {
         return false;
     }
-    if (current() == c) {
+    if (current() == character) {
         ++m_position.column;
         ++m_pointer;
         return true;
