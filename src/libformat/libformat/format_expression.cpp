@@ -18,7 +18,7 @@ namespace {
                 }
                 if (block.result_expression.has_value()) {
                     state.format("{}", state.newline());
-                    state.format(*block.result_expression);
+                    state.format(block.result_expression.value());
                 }
             }
             state.format("{}}}", state.newline());
@@ -29,7 +29,7 @@ namespace {
             if (block.side_effects.empty()) {
                 if (block.result_expression.has_value()) {
                     state.format("{{ ");
-                    state.format(*block.result_expression);
+                    state.format(block.result_expression.value());
                     state.format(" }}");
                 }
                 else {
@@ -78,7 +78,7 @@ namespace {
         {
             state.format(*sequence.leftmost_operand);
             for (auto const& operator_and_operand : sequence.sequence_tail) {
-                state.format(" {} ", operator_and_operand.operator_name);
+                state.format(" {} ", operator_and_operand.operator_id);
                 state.format(*operator_and_operand.right_operand);
             }
         }
@@ -295,7 +295,7 @@ namespace {
         {
             if (ret.returned_expression.has_value()) {
                 state.format("ret ");
-                state.format(*ret.returned_expression);
+                state.format(ret.returned_expression.value());
             }
             else {
                 state.format("ret");
@@ -328,7 +328,7 @@ namespace {
         {
             if (break_.result.has_value()) {
                 state.format("break ");
-                state.format(**break_.result);
+                state.format(*break_.result.value());
             }
             else {
                 state.format("break");

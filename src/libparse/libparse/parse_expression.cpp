@@ -32,7 +32,7 @@ namespace {
         if (auto member_name = parse_lower_name(context)) {
             Lexical_token const* const equals_sign = context.extract_required(Token_type::equals);
             return cst::expression::Struct_initializer::Member_initializer {
-                .name              = *member_name,
+                .name              = member_name.value(),
                 .expression        = extract_expression(context),
                 .equals_sign_token = cst::Token::from_lexical(equals_sign),
             };
@@ -68,22 +68,22 @@ namespace {
             utl::wrapper auto const    pattern     = extract_pattern(context);
             Lexical_token const* const equals_sign = context.extract_required(Token_type::equals);
             return context.wrap(cst::Expression {
-            .value = cst::expression::Conditional_let {
-                .pattern = pattern,
-                .initializer = extract_expression(context),
-                .let_keyword_token = cst::Token::from_lexical(let_keyword),
-                .equals_sign_token = cst::Token::from_lexical(equals_sign),
-            },
-            .source_view = context.make_source_view(anchor, context.pointer - 1),
-        });
+                .value = cst::expression::Conditional_let {
+                    .pattern           = pattern,
+                    .initializer       = extract_expression(context),
+                    .let_keyword_token = cst::Token::from_lexical(let_keyword),
+                    .equals_sign_token = cst::Token::from_lexical(equals_sign),
+                },
+                .source_view = context.make_source_view(anchor, context.pointer - 1),
+            });
         }
         return extract_expression(context);
     }
 
     auto extract_loop_body(Context& context) -> utl::Wrapper<cst::Expression>
     {
-        if (auto body = parse_block_expression(context)) {
-            return *body;
+        if (auto const body = parse_block_expression(context)) {
+            return body.value();
         }
         context.error_expected("the loop body, which must be a block expression");
     }
@@ -137,7 +137,7 @@ namespace {
         if (!name.is_upper()) {
             if (template_arguments) {
                 return cst::expression::Template_application {
-                    .template_arguments = std::move(*template_arguments),
+                    .template_arguments = std::move(template_arguments.value()),
                     .name               = std::move(name),
                 };
             }
@@ -147,7 +147,7 @@ namespace {
             auto value = std::invoke([&]() -> cst::Type::Variant {
                 if (template_arguments) {
                     return cst::type::Template_application {
-                        .template_arguments = std::move(*template_arguments),
+                        .template_arguments = std::move(template_arguments.value()),
                         .name               = std::move(name),
                     };
                 }
@@ -181,11 +181,6 @@ namespace {
                 .double_colon_token
                 = cst::Token::from_lexical(context.extract_required(Token_type::double_colon)),
             });
-    }
-
-    auto extract_self(Context&) -> cst::Expression::Variant
-    {
-        return cst::expression::Self {};
     }
 
     auto extract_reference_dereference(Context& context) -> cst::Expression::Variant
@@ -247,7 +242,7 @@ namespace {
     {
         static constexpr auto extract_branch = [](Context& context) -> utl::wrapper auto {
             if (auto branch = parse_block_expression(context)) {
-                return *branch;
+                return branch.value();
             }
             context.error_expected("a block expression");
         };
@@ -318,18 +313,13 @@ namespace {
         };
     }
 
-    auto extract_hole(Context&) -> cst::Expression::Variant
-    {
-        return cst::expression::Hole {};
-    }
-
     auto extract_sizeof(Context& context) -> cst::Expression::Variant
     {
         Lexical_token const* const sizeof_keyword = context.pointer - 1;
         assert(sizeof_keyword->source_view.string == "sizeof");
         if (auto type = parenthesized<parse_type, "a type">(context)) {
             return cst::expression::Sizeof {
-                .inspected_type       = *type,
+                .inspected_type       = type.value(),
                 .sizeof_keyword_token = cst::Token::from_lexical(sizeof_keyword),
             };
         }
@@ -342,7 +332,7 @@ namespace {
         assert(addressof_keyword->source_view.string == "addressof");
         if (auto lvalue = parenthesized<parse_expression, "an addressable expression">(context)) {
             return cst::expression::Addressof {
-                .lvalue_expression       = *lvalue,
+                .lvalue_expression       = lvalue.value(),
                 .addressof_keyword_token = cst::Token::from_lexical(addressof_keyword),
             };
         }
@@ -357,7 +347,7 @@ namespace {
             = parenthesized<parse_expression, "a pointer expression">(context))
         {
             return cst::expression::Pointer_dereference {
-                .pointer_expression        = std::move(*pointer_expression),
+                .pointer_expression        = std::move(pointer_expression.value()),
                 .dereference_keyword_token = cst::Token::from_lexical(dereference_keyword),
             };
         }
@@ -371,7 +361,7 @@ namespace {
             utl::wrapper auto const    handler = extract_expression(context);
             Lexical_token const* const semicolon = context.try_extract(Token_type::semicolon);
             return cst::expression::Match::Case {
-                .pattern                  = std::move(*pattern),
+                .pattern                  = std::move(pattern.value()),
                 .handler                  = handler,
                 .arrow_token              = cst::Token::from_lexical(arrow),
                 .optional_semicolon_token = optional_token(semicolon),
@@ -389,15 +379,13 @@ namespace {
 
         std::vector<cst::expression::Match::Case> cases;
         while (auto match_case = parse_match_case(context)) {
-            cases.push_back(std::move(*match_case)); // NOLINT: false positive
+            cases.push_back(std::move(match_case.value()));
         }
-
         if (cases.empty()) {
             context.error_expected("one or more match cases");
         }
 
         Lexical_token const* const close = context.extract_required(Token_type::brace_close);
-
         return cst::expression::Match {
             .cases {
                 .value       = std::move(cases),
@@ -466,7 +454,7 @@ namespace {
         assert(unsafe_keyword->source_view.string == "unsafe");
         if (auto block = parse_block_expression(context)) {
             return cst::expression::Unsafe {
-                .expression           = std::move(*block),
+                .expression           = std::move(block.value()),
                 .unsafe_keyword_token = cst::Token::from_lexical(unsafe_keyword),
             };
         }
@@ -489,7 +477,7 @@ namespace {
         assert(meta_keyword->source_view.string == "meta");
         if (auto expression = parenthesized<parse_expression, "an expression">(context)) {
             return cst::expression::Meta {
-                .expression         = *expression,
+                .expression         = expression.value(),
                 .meta_keyword_token = cst::Token::from_lexical(meta_keyword),
             };
         }
@@ -505,13 +493,13 @@ namespace {
 
         while (auto expression = parse_expression(context)) {
             if (Lexical_token const* const semicolon = context.try_extract(Token_type::semicolon)) {
-                side_effects.push_back({
-                    .expression               = *expression,
+                side_effects.push_back(cst::expression::Block::Side_effect {
+                    .expression               = expression.value(),
                     .trailing_semicolon_token = cst::Token::from_lexical(semicolon),
                 });
             }
             else {
-                result_expression = *expression;
+                result_expression = expression.value();
                 break;
             }
         }
@@ -529,19 +517,19 @@ namespace {
     {
         context.retreat();
         Lexical_token const* const anchor = context.pointer;
-        if (auto type = parse_type(context)) {
+        if (auto const type = parse_type(context)) {
             if (Lexical_token const* const double_colon
                 = context.try_extract(Token_type::double_colon))
             {
                 return extract_qualified_lower_name_or_struct_initializer(
                     context,
                     cst::Root_qualifier {
-                        .value              = *type,
+                        .value              = type.value(),
                         .double_colon_token = cst::Token::from_lexical(double_colon),
                     });
             }
             if (context.try_consume(Token_type::brace_open)) {
-                return extract_struct_initializer(context, std::move(*type));
+                return extract_struct_initializer(context, type.value());
             }
             context.diagnostics().error(
                 context.make_source_view(anchor, context.pointer),
@@ -552,86 +540,56 @@ namespace {
 
     auto parse_normal_expression(Context& context) -> std::optional<cst::Expression::Variant>
     {
+        // clang-format off
         switch (context.extract().type) {
-        case Token_type::integer_literal:
-            return extract_literal<kieli::Integer>(context);
-        case Token_type::floating_literal:
-            return extract_literal<kieli::Floating>(context);
-        case Token_type::character_literal:
-            return extract_literal<kieli::Character>(context);
-        case Token_type::boolean_literal:
-            return extract_literal<kieli::Boolean>(context);
-        case Token_type::string_literal:
-            return extract_string_literal(context);
-        case Token_type::lower_name:
-        case Token_type::upper_name:
-            return extract_identifier(context);
-        case Token_type::lower_self:
-            return extract_self(context);
-        case Token_type::global:
-            return extract_global_identifier(context);
-        case Token_type::asterisk:
-            return extract_reference_dereference(context);
-        case Token_type::paren_open:
-            return extract_tuple(context);
-        case Token_type::bracket_open:
-            return extract_array(context);
-        case Token_type::if_:
-            return extract_conditional(context, Conditional_kind::if_);
-        case Token_type::let:
-            return extract_let_binding(context);
-        case Token_type::alias:
-            return extract_local_type_alias(context);
-        case Token_type::hole:
-            return extract_hole(context);
-        case Token_type::loop:
-            return extract_infinite_loop(context);
-        case Token_type::while_:
-            return extract_while_loop(context);
-        case Token_type::for_:
-            return extract_for_loop(context);
-        case Token_type::sizeof_:
-            return extract_sizeof(context);
-        case Token_type::addressof:
-            return extract_addressof(context);
-        case Token_type::dereference:
-            return extract_pointer_dereference(context);
-        case Token_type::unsafe:
-            return extract_unsafe_block(context);
-        case Token_type::match:
-            return extract_match(context);
-        case Token_type::continue_:
-            return extract_continue(context);
-        case Token_type::break_:
-            return extract_break(context);
-        case Token_type::ret:
-            return extract_ret(context);
-        case Token_type::discard:
-            return extract_discard(context);
-        case Token_type::ampersand:
-            return extract_reference(context);
-        case Token_type::mov:
-            return extract_move(context);
-        case Token_type::meta:
-            return extract_meta(context);
-        case Token_type::brace_open:
-            return extract_block_expression(context);
-        default:
-            return parse_complicated_type(context);
+        case Token_type::integer_literal:   return extract_literal<kieli::Integer>(context);
+        case Token_type::floating_literal:  return extract_literal<kieli::Floating>(context);
+        case Token_type::character_literal: return extract_literal<kieli::Character>(context);
+        case Token_type::boolean_literal:   return extract_literal<kieli::Boolean>(context);
+        case Token_type::string_literal:    return extract_string_literal(context);
+        case Token_type::lower_name:        [[fallthrough]];
+        case Token_type::upper_name:        return extract_identifier(context);
+        case Token_type::global:            return extract_global_identifier(context);
+        case Token_type::lower_self:        return cst::expression::Self {};
+        case Token_type::hole:              return cst::expression::Hole {};
+        case Token_type::asterisk:          return extract_reference_dereference(context);
+        case Token_type::paren_open:        return extract_tuple(context);
+        case Token_type::bracket_open:      return extract_array(context);
+        case Token_type::if_:               return extract_conditional(context, Conditional_kind::if_);
+        case Token_type::let:               return extract_let_binding(context);
+        case Token_type::alias:             return extract_local_type_alias(context);
+        case Token_type::loop:              return extract_infinite_loop(context);
+        case Token_type::while_:            return extract_while_loop(context);
+        case Token_type::for_:              return extract_for_loop(context);
+        case Token_type::sizeof_:           return extract_sizeof(context);
+        case Token_type::addressof:         return extract_addressof(context);
+        case Token_type::dereference:       return extract_pointer_dereference(context);
+        case Token_type::unsafe:            return extract_unsafe_block(context);
+        case Token_type::match:             return extract_match(context);
+        case Token_type::continue_:         return extract_continue(context);
+        case Token_type::break_:            return extract_break(context);
+        case Token_type::ret:               return extract_ret(context);
+        case Token_type::discard:           return extract_discard(context);
+        case Token_type::ampersand:         return extract_reference(context);
+        case Token_type::mov:               return extract_move(context);
+        case Token_type::meta:              return extract_meta(context);
+        case Token_type::brace_open:        return extract_block_expression(context);
+        default:                            return parse_complicated_type(context);
+            // clang-format on
         }
     }
 
     auto parse_argument(Context& context) -> std::optional<cst::Function_argument>
     {
-        if (auto name = parse_lower_name(context)) {
+        if (auto const name = parse_lower_name(context)) {
             if (Lexical_token const* const equals_sign = context.try_extract(Token_type::equals)) {
                 return cst::Function_argument {
-                .argument_name = cst::Name_lower_equals {
-                    .name = std::move(*name),
-                    .equals_sign_token = cst::Token::from_lexical(equals_sign),
-                },
-                .expression = extract_expression(context),
-            };
+                    .argument_name = cst::Name_lower_equals {
+                        .name              = name.value(),
+                        .equals_sign_token = cst::Token::from_lexical(equals_sign),
+                    },
+                    .expression = extract_expression(context),
+                };
             }
             context.retreat();
         }
@@ -663,10 +621,10 @@ namespace {
         if (potential_invocable) {
             while (context.try_consume(Token_type::paren_open)) {
                 auto arguments = extract_arguments(context);
-                *potential_invocable = context.wrap(cst::Expression {
+                potential_invocable.value() = context.wrap(cst::Expression {
                     .value = cst::expression::Invocation {
-                        .function_arguments = std::move(arguments),
-                        .function_expression = std::move(*potential_invocable),
+                        .function_arguments  = std::move(arguments),
+                        .function_expression = std::move(potential_invocable.value()),
                     },
                     .source_view = context.make_source_view(anchor, context.pointer - 1),
                 });
@@ -675,69 +633,91 @@ namespace {
         return potential_invocable;
     }
 
+    auto extract_struct_field_access(
+        kieli::Name_lower const             field_name,
+        cst::Token&&                        dot_token,
+        utl::Wrapper<cst::Expression> const expression,
+        Context&                            context) -> cst::Expression::Variant
+    {
+        auto template_arguments = parse_template_arguments(context);
+        if (context.try_consume(Token_type::paren_open)) {
+            return cst::expression::Method_invocation {
+                .function_arguments = extract_arguments(context),
+                .template_arguments = std::move(template_arguments),
+                .base_expression    = expression,
+                .method_name        = field_name,
+            };
+        }
+        if (template_arguments.has_value()) {
+            context.error_expected("a parenthesized argument set");
+        }
+        return cst::expression::Struct_field_access {
+            .base_expression = expression,
+            .field_name      = field_name,
+            .dot_token       = std::move(dot_token),
+        };
+    }
+
+    auto extract_tuple_field_access(
+        cst::Token&&                        dot_token,
+        utl::Wrapper<cst::Expression> const expression,
+        Context&                            context) -> cst::Expression::Variant
+    {
+        Lexical_token const& field_index_token = context.extract();
+        return cst::expression::Tuple_field_access {
+            .base_expression         = expression,
+            .field_index             = field_index_token.value_as<kieli::Integer>().value,
+            .field_index_source_view = field_index_token.source_view,
+            .dot_token               = std::move(dot_token),
+        };
+    }
+
+    auto extract_array_index_access(
+        cst::Token&&                        dot_token,
+        utl::Wrapper<cst::Expression> const expression,
+        Context&                            context) -> cst::Expression::Variant
+    {
+        utl::wrapper auto const index_expression = extract_expression(context);
+        context.consume_required(Token_type::bracket_close);
+        return cst::expression::Array_index_access {
+            .base_expression  = expression,
+            .index_expression = index_expression,
+            .dot_token        = std::move(dot_token),
+        };
+    }
+
+    auto extract_member_access(
+        cst::Token&&                        dot_token,
+        utl::Wrapper<cst::Expression> const expression,
+        Context&                            context) -> cst::Expression::Variant
+    {
+        if (auto field_name = parse_lower_name(context)) {
+            return extract_struct_field_access(
+                field_name.value(), std::move(dot_token), expression, context);
+        }
+        if (context.pointer->type == Token_type::integer_literal) {
+            return extract_tuple_field_access(std::move(dot_token), expression, context);
+        }
+        if (context.try_consume(Token_type::bracket_open)) {
+            return extract_array_index_access(std::move(dot_token), expression, context);
+        }
+        context.error_expected(
+            "a struct member name (a.b), a tuple member index (a.0), or an array index (a.[b])");
+    }
+
     auto parse_potential_member_access(Context& context)
         -> std::optional<utl::Wrapper<cst::Expression>>
     {
-        Lexical_token const* const anchor     = context.pointer;
-        std::optional              expression = parse_potential_invocation(context);
+        Lexical_token const* const                   anchor = context.pointer;
+        std::optional<utl::Wrapper<cst::Expression>> expression
+            = parse_potential_invocation(context);
         if (expression) {
             while (Lexical_token const* const dot = context.try_extract(Token_type::dot)) {
-                if (auto field_name = parse_lower_name(context)) {
-                    auto template_arguments = parse_template_arguments(context);
-
-                    if (context.try_consume(Token_type::paren_open)) {
-                        auto arguments = extract_arguments(context);
-                        *expression = context.wrap(cst::Expression {
-                        .value = cst::expression::Method_invocation {
-                            .function_arguments = std::move(arguments),
-                            .template_arguments = std::move(template_arguments),
-                            .base_expression = *expression,
-                            .method_name = *field_name,
-                        },
-                        .source_view = context.make_source_view(anchor, context.pointer - 1),
-                    });
-                    }
-                    else if (template_arguments.has_value()) {
-                        context.error_expected("a parenthesized argument set");
-                    }
-                    else {
-                        *expression = context.wrap(cst::Expression {
-                        .value = cst::expression::Struct_field_access {
-                            .base_expression = *expression,
-                            .field_name = *field_name,
-                            .dot_token = cst::Token::from_lexical(dot),
-                        },
-                        .source_view = context.make_source_view(anchor, context.pointer - 1),
-                    });
-                    }
-                }
-                else if (context.pointer->type == Token_type::integer_literal) {
-                    Lexical_token const& field_index_token = context.extract();
-                    *expression = context.wrap(cst::Expression {
-                    .value = cst::expression::Tuple_field_access {
-                        .base_expression = *expression,
-                        .field_index = field_index_token.value_as<kieli::Integer>().value,
-                        .field_index_source_view = field_index_token.source_view,
-                        .dot_token = cst::Token::from_lexical(dot),
-                    },
-                    .source_view = context.make_source_view(anchor, context.pointer - 1) });
-                }
-                else if (context.try_consume(Token_type::bracket_open)) {
-                    auto index_expression = extract_expression(context);
-                    context.consume_required(Token_type::bracket_close);
-                    *expression = context.wrap(cst::Expression {
-                    .value = cst::expression::Array_index_access {
-                        .base_expression = std::move(*expression),
-                        .index_expression = std::move(index_expression),
-                        .dot_token = cst::Token::from_lexical(dot),
-                    },
+                expression = context.wrap(cst::Expression {
+                    .value = extract_member_access(
+                        cst::Token::from_lexical(dot), expression.value(), context),
                     .source_view = context.make_source_view(anchor, context.pointer - 1),
                 });
-                }
-                else {
-                    context.error_expected("a struct member name (a.b), a tuple member index "
-                                           "(a.0), or an array index (a.[b])");
-                }
             }
         }
         return expression;
@@ -745,35 +725,27 @@ namespace {
 
     auto parse_potential_type_cast(Context& context) -> std::optional<utl::Wrapper<cst::Expression>>
     {
-        Lexical_token const* const anchor = context.pointer;
-
+        auto const make_cast = [&, anchor = context.pointer](cst::Expression::Variant&& value) {
+            return context.wrap(cst::Expression {
+                .value       = std::move(value),
+                .source_view = context.make_source_view(anchor, context.pointer - 1),
+            });
+        };
         if (auto expression = parse_potential_member_access(context)) {
             for (;;) {
                 switch (context.extract().type) {
                 case Token_type::colon:
-                {
-                    auto type = extract_type(context);
-                    *expression = context.wrap(cst::Expression {
-                    .value = cst::expression::Type_ascription {
-                        .base_expression = *expression,
-                        .ascribed_type = type,
-                    },
-                    .source_view = context.make_source_view(anchor, context.pointer - 1),
-                });
+                    expression = make_cast(cst::expression::Type_ascription {
+                        .base_expression = expression.value(),
+                        .ascribed_type   = extract_type(context),
+                    });
                     break;
-                }
                 case Token_type::as:
-                {
-                    auto type = extract_type(context);
-                    *expression = context.wrap(cst::Expression {
-                    .value = cst::expression::Type_cast {
-                        .base_expression = *expression,
-                        .target_type = type,
-                    },
-                    .source_view = context.make_source_view(anchor, context.pointer - 1),
-                });
+                    expression = make_cast(cst::expression::Type_cast {
+                        .base_expression = expression.value(),
+                        .target_type     = extract_type(context),
+                    });
                     break;
-                }
                 default:
                     context.retreat();
                     return expression;
@@ -804,13 +776,13 @@ namespace {
         Lexical_token const* const anchor = context.pointer;
         if (auto leftmost_operand = parse_potential_type_cast(context)) {
             decltype(cst::expression::Binary_operator_invocation_sequence::sequence_tail) tail;
-            while (auto op = parse_operator(context)) {
+            while (auto const operator_id = parse_operator(context)) {
                 Lexical_token const* const op_token = context.pointer - 1;
                 if (auto right_operand = parse_potential_type_cast(context)) {
                     tail.push_back({
-                        .operator_name  = *op,
+                        .operator_id    = operator_id.value(),
                         .operator_token = cst::Token::from_lexical(op_token),
-                        .right_operand  = *right_operand,
+                        .right_operand  = right_operand.value(),
                     });
                 }
                 else {
@@ -822,8 +794,8 @@ namespace {
             }
             return context.wrap(cst::Expression {
                 .value = cst::expression::Binary_operator_invocation_sequence {
-                    .sequence_tail = std::move(tail),
-                    .leftmost_operand = *leftmost_operand,
+                    .sequence_tail    = std::move(tail),
+                    .leftmost_operand = leftmost_operand.value(),
                 },
                 .source_view = context.make_source_view(anchor, context.pointer - 1),
             });

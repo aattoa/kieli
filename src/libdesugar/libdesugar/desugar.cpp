@@ -170,7 +170,7 @@ auto libdesugar::Context::desugar_mutability(
     utl::Source_view const                source_view) -> ast::Mutability
 {
     if (mutability.has_value()) {
-        return desugar(*mutability);
+        return desugar(mutability.value());
     }
     return ast::Mutability {
         .value       = ast::Mutability::Concrete { .is_mutable = false },

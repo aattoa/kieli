@@ -170,7 +170,7 @@ namespace {
         {
             std::format_to(out, "let {}", binding.pattern);
             if (binding.type.has_value()) {
-                std::format_to(out, ": {}", *binding.type);
+                std::format_to(out, ": {}", binding.type.value());
             }
             std::format_to(out, " = {}", binding.initializer);
         }
@@ -203,7 +203,7 @@ namespace {
         {
             std::format_to(out, "{}.{}", invocation.base_expression, invocation.method_name);
             if (invocation.template_arguments.has_value()) {
-                std::format_to(out, "[{}]", *invocation.template_arguments);
+                std::format_to(out, "[{}]", invocation.template_arguments.value());
             }
             std::format_to(out, "({})", invocation.function_arguments);
         }
@@ -216,7 +216,7 @@ namespace {
         auto operator()(ast::expression::Ret const& ret)
         {
             if (ret.returned_expression.has_value()) {
-                std::format_to(out, "ret {}", *ret.returned_expression);
+                std::format_to(out, "ret {}", ret.returned_expression.value());
             }
             std::format_to(out, "ret");
         }
@@ -272,7 +272,7 @@ namespace {
         {
             std::format_to(out, "{}", constructor.constructor_name);
             if (constructor.payload_pattern.has_value()) {
-                std::format_to(out, "({})", *constructor.payload_pattern);
+                std::format_to(out, "({})", constructor.payload_pattern.value());
             }
         }
 
@@ -280,7 +280,7 @@ namespace {
         {
             std::format_to(out, "::{}", constructor.constructor_name);
             if (constructor.payload_pattern.has_value()) {
-                std::format_to(out, "({})", *constructor.payload_pattern);
+                std::format_to(out, "({})", constructor.payload_pattern.value());
             }
         }
 
@@ -511,7 +511,7 @@ DEFINE_FORMATTER(ast::Qualified_name)
     for (ast::Qualifier const& qualifier : value.middle_qualifiers) {
         std::format_to(context.out(), "{}", qualifier.name);
         if (qualifier.template_arguments.has_value()) {
-            std::format_to(context.out(), "[{}]", *qualifier.template_arguments);
+            std::format_to(context.out(), "[{}]", qualifier.template_arguments.value());
         }
         std::format_to(context.out(), "::");
     }
@@ -522,7 +522,7 @@ DEFINE_FORMATTER(ast::Class_reference)
 {
     std::format_to(context.out(), "{}", value.name);
     if (value.template_arguments.has_value()) {
-        std::format_to(context.out(), "[{}]", *value.template_arguments);
+        std::format_to(context.out(), "[{}]", value.template_arguments.value());
     }
     return context.out();
 }
@@ -530,7 +530,7 @@ DEFINE_FORMATTER(ast::Class_reference)
 DEFINE_FORMATTER(ast::Function_argument)
 {
     if (value.argument_name.has_value()) {
-        std::format_to(context.out(), "{} = ", *value.argument_name);
+        std::format_to(context.out(), "{} = ", value.argument_name.value());
     }
     return std::format_to(context.out(), "{}", value.expression);
 }
@@ -539,10 +539,10 @@ DEFINE_FORMATTER(ast::Function_parameter)
 {
     std::format_to(context.out(), "{}", value.pattern);
     if (value.type.has_value()) {
-        std::format_to(context.out(), ": {}", *value.type);
+        std::format_to(context.out(), ": {}", value.type.value());
     }
     if (value.default_argument.has_value()) {
-        std::format_to(context.out(), " = {}", *value.default_argument);
+        std::format_to(context.out(), " = {}", value.default_argument.value());
     }
     return context.out();
 }
@@ -570,14 +570,14 @@ DEFINE_FORMATTER(ast::Template_parameter)
         [&](ast::Template_parameter::Value_parameter const& value_parameter) {
             std::format_to(context.out(), "{}", value_parameter.name);
             if (value_parameter.type.has_value()) {
-                std::format_to(context.out(), ": {}", *value_parameter.type);
+                std::format_to(context.out(), ": {}", value_parameter.type.value());
             }
         },
         [&](ast::Template_parameter::Mutability_parameter const& mutability_parameter) {
             std::format_to(context.out(), "{}: mut", mutability_parameter.name);
         });
     if (value.default_argument.has_value()) {
-        std::format_to(context.out(), " = {}", *value.default_argument);
+        std::format_to(context.out(), " = {}", value.default_argument.value());
     }
     return context.out();
 }

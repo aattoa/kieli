@@ -17,7 +17,7 @@ namespace {
         }
         if (auto template_arguments = parse_template_arguments(context)) {
             return cst::type::Template_application {
-                .template_arguments = std::move(*template_arguments),
+                .template_arguments = std::move(template_arguments.value()),
                 .name               = std::move(name),
             };
         }
@@ -77,7 +77,7 @@ namespace {
                         = context.extract_required(Token_type::bracket_close);
                     return cst::type::Array {
                         .element_type        = element_type,
-                        .array_length        = *length,
+                        .array_length        = length.value(),
                         .open_bracket_token  = cst::Token::from_lexical(open_bracket),
                         .close_bracket_token = cst::Token::from_lexical(close_bracket),
                         .semicolon_token     = cst::Token::from_lexical(semicolon),
@@ -116,7 +116,7 @@ namespace {
                         .open_token  = cst::Token::from_lexical(open),
                         .close_token = cst::Token::from_lexical(close),
                     },
-                    .return_type      = std::move(*return_type_annotation),
+                    .return_type      = std::move(return_type_annotation.value()),
                     .fn_keyword_token = cst::Token::from_lexical(fn_keyword),
                 };
             }
@@ -182,58 +182,37 @@ namespace {
 
     auto parse_normal_type(Context& context) -> std::optional<cst::Type::Variant>
     {
+        // clang-format off
         switch (context.extract().type) {
-        case Lexical_token::Type::i8_type:
-            return kieli::built_in_type::Integer::i8;
-        case Lexical_token::Type::i16_type:
-            return kieli::built_in_type::Integer::i16;
-        case Lexical_token::Type::i32_type:
-            return kieli::built_in_type::Integer::i32;
-        case Lexical_token::Type::i64_type:
-            return kieli::built_in_type::Integer::i64;
-        case Lexical_token::Type::u8_type:
-            return kieli::built_in_type::Integer::u8;
-        case Lexical_token::Type::u16_type:
-            return kieli::built_in_type::Integer::u16;
-        case Lexical_token::Type::u32_type:
-            return kieli::built_in_type::Integer::u32;
-        case Lexical_token::Type::u64_type:
-            return kieli::built_in_type::Integer::u64;
-        case Lexical_token::Type::floating_type:
-            return kieli::built_in_type::Floating {};
-        case Lexical_token::Type::character_type:
-            return kieli::built_in_type::Character {};
-        case Lexical_token::Type::boolean_type:
-            return kieli::built_in_type::Boolean {};
-        case Lexical_token::Type::string_type:
-            return kieli::built_in_type::String {};
-        case Lexical_token::Type::underscore:
-            return cst::type::Wildcard {};
-        case Lexical_token::Type::upper_self:
-            return cst::type::Self {};
-        case Lexical_token::Type::paren_open:
-            return extract_tuple(context);
-        case Lexical_token::Type::bracket_open:
-            return extract_array_or_slice(context);
-        case Lexical_token::Type::fn:
-            return extract_function(context);
-        case Lexical_token::Type::typeof_:
-            return extract_typeof(context);
-        case Lexical_token::Type::inst:
-            return extract_instance_of(context);
-        case Lexical_token::Type::ampersand:
-            return extract_reference(context);
-        case Lexical_token::Type::asterisk:
-            return extract_pointer(context);
-        case Lexical_token::Type::upper_name:
-        case Lexical_token::Type::lower_name:
-            return extract_typename(context);
-        case Lexical_token::Type::global:
-            return extract_global_typename(context);
+        case Lexical_token::Type::i8_type:        return kieli::built_in_type::Integer::i8;
+        case Lexical_token::Type::i16_type:       return kieli::built_in_type::Integer::i16;
+        case Lexical_token::Type::i32_type:       return kieli::built_in_type::Integer::i32;
+        case Lexical_token::Type::i64_type:       return kieli::built_in_type::Integer::i64;
+        case Lexical_token::Type::u8_type:        return kieli::built_in_type::Integer::u8;
+        case Lexical_token::Type::u16_type:       return kieli::built_in_type::Integer::u16;
+        case Lexical_token::Type::u32_type:       return kieli::built_in_type::Integer::u32;
+        case Lexical_token::Type::u64_type:       return kieli::built_in_type::Integer::u64;
+        case Lexical_token::Type::floating_type:  return kieli::built_in_type::Floating {};
+        case Lexical_token::Type::character_type: return kieli::built_in_type::Character {};
+        case Lexical_token::Type::boolean_type:   return kieli::built_in_type::Boolean {};
+        case Lexical_token::Type::string_type:    return kieli::built_in_type::String {};
+        case Lexical_token::Type::underscore:     return cst::type::Wildcard {};
+        case Lexical_token::Type::upper_self:     return cst::type::Self {};
+        case Lexical_token::Type::paren_open:     return extract_tuple(context);
+        case Lexical_token::Type::bracket_open:   return extract_array_or_slice(context);
+        case Lexical_token::Type::fn:             return extract_function(context);
+        case Lexical_token::Type::typeof_:        return extract_typeof(context);
+        case Lexical_token::Type::inst:           return extract_instance_of(context);
+        case Lexical_token::Type::ampersand:      return extract_reference(context);
+        case Lexical_token::Type::asterisk:       return extract_pointer(context);
+        case Lexical_token::Type::upper_name:     [[fallthrough]];
+        case Lexical_token::Type::lower_name:     return extract_typename(context);
+        case Lexical_token::Type::global:         return extract_global_typename(context);
         default:
             context.retreat();
             return std::nullopt;
         }
+        // clang-format on
     }
 
 } // namespace
@@ -243,7 +222,7 @@ auto libparse::parse_type(Context& context) -> std::optional<utl::Wrapper<cst::T
     Lexical_token const* const type_anchor = context.pointer;
     if (auto type_value = parse_normal_type(context)) {
         utl::wrapper auto const type = context.wrap(cst::Type {
-            .value       = std::move(*type_value),
+            .value       = std::move(type_value.value()),
             .source_view = context.make_source_view(type_anchor, context.pointer - 1),
         });
 
@@ -251,25 +230,25 @@ auto libparse::parse_type(Context& context) -> std::optional<utl::Wrapper<cst::T
         if (Lexical_token const* const double_colon
             = context.try_extract(Lexical_token::Type::double_colon))
         {
-            auto name = extract_qualified(
-                context,
-                cst::Root_qualifier {
-                    .value              = type,
-                    .double_colon_token = cst::Token::from_lexical(double_colon),
-                });
+            cst::Root_qualifier root_qualifier {
+                .value              = type,
+                .double_colon_token = cst::Token::from_lexical(double_colon),
+            };
+            auto name = extract_qualified(context, std::move(root_qualifier));
 
             if (name.primary_name.is_upper.get()) {
                 auto template_arguments = parse_template_arguments(context);
                 return context.wrap(cst::Type {
-                    .value       = std::invoke([&]() -> cst::Type::Variant {
+                    .value = std::invoke([&]() -> cst::Type::Variant {
                         if (template_arguments.has_value()) {
                             return cst::type::Template_application {
-                                      .template_arguments = std::move(*template_arguments),
-                                      .name               = std::move(name),
+                                .template_arguments = std::move(template_arguments.value()),
+                                .name               = std::move(name),
                             };
                         }
                         return cst::type::Typename { std::move(name) };
                     }),
+
                     .source_view = context.make_source_view(anchor, context.pointer - 1),
                 });
             }

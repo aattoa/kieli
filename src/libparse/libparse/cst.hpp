@@ -240,7 +240,7 @@ namespace cst {
 
         struct Binary_operator_invocation_sequence {
             struct Operator_and_operand {
-                kieli::Identifier        operator_name;
+                kieli::Identifier        operator_id;
                 Token                    operator_token;
                 utl::Wrapper<Expression> right_operand;
             };

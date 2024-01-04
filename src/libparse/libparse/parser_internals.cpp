@@ -13,10 +13,10 @@ namespace {
             } };
         }
         if (auto type = parse_type(context)) {
-            return cst::Template_argument { std::move(*type) };
+            return cst::Template_argument { std::move(type.value()) };
         }
         if (auto expression = parse_expression(context)) {
-            return cst::Template_argument { *expression };
+            return cst::Template_argument { expression.value() };
         }
         if (Lexical_token const* const immut_keyword = context.try_extract(Token_type::immut)) {
             return cst::Template_argument {
@@ -66,31 +66,81 @@ namespace {
             [](cst::Mutability const&) { return "mutability"; });
     }
 
+    auto parse_template_parameter_default_argument(
+        cst::Template_parameter::Variant const& variant,
+        Context& context) -> std::optional<cst::Template_parameter::Default_argument>
+    {
+        if (Lexical_token const* const equals_sign = context.try_extract(Token_type::equals)) {
+            cst::Template_parameter::Default_argument default_argument {
+                .argument
+                = extract_required<parse_template_argument, "a default template argument">(context),
+                .equals_sign_token = cst::Token::from_lexical(equals_sign),
+            };
+            if (!is_valid_template_parameter_default_argument(
+                    variant, default_argument.argument.value))
+            {
+                context.diagnostics().error(
+                    default_argument.argument.source_view(),
+                    "A template {0} parameter's default argument must be a {0} argument, but found "
+                    "a {1} argument",
+                    template_parameter_kind_description(variant),
+                    template_argument_kind_description(default_argument.argument.value));
+            }
+            return default_argument;
+        }
+        return std::nullopt;
+    }
+
+    auto extract_value_or_mutability_template_parameter(
+        kieli::Name_lower const name,
+        Lexical_token const*&   colon,
+        Context&                context) -> cst::Template_parameter::Variant
+    {
+        colon = context.try_extract(Token_type::colon);
+        if (colon) {
+            if (Lexical_token const* const mut_keyword = context.try_extract(Token_type::mut)) {
+                return cst::Template_parameter::Mutability_parameter {
+                    .name              = name,
+                    .mut_keyword_token = cst::Token::from_lexical(mut_keyword),
+                };
+            }
+            if (auto type = parse_type(context)) {
+                return cst::Template_parameter::Value_parameter {
+                    .type = type.value(),
+                    .name = name,
+                };
+            }
+            context.error_expected("'mut' or a type");
+        }
+        return cst::Template_parameter::Value_parameter {
+            .type = std::nullopt,
+            .name = name,
+        };
+    }
+
+    auto extract_type_template_parameter(
+        kieli::Name_upper const name,
+        Lexical_token const*&   colon,
+        Context&                context) -> cst::Template_parameter::Variant
+    {
+        colon = context.try_extract(Token_type::colon);
+        cst::Separated_sequence<cst::Class_reference> class_references;
+        if (colon) {
+            class_references = extract_class_references(context);
+        }
+        return cst::Template_parameter::Type_parameter {
+            .classes = std::move(class_references),
+            .name    = name,
+        };
+    }
+
     auto parse_template_parameter(Context& context) -> std::optional<cst::Template_parameter>
     {
-        auto const template_parameter = [&, anchor = context.pointer](
-                                            cst::Template_parameter::Variant&& value,
-                                            Lexical_token const* const         colon = nullptr) {
-            auto const source_view = context.make_source_view(anchor, context.pointer - 1);
-            std::optional<cst::Template_parameter::Default_argument> default_argument;
-            if (Lexical_token const* const equals_sign = context.try_extract(Token_type::equals)) {
-                default_argument = cst::Template_parameter::Default_argument {
-                    .argument
-                    = extract_required<parse_template_argument, "a default template argument">(
-                        context),
-                    .equals_sign_token = cst::Token::from_lexical(equals_sign),
-                };
-                if (!is_valid_template_parameter_default_argument(
-                        value, default_argument->argument.value))
-                {
-                    context.diagnostics().error(
-                        default_argument->argument.source_view(),
-                        "A template {0} parameter's default argument must be a {0} argument, but "
-                        "found a {1} argument",
-                        template_parameter_kind_description(value),
-                        template_argument_kind_description(default_argument->argument.value));
-                }
-            }
+        Lexical_token const* colon {};
+
+        auto const make = [&, anchor = context.pointer](cst::Template_parameter::Variant&& value) {
+            auto const source_view      = context.make_source_view(anchor, context.pointer - 1);
+            auto       default_argument = parse_template_parameter_default_argument(value, context);
             return cst::Template_parameter {
                 .value            = std::move(value),
                 .colon_token      = optional_token(colon),
@@ -100,38 +150,11 @@ namespace {
         };
 
         if (auto name = parse_lower_name(context)) {
-            if (Lexical_token const* const colon = context.try_extract(Token_type::colon)) {
-                if (Lexical_token const* const mut_keyword = context.try_extract(Token_type::mut)) {
-                    return template_parameter(cst::Template_parameter::Mutability_parameter {
-                        .name              = std::move(*name),
-                        .mut_keyword_token = cst::Token::from_lexical(mut_keyword),
-                    });
-                }
-                if (auto type = parse_type(context)) {
-                    return template_parameter(cst::Template_parameter::Value_parameter {
-                        .type = *type,
-                        .name = std::move(*name),
-                    });
-                }
-                context.error_expected("'mut' or a type");
-            }
-            return template_parameter(cst::Template_parameter::Value_parameter {
-                .type = std::nullopt,
-                .name = std::move(*name),
-            });
+            return make(
+                extract_value_or_mutability_template_parameter(name.value(), colon, context));
         }
         if (auto name = parse_upper_name(context)) {
-            Lexical_token const* const colon = context.try_extract(Token_type::colon);
-            cst::Separated_sequence<cst::Class_reference> class_references;
-            if (colon) {
-                class_references = extract_class_references(context);
-            }
-            return template_parameter(
-                cst::Template_parameter::Type_parameter {
-                    .classes = std::move(class_references),
-                    .name    = std::move(*name),
-                },
-                colon);
+            return make(extract_type_template_parameter(name.value(), colon, context));
         }
         return std::nullopt;
     }

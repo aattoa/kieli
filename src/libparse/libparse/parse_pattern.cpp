@@ -5,11 +5,6 @@ namespace {
 
     using namespace libparse;
 
-    auto extract_wildcard(Context&) -> cst::Pattern::Variant
-    {
-        return cst::pattern::Wildcard {};
-    };
-
     template <class T>
     auto extract_literal(Context& context) -> cst::Pattern::Variant
     {
@@ -65,7 +60,7 @@ namespace {
         switch (context.pointer->type) {
         case Token_type::lower_name:
         case Token_type::upper_name:
-            return extract_qualified(context, {});
+            return extract_qualified(context, std::nullopt);
         case Token_type::global:
             ++context.pointer;
             return extract_qualified(
@@ -80,7 +75,7 @@ namespace {
                 return extract_qualified(
                     context,
                     cst::Root_qualifier {
-                        .value              = *type,
+                        .value              = type.value(),
                         .double_colon_token = cst::Token::from_lexical(
                             context.extract_required(Token_type::double_colon)),
                     });
@@ -95,7 +90,6 @@ namespace {
         auto mutability = parse_mutability(context);
 
         std::optional<kieli::Name_lower> name;
-
         if (!mutability.has_value()) {
             if (auto ctor_name = parse_constructor_name(context)) {
                 if (!ctor_name->is_unqualified()) {
@@ -107,11 +101,9 @@ namespace {
                 name = ctor_name->primary_name.as_lower();
             }
         }
-
         if (!name) {
             name = extract_lower_name(context, "a lowercase identifier");
         }
-
         return cst::pattern::Name {
             .name       = std::move(*name),
             .mutability = std::move(mutability),
@@ -142,34 +134,25 @@ namespace {
 
     auto parse_normal_pattern(Context& context) -> std::optional<cst::Pattern::Variant>
     {
+        // clang-format off
         switch (context.extract().type) {
-        case Token_type::underscore:
-            return extract_wildcard(context);
-        case Token_type::integer_literal:
-            return extract_literal<kieli::Integer>(context);
-        case Token_type::floating_literal:
-            return extract_literal<kieli::Floating>(context);
-        case Token_type::character_literal:
-            return extract_literal<kieli::Character>(context);
-        case Token_type::boolean_literal:
-            return extract_literal<kieli::Boolean>(context);
-        case Token_type::string_literal:
-            return extract_literal<kieli::String>(context);
-        case Token_type::paren_open:
-            return extract_tuple(context);
-        case Token_type::bracket_open:
-            return extract_slice(context);
-        case Token_type::lower_name:
-        case Token_type::mut:
-            return extract_name(context);
-        case Token_type::upper_name:
-            return extract_qualified_constructor(context);
-        case Token_type::double_colon:
-            return extract_abbreviated_constructor(context);
+        case Token_type::underscore:        return cst::pattern::Wildcard {};
+        case Token_type::integer_literal:   return extract_literal<kieli::Integer>(context);
+        case Token_type::floating_literal:  return extract_literal<kieli::Floating>(context);
+        case Token_type::character_literal: return extract_literal<kieli::Character>(context);
+        case Token_type::boolean_literal:   return extract_literal<kieli::Boolean>(context);
+        case Token_type::string_literal:    return extract_literal<kieli::String>(context);
+        case Token_type::paren_open:        return extract_tuple(context);
+        case Token_type::bracket_open:      return extract_slice(context);
+        case Token_type::lower_name:        [[fallthrough]];
+        case Token_type::mut:               return extract_name(context);
+        case Token_type::upper_name:        return extract_qualified_constructor(context);
+        case Token_type::double_colon:      return extract_abbreviated_constructor(context);
         default:
             context.retreat();
             return std::nullopt;
         }
+        // clang-format on
     }
 
     auto parse_potentially_aliased_pattern(Context& context) -> std::optional<cst::Pattern::Variant>
@@ -183,7 +166,7 @@ namespace {
                     .alias_name       = std::move(name),
                     .alias_mutability = std::move(mutability),
                     .aliased_pattern  = context.wrap(cst::Pattern {
-                         .value       = std::move(*pattern),
+                         .value       = std::move(pattern.value()),
                          .source_view = context.make_source_view(anchor, as_keyword - 1),
                     }),
                     .as_keyword_token = cst::Token::from_lexical(as_keyword),
@@ -202,10 +185,10 @@ namespace {
                 if (auto guard = parse_expression(context)) {
                     return cst::pattern::Guarded {
                         .guarded_pattern  = context.wrap(cst::Pattern {
-                             .value       = std::move(*pattern),
+                             .value       = std::move(pattern.value()),
                              .source_view = context.make_source_view(anchor, if_keyword - 1),
                         }),
-                        .guard_expression = *guard,
+                        .guard_expression = guard.value(),
                         .if_keyword_token = cst::Token::from_lexical(if_keyword),
                     };
                 }

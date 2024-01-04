@@ -13,7 +13,7 @@ namespace {
         std::vector<cst::Definition> definitions;
         definitions.reserve(16);
         while (auto definition = parse_definition(context)) {
-            definitions.push_back(std::move(*definition)); // NOLINT: false positive
+            definitions.push_back(std::move(definition.value()));
         }
         return definitions;
     }
@@ -110,7 +110,7 @@ namespace {
 
         return cst::Function_signature {
             .template_parameters = std::move(template_parameters),
-            .function_parameters = std::move(*function_parameters),
+            .function_parameters = std::move(function_parameters.value()),
             .return_type         = std::move(return_type_annotation),
             .name                = std::move(name),
             .fn_keyword_token    = cst::Token::from_lexical(fn_keyword),
@@ -125,7 +125,7 @@ namespace {
 
         utl::wrapper auto const body = std::invoke([&] {
             if (auto expression = parse_block_expression(context)) {
-                return *expression;
+                return expression.value();
             }
             equals_sign = context.try_extract(Token_type::equals);
             if (equals_sign) {
@@ -149,8 +149,8 @@ namespace {
         if (auto name = parse_lower_name(context)) {
             if (auto type = parse_type_annotation(context)) {
                 return cst::definition::Struct::Member {
-                    .name        = *name,
-                    .type        = *type,
+                    .name        = name.value(),
+                    .type        = type.value(),
                     .source_view = context.make_source_view(anchor, context.pointer - 1),
                 };
             }
@@ -166,16 +166,16 @@ namespace {
 
         Lexical_token const* const struct_keyword = context.pointer - 1;
 
-        auto name                = extract_upper_name(context, "a struct name");
-        auto template_parameters = parse_template_parameters(context);
+        kieli::Name_upper const name                = extract_upper_name(context, "a struct name");
+        auto                    template_parameters = parse_template_parameters(context);
 
         Lexical_token const* const equals_sign = context.extract_required(Token_type::equals);
 
         if (auto members = parse_members(context)) {
             return cst::definition::Struct {
                 .template_parameters  = std::move(template_parameters),
-                .members              = std::move(*members),
-                .name                 = std::move(name),
+                .members              = std::move(members.value()),
+                .name                 = name,
                 .struct_keyword_token = cst::Token::from_lexical(struct_keyword),
                 .equals_sign_token    = cst::Token::from_lexical(equals_sign),
             };
@@ -198,14 +198,14 @@ namespace {
                 Lexical_token const* const close
                     = context.extract_required(Token_type::paren_close);
                 payload_types = Payload_types::value_type {
-                    .value       = std::move(*types),
+                    .value       = std::move(types.value()),
                     .open_token  = cst::Token::from_lexical(open),
                     .close_token = cst::Token::from_lexical(close),
                 };
             }
             return cst::definition::Enum::Constructor {
                 .payload_types = std::move(payload_types),
-                .name          = *name,
+                .name          = name.value(),
                 .source_view   = context.make_source_view(anchor, context.pointer - 1),
             };
         }
@@ -228,7 +228,7 @@ namespace {
         if (auto constructors = parse_constructors(context)) {
             return cst::definition::Enum {
                 .template_parameters = std::move(template_parameters),
-                .constructors        = std::move(*constructors),
+                .constructors        = std::move(constructors.value()),
                 .name                = std::move(name),
                 .enum_keyword_token  = cst::Token::from_lexical(enum_keyword),
                 .equals_sign_token   = cst::Token::from_lexical(equals_sign),
@@ -276,14 +276,13 @@ namespace {
         auto                       template_parameters = parse_template_parameters(context);
 
         if (auto typeclass = parse_class_reference(context)) {
-            Lexical_token const* const for_keyword = context.extract_required(Token_type::for_);
-
-            auto type        = extract_type(context);
-            auto definitions = extract_braced_definition_sequence(context);
+            Lexical_token const* const    for_keyword = context.extract_required(Token_type::for_);
+            utl::Wrapper<cst::Type> const type        = extract_type(context);
+            auto                          definitions = extract_braced_definition_sequence(context);
 
             return cst::definition::Instantiation {
                 .template_parameters = std::move(template_parameters),
-                .typeclass           = std::move(*typeclass),
+                .typeclass           = std::move(typeclass.value()),
                 .definitions         = std::move(definitions),
                 .self_type           = type,
                 .inst_keyword_token  = cst::Token::from_lexical(inst_keyword),
@@ -296,12 +295,13 @@ namespace {
     auto extract_type_signature(Context& context) -> cst::Type_signature
     {
         Lexical_token const* const alias_keyword = context.pointer - 1;
-        auto                       name          = extract_upper_name(context, "an alias name");
+        kieli::Name_upper const    name          = extract_upper_name(context, "an alias name");
         auto                       template_parameters = parse_template_parameters(context);
-        cst::Type_signature        signature {
-                   .template_parameters = std::move(template_parameters),
-                   .name                = std::move(name),
-                   .alias_keyword_token = cst::Token::from_lexical(alias_keyword),
+
+        cst::Type_signature signature {
+            .template_parameters = std::move(template_parameters),
+            .name                = name,
+            .alias_keyword_token = cst::Token::from_lexical(alias_keyword),
         };
         if (Lexical_token const* const colon = context.try_extract(Token_type::colon)) {
             signature.classes_colon_token = cst::Token::from_lexical(colon);
@@ -313,14 +313,12 @@ namespace {
     auto extract_class(Context& context) -> cst::Definition::Variant
     {
         Lexical_token const* const class_keyword = context.pointer - 1;
-
-        auto name                = extract_upper_name(context, "a class name");
-        auto template_parameters = parse_template_parameters(context);
+        kieli::Name_upper const    name          = extract_upper_name(context, "a class name");
+        auto                       template_parameters = parse_template_parameters(context);
+        Lexical_token const* const open_brace = context.extract_required(Token_type::brace_open);
 
         std::vector<cst::Type_signature>     type_signatures;
         std::vector<cst::Function_signature> function_signatures;
-
-        Lexical_token const* const open_brace = context.extract_required(Token_type::brace_open);
 
         for (;;) {
             switch (context.extract().type) {
@@ -338,7 +336,7 @@ namespace {
                     .template_parameters = std::move(template_parameters),
                     .function_signatures = std::move(function_signatures),
                     .type_signatures     = std::move(type_signatures),
-                    .name                = std::move(name),
+                    .name                = name,
                     .class_keyword_token = cst::Token::from_lexical(class_keyword),
                     .open_brace_token    = cst::Token::from_lexical(open_brace),
                     .close_brace_token   = cst::Token::from_lexical(close_brace),
@@ -350,13 +348,12 @@ namespace {
     auto extract_namespace(Context& context) -> cst::Definition::Variant
     {
         Lexical_token const* const namespace_keyword = context.pointer - 1;
-        auto                       name = extract_lower_name(context, "a namespace name");
+        kieli::Name_lower const    name = extract_lower_name(context, "a namespace name");
         auto                       template_parameters = parse_template_parameters(context);
-        utl::always_assert(!template_parameters.has_value());
         return cst::definition::Namespace {
             .template_parameters     = std::move(template_parameters),
             .definitions             = extract_braced_definition_sequence(context),
-            .name                    = std::move(name),
+            .name                    = name,
             .namespace_keyword_token = cst::Token::from_lexical(namespace_keyword),
         };
     };
@@ -369,27 +366,21 @@ namespace {
                 .source_view = context.make_source_view(anchor, context.pointer - 1),
             };
         };
+        // clang-format off
         switch (context.extract().type) {
-        case Lexical_token::Type::fn:
-            return definition(extract_function(context));
-        case Lexical_token::Type::struct_:
-            return definition(extract_struct(context));
-        case Lexical_token::Type::enum_:
-            return definition(extract_enum(context));
-        case Lexical_token::Type::alias:
-            return definition(extract_alias(context));
-        case Lexical_token::Type::class_:
-            return definition(extract_class(context));
-        case Lexical_token::Type::impl:
-            return definition(extract_implementation(context));
-        case Lexical_token::Type::inst:
-            return definition(extract_instantiation(context));
-        case Lexical_token::Type::namespace_:
-            return definition(extract_namespace(context));
+        case Lexical_token::Type::fn:         return definition(extract_function(context));
+        case Lexical_token::Type::struct_:    return definition(extract_struct(context));
+        case Lexical_token::Type::enum_:      return definition(extract_enum(context));
+        case Lexical_token::Type::alias:      return definition(extract_alias(context));
+        case Lexical_token::Type::class_:     return definition(extract_class(context));
+        case Lexical_token::Type::impl:       return definition(extract_implementation(context));
+        case Lexical_token::Type::inst:       return definition(extract_instantiation(context));
+        case Lexical_token::Type::namespace_: return definition(extract_namespace(context));
         default:
             context.retreat();
             return std::nullopt;
         }
+        // clang-format on
     }
 
     auto make_import(Context& context, Lexical_token const& token) -> cst::Module::Import
@@ -427,7 +418,7 @@ auto kieli::parse(std::span<Lexical_token const> const tokens, Compile_info& com
     auto definitions = extract_definition_sequence(context);
 
     if (!context.is_finished()) {
-        context.error_expected("fn, struct, enum, alias, class, impl, inst, or namespace");
+        context.error_expected("one of fn, struct, enum, alias, class, impl, inst, or namespace");
     }
 
     return cst::Module {

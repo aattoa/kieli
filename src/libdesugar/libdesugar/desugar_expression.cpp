@@ -38,7 +38,7 @@ namespace {
                         = std::get<precedence>(operator_precedence_table);
 
                     if (std::ranges::find(
-                            current_operator_group, operator_and_operand.operator_name.name.view())
+                            current_operator_group, operator_and_operand.operator_id.name.view())
                         == current_operator_group.end())
                     {
                         return left;
@@ -52,7 +52,7 @@ namespace {
                     .value = ast::expression::Binary_operator_invocation {
                         .left  = context.wrap(std::move(left)),
                         .right = context.wrap(std::move(right_operand)),
-                        .op    = operator_and_operand.operator_name,
+                        .op    = operator_and_operand.operator_id,
                     },
                     .source_view = source_view,
                 };
@@ -189,7 +189,7 @@ namespace {
             if (block.result_expression.has_value()) {
                 return ast::expression::Block {
                     .side_effect_expressions = std::move(side_effects),
-                    .result_expression       = context.desugar(*block.result_expression),
+                    .result_expression       = context.desugar(block.result_expression.value()),
                 };
             }
             return ast::expression::Block {
@@ -453,7 +453,7 @@ namespace {
         {
             return ast::expression::Break {
                 .result = break_.result.has_value()
-                            ? context.desugar(*break_.result)
+                            ? context.desugar(break_.result.value())
                             : context.unit_value(this_expression.source_view),
             };
         }
