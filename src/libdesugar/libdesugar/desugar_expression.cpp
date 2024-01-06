@@ -12,20 +12,20 @@ namespace {
         std::to_array<std::string_view>({ "&&", "||" }),
         std::to_array<std::string_view>({ ":=", "+=", "*=", "/=", "%=" }),
     };
-    constexpr utl::Usize lowest_operator_precedence
+    constexpr std::size_t lowest_operator_precedence
         = -1 + std::tuple_size_v<decltype(operator_precedence_table)>;
 
     using Operator_and_operand
         = cst::expression::Binary_operator_invocation_sequence::Operator_and_operand;
 
-    template <utl::Usize precedence = lowest_operator_precedence>
+    template <std::size_t precedence = lowest_operator_precedence>
     auto desugar_binary_operator_invocation_sequence(
         Context&                            context,
         utl::Wrapper<cst::Expression> const leftmost_expression,
         Operator_and_operand const*&        tail_begin,
         Operator_and_operand const* const   tail_end) -> ast::Expression
     {
-        if constexpr (precedence != static_cast<utl::Usize>(-1)) {
+        if constexpr (precedence != static_cast<std::size_t>(-1)) {
             auto const recurse = [&](utl::Wrapper<cst::Expression> const leftmost) {
                 return desugar_binary_operator_invocation_sequence<precedence - 1>(
                     context, leftmost, tail_begin, tail_end);
@@ -78,9 +78,9 @@ namespace {
         auto operator()(cst::expression::Parenthesized const& parenthesized)
             -> ast::Expression::Variant
         {
-            return utl::match(
-                parenthesized.expression.value->value,
-                Expression_desugaring_visitor { context, *parenthesized.expression.value });
+            return std::visit(
+                Expression_desugaring_visitor { context, *parenthesized.expression.value },
+                parenthesized.expression.value->value);
         }
 
         auto operator()(cst::expression::Array_literal const& literal) -> ast::Expression::Variant
@@ -405,7 +405,7 @@ namespace {
             return ast::expression::Let_binding {
                 .pattern     = context.desugar(let.pattern),
                 .initializer = context.desugar(let.initializer),
-                .type        = let.type.transform(utl::compose(context.wrap(), context.desugar())),
+                .type        = let.type.transform(context.wrap_desugar()),
             };
         }
 
@@ -540,7 +540,7 @@ namespace {
 auto libdesugar::Context::desugar(cst::Expression const& expression) -> ast::Expression
 {
     return {
-        .value = utl::match(expression.value, Expression_desugaring_visitor { *this, expression }),
+        .value = std::visit(Expression_desugaring_visitor { *this, expression }, expression.value),
         .source_view = expression.source_view,
     };
 }

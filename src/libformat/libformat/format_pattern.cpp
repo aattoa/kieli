@@ -90,5 +90,5 @@ namespace {
 
 auto libformat::State::format(cst::Pattern const& pattern) -> void
 {
-    utl::match(pattern.value, Pattern_format_visitor { *this, pattern.source_view });
+    std::visit(Pattern_format_visitor { *this, pattern.source_view }, pattern.value);
 }

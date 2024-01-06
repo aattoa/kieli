@@ -257,7 +257,7 @@ namespace cst {
 
         struct Tuple_field_access {
             utl::Wrapper<Expression> base_expression;
-            utl::Usize               field_index {};
+            std::size_t              field_index {};
             utl::Source_view         field_index_source_view;
             Token                    dot_token;
         };

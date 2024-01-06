@@ -13,7 +13,7 @@ namespace utl {
     }
 
     struct Noisy {
-        inline static constinit Usize live_count = 0;
+        inline static constinit std::size_t live_count = 0;
         BU_NOISY_LOG(++, Noisy());
         BU_NOISY_LOG(++, Noisy(Noisy const&));
         BU_NOISY_LOG(++, Noisy(Noisy&&));

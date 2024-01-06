@@ -17,7 +17,7 @@ namespace liblex {
         utl::Source_position m_position {};
 
         [[nodiscard]] auto source_view_for(std::string_view) const noexcept -> utl::Source_view;
-        [[nodiscard]] auto remaining_input_size() const noexcept -> utl::Usize;
+        [[nodiscard]] auto remaining_input_size() const noexcept -> std::size_t;
     public:
         explicit Context(utl::Source::Wrapper, kieli::Compile_info&) noexcept;
 
@@ -40,7 +40,7 @@ namespace liblex {
         [[nodiscard]] auto error(std::string_view message)
             -> std::unexpected<Token_extraction_failure>;
 
-        auto advance(utl::Usize offset = 1) noexcept -> void;
+        auto advance(std::size_t offset = 1) noexcept -> void;
 
         auto consume(std::predicate<char> auto const& predicate) noexcept -> void
         {

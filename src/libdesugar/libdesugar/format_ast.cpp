@@ -463,50 +463,54 @@ namespace {
 
 DEFINE_FORMATTER(ast::Expression)
 {
-    utl::match(value.value, Expression_format_visitor { context.out() });
+    std::visit(Expression_format_visitor { context.out() }, value.value);
     return context.out();
 }
 
 DEFINE_FORMATTER(ast::Pattern)
 {
-    utl::match(value.value, Pattern_format_visitor { context.out() });
+    std::visit(Pattern_format_visitor { context.out() }, value.value);
     return context.out();
 }
 
 DEFINE_FORMATTER(ast::Type)
 {
-    utl::match(value.value, Type_format_visitor { context.out() });
+    std::visit(Type_format_visitor { context.out() }, value.value);
     return context.out();
 }
 
 DEFINE_FORMATTER(ast::Definition)
 {
-    utl::match(value.value, Definition_format_visitor { context.out() });
+    std::visit(Definition_format_visitor { context.out() }, value.value);
     return context.out();
 }
 
 DEFINE_FORMATTER(ast::Mutability)
 {
-    utl::match(
-        value.value,
-        [&](ast::Mutability::Concrete const concrete) {
-            std::format_to(context.out(), "{}", concrete.is_mutable.get() ? "mut" : "immut");
+    std::visit(
+        utl::Overload {
+            [&](ast::Mutability::Concrete const concrete) {
+                std::format_to(context.out(), "{}", concrete.is_mutable.get() ? "mut" : "immut");
+            },
+            [&](ast::Mutability::Parameterized const parameterized) {
+                std::format_to(context.out(), "mut?{}", parameterized.name);
+            },
         },
-        [&](ast::Mutability::Parameterized const parameterized) {
-            std::format_to(context.out(), "mut?{}", parameterized.name);
-        });
+        value.value);
     return context.out();
 }
 
 DEFINE_FORMATTER(ast::Qualified_name)
 {
     if (value.root_qualifier.has_value()) {
-        utl::match(
-            value.root_qualifier->value,
-            [&](ast::Root_qualifier::Global) { std::format_to(context.out(), "global::"); },
-            [&](utl::Wrapper<ast::Type> const type) {
-                std::format_to(context.out(), "{}::", type);
-            });
+        std::visit(
+            utl::Overload {
+                [&](ast::Root_qualifier::Global) { std::format_to(context.out(), "global::"); },
+                [&](utl::Wrapper<ast::Type> const type) {
+                    std::format_to(context.out(), "{}::", type);
+                },
+            },
+            value.root_qualifier->value);
     }
     for (ast::Qualifier const& qualifier : value.middle_qualifiers) {
         std::format_to(context.out(), "{}", qualifier.name);
@@ -549,33 +553,38 @@ DEFINE_FORMATTER(ast::Function_parameter)
 
 DEFINE_FORMATTER(ast::Template_argument)
 {
-    utl::match(
-        value.value,
-        [&](ast::Template_argument::Wildcard const&) { std::format_to(context.out(), "_"); },
-        [&](auto const& argument) { std::format_to(context.out(), "{}", argument); });
+    std::visit(
+        utl::Overload {
+            [&](ast::Template_argument::Wildcard const&) { std::format_to(context.out(), "_"); },
+            [&](auto const& argument) { std::format_to(context.out(), "{}", argument); },
+        },
+        value.value);
     return context.out();
 }
 
 DEFINE_FORMATTER(ast::Template_parameter)
 {
-    utl::match(
-        value.value,
-        [&](ast::Template_parameter::Type_parameter const& type_parameter) {
-            std::format_to(context.out(), "{}", type_parameter.name);
-            if (type_parameter.classes.empty()) {
-                return;
-            }
-            std::format_to(context.out(), ": {}", utl::fmt::join(type_parameter.classes, " + "));
+    std::visit(
+        utl::Overload {
+            [&](ast::Template_parameter::Type_parameter const& type_parameter) {
+                std::format_to(context.out(), "{}", type_parameter.name);
+                if (type_parameter.classes.empty()) {
+                    return;
+                }
+                std::format_to(
+                    context.out(), ": {}", utl::fmt::join(type_parameter.classes, " + "));
+            },
+            [&](ast::Template_parameter::Value_parameter const& value_parameter) {
+                std::format_to(context.out(), "{}", value_parameter.name);
+                if (value_parameter.type.has_value()) {
+                    std::format_to(context.out(), ": {}", value_parameter.type.value());
+                }
+            },
+            [&](ast::Template_parameter::Mutability_parameter const& mutability_parameter) {
+                std::format_to(context.out(), "{}: mut", mutability_parameter.name);
+            },
         },
-        [&](ast::Template_parameter::Value_parameter const& value_parameter) {
-            std::format_to(context.out(), "{}", value_parameter.name);
-            if (value_parameter.type.has_value()) {
-                std::format_to(context.out(), ": {}", value_parameter.type.value());
-            }
-        },
-        [&](ast::Template_parameter::Mutability_parameter const& mutability_parameter) {
-            std::format_to(context.out(), "{}: mut", mutability_parameter.name);
-        });
+        value.value);
     if (value.default_argument.has_value()) {
         std::format_to(context.out(), " = {}", value.default_argument.value());
     }

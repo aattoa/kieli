@@ -8,7 +8,7 @@ namespace libformat {
     struct State {
         kieli::Format_configuration const& configuration;
         std::string&                       string;
-        utl::Usize                         current_indentation {};
+        std::size_t                        current_indentation {};
 
         auto newline() noexcept -> Newline;
         auto indent() noexcept -> Indentation;
@@ -61,7 +61,7 @@ namespace libformat {
     };
 
     struct Newline {
-        utl::Usize indentation {};
+        std::size_t indentation {};
     };
 
     struct Indentation {

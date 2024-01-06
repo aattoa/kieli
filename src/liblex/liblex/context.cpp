@@ -15,9 +15,9 @@ auto liblex::Context::source_view_for(std::string_view const view) const noexcep
     return utl::Source_view { m_source, view, start_position, stop_position };
 }
 
-auto liblex::Context::remaining_input_size() const noexcept -> utl::Usize
+auto liblex::Context::remaining_input_size() const noexcept -> std::size_t
 {
-    return utl::unsigned_distance(m_pointer, m_source_end);
+    return static_cast<std::size_t>(std::distance(m_pointer, m_source_end));
 }
 
 liblex::Context::Context(
@@ -71,10 +71,10 @@ auto liblex::Context::extract_current() noexcept -> char
     return *m_pointer++;
 }
 
-auto liblex::Context::advance(utl::Usize const offset) noexcept -> void
+auto liblex::Context::advance(std::size_t const offset) noexcept -> void
 {
     utl::always_assert(offset <= remaining_input_size());
-    for (utl::Usize i = 0; i != offset; ++i) {
+    for (std::size_t i = 0; i != offset; ++i) {
         m_position.advance_with(*m_pointer++);
     }
 }
@@ -95,7 +95,7 @@ auto liblex::Context::try_consume(char const character) noexcept -> bool
 
 auto liblex::Context::try_consume(std::string_view const string) noexcept -> bool
 {
-    if (std::ranges::starts_with(std::string_view { m_pointer, m_source_end }, string)) {
+    if (std::string_view(m_pointer, m_source_end).starts_with(string)) {
         advance(string.size());
         return true;
     }

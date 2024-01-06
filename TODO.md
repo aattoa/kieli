@@ -32,8 +32,8 @@
 - libbuild
 - libconfigure
 - User generated compile-time messages
-- Remove `noexcept` speficiation from functions with preconditions
 - Use libtommath for arbitrary precision integers
+- Wrapper `unwrap` instead of `operator*` ?
 
 ## To-remove
 - `utl::Flatmap`, when `std::flat_map` is supported by compilers

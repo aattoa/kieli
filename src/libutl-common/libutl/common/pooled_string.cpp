@@ -11,7 +11,7 @@ auto utl::Pooled_string::view() const noexcept -> std::string_view
     return m_relative.view_in(*m_pool);
 }
 
-auto utl::Pooled_string::size() const noexcept -> Usize
+auto utl::Pooled_string::size() const noexcept -> std::size_t
 {
     return m_relative.length;
 }
@@ -32,7 +32,7 @@ auto utl::operator==(std::string_view const left, Pooled_string const& right) ->
     return left == right.view();
 }
 
-utl::String_pool::String_pool(Usize const initial_capacity)
+utl::String_pool::String_pool(std::size_t const initial_capacity)
     : m_string { std::make_unique<std::string>() }
 {
     m_string->reserve(std::max(initial_capacity, sizeof(std::string) + 1));
@@ -50,7 +50,7 @@ auto utl::String_pool::make(std::string_view const string) -> Pooled_string
     }
     return Pooled_string {
         Relative_string {
-            .offset = unsigned_distance(m_string->begin(), it),
+            .offset = static_cast<std::size_t>(std::distance(m_string->begin(), it)),
             .length = string.size(),
         },
         m_string.get(),

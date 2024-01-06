@@ -166,9 +166,9 @@ namespace ast {
         };
 
         struct Tuple_field_access {
-            utl::Wrapper<Expression>  base_expression;
-            utl::Explicit<utl::Usize> field_index;
-            utl::Source_view          field_index_source_view;
+            utl::Wrapper<Expression>   base_expression;
+            utl::Explicit<std::size_t> field_index;
+            utl::Source_view           field_index_source_view;
         };
 
         struct Array_index_access {

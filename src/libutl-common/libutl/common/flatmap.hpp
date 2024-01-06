@@ -94,7 +94,7 @@ namespace utl {
             throw std::out_of_range { "utl::Flatmap::operator[] out of range" };
         }
 
-        [[nodiscard]] constexpr auto size() const noexcept -> Usize
+        [[nodiscard]] constexpr auto size() const noexcept -> std::size_t
         {
             return m_container.size();
         }

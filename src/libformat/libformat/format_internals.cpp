@@ -20,13 +20,16 @@ libformat::Indentation::~Indentation()
 auto libformat::State::format(cst::Qualified_name const& name) -> void
 {
     if (name.root_qualifier.has_value()) {
-        utl::match(
-            name.root_qualifier->value,
-            [&](cst::Root_qualifier::Global) { format("global::"); },
-            [&](utl::Wrapper<cst::Type> const type) {
-                format(*type);
-                format("::");
-            });
+        std::visit(
+            utl::Overload {
+                [&](cst::Root_qualifier::Global) { format("global::"); },
+                [&](utl::Wrapper<cst::Type> const type) {
+                    format(*type);
+                    format("::");
+                },
+
+            },
+            name.root_qualifier->value);
     }
     for (auto const& qualifier : name.middle_qualifiers.elements) {
         format("{}", qualifier.name);
@@ -38,12 +41,14 @@ auto libformat::State::format(cst::Qualified_name const& name) -> void
 
 auto libformat::State::format(cst::Template_argument const& argument) -> void
 {
-    utl::match(
-        argument.value,
-        [&](cst::Template_argument::Wildcard const& wildcard) {
-            format("{}", wildcard.source_view.string);
+    std::visit(
+        utl::Overload {
+            [&](cst::Template_argument::Wildcard const& wildcard) {
+                format("{}", wildcard.source_view.string);
+            },
+            [&](auto const& other) { format(other); },
         },
-        [&](auto const& other) { format(other); });
+        argument.value);
 }
 
 auto libformat::State::format(cst::Function_argument const& argument) -> void
@@ -56,14 +61,16 @@ auto libformat::State::format(cst::Function_argument const& argument) -> void
 
 auto libformat::State::format(cst::Mutability const& mutability) -> void
 {
-    utl::match(
-        mutability.value,
-        [&](cst::Mutability::Parameterized const& parameterized) {
-            format("mut?{}", parameterized.name);
+    return std::visit(
+        utl::Overload {
+            [&](cst::Mutability::Parameterized const& parameterized) {
+                format("mut?{}", parameterized.name);
+            },
+            [&](cst::Mutability::Concrete const& concrete) {
+                format("{}", concrete.is_mutable ? "mut" : "immut");
+            },
         },
-        [&](cst::Mutability::Concrete const& concrete) {
-            format("{}", concrete.is_mutable ? "mut" : "immut");
-        });
+        mutability.value);
 }
 
 auto libformat::State::format(std::optional<cst::Template_arguments> const& arguments) -> void

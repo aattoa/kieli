@@ -11,8 +11,7 @@ namespace {
         }
         static thread_local std::string buffer;
         buffer.clear();
-        std::ranges::copy_if(
-            digits, std::back_inserter(buffer), [](char const c) { return c != '\''; });
+        buffer.append_range(std::views::filter(digits, [](char const c) { return c != '\''; }));
         return buffer;
     }
 
@@ -38,10 +37,10 @@ namespace {
     }
 } // namespace
 
-auto liblex::apply_scientific_exponent(utl::Usize integer, utl::Usize const exponent)
-    -> std::expected<utl::Usize, Numeric_error>
+auto liblex::apply_scientific_exponent(std::size_t integer, std::size_t const exponent)
+    -> std::expected<std::size_t, Numeric_error>
 {
-    for (utl::Usize i = 0; i != exponent; ++i) {
+    for (std::size_t i = 0; i != exponent; ++i) {
         if (utl::would_multiplication_overflow(integer, 10UZ)) {
             return std::unexpected { Numeric_error::out_of_range };
         }
@@ -51,9 +50,9 @@ auto liblex::apply_scientific_exponent(utl::Usize integer, utl::Usize const expo
 }
 
 auto liblex::parse_integer(std::string_view const digits, int const base)
-    -> std::expected<utl::Usize, Numeric_error>
+    -> std::expected<std::size_t, Numeric_error>
 {
-    return parse_impl<utl::Usize>(without_separators(digits), base);
+    return parse_impl<std::size_t>(without_separators(digits), base);
 }
 
 auto liblex::parse_floating(std::string_view const digits) -> std::expected<double, Numeric_error>

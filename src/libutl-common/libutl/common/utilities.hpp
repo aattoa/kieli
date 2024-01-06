@@ -39,19 +39,6 @@
 #include <algorithm>
 
 namespace utl {
-    using I8  = std::int8_t;
-    using I16 = std::int16_t;
-    using I32 = std::int32_t;
-    using I64 = std::int64_t;
-
-    using U8  = std::uint8_t;
-    using U16 = std::uint16_t;
-    using U32 = std::uint32_t;
-    using U64 = std::uint64_t;
-
-    using Usize = std::size_t;
-    using Isize = std::make_signed_t<Usize>;
-
     template <class From, class To>
     concept losslessly_convertible_to = std::integral<From> && std::integral<To>
                                      && std::in_range<To>(std::numeric_limits<From>::min())
@@ -73,7 +60,7 @@ namespace utl {
         return static_cast<To>(from);
     }
 
-    template <Usize length>
+    template <std::size_t length>
     struct [[nodiscard]] Metastring {
         char characters[length];
 
@@ -88,7 +75,7 @@ namespace utl {
         }
     };
 
-    template <Usize length>
+    template <std::size_t length>
     Metastring(char const (&)[length]) -> Metastring<length>;
 } // namespace utl
 
@@ -122,6 +109,11 @@ namespace utl {
     template <class T, class... Ts>
     concept one_of = std::disjunction_v<std::is_same<T, Ts>...>;
 
+    template <class... Fs>
+    struct Overload : Fs... {
+        using Fs::operator()...;
+    };
+
     [[noreturn]] auto abort(
         std::string_view message = "Invoked utl::abort",
         std::source_location     = std::source_location::current()) -> void;
@@ -136,7 +128,7 @@ namespace utl {
 
     template <class E>
         requires std::is_enum_v<E> && requires { E::_enumerator_count; }
-    constexpr Usize enumerator_count = static_cast<Usize>(E::_enumerator_count);
+    constexpr std::size_t enumerator_count = static_cast<std::size_t>(E::_enumerator_count);
 
     template <class E, E min = E {}, E max = E::_enumerator_count>
     [[nodiscard]] constexpr auto is_valid_enumerator(E const e) noexcept -> bool
@@ -145,11 +137,12 @@ namespace utl {
         return min <= e && max > e;
     }
 
-    [[nodiscard]] constexpr auto as_index(auto const e) noexcept -> Usize
-        requires requires { is_valid_enumerator(e); }
+    template <class E>
+    [[nodiscard]] constexpr auto as_index(E const e) noexcept -> std::size_t
+        requires std::is_enum_v<E>
     {
         always_assert(is_valid_enumerator(e));
-        return static_cast<Usize>(e);
+        return static_cast<std::size_t>(e);
     }
 
     // Value wrapper that is used to disable default constructors
@@ -171,39 +164,6 @@ namespace utl {
         }
     };
 
-    template <class F, class G, class... Hs>
-    [[nodiscard]] constexpr auto compose(F&& f, G&& g, Hs&&... hs)
-    {
-        if constexpr (sizeof...(Hs) != 0) {
-            return compose(
-                std::forward<F>(f), compose(std::forward<G>(g), std::forward<Hs>(hs)...));
-        }
-        else {
-            return [f = std::forward<F>(f),
-                    g = std::forward<G>(g)]<class... Args>(Args&&... args) -> decltype(auto) {
-                return std::invoke(f, std::invoke(g, std::forward<Args>(args)...));
-            };
-        }
-    };
-
-    template <class... Fs>
-    struct Overload : Fs... {
-        using Fs::operator()...;
-    };
-    template <class... Fs>
-    Overload(Fs...) -> Overload<Fs...>;
-
-    template <class Variant, class... Arms>
-    constexpr auto match(Variant&& variant, Arms&&... arms) noexcept(noexcept(std::visit(
-        Overload { std::forward<Arms>(arms)... },
-        std::forward<Variant>(variant)))) -> decltype(auto)
-    {
-        if (variant.valueless_by_exception()) [[unlikely]] {
-            abort("utl::match was invoked with a valueless variant");
-        }
-        return std::visit(Overload { std::forward<Arms>(arms)... }, std::forward<Variant>(variant));
-    }
-
     auto disable_short_string_optimization(std::string&) -> void;
 
     template <class T>
@@ -212,40 +172,10 @@ namespace utl {
         std::vector<T> {}.swap(vector);
     }
 
-    template <class T, Usize n>
+    template <class T, std::size_t n>
     [[nodiscard]] constexpr auto to_vector(T (&&array)[n]) -> std::vector<T>
     {
         return std::ranges::to<std::vector>(std::views::as_rvalue(array));
-    }
-
-    [[nodiscard]] constexpr auto unsigned_distance(
-        auto const                 start,
-        auto const                 stop,
-        std::source_location const caller = std::source_location::current()) noexcept -> Usize
-    {
-        always_assert(std::less_equal()(start, stop), caller);
-        return static_cast<Usize>(std::distance(start, stop));
-    }
-
-    template <
-        std::input_or_output_iterator     It,
-        std::sentinel_for<It>             Se,
-        std::indirect_unary_predicate<It> F>
-    [[nodiscard]] constexpr auto find_nth_if(It it, Se se, Usize const n, F f) -> It
-    {
-        return std::ranges::find_if(
-            std::move(it), std::move(se), [&f, n, i = 0](auto const& x) mutable {
-                return f(x) && (i++ == n);
-            });
-    }
-
-    template <
-        std::input_or_output_iterator                        It,
-        std::sentinel_for<It>                                Se,
-        std::equality_comparable_with<std::iter_value_t<It>> T>
-    [[nodiscard]] constexpr auto find_nth(It it, Se se, Usize const n, T const& x) -> It
-    {
-        return find_nth_if(std::move(it), std::move(se), n, [&x](auto const& y) { return x == y; });
     }
 
     [[nodiscard]] constexpr auto ordinal_indicator(std::integral auto n) noexcept
@@ -269,8 +199,8 @@ namespace utl {
     }
 
     struct [[nodiscard]] Relative_string {
-        utl::Usize offset {};
-        utl::Usize length {};
+        std::size_t offset {};
+        std::size_t length {};
 
         [[nodiscard]] auto view_in(std::string_view) const -> std::string_view;
 
@@ -280,7 +210,7 @@ namespace utl {
             std::format_string<Args...> const fmt,
             Args&&... args) -> Relative_string
         {
-            Usize const old_size = out.size();
+            auto const old_size = out.size();
             std::format_to(std::back_inserter(out), fmt, std::forward<Args>(args)...);
             return { .offset = old_size, .length = out.size() - old_size };
         }
@@ -325,9 +255,11 @@ template <class Char, std::formattable<Char>... Ts>
 struct std::formatter<std::variant<Ts...>, Char> : utl::fmt::Formatter_base {
     auto format(std::variant<Ts...> const& variant, auto& context) const
     {
-        return utl::match(variant, [&](auto const& alternative) {
-            return std::format_to(context.out(), "{}", alternative);
-        });
+        return std::visit(
+            [&](auto const& alternative) {
+                return std::format_to(context.out(), "{}", alternative);
+            },
+            variant);
     }
 };
 
@@ -360,9 +292,9 @@ struct std::formatter<utl::fmt::Integer_with_ordinal_indicator_closure<T>, Char>
 
 template <class Char, std::formattable<Char> T>
 struct std::formatter<utl::Explicit<T>, Char> : std::formatter<T> {
-    auto format(utl::Explicit<T> const& strong, auto& context) const
+    auto format(utl::Explicit<T> const& expl, auto& context) const
     {
-        return std::formatter<T>::format(strong.get(), context);
+        return std::formatter<T>::format(expl.get(), context);
     }
 };
 

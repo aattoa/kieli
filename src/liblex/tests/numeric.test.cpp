@@ -6,7 +6,7 @@
 
 TEST("liblex::apply_scientific_exponent")
 {
-    static constexpr auto max_usize = std::numeric_limits<utl::Usize>::max();
+    static constexpr auto max_usize = std::numeric_limits<std::size_t>::max();
     REQUIRE(liblex::apply_scientific_exponent(35, 0) == 35);
     REQUIRE(liblex::apply_scientific_exponent(35, 1) == 350);
     REQUIRE(liblex::apply_scientific_exponent(35, 2) == 3500);

@@ -14,14 +14,14 @@ namespace utl {
         explicit Pooled_string(Relative_string relative, std::string const* pool);
     public:
         [[nodiscard]] auto view() const noexcept -> std::string_view;
-        [[nodiscard]] auto size() const noexcept -> Usize;
+        [[nodiscard]] auto size() const noexcept -> std::size_t;
         [[nodiscard]] auto operator==(Pooled_string const&) const -> bool;
     };
 
     class [[nodiscard]] String_pool {
         std::unique_ptr<std::string> m_string;
     public:
-        explicit String_pool(Usize initial_capacity);
+        explicit String_pool(std::size_t initial_capacity);
         String_pool();
         auto make(std::string_view) -> Pooled_string;
         auto make_guaranteed_new_string(std::string_view) -> Pooled_string;

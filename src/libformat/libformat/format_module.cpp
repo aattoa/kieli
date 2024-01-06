@@ -120,7 +120,7 @@ auto kieli::format_module(
         .current_indentation = 0,
     };
     for (cst::Definition const& definition : module.definitions) {
-        utl::match(definition.value, Definition_format_visitor { state });
+        std::visit(Definition_format_visitor { state }, definition.value);
     }
     output_string.push_back('\n');
     return output_string;

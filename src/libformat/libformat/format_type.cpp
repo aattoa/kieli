@@ -121,5 +121,5 @@ namespace {
 
 auto libformat::State::format(cst::Type const& type) -> void
 {
-    utl::match(type.value, Type_format_visitor { *this, type.source_view });
+    std::visit(Type_format_visitor { *this, type.source_view }, type.value);
 }

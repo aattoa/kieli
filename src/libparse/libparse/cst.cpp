@@ -28,10 +28,12 @@ auto cst::Qualified_name::is_unqualified() const noexcept -> bool
 
 auto cst::Template_argument::source_view() const -> utl::Source_view
 {
-    return utl::match(
-        value,
-        [](Wildcard const& wildcard) { return wildcard.source_view; },
-        [](utl::Wrapper<Type> const type) { return type->source_view; },
-        [](utl::Wrapper<Expression> const expression) { return expression->source_view; },
-        [](cst::Mutability const& mutability) { return mutability.source_view; });
+    return std::visit(
+        utl::Overload {
+            [](Wildcard const& wildcard) { return wildcard.source_view; },
+            [](utl::Wrapper<Type> const type) { return type->source_view; },
+            [](utl::Wrapper<Expression> const expression) { return expression->source_view; },
+            [](cst::Mutability const& mutability) { return mutability.source_view; },
+        },
+        value);
 }

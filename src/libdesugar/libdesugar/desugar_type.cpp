@@ -10,7 +10,7 @@ namespace {
 
         auto operator()(cst::type::Parenthesized const& parenthesized) -> ast::Type::Variant
         {
-            return utl::match(parenthesized.type.value->value, *this);
+            return std::visit(*this, parenthesized.type.value->value);
         }
 
         auto operator()(kieli::built_in_type::Integer const& integer) -> ast::Type::Variant

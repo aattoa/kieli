@@ -89,8 +89,8 @@ TEST("integer literal suffix")
 TEST("integer literal valid range")
 {
     REQUIRE(
-        lex_success(std::format("{}", std::numeric_limits<utl::Usize>::max()))
-        == std::format("(int: {})", std::numeric_limits<utl::Usize>::max()));
+        lex_success(std::format("{}", std::numeric_limits<std::size_t>::max()))
+        == std::format("(int: {})", std::numeric_limits<std::size_t>::max()));
     REQUIRE_THAT(lex_failure("18446744073709551616"), contains("integer literal is too large"));
     REQUIRE_THAT(lex_failure("5e18446744073709551616"), contains("exponent is too large"));
     REQUIRE_THAT(lex_failure("5e20"), contains("too large after applying scientific exponent"));

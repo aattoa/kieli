@@ -26,7 +26,7 @@ namespace kieli {
         cppdiag::Context                 context;
         std::vector<cppdiag::Diagnostic> vector;
 
-        template <utl::Usize n, class... Args>
+        template <std::size_t n, class... Args>
         auto emit(
             cppdiag::Severity const severity,
             Simple_text_section (&&sections)[n],
@@ -35,7 +35,7 @@ namespace kieli {
         {
             vector.push_back(cppdiag::Diagnostic {
                 .text_sections =
-                    [&]<utl::Usize... is>(std::index_sequence<is...>) {
+                    [&]<std::size_t... is>(std::index_sequence<is...>) {
                         return utl::to_vector({ text_section(
                             sections[is].source_view,
                             sections[is].note.transform(
@@ -56,7 +56,7 @@ namespace kieli {
             emit(severity, { Simple_text_section { view } }, fmt, std::forward<Args>(args)...);
         }
 
-        template <utl::Usize n, class... Args>
+        template <std::size_t n, class... Args>
         [[noreturn]] auto error(
             Simple_text_section (&&sections)[n],
             std::format_string<Args...> const fmt,
@@ -131,7 +131,7 @@ namespace kieli {
     };
 
     struct Integer {
-        utl::U64 value {};
+        std::uint64_t value {};
     };
 
     struct Floating {

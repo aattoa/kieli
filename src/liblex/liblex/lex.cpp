@@ -236,7 +236,7 @@ namespace {
     auto skip_block_comment(char const* const anchor, liblex::Context& context)
         -> liblex::Expected<void>
     {
-        for (utl::Usize depth = 1; depth != 0;) {
+        for (std::size_t depth = 1; depth != 0;) {
             (void)skip_string_literal_within_comment(context);
             if (context.try_consume("*/")) {
                 assert(depth != 0);
@@ -432,11 +432,11 @@ namespace {
             });
     }
 
-    auto extract_integer_exponent(liblex::Context& context) -> liblex::Expected<utl::Usize>
+    auto extract_integer_exponent(liblex::Context& context) -> liblex::Expected<std::size_t>
     {
         std::string_view const exponent_digit_sequence = context.extract(is_digit10);
         return ensure_no_trailing_separator(exponent_digit_sequence, context)
-            .and_then([&]() -> liblex::Expected<utl::Usize> {
+            .and_then([&]() -> liblex::Expected<std::size_t> {
                 std::string_view const extraneous_suffix = context.extract(is_alpha);
                 if (!extraneous_suffix.empty()) {
                     return context.error(
@@ -452,10 +452,10 @@ namespace {
     }
 
     auto apply_integer_exponent(
-        utl::Usize const  integer,
-        utl::Usize const  exponent,
+        std::size_t const integer,
+        std::size_t const exponent,
         char const* const anchor,
-        liblex::Context&  context) -> liblex::Expected<utl::Usize>
+        liblex::Context&  context) -> liblex::Expected<std::size_t>
     {
         return liblex::apply_scientific_exponent(integer, exponent)
             .transform_error([&](liblex::Numeric_error const error) {
@@ -470,8 +470,8 @@ namespace {
 
     auto extract_and_apply_potential_integer_exponent(
         char const* const anchor,
-        utl::Usize const  integer,
-        liblex::Context&  context) -> liblex::Expected<utl::Usize>
+        std::size_t const integer,
+        liblex::Context&  context) -> liblex::Expected<std::size_t>
     {
         std::string_view const suffix = context.extract(is_alpha);
         if (suffix.empty()) {
@@ -487,7 +487,7 @@ namespace {
         if (context.is_finished() || !is_digit10(context.current())) {
             return context.error("Expected an exponent");
         }
-        return extract_integer_exponent(context).and_then([&](utl::Usize const exponent) {
+        return extract_integer_exponent(context).and_then([&](std::size_t const exponent) {
             return apply_integer_exponent(integer, exponent, anchor, context);
         });
     }
@@ -504,10 +504,10 @@ namespace {
                 utl::always_assert(error == liblex::Numeric_error::out_of_range);
                 return context.error(digits, "Integer literal is too large").error();
             })
-            .and_then([&](utl::Usize const integer) {
+            .and_then([&](std::size_t const integer) {
                 return extract_and_apply_potential_integer_exponent(anchor, integer, context);
             })
-            .transform([&](utl::Usize const integer) {
+            .transform([&](std::size_t const integer) {
                 return token(kieli::Integer { integer }, Token::Type::integer_literal);
             });
     }

@@ -5,12 +5,12 @@
 namespace utl::dtl {
     template <class T>
     class [[nodiscard]] Wrapper_arena_page {
-        Usize                 m_page_size;
+        std::size_t           m_page_size;
         T*                    m_buffer;
         T*                    m_slot;
         static constexpr auto alignment = static_cast<std::align_val_t>(alignof(T));
     public:
-        explicit Wrapper_arena_page(Usize const page_size)
+        explicit Wrapper_arena_page(std::size_t const page_size)
             : m_page_size { page_size }
             , m_buffer { static_cast<T*>(::operator new(sizeof(T) * page_size, alignment)) }
             , m_slot { m_buffer }
@@ -75,11 +75,11 @@ namespace utl {
     class [[nodiscard]] Wrapper_arena<T> {
         using Page = dtl::Wrapper_arena_page<T>;
         std::vector<Page> m_pages;
-        Usize             m_page_size;
+        std::size_t       m_page_size;
 
-        explicit Wrapper_arena(Usize const page_size) noexcept : m_page_size { page_size } {}
+        explicit Wrapper_arena(std::size_t const page_size) noexcept : m_page_size { page_size } {}
     public:
-        static auto with_page_size(Usize const page_size) -> Wrapper_arena
+        static auto with_page_size(std::size_t const page_size) -> Wrapper_arena
         {
             return Wrapper_arena { page_size };
         }
@@ -110,7 +110,7 @@ namespace utl {
             : Wrapper_arena<Ts> { std::move(arenas) }...
         {}
 
-        static auto with_page_size(Usize const page_size) -> Wrapper_arena
+        static auto with_page_size(std::size_t const page_size) -> Wrapper_arena
         {
             return Wrapper_arena { Wrapper_arena<Ts>::with_page_size(page_size)... };
         }

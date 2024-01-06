@@ -251,18 +251,17 @@ namespace utl {
         [[nodiscard]] auto operator<=>(Safe_integer const&) const noexcept        = default;
     };
 
-    using Safe_i8  = Safe_integer<I8>;
-    using Safe_i16 = Safe_integer<I16>;
-    using Safe_i32 = Safe_integer<I32>;
-    using Safe_i64 = Safe_integer<I64>;
+    using Safe_i8  = Safe_integer<std::int8_t>;
+    using Safe_i16 = Safe_integer<std::int16_t>;
+    using Safe_i32 = Safe_integer<std::int32_t>;
+    using Safe_i64 = Safe_integer<std::int64_t>;
 
-    using Safe_u8  = Safe_integer<U8>;
-    using Safe_u16 = Safe_integer<U16>;
-    using Safe_u32 = Safe_integer<U32>;
-    using Safe_u64 = Safe_integer<U64>;
+    using Safe_u8  = Safe_integer<std::uint8_t>;
+    using Safe_u16 = Safe_integer<std::uint16_t>;
+    using Safe_u32 = Safe_integer<std::uint32_t>;
+    using Safe_u64 = Safe_integer<std::uint64_t>;
 
-    using Safe_usize = Safe_integer<Usize>;
-    using Safe_isize = Safe_integer<Isize>;
+    using Safe_size_t = Safe_integer<std::size_t>;
 
 } // namespace utl
 

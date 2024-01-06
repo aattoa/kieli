@@ -48,22 +48,26 @@ namespace {
     auto template_parameter_kind_description(cst::Template_parameter::Variant const& parameter)
         -> std::string_view
     {
-        return utl::match(
-            parameter,
-            [](cst::Template_parameter::Type_parameter const&) { return "type"; },
-            [](cst::Template_parameter::Value_parameter const&) { return "value"; },
-            [](cst::Template_parameter::Mutability_parameter const&) { return "mutability"; });
+        return std::visit(
+            utl::Overload {
+                [](cst::Template_parameter::Type_parameter const&) { return "type"; },
+                [](cst::Template_parameter::Value_parameter const&) { return "value"; },
+                [](cst::Template_parameter::Mutability_parameter const&) { return "mutability"; },
+            },
+            parameter);
     }
 
     auto template_argument_kind_description(cst::Template_argument::Variant const& argument)
         -> std::string_view
     {
-        return utl::match(
-            argument,
-            [](cst::Template_argument::Wildcard const&) { return "wildcard"; },
-            [](utl::Wrapper<cst::Type> const&) { return "type"; },
-            [](utl::Wrapper<cst::Expression> const&) { return "value"; },
-            [](cst::Mutability const&) { return "mutability"; });
+        return std::visit(
+            utl::Overload {
+                [](cst::Template_argument::Wildcard const&) { return "wildcard"; },
+                [](utl::Wrapper<cst::Type> const&) { return "type"; },
+                [](utl::Wrapper<cst::Expression> const&) { return "value"; },
+                [](cst::Mutability const&) { return "mutability"; },
+            },
+            argument);
     }
 
     auto parse_template_parameter_default_argument(

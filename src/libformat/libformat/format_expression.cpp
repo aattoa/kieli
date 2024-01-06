@@ -354,5 +354,5 @@ namespace {
 
 auto libformat::State::format(cst::Expression const& expression) -> void
 {
-    utl::match(expression.value, Expression_format_visitor { *this, expression.source_view });
+    std::visit(Expression_format_visitor { *this, expression.source_view }, expression.value);
 }

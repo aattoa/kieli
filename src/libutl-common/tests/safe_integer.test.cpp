@@ -22,8 +22,8 @@ TEST("safe integer default construction")
 
 TEST("safe integer conversion to bool")
 {
-    REQUIRE(static_cast<bool>(safe_max<utl::I32>));
-    REQUIRE(static_cast<bool>(safe_min<utl::I32>));
+    REQUIRE(static_cast<bool>(safe_max<std::int32_t>));
+    REQUIRE(static_cast<bool>(safe_min<std::int32_t>));
     REQUIRE(static_cast<bool>(utl::Safe_i32 { 1 }));
     REQUIRE_FALSE(static_cast<bool>(utl::Safe_i32 { 0 }));
 }

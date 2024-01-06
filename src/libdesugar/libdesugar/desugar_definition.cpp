@@ -31,14 +31,12 @@ namespace {
             std::vector<ast::Function_parameter> parameters;
             if (function.signature.function_parameters.self_parameter.has_value()) {
                 parameters.push_back(context.normalize_self_parameter(
-                    *function.signature.function_parameters.self_parameter));
+                    function.signature.function_parameters.self_parameter.value()));
             }
 
-            std::ranges::move(
-                std::views::transform(
-                    function.signature.function_parameters.normal_parameters.elements,
-                    context.desugar()),
-                std::back_inserter(parameters));
+            parameters.append_range(
+                function.signature.function_parameters.normal_parameters.elements
+                | std::views::transform(context.desugar()));
 
             // Convert function bodies defined with shorthand syntax into blocks
             ast::Expression function_body = context.desugar(*function.body);
