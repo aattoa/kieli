@@ -25,8 +25,8 @@ namespace utl {
     };
 
     struct Source_position {
-        std::size_t line   = 1;
-        std::size_t column = 1;
+        std::uint32_t line   = 1;
+        std::uint32_t column = 1;
 
         auto advance_with(char) noexcept -> void;
 
