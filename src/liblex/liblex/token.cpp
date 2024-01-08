@@ -190,7 +190,7 @@ auto kieli::Lexical_token::description(Type const type) noexcept -> std::string_
     case Type::u64_type:     return "a primitive typename";
     case Type::end_of_input: return "the end of input";
     default:
-        utl::unreachable();
+        cpputil::unreachable();
     }
     // clang-format on
 }

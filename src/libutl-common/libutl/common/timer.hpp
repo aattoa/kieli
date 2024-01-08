@@ -47,7 +47,7 @@ namespace utl {
                 scope_exit_logger(Basic_timer<Clock, Duration>::elapsed());
             }
             else {
-                abort("utl::Logging_timer: scope_exit_logger was uninitialized");
+                cpputil::abort("utl::Logging_timer: scope_exit_logger was uninitialized");
             }
         }
     };

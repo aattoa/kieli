@@ -38,6 +38,8 @@
 #include <numeric>
 #include <algorithm>
 
+#include <cpputil/util.hpp>
+
 namespace utl {
     template <class From, class To>
     concept losslessly_convertible_to = std::integral<From> && std::integral<To>
@@ -102,7 +104,6 @@ namespace utl::dtl {
 } // namespace utl::dtl
 
 namespace utl {
-
     template <class T, template <class...> class F>
     concept specialization_of = dtl::Is_specialization_of<T, F>::value;
 
@@ -113,18 +114,6 @@ namespace utl {
     struct Overload : Fs... {
         using Fs::operator()...;
     };
-
-    [[noreturn]] auto abort(
-        std::string_view message = "Invoked utl::abort",
-        std::source_location     = std::source_location::current()) -> void;
-
-    [[noreturn]] auto todo(std::source_location = std::source_location::current()) -> void;
-
-    [[noreturn]] auto unreachable(std::source_location = std::source_location::current()) -> void;
-
-    auto trace(std::source_location = std::source_location::current()) -> void;
-
-    auto always_assert(bool, std::source_location = std::source_location::current()) -> void;
 
     template <class E>
         requires std::is_enum_v<E> && requires { E::_enumerator_count; }
@@ -141,7 +130,7 @@ namespace utl {
     [[nodiscard]] constexpr auto as_index(E const e) noexcept -> std::size_t
         requires std::is_enum_v<E>
     {
-        always_assert(is_valid_enumerator(e));
+        cpputil::always_assert(is_valid_enumerator(e));
         return static_cast<std::size_t>(e);
     }
 
@@ -248,7 +237,6 @@ namespace utl {
             return Join_closure { std::addressof(range), delimiter };
         }
     } // namespace fmt
-
 } // namespace utl
 
 template <class Char, std::formattable<Char>... Ts>

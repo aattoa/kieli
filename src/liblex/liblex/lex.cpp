@@ -143,7 +143,7 @@ namespace {
         case 12: return is_digit_or_separator<is_digit12>;
         case 16: return is_digit_or_separator<is_digit16>;
         default:
-            utl::unreachable();
+            cpputil::unreachable();
         }
         // clang-format on
     }
@@ -180,7 +180,7 @@ namespace {
     auto ensure_no_trailing_separator(std::string_view const string, liblex::Context& context)
         -> liblex::Expected<void>
     {
-        utl::always_assert(!string.empty());
+        cpputil::always_assert(!string.empty());
         if (string.back() == '\'') {
             return context.error("Expected one or more digits after the digit separator");
         }
@@ -400,7 +400,7 @@ namespace {
     {
         return liblex::parse_floating(literal_string)
             .transform_error([&](liblex::Numeric_error const error) {
-                utl::always_assert(error == liblex::Numeric_error::out_of_range);
+                cpputil::always_assert(error == liblex::Numeric_error::out_of_range);
                 return context.error(literal_string, "Floating point literal is too large").error();
             });
     }
@@ -444,7 +444,7 @@ namespace {
                 }
                 return liblex::parse_integer(exponent_digit_sequence)
                     .transform_error([&](liblex::Numeric_error const error) {
-                        utl::always_assert(error == liblex::Numeric_error::out_of_range);
+                        cpputil::always_assert(error == liblex::Numeric_error::out_of_range);
                         return context.error(exponent_digit_sequence, "Exponent is too large")
                             .error();
                     });
@@ -459,7 +459,7 @@ namespace {
     {
         return liblex::apply_scientific_exponent(integer, exponent)
             .transform_error([&](liblex::Numeric_error const error) {
-                utl::always_assert(error == liblex::Numeric_error::out_of_range);
+                cpputil::always_assert(error == liblex::Numeric_error::out_of_range);
                 return context
                     .error(
                         { anchor, context.pointer() },
@@ -501,7 +501,7 @@ namespace {
     {
         return liblex::parse_integer(digits, base)
             .transform_error([&](liblex::Numeric_error const error) {
-                utl::always_assert(error == liblex::Numeric_error::out_of_range);
+                cpputil::always_assert(error == liblex::Numeric_error::out_of_range);
                 return context.error(digits, "Integer literal is too large").error();
             })
             .and_then([&](std::size_t const integer) {
@@ -594,7 +594,7 @@ namespace {
 auto kieli::lex(utl::Source::Wrapper const source, Compile_info& compile_info)
     -> std::vector<Lexical_token>
 {
-    utl::always_assert(source->string().data() != nullptr);
+    cpputil::always_assert(source->string().data() != nullptr);
 
     std::vector<Token> tokens;
     tokens.reserve(1024);

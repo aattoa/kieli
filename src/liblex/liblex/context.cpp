@@ -61,19 +61,19 @@ auto liblex::Context::is_finished() const noexcept -> bool
 
 auto liblex::Context::current() const noexcept -> char
 {
-    utl::always_assert(!is_finished());
+    cpputil::always_assert(!is_finished());
     return *m_pointer;
 }
 
 auto liblex::Context::extract_current() noexcept -> char
 {
-    utl::always_assert(!is_finished());
+    cpputil::always_assert(!is_finished());
     return *m_pointer++;
 }
 
 auto liblex::Context::advance(std::size_t const offset) noexcept -> void
 {
-    utl::always_assert(offset <= remaining_input_size());
+    cpputil::always_assert(offset <= remaining_input_size());
     for (std::size_t i = 0; i != offset; ++i) {
         m_position.advance_with(*m_pointer++);
     }

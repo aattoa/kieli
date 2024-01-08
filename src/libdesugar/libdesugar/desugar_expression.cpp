@@ -532,7 +532,7 @@ namespace {
         {
             // Should be unreachable because a conditional let expression can
             // only occur as the condition of if-let or while-let expressions.
-            utl::unreachable();
+            cpputil::unreachable();
         }
     };
 } // namespace

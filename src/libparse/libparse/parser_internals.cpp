@@ -409,7 +409,7 @@ libparse::Context::Context(
     , asterisk_id { compile_info.operator_pool.make("*") }
 {
     // The end-of-input token should always be present
-    utl::always_assert(!tokens.empty() && tokens.back().type == Token_type::end_of_input);
+    cpputil::always_assert(!tokens.empty() && tokens.back().type == Token_type::end_of_input);
 }
 
 auto libparse::Context::is_finished() const noexcept -> bool

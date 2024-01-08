@@ -161,7 +161,7 @@ namespace {
                 }));
         }
         context.diagnostics().error(
-            context.make_source_view(anchor, context.pointer),
+            context.make_source_view(anchor, context.pointer - 1),
             "Expected an expression, but found a type");
     }
 

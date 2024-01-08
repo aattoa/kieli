@@ -56,43 +56,43 @@ namespace {
                 return;
             }
             default:
-                utl::unreachable();
+                cpputil::unreachable();
             }
         }
 
         auto operator()(cst::definition::Struct const&) -> void
         {
-            utl::todo();
+            cpputil::todo();
         }
 
         auto operator()(cst::definition::Enum const&) -> void
         {
-            utl::todo();
+            cpputil::todo();
         }
 
         auto operator()(cst::definition::Typeclass const&) -> void
         {
-            utl::todo();
+            cpputil::todo();
         }
 
         auto operator()(cst::definition::Implementation const&) -> void
         {
-            utl::todo();
+            cpputil::todo();
         }
 
         auto operator()(cst::definition::Instantiation const&) -> void
         {
-            utl::todo();
+            cpputil::todo();
         }
 
         auto operator()(cst::definition::Alias const&) -> void
         {
-            utl::todo();
+            cpputil::todo();
         }
 
         auto operator()(cst::definition::Namespace const&) -> void
         {
-            utl::todo();
+            cpputil::todo();
         }
     };
 

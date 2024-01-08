@@ -52,7 +52,8 @@ namespace utl {
                          decltype(std::as_const(key))>
         {
             if (find(std::as_const(key)) != nullptr) {
-                abort("utl::Flatmap::add_new_or_abort: key already present in flatmap", caller);
+                cpputil::abort(
+                    "utl::Flatmap::add_new_or_abort: key already present in flatmap", caller);
             }
             return m_container.emplace_back(std::forward<K>(key), std::forward<V>(value)).second;
         }

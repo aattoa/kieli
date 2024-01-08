@@ -17,7 +17,7 @@ namespace {
         case utl::Source::Read_error::failed_to_read:
             return "Failed to read file '{}'";
         default:
-            utl::unreachable();
+            cpputil::unreachable();
         }
     }
 

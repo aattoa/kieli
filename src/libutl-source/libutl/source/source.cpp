@@ -55,7 +55,7 @@ utl::Source_view::Source_view(
     , start_position { start }
     , stop_position { stop }
 {
-    always_assert(start_position <= stop_position);
+    cpputil::always_assert(start_position <= stop_position);
 }
 
 auto utl::Source_view::dummy() -> Source_view
@@ -67,7 +67,7 @@ auto utl::Source_view::dummy() -> Source_view
 
 auto utl::Source_view::combine_with(Source_view const& other) const noexcept -> Source_view
 {
-    always_assert(source.is(other.source));
+    cpputil::always_assert(source.is(other.source));
 
     if (other.string.empty()) {
         return *this;
@@ -76,7 +76,7 @@ auto utl::Source_view::combine_with(Source_view const& other) const noexcept -> 
         return other;
     }
 
-    always_assert(std::less_equal()(&string.front(), &other.string.back()));
+    cpputil::always_assert(std::less_equal()(&string.front(), &other.string.back()));
     return Source_view {
         source,
         std::string_view { string.data(), other.string.data() + other.string.size() },

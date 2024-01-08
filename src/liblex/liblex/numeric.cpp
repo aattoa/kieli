@@ -21,7 +21,7 @@ namespace {
     {
         char const* const begin = string.data();
         char const* const end   = begin + string.size();
-        utl::always_assert(begin != end);
+        cpputil::always_assert(begin != end);
 
         T value {};
         auto const [ptr, ec] = std::from_chars(begin, end, value, base...);
@@ -30,7 +30,7 @@ namespace {
             return std::unexpected { liblex::Numeric_error::invalid_argument };
         }
         if (ec != std::errc {}) {
-            utl::always_assert(ec == std::errc::result_out_of_range);
+            cpputil::always_assert(ec == std::errc::result_out_of_range);
             return std::unexpected { liblex::Numeric_error::out_of_range };
         }
         return value;

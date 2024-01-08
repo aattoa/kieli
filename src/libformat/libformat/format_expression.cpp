@@ -45,7 +45,7 @@ namespace {
             -> cst::expression::Block const&
         {
             auto const* const block = std::get_if<cst::expression::Block>(&expression->value);
-            utl::always_assert(block != nullptr);
+            cpputil::always_assert(block != nullptr);
             return *block;
         }
 

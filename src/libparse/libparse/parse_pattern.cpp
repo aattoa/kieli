@@ -119,7 +119,7 @@ namespace {
                 .payload_pattern  = parse_constructor_pattern(context),
             };
         }
-        utl::unreachable();
+        cpputil::unreachable();
     };
 
     auto extract_abbreviated_constructor(Context& context) -> cst::Pattern::Variant

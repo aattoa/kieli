@@ -157,7 +157,7 @@ namespace {
 
 auto libdesugar::Context::desugar(cst::Definition const& definition) -> ast::Definition
 {
-    utl::always_assert(!definition.value.valueless_by_exception());
+    cpputil::always_assert(!definition.value.valueless_by_exception());
     return {
         .value = std::visit<ast::Definition::Variant>(
             Definition_desugaring_visitor { *this }, definition.value),

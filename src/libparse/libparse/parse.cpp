@@ -105,7 +105,7 @@ namespace {
         std::optional return_type_annotation = parse_type_annotation(context);
 
         if (context.try_consume(Token_type::where)) {
-            utl::todo(); // TODO: add support for where clauses
+            cpputil::todo(); // TODO: add support for where clauses
         }
 
         return cst::Function_signature {

@@ -116,7 +116,7 @@ namespace kieli {
         [[nodiscard]] auto value_as() const noexcept -> T
         {
             T const* const pointer = std::get_if<T>(&value);
-            utl::always_assert(pointer != nullptr);
+            cpputil::always_assert(pointer != nullptr);
             return *pointer;
         }
 

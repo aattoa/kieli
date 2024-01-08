@@ -60,13 +60,13 @@ auto kieli::Diagnostics::format_all(cppdiag::Colors const colors) const -> std::
 
 auto kieli::Name_dynamic::as_upper() const noexcept -> Name_upper
 {
-    utl::always_assert(is_upper.get());
+    cpputil::always_assert(is_upper.get());
     return { identifier, source_view };
 }
 
 auto kieli::Name_dynamic::as_lower() const noexcept -> Name_lower
 {
-    utl::always_assert(!is_upper.get());
+    cpputil::always_assert(!is_upper.get());
     return { identifier, source_view };
 }
 
@@ -83,7 +83,7 @@ auto kieli::built_in_type::integer_name(Integer const integer) noexcept -> std::
     case Integer::u32: return "U32";
     case Integer::u64: return "U64";
     default:
-        utl::unreachable();
+        cpputil::unreachable();
     }
     // clang-format on
 }

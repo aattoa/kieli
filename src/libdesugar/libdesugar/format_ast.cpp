@@ -441,22 +441,22 @@ namespace {
 
         auto operator()(ast::definition::Typeclass const&)
         {
-            utl::todo();
+            cpputil::todo();
         }
 
         auto operator()(ast::definition::Implementation const&)
         {
-            utl::todo();
+            cpputil::todo();
         }
 
         auto operator()(ast::definition::Instantiation const&)
         {
-            utl::todo();
+            cpputil::todo();
         }
 
         auto operator()(ast::definition::Namespace const&)
         {
-            utl::todo();
+            cpputil::todo();
         }
     };
 } // namespace
