@@ -163,6 +163,14 @@ namespace {
 
         auto operator()(Token::Variant&& value, Token::Type const type) const noexcept -> Token
         {
+            // If the context has advanced, the current position will be the starting position of
+            // the *next* token, so in that case we simply decrement the column here to acquire the
+            // ending position of the *current* token.
+
+            utl::Source_position new_position = m_context.position();
+            if (new_position > m_old_position && new_position.column > 1) {
+                --new_position.column;
+            }
             return Token {
                 .value            = std::move(value),
                 .type             = type,
@@ -171,7 +179,7 @@ namespace {
                     m_context.source(),
                     { m_old_pointer, m_context.pointer() },
                     m_old_position,
-                    m_context.position(),
+                    new_position,
                 },
             };
         }
