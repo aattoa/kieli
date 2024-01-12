@@ -11,6 +11,29 @@
 
 namespace {
 
+    [[nodiscard]] auto format_command_line_error(
+        cppargs::Parse_error_info const& info,
+        std::string_view const           program_name,
+        cppdiag::Colors const            colors) -> std::string
+    {
+        cppdiag::Message_buffer   message_buffer;
+        cppdiag::Diagnostic const diagnostic {
+            .text_sections { {
+                .source_string  = info.command_line,
+                .source_name    = "command line",
+                .start_position = { .column = info.error_column },
+                .stop_position  = { .column = -1 + info.error_column + info.error_width },
+                .note           = cppdiag::format_message(
+                    message_buffer, "{}", cppargs::Parse_error_info::kind_to_string(info.kind)),
+            } },
+            .message   = cppdiag::format_message(message_buffer, "Command line parse failure"),
+            .help_note = cppdiag::format_message(
+                message_buffer, "To see a list of valid options, use `{} --help`", program_name),
+            .severity = cppdiag::Severity::error,
+        };
+        return cppdiag::format_diagnostic(diagnostic, message_buffer, colors);
+    }
+
     [[nodiscard]] auto error_header(cppdiag::Colors const colors) -> std::string
     {
         return std::format("{}Error:{}", colors.error.code, colors.normal.code);
@@ -23,7 +46,7 @@ namespace {
             auto input = utl::readline(">>> ");
 
             if (!input || input == "q") {
-                break;
+                return;
             }
             if (input.value().find_first_not_of(' ') == std::string::npos) {
                 continue;
@@ -36,11 +59,12 @@ namespace {
                 f(source, info);
             }
             catch (kieli::Compilation_failure const&) {
-                (void)0; // do nothing
+                (void)0; // Do nothing, diagnostics are printed below
             }
             catch (std::exception const& exception) {
                 std::print(stderr, "{} {}\n\n", error_header(colors), exception.what());
             }
+
             std::print(stderr, "{}", info.diagnostics.format_all(colors));
         }
     }
@@ -69,6 +93,22 @@ namespace {
               std::print("{}\n\n", output);
           }>;
 
+    [[nodiscard]]
+    auto run_development_repl(std::string_view const name, cppdiag::Colors const colors) -> int
+    {
+        utl::Flatmap<std::string_view, auto (*)(cppdiag::Colors)->void> const repls { {
+            { "lex", lex_repl },
+            { "par", parse_repl },
+            { "des", desugar_repl },
+        } };
+        if (auto const* const repl = repls.find(name)) {
+            (*repl)(colors);
+            return EXIT_SUCCESS;
+        }
+        std::println(stderr, "The repl must be one of lex|par|des, not '{}'", name);
+        return EXIT_FAILURE;
+    }
+
 } // namespace
 
 auto main(int argc, char const** argv) -> int
@@ -88,59 +128,29 @@ auto main(int argc, char const** argv) -> int
 
         utl::Logging_timer const execution_timer { [&](auto const elapsed) {
             if (time_flag) {
-                std::println("Total execution time: {}", elapsed);
+                std::println("Execution time: {}", elapsed);
             }
         } };
 
         if (nocolor_flag) {
             colors = cppdiag::Colors {};
         }
-
-        if (help_flag) {
-            std::print("Valid options:\n{}", parameters.help_string());
-            return EXIT_SUCCESS;
-        }
-
         if (version_flag) {
             std::println("kieli version 0, compiled on " __DATE__ ", " __TIME__ ".");
         }
-
+        if (help_flag) {
+            std::print("Valid options:\n{}", parameters.help_string());
+        }
         if (repl_option) {
-            utl::Flatmap<std::string_view, void (*)(cppdiag::Colors)> const repls { {
-                { "lex", lex_repl },
-                { "par", parse_repl },
-                { "des", desugar_repl },
-            } };
-            if (auto const* const repl = repls.find(repl_option.value())) {
-                (*repl)(colors);
-            }
-            else {
-                std::println(
-                    stderr, "The repl must be one of lex|par|des, not '{}'", repl_option.value());
-                return EXIT_FAILURE;
-            }
+            return run_development_repl(repl_option.value(), colors);
         }
 
         return EXIT_SUCCESS;
     }
-
     catch (cppargs::Exception const& exception) {
-        auto const&               info = exception.info();
-        cppdiag::Context          context;
-        cppdiag::Diagnostic const diagnostic {
-            .text_sections { {
-                .source_string  = info.command_line,
-                .source_name    = "command line",
-                .start_position = { .column = info.error_column },
-                .stop_position  = { .column = -1 + info.error_column + info.error_width },
-                .note = context.message(cppargs::Parse_error_info::kind_to_string(info.kind)),
-            } },
-            .message   = context.message("Command line parse failure"),
-            .help_note = context.format_message(
-                "To see a list of valid options, use `{} --help`", *argv ? *argv : "kieli"),
-            .severity = cppdiag::Severity::error,
-        };
-        std::print(stderr, "{}", context.format_diagnostic(diagnostic, colors));
+        auto const program_name = *argv ? *argv : "kieli";
+        auto const message      = format_command_line_error(exception.info(), program_name, colors);
+        std::println(stderr, "{}", message);
         return EXIT_FAILURE;
     }
     catch (std::exception const& exception) {
