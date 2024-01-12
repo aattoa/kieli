@@ -516,7 +516,6 @@ namespace {
     auto parse_complicated_type(Context& context) -> std::optional<cst::Expression::Variant>
     {
         context.retreat();
-        Lexical_token const* const anchor = context.pointer;
         if (auto const type = parse_type(context)) {
             if (Lexical_token const* const double_colon
                 = context.try_extract(Token_type::double_colon))
@@ -532,8 +531,7 @@ namespace {
                 return extract_struct_initializer(context, type.value());
             }
             context.diagnostics().error(
-                context.make_source_view(anchor, context.pointer),
-                "Expected an expression, but found a type");
+                type.value()->source_view, "Expected an expression, but found a type");
         }
         return std::nullopt;
     }

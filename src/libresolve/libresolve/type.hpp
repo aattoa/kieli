@@ -18,9 +18,9 @@ namespace libresolve {
     };
 
     struct Unification_variable_tag {
-        utl::Usize value;
+        std::size_t value;
 
-        explicit constexpr Unification_variable_tag(utl::Usize const value) noexcept
+        explicit constexpr Unification_variable_tag(std::size_t const value) noexcept
             : value { value }
         {}
     };

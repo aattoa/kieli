@@ -4,7 +4,6 @@ target_include_directories(libresolve PUBLIC .)
 
 target_sources(libresolve
     PRIVATE libresolve/context.cpp
-    PRIVATE libresolve/context.hpp
     PRIVATE libresolve/environment.cpp
     PRIVATE libresolve/hir.cpp
     PRIVATE libresolve/hir.hpp

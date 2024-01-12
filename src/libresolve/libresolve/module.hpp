@@ -52,14 +52,23 @@ namespace libresolve {
         kieli::Name_lower                                        name;
     };
 
-    using Lower_info_variant
-        = std::variant<utl::Mutable_wrapper<Function_info>, utl::Mutable_wrapper<Namespace_info>>;
+    struct Lower_info {
+        using Variant = std::variant<
+            utl::Mutable_wrapper<Function_info>, //
+            utl::Mutable_wrapper<Namespace_info>>;
+        kieli::Name_lower name;
+        Variant           variant;
+    };
 
-    using Upper_info_variant = std::variant<
-        utl::Mutable_wrapper<Structure_info>,
-        utl::Mutable_wrapper<Enumeration_info>,
-        utl::Mutable_wrapper<Typeclass_info>,
-        utl::Mutable_wrapper<Alias_info>>;
+    struct Upper_info {
+        using Variant = std::variant<
+            utl::Mutable_wrapper<Structure_info>,
+            utl::Mutable_wrapper<Enumeration_info>,
+            utl::Mutable_wrapper<Typeclass_info>,
+            utl::Mutable_wrapper<Alias_info>>;
+        kieli::Name_upper name;
+        Variant           variant;
+    };
 
     using Info_arena = utl::Wrapper_arena<
         Structure_info,
@@ -73,6 +82,7 @@ namespace libresolve {
         Info_arena                      info_arena;
         ast::Node_arena                 ast_node_arena;
         utl::Wrapper_arena<Environment> environment_arena;
+        kieli::Compile_info&            compile_info;
     };
 
     struct Module {
@@ -81,10 +91,7 @@ namespace libresolve {
 
     using Module_map = utl::Flatmap<std::filesystem::path, Module>;
 
-    auto read_module_map(
-        kieli::Compile_info&         info,
-        Context&                     context,
-        std::filesystem::path const& project_root) -> Module_map;
+    auto read_module_map(Context& context, std::filesystem::path const& project_root) -> Module_map;
 
 } // namespace libresolve
 
@@ -93,10 +100,10 @@ struct libresolve::Scope {
 };
 
 struct libresolve::Environment {
-    utl::Flatmap<kieli::Identifier, Upper_info_variant> upper_map;
-    utl::Flatmap<kieli::Identifier, Lower_info_variant> lower_map;
-    std::optional<utl::Mutable_wrapper<Environment>>    parent;
+    utl::Flatmap<kieli::Identifier, Upper_info>      upper_map;
+    utl::Flatmap<kieli::Identifier, Lower_info>      lower_map;
+    std::optional<utl::Mutable_wrapper<Environment>> parent;
 
-    auto find_lower(kieli::Name_lower) -> std::optional<Lower_info_variant>;
-    auto find_upper(kieli::Name_upper) -> std::optional<Upper_info_variant>;
+    auto find_lower(kieli::Name_lower) -> std::optional<Lower_info>;
+    auto find_upper(kieli::Name_upper) -> std::optional<Upper_info>;
 };
