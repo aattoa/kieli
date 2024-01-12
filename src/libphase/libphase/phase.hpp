@@ -23,8 +23,9 @@ namespace kieli {
         std::optional<cppdiag::Severity>       severity = std::nullopt) -> cppdiag::Text_section;
 
     struct Diagnostics {
-        cppdiag::Context                 context;
+        cppdiag::Message_buffer          message_buffer;
         std::vector<cppdiag::Diagnostic> vector;
+        bool                             has_emitted_error {};
 
         template <std::size_t n, class... Args>
         auto emit(
@@ -33,15 +34,17 @@ namespace kieli {
             std::format_string<Args...> const fmt,
             Args&&... args) -> void
         {
+            has_emitted_error = has_emitted_error || (severity == cppdiag::Severity::error);
             vector.push_back(cppdiag::Diagnostic {
                 .text_sections =
                     [&]<std::size_t... is>(std::index_sequence<is...>) {
                         return utl::to_vector({ text_section(
                             sections[is].source_view,
-                            sections[is].note.transform(
-                                std::bind_front(&cppdiag::Context::message, &context)))... });
+                            sections[is].note.transform([&](std::string_view const string) {
+                                return cppdiag::format_message(message_buffer, "{}", string);
+                            }))... });
                     }(std::make_index_sequence<n> {}),
-                .message  = context.format_message(fmt, std::forward<Args>(args)...),
+                .message  = format_message(message_buffer, fmt, std::forward<Args>(args)...),
                 .severity = severity,
             });
         }

@@ -41,7 +41,7 @@ FetchContent_Declare(
 FetchContent_Declare(
     cppdiag
     GIT_REPOSITORY https://github.com/aattoa/cppdiag.git
-    GIT_TAG        383bc5ac34c7a7ec986ef8c8243bd2457638cb4d)
+    GIT_TAG        3fb3be8015e564c5e378729475738da5a67d0a4b)
 FetchContent_Declare(
     cpputil
     GIT_REPOSITORY https://github.com/aattoa/cpputil.git

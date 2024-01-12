@@ -35,7 +35,7 @@ auto kieli::text_section(
 {
     return cppdiag::Text_section {
         .source_string  = section_view.source->string(),
-        .source_name    = section_view.source->path().c_str(), // TODO: cppdiag use owning path?
+        .source_name    = section_view.source->path().c_str(),
         .start_position = { section_view.start_position.line, section_view.start_position.column },
         .stop_position  = { section_view.stop_position.line, section_view.stop_position.column },
         .note           = section_note,
@@ -52,7 +52,7 @@ auto kieli::Diagnostics::format_all(cppdiag::Colors const colors) const -> std::
 {
     std::string output;
     for (cppdiag::Diagnostic const& diagnostic : vector) {
-        context.format_diagnostic(diagnostic, output, colors);
+        format_diagnostic(diagnostic, message_buffer, output, colors);
         output.push_back('\n');
     }
     return output;
