@@ -34,47 +34,51 @@ namespace {
         }
     }
 
-    auto xdg_state_home_filename() -> std::optional<std::filesystem::path>
+    auto environment_defined_path(char const* const name) -> std::optional<std::filesystem::path>
     {
-        static constexpr std::string_view filename = "kieli_history";
-        if (char const* const state_home = std::getenv("XDG_STATE_HOME")) { // NOLINT
-            return std::filesystem::path { state_home } / filename;
-        }
-        if (char const* const home = std::getenv("HOME")) { // NOLINT
-            return std::filesystem::path { home } / ".local" / "state" / filename;
-        }
-        return std::nullopt;
+        char const* const pointer = std::getenv(name); // NOLINT: thread unsafe
+        return pointer ? std::optional(pointer) : std::nullopt;
     }
 
-    auto determine_history_file_path() -> std::optional<std::filesystem::path>
+    auto xdg_state_home_fallback() -> std::optional<std::filesystem::path>
     {
-        if (char const* const override = std::getenv("KIELI_HISTORY")) { // NOLINT
-            return override;
-        }
-        return xdg_state_home_filename();
+        return environment_defined_path("HOME").transform(
+            [](auto const& home) { return home / ".local" / "state"; });
+    }
+
+    auto xdg_state_home() -> std::optional<std::filesystem::path>
+    {
+        return environment_defined_path("XDG_STATE_HOME").or_else(xdg_state_home_fallback);
+    }
+
+    auto default_history_file_path() -> std::optional<std::filesystem::path>
+    {
+        return xdg_state_home().transform(
+            [](auto const& directory) { return directory / "kieli_history"; });
+    }
+
+    auto history_file_path() -> std::optional<std::filesystem::path>
+    {
+        return environment_defined_path("KIELI_HISTORY").or_else(default_history_file_path);
     }
 
     auto read_history_file_to_current_history() -> void
     {
-        std::optional const path = determine_history_file_path();
+        auto const path = history_file_path();
         if (!path.has_value() || !is_valid_history_file_path(path.value())) {
             return;
         }
-        auto file = cpputil::io::File::open_read(path.value().c_str());
-        if (!file) {
-            return;
-        }
-        std::string line;
-        while (cpputil::io::read_line(file.get(), line)) {
-            ::add_history(line.c_str());
-            previous_readline_input = line;
-            line.clear();
+        if (auto const file = cpputil::io::File::open_read(path.value().c_str())) {
+            for (std::string const& line : cpputil::io::lines(file.get())) {
+                previous_readline_input = line;
+                ::add_history(line.c_str());
+            }
         }
     }
 
     auto add_line_to_history_file(std::string_view const line) -> void
     {
-        std::optional const path = determine_history_file_path();
+        std::optional const path = history_file_path();
         if (!path.has_value() || !is_valid_history_file_path(path.value())) {
             return;
         }
