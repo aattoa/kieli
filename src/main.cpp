@@ -9,6 +9,8 @@
 #include <cppargs.hpp>
 #include <cppdiag.hpp>
 
+#include <liblex2/lex.hpp>
+
 namespace {
 
     [[nodiscard]] auto format_command_line_error(
@@ -51,6 +53,24 @@ namespace {
         std::println("Tokens: {}", kieli::lex(source, info));
     }
 
+    auto debug_lex2(utl::Source::Wrapper const source, kieli::Compile_info& info) -> void
+    {
+        kieli::Lex2_state state {
+            .compile_info = info,
+            .source       = source,
+            .string       = source->string(),
+        };
+        std::vector<kieli::Token2> tokens;
+        for (;;) {
+            auto token = kieli::lex2(state);
+            if (token.type == kieli::Token2::Type::end_of_input) {
+                break;
+            }
+            tokens.push_back(std::move(token));
+        }
+        std::println("Tokens: {}", kieli::lex(source, info));
+    }
+
     auto debug_parse(utl::Source::Wrapper const source, kieli::Compile_info& info) -> void
     {
         auto const module = kieli::parse(kieli::lex(source, info), info);
@@ -72,6 +92,7 @@ namespace {
     {
         // clang-format off
         if (name == "lex") return debug_lex;
+        if (name == "lex2") return debug_lex2;
         if (name == "par") return debug_parse;
         if (name == "des") return debug_desugar;
         return nullptr;

@@ -113,6 +113,7 @@ add_subdirectory(src/libutl-readline)
 add_subdirectory(src/libutl-source)
 add_subdirectory(src/libphase)
 add_subdirectory(src/liblex)
+add_subdirectory(src/liblex2)
 add_subdirectory(src/libparse)
 add_subdirectory(src/libdesugar)
 add_subdirectory(src/libformat)
@@ -122,6 +123,7 @@ add_executable(debug-kieli src/main.cpp)
 target_link_libraries(debug-kieli
     PRIVATE libutl-readline
     PRIVATE liblex
+    PRIVATE liblex2
     PRIVATE libparse
     PRIVATE libdesugar
     PRIVATE libresolve
