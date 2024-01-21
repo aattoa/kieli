@@ -155,16 +155,27 @@ namespace utl {
 
     auto disable_short_string_optimization(std::string&) -> void;
 
-    template <class T>
-    constexpr auto release_vector_memory(std::vector<T>& vector) noexcept -> void
+    template <class T, class A>
+    constexpr auto release_vector_memory(std::vector<T, A>& vector) noexcept -> void
     {
-        std::vector<T> {}.swap(vector);
+        std::vector<T, A> {}.swap(vector);
     }
 
     template <class T, std::size_t n>
     [[nodiscard]] constexpr auto to_vector(T (&&array)[n]) -> std::vector<T>
     {
         return std::ranges::to<std::vector>(std::views::as_rvalue(array));
+    }
+
+    template <class T, class A>
+    [[nodiscard]] auto pop_back(std::vector<T, A>& vector) -> std::optional<T>
+    {
+        if (vector.empty()) {
+            return std::nullopt;
+        }
+        T back = std::move(vector.back());
+        vector.pop_back();
+        return back;
     }
 
     [[nodiscard]] constexpr auto ordinal_indicator(std::integral auto n) noexcept

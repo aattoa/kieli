@@ -7,7 +7,14 @@ auto cst::Token::from_lexical(kieli::Lexical_token const* const pointer) -> Toke
     return Token {
         .source_view      = pointer->source_view,
         .preceding_trivia = pointer->preceding_trivia,
-        .trailing_trivia  = pointer[1].preceding_trivia,
+    };
+}
+
+auto cst::Token::from_lexical(kieli::Token2 const& lexical) -> Token
+{
+    return Token {
+        .source_view      = lexical.source_view,
+        .preceding_trivia = lexical.preceding_trivia,
     };
 }
 

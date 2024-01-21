@@ -1,19 +1,6 @@
 #include <libutl/common/utilities.hpp>
 #include <libparse2/parser_internals.hpp>
 
-namespace {
-    auto do_extract(std::vector<kieli::Token2>& cache, kieli::Lex2_state& lex_state)
-        -> kieli::Token2
-    {
-        if (!cache.empty()) {
-            kieli::Token2 token = cache.back();
-            cache.pop_back();
-            return token;
-        }
-        return kieli::lex2(lex_state);
-    }
-} // namespace
-
 libparse2::Context::Context(cst::Node_arena& arena, kieli::Lex2_state state)
     : m_lex_state { std::move(state) }
     , m_node_arena { arena }
@@ -34,9 +21,34 @@ auto libparse2::Context::peek() -> kieli::Token2
 
 auto libparse2::Context::extract() -> kieli::Token2
 {
-    kieli::Token2 token          = do_extract(m_cached_tokens, m_lex_state);
-    m_previous_token_source_view = token.source_view;
-    return token;
+    if (!m_cached_tokens.empty()) {
+        return consume(utl::pop_back(m_cached_tokens).value());
+    }
+    return consume(kieli::lex2(m_lex_state));
+}
+
+auto libparse2::Context::try_extract(kieli::Token2::Type const type) -> std::optional<kieli::Token2>
+{
+    if (m_cached_tokens.empty()) {
+        kieli::Token2 token = kieli::lex2(m_lex_state);
+        if (token.type == type) {
+            return consume(token);
+        }
+        restore(token);
+        return std::nullopt;
+    }
+    if (m_cached_tokens.back().type == type) {
+        return consume(utl::pop_back(m_cached_tokens).value());
+    }
+    return std::nullopt;
+}
+
+auto libparse2::Context::extract_required(kieli::Token2::Type const type) -> kieli::Token2
+{
+    if (auto token = try_extract(type)) {
+        return token.value();
+    }
+    error_expected(kieli::Token2::description(type));
 }
 
 auto libparse2::Context::restore(kieli::Token2 const token) -> void
@@ -63,4 +75,10 @@ auto libparse2::Context::error_expected(
 auto libparse2::Context::error_expected(std::string_view const description) -> void
 {
     error_expected(peek().source_view, description);
+}
+
+auto libparse2::Context::consume(kieli::Token2 const token) -> kieli::Token2
+{
+    m_previous_token_source_view = token.source_view;
+    return token;
 }

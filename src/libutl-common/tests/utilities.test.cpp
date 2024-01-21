@@ -46,6 +46,15 @@ TEST("to_vector")
     REQUIRE(vector == utl::to_vector({ 10_mov, 20_mov, 30_mov }));
 }
 
+TEST("pop_back")
+{
+    auto vector = utl::to_vector({ 10_mov, 20_mov, 30_mov });
+    REQUIRE(utl::pop_back(vector) == 30_mov);
+    REQUIRE(utl::pop_back(vector) == 20_mov);
+    REQUIRE(utl::pop_back(vector) == 10_mov);
+    REQUIRE(utl::pop_back(vector) == std::nullopt);
+}
+
 TEST("Relative_string")
 {
     SECTION("view_in")

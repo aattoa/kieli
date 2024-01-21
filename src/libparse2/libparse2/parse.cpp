@@ -2,7 +2,55 @@
 #include <libparse2/parse.hpp>
 #include <libparse2/parser_internals.hpp>
 
-namespace {} // namespace
+auto libparse2::parse_template_parameters(Context& context)
+    -> std::optional<cst::Template_parameters>
+{
+    (void)context;
+    cpputil::todo();
+}
+
+auto libparse2::parse_template_parameter(Context& context) -> std::optional<cst::Template_parameter>
+{
+    (void)context;
+    cpputil::todo();
+}
+
+auto libparse2::parse_template_argument(Context& context) -> std::optional<cst::Template_argument>
+{
+    (void)context;
+    cpputil::todo();
+}
+
+auto libparse2::parse_template_arguments(Context& context) -> std::optional<cst::Template_arguments>
+{
+    (void)context;
+    cpputil::todo();
+}
+
+auto libparse2::parse_function_parameters(Context& context)
+    -> std::optional<cst::Function_parameters>
+{
+    (void)context;
+    cpputil::todo();
+}
+
+auto libparse2::parse_function_parameter(Context& context) -> std::optional<cst::Function_parameter>
+{
+    (void)context;
+    cpputil::todo();
+}
+
+auto libparse2::parse_function_argument(Context& context) -> std::optional<cst::Function_argument>
+{
+    (void)context;
+    cpputil::todo();
+}
+
+auto libparse2::parse_function_arguments(Context& context) -> std::optional<cst::Function_arguments>
+{
+    (void)context;
+    cpputil::todo();
+}
 
 auto kieli::parse2(utl::Source::Wrapper const source, Compile_info& compile_info) -> cst::Module
 {

@@ -32,10 +32,11 @@ namespace cst {
     struct [[nodiscard]] Token {
         utl::Source_view source_view;
         std::string_view preceding_trivia;
-        std::string_view trailing_trivia;
 
         // Precondition: `pointer` must point to a token within a contiguous token sequence
         static auto from_lexical(kieli::Lexical_token const*) -> Token;
+
+        static auto from_lexical(kieli::Token2 const&) -> Token;
     };
 
     template <class T>
