@@ -10,6 +10,8 @@ namespace kieli {
         utl::Source::Wrapper source;
         utl::Source_position position;
         std::string_view     string;
+
+        static auto make(utl::Source::Wrapper, Compile_info&) -> Lex2_state;
     };
 
     auto lex2(Lex2_state&) -> Token2;

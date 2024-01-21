@@ -621,6 +621,15 @@ namespace {
 
 } // namespace
 
+auto kieli::Lex2_state::make(utl::Source::Wrapper const source, Compile_info& info) -> Lex2_state
+{
+    return Lex2_state {
+        .compile_info = info,
+        .source       = source,
+        .string       = source->string(),
+    };
+}
+
 auto kieli::lex2(Lex2_state& state) -> Token
 {
     Token_maker const token_maker { extract_comments_and_whitespace(state), state };
