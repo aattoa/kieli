@@ -12,6 +12,6 @@ target_sources(libformat
     PRIVATE libformat/format_type.cpp)
 
 target_link_libraries(libformat
-    PUBLIC libparse2)
+    PUBLIC libparse)
 
 kieli_consume_libutl_common(libformat)

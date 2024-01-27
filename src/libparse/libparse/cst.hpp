@@ -1,0 +1,763 @@
+#pragma once
+
+#include <libphase/phase.hpp>
+#include <liblex/token.hpp>
+#include <libutl/common/utilities.hpp>
+#include <libutl/common/wrapper.hpp>
+
+/*
+
+    The Concrete Syntax Tree (CST) is the highest level structured
+    representation of a program's syntax. It is produced by parsing a sequence of
+    tokens. Any syntactically valid program can be represented as a CST, but such
+    a program may still be erroneous in other ways, and such errors can only be
+    revealed by subsequent compilation steps.
+
+    For example, the following expression is syntactically valid, and can thus
+    be represented by a CST node, but it will be rejected upon expression
+    resolution due to the obvious type error:
+
+        let x: Int = "hello"
+
+*/
+
+namespace cst {
+
+    struct [[nodiscard]] Expression;
+    struct [[nodiscard]] Pattern;
+    struct [[nodiscard]] Type;
+    struct [[nodiscard]] Definition;
+
+    struct [[nodiscard]] Token {
+        utl::Source_view source_view;
+        std::string_view preceding_trivia;
+
+        static auto from_lexical(kieli::Token const&) -> Token;
+    };
+
+    template <class T>
+    struct Surrounded {
+        T     value;
+        Token open_token;
+        Token close_token;
+    };
+
+    template <class T>
+    struct Separated_sequence {
+        std::vector<T>     elements;
+        std::vector<Token> separator_tokens;
+    };
+
+    struct Name_lower_equals {
+        kieli::Name_lower name;
+        Token             equals_sign_token;
+    };
+
+    struct Type_annotation {
+        utl::Wrapper<Type> type;
+        Token              colon_token;
+    };
+
+    struct Mutability {
+        struct Concrete {
+            bool is_mutable = false;
+        };
+
+        struct Parameterized {
+            kieli::Name_lower name;
+            Token             question_mark_token;
+        };
+
+        using Variant = std::variant<Concrete, Parameterized>;
+        Variant          value;
+        utl::Source_view source_view;
+        Token            mut_or_immut_keyword_token;
+    };
+
+    struct Self_parameter {
+        std::optional<Mutability> mutability;
+        std::optional<Token>      ampersand_token;
+        Token                     self_keyword_token;
+        utl::Source_view          source_view;
+
+        [[nodiscard]] auto is_reference() const noexcept -> bool;
+    };
+
+    struct Template_argument {
+        struct Wildcard {
+            utl::Source_view source_view;
+        };
+
+        using Variant = std::variant< //
+            utl::Wrapper<Type>,
+            utl::Wrapper<Expression>,
+            Mutability,
+            Wildcard>;
+        Variant value;
+
+        auto        source_view() const -> utl::Source_view;
+        static auto kind_description(Variant const&) noexcept -> std::string_view;
+    };
+
+    using Template_arguments = Surrounded<Separated_sequence<Template_argument>>;
+
+    struct Qualifier {
+        std::optional<Template_arguments> template_arguments;
+        kieli::Name_dynamic               name;
+        std::optional<Token>              trailing_double_colon_token;
+        utl::Source_view                  source_view;
+    };
+
+    struct Root_qualifier {
+        struct Global {};
+
+        std::variant<Global, utl::Wrapper<Type>> value;
+        Token                                    double_colon_token;
+        utl::Source_view                         source_view;
+    };
+
+    struct Qualified_name {
+        Separated_sequence<Qualifier> middle_qualifiers;
+        std::optional<Root_qualifier> root_qualifier;
+        kieli::Name_dynamic           primary_name;
+        utl::Source_view              source_view;
+
+        [[nodiscard]] auto is_upper() const noexcept -> bool;
+        [[nodiscard]] auto is_unqualified() const noexcept -> bool;
+    };
+
+    struct Class_reference {
+        std::optional<Template_arguments> template_arguments;
+        Qualified_name                    name;
+        utl::Source_view                  source_view;
+    };
+
+    struct Function_parameter {
+        struct Default_argument {
+            utl::Wrapper<Expression> expression;
+            Token                    equals_sign_token;
+        };
+
+        utl::Wrapper<Pattern>           pattern;
+        std::optional<Type_annotation>  type;
+        std::optional<Default_argument> default_argument;
+    };
+
+    struct Function_parameters {
+        Separated_sequence<Function_parameter> normal_parameters;
+        std::optional<Self_parameter>          self_parameter;
+        std::optional<Token>                   comma_token_after_self;
+    };
+
+    struct Function_argument {
+        std::optional<Name_lower_equals> name;
+        utl::Wrapper<Expression>         expression;
+    };
+
+    using Function_arguments = Surrounded<Separated_sequence<Function_argument>>;
+
+    struct Template_parameter {
+        struct Type_parameter {
+            kieli::Name_upper                   name;
+            std::optional<Token>                colon_token;
+            Separated_sequence<Class_reference> classes;
+        };
+
+        struct Value_parameter {
+            kieli::Name_lower              name;
+            std::optional<Type_annotation> type_annotation;
+        };
+
+        struct Mutability_parameter {
+            kieli::Name_lower name;
+            Token             colon_token;
+            Token             mut_keyword_token;
+        };
+
+        struct Default_argument {
+            // TODO: Encode default argument kind in the type system
+            Template_argument argument;
+            Token             equals_sign_token;
+        };
+
+        using Variant = std::variant<Type_parameter, Value_parameter, Mutability_parameter>;
+
+        std::optional<Default_argument> default_argument;
+        Variant                         value;
+        utl::Source_view                source_view;
+
+        static auto kind_description(Variant const&) noexcept -> std::string_view;
+    };
+
+    using Template_parameters = Surrounded<Separated_sequence<Template_parameter>>;
+
+    namespace expression {
+        struct Parenthesized {
+            Surrounded<utl::Wrapper<Expression>> expression;
+        };
+
+        struct Array_literal {
+            Surrounded<Separated_sequence<utl::Wrapper<Expression>>> elements;
+        };
+
+        struct Self {};
+
+        struct Variable {
+            Qualified_name name;
+        };
+
+        struct Template_application {
+            Template_arguments template_arguments;
+            Qualified_name     name;
+        };
+
+        struct Tuple {
+            Surrounded<Separated_sequence<utl::Wrapper<Expression>>> fields;
+        };
+
+        struct Block {
+            struct Side_effect {
+                utl::Wrapper<Expression> expression;
+                Token                    trailing_semicolon_token;
+            };
+
+            std::vector<Side_effect>                side_effects;
+            std::optional<utl::Wrapper<Expression>> result_expression;
+            Token                                   open_brace_token;
+            Token                                   close_brace_token;
+        };
+
+        struct Invocation {
+            Function_arguments       function_arguments;
+            utl::Wrapper<Expression> function_expression;
+        };
+
+        struct Struct_initializer {
+            struct Member_initializer {
+                kieli::Name_lower        name;
+                utl::Wrapper<Expression> expression;
+                Token                    equals_sign_token;
+            };
+
+            Surrounded<Separated_sequence<Member_initializer>> member_initializers;
+            utl::Wrapper<Type>                                 struct_type;
+        };
+
+        struct Binary_operator_invocation_sequence {
+            struct Operator_name {
+                kieli::Identifier operator_id;
+                utl::Source_view  operator_source_view;
+            };
+
+            struct Operator_and_operand {
+                utl::Wrapper<Expression> right_operand;
+                Operator_name            operator_name;
+            };
+
+            std::vector<Operator_and_operand> sequence_tail;
+            utl::Wrapper<Expression>          leftmost_operand;
+        };
+
+        struct Struct_field_access {
+            utl::Wrapper<Expression> base_expression;
+            kieli::Name_lower        field_name;
+            Token                    dot_token;
+        };
+
+        struct Tuple_field_access {
+            utl::Wrapper<Expression> base_expression;
+            std::uint64_t            field_index {};
+            Token                    field_index_token;
+            Token                    dot_token;
+        };
+
+        struct Array_index_access {
+            utl::Wrapper<Expression>             base_expression;
+            Surrounded<utl::Wrapper<Expression>> index_expression;
+            Token                                dot_token;
+        };
+
+        struct Method_invocation {
+            Function_arguments                function_arguments;
+            std::optional<Template_arguments> template_arguments;
+            utl::Wrapper<Expression>          base_expression;
+            kieli::Name_lower                 method_name;
+        };
+
+        struct Conditional {
+            struct False_branch {
+                utl::Wrapper<Expression> body;
+                Token                    else_or_elif_keyword_token;
+            };
+
+            utl::Wrapper<Expression>    condition;
+            utl::Wrapper<Expression>    true_branch;
+            std::optional<False_branch> false_branch;
+            Token                       if_or_elif_keyword_token;
+            utl::Explicit<bool>         is_elif_conditional;
+        };
+
+        struct Match {
+            struct Case {
+                utl::Wrapper<Pattern>    pattern;
+                utl::Wrapper<Expression> handler;
+                Token                    arrow_token;
+                std::optional<Token>     optional_semicolon_token;
+            };
+
+            Surrounded<std::vector<Case>> cases;
+            utl::Wrapper<Expression>      matched_expression;
+            Token                         match_keyword_token;
+        };
+
+        struct Type_cast {
+            utl::Wrapper<Expression> base_expression;
+            Token                    as_token;
+            utl::Wrapper<Type>       target_type;
+        };
+
+        struct Type_ascription {
+            utl::Wrapper<Expression> base_expression;
+            Token                    colon_token;
+            utl::Wrapper<Type>       ascribed_type;
+        };
+
+        struct Let_binding {
+            utl::Wrapper<Pattern>          pattern;
+            std::optional<Type_annotation> type;
+            utl::Wrapper<Expression>       initializer;
+            Token                          let_keyword_token;
+            Token                          equals_sign_token;
+        };
+
+        struct Conditional_let {
+            utl::Wrapper<Pattern>    pattern;
+            utl::Wrapper<Expression> initializer;
+            Token                    let_keyword_token;
+            Token                    equals_sign_token;
+        };
+
+        struct Local_type_alias {
+            kieli::Name_upper  alias_name;
+            utl::Wrapper<Type> aliased_type;
+            Token              alias_keyword_token;
+            Token              equals_sign_token;
+        };
+
+        struct Infinite_loop {
+            utl::Wrapper<Expression> body;
+            Token                    loop_keyword_token;
+        };
+
+        struct While_loop {
+            utl::Wrapper<Expression> condition;
+            utl::Wrapper<Expression> body;
+            Token                    while_keyword_token;
+        };
+
+        struct For_loop {
+            utl::Wrapper<Pattern>    iterator;
+            utl::Wrapper<Expression> iterable;
+            utl::Wrapper<Expression> body;
+            Token                    for_keyword_token;
+            Token                    in_keyword_token;
+        };
+
+        struct Continue {
+            Token continue_keyword_token;
+        };
+
+        struct Break {
+            std::optional<utl::Wrapper<Expression>> result;
+            Token                                   break_keyword_token;
+        };
+
+        struct Discard {
+            utl::Wrapper<Expression> discarded_expression;
+            Token                    discard_keyword_token;
+        };
+
+        struct Ret {
+            std::optional<utl::Wrapper<Expression>> returned_expression;
+            Token                                   ret_keyword_token;
+        };
+
+        struct Reference {
+            std::optional<Mutability> mutability;
+            utl::Wrapper<Expression>  referenced_expression;
+            Token                     ampersand_token;
+        };
+
+        struct Sizeof {
+            Surrounded<utl::Wrapper<Type>> inspected_type;
+            Token                          sizeof_keyword_token;
+        };
+
+        struct Addressof {
+            Surrounded<utl::Wrapper<Expression>> lvalue_expression;
+            Token                                addressof_keyword_token;
+        };
+
+        struct Reference_dereference {
+            utl::Wrapper<Expression> dereferenced_expression;
+            Token                    asterisk_token;
+        };
+
+        struct Pointer_dereference {
+            Surrounded<utl::Wrapper<Expression>> pointer_expression;
+            Token                                dereference_keyword_token;
+        };
+
+        struct Unsafe {
+            utl::Wrapper<Expression> expression;
+            Token                    unsafe_keyword_token;
+        };
+
+        struct Move {
+            utl::Wrapper<Expression> lvalue;
+            Token                    mov_keyword_token;
+        };
+
+        struct Meta {
+            Surrounded<utl::Wrapper<Expression>> expression;
+            Token                                meta_keyword_token;
+        };
+
+        struct Hole {};
+    } // namespace expression
+
+    struct Expression {
+        using Variant = std::variant<
+            kieli::Integer,
+            kieli::Floating,
+            kieli::Character,
+            kieli::Boolean,
+            kieli::String,
+            expression::Parenthesized,
+            expression::Array_literal,
+            expression::Self,
+            expression::Variable,
+            expression::Template_application,
+            expression::Tuple,
+            expression::Block,
+            expression::Invocation,
+            expression::Struct_initializer,
+            expression::Binary_operator_invocation_sequence,
+            expression::Struct_field_access,
+            expression::Tuple_field_access,
+            expression::Array_index_access,
+            expression::Method_invocation,
+            expression::Conditional,
+            expression::Match,
+            expression::Type_cast,
+            expression::Type_ascription,
+            expression::Let_binding,
+            expression::Conditional_let,
+            expression::Local_type_alias,
+            expression::Infinite_loop,
+            expression::While_loop,
+            expression::For_loop,
+            expression::Continue,
+            expression::Break,
+            expression::Discard,
+            expression::Ret,
+            expression::Sizeof,
+            expression::Reference,
+            expression::Addressof,
+            expression::Reference_dereference,
+            expression::Pointer_dereference,
+            expression::Unsafe,
+            expression::Move,
+            expression::Meta,
+            expression::Hole>;
+
+        Variant          value;
+        utl::Source_view source_view;
+    };
+
+    namespace pattern {
+        struct Parenthesized {
+            Surrounded<utl::Wrapper<Pattern>> pattern;
+        };
+
+        struct Wildcard {};
+
+        struct Name {
+            kieli::Name_lower         name;
+            std::optional<Mutability> mutability;
+        };
+
+        struct Constructor {
+            Qualified_name                                   constructor_name;
+            std::optional<Surrounded<utl::Wrapper<Pattern>>> payload_pattern;
+        };
+
+        struct Abbreviated_constructor {
+            kieli::Name_lower                                constructor_name;
+            std::optional<Surrounded<utl::Wrapper<Pattern>>> payload_pattern;
+            Token                                            double_colon_token;
+        };
+
+        struct Tuple {
+            Surrounded<Separated_sequence<utl::Wrapper<Pattern>>> patterns;
+        };
+
+        struct Top_level_tuple {
+            Separated_sequence<utl::Wrapper<Pattern>> patterns;
+        };
+
+        struct Slice {
+            Surrounded<Separated_sequence<utl::Wrapper<Pattern>>> patterns;
+        };
+
+        struct Alias {
+            std::optional<Mutability> alias_mutability;
+            kieli::Name_lower         alias_name;
+            utl::Wrapper<Pattern>     aliased_pattern;
+            Token                     as_keyword_token;
+        };
+
+        struct Guarded {
+            utl::Wrapper<Pattern>    guarded_pattern;
+            utl::Wrapper<Expression> guard_expression;
+            Token                    if_keyword_token;
+        };
+    } // namespace pattern
+
+    struct Pattern {
+        using Variant = std::variant<
+            kieli::Integer,
+            kieli::Floating,
+            kieli::Character,
+            kieli::Boolean,
+            kieli::String,
+            pattern::Parenthesized,
+            pattern::Wildcard,
+            pattern::Name,
+            pattern::Constructor,
+            pattern::Abbreviated_constructor,
+            pattern::Tuple,
+            pattern::Top_level_tuple,
+            pattern::Slice,
+            pattern::Alias,
+            pattern::Guarded>;
+
+        Variant          value;
+        utl::Source_view source_view;
+    };
+
+    namespace type {
+        struct Parenthesized {
+            Surrounded<utl::Wrapper<Type>> type;
+        };
+
+        struct Wildcard {};
+
+        struct Self {};
+
+        struct Typename {
+            Qualified_name name;
+        };
+
+        struct Tuple {
+            Surrounded<Separated_sequence<utl::Wrapper<Type>>> field_types;
+        };
+
+        struct Array {
+            utl::Wrapper<Type>       element_type;
+            utl::Wrapper<Expression> array_length;
+            Token                    open_bracket_token;
+            Token                    close_bracket_token;
+            Token                    semicolon_token;
+        };
+
+        struct Slice {
+            Surrounded<utl::Wrapper<Type>> element_type;
+        };
+
+        struct Function {
+            Surrounded<Separated_sequence<utl::Wrapper<Type>>> parameter_types;
+            Type_annotation                                    return_type;
+            Token                                              fn_keyword_token;
+        };
+
+        struct Typeof {
+            Surrounded<utl::Wrapper<Expression>> inspected_expression;
+            Token                                typeof_keyword_token;
+        };
+
+        struct Reference {
+            std::optional<Mutability> mutability;
+            utl::Wrapper<Type>        referenced_type;
+            Token                     ampersand_token;
+        };
+
+        struct Pointer {
+            std::optional<Mutability> mutability;
+            utl::Wrapper<Type>        pointee_type;
+            Token                     asterisk_token;
+        };
+
+        struct Instance_of {
+            Separated_sequence<Class_reference> classes;
+            Token                               inst_keyword_token;
+        };
+
+        struct Template_application {
+            Template_arguments template_arguments;
+            Qualified_name     name;
+        };
+    } // namespace type
+
+    struct Type {
+        using Variant = std::variant<
+            type::Parenthesized,
+            kieli::built_in_type::Integer,
+            kieli::built_in_type::Floating,
+            kieli::built_in_type::Character,
+            kieli::built_in_type::Boolean,
+            kieli::built_in_type::String,
+            type::Wildcard,
+            type::Self,
+            type::Typename,
+            type::Tuple,
+            type::Array,
+            type::Slice,
+            type::Function,
+            type::Typeof,
+            type::Instance_of,
+            type::Reference,
+            type::Pointer,
+            type::Template_application>;
+
+        Variant          value;
+        utl::Source_view source_view;
+    };
+
+    struct Function_signature {
+        std::optional<Template_parameters> template_parameters;
+        Surrounded<Function_parameters>    function_parameters;
+        std::optional<Type_annotation>     return_type;
+        kieli::Name_lower                  name;
+        Token                              fn_keyword_token;
+    };
+
+    struct Type_signature {
+        std::optional<Template_parameters>  template_parameters;
+        Separated_sequence<Class_reference> classes;
+        kieli::Name_upper                   name;
+        std::optional<Token>                classes_colon_token;
+        Token                               alias_keyword_token;
+    };
+
+    namespace definition {
+        struct Function {
+            Function_signature       signature;
+            utl::Wrapper<Expression> body;
+            std::optional<Token>     optional_equals_sign_token;
+            Token                    fn_keyword_token;
+        };
+
+        struct Struct {
+            struct Member {
+                kieli::Name_lower name;
+                Type_annotation   type;
+                utl::Source_view  source_view;
+            };
+
+            std::optional<Template_parameters> template_parameters;
+            Separated_sequence<Member>         members;
+            kieli::Name_upper                  name;
+            Token                              struct_keyword_token;
+            Token                              equals_sign_token;
+        };
+
+        struct Enum {
+            struct Constructor {
+                std::optional<Surrounded<Separated_sequence<utl::Wrapper<Type>>>> payload_types;
+                kieli::Name_lower                                                 name;
+                utl::Source_view                                                  source_view;
+            };
+
+            std::optional<Template_parameters> template_parameters;
+            Separated_sequence<Constructor>    constructors;
+            kieli::Name_upper                  name;
+            Token                              enum_keyword_token;
+            Token                              equals_sign_token;
+        };
+
+        struct Alias {
+            std::optional<Template_parameters> template_parameters;
+            kieli::Name_upper                  name;
+            utl::Wrapper<Type>                 type;
+            Token                              alias_keyword_token;
+            Token                              equals_sign_token;
+        };
+
+        struct Typeclass {
+            std::optional<Template_parameters> template_parameters;
+            std::vector<Function_signature>    function_signatures;
+            std::vector<Type_signature>        type_signatures;
+            kieli::Name_upper                  name;
+            Token                              class_keyword_token;
+            Token                              open_brace_token;
+            Token                              close_brace_token;
+        };
+
+        struct Implementation {
+            std::optional<Template_parameters>  template_parameters;
+            Surrounded<std::vector<Definition>> definitions;
+            utl::Wrapper<Type>                  self_type;
+            Token                               impl_keyword_token;
+        };
+
+        struct Instantiation {
+            std::optional<Template_parameters>  template_parameters;
+            Class_reference                     typeclass;
+            Surrounded<std::vector<Definition>> definitions;
+            utl::Wrapper<Type>                  self_type;
+            Token                               inst_keyword_token;
+            Token                               for_keyword_token;
+        };
+
+        struct Namespace {
+            std::optional<Template_parameters>  template_parameters;
+            Surrounded<std::vector<Definition>> definitions;
+            kieli::Name_lower                   name;
+            Token                               namespace_keyword_token;
+        };
+    } // namespace definition
+
+    struct Definition {
+        using Variant = std::variant<
+            definition::Function,
+            definition::Struct,
+            definition::Enum,
+            definition::Alias,
+            definition::Typeclass,
+            definition::Implementation,
+            definition::Instantiation,
+            definition::Namespace>;
+
+        Variant          value;
+        utl::Source_view source_view;
+    };
+
+    template <class T>
+    concept node = utl::one_of<T, Expression, Type, Pattern>;
+
+    using Node_arena = utl::Wrapper_arena<Expression, Type, Pattern>;
+
+    struct [[nodiscard]] Module {
+        struct Import {
+            utl::Pooled_string name;
+            utl::Source_view   source_view;
+            Token              import_keyword_token;
+        };
+
+        std::vector<Import>     imports;
+        std::vector<Definition> definitions;
+        Node_arena              node_arena;
+    };
+
+} // namespace cst

@@ -3,7 +3,7 @@
 #include <libutl/common/utilities.hpp>
 #include <libutl/common/safe_integer.hpp>
 #include <libphase/phase.hpp>
-#include <libparse2/cst.hpp>
+#include <libparse/cst.hpp>
 #include <libdesugar/ast.hpp>
 
 namespace libdesugar {
