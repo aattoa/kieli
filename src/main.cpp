@@ -2,14 +2,12 @@
 #include <libutl/common/flatmap.hpp>
 #include <libutl/common/timer.hpp>
 #include <libutl/readline/readline.hpp>
-#include <liblex/lex.hpp>
-#include <libparse/parse.hpp>
+#include <liblex2/lex.hpp>
+#include <libparse2/parse.hpp>
 #include <libdesugar/desugar.hpp>
 #include <libformat/format.hpp>
 #include <cppargs.hpp>
 #include <cppdiag.hpp>
-
-#include <liblex2/lex.hpp>
 
 namespace {
 
@@ -48,11 +46,6 @@ namespace {
         return cppdiag::Severity_header::make(cppdiag::Severity::error, colors);
     }
 
-    auto debug_lex(utl::Source::Wrapper const source, kieli::Compile_info& info) -> void
-    {
-        std::println("Tokens: {}", kieli::lex(source, info));
-    }
-
     auto debug_lex2(utl::Source::Wrapper const source, kieli::Compile_info& info) -> void
     {
         kieli::Lex2_state state {
@@ -68,18 +61,18 @@ namespace {
             }
             tokens.push_back(std::move(token));
         }
-        std::println("Tokens: {}", kieli::lex(source, info));
+        std::println("Tokens: {}", tokens);
     }
 
-    auto debug_parse(utl::Source::Wrapper const source, kieli::Compile_info& info) -> void
+    auto debug_parse2(utl::Source::Wrapper const source, kieli::Compile_info& info) -> void
     {
-        auto const module = kieli::parse(kieli::lex(source, info), info);
+        auto const module = kieli::parse2(source, info);
         std::print("{}", kieli::format_module(module, {}));
     }
 
     auto debug_desugar(utl::Source::Wrapper const source, kieli::Compile_info& info) -> void
     {
-        auto const  module = kieli::desugar(kieli::parse(kieli::lex(source, info), info), info);
+        auto const  module = kieli::desugar(kieli::parse2(source, info), info);
         std::string output;
         for (ast::Definition const& definition : module.definitions) {
             ast::format_to(definition, output);
@@ -91,9 +84,8 @@ namespace {
         -> void (*)(utl::Source::Wrapper, kieli::Compile_info&)
     {
         // clang-format off
-        if (name == "lex") return debug_lex;
         if (name == "lex2") return debug_lex2;
-        if (name == "par") return debug_parse;
+        if (name == "par2") return debug_parse2;
         if (name == "des") return debug_desugar;
         return nullptr;
         // clang-format on
@@ -128,8 +120,8 @@ namespace {
         }
     }
 
-    [[nodiscard]]
-    auto run_debug_repl(std::string_view const name, cppdiag::Colors const colors) -> int
+    [[nodiscard]] auto run_debug_repl(std::string_view const name, cppdiag::Colors const colors)
+        -> int
     {
         if (auto* const callback = choose_debug_repl_callback(name)) {
             run_debug_repl(callback, colors);
@@ -166,7 +158,7 @@ auto main(int argc, char const** argv) -> int
             colors = cppdiag::Colors::none();
         }
         if (version_flag) {
-            std::println("kieli version 0, compiled on " __DATE__ ", " __TIME__ ".");
+            std::println("Kieli version 0");
         }
         if (help_flag) {
             std::print("Valid options:\n{}", parameters.help_string());
