@@ -36,14 +36,15 @@ namespace kieli {
         {
             has_emitted_error = has_emitted_error || (severity == cppdiag::Severity::error);
             vector.push_back(cppdiag::Diagnostic {
-                .text_sections =
-                    [&]<std::size_t... is>(std::index_sequence<is...>) {
+                .text_sections = std::apply(
+                    [&](auto&&... sections) {
                         return utl::to_vector({ text_section(
-                            sections[is].source_view,
-                            sections[is].note.transform([&](std::string_view const string) {
+                            sections.source_view,
+                            sections.note.transform([&](std::string_view const string) {
                                 return cppdiag::format_message(message_buffer, "{}", string);
                             }))... });
-                    }(std::make_index_sequence<n> {}),
+                    },
+                    std::to_array(std::move(sections))),
                 .message  = format_message(message_buffer, fmt, std::forward<Args>(args)...),
                 .severity = severity,
             });
@@ -95,7 +96,7 @@ namespace kieli {
         -> std::pair<Compile_info, utl::Source::Wrapper>;
 
     struct Identifier {
-        utl::Pooled_string name;
+        utl::Pooled_string string;
         [[nodiscard]] auto operator==(Identifier const&) const -> bool = default;
     };
 
@@ -175,7 +176,7 @@ template <>
 struct std::formatter<kieli::Identifier> : std::formatter<utl::Pooled_string> {
     auto format(kieli::Identifier const identifier, auto& context) const
     {
-        return std::formatter<utl::Pooled_string>::format(identifier.name, context);
+        return std::formatter<utl::Pooled_string>::format(identifier.string, context);
     }
 };
 
@@ -183,7 +184,7 @@ template <utl::one_of<kieli::Name_dynamic, kieli::Name_lower, kieli::Name_upper>
 struct std::formatter<Name> : std::formatter<utl::Pooled_string> {
     auto format(Name const& name, auto& context) const
     {
-        return std::formatter<utl::Pooled_string>::format(name.identifier.name, context);
+        return std::formatter<utl::Pooled_string>::format(name.identifier.string, context);
     }
 };
 

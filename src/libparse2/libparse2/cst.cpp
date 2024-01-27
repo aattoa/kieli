@@ -1,14 +1,5 @@
-#include <libparse/cst.hpp>
+#include <libparse2/cst.hpp>
 #include <libutl/common/utilities.hpp>
-
-auto cst::Token::from_lexical(kieli::Lexical_token const* const pointer) -> Token
-{
-    assert(pointer != nullptr && pointer->type != kieli::Lexical_token::Type::end_of_input);
-    return Token {
-        .source_view      = pointer->source_view,
-        .preceding_trivia = pointer->preceding_trivia,
-    };
-}
 
 auto cst::Token::from_lexical(kieli::Token2 const& lexical) -> Token
 {
@@ -31,6 +22,29 @@ auto cst::Qualified_name::is_upper() const noexcept -> bool
 auto cst::Qualified_name::is_unqualified() const noexcept -> bool
 {
     return !root_qualifier.has_value() && middle_qualifiers.elements.empty();
+}
+
+auto cst::Template_parameter::kind_description(const Variant& variant) noexcept -> std::string_view
+{
+    return std::visit(
+        utl::Overload {
+            [](cst::Template_parameter::Type_parameter const&) { return "type"; },
+            [](cst::Template_parameter::Value_parameter const&) { return "value"; },
+            [](cst::Template_parameter::Mutability_parameter const&) { return "mutability"; },
+        },
+        variant);
+}
+
+auto cst::Template_argument::kind_description(const Variant& variant) noexcept -> std::string_view
+{
+    return std::visit(
+        utl::Overload {
+            [](cst::Template_argument::Wildcard const&) { return "wildcard"; },
+            [](utl::Wrapper<cst::Type> const&) { return "type"; },
+            [](utl::Wrapper<cst::Expression> const&) { return "value"; },
+            [](cst::Mutability const&) { return "mutability"; },
+        },
+        variant);
 }
 
 auto cst::Template_argument::source_view() const -> utl::Source_view

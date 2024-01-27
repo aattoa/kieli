@@ -4,7 +4,6 @@
 namespace {
     struct Type_format_visitor {
         libformat::State& state;
-        utl::Source_view  source_view;
 
         auto operator()(kieli::built_in_type::Integer const integer)
         {
@@ -33,7 +32,7 @@ namespace {
 
         auto operator()(cst::type::Wildcard const&)
         {
-            state.format("{}", source_view.string);
+            state.format("_");
         }
 
         auto operator()(cst::type::Self const&)
@@ -77,7 +76,7 @@ namespace {
         {
             state.format("*");
             state.format_mutability_with_trailing_whitespace(pointer.mutability);
-            state.format(pointer.pointed_to_type);
+            state.format(pointer.pointee_type);
         }
 
         auto operator()(cst::type::Function const& function)
@@ -121,5 +120,5 @@ namespace {
 
 auto libformat::State::format(cst::Type const& type) -> void
 {
-    std::visit(Type_format_visitor { *this, type.source_view }, type.value);
+    std::visit(Type_format_visitor { *this }, type.value);
 }

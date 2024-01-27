@@ -29,13 +29,13 @@ namespace {
         auto operator()(cst::definition::Function const& function) -> ast::Definition::Variant
         {
             std::vector<ast::Function_parameter> parameters;
-            if (function.signature.function_parameters.self_parameter.has_value()) {
+            if (function.signature.function_parameters.value.self_parameter.has_value()) {
                 parameters.push_back(context.normalize_self_parameter(
-                    function.signature.function_parameters.self_parameter.value()));
+                    function.signature.function_parameters.value.self_parameter.value()));
             }
 
             parameters.append_range(
-                function.signature.function_parameters.normal_parameters.elements
+                function.signature.function_parameters.value.normal_parameters.elements
                 | std::views::transform(context.desugar()));
 
             // Convert function bodies defined with shorthand syntax into blocks
@@ -56,7 +56,7 @@ namespace {
                           .value_or(std::vector<ast::Template_parameter> {}),
                     .function_parameters = std::move(parameters),
                     .self_parameter
-                    = function.signature.function_parameters.self_parameter.transform(
+                    = function.signature.function_parameters.value.self_parameter.transform(
                         context.desugar()),
                     .return_type = function.signature.return_type.transform(context.desugar()),
                     .name        = function.signature.name,

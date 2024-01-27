@@ -1,9 +1,9 @@
 #include <catch2/catch_test_macros.hpp>
-#include <libparse/test_interface.hpp>
+#include <libparse2/test_interface.hpp>
 #include <libutl/common/utilities.hpp>
 
 namespace {
-    constexpr auto parse = libparse::test_parse_expression;
+    constexpr auto parse = libparse2::test_parse_expression;
 }
 
 #define TEST(name) TEST_CASE("parse-expression " name, "[libparse][expression]") // NOLINT
@@ -13,9 +13,9 @@ namespace {
 TEST("literals")
 {
     REQUIRE_SIMPLE_PARSE("5");
-    REQUIRE_SIMPLE_PARSE("5e3");
-    REQUIRE_SIMPLE_PARSE("5.0");
-    REQUIRE_SIMPLE_PARSE("5.0e3");
+    REQUIRE(parse("5e3") == "5000");
+    REQUIRE(parse("5.0") == "5");
+    REQUIRE(parse("5.0e3") == "5000");
     REQUIRE_SIMPLE_PARSE("true");
     REQUIRE_SIMPLE_PARSE("false");
     REQUIRE_SIMPLE_PARSE("'x'");

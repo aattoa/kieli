@@ -1,7 +1,6 @@
 #pragma once
 
 #include <libphase/phase.hpp>
-#include <liblex/token.hpp>
 #include <liblex2/token.hpp>
 #include <libutl/common/utilities.hpp>
 #include <libutl/common/wrapper.hpp>
@@ -32,9 +31,6 @@ namespace cst {
     struct [[nodiscard]] Token {
         utl::Source_view source_view;
         std::string_view preceding_trivia;
-
-        // Precondition: `pointer` must point to a token within a contiguous token sequence
-        static auto from_lexical(kieli::Lexical_token const*) -> Token;
 
         static auto from_lexical(kieli::Token2 const&) -> Token;
     };
@@ -92,11 +88,15 @@ namespace cst {
             utl::Source_view source_view;
         };
 
-        using Variant
-            = std::variant<utl::Wrapper<Type>, utl::Wrapper<Expression>, Mutability, Wildcard>;
+        using Variant = std::variant< //
+            utl::Wrapper<Type>,
+            utl::Wrapper<Expression>,
+            Mutability,
+            Wildcard>;
         Variant value;
 
-        auto source_view() const -> utl::Source_view;
+        auto        source_view() const -> utl::Source_view;
+        static auto kind_description(Variant const&) noexcept -> std::string_view;
     };
 
     using Template_arguments = Surrounded<Separated_sequence<Template_argument>>;
@@ -111,15 +111,16 @@ namespace cst {
     struct Root_qualifier {
         struct Global {};
 
-        using Variant = std::variant<Global, utl::Wrapper<Type>>;
-        Variant value;
-        Token   double_colon_token;
+        std::variant<Global, utl::Wrapper<Type>> value;
+        Token                                    double_colon_token;
+        utl::Source_view                         source_view;
     };
 
     struct Qualified_name {
         Separated_sequence<Qualifier> middle_qualifiers;
         std::optional<Root_qualifier> root_qualifier;
         kieli::Name_dynamic           primary_name;
+        utl::Source_view              source_view;
 
         [[nodiscard]] auto is_upper() const noexcept -> bool;
         [[nodiscard]] auto is_unqualified() const noexcept -> bool;
@@ -145,13 +146,11 @@ namespace cst {
     struct Function_parameters {
         Separated_sequence<Function_parameter> normal_parameters;
         std::optional<Self_parameter>          self_parameter;
-        std::optional<Token>                   comma_token_after_self_parameter;
-        Token                                  open_parenthesis_token;
-        Token                                  close_parenthesis_token;
+        std::optional<Token>                   comma_token_after_self;
     };
 
     struct Function_argument {
-        std::optional<Name_lower_equals> argument_name;
+        std::optional<Name_lower_equals> name;
         utl::Wrapper<Expression>         expression;
     };
 
@@ -159,30 +158,35 @@ namespace cst {
 
     struct Template_parameter {
         struct Type_parameter {
-            Separated_sequence<Class_reference> classes;
             kieli::Name_upper                   name;
+            std::optional<Token>                colon_token;
+            Separated_sequence<Class_reference> classes;
         };
 
         struct Value_parameter {
-            std::optional<utl::Wrapper<Type>> type;
-            kieli::Name_lower                 name;
+            kieli::Name_lower              name;
+            std::optional<Type_annotation> type_annotation;
         };
 
         struct Mutability_parameter {
             kieli::Name_lower name;
+            Token             colon_token;
             Token             mut_keyword_token;
         };
 
         struct Default_argument {
+            // TODO: Encode default argument kind in the type system
             Template_argument argument;
             Token             equals_sign_token;
         };
 
         using Variant = std::variant<Type_parameter, Value_parameter, Mutability_parameter>;
-        Variant                         value;
-        std::optional<Token>            colon_token;
+
         std::optional<Default_argument> default_argument;
+        Variant                         value;
         utl::Source_view                source_view;
+
+        static auto kind_description(Variant const&) noexcept -> std::string_view;
     };
 
     using Template_parameters = Surrounded<Separated_sequence<Template_parameter>>;
@@ -240,10 +244,14 @@ namespace cst {
         };
 
         struct Binary_operator_invocation_sequence {
+            struct Operator_name {
+                kieli::Identifier operator_id;
+                utl::Source_view  operator_source_view;
+            };
+
             struct Operator_and_operand {
-                kieli::Identifier        operator_id;
-                Token                    operator_token;
                 utl::Wrapper<Expression> right_operand;
+                Operator_name            operator_name;
             };
 
             std::vector<Operator_and_operand> sequence_tail;
@@ -258,15 +266,15 @@ namespace cst {
 
         struct Tuple_field_access {
             utl::Wrapper<Expression> base_expression;
-            std::size_t              field_index {};
-            utl::Source_view         field_index_source_view;
+            std::uint64_t            field_index {};
+            Token                    field_index_token;
             Token                    dot_token;
         };
 
         struct Array_index_access {
-            utl::Wrapper<Expression> base_expression;
-            utl::Wrapper<Expression> index_expression;
-            Token                    dot_token;
+            utl::Wrapper<Expression>             base_expression;
+            Surrounded<utl::Wrapper<Expression>> index_expression;
+            Token                                dot_token;
         };
 
         struct Method_invocation {
@@ -304,11 +312,13 @@ namespace cst {
 
         struct Type_cast {
             utl::Wrapper<Expression> base_expression;
+            Token                    as_token;
             utl::Wrapper<Type>       target_type;
         };
 
         struct Type_ascription {
             utl::Wrapper<Expression> base_expression;
+            Token                    colon_token;
             utl::Wrapper<Type>       ascribed_type;
         };
 
@@ -501,8 +511,8 @@ namespace cst {
         };
 
         struct Alias {
-            kieli::Name_lower         alias_name;
             std::optional<Mutability> alias_mutability;
+            kieli::Name_lower         alias_name;
             utl::Wrapper<Pattern>     aliased_pattern;
             Token                     as_keyword_token;
         };
@@ -577,14 +587,14 @@ namespace cst {
         };
 
         struct Reference {
-            utl::Wrapper<Type>        referenced_type;
             std::optional<Mutability> mutability;
+            utl::Wrapper<Type>        referenced_type;
             Token                     ampersand_token;
         };
 
         struct Pointer {
-            utl::Wrapper<Type>        pointed_to_type;
             std::optional<Mutability> mutability;
+            utl::Wrapper<Type>        pointee_type;
             Token                     asterisk_token;
         };
 
@@ -626,7 +636,7 @@ namespace cst {
 
     struct Function_signature {
         std::optional<Template_parameters> template_parameters;
-        Function_parameters                function_parameters;
+        Surrounded<Function_parameters>    function_parameters;
         std::optional<Type_annotation>     return_type;
         kieli::Name_lower                  name;
         Token                              fn_keyword_token;
@@ -695,26 +705,26 @@ namespace cst {
         };
 
         struct Implementation {
-            std::optional<Template_parameters> template_parameters;
-            std::vector<Definition>            definitions;
-            utl::Wrapper<Type>                 self_type;
-            Token                              impl_keyword_token;
+            std::optional<Template_parameters>  template_parameters;
+            Surrounded<std::vector<Definition>> definitions;
+            utl::Wrapper<Type>                  self_type;
+            Token                               impl_keyword_token;
         };
 
         struct Instantiation {
-            std::optional<Template_parameters> template_parameters;
-            Class_reference                    typeclass;
-            std::vector<Definition>            definitions;
-            utl::Wrapper<Type>                 self_type;
-            Token                              inst_keyword_token;
-            Token                              for_keyword_token;
+            std::optional<Template_parameters>  template_parameters;
+            Class_reference                     typeclass;
+            Surrounded<std::vector<Definition>> definitions;
+            utl::Wrapper<Type>                  self_type;
+            Token                               inst_keyword_token;
+            Token                               for_keyword_token;
         };
 
         struct Namespace {
-            std::optional<Template_parameters> template_parameters;
-            std::vector<Definition>            definitions;
-            kieli::Name_lower                  name;
-            Token                              namespace_keyword_token;
+            std::optional<Template_parameters>  template_parameters;
+            Surrounded<std::vector<Definition>> definitions;
+            kieli::Name_lower                   name;
+            Token                               namespace_keyword_token;
         };
     } // namespace definition
 
@@ -742,6 +752,7 @@ namespace cst {
         struct Import {
             utl::Pooled_string name;
             utl::Source_view   source_view;
+            Token              import_keyword_token;
         };
 
         std::vector<Import>     imports;

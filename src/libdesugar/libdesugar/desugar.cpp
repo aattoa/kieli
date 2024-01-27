@@ -5,9 +5,8 @@
 auto libdesugar::Context::desugar(cst::Function_argument const& argument) -> ast::Function_argument
 {
     return {
-        .expression = desugar(argument.expression),
-        .argument_name
-        = argument.argument_name.transform([](auto const& syntax) { return syntax.name; }),
+        .expression    = desugar(argument.expression),
+        .argument_name = argument.name.transform([](auto const& syntax) { return syntax.name; }),
     };
 }
 
@@ -34,13 +33,10 @@ auto libdesugar::Context::desugar(cst::Self_parameter const& self_parameter) -> 
 auto libdesugar::Context::desugar(cst::Template_argument const& argument) -> ast::Template_argument
 {
     return {
-        .value = std::visit(
+        .value = std::visit<ast::Template_argument::Variant>(
             utl::Overload {
-                [this](auto const& argument) -> ast::Template_argument::Variant {
-                    return this->desugar(argument);
-                },
-                [](cst::Template_argument::Wildcard const wildcard)
-                    -> ast::Template_argument::Variant {
+                [this](auto const& argument) { return this->desugar(argument); },
+                [](cst::Template_argument::Wildcard const wildcard) {
                     return ast::Template_argument::Wildcard { .source_view = wildcard.source_view };
                 },
             },
@@ -52,24 +48,21 @@ auto libdesugar::Context::desugar(cst::Template_parameter const& parameter)
     -> ast::Template_parameter
 {
     return {
-        .value = std::visit(
+        .value = std::visit<ast::Template_parameter::Variant>(
             utl::Overload {
-                [this](cst::Template_parameter::Type_parameter const& type_parameter)
-                    -> ast::Template_parameter::Variant {
+                [this](cst::Template_parameter::Type_parameter const& type_parameter) {
                     return ast::Template_parameter::Type_parameter {
                         .classes = desugar(type_parameter.classes),
                         .name    = type_parameter.name,
                     };
                 },
-                [this](cst::Template_parameter::Value_parameter const& value_parameter)
-                    -> ast::Template_parameter::Variant {
+                [this](cst::Template_parameter::Value_parameter const& value_parameter) {
                     return ast::Template_parameter::Value_parameter {
-                        .type = value_parameter.type.transform(desugar()),
+                        .type = value_parameter.type_annotation.transform(wrap_desugar()),
                         .name = value_parameter.name,
                     };
                 },
-                [](cst::Template_parameter::Mutability_parameter const& mutability_parameter)
-                    -> ast::Template_parameter::Variant {
+                [](cst::Template_parameter::Mutability_parameter const& mutability_parameter) {
                     return ast::Template_parameter::Mutability_parameter {
                         .name = mutability_parameter.name,
                     };
@@ -83,7 +76,7 @@ auto libdesugar::Context::desugar(cst::Template_parameter const& parameter)
 
 auto libdesugar::Context::desugar(cst::Qualifier const& qualifier) -> ast::Qualifier
 {
-    return {
+    return ast::Qualifier {
         .template_arguments = qualifier.template_arguments.transform(desugar()),
         .name               = qualifier.name,
         .source_view        = qualifier.source_view,
@@ -92,7 +85,7 @@ auto libdesugar::Context::desugar(cst::Qualifier const& qualifier) -> ast::Quali
 
 auto libdesugar::Context::desugar(cst::Qualified_name const& name) -> ast::Qualified_name
 {
-    return {
+    return ast::Qualified_name {
         .middle_qualifiers = desugar(name.middle_qualifiers.elements),
         .root_qualifier    = name.root_qualifier.transform([&](cst::Root_qualifier const& root) {
             return std::visit(
@@ -113,7 +106,7 @@ auto libdesugar::Context::desugar(cst::Qualified_name const& name) -> ast::Quali
 
 auto libdesugar::Context::desugar(cst::Class_reference const& reference) -> ast::Class_reference
 {
-    return {
+    return ast::Class_reference {
         .template_arguments = reference.template_arguments.transform(desugar()),
         .name               = desugar(reference.name),
         .source_view        = reference.source_view,
@@ -123,17 +116,18 @@ auto libdesugar::Context::desugar(cst::Class_reference const& reference) -> ast:
 auto libdesugar::Context::desugar(cst::Function_signature const& signature)
     -> ast::Function_signature
 {
-    return {
-        .function_parameters = desugar(signature.function_parameters.normal_parameters.elements),
-        .self_parameter      = signature.function_parameters.self_parameter.transform(desugar()),
-        .return_type         = signature.return_type.transform(desugar()),
-        .name                = signature.name,
+    return ast::Function_signature {
+        .function_parameters
+        = desugar(signature.function_parameters.value.normal_parameters.elements),
+        .self_parameter = signature.function_parameters.value.self_parameter.transform(desugar()),
+        .return_type    = signature.return_type.transform(desugar()),
+        .name           = signature.name,
     };
 }
 
 auto libdesugar::Context::desugar(cst::Type_signature const& signature) -> ast::Type_signature
 {
-    return {
+    return ast::Type_signature {
         .classes = desugar(signature.classes.elements),
         .name    = signature.name,
     };
@@ -142,12 +136,12 @@ auto libdesugar::Context::desugar(cst::Type_signature const& signature) -> ast::
 auto libdesugar::Context::desugar(cst::Mutability const& mutability) -> ast::Mutability
 {
     return ast::Mutability {
-        .value = std::visit(
+        .value = std::visit<ast::Mutability::Variant>(
             utl::Overload {
-                [](cst::Mutability::Concrete const concrete) -> ast::Mutability::Variant {
+                [](cst::Mutability::Concrete const concrete) {
                     return ast::Mutability::Concrete { .is_mutable = concrete.is_mutable };
                 },
-                [](cst::Mutability::Parameterized const parameterized) -> ast::Mutability::Variant {
+                [](cst::Mutability::Parameterized const parameterized) {
                     return ast::Mutability::Parameterized { .name = parameterized.name };
                 },
             },

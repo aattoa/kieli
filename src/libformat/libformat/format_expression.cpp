@@ -4,7 +4,6 @@
 namespace {
     struct Expression_format_visitor {
         libformat::State& state;
-        utl::Source_view  source_view;
 
         auto format_indented_block_body(cst::expression::Block const& block)
         {
@@ -50,9 +49,17 @@ namespace {
         }
 
         template <kieli::literal Literal>
-        auto operator()(Literal const&)
+        auto operator()(Literal const& literal)
         {
-            state.format("{}", source_view.string);
+            if constexpr (std::is_same_v<Literal, kieli::String>) {
+                state.format("\"{}\"", literal.value);
+            }
+            else if constexpr (std::is_same_v<Literal, kieli::Character>) {
+                state.format("'{}'", literal.value);
+            }
+            else {
+                state.format("{}", literal.value);
+            }
         }
 
         auto operator()(cst::expression::Block const& block)
@@ -77,9 +84,9 @@ namespace {
         auto operator()(cst::expression::Binary_operator_invocation_sequence const& sequence)
         {
             state.format(*sequence.leftmost_operand);
-            for (auto const& operator_and_operand : sequence.sequence_tail) {
-                state.format(" {} ", operator_and_operand.operator_id);
-                state.format(*operator_and_operand.right_operand);
+            for (auto const& [right_operand, operator_name] : sequence.sequence_tail) {
+                state.format(" {} ", operator_name.operator_id);
+                state.format(*right_operand);
             }
         }
 
@@ -203,7 +210,7 @@ namespace {
         {
             state.format(access.base_expression);
             state.format(".[");
-            state.format(access.index_expression);
+            state.format(access.index_expression.value);
             state.format("]");
         }
 
@@ -304,7 +311,7 @@ namespace {
 
         auto operator()(cst::expression::Conditional const& conditional)
         {
-            state.format("{} ", conditional.if_or_elif_keyword_token.source_view.string);
+            state.format("{} ", conditional.is_elif_conditional.get() ? "elif" : "if");
             state.format(conditional.condition);
             state.format(" ");
             format_indented_block_body(as_block(conditional.true_branch));
@@ -354,5 +361,5 @@ namespace {
 
 auto libformat::State::format(cst::Expression const& expression) -> void
 {
-    std::visit(Expression_format_visitor { *this, expression.source_view }, expression.value);
+    std::visit(Expression_format_visitor { *this }, expression.value);
 }

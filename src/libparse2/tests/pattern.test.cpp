@@ -1,9 +1,9 @@
 #include <catch2/catch_test_macros.hpp>
-#include <libparse/test_interface.hpp>
+#include <libparse2/test_interface.hpp>
 #include <libutl/common/utilities.hpp>
 
 namespace {
-    constexpr auto parse = libparse::test_parse_pattern;
+    constexpr auto parse = libparse2::test_parse_pattern;
 }
 
 #define TEST(name) TEST_CASE("parse-pattern " name, "[libparse][pattern]") // NOLINT
@@ -13,9 +13,9 @@ namespace {
 TEST("literals")
 {
     REQUIRE_SIMPLE_PARSE("5");
-    REQUIRE_SIMPLE_PARSE("5e3");
-    REQUIRE_SIMPLE_PARSE("5.0");
-    REQUIRE_SIMPLE_PARSE("5.0e3");
+    REQUIRE(parse("5e3") == "5000");
+    REQUIRE(parse("5.0") == "5");
+    REQUIRE(parse("5.0e3") == "5000");
     REQUIRE_SIMPLE_PARSE("true");
     REQUIRE_SIMPLE_PARSE("false");
     REQUIRE_SIMPLE_PARSE("'x'");
@@ -35,7 +35,7 @@ TEST("parenthesized")
 TEST("wildcard")
 {
     REQUIRE_SIMPLE_PARSE("_");
-    REQUIRE_SIMPLE_PARSE("___");
+    REQUIRE(parse("____") == "_");
 }
 
 TEST("name")
@@ -65,8 +65,8 @@ TEST("slice")
 
 TEST("alias")
 {
-    REQUIRE_SIMPLE_PARSE("(_, ___) as x");
-    REQUIRE_SIMPLE_PARSE("(___, _) as mut x");
+    REQUIRE(parse("(_, ___) as x") == "(_, _) as x");
+    REQUIRE(parse("(___, _) as mut x") == "(_, _) as mut x");
 }
 
 TEST("guarded")

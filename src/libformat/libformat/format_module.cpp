@@ -126,6 +126,14 @@ auto kieli::format_module(
     return output_string;
 }
 
+auto kieli::format_definition(
+    cst::Definition const& definition, Format_configuration const& configuration) -> std::string
+{
+    (void)definition;
+    (void)configuration;
+    cpputil::todo();
+}
+
 auto kieli::format_expression(
     cst::Expression const& expression, Format_configuration const& configuration) -> std::string
 {

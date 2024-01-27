@@ -103,7 +103,7 @@ namespace {
         auto operator()(cst::type::Pointer const& pointer) -> ast::Type::Variant
         {
             return ast::type::Pointer {
-                .pointed_to_type = context.desugar(pointer.pointed_to_type),
+                .pointed_to_type = context.desugar(pointer.pointee_type),
                 .mutability      = context.desugar_mutability(
                     pointer.mutability, pointer.asterisk_token.source_view),
             };

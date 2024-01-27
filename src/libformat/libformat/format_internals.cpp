@@ -53,8 +53,8 @@ auto libformat::State::format(cst::Template_argument const& argument) -> void
 
 auto libformat::State::format(cst::Function_argument const& argument) -> void
 {
-    if (argument.argument_name.has_value()) {
-        format("{} = ", argument.argument_name->name);
+    if (argument.name.has_value()) {
+        format("{} = ", argument.name->name);
     }
     format(argument.expression);
 }

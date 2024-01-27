@@ -3,76 +3,270 @@
 
 namespace {
 
-    auto parse_function(libparse2::Context& context, kieli::Token2 const& token)
-        -> std::optional<cst::Definition::Variant>
+    using namespace libparse2;
+
+    auto extract_definition_sequence(Context& context)
+        -> cst::Surrounded<std::vector<cst::Definition>>
     {
-        (void)context;
-        (void)token;
-        cpputil::todo();
+        Token const open = context.require_extract(Token::Type::brace_open);
+
+        std::vector<cst::Definition> definitions;
+        while (auto definition = parse_definition(context)) {
+            definitions.push_back(std::move(definition.value()));
+        }
+
+        Token const close = context.require_extract(Token::Type::brace_close);
+        return {
+            .value       = std::move(definitions),
+            .open_token  = cst::Token::from_lexical(open),
+            .close_token = cst::Token::from_lexical(close),
+        };
     }
 
-    auto parse_structure(libparse2::Context& context, kieli::Token2 const& token)
-        -> std::optional<cst::Definition::Variant>
+    auto extract_function_signature(Context& context, Token const& fn_keyword)
+        -> cst::Function_signature
     {
-        (void)context;
-        (void)token;
-        cpputil::todo();
+        auto name                = extract_lower_name(context, "a function name");
+        auto template_parameters = parse_template_parameters(context);
+        auto function_parameters
+            = parse_parenthesized<parse_function_parameters, "a function parameter list">(context);
+
+        if (!function_parameters.has_value()) {
+            context.error_expected("a '(' followed by a function parameter list");
+        }
+
+        auto return_type_annotation = parse_type_annotation(context);
+
+        if (context.try_extract(Token::Type::where)) {
+            cpputil::todo(); // TODO: add support for where clauses
+        }
+
+        return cst::Function_signature {
+            .template_parameters = std::move(template_parameters),
+            .function_parameters = std::move(function_parameters.value()),
+            .return_type         = std::move(return_type_annotation),
+            .name                = std::move(name),
+            .fn_keyword_token    = cst::Token::from_lexical(fn_keyword),
+        };
     }
 
-    auto parse_enumeration(libparse2::Context& context, kieli::Token2 const& token)
-        -> std::optional<cst::Definition::Variant>
+    auto extract_function(Context& context, Token const& fn_keyword) -> cst::Definition::Variant
     {
-        (void)context;
-        (void)token;
-        cpputil::todo();
+        auto signature   = extract_function_signature(context, fn_keyword);
+        auto equals_sign = context.try_extract(Token::Type::equals);
+
+        auto const function_body
+            = equals_sign.has_value() ? parse_expression(context) : parse_block_expression(context);
+
+        if (!function_body.has_value()) {
+            context.error_expected(
+                equals_sign.has_value() ? "the function body expression"
+                                        : "the function body: '=' or '{'");
+        }
+
+        return cst::definition::Function {
+            .signature                  = std::move(signature),
+            .body                       = function_body.value(),
+            .optional_equals_sign_token = equals_sign.transform(cst::Token::from_lexical),
+            .fn_keyword_token           = cst::Token::from_lexical(fn_keyword),
+        };
     }
 
-    auto parse_typeclass(libparse2::Context& context, kieli::Token2 const& token)
-        -> std::optional<cst::Definition::Variant>
+    auto parse_struct_member(Context& context) -> std::optional<cst::definition::Struct::Member>
     {
-        (void)context;
-        (void)token;
-        cpputil::todo();
+        return parse_lower_name(context).transform([&](kieli::Name_lower const name) {
+            return cst::definition::Struct::Member {
+                .name        = name,
+                .type        = require<parse_type_annotation>(context, "a ':' followed by a type"),
+                .source_view = context.up_to_current(name.source_view),
+            };
+        });
     }
 
-    auto parse_instantiation(libparse2::Context& context, kieli::Token2 const& token)
-        -> std::optional<cst::Definition::Variant>
+    auto extract_structure(Context& context, Token const& struct_keyword)
+        -> cst::Definition::Variant
     {
-        (void)context;
-        (void)token;
-        cpputil::todo();
+        static constexpr auto extract_members = extract_required<
+            parse_comma_separated_one_or_more<parse_struct_member, "a struct member">,
+            "one or more struct members">;
+
+        auto name                = extract_upper_name(context, "a struct name");
+        auto template_parameters = parse_template_parameters(context);
+        auto equals_sign         = context.require_extract(Token::Type::equals);
+
+        return cst::definition::Struct {
+            .template_parameters  = std::move(template_parameters),
+            .members              = extract_members(context),
+            .name                 = std::move(name),
+            .struct_keyword_token = cst::Token::from_lexical(struct_keyword),
+            .equals_sign_token    = cst::Token::from_lexical(equals_sign),
+        };
     }
 
-    auto parse_implementation(libparse2::Context& context, kieli::Token2 const& token)
-        -> std::optional<cst::Definition::Variant>
+    auto parse_enum_constructor(Context& context)
+        -> std::optional<cst::definition::Enum::Constructor>
     {
-        (void)context;
-        (void)token;
-        cpputil::todo();
+        static constexpr auto parse_payload = parse_parenthesized<
+            parse_comma_separated_one_or_more<parse_type, "a type">,
+            "one or more types">;
+
+        return parse_lower_name(context).transform([&](kieli::Name_lower const name) {
+            return cst::definition::Enum::Constructor {
+                .payload_types = parse_payload(context),
+                .name          = name,
+                .source_view   = context.up_to_current(name.source_view),
+            };
+        });
     }
 
-    auto parse_namespace(libparse2::Context& context, kieli::Token2 const& token)
-        -> std::optional<cst::Definition::Variant>
+    auto extract_enumeration(Context& context, Token const& enum_keyword)
+        -> cst::Definition::Variant
     {
-        (void)context;
-        (void)token;
-        cpputil::todo();
+        static constexpr auto extract_constructors = extract_required<
+            parse_separated_one_or_more<
+                parse_enum_constructor,
+                "an enum constructor",
+                Token::Type::pipe>,
+            "one or more enum constructors">;
+
+        auto const name                = extract_upper_name(context, "an enum name");
+        auto       template_parameters = parse_template_parameters(context);
+        auto const equals_sign         = context.require_extract(Token::Type::equals);
+
+        return cst::definition::Enum {
+            .template_parameters = std::move(template_parameters),
+            .constructors        = extract_constructors(context),
+            .name                = name,
+            .enum_keyword_token  = cst::Token::from_lexical(enum_keyword),
+            .equals_sign_token   = cst::Token::from_lexical(equals_sign),
+        };
     }
 
-    auto dispatch_parse_definition(libparse2::Context& context, kieli::Token2 const& token)
+    auto extract_type_signature(Context& context, Token const& alias_keyword) -> cst::Type_signature
+    {
+        auto const name                = extract_upper_name(context, "an alias name");
+        auto       template_parameters = parse_template_parameters(context);
+
+        cst::Type_signature signature {
+            .template_parameters = std::move(template_parameters),
+            .name                = name,
+            .alias_keyword_token = cst::Token::from_lexical(alias_keyword),
+        };
+        if (auto const colon_token = context.try_extract(Token::Type::colon)) {
+            signature.classes_colon_token = cst::Token::from_lexical(colon_token.value());
+            signature.classes             = extract_class_references(context);
+        }
+        return signature;
+    }
+
+    auto extract_typeclass(Context& context, Token const& class_keyword) -> cst::Definition::Variant
+    {
+        auto const name                = extract_upper_name(context, "a class name");
+        auto       template_parameters = parse_template_parameters(context);
+        auto const open_brace          = context.require_extract(Token::Type::brace_open);
+
+        std::vector<cst::Type_signature>     types;
+        std::vector<cst::Function_signature> functions;
+
+        for (;;) {
+            switch (context.peek().type) {
+            case Token::Type::fn:
+                functions.push_back(extract_function_signature(context, context.extract()));
+                continue;
+            case Token::Type::alias:
+                types.push_back(extract_type_signature(context, context.extract()));
+                continue;
+            default:
+                Token const close_brace = context.require_extract(Token::Type::brace_close);
+                return cst::definition::Typeclass {
+                    .template_parameters = std::move(template_parameters),
+                    .function_signatures = std::move(functions),
+                    .type_signatures     = std::move(types),
+                    .name                = name,
+                    .class_keyword_token = cst::Token::from_lexical(class_keyword),
+                    .open_brace_token    = cst::Token::from_lexical(open_brace),
+                    .close_brace_token   = cst::Token::from_lexical(close_brace),
+                };
+            }
+        }
+    }
+
+    auto extract_alias(Context& context, Token const& alias_keyword) -> cst::Definition::Variant
+    {
+        auto const name                = extract_upper_name(context, "an alias name");
+        auto       template_parameters = parse_template_parameters(context);
+        auto const equals_sign         = context.require_extract(Token::Type::equals);
+
+        return cst::definition::Alias {
+            .template_parameters = std::move(template_parameters),
+            .name                = name,
+            .type                = require<parse_type>(context, "the aliased type"),
+            .alias_keyword_token = cst::Token::from_lexical(alias_keyword),
+            .equals_sign_token   = cst::Token::from_lexical(equals_sign),
+        };
+    }
+
+    auto extract_instantiation(Context& context, Token const& inst_keyword)
+        -> cst::Definition::Variant
+    {
+        auto template_parameters = parse_template_parameters(context);
+        auto typeclass_reference = require<parse_class_reference>(context, "a class name");
+
+        Token const for_keyword = context.require_extract(Token::Type::for_);
+        auto        self_type   = require<parse_type>(context, "the Self type");
+
+        return cst::definition::Instantiation {
+            .template_parameters = std::move(template_parameters),
+            .typeclass           = std::move(typeclass_reference),
+            .definitions         = extract_definition_sequence(context),
+            .self_type           = std::move(self_type),
+            .inst_keyword_token  = cst::Token::from_lexical(inst_keyword),
+            .for_keyword_token   = cst::Token::from_lexical(for_keyword),
+        };
+    }
+
+    auto extract_implementation(Context& context, Token const& impl_keyword)
+        -> cst::Definition::Variant
+    {
+        auto template_parameters = parse_template_parameters(context);
+        auto self_type           = require<parse_type>(context, "the Self type");
+        auto definitions         = extract_definition_sequence(context);
+
+        return cst::definition::Implementation {
+            .template_parameters = std::move(template_parameters),
+            .definitions         = std::move(definitions),
+            .self_type           = self_type,
+            .impl_keyword_token  = cst::Token::from_lexical(impl_keyword),
+        };
+    }
+
+    auto extract_namespace(Context& context, Token const& namespace_keyword)
+        -> cst::Definition::Variant
+    {
+        auto const name = extract_lower_name(context, "a namespace name");
+        return cst::definition::Namespace {
+            .template_parameters     = parse_template_parameters(context),
+            .definitions             = extract_definition_sequence(context),
+            .name                    = name,
+            .namespace_keyword_token = cst::Token::from_lexical(namespace_keyword),
+        };
+    }
+
+    auto dispatch_parse_definition(Context& context, Token const& token, Stage const stage)
         -> std::optional<cst::Definition::Variant>
     {
         // clang-format off
         switch (token.type) {
-        case kieli::Token2::Type::fn:         return parse_function(context, token);
-        case kieli::Token2::Type::struct_:    return parse_structure(context, token);
-        case kieli::Token2::Type::enum_:      return parse_enumeration(context, token);
-        case kieli::Token2::Type::class_:     return parse_typeclass(context, token);
-        case kieli::Token2::Type::inst:       return parse_instantiation(context, token);
-        case kieli::Token2::Type::impl:       return parse_implementation(context, token);
-        case kieli::Token2::Type::namespace_: return parse_namespace(context, token);
+        case Token::Type::fn:         return extract_function(context, token);
+        case Token::Type::struct_:    return extract_structure(context, token);
+        case Token::Type::enum_:      return extract_enumeration(context, token);
+        case Token::Type::class_:     return extract_typeclass(context, token);
+        case Token::Type::alias:      return extract_alias(context, token);
+        case Token::Type::inst:       return extract_instantiation(context, token);
+        case Token::Type::impl:       return extract_implementation(context, token);
+        case Token::Type::namespace_: return extract_namespace(context, token);
         default:
-            context.restore(token);
+            context.unstage(stage);
             return std::nullopt;
         }
         // clang-format on
@@ -82,9 +276,11 @@ namespace {
 
 auto libparse2::parse_definition(Context& context) -> std::optional<cst::Definition>
 {
-    kieli::Token2 const first_token = context.extract();
-    return dispatch_parse_definition(context, first_token)
+    Stage const stage       = context.stage();
+    Token const first_token = context.extract();
+    return dispatch_parse_definition(context, first_token, stage)
         .transform([&](cst::Definition::Variant&& variant) {
+            context.commit(stage);
             return cst::Definition {
                 .value       = std::move(variant),
                 .source_view = context.up_to_current(first_token.source_view),

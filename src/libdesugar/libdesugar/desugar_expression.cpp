@@ -25,6 +25,7 @@ namespace {
         Operator_and_operand const*&        tail_begin,
         Operator_and_operand const* const   tail_end) -> ast::Expression
     {
+        // TODO: cleanup
         if constexpr (precedence != static_cast<std::size_t>(-1)) {
             auto const recurse = [&](utl::Wrapper<cst::Expression> const leftmost) {
                 return desugar_binary_operator_invocation_sequence<precedence - 1>(
@@ -32,27 +33,26 @@ namespace {
             };
             ast::Expression left = recurse(leftmost_expression);
             while (tail_begin != tail_end) {
-                auto const& operator_and_operand = *tail_begin;
+                auto const& [right_operand, operator_name] = *tail_begin;
                 if constexpr (precedence != lowest_operator_precedence) {
                     static constexpr auto current_operator_group
                         = std::get<precedence>(operator_precedence_table);
 
                     if (std::ranges::find(
-                            current_operator_group, operator_and_operand.operator_id.name.view())
+                            current_operator_group, operator_name.operator_id.string.view())
                         == current_operator_group.end())
                     {
                         return left;
                     }
                 }
                 ++tail_begin;
-                ast::Expression        right_operand = recurse(operator_and_operand.right_operand);
                 utl::Source_view const source_view
-                    = left.source_view.combine_with(right_operand.source_view);
+                    = left.source_view.combine_with(right_operand->source_view);
                 left = ast::Expression {
                     .value = ast::expression::Binary_operator_invocation {
                         .left  = context.wrap(std::move(left)),
-                        .right = context.wrap(std::move(right_operand)),
-                        .op    = operator_and_operand.operator_id,
+                        .right = context.wrap(recurse(right_operand)),
+                        .op    = operator_name.operator_id,
                     },
                     .source_view = source_view,
                 };
@@ -360,7 +360,7 @@ namespace {
             return ast::expression::Tuple_field_access {
                 .base_expression         = context.desugar(access.base_expression),
                 .field_index             = access.field_index,
-                .field_index_source_view = access.field_index_source_view,
+                .field_index_source_view = access.field_index_token.source_view,
             };
         }
 

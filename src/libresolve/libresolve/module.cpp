@@ -1,7 +1,7 @@
 #include <libutl/common/utilities.hpp>
 #include <libdesugar/desugar.hpp>
-#include <libparse/parse.hpp>
-#include <liblex/lex.hpp>
+#include <libparse2/parse.hpp>
+#include <liblex2/lex.hpp>
 #include <libresolve/module.hpp>
 
 namespace {
@@ -147,7 +147,7 @@ namespace {
         auto& info = context.compile_info;
         if (auto source = utl::Source::read(std::move(file_path))) {
             auto const wrapped_source = info.source_arena.wrap(std::move(*source));
-            auto const cst            = kieli::parse(kieli::lex(wrapped_source, info), info);
+            auto const cst            = kieli::parse2(wrapped_source, info);
             module_map.add_new_unchecked(
                 wrapped_source->path(), collect_environment(context, kieli::desugar(cst, info)));
             for (auto const& import : cst.imports) {
@@ -167,7 +167,9 @@ namespace {
     {
         utl::Source::Wrapper const source = info.source_arena.wrap(
             std::filesystem::path("[kieli-internal-project-root]"), "import \"main\"");
-        return kieli::parse(kieli::lex(source, info), info).imports.front();
+        auto const imports = kieli::parse2(source, info).imports;
+        cpputil::always_assert(imports.size() == 1);
+        return imports.front();
     }
 
 } // namespace

@@ -1,7 +1,7 @@
 #pragma once
 
 #include <libutl/common/utilities.hpp>
-#include <libparse/cst.hpp>
+#include <libparse2/cst.hpp>
 
 // TODO: collapse string literals, expand integer literals, insert digit separators
 
@@ -13,6 +13,7 @@ namespace kieli {
     };
 
     auto format_module(cst::Module const&, Format_configuration const&) -> std::string;
+    auto format_definition(cst::Definition const&, Format_configuration const&) -> std::string;
     auto format_expression(cst::Expression const&, Format_configuration const&) -> std::string;
     auto format_pattern(cst::Pattern const&, Format_configuration const&) -> std::string;
     auto format_type(cst::Type const&, Format_configuration const&) -> std::string;

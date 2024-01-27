@@ -15,11 +15,11 @@ target_sources(libdesugar
     PRIVATE libdesugar/format_ast.cpp)
 
 target_link_libraries(libdesugar
-    PUBLIC libparse
+    PUBLIC libparse2
     PUBLIC libphase)
 
 kieli_consume_libutl_common(libdesugar)
 
 kieli_add_tests(libdesugar
-    LINK libphase liblex libparse
+    LINK libphase libparse2
     TESTS libdesugar)

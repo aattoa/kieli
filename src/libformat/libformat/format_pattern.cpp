@@ -4,12 +4,19 @@
 namespace {
     struct Pattern_format_visitor {
         libformat::State& state;
-        utl::Source_view  source_view;
 
         template <kieli::literal Literal>
-        auto operator()(Literal const&)
+        auto operator()(Literal const& literal)
         {
-            state.format("{}", source_view.string);
+            if constexpr (std::is_same_v<Literal, kieli::String>) {
+                state.format("\"{}\"", literal.value);
+            }
+            else if constexpr (std::is_same_v<Literal, kieli::Character>) {
+                state.format("'{}'", literal.value);
+            }
+            else {
+                state.format("{}", literal.value);
+            }
         }
 
         auto operator()(cst::pattern::Parenthesized const& parenthesized)
@@ -35,7 +42,7 @@ namespace {
 
         auto operator()(cst::pattern::Wildcard const&)
         {
-            state.format("{}", source_view.string);
+            state.format("_");
         }
 
         auto operator()(cst::pattern::Name const& name)
@@ -90,5 +97,5 @@ namespace {
 
 auto libformat::State::format(cst::Pattern const& pattern) -> void
 {
-    std::visit(Pattern_format_visitor { *this, pattern.source_view }, pattern.value);
+    std::visit(Pattern_format_visitor { *this }, pattern.value);
 }

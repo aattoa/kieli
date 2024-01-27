@@ -3,7 +3,7 @@
 #include <libutl/common/utilities.hpp>
 #include <libutl/common/safe_integer.hpp>
 #include <libphase/phase.hpp>
-#include <libparse/cst.hpp>
+#include <libparse2/cst.hpp>
 #include <libdesugar/ast.hpp>
 
 namespace libdesugar {
@@ -21,13 +21,13 @@ namespace libdesugar {
         template <ast::node Node>
         auto wrap(Node&& node) -> utl::Wrapper<Node>
         {
-            return node_arena.wrap<Node>(std::move(node)); // NOLINT: move is correct
+            return node_arena.wrap<Node>(static_cast<Node&&>(node));
         }
 
         [[nodiscard]] auto wrap() noexcept
         {
             return [this]<ast::node Node>(Node&& node) -> utl::Wrapper<Node> {
-                return wrap(std::move(node)); // NOLINT: move is correct
+                return wrap(static_cast<Node&&>(node));
             };
         }
 

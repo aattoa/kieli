@@ -1,6 +1,5 @@
 #include <libutl/common/utilities.hpp>
-#include <liblex/lex.hpp>
-#include <libparse/parse.hpp>
+#include <libparse2/parse.hpp>
 #include <libdesugar/desugar.hpp>
 #include <catch2/catch_test_macros.hpp>
 
@@ -8,7 +7,7 @@ namespace {
     auto desugar(std::string&& string) -> std::string
     {
         auto [info, source] = kieli::test_info_and_source(std::move(string));
-        auto const  module  = desugar(parse(lex(source, info), info), info);
+        auto const  module  = kieli::desugar(kieli::parse2(source, info), info);
         std::string output;
         for (ast::Definition const& definition : module.definitions) {
             ast::format_to(definition, output);
