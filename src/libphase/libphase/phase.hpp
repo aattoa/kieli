@@ -12,13 +12,15 @@ namespace kieli {
     };
 
     struct Simple_text_section {
-        utl::Source_view                 source_view;
+        utl::Source::Wrapper             source;
+        utl::Source_range                source_range;
         std::optional<std::string_view>  note;
         std::optional<cppdiag::Severity> severity;
     };
 
     auto text_section(
-        utl::Source_view                       section_view,
+        utl::Source::Wrapper                   section_source,
+        utl::Source_range                      section_range,
         std::optional<cppdiag::Message_string> section_note = std::nullopt,
         std::optional<cppdiag::Severity>       severity = std::nullopt) -> cppdiag::Text_section;
 
@@ -39,7 +41,8 @@ namespace kieli {
                 .text_sections = std::apply(
                     [&](auto&&... sections) {
                         return utl::to_vector({ text_section(
-                            sections.source_view,
+                            sections.source,
+                            sections.source_range,
                             sections.note.transform([&](std::string_view const string) {
                                 return cppdiag::format_message(message_buffer, "{}", string);
                             }))... });
@@ -53,11 +56,16 @@ namespace kieli {
         template <class... Args>
         auto emit(
             cppdiag::Severity const           severity,
-            utl::Source_view const            view,
+            utl::Source::Wrapper const        source,
+            utl::Source_range const           source_range,
             std::format_string<Args...> const fmt,
             Args&&... args) -> void
         {
-            emit(severity, { Simple_text_section { view } }, fmt, std::forward<Args>(args)...);
+            emit(
+                severity,
+                { Simple_text_section { source, source_range } },
+                fmt,
+                std::forward<Args>(args)...);
         }
 
         template <std::size_t n, class... Args>
@@ -72,11 +80,13 @@ namespace kieli {
 
         template <class... Args>
         [[noreturn]] auto error(
-            utl::Source_view const            view,
+            utl::Source::Wrapper const        source,
+            utl::Source_range const           source_range,
             std::format_string<Args...> const fmt,
             Args&&... args) -> void
         {
-            error({ Simple_text_section { view } }, fmt, std::forward<Args>(args)...);
+            error(
+                { Simple_text_section { source, source_range } }, fmt, std::forward<Args>(args)...);
         }
 
         [[nodiscard]] auto format_all(cppdiag::Colors) const -> std::string;
@@ -107,7 +117,7 @@ namespace kieli {
 
     struct Name_dynamic {
         Identifier          identifier;
-        utl::Source_view    source_view;
+        utl::Source_range   source_range;
         utl::Explicit<bool> is_upper;
         [[nodiscard]] auto  as_upper() const noexcept -> Name_upper;
         [[nodiscard]] auto  as_lower() const noexcept -> Name_lower;
@@ -120,12 +130,12 @@ namespace kieli {
 
     template <bool is_upper>
     struct Basic_name {
-        Identifier       identifier;
-        utl::Source_view source_view;
+        Identifier        identifier;
+        utl::Source_range source_range;
 
         [[nodiscard]] auto as_dynamic() const -> Name_dynamic
         {
-            return Name_dynamic { identifier, source_view, is_upper };
+            return Name_dynamic { identifier, source_range, is_upper };
         }
 
         [[nodiscard]] auto operator==(Basic_name const& other) const noexcept -> bool

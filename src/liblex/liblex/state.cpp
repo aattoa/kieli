@@ -2,18 +2,18 @@
 #include <liblex/state.hpp>
 
 namespace {
-    auto source_view_for(kieli::Lex_state const& state, std::string_view const view) noexcept
-        -> utl::Source_view
+    auto source_range_for(kieli::Lex_state const& state, std::string_view const view) noexcept
+        -> utl::Source_range
     {
-        utl::Source_position start_position;
+        utl::Source_position start;
         for (char const* ptr = liblex::source_begin(state); ptr != view.data(); ++ptr) {
-            start_position.advance_with(*ptr);
+            start.advance_with(*ptr);
         }
-        utl::Source_position stop_position = start_position;
+        utl::Source_position stop = start;
         for (char const c : view) {
-            stop_position.advance_with(c);
+            stop.advance_with(c);
         }
-        return utl::Source_view { state.source, view, start_position, stop_position };
+        return utl::Source_range { start, stop };
     }
 } // namespace
 
@@ -98,7 +98,7 @@ auto liblex::error(
     std::string_view const  message) -> std::unexpected<Token_extraction_failure>
 {
     state.compile_info.diagnostics.emit(
-        cppdiag::Severity::error, source_view_for(state, position), "{}", message);
+        cppdiag::Severity::error, state.source, source_range_for(state, position), "{}", message);
     return std::unexpected { Token_extraction_failure {} };
 }
 

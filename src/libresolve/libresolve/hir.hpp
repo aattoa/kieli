@@ -11,9 +11,9 @@ namespace libresolve::hir {
 
     struct Expression {
         using Variant = std::monostate;
-        Variant          variant;
-        libresolve::Type type;
-        utl::Source_view source_view;
+        Variant           variant;
+        libresolve::Type  type;
+        utl::Source_range source_range;
     };
 
     struct Structure {};

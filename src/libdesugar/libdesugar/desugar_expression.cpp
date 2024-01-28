@@ -46,15 +46,14 @@ namespace {
                     }
                 }
                 ++tail_begin;
-                utl::Source_view const source_view
-                    = left.source_view.combine_with(right_operand->source_view);
+                auto const source_range = left.source_range.up_to(right_operand->source_range);
                 left = ast::Expression {
                     .value = ast::expression::Binary_operator_invocation {
                         .left  = context.wrap(std::move(left)),
                         .right = context.wrap(recurse(right_operand)),
                         .op    = operator_name.operator_id,
                     },
-                    .source_view = source_view,
+                    .source_range = source_range,
                 };
             }
             return left;
@@ -116,7 +115,7 @@ namespace {
             utl::wrapper auto const false_branch
                 = conditional.false_branch.has_value()
                     ? context.desugar(conditional.false_branch->body)
-                    : context.unit_value(this_expression.source_view);
+                    : context.unit_value(this_expression.source_range);
 
             if (auto const* const let
                 = std::get_if<cst::expression::Conditional_let>(&conditional.condition->value))
@@ -139,7 +138,7 @@ namespace {
                             .handler = context.desugar(conditional.true_branch),
                         },
                         {
-                            .pattern = context.wildcard_pattern(let->pattern->source_view),
+                            .pattern = context.wildcard_pattern(let->pattern->source_range),
                             .handler = false_branch,
                         },
                     }),
@@ -151,7 +150,10 @@ namespace {
             utl::wrapper auto condition = context.desugar(conditional.condition);
             if (std::holds_alternative<kieli::Boolean>(condition->value)) {
                 context.diagnostics().emit(
-                    cppdiag::Severity::information, condition->source_view, "Constant condition");
+                    cppdiag::Severity::information,
+                    context.source,
+                    condition->source_range,
+                    "Constant condition");
             }
             return ast::expression::Conditional {
                 .condition                 = condition,
@@ -194,7 +196,7 @@ namespace {
             }
             return ast::expression::Block {
                 .side_effect_expressions = std::move(side_effects),
-                .result_expression       = context.unit_value(block.close_brace_token.source_view),
+                .result_expression       = context.unit_value(block.close_brace_token.source_range),
             };
         }
 
@@ -225,18 +227,18 @@ namespace {
                                     .handler = context.desugar(loop.body),
                                 },
                                 {
-                                    .pattern = context.wildcard_pattern(this_expression.source_view),
+                                    .pattern = context.wildcard_pattern(this_expression.source_range),
                                     .handler = context.wrap(ast::Expression {
                                         .value = ast::expression::Break {
-                                            .result = context.unit_value(this_expression.source_view),
+                                            .result = context.unit_value(this_expression.source_range),
                                         },
-                                        .source_view = this_expression.source_view,
+                                        .source_range = this_expression.source_range,
                                     })
                                 }
                             }),
                             .matched_expression = context.desugar(let->initializer),
                         },
-                        .source_view = loop.body->source_view,
+                        .source_range = loop.body->source_range,
                     }),
                     .source = ast::expression::Loop::Source::while_loop,
                 };
@@ -254,7 +256,8 @@ namespace {
             if (auto const* const boolean = std::get_if<kieli::Boolean>(&condition->value)) {
                 context.diagnostics().emit(
                     cppdiag::Severity::information,
-                    condition->source_view,
+                    context.source,
+                    condition->source_range,
                     "Constant condition: {}",
                     boolean->value ? "consider using `loop` instead of `while true`"
                                    : "loop body will never be executed");
@@ -266,14 +269,14 @@ namespace {
                         .true_branch  = context.desugar(loop.body),
                         .false_branch = context.wrap(ast::Expression {
                             .value = ast::expression::Break {
-                                .result = context.unit_value(this_expression.source_view),
+                                .result = context.unit_value(this_expression.source_range),
                             },
-                            .source_view = this_expression.source_view,
+                            .source_range = this_expression.source_range,
                         }),
                         .source                    = ast::expression::Conditional::Source::while_loop_body,
                         .has_explicit_false_branch = true,
                     },
-                    .source_view = loop.body->source_view,
+                    .source_range = loop.body->source_range,
                 }),
                 .source = ast::expression::Loop::Source::while_loop,
             };
@@ -311,10 +314,13 @@ namespace {
                 {
                     context.diagnostics().error(
                         {
-                            { it->name.source_view,
+                            { context.source,
+                              it->name.source_range,
                               "First specified here",
                               cppdiag::Severity::information },
-                            { duplicate->name.source_view, "Later specified here" },
+                            { context.source,
+                              duplicate->name.source_range,
+                              "Later specified here" },
                         },
                         "Struct initializer contains more than one initializer for member {}",
                         it->name);
@@ -358,9 +364,9 @@ namespace {
             -> ast::Expression::Variant
         {
             return ast::expression::Tuple_field_access {
-                .base_expression         = context.desugar(access.base_expression),
-                .field_index             = access.field_index,
-                .field_index_source_view = access.field_index_token.source_view,
+                .base_expression          = context.desugar(access.base_expression),
+                .field_index              = access.field_index,
+                .field_index_source_range = access.field_index_token.source_range,
             };
         }
 
@@ -438,14 +444,14 @@ namespace {
                 .side_effect_expressions = utl::to_vector({
                     ast::Expression {
                         .value = ast::expression::Let_binding {
-                            .pattern     = context.wildcard_pattern(this_expression.source_view),
+                            .pattern     = context.wildcard_pattern(this_expression.source_range),
                             .initializer = context.desugar(discard.discarded_expression),
                             .type        = std::nullopt,
                         },
-                        .source_view = this_expression.source_view,
+                        .source_range = this_expression.source_range,
                     }
                 }),
-                .result_expression = context.unit_value(this_expression.source_view),
+                .result_expression = context.unit_value(this_expression.source_range),
             };
         }
 
@@ -454,7 +460,7 @@ namespace {
             return ast::expression::Break {
                 .result = break_.result.has_value()
                             ? context.desugar(break_.result.value())
-                            : context.unit_value(this_expression.source_view),
+                            : context.unit_value(this_expression.source_range),
             };
         }
 
@@ -474,7 +480,7 @@ namespace {
         {
             return ast::expression::Reference {
                 .mutability = context.desugar_mutability(
-                    reference.mutability, reference.ampersand_token.source_view),
+                    reference.mutability, reference.ampersand_token.source_range),
                 .referenced_expression = context.desugar(reference.referenced_expression),
             };
         }
@@ -525,7 +531,7 @@ namespace {
         auto operator()(cst::expression::For_loop const&) -> ast::Expression::Variant
         {
             context.diagnostics().error(
-                this_expression.source_view, "For loops are not supported yet");
+                context.source, this_expression.source_range, "For loops are not supported yet");
         }
 
         auto operator()(cst::expression::Conditional_let const&) -> ast::Expression::Variant
@@ -541,6 +547,6 @@ auto libdesugar::Context::desugar(cst::Expression const& expression) -> ast::Exp
 {
     return {
         .value = std::visit(Expression_desugaring_visitor { *this, expression }, expression.value),
-        .source_view = expression.source_view,
+        .source_range = expression.source_range,
     };
 }

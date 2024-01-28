@@ -25,30 +25,23 @@ TEST("utl::Source_position::advance_with")
     REQUIRE(position == utl::Source_position { .line = 6, .column = 2 });
 }
 
-TEST("utl::Source_view::combine_with")
+TEST("utl::Source_range::in")
 {
-    auto                    source_arena = utl::Source::Arena::with_page_size(1);
-    utl::wrapper auto const source       = source_arena.wrap("test source", "Hello, world!");
-    REQUIRE(source->string() == "Hello, world!");
-
-    utl::Source_view const view_1 { source, source->string().substr(0, 5), {}, {} };
-    utl::Source_view const view_2 { source, source->string().substr(7, 5), {}, {} };
-    REQUIRE(view_1.string == "Hello");
-    REQUIRE(view_2.string == "world");
-
-    utl::Source_view const combined_view = view_1.combine_with(view_2);
-    REQUIRE(combined_view.string == "Hello, world");
-    REQUIRE(combined_view.string.data() == view_1.string.data());
-}
-
-TEST("utl::Source_view::dummy")
-{
-    REQUIRE(utl::Source_view::dummy().source.is(utl::Source_view::dummy().source));
+    static constexpr std::string_view source = "123abc\n"
+                                               "456defg\n"
+                                               "789hij";
+    REQUIRE(utl::Source_range { { 1, 1 }, { 1, 3 } }.in(source) == "123");
+    REQUIRE(utl::Source_range { { 2, 4 }, { 2, 6 } }.in(source) == "def");
+    REQUIRE(utl::Source_range { { 3, 1 }, { 3, 6 } }.in(source) == "789hij");
+    REQUIRE(utl::Source_range { { 3, 2 }, { 3, 5 } }.in(source) == "89hi");
+    REQUIRE(utl::Source_range { { 1, 2 }, { 2, 5 } }.in(source) == "23abc\n456de");
+    REQUIRE(utl::Source_range { { 2, 1 }, { 3, 1 } }.in(source) == "456defg\n7");
+    REQUIRE(utl::Source_range { { 1, 1 }, { 3, 6 } }.in(source) == source);
 }
 
 static_assert(!std::is_default_constructible_v<utl::Source>);
-static_assert(!std::is_default_constructible_v<utl::Source_view>);
-static_assert(std::is_trivially_copyable_v<utl::Source_view>);
+static_assert(!std::is_default_constructible_v<utl::Source_range>);
+static_assert(std::is_trivially_copyable_v<utl::Source_range>);
 static_assert(std::is_trivially_copyable_v<utl::Source_position>);
 static_assert(utl::Source_position { 4, 5 } < utl::Source_position { 9, 2 });
 static_assert(utl::Source_position { 5, 2 } < utl::Source_position { 5, 3 });

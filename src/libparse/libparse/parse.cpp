@@ -17,7 +17,7 @@ namespace {
                 .mutability         = mutability,
                 .ampersand_token    = ampersand_token.transform(cst::Token::from_lexical),
                 .self_keyword_token = cst::Token::from_lexical(self_token.value()),
-                .source_view        = self_token.value().source_view,
+                .source_range       = self_token.value().source_range,
             };
         }
 
@@ -63,7 +63,8 @@ namespace {
                     variant, default_argument.argument.value))
             {
                 context.compile_info().diagnostics.error(
-                    default_argument.argument.source_view(),
+                    context.source(),
+                    default_argument.argument.source_range(),
                     "A template {0} parameter's default argument must "
                     "be a {0} argument, but found a {1} argument",
                     cst::Template_parameter::kind_description(variant),
@@ -130,12 +131,13 @@ namespace {
         if (path.value.view().contains('.')) {
             context.compile_info().diagnostics.emit(
                 cppdiag::Severity::error,
-                path_token.source_view,
+                context.source(),
+                path_token.source_range,
                 "Module paths must not contain dots");
         }
         return cst::Module::Import {
             .name                 = path.value,
-            .source_view          = path_token.source_view,
+            .source_range         = path_token.source_range,
             .import_keyword_token = cst::Token::from_lexical(import_keyword),
         };
     }
@@ -151,19 +153,20 @@ auto libparse::parse_mutability(Context& context) -> std::optional<cst::Mutabili
                     .name = extract_lower_name(context, "a mutability parameter name"),
                     .question_mark_token = cst::Token::from_lexical(question_mark.value()),
                 } },
-                .source_view = context.up_to_current(mut_keyword.value().source_view),
+                .source_range = context.up_to_current(mut_keyword.value().source_range),
                 .mut_or_immut_keyword_token = cst::Token::from_lexical(mut_keyword.value()),
             };
         }
         return cst::Mutability {
             .value                      = cst::Mutability::Concrete { .is_mutable = true },
-            .source_view                = mut_keyword.value().source_view,
+            .source_range               = mut_keyword.value().source_range,
             .mut_or_immut_keyword_token = cst::Token::from_lexical(mut_keyword.value()),
         };
     }
     if (auto immut_keyword = context.try_extract(Token::Type::immut)) {
         context.compile_info().diagnostics.error(
-            immut_keyword.value().source_view,
+            context.source(),
+            immut_keyword.value().source_range,
             "Immutability may not be specified here, as it is the default");
     }
     return std::nullopt;
@@ -173,7 +176,7 @@ auto libparse::parse_class_reference(Context& context) -> std::optional<cst::Cla
 {
     // TODO: cleanup
 
-    auto const anchor_source_view = context.peek().source_view;
+    auto const anchor_source_range = context.peek().source_range;
 
     auto name = std::invoke([&]() -> std::optional<cst::Qualified_name> {
         std::optional<cst::Root_qualifier> root;
@@ -185,7 +188,7 @@ auto libparse::parse_class_reference(Context& context) -> std::optional<cst::Cla
                     .value = cst::Root_qualifier::Global {},
                     .double_colon_token
                     = cst::Token::from_lexical(context.require_extract(Token::Type::double_colon)),
-                    .source_view = global.value().source_view,
+                    .source_range = global.value().source_range,
                 };
             }
             else {
@@ -196,7 +199,8 @@ auto libparse::parse_class_reference(Context& context) -> std::optional<cst::Cla
         auto name = extract_qualified_name(context, std::move(root));
         if (!name.primary_name.is_upper.get()) {
             context.compile_info().diagnostics.error(
-                name.primary_name.source_view,
+                context.source(),
+                name.primary_name.source_range,
                 "Expected a class name, but found a lowercase identifier");
         }
         return name;
@@ -207,7 +211,7 @@ auto libparse::parse_class_reference(Context& context) -> std::optional<cst::Cla
         return cst::Class_reference {
             .template_arguments = std::move(template_arguments),
             .name               = std::move(name.value()),
-            .source_view        = context.up_to_current(anchor_source_view),
+            .source_range       = context.up_to_current(anchor_source_range),
         };
     }
     return std::nullopt;
@@ -233,13 +237,13 @@ auto libparse::parse_template_parameters(Context& context)
 
 auto libparse::parse_template_parameter(Context& context) -> std::optional<cst::Template_parameter>
 {
-    auto const anchor_source_view = context.peek().source_view;
+    auto const anchor_source_range = context.peek().source_range;
     return dispatch_parse_template_parameter(context).transform(
         [&](cst::Template_parameter::Variant&& variant) {
             return cst::Template_parameter {
                 .default_argument = parse_template_parameter_default_argument(context, variant),
                 .value            = std::move(variant),
-                .source_view      = context.up_to_current(anchor_source_view),
+                .source_range     = context.up_to_current(anchor_source_range),
             };
         });
 }
@@ -248,7 +252,7 @@ auto libparse::parse_template_argument(Context& context) -> std::optional<cst::T
 {
     if (auto const wildcard = context.try_extract(Token::Type::underscore)) {
         return cst::Template_argument { cst::Template_argument::Wildcard {
-            .source_view = wildcard->source_view,
+            .source_range = wildcard->source_range,
         } };
     }
     if (auto const type = parse_type(context)) {
@@ -260,7 +264,7 @@ auto libparse::parse_template_argument(Context& context) -> std::optional<cst::T
     if (auto const immut_keyword = context.try_extract(Token::Type::immut)) {
         return cst::Template_argument { cst::Mutability {
             .value                      = cst::Mutability::Concrete { .is_mutable = false },
-            .source_view                = immut_keyword->source_view,
+            .source_range               = immut_keyword->source_range,
             .mut_or_immut_keyword_token = cst::Token::from_lexical(immut_keyword.value()),
         } };
     }
@@ -289,7 +293,7 @@ auto libparse::parse_function_parameters(Context& context)
 
     if (!self_parameter.has_value() && comma_token_after_self.has_value()) {
         context.error_expected(
-            comma_token_after_self.value().source_view, "a function parameter before the comma");
+            comma_token_after_self.value().source_range, "a function parameter before the comma");
     }
     if (comma_token_after_self.has_value() && normal_parameters.elements.empty()) {
         context.error_expected("a function parameter");
@@ -298,7 +302,7 @@ auto libparse::parse_function_parameters(Context& context)
         && !normal_parameters.elements.empty())
     {
         context.error_expected(
-            normal_parameters.elements.front().pattern->source_view,
+            normal_parameters.elements.front().pattern->source_range,
             "a comma separating the self parameter from the other function parameters");
     }
 
@@ -356,9 +360,9 @@ auto libparse::extract_qualified_name(Context& context, std::optional<cst::Root_
         Token const token = context.extract();
         if (token.type == Token::Type::upper_name || token.type == Token::Type::lower_name) {
             kieli::Name_dynamic const qualifier_name {
-                .identifier  = token.value_as<kieli::Identifier>(),
-                .source_view = token.source_view,
-                .is_upper    = token.type == Token::Type::upper_name,
+                .identifier   = token.value_as<kieli::Identifier>(),
+                .source_range = token.source_range,
+                .is_upper     = token.type == Token::Type::upper_name,
             };
             Stage const template_arguments_stage = context.stage();
             auto        template_arguments       = parse_template_arguments(context);
@@ -369,7 +373,7 @@ auto libparse::extract_qualified_name(Context& context, std::optional<cst::Root_
                     .template_arguments          = std::move(template_arguments),
                     .name                        = qualifier_name,
                     .trailing_double_colon_token = cst::Token::from_lexical(double_colon.value()),
-                    .source_view                 = token.source_view,
+                    .source_range                = token.source_range,
                 });
                 continue;
             }
@@ -377,20 +381,20 @@ auto libparse::extract_qualified_name(Context& context, std::optional<cst::Root_
             context.unstage(template_arguments_stage);
 
             // TODO: cleanup
-            auto const source_view = context.up_to_current(
-                root.has_value() ? root.value().source_view
+            auto const source_range = context.up_to_current(
+                root.has_value() ? root.value().source_range
                 : middle_qualifiers.elements.empty()
-                    ? qualifier_name.source_view
-                    : middle_qualifiers.elements.front().source_view);
+                    ? qualifier_name.source_range
+                    : middle_qualifiers.elements.front().source_range);
 
             return cst::Qualified_name {
                 .middle_qualifiers = std::move(middle_qualifiers),
                 .root_qualifier    = std::move(root),
                 .primary_name      = qualifier_name,
-                .source_view       = source_view,
+                .source_range      = source_range,
             };
         }
-        context.error_expected(token.source_view, "an identifier");
+        context.error_expected(token.source_range, "an identifier");
     }
 }
 
@@ -424,5 +428,6 @@ auto kieli::parse(utl::Source::Wrapper const source, Compile_info& compile_info)
         .imports     = std::move(imports),
         .definitions = std::move(definitions),
         .node_arena  = std::move(node_arena),
+        .source      = source,
     };
 }

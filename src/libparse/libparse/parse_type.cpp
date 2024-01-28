@@ -11,7 +11,8 @@ namespace {
         auto name = extract_qualified_name(context, std::move(root));
         if (!name.is_upper()) {
             context.compile_info().diagnostics.error(
-                context.up_to_current(name.primary_name.source_view),
+                context.source(),
+                context.up_to_current(name.primary_name.source_range),
                 "Expected a type, but found a lowercase name");
         }
         if (auto template_arguments = parse_template_arguments(context)) {
@@ -37,7 +38,7 @@ namespace {
                 .value = cst::Root_qualifier::Global {},
                 .double_colon_token
                 = cst::Token::from_lexical(context.require_extract(Token::Type::double_colon)),
-                .source_view = global.source_view,
+                .source_range = global.source_range,
             });
     }
 
@@ -187,7 +188,7 @@ namespace {
                 cst::Root_qualifier {
                     .value              = type,
                     .double_colon_token = cst::Token::from_lexical(double_colon.value()),
-                    .source_view        = type->source_view,
+                    .source_range       = type->source_range,
                 });
 
             if (name.primary_name.is_upper.get()) {
@@ -203,7 +204,7 @@ namespace {
                         }
                         return cst::type::Typename { std::move(name) };
                     }) },
-                    .source_view = context.up_to_current(type->source_view),
+                    .source_range = context.up_to_current(type->source_range),
                 });
             }
             // Not a qualified type, retreat
@@ -223,8 +224,8 @@ auto libparse::parse_type(Context& context) -> std::optional<utl::Wrapper<cst::T
             return try_qualify(
                 context,
                 context.wrap(cst::Type {
-                    .value       = std::move(variant),
-                    .source_view = context.up_to_current(first_token.source_view),
+                    .value        = std::move(variant),
+                    .source_range = context.up_to_current(first_token.source_range),
                 }));
         });
 }

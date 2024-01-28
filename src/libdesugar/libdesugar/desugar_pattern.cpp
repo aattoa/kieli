@@ -28,7 +28,7 @@ namespace {
         {
             return ast::pattern::Name {
                 .name       = name.name,
-                .mutability = context.desugar_mutability(name.mutability, name.name.source_view),
+                .mutability = context.desugar_mutability(name.mutability, name.name.source_range),
             };
         }
 
@@ -80,7 +80,7 @@ namespace {
             return ast::pattern::Alias {
                 .alias_name = alias.alias_name,
                 .alias_mutability
-                = context.desugar_mutability(alias.alias_mutability, alias.alias_name.source_view),
+                = context.desugar_mutability(alias.alias_mutability, alias.alias_name.source_range),
                 .aliased_pattern = context.desugar(alias.aliased_pattern),
             };
         }
@@ -98,7 +98,7 @@ namespace {
 auto libdesugar::Context::desugar(cst::Pattern const& pattern) -> ast::Pattern
 {
     return {
-        .value       = std::visit(Pattern_desugaring_visitor { *this }, pattern.value),
-        .source_view = pattern.source_view,
+        .value        = std::visit(Pattern_desugaring_visitor { *this }, pattern.value),
+        .source_range = pattern.source_range,
     };
 }

@@ -29,8 +29,8 @@ namespace cst {
     struct [[nodiscard]] Definition;
 
     struct [[nodiscard]] Token {
-        utl::Source_view source_view;
-        std::string_view preceding_trivia;
+        utl::Source_range source_range;
+        std::string_view  preceding_trivia;
 
         static auto from_lexical(kieli::Token const&) -> Token;
     };
@@ -69,23 +69,23 @@ namespace cst {
         };
 
         using Variant = std::variant<Concrete, Parameterized>;
-        Variant          value;
-        utl::Source_view source_view;
-        Token            mut_or_immut_keyword_token;
+        Variant           value;
+        utl::Source_range source_range;
+        Token             mut_or_immut_keyword_token;
     };
 
     struct Self_parameter {
         std::optional<Mutability> mutability;
         std::optional<Token>      ampersand_token;
         Token                     self_keyword_token;
-        utl::Source_view          source_view;
+        utl::Source_range         source_range;
 
         [[nodiscard]] auto is_reference() const noexcept -> bool;
     };
 
     struct Template_argument {
         struct Wildcard {
-            utl::Source_view source_view;
+            utl::Source_range source_range;
         };
 
         using Variant = std::variant< //
@@ -95,8 +95,8 @@ namespace cst {
             Wildcard>;
         Variant value;
 
-        auto        source_view() const -> utl::Source_view;
-        static auto kind_description(Variant const&) noexcept -> std::string_view;
+        [[nodiscard]] auto        source_range() const -> utl::Source_range;
+        [[nodiscard]] static auto kind_description(Variant const&) noexcept -> std::string_view;
     };
 
     using Template_arguments = Surrounded<Separated_sequence<Template_argument>>;
@@ -105,7 +105,7 @@ namespace cst {
         std::optional<Template_arguments> template_arguments;
         kieli::Name_dynamic               name;
         std::optional<Token>              trailing_double_colon_token;
-        utl::Source_view                  source_view;
+        utl::Source_range                 source_range;
     };
 
     struct Root_qualifier {
@@ -113,14 +113,14 @@ namespace cst {
 
         std::variant<Global, utl::Wrapper<Type>> value;
         Token                                    double_colon_token;
-        utl::Source_view                         source_view;
+        utl::Source_range                        source_range;
     };
 
     struct Qualified_name {
         Separated_sequence<Qualifier> middle_qualifiers;
         std::optional<Root_qualifier> root_qualifier;
         kieli::Name_dynamic           primary_name;
-        utl::Source_view              source_view;
+        utl::Source_range             source_range;
 
         [[nodiscard]] auto is_upper() const noexcept -> bool;
         [[nodiscard]] auto is_unqualified() const noexcept -> bool;
@@ -129,7 +129,7 @@ namespace cst {
     struct Class_reference {
         std::optional<Template_arguments> template_arguments;
         Qualified_name                    name;
-        utl::Source_view                  source_view;
+        utl::Source_range                 source_range;
     };
 
     struct Function_parameter {
@@ -184,7 +184,7 @@ namespace cst {
 
         std::optional<Default_argument> default_argument;
         Variant                         value;
-        utl::Source_view                source_view;
+        utl::Source_range               source_range;
 
         static auto kind_description(Variant const&) noexcept -> std::string_view;
     };
@@ -246,7 +246,7 @@ namespace cst {
         struct Binary_operator_invocation_sequence {
             struct Operator_name {
                 kieli::Identifier operator_id;
-                utl::Source_view  operator_source_view;
+                utl::Source_range source_range;
             };
 
             struct Operator_and_operand {
@@ -471,8 +471,8 @@ namespace cst {
             expression::Meta,
             expression::Hole>;
 
-        Variant          value;
-        utl::Source_view source_view;
+        Variant           value;
+        utl::Source_range source_range;
     };
 
     namespace pattern {
@@ -542,8 +542,8 @@ namespace cst {
             pattern::Alias,
             pattern::Guarded>;
 
-        Variant          value;
-        utl::Source_view source_view;
+        Variant           value;
+        utl::Source_range source_range;
     };
 
     namespace type {
@@ -630,8 +630,8 @@ namespace cst {
             type::Pointer,
             type::Template_application>;
 
-        Variant          value;
-        utl::Source_view source_view;
+        Variant           value;
+        utl::Source_range source_range;
     };
 
     struct Function_signature {
@@ -662,7 +662,7 @@ namespace cst {
             struct Member {
                 kieli::Name_lower name;
                 Type_annotation   type;
-                utl::Source_view  source_view;
+                utl::Source_range source_range;
             };
 
             std::optional<Template_parameters> template_parameters;
@@ -676,7 +676,7 @@ namespace cst {
             struct Constructor {
                 std::optional<Surrounded<Separated_sequence<utl::Wrapper<Type>>>> payload_types;
                 kieli::Name_lower                                                 name;
-                utl::Source_view                                                  source_view;
+                utl::Source_range                                                 source_range;
             };
 
             std::optional<Template_parameters> template_parameters;
@@ -739,8 +739,9 @@ namespace cst {
             definition::Instantiation,
             definition::Namespace>;
 
-        Variant          value;
-        utl::Source_view source_view;
+        Variant              value;
+        utl::Source::Wrapper source;
+        utl::Source_range    source_range;
     };
 
     template <class T>
@@ -751,13 +752,14 @@ namespace cst {
     struct [[nodiscard]] Module {
         struct Import {
             utl::Pooled_string name;
-            utl::Source_view   source_view;
+            utl::Source_range  source_range;
             Token              import_keyword_token;
         };
 
         std::vector<Import>     imports;
         std::vector<Definition> definitions;
         Node_arena              node_arena;
+        utl::Source::Wrapper    source;
     };
 
 } // namespace cst

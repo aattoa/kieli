@@ -10,7 +10,7 @@ namespace libresolve {
     struct Type {
         struct Variant;
         utl::Mutable_wrapper<Variant> variant;
-        utl::Source_view              source_view;
+        utl::Source_range             source_range;
     };
 
     struct Type_constraint {

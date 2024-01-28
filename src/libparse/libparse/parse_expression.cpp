@@ -30,7 +30,7 @@ namespace {
                     .let_keyword_token = cst::Token::from_lexical(let_keyword.value()),
                     .equals_sign_token = cst::Token::from_lexical(equals_sign),
                 } },
-                .source_view = context.up_to_current(let_keyword.value().source_view),
+                .source_range = context.up_to_current(let_keyword.value().source_range),
             });
         }
         return require<parse_expression>(context, "the condition expression");
@@ -137,12 +137,14 @@ namespace {
                 context,
                 brace_open.value(),
                 context.wrap(cst::Type {
-                    .value       = std::move(type),
-                    .source_view = context.up_to_current(name.source_view),
+                    .value        = std::move(type),
+                    .source_range = context.up_to_current(name.source_range),
                 }));
         }
         context.compile_info().diagnostics.error(
-            name.primary_name.source_view, "Expected an expression, but found a type");
+            context.source(),
+            name.primary_name.source_range,
+            "Expected an expression, but found a type");
     }
 
     auto extract_identifier(Context& context, Stage const stage) -> cst::Expression::Variant
@@ -160,7 +162,7 @@ namespace {
                 .value = cst::Root_qualifier::Global {},
                 .double_colon_token
                 = cst::Token::from_lexical(context.require_extract(Token::Type::double_colon)),
-                .source_view = global.source_view,
+                .source_range = global.source_range,
             });
     }
 
@@ -238,8 +240,8 @@ namespace {
 
             false_branch = cst::expression::Conditional::False_branch {
                 .body = context.wrap(cst::Expression {
-                    .value       = std::move(elif_conditional),
-                    .source_view = context.up_to_current(elif_keyword.value().source_view),
+                    .value        = std::move(elif_conditional),
+                    .source_range = context.up_to_current(elif_keyword.value().source_range),
                 }),
 
                 .else_or_elif_keyword_token = cst::Token::from_lexical(elif_keyword.value()),
@@ -465,7 +467,7 @@ namespace {
                         cst::Root_qualifier {
                             .value              = type,
                             .double_colon_token = cst::Token::from_lexical(double_colon.value()),
-                            .source_view        = type->source_view,
+                            .source_range       = type->source_range,
                         });
                 }
 
@@ -473,7 +475,9 @@ namespace {
                     return extract_struct_initializer(context, brace_open.value(), type);
                 }
                 context.compile_info().diagnostics.error(
-                    type->source_view, "Expected an expression, but found a type");
+                    context.source(),
+                    type->source_range,
+                    "Expected an expression, but found a type");
             });
     }
 
@@ -525,8 +529,8 @@ namespace {
         Token const first_token = context.extract();
         if (auto variant = dispatch_parse_normal_expression(context, first_token, stage)) {
             return context.wrap(cst::Expression {
-                .value       = std::move(variant.value()),
-                .source_view = context.up_to_current(first_token.source_view),
+                .value        = std::move(variant.value()),
+                .source_range = context.up_to_current(first_token.source_range),
             });
         }
         context.unstage(stage);
@@ -544,7 +548,7 @@ namespace {
                             .function_arguments  = std::move(arguments.value()),
                             .function_expression = expression,
                         },
-                        .source_view = context.up_to_current(expression->source_view),
+                        .source_range = context.up_to_current(expression->source_range),
                     });
                 }
                 return expression;
@@ -612,7 +616,7 @@ namespace {
                     expression = context.wrap(cst::Expression {
                         .value = extract_member_access(
                             cst::Token::from_lexical(dot.value()), expression, context),
-                        .source_view = context.up_to_current(expression->source_view),
+                        .source_range = context.up_to_current(expression->source_range),
                     });
                 }
                 return expression;
@@ -647,8 +651,8 @@ namespace {
             [&](utl::Wrapper<cst::Expression> expression) {
                 while (auto type_cast = dispatch_parse_type_cast(context, expression)) {
                     expression = context.wrap(cst::Expression {
-                        .value       = std::move(type_cast.value()),
-                        .source_view = context.up_to_current(expression->source_view),
+                        .value        = std::move(type_cast.value()),
+                        .source_range = context.up_to_current(expression->source_range),
                     });
                 }
                 return expression;
@@ -675,11 +679,11 @@ namespace {
     auto parse_operator_name(Context& context)
         -> std::optional<cst::expression::Binary_operator_invocation_sequence::Operator_name>
     {
-        auto const anchor_source_view = context.peek().source_view;
+        auto const anchor_source_range = context.peek().source_range;
         return parse_operator_id(context).transform([&](kieli::Identifier const identifier) {
             return cst::expression::Binary_operator_invocation_sequence::Operator_name {
-                .operator_id          = identifier,
-                .operator_source_view = anchor_source_view,
+                .operator_id  = identifier,
+                .source_range = anchor_source_range,
             };
         });
     }
@@ -704,7 +708,7 @@ namespace {
                     .sequence_tail    = std::move(tail),
                     .leftmost_operand = expression,
                 } },
-                .source_view = context.up_to_current(expression->source_view),
+                .source_range = context.up_to_current(expression->source_range),
             });
         });
     }

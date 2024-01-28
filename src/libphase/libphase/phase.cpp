@@ -29,15 +29,16 @@ auto kieli::test_info_and_source(std::string&& source_string)
 }
 
 auto kieli::text_section(
-    utl::Source_view const                       section_view,
+    utl::Source::Wrapper const                   section_source,
+    utl::Source_range const                      section_range,
     std::optional<cppdiag::Message_string> const section_note,
     std::optional<cppdiag::Severity> const       severity) -> cppdiag::Text_section
 {
     return cppdiag::Text_section {
-        .source_string  = section_view.source->string(),
-        .source_name    = section_view.source->path().c_str(),
-        .start_position = { section_view.start_position.line, section_view.start_position.column },
-        .stop_position  = { section_view.stop_position.line, section_view.stop_position.column },
+        .source_string  = section_source->string(),
+        .source_name    = section_source->path().c_str(),
+        .start_position = { section_range.start.line, section_range.start.column },
+        .stop_position  = { section_range.stop.line, section_range.stop.column },
         .note           = section_note,
         .note_severity  = severity,
     };
@@ -61,13 +62,13 @@ auto kieli::Diagnostics::format_all(cppdiag::Colors const colors) const -> std::
 auto kieli::Name_dynamic::as_upper() const noexcept -> Name_upper
 {
     cpputil::always_assert(is_upper.get());
-    return { identifier, source_view };
+    return { identifier, source_range };
 }
 
 auto kieli::Name_dynamic::as_lower() const noexcept -> Name_lower
 {
     cpputil::always_assert(!is_upper.get());
-    return { identifier, source_view };
+    return { identifier, source_range };
 }
 
 auto kieli::built_in_type::integer_name(Integer const integer) noexcept -> std::string_view

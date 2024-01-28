@@ -17,12 +17,12 @@ namespace libparse {
     };
 
     class Context {
-        kieli::Lex_state                m_lex_state;
-        std::optional<utl::Source_view> m_previous_token_source_view;
-        std::vector<Token>              m_cached_tokens;
-        std::size_t                     m_token_index {};
-        cst::Node_arena&                m_node_arena;
-        Special_identifiers             m_special_identifiers;
+        kieli::Lex_state                 m_lex_state;
+        std::optional<utl::Source_range> m_previous_token_source_range;
+        std::vector<Token>               m_cached_tokens;
+        std::size_t                      m_token_index {};
+        cst::Node_arena&                 m_node_arena;
+        Special_identifiers              m_special_identifiers;
     public:
         explicit Context(cst::Node_arena&, kieli::Lex_state);
 
@@ -50,20 +50,21 @@ namespace libparse {
         // Commit to a parse; irreversibly consume every token extracted in `stage`.
         auto commit(Stage stage) -> void;
 
-        // Source view from `start` up to (but not including) the current token.
-        auto up_to_current(utl::Source_view start) const -> utl::Source_view;
-
         // Emit an error that describes an expectation failure:
         // Encountered `error_view` where `description` was expected.
-        [[noreturn]] auto error_expected(utl::Source_view error_view, std::string_view description)
+        [[noreturn]] auto error_expected(utl::Source_range error_view, std::string_view description)
             -> void;
 
         // Emit an error that describes an expectation failure:
         // Encountered the current token where `description` was expected.
         [[noreturn]] auto error_expected(std::string_view description) -> void;
 
+        // Source view from `start` up to (but not including) the current token.
+        [[nodiscard]] auto up_to_current(utl::Source_range start) const -> utl::Source_range;
+
         [[nodiscard]] auto compile_info() -> kieli::Compile_info&;
         [[nodiscard]] auto special_identifiers() const -> Special_identifiers;
+        [[nodiscard]] auto source() const -> utl::Source::Wrapper;
 
         template <cst::node Node>
         auto wrap(Node&& node) -> utl::Wrapper<Node>
@@ -199,8 +200,8 @@ namespace libparse {
     {
         return context.try_extract(type).transform([](Token const& token) {
             return Name {
-                .identifier  = token.value_as<kieli::Identifier>(),
-                .source_view = token.source_view,
+                .identifier   = token.value_as<kieli::Identifier>(),
+                .source_range = token.source_range,
             };
         });
     }

@@ -4,7 +4,7 @@
 auto cst::Token::from_lexical(kieli::Token const& lexical) -> Token
 {
     return Token {
-        .source_view      = lexical.source_view,
+        .source_range     = lexical.source_range,
         .preceding_trivia = lexical.preceding_trivia,
     };
 }
@@ -47,14 +47,14 @@ auto cst::Template_argument::kind_description(const Variant& variant) noexcept -
         variant);
 }
 
-auto cst::Template_argument::source_view() const -> utl::Source_view
+auto cst::Template_argument::source_range() const -> utl::Source_range
 {
     return std::visit(
         utl::Overload {
-            [](Wildcard const& wildcard) { return wildcard.source_view; },
-            [](utl::Wrapper<Type> const type) { return type->source_view; },
-            [](utl::Wrapper<Expression> const expression) { return expression->source_view; },
-            [](cst::Mutability const& mutability) { return mutability.source_view; },
+            [](Wildcard const& wildcard) { return wildcard.source_range; },
+            [](utl::Wrapper<Type> const type) { return type->source_range; },
+            [](utl::Wrapper<Expression> const expression) { return expression->source_range; },
+            [](cst::Mutability const& mutability) { return mutability.source_range; },
         },
         value);
 }

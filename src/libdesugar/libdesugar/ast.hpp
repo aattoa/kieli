@@ -38,12 +38,12 @@ namespace ast {
 
         Variant             value;
         utl::Explicit<bool> is_explicit;
-        utl::Source_view    source_view;
+        utl::Source_range   source_range;
     };
 
     struct Template_argument {
         struct Wildcard {
-            utl::Source_view source_view;
+            utl::Source_range source_range;
         };
 
         using Variant
@@ -54,7 +54,7 @@ namespace ast {
     struct Qualifier {
         std::optional<std::vector<Template_argument>> template_arguments;
         kieli::Name_dynamic                           name;
-        utl::Source_view                              source_view;
+        utl::Source_range                             source_range;
     };
 
     struct Root_qualifier {
@@ -76,7 +76,7 @@ namespace ast {
     struct Class_reference {
         std::optional<std::vector<Template_argument>> template_arguments;
         Qualified_name                                name;
-        utl::Source_view                              source_view;
+        utl::Source_range                             source_range;
     };
 
     struct Template_parameter {
@@ -98,7 +98,7 @@ namespace ast {
 
         Variant                          value;
         std::optional<Template_argument> default_argument;
-        utl::Source_view                 source_view;
+        utl::Source_range                source_range;
     };
 
     struct Function_argument {
@@ -168,7 +168,7 @@ namespace ast {
         struct Tuple_field_access {
             utl::Wrapper<Expression>   base_expression;
             utl::Explicit<std::size_t> field_index;
-            utl::Source_view           field_index_source_view;
+            utl::Source_range          field_index_source_range;
         };
 
         struct Array_index_access {
@@ -308,8 +308,8 @@ namespace ast {
             expression::Meta,
             expression::Hole>;
 
-        Variant          value;
-        utl::Source_view source_view;
+        Variant           value;
+        utl::Source_range source_range;
     };
 
     namespace pattern {
@@ -366,8 +366,8 @@ namespace ast {
             pattern::Alias,
             pattern::Guarded>;
 
-        Variant          value;
-        utl::Source_view source_view;
+        Variant           value;
+        utl::Source_range source_range;
     };
 
     namespace type {
@@ -441,14 +441,14 @@ namespace ast {
             type::Instance_of,
             type::Template_application>;
 
-        Variant          value;
-        utl::Source_view source_view;
+        Variant           value;
+        utl::Source_range source_range;
     };
 
     struct Self_parameter {
         Mutability          mutability;
         utl::Explicit<bool> is_reference;
-        utl::Source_view    source_view;
+        utl::Source_range   source_range;
     };
 
     struct Function_signature {
@@ -478,7 +478,7 @@ namespace ast {
             struct Member {
                 kieli::Name_lower name;
                 Type              type;
-                utl::Source_view  source_view;
+                utl::Source_range source_range;
             };
 
             std::vector<Member> members;
@@ -490,7 +490,7 @@ namespace ast {
             struct Constructor {
                 kieli::Name_lower                              name;
                 std::optional<std::vector<utl::Wrapper<Type>>> payload_types;
-                utl::Source_view                               source_view;
+                utl::Source_range                              source_range;
             };
 
             std::vector<Constructor> constructors;
@@ -542,8 +542,9 @@ namespace ast {
             definition::Instantiation,
             definition::Namespace>;
 
-        Variant          value;
-        utl::Source_view source_view;
+        Variant              value;
+        utl::Source::Wrapper source;
+        utl::Source_range    source_range;
     };
 
     template <class T>

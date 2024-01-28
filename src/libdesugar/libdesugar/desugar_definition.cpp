@@ -6,15 +6,18 @@ using namespace libdesugar;
 namespace {
     template <class T>
     auto ensure_no_duplicates(
-        Context& context, std::string_view const description, std::vector<T> const& elements)
+        Context&                   context,
+        utl::Source::Wrapper const source,
+        std::string_view const     description,
+        std::vector<T> const&      elements)
     {
         for (auto it = elements.begin(); it != elements.end(); ++it) {
             auto const duplicate = std::ranges::find(it + 1, elements.end(), it->name, &T::name);
             if (duplicate != elements.end()) {
                 context.diagnostics().error(
                     {
-                        { it->name.source_view, "First specified here" },
-                        { duplicate->name.source_view, "Later specified here" },
+                        { source, it->name.source_range, "First specified here" },
+                        { source, duplicate->name.source_range, "Later specified here" },
                     },
                     "More than one definition for {} {}",
                     description,
@@ -24,7 +27,8 @@ namespace {
     }
 
     struct Definition_desugaring_visitor {
-        Context& context;
+        Context&             context;
+        utl::Source::Wrapper source;
 
         auto operator()(cst::definition::Function const& function) -> ast::Definition::Variant
         {
@@ -43,8 +47,8 @@ namespace {
             if (!std::holds_alternative<ast::expression::Block>(function_body.value)) {
                 function_body.value = ast::expression::Block {
                     .result_expression = context.wrap(ast::Expression {
-                        .value       = std::move(function_body.value),
-                        .source_view = function_body.source_view,
+                        .value        = std::move(function_body.value),
+                        .source_range = function_body.source_range,
                     }),
                 };
             }
@@ -67,12 +71,12 @@ namespace {
 
         auto operator()(cst::definition::Struct const& structure) -> ast::Definition::Variant
         {
-            ensure_no_duplicates(context, "member", structure.members.elements);
+            ensure_no_duplicates(context, source, "member", structure.members.elements);
             auto const desugar_member = [this](cst::definition::Struct::Member const& member) {
                 return ast::definition::Struct::Member {
-                    .name        = member.name,
-                    .type        = context.desugar(member.type),
-                    .source_view = member.source_view,
+                    .name         = member.name,
+                    .type         = context.desugar(member.type),
+                    .source_range = member.source_range,
                 };
             };
             return ast::definition::Struct {
@@ -85,12 +89,12 @@ namespace {
 
         auto operator()(cst::definition::Enum const& enumeration) -> ast::Definition::Variant
         {
-            ensure_no_duplicates(context, "constructor", enumeration.constructors.elements);
+            ensure_no_duplicates(context, source, "constructor", enumeration.constructors.elements);
             auto const desugar_ctor = [this](cst::definition::Enum::Constructor const& ctor) {
                 return ast::definition::Enum::Constructor {
                     .name          = ctor.name,
                     .payload_types = ctor.payload_types.transform(context.desugar()),
-                    .source_view   = ctor.source_view,
+                    .source_range  = ctor.source_range,
                 };
             };
             return ast::definition::Enum {
@@ -160,7 +164,8 @@ auto libdesugar::Context::desugar(cst::Definition const& definition) -> ast::Def
     cpputil::always_assert(!definition.value.valueless_by_exception());
     return {
         .value = std::visit<ast::Definition::Variant>(
-            Definition_desugaring_visitor { *this }, definition.value),
-        .source_view = definition.source_view,
+            Definition_desugaring_visitor { *this, definition.source }, definition.value),
+        .source       = definition.source,
+        .source_range = definition.source_range,
     };
 }

@@ -27,7 +27,7 @@ auto libparse::Context::extract() -> Token
 {
     Token token = peek();
     ++m_token_index;
-    m_previous_token_source_view = token.source_view;
+    m_previous_token_source_range = token.source_range;
     return token;
 }
 
@@ -66,22 +66,26 @@ auto libparse::Context::commit(Stage const stage) -> void
     }
 }
 
-auto libparse::Context::up_to_current(utl::Source_view const start) const -> utl::Source_view
+auto libparse::Context::up_to_current(utl::Source_range const start) const -> utl::Source_range
 {
-    cpputil::always_assert(m_previous_token_source_view.has_value());
-    return start.combine_with(m_previous_token_source_view.value());
+    cpputil::always_assert(m_previous_token_source_range.has_value());
+    return start.up_to(m_previous_token_source_range.value());
 }
 
 auto libparse::Context::error_expected(
-    utl::Source_view const error_view, std::string_view const description) -> void
+    utl::Source_range const error_view, std::string_view const description) -> void
 {
     m_lex_state.compile_info.diagnostics.error(
-        error_view, "Expected {}, but found {}", description, Token::description(peek().type));
+        m_lex_state.source,
+        error_view,
+        "Expected {}, but found {}",
+        description,
+        Token::description(peek().type));
 }
 
 auto libparse::Context::error_expected(std::string_view const description) -> void
 {
-    error_expected(peek().source_view, description);
+    error_expected(peek().source_range, description);
 }
 
 auto libparse::Context::compile_info() -> kieli::Compile_info&
@@ -92,4 +96,9 @@ auto libparse::Context::compile_info() -> kieli::Compile_info&
 auto libparse::Context::special_identifiers() const -> Special_identifiers
 {
     return m_special_identifiers;
+}
+
+auto libparse::Context::source() const -> utl::Source::Wrapper
+{
+    return m_lex_state.source;
 }

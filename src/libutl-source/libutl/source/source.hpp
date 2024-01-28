@@ -30,26 +30,23 @@ namespace utl {
 
         auto advance_with(char) noexcept -> void;
 
-        auto operator==(Source_position const&) const noexcept -> bool                  = default;
-        auto operator<=>(Source_position const&) const noexcept -> std::strong_ordering = default;
+        auto operator==(Source_position const&) const -> bool                  = default;
+        auto operator<=>(Source_position const&) const -> std::strong_ordering = default;
     };
 
-    struct [[nodiscard]] Source_view {
-        Wrapper<Source>  source;
-        std::string_view string;
-        Source_position  start_position;
-        Source_position  stop_position;
+    struct Source_range {
+        Source_position start;
+        Source_position stop;
 
-        explicit Source_view(
-            Source::Wrapper  source,
-            std::string_view string,
-            Source_position  start,
-            Source_position  stop) noexcept;
+        // Deliberately non-aggregate.
+        explicit constexpr Source_range(
+            Source_position const start, Source_position const stop) noexcept
+            : start { start }
+            , stop { stop }
+        {}
 
-        // Dummy source view for mock purposes
-        static auto dummy() -> Source_view;
-
-        auto combine_with(Source_view const&) const noexcept -> Source_view;
+        [[nodiscard]] auto in(std::string_view string) const -> std::string_view;
+        [[nodiscard]] auto up_to(Source_range other) const -> Source_range;
     };
 
 } // namespace utl

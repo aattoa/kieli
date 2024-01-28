@@ -76,9 +76,9 @@ namespace {
     {
         return parse_lower_name(context).transform([&](kieli::Name_lower const name) {
             return cst::definition::Struct::Member {
-                .name        = name,
-                .type        = require<parse_type_annotation>(context, "a ':' followed by a type"),
-                .source_view = context.up_to_current(name.source_view),
+                .name         = name,
+                .type         = require<parse_type_annotation>(context, "a ':' followed by a type"),
+                .source_range = context.up_to_current(name.source_range),
             };
         });
     }
@@ -114,7 +114,7 @@ namespace {
             return cst::definition::Enum::Constructor {
                 .payload_types = parse_payload(context),
                 .name          = name,
-                .source_view   = context.up_to_current(name.source_view),
+                .source_range  = context.up_to_current(name.source_range),
             };
         });
     }
@@ -282,8 +282,9 @@ auto libparse::parse_definition(Context& context) -> std::optional<cst::Definiti
         .transform([&](cst::Definition::Variant&& variant) {
             context.commit(stage);
             return cst::Definition {
-                .value       = std::move(variant),
-                .source_view = context.up_to_current(first_token.source_view),
+                .value        = std::move(variant),
+                .source       = context.source(),
+                .source_range = context.up_to_current(first_token.source_range),
             };
         });
 }

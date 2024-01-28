@@ -2,6 +2,27 @@
 #include <libutl/source/source.hpp>
 #include <cpputil/io.hpp>
 
+namespace {
+    constexpr auto is_valid_position(utl::Source_position const position) noexcept -> bool
+    {
+        return position.line != 0 && position.column != 0;
+    }
+
+    auto find_position(std::string_view const string, utl::Source_position const position)
+        -> std::string_view::iterator
+    {
+        cpputil::always_assert(is_valid_position(position));
+        auto it = string.begin();
+        for (std::size_t i = 1; i != position.line; ++i) {
+            it = std::find(it, string.end(), '\n');
+            cpputil::always_assert(it != string.end());
+            ++it;
+        }
+        cpputil::always_assert(std::cmp_less(position.column - 1, std::distance(it, string.end())));
+        return it + position.column - 1;
+    }
+} // namespace
+
 utl::Source::Source(std::filesystem::path&& file_path, std::string&& file_content)
     : m_file_path { std::move(file_path) }
     , m_file_content { std::move(file_content) }
@@ -36,6 +57,7 @@ auto utl::Source::string() const noexcept -> std::string_view
 
 auto utl::Source_position::advance_with(char const c) noexcept -> void
 {
+    assert(is_valid_position(*this));
     if (c == '\n') {
         ++line;
         column = 1;
@@ -45,42 +67,14 @@ auto utl::Source_position::advance_with(char const c) noexcept -> void
     }
 }
 
-utl::Source_view::Source_view(
-    Source::Wrapper const  source,
-    std::string_view const string,
-    Source_position const  start,
-    Source_position const  stop) noexcept
-    : source { source }
-    , string { string }
-    , start_position { start }
-    , stop_position { stop }
+auto utl::Source_range::in(std::string_view const string) const -> std::string_view
 {
-    cpputil::always_assert(start_position <= stop_position);
+    // TODO: maybe avoid traversing the string twice
+    return std::string_view { find_position(string, start), find_position(string, stop) + 1 };
 }
 
-auto utl::Source_view::dummy() -> Source_view
+auto utl::Source_range::up_to(Source_range const other) const -> Source_range
 {
-    static Source::Arena         source_arena   = Source::Arena::with_page_size(1);
-    static Source::Wrapper const wrapped_source = source_arena.wrap("[dummy]", "dummy content");
-    return Source_view { wrapped_source, wrapped_source->string(), {}, {} };
-}
-
-auto utl::Source_view::combine_with(Source_view const& other) const noexcept -> Source_view
-{
-    cpputil::always_assert(source.is(other.source));
-
-    if (other.string.empty()) {
-        return *this;
-    }
-    if (string.empty()) {
-        return other;
-    }
-
-    cpputil::always_assert(std::less_equal()(&string.front(), &other.string.back()));
-    return Source_view {
-        source,
-        std::string_view { string.data(), other.string.data() + other.string.size() },
-        start_position,
-        other.stop_position,
-    };
-}
+    cpputil::always_assert(start <= other.stop);
+    return Source_range { start, other.stop };
+};

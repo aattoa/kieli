@@ -101,7 +101,7 @@ namespace {
     });
 }
 
-auto kieli::Token::description(Type const type) noexcept -> std::string_view
+auto kieli::Token::description(Type const type) -> std::string_view
 {
     // clang-format off
     switch (type) {
@@ -195,7 +195,7 @@ auto kieli::Token::description(Type const type) noexcept -> std::string_view
     // clang-format on
 }
 
-auto kieli::Token::type_string(kieli::Token::Type const type) noexcept -> std::string_view
+auto kieli::Token::type_string(kieli::Token::Type const type) -> std::string_view
 {
     static_assert(type_strings_array.size() == utl::enumerator_count<kieli::Token::Type>);
     return type_strings_array[utl::as_index(type)];

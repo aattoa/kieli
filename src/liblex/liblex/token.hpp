@@ -107,21 +107,21 @@ namespace kieli {
             _enumerator_count
         };
 
-        Variant          value;
-        Type             type;
-        std::string_view preceding_trivia;
-        utl::Source_view source_view;
+        Variant           value;
+        Type              type;
+        std::string_view  preceding_trivia;
+        utl::Source_range source_range;
 
         template <class T>
-        [[nodiscard]] auto value_as() const noexcept -> T
+        [[nodiscard]] auto value_as() const -> T
         {
             T const* const pointer = std::get_if<T>(&value);
             cpputil::always_assert(pointer != nullptr);
             return *pointer;
         }
 
-        [[nodiscard]] static auto description(Type) noexcept -> std::string_view;
-        [[nodiscard]] static auto type_string(Type) noexcept -> std::string_view;
+        [[nodiscard]] static auto description(Type) -> std::string_view;
+        [[nodiscard]] static auto type_string(Type) -> std::string_view;
     };
 } // namespace kieli
 

@@ -96,7 +96,7 @@ namespace {
             return ast::type::Reference {
                 .referenced_type = context.desugar(reference.referenced_type),
                 .mutability      = context.desugar_mutability(
-                    reference.mutability, reference.ampersand_token.source_view),
+                    reference.mutability, reference.ampersand_token.source_range),
             };
         }
 
@@ -105,7 +105,7 @@ namespace {
             return ast::type::Pointer {
                 .pointed_to_type = context.desugar(pointer.pointee_type),
                 .mutability      = context.desugar_mutability(
-                    pointer.mutability, pointer.asterisk_token.source_view),
+                    pointer.mutability, pointer.asterisk_token.source_range),
             };
         }
 
@@ -127,7 +127,7 @@ namespace {
 auto libdesugar::Context::desugar(cst::Type const& type) -> ast::Type
 {
     return {
-        .value       = std::visit(Type_desugaring_visitor { *this, type }, type.value),
-        .source_view = type.source_view,
+        .value        = std::visit(Type_desugaring_visitor { *this, type }, type.value),
+        .source_range = type.source_range,
     };
 }

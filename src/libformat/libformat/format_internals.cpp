@@ -43,9 +43,7 @@ auto libformat::State::format(cst::Template_argument const& argument) -> void
 {
     std::visit(
         utl::Overload {
-            [&](cst::Template_argument::Wildcard const& wildcard) {
-                format("{}", wildcard.source_view.string);
-            },
+            [&](cst::Template_argument::Wildcard const&) { format("_"); },
             [&](auto const& other) { format(other); },
         },
         argument.value);

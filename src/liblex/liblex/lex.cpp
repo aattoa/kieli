@@ -175,12 +175,7 @@ namespace {
                 .value            = std::move(value),
                 .type             = type,
                 .preceding_trivia = m_trivia,
-                .source_view {
-                    m_state.source,
-                    m_old_string.substr(m_old_string.size() - m_state.string.size()),
-                    m_old_position,
-                    new_position,
-                },
+                .source_range     = utl::Source_range { m_old_position, new_position },
             };
         }
     };

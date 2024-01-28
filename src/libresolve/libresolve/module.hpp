@@ -56,8 +56,9 @@ namespace libresolve {
         using Variant = std::variant<
             utl::Mutable_wrapper<Function_info>, //
             utl::Mutable_wrapper<Namespace_info>>;
-        kieli::Name_lower name;
-        Variant           variant;
+        kieli::Name_lower    name;
+        utl::Source::Wrapper source;
+        Variant              variant;
     };
 
     struct Upper_info {
@@ -66,8 +67,9 @@ namespace libresolve {
             utl::Mutable_wrapper<Enumeration_info>,
             utl::Mutable_wrapper<Typeclass_info>,
             utl::Mutable_wrapper<Alias_info>>;
-        kieli::Name_upper name;
-        Variant           variant;
+        kieli::Name_upper    name;
+        utl::Source::Wrapper source;
+        Variant              variant;
     };
 
     using Info_arena = utl::Wrapper_arena<

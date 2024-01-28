@@ -28,11 +28,9 @@ TEST("liblex::parse_integer")
         liblex::parse_integer("9999999999999999999999999999")
         == std::unexpected { liblex::Numeric_error::out_of_range });
     REQUIRE(
-        liblex::parse_integer("5w")
-        == std::unexpected { liblex::Numeric_error::invalid_argument });
+        liblex::parse_integer("5w") == std::unexpected { liblex::Numeric_error::invalid_argument });
     REQUIRE(
-        liblex::parse_integer("w5")
-        == std::unexpected { liblex::Numeric_error::invalid_argument });
+        liblex::parse_integer("w5") == std::unexpected { liblex::Numeric_error::invalid_argument });
 }
 
 TEST("liblex::parse_floating")
