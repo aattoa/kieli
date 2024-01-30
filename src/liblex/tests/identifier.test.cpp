@@ -1,15 +1,14 @@
 #include <libutl/common/utilities.hpp>
-#include <catch2/catch_test_macros.hpp>
-#include <catch2/matchers/catch_matchers_string.hpp>
+#include <cppunittest/unittest.hpp>
 #include "test_liblex.hpp"
 
-#define TEST(name) TEST_CASE(name, "[liblex][keyword][identifier]") // NOLINT
+#define TEST(name) UNITTEST("liblex identifiers: " name)
 
 namespace {
     auto lex_success(std::string&& string) -> std::string
     {
         auto result = liblex::test_lex(std::move(string));
-        REQUIRE(result.diagnostic_messages == "");
+        REQUIRE_EQUAL(result.diagnostic_messages, "");
         return result.formatted_tokens;
     }
 
@@ -27,34 +26,34 @@ namespace {
 TEST("keywords")
 {
     for (auto const keyword : keywords) {
-        REQUIRE(lex_success(std::string(keyword)) == std::format("{}", keyword));
+        CHECK_EQUAL(lex_success(std::string(keyword)), keyword);
     }
 }
 
 TEST("boolean literals")
 {
-    REQUIRE(lex_success("true") == "(bool: true)");
-    REQUIRE(lex_success("false") == "(bool: false)");
+    CHECK_EQUAL(lex_success("true"), "(bool: true)");
+    CHECK_EQUAL(lex_success("false"), "(bool: false)");
 }
 
 TEST("underscores")
 {
-    REQUIRE(lex_success("_") == "_");
-    REQUIRE(lex_success("_____") == "_");
+    CHECK_EQUAL(lex_success("_"), "_");
+    CHECK_EQUAL(lex_success("_____"), "_");
 }
 
 TEST("uncapitalized identifiers")
 {
-    REQUIRE(
-        lex_success("a bBb for_ forR _x ___x___ _5")
-        == "(lower: a), (lower: bBb), (lower: for_), "
-           "(lower: forR), (lower: _x), (lower: ___x___), (lower: _5)");
+    CHECK_EQUAL(
+        lex_success("a bBb for_ forR _x ___x___ _5"),
+        "(lower: a), (lower: bBb), (lower: for_), "
+        "(lower: forR), (lower: _x), (lower: ___x___), (lower: _5)");
 }
 
 TEST("capitalized identifiers")
 {
-    REQUIRE(
-        lex_success("A Bbb For_ FORR _X ___X___")
-        == "(upper: A), (upper: Bbb), (upper: For_), "
-           "(upper: FORR), (upper: _X), (upper: ___X___)");
+    CHECK_EQUAL(
+        lex_success("A Bbb For_ FORR _X ___X___"),
+        "(upper: A), (upper: Bbb), (upper: For_), "
+        "(upper: FORR), (upper: _X), (upper: ___X___)");
 }

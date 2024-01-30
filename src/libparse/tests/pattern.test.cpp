@@ -1,76 +1,76 @@
-#include <catch2/catch_test_macros.hpp>
-#include <libparse/test_interface.hpp>
 #include <libutl/common/utilities.hpp>
+#include <libparse/test_interface.hpp>
+#include <cppunittest/unittest.hpp>
 
 namespace {
     constexpr auto parse = libparse::test_parse_pattern;
 }
 
-#define TEST(name) TEST_CASE("parse-pattern " name, "[libparse][pattern]") // NOLINT
+#define TEST(name) UNITTEST("parse pattern: " name)
 
-#define REQUIRE_SIMPLE_PARSE(string) REQUIRE(parse(string) == (string))
+#define CHECK_SIMPLE_PARSE(string) CHECK_EQUAL(parse(string), (string))
 
 TEST("literals")
 {
-    REQUIRE_SIMPLE_PARSE("5");
-    REQUIRE(parse("5e3") == "5000");
-    REQUIRE(parse("5.0") == "5");
-    REQUIRE(parse("5.0e3") == "5000");
-    REQUIRE_SIMPLE_PARSE("true");
-    REQUIRE_SIMPLE_PARSE("false");
-    REQUIRE_SIMPLE_PARSE("'x'");
-    REQUIRE_SIMPLE_PARSE("'\n'");
-    REQUIRE_SIMPLE_PARSE("\"\"");
-    REQUIRE_SIMPLE_PARSE("\"hello\"");
-    REQUIRE_SIMPLE_PARSE("\"hello,\tworld!\n\"");
+    CHECK_SIMPLE_PARSE("5");
+    CHECK_EQUAL(parse("5e3"), "5000");
+    CHECK_EQUAL(parse("5.0"), "5");
+    CHECK_EQUAL(parse("5.0e3"), "5000");
+    CHECK_SIMPLE_PARSE("true");
+    CHECK_SIMPLE_PARSE("false");
+    CHECK_SIMPLE_PARSE("'x'");
+    CHECK_SIMPLE_PARSE("'\n'");
+    CHECK_SIMPLE_PARSE("\"\"");
+    CHECK_SIMPLE_PARSE("\"hello\"");
+    CHECK_SIMPLE_PARSE("\"hello,\tworld!\n\"");
 }
 
 TEST("parenthesized")
 {
-    REQUIRE_SIMPLE_PARSE("()");
-    REQUIRE_SIMPLE_PARSE("(x)");
-    REQUIRE_SIMPLE_PARSE("(x, y)");
+    CHECK_SIMPLE_PARSE("()");
+    CHECK_SIMPLE_PARSE("(x)");
+    CHECK_SIMPLE_PARSE("(x, y)");
 }
 
 TEST("wildcard")
 {
-    REQUIRE_SIMPLE_PARSE("_");
-    REQUIRE(parse("____") == "_");
+    CHECK_SIMPLE_PARSE("_");
+    CHECK_EQUAL(parse("____"), "_");
 }
 
 TEST("name")
 {
-    REQUIRE_SIMPLE_PARSE("x");
-    REQUIRE_SIMPLE_PARSE("mut x");
+    CHECK_SIMPLE_PARSE("x");
+    CHECK_SIMPLE_PARSE("mut x");
 }
 
 TEST("constructor")
 {
-    REQUIRE_SIMPLE_PARSE("X::x");
-    REQUIRE_SIMPLE_PARSE("X::x(a, b, c)");
+    CHECK_SIMPLE_PARSE("X::x");
+    CHECK_SIMPLE_PARSE("X::x(a, b, c)");
 }
 
 TEST("abbreviated constructor")
 {
-    REQUIRE_SIMPLE_PARSE("::x");
-    REQUIRE_SIMPLE_PARSE("::x(a, b, c)");
+    CHECK_SIMPLE_PARSE("::x");
+    CHECK_SIMPLE_PARSE("::x(a, b, c)");
 }
 
 TEST("slice")
 {
-    REQUIRE_SIMPLE_PARSE("[]");
-    REQUIRE_SIMPLE_PARSE("[a]");
-    REQUIRE_SIMPLE_PARSE("[a, [b, c], (d, e), f]");
+    CHECK_SIMPLE_PARSE("[]");
+    CHECK_SIMPLE_PARSE("[a]");
+    CHECK_SIMPLE_PARSE("[a, [b, c], (d, e), f]");
 }
 
 TEST("alias")
 {
-    REQUIRE(parse("(_, ___) as x") == "(_, _) as x");
-    REQUIRE(parse("(___, _) as mut x") == "(_, _) as mut x");
+    CHECK_EQUAL(parse("(_, ___) as x"), "(_, _) as x");
+    CHECK_EQUAL(parse("(___, _) as mut x"), "(_, _) as mut x");
 }
 
 TEST("guarded")
 {
-    REQUIRE_SIMPLE_PARSE("_ if x");
-    REQUIRE_SIMPLE_PARSE("x if x == y");
+    CHECK_SIMPLE_PARSE("_ if x");
+    CHECK_SIMPLE_PARSE("x if x == y");
 }

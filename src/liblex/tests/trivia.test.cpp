@@ -1,6 +1,6 @@
 #include <libutl/common/utilities.hpp>
 #include <liblex/lex.hpp>
-#include <catch2/catch_test_macros.hpp>
+#include <cppunittest/unittest.hpp>
 
 namespace {
     auto lex(std::string&& string) -> std::string
@@ -25,46 +25,46 @@ namespace {
     }
 } // namespace
 
-#define TEST(name) TEST_CASE(name, "[liblex][trivia]") // NOLINT
+#define TEST(name) UNITTEST("liblex trivia: " name)
 
 TEST("whitespace trivia")
 {
-    REQUIRE(
-        lex("\ta\nb  \t  c  \n  d\n\n e ")
-        == "('\t' lower)"
-           "('\n' lower)"
-           "('  \t  ' lower)"
-           "('  \n  ' lower)"
-           "('\n\n ' lower)"
-           "(' ' end of input)");
+    CHECK_EQUAL(
+        lex("\ta\nb  \t  c  \n  d\n\n e "),
+        "('\t' lower)"
+        "('\n' lower)"
+        "('  \t  ' lower)"
+        "('  \n  ' lower)"
+        "('\n\n ' lower)"
+        "(' ' end of input)");
 
-    REQUIRE(lex(" \t \n ") == "(' \t \n ' end of input)");
+    CHECK_EQUAL(lex(" \t \n "), "(' \t \n ' end of input)");
 }
 
 TEST("line comment trivia")
 {
-    REQUIRE(
-        lex(" a // b \n c // d")
-        == "(' ' lower)"
-           "(' // b \n ' lower)"
-           "(' // d' end of input)");
+    CHECK_EQUAL(
+        lex(" a // b \n c // d"),
+        "(' ' lower)"
+        "(' // b \n ' lower)"
+        "(' // d' end of input)");
 }
 
 TEST("block commen trivia")
 {
-    REQUIRE(
-        lex(". /* , /*::*/! */ in /**/ / //")
-        == "('' .)"
-           "(' /* , /*::*/! */ ' in)"
-           "(' /**/ ' op)"
-           "(' //' end of input)");
+    CHECK_EQUAL(
+        lex(". /* , /*::*/! */ in /**/ / //"),
+        "('' .)"
+        "(' /* , /*::*/! */ ' in)"
+        "(' /**/ ' op)"
+        "(' //' end of input)");
 
-    REQUIRE(
-        lex(R"(/* "" */ . /* "*/" */ . "/* /*" . /* /* "*/"*/ */ .)")
-        == "('/* \"\" */ ' .)"
-           "(' /* \"*/\" */ ' .)"
-           "(' ' str)"
-           "(' ' .)"
-           "(' /* /* \"*/\"*/ */ ' .)"
-           "('' end of input)");
+    CHECK_EQUAL(
+        lex(R"(/* "" */ . /* "*/" */ . "/* /*" . /* /* "*/"*/ */ .)"),
+        "('/* \"\" */ ' .)"
+        "(' /* \"*/\" */ ' .)"
+        "(' ' str)"
+        "(' ' .)"
+        "(' /* /* \"*/\"*/ */ ' .)"
+        "('' end of input)");
 }

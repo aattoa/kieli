@@ -1,8 +1,8 @@
 #include <libutl/common/utilities.hpp>
 #include <libutl/common/safe_integer.hpp>
-#include <catch2/catch_test_macros.hpp>
+#include <cppunittest/unittest.hpp>
 
-#define TEST(name) TEST_CASE(name, "[libutl][safe_integer]") // NOLINT
+#define TEST(name) UNITTEST("libutl-common safe-integer: " name)
 
 namespace {
     template <class T>
@@ -17,61 +17,61 @@ namespace {
 
 TEST("safe integer default construction")
 {
-    REQUIRE(utl::Safe_integer<int> {} == 0);
+    CHECK_EQUAL(utl::Safe_integer<int> {}, 0);
 }
 
 TEST("safe integer conversion to bool")
 {
-    REQUIRE(static_cast<bool>(safe_max<std::int32_t>));
-    REQUIRE(static_cast<bool>(safe_min<std::int32_t>));
-    REQUIRE(static_cast<bool>(utl::Safe_i32 { 1 }));
-    REQUIRE_FALSE(static_cast<bool>(utl::Safe_i32 { 0 }));
+    CHECK(safe_max<std::int32_t>);
+    CHECK(safe_min<std::int32_t>);
+    CHECK(utl::Safe_i32 { 1 });
+    CHECK(!utl::Safe_i32 { 0 });
 }
 
 TEST("safe integer addition")
 {
-    SECTION("overflow")
+    // SECTION("overflow")
     {
-        REQUIRE_THROWS_AS(safe_max<int> + 1, utl::Safe_integer_overflow);
+        CHECK_THROWS_AS(utl::Safe_integer_overflow, safe_max<int> + 1);
     }
-    SECTION("underflow")
+    // SECTION("underflow")
     {
-        REQUIRE_THROWS_AS(safe_min<int> + -1, utl::Safe_integer_underflow);
+        CHECK_THROWS_AS(utl::Safe_integer_underflow, safe_min<int> + -1);
     }
 }
 
 TEST("safe integer subtraction")
 {
-    SECTION("overflow")
+    // SECTION("overflow")
     {
-        REQUIRE_THROWS_AS(safe_max<int> - -1, utl::Safe_integer_overflow);
+        CHECK_THROWS_AS(utl::Safe_integer_overflow, safe_max<int> - -1);
     }
-    SECTION("underflow")
+    // SECTION("underflow")
     {
-        REQUIRE_THROWS_AS(safe_min<int> - 1, utl::Safe_integer_underflow);
+        CHECK_THROWS_AS(utl::Safe_integer_underflow, safe_min<int> - 1);
     }
 }
 
 TEST("safe integer multiplication")
 {
-    SECTION("overflow")
+    // SECTION("overflow")
     {
-        REQUIRE_THROWS_AS(utl::Safe_u8 { 130 } * 2, utl::Safe_integer_overflow);
+        CHECK_THROWS_AS(utl::Safe_integer_overflow, utl::Safe_u8 { 130 } * 2);
     }
-    SECTION("underflow")
+    // SECTION("underflow")
     {
-        REQUIRE_THROWS_AS(utl::Safe_i8 { 50 } * -3, utl::Safe_integer_underflow);
+        CHECK_THROWS_AS(utl::Safe_integer_underflow, utl::Safe_i8 { 50 } * -3);
     }
 }
 
 TEST("safe integer division")
 {
-    SECTION("division by zero")
+    // SECTION("division by zero")
     {
-        REQUIRE_THROWS_AS(utl::Safe_i64 { 50 } / 0, utl::Safe_integer_division_by_zero);
+        CHECK_THROWS_AS(utl::Safe_integer_division_by_zero, utl::Safe_i64 { 50 } / 0);
     }
-    SECTION("overflow")
+    // SECTION("overflow")
     {
-        REQUIRE_THROWS_AS(safe_min<int> / -1, utl::Safe_integer_overflow);
+        CHECK_THROWS_AS(utl::Safe_integer_overflow, safe_min<int> / -1);
     }
 }

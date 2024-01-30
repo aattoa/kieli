@@ -24,16 +24,8 @@ else ()
         "-Wno-switch")
 endif ()
 
-function (kieli_message message)
-    message(STATUS "<KIELI> ${message}")
-endfunction ()
-
-# External dependencies
+# Dependencies
 include(FetchContent)
-FetchContent_Declare(
-    Catch2
-    GIT_REPOSITORY https://github.com/catchorg/Catch2.git
-    GIT_TAG        766541d12d64845f5232a1ce4e34a85e83506b09)
 FetchContent_Declare(
     cppargs
     GIT_REPOSITORY https://github.com/aattoa/cppargs.git
@@ -46,28 +38,23 @@ FetchContent_Declare(
     cpputil
     GIT_REPOSITORY https://github.com/aattoa/cpputil.git
     GIT_TAG        dabf5399fa82be60d695f006058881b1d228cb4d)
+FetchContent_Declare(
+    cppunittest
+    GIT_REPOSITORY https://github.com/aattoa/cppunittest.git
+    GIT_TAG        9396bcafe5a65178acce4f3962f91fb17777892d)
 
 set(CPPARGS_BUILD_TESTS OFF)
 set(CPPDIAG_BUILD_TESTS OFF)
 set(CPPUTIL_BUILD_TESTS OFF)
 
-function (fetch package)
-    kieli_message("Fetching ${package}")
-    FetchContent_MakeAvailable(${package})
-endfunction ()
-
-fetch(cppargs)
-fetch(cppdiag)
-fetch(cpputil)
+message(STATUS "<KIELI> Fetching dependencies...")
+FetchContent_MakeAvailable(cppargs cppdiag cpputil cppunittest)
+message(STATUS "<KIELI> Dependencies fetched.")
 
 # Build kieli tests by default
 option(KIELI_BUILD_TESTS "Build kieli tests" ON)
-
 if (${KIELI_BUILD_TESTS})
-    kieli_message("Enabling tests and fetching Catch2")
-    FetchContent_MakeAvailable(Catch2)
-    include(CTest)
-    include(Catch)
+    include(cppunittest)
 endif ()
 
 # Convenience function for registering Kieli component tests
@@ -78,28 +65,17 @@ function (kieli_add_tests component)
     endif ()
     foreach (test IN LISTS _TESTS)
         set(executable ${component}-test-${test})
-        kieli_message("Adding test ${executable}")
-        add_executable(${executable}
-            ${CMAKE_CURRENT_SOURCE_DIR}/tests/${test}.test.cpp)
-        target_include_directories(${executable}
-            PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+        add_executable(${executable} ${CMAKE_CURRENT_SOURCE_DIR}/tests/${test}.test.cpp)
+        target_include_directories(${executable} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
         foreach (source IN LISTS _EXTRA_SOURCES)
-            target_sources(${executable}
-                PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/tests/${source})
+            target_sources(${executable} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/tests/${source})
         endforeach ()
         kieli_consume_libutl_common(${executable})
-        target_link_libraries(${executable}
-            PRIVATE ${component}
-            PRIVATE Catch2::Catch2WithMain)
+        target_link_libraries(${executable} PRIVATE ${component})
         foreach (library IN LISTS _LINK)
-            target_link_libraries(${executable}
-                PRIVATE ${library})
+            target_link_libraries(${executable} PRIVATE ${library})
         endforeach ()
-        if (_WORKING_DIR)
-            catch_discover_tests(${executable} WORKING_DIRECTORY ${_WORKING_DIR})
-        else ()
-            catch_discover_tests(${executable})
-        endif ()
+        cppunittest_add_tests(${executable} WORKING_DIR "${_WORKING_DIR}")
     endforeach ()
 endfunction ()
 

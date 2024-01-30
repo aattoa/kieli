@@ -1,8 +1,8 @@
 #include <libutl/common/utilities.hpp>
 #include <libresolve/module.hpp>
-#include <catch2/catch_test_macros.hpp>
+#include <cppunittest/unittest.hpp>
 
-#define TEST(name) TEST_CASE("libresolve " name, "[libresolve][module]") // NOLINT
+#define TEST(name) UNITTEST("libresolve: " name)
 
 namespace {
     auto test_project_path(std::string_view const path) -> std::filesystem::path
@@ -27,9 +27,9 @@ TEST("read module map")
         .compile_info      = info,
     };
     auto const module_map = libresolve::read_module_map(context, std::filesystem::current_path());
-    REQUIRE(info.diagnostics.format_all({}) == "");
-    REQUIRE(module_map.size() == 3);
-    REQUIRE(definition_count(module_map[test_project_path("main")]) == 1);
-    REQUIRE(definition_count(module_map[test_project_path("b/c")]) == 2);
-    REQUIRE(definition_count(module_map[test_project_path("a")]) == 3);
+    REQUIRE_EQUAL(info.diagnostics.format_all({}), "");
+    REQUIRE_EQUAL(module_map.size(), 3UZ);
+    CHECK_EQUAL(definition_count(module_map[test_project_path("main")]), 1UZ);
+    CHECK_EQUAL(definition_count(module_map[test_project_path("b/c")]), 2UZ);
+    CHECK_EQUAL(definition_count(module_map[test_project_path("a")]), 3UZ);
 }

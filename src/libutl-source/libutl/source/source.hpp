@@ -50,3 +50,19 @@ namespace utl {
     };
 
 } // namespace utl
+
+template <>
+struct std::formatter<utl::Source_position> : utl::fmt::Formatter_base {
+    auto format(utl::Source_position const position, auto& context) const
+    {
+        return std::format_to(context.out(), "{}:{}", position.line, position.column);
+    }
+};
+
+template <>
+struct std::formatter<utl::Source_range> : utl::fmt::Formatter_base {
+    auto format(utl::Source_range const range, auto& context) const
+    {
+        return std::format_to(context.out(), "({})-({})", range.start, range.stop);
+    }
+};

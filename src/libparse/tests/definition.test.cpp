@@ -1,4 +1,4 @@
-#include <catch2/catch_test_macros.hpp>
+#include <cppunittest/unittest.hpp>
 #include <libparse/test_interface.hpp>
 #include <libutl/common/utilities.hpp>
 

@@ -13,7 +13,7 @@ Dependencies are installed automatically with CMake's `FetchContent` functionali
     - Required, for diagnostic messages
 - https://github.com/aattoa/cpputil
     - Required, for general utilities
-- https://github.com/catchorg/Catch2
+- https://github.com/aattoa/cppunittest
     - Optional, only for tests
 
 ## Building Kieli
@@ -28,7 +28,7 @@ At the time of writing, LLVM 18 is the only toolchain that supports C++23 well e
 
 Run the following commands to clone and build Kieli:
 
-```
+```sh
 git clone https://github.com/aattoa/kieli
 cd kieli
 cmake -S . -B build
@@ -39,7 +39,7 @@ These build steps have been tested with the following:
 
 - CMake `3.28.1`
 - Build systems: Ninja `1.11.1`, GNU Make `4.4.1`
-- Compilers: clang `18.0.0`
+- Compilers: clang `18.0.0git`
 
 ## Tests
 

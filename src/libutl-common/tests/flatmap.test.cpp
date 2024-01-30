@@ -1,10 +1,10 @@
 #include <libutl/common/utilities.hpp>
 #include <libutl/common/flatmap.hpp>
-#include <catch2/catch_test_macros.hpp>
+#include <cppunittest/unittest.hpp>
 
-#define TEST(name) TEST_CASE(name, "[libutl][flatmap]") // NOLINT
+#define TEST(name) UNITTEST("libutl-common flatmap: " name)
 
-TEST("utl::Flatmap::add_or_assign")
+TEST("add_or_assign")
 {
     utl::Flatmap<std::string, int> map;
     REQUIRE(map.empty());

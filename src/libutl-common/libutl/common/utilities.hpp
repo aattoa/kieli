@@ -262,6 +262,25 @@ struct std::formatter<std::variant<Ts...>, Char> : utl::fmt::Formatter_base {
     }
 };
 
+template <class Char, std::formattable<Char> T, std::formattable<Char> E>
+struct std::formatter<std::expected<T, E>, Char> : utl::fmt::Formatter_base {
+    auto format(std::expected<T, E> const& expected, auto& context) const
+    {
+        if (expected.has_value()) {
+            return std::format_to(context.out(), "{}", expected.value());
+        }
+        return std::format_to(context.out(), "std::unexpected({})", expected.error());
+    }
+};
+
+template <class Char, std::formattable<Char> E>
+struct std::formatter<std::unexpected<E>, Char> : utl::fmt::Formatter_base {
+    auto format(std::unexpected<E> const& unexpected, auto& context) const
+    {
+        return std::format_to(context.out(), "std::unexpected({})", unexpected.error());
+    }
+};
+
 template <class Char, class Range>
 struct std::formatter<utl::fmt::Join_closure<Range>, Char> : utl::fmt::Formatter_base {
     auto format(auto const closure, auto& context) const

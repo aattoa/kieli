@@ -1,8 +1,8 @@
 #include <libutl/common/utilities.hpp>
 #include <libutl/common/pooled_string.hpp>
-#include <catch2/catch_test_macros.hpp>
+#include <cppunittest/unittest.hpp>
 
-#define TEST(name) TEST_CASE("pooled-string " name, "[libutl][pooled_string]") // NOLINT
+#define TEST(name) UNITTEST("libutl-common pooled-string: " name)
 
 TEST("equality")
 {
@@ -13,8 +13,8 @@ TEST("equality")
     utl::Pooled_string const c = pool.make("abc");
     utl::Pooled_string const d = pool.make("def");
 
-    REQUIRE(a == c);
-    REQUIRE(b == d);
+    CHECK_EQUAL(a, c);
+    CHECK_EQUAL(b, d);
 }
 
 TEST("overlap")
@@ -25,15 +25,17 @@ TEST("overlap")
     utl::Pooled_string const b = pool.make("cd");
     utl::Pooled_string const c = pool.make("bc");
 
-    REQUIRE(a.size() == 2);
-    REQUIRE(a == "ab");
-    REQUIRE(b.size() == 2);
-    REQUIRE(b == "cd");
-    REQUIRE(c.size() == 2);
-    REQUIRE(c == "bc");
+    CHECK_EQUAL(a.size(), 2UZ);
+    CHECK_EQUAL(a.view(), "ab");
 
-    REQUIRE(a.view().data() + 1 == c.view().data());
-    REQUIRE(b.view().data() - 1 == c.view().data());
+    CHECK_EQUAL(b.size(), 2UZ);
+    CHECK_EQUAL(b.view(), "cd");
 
-    REQUIRE("abcd" == std::string_view { a.view().data(), b.view().data() + b.size() });
+    CHECK_EQUAL(c.size(), 2UZ);
+    CHECK_EQUAL(c.view(), "bc");
+
+    CHECK_EQUAL(a.view().data() + 1, c.view().data());
+    CHECK_EQUAL(b.view().data() - 1, c.view().data());
+
+    CHECK_EQUAL("abcd", std::string_view { a.view().data(), b.view().data() + b.size() });
 }

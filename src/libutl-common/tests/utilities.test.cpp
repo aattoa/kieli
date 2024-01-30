@@ -1,7 +1,7 @@
 #include <libutl/common/utilities.hpp>
-#include <catch2/catch_test_macros.hpp>
+#include <cppunittest/unittest.hpp>
 
-#define TEST(name) TEST_CASE("libutl " name, "[libutl][utilities]") // NOLINT
+#define TEST(name) UNITTEST("libutl-common: " name)
 
 namespace {
     struct Move_only {
@@ -26,15 +26,23 @@ namespace {
     static_assert(std::movable<Move_only> && !std::copyable<Move_only>);
 } // namespace
 
+template <>
+struct std::formatter<Move_only> : utl::fmt::Formatter_base {
+    auto format(Move_only const& move_only, auto& context) const
+    {
+        return std::format_to(context.out(), "Move_only({})", move_only.value);
+    }
+};
+
 TEST("vector capacity operations")
 {
     std::vector<int> vector;
-    REQUIRE(vector.empty());
+    CHECK(vector.empty());
     vector.reserve(10);
-    REQUIRE(vector.capacity() >= 10);
+    CHECK(vector.capacity() >= 10);
     utl::release_vector_memory(vector);
-    REQUIRE(vector.empty());
-    REQUIRE(vector.capacity() == 0);
+    CHECK(vector.empty());
+    CHECK_EQUAL(vector.capacity(), 0UZ);
 }
 
 TEST("to_vector")
@@ -43,34 +51,32 @@ TEST("to_vector")
     vector.push_back(10_mov);
     vector.push_back(20_mov);
     vector.push_back(30_mov);
-    REQUIRE(vector == utl::to_vector({ 10_mov, 20_mov, 30_mov }));
+    CHECK_EQUAL(vector, utl::to_vector({ 10_mov, 20_mov, 30_mov }));
 }
 
 TEST("pop_back")
 {
     auto vector = utl::to_vector({ 10_mov, 20_mov, 30_mov });
-    REQUIRE(utl::pop_back(vector) == 30_mov);
-    REQUIRE(utl::pop_back(vector) == 20_mov);
-    REQUIRE(utl::pop_back(vector) == 10_mov);
-    REQUIRE(utl::pop_back(vector) == std::nullopt);
+    CHECK_EQUAL(utl::pop_back(vector).value(), 30_mov);
+    CHECK_EQUAL(utl::pop_back(vector).value(), 20_mov);
+    CHECK_EQUAL(utl::pop_back(vector).value(), 10_mov);
+    CHECK(!utl::pop_back(vector).has_value());
 }
 
-TEST("Relative_string")
+TEST("Relative_string::view_in")
 {
-    SECTION("view_in")
-    {
-        static constexpr utl::Relative_string rs { .offset = 2, .length = 3 };
-        REQUIRE(rs.view_in("abcdefg") == "cde");
-    }
-    SECTION("format_to")
-    {
-        std::string s  = "abc";
-        auto const  rs = utl::Relative_string::format_to(s, "d{}fg", 'e');
-        REQUIRE(s == "abcdefg");
-        REQUIRE(rs.offset == 3);
-        REQUIRE(rs.length == 4);
-        REQUIRE(rs.view_in(s) == "defg");
-    }
+    utl::Relative_string rs { .offset = 2, .length = 3 };
+    CHECK_EQUAL(rs.view_in("abcdefg"), "cde");
+}
+
+TEST("Relative_string::format_to")
+{
+    std::string s  = "abc";
+    auto const  rs = utl::Relative_string::format_to(s, "d{}fg", 'e');
+    CHECK_EQUAL(s, "abcdefg");
+    CHECK_EQUAL(rs.offset, 3UZ);
+    CHECK_EQUAL(rs.length, 4UZ);
+    CHECK_EQUAL(rs.view_in(s), "defg");
 }
 
 static_assert(utl::losslessly_convertible_to<std::int8_t, std::int16_t>);
