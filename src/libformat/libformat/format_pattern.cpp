@@ -40,9 +40,9 @@ namespace {
             state.format("]");
         }
 
-        auto operator()(cst::pattern::Wildcard const&)
+        auto operator()(cst::Wildcard const& wildcard)
         {
-            state.format("_");
+            state.format(wildcard);
         }
 
         auto operator()(cst::pattern::Name const& name)

@@ -25,6 +25,10 @@ namespace ast {
     struct [[nodiscard]] Pattern;
     struct [[nodiscard]] Definition;
 
+    struct Wildcard {
+        utl::Source_range source_range;
+    };
+
     struct Mutability {
         struct Concrete {
             utl::Explicit<bool> is_mutable;
@@ -42,10 +46,6 @@ namespace ast {
     };
 
     struct Template_argument {
-        struct Wildcard {
-            utl::Source_range source_range;
-        };
-
         using Variant
             = std::variant<utl::Wrapper<Type>, utl::Wrapper<Expression>, Mutability, Wildcard>;
         Variant value;
@@ -79,26 +79,36 @@ namespace ast {
         utl::Source_range                             source_range;
     };
 
+    struct Template_type_parameter {
+        using Default = std::variant<utl::Wrapper<Type>, Wildcard>;
+        kieli::Name_upper            name;
+        std::vector<Class_reference> classes;
+        std::optional<Default>       default_argument;
+    };
+
+    struct Template_value_parameter {
+        using Default = std::variant<utl::Wrapper<Expression>, Wildcard>;
+        kieli::Name_lower                 name;
+        std::optional<utl::Wrapper<Type>> type;
+        std::optional<Default>            default_argument;
+    };
+
+    struct Template_mutability_parameter {
+        using Default = std::variant<Mutability, Wildcard>;
+        kieli::Name_lower      name;
+        std::optional<Default> default_argument;
+    };
+
     struct Template_parameter {
-        struct Type_parameter {
-            std::vector<Class_reference> classes;
-            kieli::Name_upper            name;
-        };
+        using Variant = std::variant<
+            Template_type_parameter,
+            Template_value_parameter,
+            Template_mutability_parameter>;
 
-        struct Value_parameter {
-            std::optional<utl::Wrapper<Type>> type;
-            kieli::Name_lower                 name;
-        };
+        Variant           value;
+        utl::Source_range source_range;
 
-        struct Mutability_parameter {
-            kieli::Name_lower name;
-        };
-
-        using Variant = std::variant<Type_parameter, Value_parameter, Mutability_parameter>;
-
-        Variant                          value;
-        std::optional<Template_argument> default_argument;
-        utl::Source_range                source_range;
+        static auto kind_description(Variant const&) noexcept -> std::string_view;
     };
 
     struct Function_argument {
@@ -313,8 +323,6 @@ namespace ast {
     };
 
     namespace pattern {
-        struct Wildcard {};
-
         struct Name {
             kieli::Name_lower name;
             Mutability        mutability;
@@ -357,7 +365,7 @@ namespace ast {
             kieli::Character,
             kieli::Boolean,
             kieli::String,
-            pattern::Wildcard,
+            Wildcard,
             pattern::Name,
             pattern::Constructor,
             pattern::Abbreviated_constructor,
@@ -371,8 +379,6 @@ namespace ast {
     };
 
     namespace type {
-        struct Wildcard {};
-
         struct Self {};
 
         struct Typename {
@@ -428,7 +434,7 @@ namespace ast {
             kieli::built_in_type::Character,
             kieli::built_in_type::Boolean,
             kieli::built_in_type::String,
-            type::Wildcard,
+            Wildcard,
             type::Self,
             type::Typename,
             type::Tuple,
@@ -557,6 +563,7 @@ namespace ast {
         Node_arena              node_arena;
     };
 
+    auto format_to(Wildcard const&, std::string&) -> void;
     auto format_to(Expression const&, std::string&) -> void;
     auto format_to(Pattern const&, std::string&) -> void;
     auto format_to(Type const&, std::string&) -> void;

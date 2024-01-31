@@ -86,9 +86,8 @@ namespace {
     auto extract_structure(Context& context, Token const& struct_keyword)
         -> cst::Definition::Variant
     {
-        static constexpr auto extract_members = extract_required<
-            parse_comma_separated_one_or_more<parse_struct_member, "a struct member">,
-            "one or more struct members">;
+        static constexpr auto extract_members
+            = require<parse_comma_separated_one_or_more<parse_struct_member, "a struct member">>;
 
         auto name                = extract_upper_name(context, "a struct name");
         auto template_parameters = parse_template_parameters(context);
@@ -96,7 +95,7 @@ namespace {
 
         return cst::definition::Struct {
             .template_parameters  = std::move(template_parameters),
-            .members              = extract_members(context),
+            .members              = extract_members(context, "one or more struct members"),
             .name                 = std::move(name),
             .struct_keyword_token = cst::Token::from_lexical(struct_keyword),
             .equals_sign_token    = cst::Token::from_lexical(equals_sign),
@@ -122,12 +121,10 @@ namespace {
     auto extract_enumeration(Context& context, Token const& enum_keyword)
         -> cst::Definition::Variant
     {
-        static constexpr auto extract_constructors = extract_required<
-            parse_separated_one_or_more<
-                parse_enum_constructor,
-                "an enum constructor",
-                Token::Type::pipe>,
-            "one or more enum constructors">;
+        static constexpr auto extract_constructors = require<parse_separated_one_or_more<
+            parse_enum_constructor,
+            "an enum constructor",
+            Token::Type::pipe>>;
 
         auto const name                = extract_upper_name(context, "an enum name");
         auto       template_parameters = parse_template_parameters(context);
@@ -135,7 +132,7 @@ namespace {
 
         return cst::definition::Enum {
             .template_parameters = std::move(template_parameters),
-            .constructors        = extract_constructors(context),
+            .constructors        = extract_constructors(context, "one or more enum constructors"),
             .name                = name,
             .enum_keyword_token  = cst::Token::from_lexical(enum_keyword),
             .equals_sign_token   = cst::Token::from_lexical(equals_sign),

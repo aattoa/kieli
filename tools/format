@@ -1,7 +1,6 @@
 #!/bin/sh
 
-if [ "$#" = "1" ] && [ -e "$1" ]
-then
+if [ "$#" = "1" ] && [ -e "$1" ]; then
     find "$1" -type f -name "*[ch]pp" -exec clang-format -i {} \;
 else
     echo "Invalid argument" 1>&2

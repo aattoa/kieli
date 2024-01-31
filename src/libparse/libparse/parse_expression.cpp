@@ -265,7 +265,7 @@ namespace {
 
     auto extract_let_binding(Context& context, Token const& let_keyword) -> cst::Expression::Variant
     {
-        auto const pattern     = extract_required<parse_top_level_pattern, "a pattern">(context);
+        auto const pattern     = require<parse_top_level_pattern>(context, "a pattern");
         auto const type        = parse_type_annotation(context);
         auto const equals_sign = context.require_extract(Token::Type::equals);
         return cst::expression::Let_binding {
@@ -349,12 +349,11 @@ namespace {
 
     auto extract_match(Context& context, Token const& match_keyword) -> cst::Expression::Variant
     {
-        static constexpr auto extract_cases = extract_required<
-            parse_braced<parse_match_cases, "one or more match cases">,
-            "a '{' followed by match cases">;
+        static constexpr auto extract_cases
+            = require<parse_braced<parse_match_cases, "one or more match cases">>;
         auto const expression = require<parse_expression>(context, "an expression");
         return cst::expression::Match {
-            .cases               = extract_cases(context),
+            .cases               = extract_cases(context, "a '{' followed by match cases"),
             .matched_expression  = expression,
             .match_keyword_token = cst::Token::from_lexical(match_keyword),
         };

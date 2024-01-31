@@ -51,13 +51,11 @@ namespace libdesugar {
         auto desugar(cst::Function_signature const&) -> ast::Function_signature;
         auto desugar(cst::Type_signature const&) -> ast::Type_signature;
 
+        static auto desugar(cst::Wildcard const&) -> ast::Wildcard;
         static auto desugar(cst::Self_parameter const&) -> ast::Self_parameter;
         static auto desugar(cst::Mutability const&) -> ast::Mutability;
 
         auto desugar(cst::Type_annotation const&) -> ast::Type;
-        auto desugar(cst::Function_parameter::Default_argument const&)
-            -> utl::Wrapper<ast::Expression>;
-        auto desugar(cst::Template_parameter::Default_argument const&) -> ast::Template_argument;
 
         auto desugar(utl::wrapper auto const node)
         {
@@ -69,10 +67,15 @@ namespace libdesugar {
             return [this](auto const& node) { return this->desugar(node); };
         }
 
+        auto wrap_desugar()
+        {
+            return [this](auto const& node) { return wrap(this->desugar(node)); };
+        }
+
         template <class T>
         auto desugar(std::vector<T> const& vector)
         {
-            return std::ranges::to<std::vector>(std::views::transform(vector, desugar()));
+            return vector | std::views::transform(desugar()) | std::ranges::to<std::vector>();
         }
 
         template <class T>
@@ -87,14 +90,25 @@ namespace libdesugar {
             return desugar(surrounded.value);
         }
 
+        auto desugar(cst::Type_parameter_default_argument const& argument)
+        {
+            return std::visit<ast::Template_type_parameter::Default>(desugar(), argument.value);
+        }
+
+        auto desugar(cst::Value_parameter_default_argument const& argument)
+        {
+            return std::visit<ast::Template_value_parameter::Default>(desugar(), argument.value);
+        }
+
+        auto desugar(cst::Mutability_parameter_default_argument const& default_argument)
+        {
+            return std::visit<ast::Template_mutability_parameter::Default>(
+                desugar(), default_argument.value);
+        }
+
         auto deref_desugar()
         {
             return [this](utl::wrapper auto const node) { return this->desugar(*node); };
-        }
-
-        auto wrap_desugar()
-        {
-            return [this](auto const& node) { return wrap(this->desugar(node)); };
         }
 
         static auto desugar_mutability(std::optional<cst::Mutability> const&, utl::Source_range)

@@ -35,7 +35,7 @@ TEST("parenthesized")
 TEST("wildcard")
 {
     CHECK_SIMPLE_PARSE("_");
-    CHECK_EQUAL(parse("____"), "_");
+    CHECK_SIMPLE_PARSE("____");
 }
 
 TEST("name")
@@ -65,8 +65,8 @@ TEST("slice")
 
 TEST("alias")
 {
-    CHECK_EQUAL(parse("(_, ___) as x"), "(_, _) as x");
-    CHECK_EQUAL(parse("(___, _) as mut x"), "(_, _) as mut x");
+    CHECK_SIMPLE_PARSE("(_, ___) as x");
+    CHECK_SIMPLE_PARSE("(___, _) as mut x");
 }
 
 TEST("guarded")

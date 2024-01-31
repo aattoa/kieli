@@ -17,6 +17,13 @@ libformat::Indentation::~Indentation()
     state.current_indentation -= state.configuration.block_indentation;
 }
 
+auto libformat::State::format(cst::Wildcard const& wildcard) -> void
+{
+    auto const [start, stop] = wildcard.source_range;
+    cpputil::always_assert(start.column <= stop.column);
+    format("{:_^{}}", "", stop.column - start.column + 1);
+}
+
 auto libformat::State::format(cst::Qualified_name const& name) -> void
 {
     if (name.root_qualifier.has_value()) {
@@ -41,12 +48,7 @@ auto libformat::State::format(cst::Qualified_name const& name) -> void
 
 auto libformat::State::format(cst::Template_argument const& argument) -> void
 {
-    std::visit(
-        utl::Overload {
-            [&](cst::Template_argument::Wildcard const&) { format("_"); },
-            [&](auto const& other) { format(other); },
-        },
-        argument.value);
+    std::visit([&](auto const& other) { this->format(other); }, argument.value);
 }
 
 auto libformat::State::format(cst::Function_argument const& argument) -> void
@@ -65,7 +67,7 @@ auto libformat::State::format(cst::Mutability const& mutability) -> void
                 format("mut?{}", parameterized.name);
             },
             [&](cst::Mutability::Concrete const& concrete) {
-                format("{}", concrete.is_mutable ? "mut" : "immut");
+                format("{}", concrete.is_mutable.get() ? "mut" : "immut");
             },
         },
         mutability.value);

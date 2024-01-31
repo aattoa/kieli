@@ -38,9 +38,9 @@ namespace {
             return boolean;
         }
 
-        auto operator()(cst::type::Wildcard const&) -> ast::Type::Variant
+        auto operator()(cst::Wildcard const& wildcard) -> ast::Type::Variant
         {
-            return ast::type::Wildcard {};
+            return context.desugar(wildcard);
         }
 
         auto operator()(cst::type::Self const&) -> ast::Type::Variant

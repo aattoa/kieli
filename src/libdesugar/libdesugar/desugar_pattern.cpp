@@ -19,9 +19,9 @@ namespace {
             return literal;
         }
 
-        auto operator()(cst::pattern::Wildcard const&) -> ast::Pattern::Variant
+        auto operator()(cst::Wildcard const& wildcard) -> ast::Pattern::Variant
         {
-            return ast::pattern::Wildcard {};
+            return context.desugar(wildcard);
         }
 
         auto operator()(cst::pattern::Name const& name) -> ast::Pattern::Variant

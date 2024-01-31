@@ -125,7 +125,7 @@ namespace {
     {
         // clang-format off
         switch (token.type) {
-        case Token::Type::underscore:        return cst::pattern::Wildcard {};
+        case Token::Type::underscore:        return cst::Wildcard { token.source_range };
         case Token::Type::integer_literal:   return token.value_as<kieli::Integer>();
         case Token::Type::floating_literal:  return token.value_as<kieli::Floating>();
         case Token::Type::character_literal: return token.value_as<kieli::Character>();

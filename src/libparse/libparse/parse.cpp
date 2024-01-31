@@ -8,10 +8,9 @@ namespace {
 
     auto parse_self_parameter(Context& context) -> std::optional<cst::Self_parameter>
     {
-        Stage const stage = context.stage();
-
-        auto ampersand_token = context.try_extract(Token::Type::ampersand);
-        auto mutability      = parse_mutability(context);
+        Stage const stage           = context.stage();
+        auto const  ampersand_token = context.try_extract(Token::Type::ampersand);
+        auto        mutability      = parse_mutability(context);
         if (auto self_token = context.try_extract(Token::Type::lower_self)) {
             return cst::Self_parameter {
                 .mutability         = mutability,
@@ -25,100 +24,75 @@ namespace {
         return std::nullopt;
     }
 
-    auto parse_function_default_argument(Context& context)
-        -> std::optional<cst::Function_parameter::Default_argument>
+    template <class Default, parser auto parse_argument>
+    auto parse_default_argument(Context& context) -> std::optional<Default>
     {
-        return context.try_extract(Token::Type::equals).transform([&](Token const& equals_sign) {
-            return cst::Function_parameter::Default_argument {
-                .expression        = require<parse_expression>(context, "a default argument"),
-                .equals_sign_token = cst::Token::from_lexical(equals_sign),
+        return context.try_extract(Token::Type::equals).transform([&](Token const& equals) {
+            return Default {
+                .equals_sign_token = cst::Token::from_lexical(equals),
+                .value             = require<parse_argument>(context, "a default argument"),
             };
         });
     }
 
-    auto is_valid_template_parameter_default_argument(
-        cst::Template_parameter::Variant const& parameter,
-        cst::Template_argument::Variant const&  argument) -> bool
-    {
-        return std::holds_alternative<cst::Template_argument::Wildcard>(argument)
-            || (std::holds_alternative<cst::Template_parameter::Type_parameter>(parameter)
-                && std::holds_alternative<utl::Wrapper<cst::Type>>(argument))
-            || (std::holds_alternative<cst::Template_parameter::Value_parameter>(parameter)
-                && std::holds_alternative<utl::Wrapper<cst::Expression>>(argument))
-            || (std::holds_alternative<cst::Template_parameter::Mutability_parameter>(parameter)
-                && std::holds_alternative<cst::Mutability>(argument));
-    }
+    constexpr auto parse_type_parameter_default_argument
+        = parse_default_argument<cst::Type_parameter_default_argument, parse_type>;
+    constexpr auto parse_value_parameter_default_argument
+        = parse_default_argument<cst::Value_parameter_default_argument, parse_expression>;
+    constexpr auto parse_mutability_parameter_default_argument
+        = parse_default_argument<cst::Mutability_parameter_default_argument, parse_mutability>;
 
-    auto parse_template_parameter_default_argument(
-        Context& context, cst::Template_parameter::Variant const& variant)
-        -> std::optional<cst::Template_parameter::Default_argument>
-    {
-        return context.try_extract(Token::Type::equals).transform([&](Token const& equals_sign) {
-            cst::Template_parameter::Default_argument default_argument {
-                .argument
-                = require<parse_template_argument>(context, "a default template argument"),
-                .equals_sign_token = cst::Token::from_lexical(equals_sign),
-            };
-            if (!is_valid_template_parameter_default_argument(
-                    variant, default_argument.argument.value))
-            {
-                context.compile_info().diagnostics.error(
-                    context.source(),
-                    default_argument.argument.source_range(),
-                    "A template {0} parameter's default argument must "
-                    "be a {0} argument, but found a {1} argument",
-                    cst::Template_parameter::kind_description(variant),
-                    cst::Template_argument::kind_description(default_argument.argument.value));
-            }
-            return default_argument;
-        });
-    }
-
-    auto extract_value_or_mutability_template_parameter(
+    auto extract_template_value_or_mutability_parameter(
         Context& context, kieli::Name_lower const name) -> cst::Template_parameter::Variant
     {
         if (auto const colon = context.try_extract(Token::Type::colon)) {
             if (auto const mut_keyword = context.try_extract(Token::Type::mut)) {
-                return cst::Template_parameter::Mutability_parameter {
+                return cst::Template_mutability_parameter {
                     .name              = name,
                     .colon_token       = cst::Token::from_lexical(colon.value()),
                     .mut_keyword_token = cst::Token::from_lexical(mut_keyword.value()),
+                    .default_argument  = parse_mutability_parameter_default_argument(context),
                 };
             }
             if (auto const type = parse_type(context)) {
-                return cst::Template_parameter::Value_parameter {
+                return cst::Template_value_parameter {
                     .name = name,
                     .type_annotation { cst::Type_annotation {
                         .type        = type.value(),
                         .colon_token = cst::Token::from_lexical(colon.value()),
                     } },
+                    .default_argument = parse_value_parameter_default_argument(context),
                 };
             }
             context.error_expected("'mut' or a type");
         }
-        return cst::Template_parameter::Value_parameter { .name = name };
+        return cst::Template_value_parameter {
+            .name             = name,
+            .default_argument = parse_value_parameter_default_argument(context),
+        };
     }
 
-    auto extract_type_template_parameter(Context& context, kieli::Name_upper const name)
+    auto extract_template_type_parameter(Context& context, kieli::Name_upper const name)
         -> cst::Template_parameter::Variant
     {
         if (auto const colon = context.try_extract(Token::Type::colon)) {
-            return cst::Template_parameter::Type_parameter {
-                .name        = name,
-                .colon_token = cst::Token::from_lexical(colon.value()),
-                .classes     = extract_class_references(context),
+            return cst::Template_type_parameter {
+                .name             = name,
+                .colon_token      = cst::Token::from_lexical(colon.value()),
+                .classes          = extract_class_references(context),
+                .default_argument = parse_type_parameter_default_argument(context),
             };
         }
-        return cst::Template_parameter::Type_parameter { .name = name };
+        return cst::Template_type_parameter { .name = name };
     }
 
     auto dispatch_parse_template_parameter(Context& context)
         -> std::optional<cst::Template_parameter::Variant>
     {
         auto const extract_lower
-            = std::bind_front(extract_value_or_mutability_template_parameter, std::ref(context));
+            = std::bind_front(extract_template_value_or_mutability_parameter, std::ref(context));
         auto const extract_upper
-            = std::bind_front(extract_type_template_parameter, std::ref(context));
+            = std::bind_front(extract_template_type_parameter, std::ref(context));
         return parse_lower_name(context).transform(extract_lower).or_else([&] {
             return parse_upper_name(context).transform(extract_upper);
         });
@@ -232,7 +206,7 @@ auto libparse::parse_template_parameters(Context& context)
 {
     return parse_bracketed<
         parse_comma_separated_one_or_more<parse_template_parameter, "a template parameter">,
-        "a '[' followed by a bracketed list of template parameters">(context);
+        "a bracketed list of template parameters">(context);
 }
 
 auto libparse::parse_template_parameter(Context& context) -> std::optional<cst::Template_parameter>
@@ -241,9 +215,8 @@ auto libparse::parse_template_parameter(Context& context) -> std::optional<cst::
     return dispatch_parse_template_parameter(context).transform(
         [&](cst::Template_parameter::Variant&& variant) {
             return cst::Template_parameter {
-                .default_argument = parse_template_parameter_default_argument(context, variant),
-                .value            = std::move(variant),
-                .source_range     = context.up_to_current(anchor_source_range),
+                .value        = std::move(variant),
+                .source_range = context.up_to_current(anchor_source_range),
             };
         });
 }
@@ -251,9 +224,7 @@ auto libparse::parse_template_parameter(Context& context) -> std::optional<cst::
 auto libparse::parse_template_argument(Context& context) -> std::optional<cst::Template_argument>
 {
     if (auto const wildcard = context.try_extract(Token::Type::underscore)) {
-        return cst::Template_argument { cst::Template_argument::Wildcard {
-            .source_range = wildcard->source_range,
-        } };
+        return cst::Template_argument { cst::Wildcard { .source_range = wildcard->source_range } };
     }
     if (auto const type = parse_type(context)) {
         return cst::Template_argument { type.value() };
@@ -319,7 +290,7 @@ auto libparse::parse_function_parameter(Context& context) -> std::optional<cst::
         return cst::Function_parameter {
             .pattern          = pattern,
             .type             = parse_type_annotation(context),
-            .default_argument = parse_function_default_argument(context),
+            .default_argument = parse_value_parameter_default_argument(context),
         };
     });
 }
@@ -401,9 +372,9 @@ auto libparse::extract_qualified_name(Context& context, std::optional<cst::Root_
 auto libparse::extract_class_references(Context& context)
     -> cst::Separated_sequence<cst::Class_reference>
 {
-    return extract_required<
-        parse_separated_one_or_more<parse_class_reference, "a class reference", Token::Type::plus>,
-        "one or more '+'-separated class references">(context);
+    return require<
+        parse_separated_one_or_more<parse_class_reference, "a class reference", Token::Type::plus>>(
+        context, "one or more '+'-separated class references");
 }
 
 auto kieli::parse(utl::Source::Wrapper const source, Compile_info& compile_info) -> cst::Module

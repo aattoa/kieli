@@ -30,9 +30,9 @@ namespace {
             state.format("String");
         }
 
-        auto operator()(cst::type::Wildcard const&)
+        auto operator()(cst::Wildcard const& wildcard)
         {
-            state.format("_");
+            state.format(wildcard);
         }
 
         auto operator()(cst::type::Self const&)

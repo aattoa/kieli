@@ -87,13 +87,12 @@ namespace {
 
     auto extract_function(Context& context, Token const& fn_keyword) -> cst::Type::Variant
     {
-        static constexpr auto extract_parameter_types = extract_required<
-            parse_parenthesized<
-                pretend_parse<extract_comma_separated_zero_or_more<parse_type, "a parameter type">>,
-                "">,
-            "a parenthesized list of argument types">;
+        static constexpr auto extract_parameter_types = require<parse_parenthesized<
+            pretend_parse<extract_comma_separated_zero_or_more<parse_type, "a parameter type">>,
+            "">>;
 
-        auto parameters_types = extract_parameter_types(context);
+        auto parameters_types
+            = extract_parameter_types(context, "a parenthesized list of argument types");
         auto return_type_annotation
             = require<parse_type_annotation>(context, "a ':' followed by the function return type");
 
@@ -106,11 +105,10 @@ namespace {
 
     auto extract_typeof(Context& context, Token const& typeof_keyword) -> cst::Type::Variant
     {
-        static constexpr auto extract_inspected = extract_required<
-            parse_parenthesized<parse_expression, "the inspected expression">,
-            "a parenthesized expression">;
+        static constexpr auto extract_inspected
+            = require<parse_parenthesized<parse_expression, "the inspected expression">>;
         return cst::type::Typeof {
-            .inspected_expression = extract_inspected(context),
+            .inspected_expression = extract_inspected(context, "a parenthesized expression"),
             .typeof_keyword_token = cst::Token::from_lexical(typeof_keyword),
         };
     }
@@ -158,7 +156,7 @@ namespace {
         case Token::Type::character_type: return kieli::built_in_type::Character {};
         case Token::Type::boolean_type:   return kieli::built_in_type::Boolean {};
         case Token::Type::string_type:    return kieli::built_in_type::String {};
-        case Token::Type::underscore:     return cst::type::Wildcard {};
+        case Token::Type::underscore:     return cst::Wildcard { token.source_range };
         case Token::Type::upper_self:     return cst::type::Self {};
         case Token::Type::paren_open:     return extract_tuple(context, token);
         case Token::Type::bracket_open:   return extract_array_or_slice(context, token);

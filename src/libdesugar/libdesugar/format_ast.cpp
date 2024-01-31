@@ -15,6 +15,7 @@
     auto std::formatter<__VA_ARGS__>::format(__VA_ARGS__ const& value, auto& context) \
         const -> decltype(context.out())
 
+DECLARE_FORMATTER(ast::Wildcard);
 DECLARE_FORMATTER(ast::Expression);
 DECLARE_FORMATTER(ast::Pattern);
 DECLARE_FORMATTER(ast::Type);
@@ -253,7 +254,7 @@ namespace {
             std::format_to(out, "({})", tuple.field_patterns);
         }
 
-        auto operator()(ast::pattern::Wildcard const&)
+        auto operator()(ast::Wildcard const&)
         {
             std::format_to(out, "_");
         }
@@ -332,7 +333,7 @@ namespace {
             std::format_to(out, "String");
         }
 
-        auto operator()(ast::type::Wildcard const&)
+        auto operator()(ast::Wildcard const&)
         {
             std::format_to(out, "_");
         }
@@ -485,6 +486,12 @@ DEFINE_FORMATTER(ast::Definition)
     return context.out();
 }
 
+DEFINE_FORMATTER(ast::Wildcard)
+{
+    (void)value;
+    return std::format_to(context.out(), "_");
+}
+
 DEFINE_FORMATTER(ast::Mutability)
 {
     std::visit(
@@ -553,41 +560,39 @@ DEFINE_FORMATTER(ast::Function_parameter)
 
 DEFINE_FORMATTER(ast::Template_argument)
 {
-    std::visit(
-        utl::Overload {
-            [&](ast::Template_argument::Wildcard const&) { std::format_to(context.out(), "_"); },
-            [&](auto const& argument) { std::format_to(context.out(), "{}", argument); },
-        },
-        value.value);
-    return context.out();
+    return std::format_to(context.out(), "{}", value.value);
 }
 
 DEFINE_FORMATTER(ast::Template_parameter)
 {
     std::visit(
         utl::Overload {
-            [&](ast::Template_parameter::Type_parameter const& type_parameter) {
-                std::format_to(context.out(), "{}", type_parameter.name);
-                if (type_parameter.classes.empty()) {
-                    return;
+            [&](ast::Template_type_parameter const& parameter) {
+                std::format_to(context.out(), "{}", parameter.name);
+                if (!parameter.classes.empty()) {
+                    std::format_to(context.out(), ": {}", utl::fmt::join(parameter.classes, " + "));
                 }
-                std::format_to(
-                    context.out(), ": {}", utl::fmt::join(type_parameter.classes, " + "));
-            },
-            [&](ast::Template_parameter::Value_parameter const& value_parameter) {
-                std::format_to(context.out(), "{}", value_parameter.name);
-                if (value_parameter.type.has_value()) {
-                    std::format_to(context.out(), ": {}", value_parameter.type.value());
+                if (parameter.default_argument.has_value()) {
+                    std::format_to(context.out(), " = {}", parameter.default_argument.value());
                 }
             },
-            [&](ast::Template_parameter::Mutability_parameter const& mutability_parameter) {
-                std::format_to(context.out(), "{}: mut", mutability_parameter.name);
+            [&](ast::Template_value_parameter const& parameter) {
+                std::format_to(context.out(), "{}", parameter.name);
+                if (parameter.type.has_value()) {
+                    std::format_to(context.out(), ": {}", parameter.type.value());
+                }
+                if (parameter.default_argument.has_value()) {
+                    std::format_to(context.out(), " = {}", parameter.default_argument.value());
+                }
+            },
+            [&](ast::Template_mutability_parameter const& parameter) {
+                std::format_to(context.out(), "{}: mut", parameter.name);
+                if (parameter.default_argument.has_value()) {
+                    std::format_to(context.out(), " = {}", parameter.default_argument.value());
+                }
             },
         },
         value.value);
-    if (value.default_argument.has_value()) {
-        std::format_to(context.out(), " = {}", value.default_argument.value());
-    }
     return context.out();
 }
 

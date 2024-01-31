@@ -58,9 +58,13 @@ namespace cst {
         Token              colon_token;
     };
 
+    struct Wildcard {
+        utl::Source_range source_range;
+    };
+
     struct Mutability {
         struct Concrete {
-            bool is_mutable = false;
+            utl::Explicit<bool> is_mutable;
         };
 
         struct Parameterized {
@@ -84,10 +88,6 @@ namespace cst {
     };
 
     struct Template_argument {
-        struct Wildcard {
-            utl::Source_range source_range;
-        };
-
         using Variant = std::variant< //
             utl::Wrapper<Type>,
             utl::Wrapper<Expression>,
@@ -95,8 +95,7 @@ namespace cst {
             Wildcard>;
         Variant value;
 
-        [[nodiscard]] auto        source_range() const -> utl::Source_range;
-        [[nodiscard]] static auto kind_description(Variant const&) noexcept -> std::string_view;
+        [[nodiscard]] auto source_range() const -> utl::Source_range;
     };
 
     using Template_arguments = Surrounded<Separated_sequence<Template_argument>>;
@@ -132,15 +131,20 @@ namespace cst {
         utl::Source_range                 source_range;
     };
 
-    struct Function_parameter {
-        struct Default_argument {
-            utl::Wrapper<Expression> expression;
-            Token                    equals_sign_token;
-        };
+    template <class T>
+    struct Default_argument {
+        Token                     equals_sign_token;
+        std::variant<T, Wildcard> value;
+    };
 
-        utl::Wrapper<Pattern>           pattern;
-        std::optional<Type_annotation>  type;
-        std::optional<Default_argument> default_argument;
+    using Type_parameter_default_argument       = Default_argument<utl::Wrapper<Type>>;
+    using Value_parameter_default_argument      = Default_argument<utl::Wrapper<Expression>>;
+    using Mutability_parameter_default_argument = Default_argument<Mutability>;
+
+    struct Function_parameter {
+        utl::Wrapper<Pattern>                           pattern;
+        std::optional<Type_annotation>                  type;
+        std::optional<Value_parameter_default_argument> default_argument;
     };
 
     struct Function_parameters {
@@ -156,37 +160,34 @@ namespace cst {
 
     using Function_arguments = Surrounded<Separated_sequence<Function_argument>>;
 
+    struct Template_type_parameter {
+        kieli::Name_upper                              name;
+        std::optional<Token>                           colon_token;
+        Separated_sequence<Class_reference>            classes;
+        std::optional<Type_parameter_default_argument> default_argument;
+    };
+
+    struct Template_value_parameter {
+        kieli::Name_lower                               name;
+        std::optional<Type_annotation>                  type_annotation;
+        std::optional<Value_parameter_default_argument> default_argument;
+    };
+
+    struct Template_mutability_parameter {
+        kieli::Name_lower                                    name;
+        Token                                                colon_token;
+        Token                                                mut_keyword_token;
+        std::optional<Mutability_parameter_default_argument> default_argument;
+    };
+
     struct Template_parameter {
-        struct Type_parameter {
-            kieli::Name_upper                   name;
-            std::optional<Token>                colon_token;
-            Separated_sequence<Class_reference> classes;
-        };
+        using Variant = std::variant<
+            Template_type_parameter,
+            Template_value_parameter,
+            Template_mutability_parameter>;
 
-        struct Value_parameter {
-            kieli::Name_lower              name;
-            std::optional<Type_annotation> type_annotation;
-        };
-
-        struct Mutability_parameter {
-            kieli::Name_lower name;
-            Token             colon_token;
-            Token             mut_keyword_token;
-        };
-
-        struct Default_argument {
-            // TODO: Encode default argument kind in the type system
-            Template_argument argument;
-            Token             equals_sign_token;
-        };
-
-        using Variant = std::variant<Type_parameter, Value_parameter, Mutability_parameter>;
-
-        std::optional<Default_argument> default_argument;
-        Variant                         value;
-        utl::Source_range               source_range;
-
-        static auto kind_description(Variant const&) noexcept -> std::string_view;
+        Variant           value;
+        utl::Source_range source_range;
     };
 
     using Template_parameters = Surrounded<Separated_sequence<Template_parameter>>;
@@ -480,8 +481,6 @@ namespace cst {
             Surrounded<utl::Wrapper<Pattern>> pattern;
         };
 
-        struct Wildcard {};
-
         struct Name {
             kieli::Name_lower         name;
             std::optional<Mutability> mutability;
@@ -531,8 +530,8 @@ namespace cst {
             kieli::Character,
             kieli::Boolean,
             kieli::String,
+            Wildcard,
             pattern::Parenthesized,
-            pattern::Wildcard,
             pattern::Name,
             pattern::Constructor,
             pattern::Abbreviated_constructor,
@@ -550,8 +549,6 @@ namespace cst {
         struct Parenthesized {
             Surrounded<utl::Wrapper<Type>> type;
         };
-
-        struct Wildcard {};
 
         struct Self {};
 
@@ -617,7 +614,7 @@ namespace cst {
             kieli::built_in_type::Character,
             kieli::built_in_type::Boolean,
             kieli::built_in_type::String,
-            type::Wildcard,
+            Wildcard,
             type::Self,
             type::Typename,
             type::Tuple,

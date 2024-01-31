@@ -36,7 +36,7 @@ TEST("parenthesized")
 TEST("wildcard")
 {
     CHECK_SIMPLE_PARSE("_");
-    // TODO: CHECK_SIMPLE_PARSE("____");
+    CHECK_SIMPLE_PARSE("____");
 }
 
 TEST("self")

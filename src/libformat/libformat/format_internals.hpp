@@ -19,6 +19,7 @@ namespace libformat {
             std::format_to(std::back_inserter(string), fmt, std::forward<Args>(args)...);
         }
 
+        auto format(cst::Wildcard const&) -> void;
         auto format(cst::Expression const&) -> void;
         auto format(cst::Pattern const&) -> void;
         auto format(cst::Type const&) -> void;

@@ -64,21 +64,18 @@ namespace utl {
 
     template <std::size_t length>
     struct [[nodiscard]] Metastring {
-        char characters[length];
+        std::array<char, length> m_string;
 
-        consteval Metastring(char const* pointer) noexcept // NOLINT: implicit
+        consteval Metastring(char const (&string)[length])
         {
-            std::copy_n(pointer, length, characters);
+            std::copy_n(static_cast<char const*>(string), length, m_string.data());
         }
 
         [[nodiscard]] consteval auto view() const noexcept -> std::string_view
         {
-            return { characters, length - 1 };
+            return { m_string.data(), length - 1 };
         }
     };
-
-    template <std::size_t length>
-    Metastring(char const (&)[length]) -> Metastring<length>;
 } // namespace utl
 
 namespace utl::inline literals {

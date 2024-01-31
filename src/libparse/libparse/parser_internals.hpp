@@ -125,12 +125,9 @@ namespace libparse {
     }
 
     template <parser auto parser, utl::Metastring description>
-    auto extract_required(Context& context) -> Parser_target<parser>
+    auto require(Context& context) -> Parser_target<parser>
     {
-        if (auto result = parser(context)) {
-            return std::move(result.value());
-        }
-        context.error_expected(description.view());
+        return require<parser>(context, description.view());
     }
 
     template <
@@ -142,7 +139,7 @@ namespace libparse {
     {
         return context.try_extract(open_type).transform([&](Token const& open) {
             return cst::Surrounded<Parser_target<parser>> {
-                .value       = extract_required<parser, description>(context),
+                .value       = require<parser>(context, description.view()),
                 .open_token  = cst::Token::from_lexical(open),
                 .close_token = cst::Token::from_lexical(context.require_extract(close_type)),
             };
@@ -171,7 +168,7 @@ namespace libparse {
             sequence.elements.push_back(std::move(first_element.value()));
             while (auto separator = context.try_extract(separator_type)) {
                 sequence.separator_tokens.push_back(cst::Token::from_lexical(separator.value()));
-                sequence.elements.push_back(extract_required<parser, description>(context));
+                sequence.elements.push_back(require<parser>(context, description.view()));
             }
         }
         return sequence;
