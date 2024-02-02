@@ -14,7 +14,7 @@
         while a { b }
 
     would be desugared to the following AST node:
-        loop { if a { b } else { break } }
+        loop { if a { b } else { break () } }
 
 */
 
@@ -46,8 +46,11 @@ namespace ast {
     };
 
     struct Template_argument {
-        using Variant
-            = std::variant<utl::Wrapper<Type>, utl::Wrapper<Expression>, Mutability, Wildcard>;
+        using Variant = std::variant< //
+            utl::Wrapper<Type>,
+            utl::Wrapper<Expression>,
+            Mutability,
+            Wildcard>;
         Variant value;
     };
 
@@ -60,8 +63,7 @@ namespace ast {
     struct Root_qualifier {
         struct Global {};
 
-        using Variant = std::variant<Global, utl::Wrapper<Type>>;
-        Variant value;
+        std::variant<Global, utl::Wrapper<Type>> value;
     };
 
     struct Qualified_name {
@@ -159,9 +161,23 @@ namespace ast {
             utl::Wrapper<Expression>       invocable;
         };
 
+        struct Unit_initializer {
+            Qualified_name constructor;
+        };
+
+        struct Tuple_initializer {
+            Qualified_name                        constructor;
+            std::vector<utl::Wrapper<Expression>> initializers;
+        };
+
         struct Struct_initializer {
-            utl::Flatmap<kieli::Name_lower, utl::Wrapper<Expression>> member_initializers;
-            utl::Wrapper<Type>                                        struct_type;
+            struct Field {
+                kieli::Name_lower        name;
+                utl::Wrapper<Expression> expression;
+            };
+
+            Qualified_name     constructor;
+            std::vector<Field> initializers;
         };
 
         struct Binary_operator_invocation {
@@ -294,6 +310,8 @@ namespace ast {
             expression::Continue,
             expression::Block,
             expression::Invocation,
+            expression::Unit_initializer,
+            expression::Tuple_initializer,
             expression::Struct_initializer,
             expression::Binary_operator_invocation,
             expression::Struct_field_access,
@@ -328,14 +346,32 @@ namespace ast {
             Mutability        mutability;
         };
 
+        struct Field {
+            kieli::Name_lower                    name;
+            std::optional<utl::Wrapper<Pattern>> pattern;
+        };
+
+        struct Struct_constructor {
+            std::vector<Field> fields;
+        };
+
+        struct Tuple_constructor {
+            utl::Wrapper<Pattern> pattern;
+        };
+
+        struct Unit_constructor {};
+
+        using Constructor_body
+            = std::variant<Struct_constructor, Tuple_constructor, Unit_constructor>;
+
         struct Constructor {
-            Qualified_name                       constructor_name;
-            std::optional<utl::Wrapper<Pattern>> payload_pattern;
+            Qualified_name   name;
+            Constructor_body body;
         };
 
         struct Abbreviated_constructor {
-            kieli::Name_lower                    constructor_name;
-            std::optional<utl::Wrapper<Pattern>> payload_pattern;
+            kieli::Name_upper name;
+            Constructor_body  body;
         };
 
         struct Tuple {
@@ -480,25 +516,31 @@ namespace ast {
             Template_parameters template_parameters;
         };
 
-        struct Struct {
-            struct Member {
-                kieli::Name_lower name;
-                Type              type;
-                utl::Source_range source_range;
-            };
+        struct Field {
+            kieli::Name_lower name;
+            Type              type;
+            utl::Source_range source_range;
+        };
 
-            std::vector<Member> members;
-            kieli::Name_upper   name;
-            Template_parameters template_parameters;
+        struct Struct_constructor {
+            std::vector<Field> fields;
+        };
+
+        struct Tuple_constructor {
+            std::vector<utl::Wrapper<Type>> types;
+        };
+
+        struct Unit_constructor {};
+
+        using Constructor_body
+            = std::variant<Struct_constructor, Tuple_constructor, Unit_constructor>;
+
+        struct Constructor {
+            kieli::Name_upper name;
+            Constructor_body  body;
         };
 
         struct Enum {
-            struct Constructor {
-                kieli::Name_lower                              name;
-                std::optional<std::vector<utl::Wrapper<Type>>> payload_types;
-                utl::Source_range                              source_range;
-            };
-
             std::vector<Constructor> constructors;
             kieli::Name_upper        name;
             Template_parameters      template_parameters;
@@ -540,7 +582,6 @@ namespace ast {
     struct Definition {
         using Variant = std::variant<
             definition::Function,
-            definition::Struct,
             definition::Enum,
             definition::Alias,
             definition::Typeclass,
@@ -575,9 +616,13 @@ namespace ast {
     auto format_to(Function_argument const&, std::string&) -> void;
     auto format_to(Template_parameter const&, std::string&) -> void;
     auto format_to(Template_argument const&, std::string&) -> void;
+    auto format_to(pattern::Field const&, std::string&) -> void;
+    auto format_to(pattern::Constructor_body const&, std::string&) -> void;
+    auto format_to(pattern::Constructor const&, std::string&) -> void;
+    auto format_to(definition::Field const&, std::string&) -> void;
+    auto format_to(definition::Constructor_body const&, std::string&) -> void;
+    auto format_to(definition::Constructor const&, std::string&) -> void;
     auto format_to(definition::Template_parameters const&, std::string&) -> void;
-    auto format_to(definition::Struct::Member const&, std::string&) -> void;
-    auto format_to(definition::Enum::Constructor const&, std::string&) -> void;
 
     inline constexpr auto to_string = [](auto const& x) -> std::string
         requires requires(std::string out) { ast::format_to(x, out); }

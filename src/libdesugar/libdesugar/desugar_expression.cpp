@@ -1,9 +1,36 @@
 #include <libutl/common/utilities.hpp>
 #include <libdesugar/desugaring_internals.hpp>
 
-using namespace libdesugar;
-
 namespace {
+
+    using namespace libdesugar;
+
+    auto ensure_no_duplicate_fields(
+        Context& context, cst::expression::Struct_initializer const& initializer) -> void
+    {
+        auto const& initializers = initializer.initializers.value.elements;
+        for (auto it = initializers.begin(); it != initializers.end(); ++it) {
+            if (auto duplicate = std::ranges::find(
+                    it + 1,
+                    initializers.end(),
+                    it->name,
+                    &cst::expression::Struct_initializer::Field::name);
+                duplicate != initializers.end())
+            {
+                context.diagnostics().error(
+                    {
+                        { context.source,
+                          it->name.source_range,
+                          "First specified here",
+                          cppdiag::Severity::information },
+                        { context.source, duplicate->name.source_range, "Later specified here" },
+                    },
+                    "Struct initializer contains more than one initializer for member {}",
+                    it->name);
+            }
+        }
+    }
+
     constexpr std::tuple operator_precedence_table {
         std::to_array<std::string_view>({ "*", "/", "%" }),
         std::to_array<std::string_view>({ "+", "-" }),
@@ -298,37 +325,28 @@ namespace {
             };
         }
 
-        auto operator()(cst::expression::Struct_initializer const& cst_struct_initializer)
+        auto operator()(cst::expression::Unit_initializer const&) -> ast::Expression::Variant
+        {
+            cpputil::todo();
+        }
+
+        auto operator()(cst::expression::Tuple_initializer const& initializer)
             -> ast::Expression::Variant
         {
-            ast::expression::Struct_initializer ast_struct_initializer {
-                .struct_type = context.desugar(cst_struct_initializer.struct_type),
+            return ast::expression::Tuple_initializer {
+                .constructor  = context.desugar(initializer.constructor),
+                .initializers = context.desugar(initializer.initializers),
             };
-            auto const& initializers = cst_struct_initializer.member_initializers.value.elements;
-            for (auto it = initializers.begin(); it != initializers.end(); ++it) {
-                static constexpr auto projection
-                    = &cst::expression::Struct_initializer::Member_initializer::name;
-                if (auto duplicate
-                    = std::ranges::find(it + 1, initializers.end(), it->name, projection);
-                    duplicate != initializers.end())
-                {
-                    context.diagnostics().error(
-                        {
-                            { context.source,
-                              it->name.source_range,
-                              "First specified here",
-                              cppdiag::Severity::information },
-                            { context.source,
-                              duplicate->name.source_range,
-                              "Later specified here" },
-                        },
-                        "Struct initializer contains more than one initializer for member {}",
-                        it->name);
-                }
-                ast_struct_initializer.member_initializers.add_new_unchecked(
-                    it->name, context.desugar(it->expression));
-            }
-            return ast_struct_initializer;
+        }
+
+        auto operator()(cst::expression::Struct_initializer const& initializer)
+            -> ast::Expression::Variant
+        {
+            ensure_no_duplicate_fields(context, initializer);
+            return ast::expression::Struct_initializer {
+                .constructor  = context.desugar(initializer.constructor),
+                .initializers = context.desugar(initializer.initializers),
+            };
         }
 
         auto operator()(cst::expression::Binary_operator_invocation_sequence const& sequence)
@@ -541,6 +559,7 @@ namespace {
             cpputil::unreachable();
         }
     };
+
 } // namespace
 
 auto libdesugar::Context::desugar(cst::Expression const& expression) -> ast::Expression

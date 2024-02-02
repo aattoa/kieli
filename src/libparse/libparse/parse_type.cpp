@@ -35,7 +35,7 @@ namespace {
         return extract_qualified_typename(
             context,
             cst::Root_qualifier {
-                .value = cst::Root_qualifier::Global {},
+                .value = cst::Root_qualifier::Global { cst::Token::from_lexical(global) },
                 .double_colon_token
                 = cst::Token::from_lexical(context.require_extract(Token::Type::double_colon)),
                 .source_range = global.source_range,

@@ -100,10 +100,6 @@ namespace {
                     add_to_environment<libresolve::Function_info>(
                         context, source, environment, function.signature.name, std::move(function));
                 },
-                [&](ast::definition::Struct&& structure) {
-                    add_to_environment<libresolve::Structure_info>(
-                        context, source, environment, structure.name, std::move(structure));
-                },
                 [&](ast::definition::Enum&& enumeration) {
                     add_to_environment<libresolve::Enumeration_info>(
                         context, source, environment, enumeration.name, std::move(enumeration));

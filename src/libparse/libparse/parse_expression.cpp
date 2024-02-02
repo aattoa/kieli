@@ -74,47 +74,25 @@ namespace {
         };
     }
 
-    auto parse_struct_member_initializer(Context& context)
-        -> std::optional<cst::expression::Struct_initializer::Member_initializer>
+    auto parse_struct_field_initializer(Context& context)
+        -> std::optional<cst::expression::Struct_initializer::Field>
     {
         return parse_lower_name(context).transform([&](kieli::Name_lower const name) {
             Token const equals_sign = context.require_extract(Token::Type::equals);
-            return cst::expression::Struct_initializer::Member_initializer {
-                .name       = name,
-                .expression = require<parse_expression>(context, "an initializer expression"),
+            return cst::expression::Struct_initializer::Field {
+                .name              = name,
                 .equals_sign_token = cst::Token::from_lexical(equals_sign),
+                .expression = require<parse_expression>(context, "an initializer expression"),
             };
         });
     }
 
-    auto extract_struct_initializer(
-        Context&                      context,
-        Token const&                  brace_open,
-        utl::Wrapper<cst::Type> const struct_type) -> cst::Expression::Variant
-    {
-        static constexpr auto extract_member_initializers = extract_comma_separated_zero_or_more<
-            parse_struct_member_initializer,
-            "a member initializer">;
-
-        auto        initializers = extract_member_initializers(context);
-        Token const brace_close  = context.require_extract(Token::Type::brace_close);
-
-        return cst::expression::Struct_initializer {
-            .member_initializers {
-                .value       = std::move(initializers),
-                .open_token  = cst::Token::from_lexical(brace_open),
-                .close_token = cst::Token::from_lexical(brace_close),
-            },
-            .struct_type = struct_type,
-        };
-    }
-
-    auto extract_qualified_lower_name_or_struct_initializer(
+    auto extract_qualified_lower_name_or_initializer(
         Context& context, std::optional<cst::Root_qualifier>&& root) -> cst::Expression::Variant
     {
-        auto name               = extract_qualified_name(context, std::move(root));
-        auto template_arguments = parse_template_arguments(context);
+        auto name = extract_qualified_name(context, std::move(root));
         if (!name.is_upper()) {
+            auto template_arguments = parse_template_arguments(context);
             if (template_arguments) {
                 return cst::expression::Template_application {
                     .template_arguments = std::move(template_arguments.value()),
@@ -123,43 +101,46 @@ namespace {
             }
             return cst::expression::Variable { std::move(name) };
         }
-        if (auto const brace_open = context.try_extract(Token::Type::brace_open)) {
-            auto type = std::invoke([&]() -> cst::Type::Variant {
-                if (template_arguments) {
-                    return cst::type::Template_application {
-                        .template_arguments = std::move(template_arguments.value()),
-                        .name               = std::move(name),
-                    };
-                }
-                return cst::type::Typename { std::move(name) };
-            });
-            return extract_struct_initializer(
-                context,
-                brace_open.value(),
-                context.wrap(cst::Type {
-                    .value        = std::move(type),
-                    .source_range = context.up_to_current(name.source_range),
-                }));
+
+        static constexpr parser auto parse_braced_initializers = parse_braced<
+            parse_comma_separated_one_or_more<
+                parse_struct_field_initializer,
+                "a field initializer">,
+            "one or more field initializers">;
+        static constexpr parser auto parse_parenthesized_initializers = parse_parenthesized<
+            parse_comma_separated_one_or_more<parse_expression, "an expression">,
+            "one or more expressions">;
+
+        if (auto initializers = parse_braced_initializers(context)) {
+            return cst::expression::Struct_initializer {
+                .constructor  = std::move(name),
+                .initializers = std::move(initializers.value()),
+            };
         }
-        context.compile_info().diagnostics.error(
-            context.source(),
-            name.primary_name.source_range,
-            "Expected an expression, but found a type");
+        if (auto initializers = parse_parenthesized_initializers(context)) {
+            return cst::expression::Tuple_initializer {
+                .constructor  = std::move(name),
+                .initializers = std::move(initializers.value()),
+            };
+        }
+        return cst::expression::Unit_initializer { .constructor = std::move(name) };
     }
 
     auto extract_identifier(Context& context, Stage const stage) -> cst::Expression::Variant
     {
         context.unstage(stage);
-        return extract_qualified_lower_name_or_struct_initializer(context, std::nullopt);
+        return extract_qualified_lower_name_or_initializer(context, std::nullopt);
     }
 
     auto extract_global_identifier(Context& context, Token const& global)
         -> cst::Expression::Variant
     {
-        return extract_qualified_lower_name_or_struct_initializer(
+        return extract_qualified_lower_name_or_initializer(
             context,
             cst::Root_qualifier {
-                .value = cst::Root_qualifier::Global {},
+                .value { cst::Root_qualifier::Global {
+                    .global_keyword = cst::Token::from_lexical(global),
+                } },
                 .double_colon_token
                 = cst::Token::from_lexical(context.require_extract(Token::Type::double_colon)),
                 .source_range = global.source_range,
@@ -461,17 +442,13 @@ namespace {
         return parse_type(context).transform(
             [&](utl::Wrapper<cst::Type> const type) -> cst::Expression::Variant {
                 if (auto const double_colon = context.try_extract(Token::Type::double_colon)) {
-                    return extract_qualified_lower_name_or_struct_initializer(
+                    return extract_qualified_lower_name_or_initializer(
                         context,
                         cst::Root_qualifier {
                             .value              = type,
                             .double_colon_token = cst::Token::from_lexical(double_colon.value()),
                             .source_range       = type->source_range,
                         });
-                }
-
-                if (auto const brace_open = context.try_extract(Token::Type::brace_open)) {
-                    return extract_struct_initializer(context, brace_open.value(), type);
                 }
                 context.compile_info().diagnostics.error(
                     context.source(),

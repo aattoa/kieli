@@ -2,21 +2,32 @@
 #include <libformat/format_internals.hpp>
 
 namespace {
+    auto format_constructor_body(
+        libformat::State& state, cst::pattern::Constructor_body const& body)
+    {
+        std::visit(
+            utl::Overload {
+                [&](cst::pattern::Struct_constructor const& constructor) {
+                    state.format(" {{ ");
+                    state.format_comma_separated(constructor.fields.value.elements);
+                    state.format(" }}");
+                },
+                [&](cst::pattern::Tuple_constructor const& constructor) {
+                    state.format("(");
+                    state.format(constructor.pattern.value);
+                    state.format(")");
+                },
+                [](cst::pattern::Unit_constructor const&) {},
+            },
+            body);
+    }
+
     struct Pattern_format_visitor {
         libformat::State& state;
 
-        template <kieli::literal Literal>
-        auto operator()(Literal const& literal)
+        auto operator()(kieli::literal auto const& literal)
         {
-            if constexpr (std::is_same_v<Literal, kieli::String>) {
-                state.format("\"{}\"", literal.value);
-            }
-            else if constexpr (std::is_same_v<Literal, kieli::Character>) {
-                state.format("'{}'", literal.value);
-            }
-            else {
-                state.format("{}", literal.value);
-            }
+            state.format("{}", literal);
         }
 
         auto operator()(cst::pattern::Parenthesized const& parenthesized)
@@ -68,24 +79,14 @@ namespace {
 
         auto operator()(cst::pattern::Constructor const& constructor)
         {
-            state.format(constructor.constructor_name);
-            if (!constructor.payload_pattern.has_value()) {
-                return;
-            }
-            state.format("(");
-            state.format(constructor.payload_pattern->value);
-            state.format(")");
+            state.format(constructor.name);
+            format_constructor_body(state, constructor.body);
         }
 
         auto operator()(cst::pattern::Abbreviated_constructor const& constructor)
         {
-            state.format("::{}", constructor.constructor_name);
-            if (!constructor.payload_pattern.has_value()) {
-                return;
-            }
-            state.format("(");
-            state.format(constructor.payload_pattern->value);
-            state.format(")");
+            state.format("::{}", constructor.name);
+            format_constructor_body(state, constructor.body);
         }
 
         auto operator()(cst::pattern::Top_level_tuple const& tuple)

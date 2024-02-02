@@ -159,7 +159,9 @@ auto libparse::parse_class_reference(Context& context) -> std::optional<cst::Cla
         {
             if (auto const global = context.try_extract(Token::Type::global)) {
                 root = cst::Root_qualifier {
-                    .value = cst::Root_qualifier::Global {},
+                    .value { cst::Root_qualifier::Global {
+                        .global_keyword = cst::Token::from_lexical(global.value()),
+                    } },
                     .double_colon_token
                     = cst::Token::from_lexical(context.require_extract(Token::Type::double_colon)),
                     .source_range = global.value().source_range,
@@ -326,6 +328,8 @@ auto libparse::parse_function_arguments(Context& context) -> std::optional<cst::
 auto libparse::extract_qualified_name(Context& context, std::optional<cst::Root_qualifier>&& root)
     -> cst::Qualified_name
 {
+    auto const anchor_source_range = context.peek().source_range;
+
     cst::Separated_sequence<cst::Qualifier> middle_qualifiers;
     for (;;) {
         Token const token = context.extract();
@@ -337,6 +341,7 @@ auto libparse::extract_qualified_name(Context& context, std::optional<cst::Root_
             };
             Stage const template_arguments_stage = context.stage();
             auto        template_arguments       = parse_template_arguments(context);
+
             if (auto const double_colon = context.try_extract(Token::Type::double_colon)) {
                 middle_qualifiers.separator_tokens.push_back(
                     cst::Token::from_lexical(double_colon.value()));
@@ -351,12 +356,8 @@ auto libparse::extract_qualified_name(Context& context, std::optional<cst::Root_
             // Primary name encountered
             context.unstage(template_arguments_stage);
 
-            // TODO: cleanup
             auto const source_range = context.up_to_current(
-                root.has_value() ? root.value().source_range
-                : middle_qualifiers.elements.empty()
-                    ? qualifier_name.source_range
-                    : middle_qualifiers.elements.front().source_range);
+                root.has_value() ? root.value().source_range : anchor_source_range);
 
             return cst::Qualified_name {
                 .middle_qualifiers = std::move(middle_qualifiers),

@@ -27,9 +27,13 @@ DECLARE_FORMATTER(ast::Function_argument);
 DECLARE_FORMATTER(ast::Function_parameter);
 DECLARE_FORMATTER(ast::Template_argument);
 DECLARE_FORMATTER(ast::Template_parameter);
+DECLARE_FORMATTER(ast::pattern::Field);
+DECLARE_FORMATTER(ast::pattern::Constructor_body);
+DECLARE_FORMATTER(ast::pattern::Constructor);
+DECLARE_FORMATTER(ast::definition::Field);
+DECLARE_FORMATTER(ast::definition::Constructor_body);
+DECLARE_FORMATTER(ast::definition::Constructor);
 DECLARE_FORMATTER(ast::definition::Template_parameters);
-DECLARE_FORMATTER(ast::definition::Struct::Member);
-DECLARE_FORMATTER(ast::definition::Enum::Constructor);
 
 namespace {
     template <class Out>
@@ -38,8 +42,7 @@ namespace {
 
         explicit Expression_format_visitor(Out&& out) noexcept : out { std::move(out) } {}
 
-        template <kieli::literal Literal>
-        auto operator()(Literal const& literal)
+        auto operator()(kieli::literal auto const& literal)
         {
             std::format_to(out, "{}", literal);
         }
@@ -98,10 +101,20 @@ namespace {
             std::format_to(out, "meta({})", meta.expression);
         }
 
-        auto operator()(ast::expression::Struct_initializer const& struct_initializer)
+        auto operator()(ast::expression::Unit_initializer const& initializer)
         {
-            std::format_to(out, "{} {{", struct_initializer.struct_type);
-            for (auto const& [name, initializer] : struct_initializer.member_initializers) {
+            std::format_to(out, "{}", initializer.constructor);
+        }
+
+        auto operator()(ast::expression::Tuple_initializer const& initializer)
+        {
+            std::format_to(out, "{}({:n})", initializer.constructor, initializer.initializers);
+        }
+
+        auto operator()(ast::expression::Struct_initializer const& initializer)
+        {
+            std::format_to(out, "{} {{", initializer.constructor);
+            for (auto const& [name, initializer] : initializer.initializers) {
                 std::format_to(out, " {} = {}", name, initializer);
             }
             std::format_to(out, " }}");
@@ -244,6 +257,11 @@ namespace {
 
         explicit Pattern_format_visitor(Out&& out) noexcept : out { std::move(out) } {}
 
+        auto operator()(kieli::literal auto const& literal)
+        {
+            std::format_to(out, "{}", literal);
+        }
+
         auto operator()(ast::pattern::Slice const& slice)
         {
             std::format_to(out, "[{}]", slice.element_patterns);
@@ -271,18 +289,12 @@ namespace {
 
         auto operator()(ast::pattern::Constructor const& constructor)
         {
-            std::format_to(out, "{}", constructor.constructor_name);
-            if (constructor.payload_pattern.has_value()) {
-                std::format_to(out, "({})", constructor.payload_pattern.value());
-            }
+            std::format_to(out, "{}{}", constructor.name, constructor.body);
         }
 
         auto operator()(ast::pattern::Abbreviated_constructor const& constructor)
         {
-            std::format_to(out, "::{}", constructor.constructor_name);
-            if (constructor.payload_pattern.has_value()) {
-                std::format_to(out, "({})", constructor.payload_pattern.value());
-            }
+            std::format_to(out, "{}{}", constructor.name, constructor.body);
         }
 
         auto operator()(ast::pattern::Name const& name)
@@ -293,12 +305,6 @@ namespace {
         auto operator()(ast::pattern::Guarded const& guarded)
         {
             std::format_to(out, "{} if {}", guarded.guarded_pattern, guarded.guard);
-        }
-
-        template <kieli::literal Literal>
-        auto operator()(Literal const& literal)
-        {
-            std::format_to(out, "{}", literal);
         }
     };
 
@@ -412,16 +418,6 @@ namespace {
             }
             assert(std::holds_alternative<ast::expression::Block>(function.body.value));
             std::format_to(out, " {}", function.body);
-        }
-
-        auto operator()(ast::definition::Struct const& structure)
-        {
-            std::format_to(
-                out,
-                "struct {}{} = {:n}",
-                structure.name,
-                structure.template_parameters,
-                structure.members);
         }
 
         auto operator()(ast::definition::Enum const& enumeration)
@@ -596,20 +592,62 @@ DEFINE_FORMATTER(ast::Template_parameter)
     return context.out();
 }
 
-DEFINE_FORMATTER(ast::definition::Template_parameters)
+DEFINE_FORMATTER(ast::pattern::Field)
 {
-    return value.has_value() ? std::format_to(context.out(), "[{:n}]", value.value())
-                             : context.out();
+    std::format_to(context.out(), "{}", value.name);
+    if (value.pattern.has_value()) {
+        std::format_to(context.out(), ": {}", value.pattern.value());
+    }
+    return context.out();
 }
 
-DEFINE_FORMATTER(ast::definition::Struct::Member)
+DEFINE_FORMATTER(ast::definition::Field)
 {
     return std::format_to(context.out(), "{}: {}", value.name, value.type);
 }
 
-DEFINE_FORMATTER(ast::definition::Enum::Constructor)
+DEFINE_FORMATTER(ast::pattern::Constructor_body)
 {
-    return value.payload_types.has_value()
-             ? std::format_to(context.out(), "{}({:n})", value.name, value.payload_types.value())
-             : std::format_to(context.out(), "{}", value.name);
+    return std::visit(
+        utl::Overload {
+            [&](ast::pattern::Struct_constructor const& constructor) {
+                return std::format_to(context.out(), "{{ {} }}", constructor.fields);
+            },
+            [&](ast::pattern::Tuple_constructor const& constructor) {
+                return std::format_to(context.out(), "({})", constructor.pattern);
+            },
+            [&](ast::pattern::Unit_constructor const&) { return context.out(); },
+        },
+        value);
+}
+
+DEFINE_FORMATTER(ast::definition::Constructor_body)
+{
+    return std::visit(
+        utl::Overload {
+            [&](ast::definition::Struct_constructor const& constructor) {
+                return std::format_to(context.out(), " {{ {:n} }}", constructor.fields);
+            },
+            [&](ast::definition::Tuple_constructor const& constructor) {
+                return std::format_to(context.out(), "({:n})", constructor.types);
+            },
+            [&](ast::definition::Unit_constructor const&) { return context.out(); },
+        },
+        value);
+}
+
+DEFINE_FORMATTER(ast::pattern::Constructor)
+{
+    return std::format_to(context.out(), "{}{}", value.name, value.body);
+}
+
+DEFINE_FORMATTER(ast::definition::Constructor)
+{
+    return std::format_to(context.out(), "{}{}", value.name, value.body);
+}
+
+DEFINE_FORMATTER(ast::definition::Template_parameters)
+{
+    return value.has_value() ? std::format_to(context.out(), "[{:n}]", value.value())
+                             : context.out();
 }

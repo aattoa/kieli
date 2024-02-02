@@ -46,9 +46,7 @@ auto libdesugar::Context::desugar(cst::Self_parameter const& self_parameter) -> 
 
 auto libdesugar::Context::desugar(cst::Template_argument const& argument) -> ast::Template_argument
 {
-    return {
-        .value = std::visit<ast::Template_argument::Variant>(desugar(), argument.value),
-    };
+    return { .value = std::visit<ast::Template_argument::Variant>(desugar(), argument.value) };
 }
 
 auto libdesugar::Context::desugar(cst::Template_parameter const& template_parameter)
@@ -99,9 +97,8 @@ auto libdesugar::Context::desugar(cst::Qualified_name const& name) -> ast::Quali
         .root_qualifier    = name.root_qualifier.transform([&](cst::Root_qualifier const& root) {
             return std::visit(
                 utl::Overload {
-                    [](std::monostate) -> ast::Root_qualifier { return {}; },
-                    [](cst::Root_qualifier::Global) -> ast::Root_qualifier {
-                        return { .value = ast::Root_qualifier::Global {} };
+                    [](cst::Root_qualifier::Global const&) {
+                        return ast::Root_qualifier { .value = ast::Root_qualifier::Global {} };
                     },
                     [this](utl::Wrapper<cst::Type> const type) -> ast::Root_qualifier {
                         return { .value = desugar(type) };
@@ -142,6 +139,12 @@ auto libdesugar::Context::desugar(cst::Type_signature const& signature) -> ast::
     };
 }
 
+auto libdesugar::Context::desugar(cst::expression::Struct_initializer::Field const& field)
+    -> ast::expression::Struct_initializer::Field
+{
+    return { .name = field.name, .expression = desugar(field.expression) };
+}
+
 auto libdesugar::Context::desugar(cst::Mutability const& mutability) -> ast::Mutability
 {
     return ast::Mutability {
@@ -159,6 +162,35 @@ auto libdesugar::Context::desugar(cst::Mutability const& mutability) -> ast::Mut
         .source_range = mutability.source_range,
     };
 }
+
+auto libdesugar::Context::desugar(cst::pattern::Field const& field) -> ast::pattern::Field
+{
+    return ast::pattern::Field {
+        .name    = field.name,
+        .pattern = field.field_pattern.transform(
+            [&](cst::pattern::Field::Field_pattern const& field_pattern) {
+                return desugar(field_pattern.pattern);
+            }),
+    };
+}
+
+auto libdesugar::Context::desugar(cst::pattern::Constructor_body const& body)
+    -> ast::pattern::Constructor_body
+{
+    return std::visit<ast::pattern::Constructor_body>(
+        utl::Overload {
+            [&](cst::pattern::Struct_constructor const& constructor) {
+                return ast::pattern::Struct_constructor { .fields = desugar(constructor.fields) };
+            },
+            [&](cst::pattern::Tuple_constructor const& constructor) {
+                return ast::pattern::Tuple_constructor { .pattern = desugar(constructor.pattern) };
+            },
+            [&](cst::pattern::Unit_constructor const&) {
+                return ast::pattern::Unit_constructor {};
+            },
+        },
+        body);
+};
 
 auto libdesugar::Context::desugar(cst::Type_annotation const& annotation) -> ast::Type
 {

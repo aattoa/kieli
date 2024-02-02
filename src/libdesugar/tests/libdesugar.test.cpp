@@ -7,12 +7,17 @@ namespace {
     auto desugar(std::string&& string) -> std::string
     {
         auto [info, source] = kieli::test_info_and_source(std::move(string));
-        auto const  module  = kieli::desugar(kieli::parse(source, info), info);
-        std::string output;
-        for (ast::Definition const& definition : module.definitions) {
-            ast::format_to(definition, output);
+        try {
+            auto const  module = kieli::desugar(kieli::parse(source, info), info);
+            std::string output;
+            for (ast::Definition const& definition : module.definitions) {
+                ast::format_to(definition, output);
+            }
+            return output;
         }
-        return output;
+        catch (kieli::Compilation_failure const&) {
+            return info.diagnostics.format_all(cppdiag::Colors::none());
+        }
     }
 } // namespace
 
@@ -74,8 +79,8 @@ TEST("while loop expression")
 
 TEST("conditional expression")
 {
+    CHECK_SIMPLE_DESUGAR("fn f() { if x { y } else { z } }");
     CHECK_EQUAL(desugar("fn f() { if x { y } }"), "fn f() { if x { y } else () }");
-    CHECK_EQUAL(desugar("fn f() { if x { y } else { z } }"), "fn f() { if x { y } else { z } }");
     CHECK_EQUAL(
         desugar("fn f() { if let x = y { z } }"),
         "fn f() { match y { immut x -> { z } _ -> () } }");
@@ -91,14 +96,14 @@ TEST("discard expression")
 
 TEST("struct")
 {
-    CHECK_SIMPLE_DESUGAR("struct S = a: Int, b: Float");
-    CHECK_SIMPLE_DESUGAR("struct S[A, B] = a: A, b: B");
+    CHECK_EQUAL(desugar("struct S { a: Int, b: Float }"), "enum S = S { a: Int, b: Float }");
+    CHECK_EQUAL(desugar("struct S[A, B](A, B)"), "enum S[A, B] = S(A, B)");
 }
 
 TEST("enum")
 {
-    CHECK_SIMPLE_DESUGAR("enum E = aaa | bbb(Int) | ccc(Float, Char)");
-    CHECK_SIMPLE_DESUGAR("enum Option[T] = none | some(T)");
+    CHECK_SIMPLE_DESUGAR("enum E = Aaa | Bbb(Int) | Ccc { x: Int, y: Float }");
+    CHECK_SIMPLE_DESUGAR("enum Option[T] = None | Some(T)");
 }
 
 TEST("alias")

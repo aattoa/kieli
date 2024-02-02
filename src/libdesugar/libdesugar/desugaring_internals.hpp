@@ -50,6 +50,13 @@ namespace libdesugar {
         auto desugar(cst::Class_reference const&) -> ast::Class_reference;
         auto desugar(cst::Function_signature const&) -> ast::Function_signature;
         auto desugar(cst::Type_signature const&) -> ast::Type_signature;
+        auto desugar(cst::expression::Struct_initializer::Field const&)
+            -> ast::expression::Struct_initializer::Field;
+        auto desugar(cst::pattern::Field const&) -> ast::pattern::Field;
+        auto desugar(cst::pattern::Constructor_body const&) -> ast::pattern::Constructor_body;
+        auto desugar(cst::definition::Field const&) -> ast::definition::Field;
+        auto desugar(cst::definition::Constructor_body const&) -> ast::definition::Constructor_body;
+        auto desugar(cst::definition::Constructor const&) -> ast::definition::Constructor;
 
         static auto desugar(cst::Wildcard const&) -> ast::Wildcard;
         static auto desugar(cst::Self_parameter const&) -> ast::Self_parameter;

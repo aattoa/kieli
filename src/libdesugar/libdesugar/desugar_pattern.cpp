@@ -1,9 +1,10 @@
 #include <libutl/common/utilities.hpp>
 #include <libdesugar/desugaring_internals.hpp>
 
-using namespace libdesugar;
-
 namespace {
+
+    using namespace libdesugar;
+
     struct Pattern_desugaring_visitor {
         Context& context;
 
@@ -13,8 +14,7 @@ namespace {
                 Pattern_desugaring_visitor { context }, parenthesized.pattern.value->value);
         }
 
-        template <kieli::literal Literal>
-        auto operator()(Literal const& literal) -> ast::Pattern::Variant
+        auto operator()(kieli::literal auto const& literal) -> ast::Pattern::Variant
         {
             return literal;
         }
@@ -35,43 +35,44 @@ namespace {
         auto operator()(cst::pattern::Tuple const& tuple) -> ast::Pattern::Variant
         {
             return ast::pattern::Tuple {
-                .field_patterns
-                = std::views::transform(tuple.patterns.value.elements, context.deref_desugar())
-                | std::ranges::to<std::vector>(),
+                .field_patterns = tuple.patterns.value.elements
+                                | std::views::transform(context.deref_desugar())
+                                | std::ranges::to<std::vector>(),
             };
         }
 
         auto operator()(cst::pattern::Top_level_tuple const& tuple) -> ast::Pattern::Variant
         {
             return ast::pattern::Tuple {
-                .field_patterns
-                = std::views::transform(tuple.patterns.elements, context.deref_desugar())
-                | std::ranges::to<std::vector>(),
+                .field_patterns = tuple.patterns.elements
+                                | std::views::transform(context.deref_desugar())
+                                | std::ranges::to<std::vector>(),
             };
         }
 
         auto operator()(cst::pattern::Slice const& slice) -> ast::Pattern::Variant
         {
             return ast::pattern::Slice {
-                .element_patterns
-                = std::views::transform(slice.patterns.value.elements, context.deref_desugar())
-                | std::ranges::to<std::vector>(),
+                .element_patterns = slice.patterns.value.elements
+                                  | std::views::transform(context.deref_desugar())
+                                  | std::ranges::to<std::vector>(),
             };
         }
 
-        auto operator()(cst::pattern::Constructor const& ctor) -> ast::Pattern::Variant
+        auto operator()(cst::pattern::Constructor const& constructor) -> ast::Pattern::Variant
         {
             return ast::pattern::Constructor {
-                .constructor_name = context.desugar(ctor.constructor_name),
-                .payload_pattern  = ctor.payload_pattern.transform(context.desugar()),
+                .name = context.desugar(constructor.name),
+                .body = context.desugar(constructor.body),
             };
         }
 
-        auto operator()(cst::pattern::Abbreviated_constructor const& ctor) -> ast::Pattern::Variant
+        auto operator()(cst::pattern::Abbreviated_constructor const& constructor)
+            -> ast::Pattern::Variant
         {
             return ast::pattern::Abbreviated_constructor {
-                .constructor_name = ctor.constructor_name,
-                .payload_pattern  = ctor.payload_pattern.transform(context.desugar()),
+                .name = constructor.name,
+                .body = context.desugar(constructor.body),
             };
         }
 
@@ -93,6 +94,7 @@ namespace {
             };
         }
     };
+
 } // namespace
 
 auto libdesugar::Context::desugar(cst::Pattern const& pattern) -> ast::Pattern

@@ -32,6 +32,8 @@ namespace cst {
         utl::Source_range source_range;
         std::string_view  preceding_trivia;
 
+        // TODO: std::string_view succeeding_trivia
+
         static auto from_lexical(kieli::Token const&) -> Token;
     };
 
@@ -108,7 +110,9 @@ namespace cst {
     };
 
     struct Root_qualifier {
-        struct Global {};
+        struct Global {
+            Token global_keyword;
+        };
 
         std::variant<Global, utl::Wrapper<Type>> value;
         Token                                    double_colon_token;
@@ -233,15 +237,24 @@ namespace cst {
             utl::Wrapper<Expression> function_expression;
         };
 
+        struct Unit_initializer {
+            Qualified_name constructor;
+        };
+
+        struct Tuple_initializer {
+            Qualified_name                                           constructor;
+            Surrounded<Separated_sequence<utl::Wrapper<Expression>>> initializers;
+        };
+
         struct Struct_initializer {
-            struct Member_initializer {
+            struct Field {
                 kieli::Name_lower        name;
-                utl::Wrapper<Expression> expression;
                 Token                    equals_sign_token;
+                utl::Wrapper<Expression> expression;
             };
 
-            Surrounded<Separated_sequence<Member_initializer>> member_initializers;
-            utl::Wrapper<Type>                                 struct_type;
+            Qualified_name                        constructor;
+            Surrounded<Separated_sequence<Field>> initializers;
         };
 
         struct Binary_operator_invocation_sequence {
@@ -442,6 +455,8 @@ namespace cst {
             expression::Tuple,
             expression::Block,
             expression::Invocation,
+            expression::Unit_initializer,
+            expression::Tuple_initializer,
             expression::Struct_initializer,
             expression::Binary_operator_invocation_sequence,
             expression::Struct_field_access,
@@ -486,15 +501,38 @@ namespace cst {
             std::optional<Mutability> mutability;
         };
 
+        struct Field {
+            struct Field_pattern {
+                Token                 equals_sign_token;
+                utl::Wrapper<Pattern> pattern;
+            };
+
+            kieli::Name_lower            name;
+            std::optional<Field_pattern> field_pattern;
+        };
+
+        struct Struct_constructor {
+            Surrounded<Separated_sequence<Field>> fields;
+        };
+
+        struct Tuple_constructor {
+            Surrounded<utl::Wrapper<Pattern>> pattern;
+        };
+
+        struct Unit_constructor {};
+
+        using Constructor_body
+            = std::variant<Struct_constructor, Tuple_constructor, Unit_constructor>;
+
         struct Constructor {
-            Qualified_name                                   constructor_name;
-            std::optional<Surrounded<utl::Wrapper<Pattern>>> payload_pattern;
+            Qualified_name   name;
+            Constructor_body body;
         };
 
         struct Abbreviated_constructor {
-            kieli::Name_lower                                constructor_name;
-            std::optional<Surrounded<utl::Wrapper<Pattern>>> payload_pattern;
-            Token                                            double_colon_token;
+            kieli::Name_upper name;
+            Constructor_body  body;
+            Token             double_colon_token;
         };
 
         struct Tuple {
@@ -655,27 +693,38 @@ namespace cst {
             Token                    fn_keyword_token;
         };
 
-        struct Struct {
-            struct Member {
-                kieli::Name_lower name;
-                Type_annotation   type;
-                utl::Source_range source_range;
-            };
+        struct Field {
+            kieli::Name_lower name;
+            Type_annotation   type;
+            utl::Source_range source_range;
+        };
 
+        struct Struct_constructor {
+            Surrounded<Separated_sequence<Field>> fields;
+        };
+
+        struct Tuple_constructor {
+            Surrounded<Separated_sequence<utl::Wrapper<Type>>> types;
+        };
+
+        struct Unit_constructor {};
+
+        using Constructor_body
+            = std::variant<Struct_constructor, Tuple_constructor, Unit_constructor>;
+
+        struct Constructor {
+            kieli::Name_upper name;
+            Constructor_body  body;
+        };
+
+        struct Struct {
             std::optional<Template_parameters> template_parameters;
-            Separated_sequence<Member>         members;
+            Constructor_body                   body;
             kieli::Name_upper                  name;
             Token                              struct_keyword_token;
-            Token                              equals_sign_token;
         };
 
         struct Enum {
-            struct Constructor {
-                std::optional<Surrounded<Separated_sequence<utl::Wrapper<Type>>>> payload_types;
-                kieli::Name_lower                                                 name;
-                utl::Source_range                                                 source_range;
-            };
-
             std::optional<Template_parameters> template_parameters;
             Separated_sequence<Constructor>    constructors;
             kieli::Name_upper                  name;

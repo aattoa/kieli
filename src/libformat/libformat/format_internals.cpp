@@ -96,8 +96,16 @@ auto libformat::State::format(cst::Class_reference const& reference) -> void
     format(reference.template_arguments);
 }
 
-auto libformat::State::format(
-    cst::expression::Struct_initializer::Member_initializer const& initializer) -> void
+auto libformat::State::format(cst::pattern::Field const& field) -> void
+{
+    format("{}", field.name);
+    if (field.field_pattern.has_value()) {
+        format(" = ");
+        format(field.field_pattern.value().pattern);
+    }
+}
+
+auto libformat::State::format(cst::expression::Struct_initializer::Field const& initializer) -> void
 {
     format("{} = ", initializer.name);
     format(initializer.expression);

@@ -104,15 +104,24 @@ namespace {
             state.format(invocation.function_arguments);
         }
 
+        auto operator()(cst::expression::Unit_initializer const& initializer)
+        {
+            state.format(initializer.constructor);
+        }
+
+        auto operator()(cst::expression::Tuple_initializer const& initializer)
+        {
+            state.format(initializer.constructor);
+            state.format("(");
+            state.format_comma_separated(initializer.initializers.value.elements);
+            state.format(")");
+        }
+
         auto operator()(cst::expression::Struct_initializer const& initializer)
         {
-            state.format(initializer.struct_type);
-            if (initializer.member_initializers.value.elements.empty()) {
-                state.format(" {{}}");
-                return;
-            }
+            state.format(initializer.constructor);
             state.format(" {{ ");
-            state.format_comma_separated(initializer.member_initializers.value.elements);
+            state.format_comma_separated(initializer.initializers.value.elements);
             state.format(" }}");
         }
 

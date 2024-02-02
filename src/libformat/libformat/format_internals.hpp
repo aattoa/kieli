@@ -30,7 +30,8 @@ namespace libformat {
         auto format(std::optional<cst::Template_arguments> const&) -> void;
         auto format(cst::Function_arguments const&) -> void;
         auto format(cst::Class_reference const&) -> void;
-        auto format(cst::expression::Struct_initializer::Member_initializer const&) -> void;
+        auto format(cst::pattern::Field const&) -> void;
+        auto format(cst::expression::Struct_initializer::Field const&) -> void;
 
         auto format_mutability_with_trailing_whitespace(std::optional<cst::Mutability> const&)
             -> void;

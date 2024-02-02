@@ -11,13 +11,6 @@ namespace libresolve {
     struct Scope;
     struct Environment;
 
-    struct Structure_info {
-        std::variant<ast::definition::Struct, hir::Structure> variant;
-        utl::Mutable_wrapper<Environment>                     environment;
-        kieli::Name_upper                                     name;
-        bool                                                  currently_resolving {};
-    };
-
     struct Enumeration_info {
         std::variant<ast::definition::Enum, hir::Enumeration> variant;
         utl::Mutable_wrapper<Environment>                     environment;
@@ -63,7 +56,6 @@ namespace libresolve {
 
     struct Upper_info {
         using Variant = std::variant<
-            utl::Mutable_wrapper<Structure_info>,
             utl::Mutable_wrapper<Enumeration_info>,
             utl::Mutable_wrapper<Typeclass_info>,
             utl::Mutable_wrapper<Alias_info>>;
@@ -72,8 +64,7 @@ namespace libresolve {
         Variant              variant;
     };
 
-    using Info_arena = utl::Wrapper_arena<
-        Structure_info,
+    using Info_arena = utl::Wrapper_arena< //
         Enumeration_info,
         Typeclass_info,
         Alias_info,

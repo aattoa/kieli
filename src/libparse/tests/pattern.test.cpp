@@ -46,14 +46,16 @@ TEST("name")
 
 TEST("constructor")
 {
-    CHECK_SIMPLE_PARSE("X::x");
-    CHECK_SIMPLE_PARSE("X::x(a, b, c)");
+    CHECK_SIMPLE_PARSE("X::X");
+    CHECK_SIMPLE_PARSE("X::X(a, b, c)");
+    CHECK_SIMPLE_PARSE("X::X { a, b = 5, c }");
 }
 
 TEST("abbreviated constructor")
 {
-    CHECK_SIMPLE_PARSE("::x");
-    CHECK_SIMPLE_PARSE("::x(a, b, c)");
+    CHECK_SIMPLE_PARSE("::X");
+    CHECK_SIMPLE_PARSE("::X(a, b, c)");
+    CHECK_SIMPLE_PARSE("::X { a, b = 5, c }");
 }
 
 TEST("slice")

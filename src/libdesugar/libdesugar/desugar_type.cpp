@@ -1,9 +1,10 @@
 #include <libutl/common/utilities.hpp>
 #include <libdesugar/desugaring_internals.hpp>
 
-using namespace libdesugar;
-
 namespace {
+
+    using namespace libdesugar;
+
     struct Type_desugaring_visitor {
         Context&         context;
         cst::Type const& this_type;
@@ -122,6 +123,7 @@ namespace {
             };
         }
     };
+
 } // namespace
 
 auto libdesugar::Context::desugar(cst::Type const& type) -> ast::Type

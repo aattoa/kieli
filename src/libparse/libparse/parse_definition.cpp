@@ -37,8 +37,11 @@ namespace {
 
         auto return_type_annotation = parse_type_annotation(context);
 
-        if (context.try_extract(Token::Type::where)) {
-            cpputil::todo(); // TODO: add support for where clauses
+        if (auto const where = context.try_extract(Token::Type::where)) {
+            context.compile_info().diagnostics.error(
+                context.source(),
+                where.value().source_range,
+                "where clauses are not supported yet");
         }
 
         return cst::Function_signature {
@@ -72,10 +75,10 @@ namespace {
         };
     }
 
-    auto parse_struct_member(Context& context) -> std::optional<cst::definition::Struct::Member>
+    auto parse_field(Context& context) -> std::optional<cst::definition::Field>
     {
-        return parse_lower_name(context).transform([&](kieli::Name_lower const name) {
-            return cst::definition::Struct::Member {
+        return parse_lower_name(context).transform([&](kieli::Name_lower const& name) {
+            return cst::definition::Field {
                 .name         = name,
                 .type         = require<parse_type_annotation>(context, "a ':' followed by a type"),
                 .source_range = context.up_to_current(name.source_range),
@@ -83,46 +86,55 @@ namespace {
         });
     }
 
-    auto extract_structure(Context& context, Token const& struct_keyword)
-        -> cst::Definition::Variant
+    auto extract_constructor_body(Context& context) -> cst::definition::Constructor_body
     {
-        static constexpr auto extract_members
-            = require<parse_comma_separated_one_or_more<parse_struct_member, "a struct member">>;
-
-        auto name                = extract_upper_name(context, "a struct name");
-        auto template_parameters = parse_template_parameters(context);
-        auto equals_sign         = context.require_extract(Token::Type::equals);
-
-        return cst::definition::Struct {
-            .template_parameters  = std::move(template_parameters),
-            .members              = extract_members(context, "one or more struct members"),
-            .name                 = std::move(name),
-            .struct_keyword_token = cst::Token::from_lexical(struct_keyword),
-            .equals_sign_token    = cst::Token::from_lexical(equals_sign),
-        };
-    }
-
-    auto parse_enum_constructor(Context& context)
-        -> std::optional<cst::definition::Enum::Constructor>
-    {
-        static constexpr auto parse_payload = parse_parenthesized<
+        static constexpr parser auto parse_struct_constructor = parse_braced<
+            parse_comma_separated_one_or_more<parse_field, "a field name">,
+            "one or more fields">;
+        static constexpr parser auto parse_tuple_constructor = parse_parenthesized<
             parse_comma_separated_one_or_more<parse_type, "a type">,
             "one or more types">;
 
-        return parse_lower_name(context).transform([&](kieli::Name_lower const name) {
-            return cst::definition::Enum::Constructor {
-                .payload_types = parse_payload(context),
-                .name          = name,
-                .source_range  = context.up_to_current(name.source_range),
+        if (auto fields = parse_struct_constructor(context)) {
+            return cst::definition::Struct_constructor {
+                .fields = std::move(fields.value()),
+            };
+        }
+        if (auto types = parse_tuple_constructor(context)) {
+            return cst::definition::Tuple_constructor {
+                .types = std::move(types.value()),
+            };
+        }
+        return cst::definition::Unit_constructor {};
+    }
+
+    auto parse_constructor(Context& context) -> std::optional<cst::definition::Constructor>
+    {
+        return parse_upper_name(context).transform([&](kieli::Name_upper const& name) {
+            return cst::definition::Constructor {
+                .name = name,
+                .body = extract_constructor_body(context),
             };
         });
+    }
+
+    auto extract_structure(Context& context, Token const& struct_keyword)
+        -> cst::Definition::Variant
+    {
+        auto const name = extract_upper_name(context, "a struct name");
+        return cst::definition::Struct {
+            .template_parameters  = parse_template_parameters(context),
+            .body                 = extract_constructor_body(context),
+            .name                 = name,
+            .struct_keyword_token = cst::Token::from_lexical(struct_keyword),
+        };
     }
 
     auto extract_enumeration(Context& context, Token const& enum_keyword)
         -> cst::Definition::Variant
     {
         static constexpr auto extract_constructors = require<parse_separated_one_or_more<
-            parse_enum_constructor,
+            parse_constructor,
             "an enum constructor",
             Token::Type::pipe>>;
 

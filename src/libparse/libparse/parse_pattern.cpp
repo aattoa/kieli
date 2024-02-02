@@ -52,7 +52,7 @@ namespace {
             return extract_qualified_name(
                 context,
                 cst::Root_qualifier {
-                    .value              = cst::Root_qualifier::Global {},
+                    .value = cst::Root_qualifier::Global { cst::Token::from_lexical(global) },
                     .double_colon_token = cst::Token::from_lexical(double_colon),
                     .source_range       = global.source_range,
                 });
@@ -71,8 +71,37 @@ namespace {
         }
     }
 
-    constexpr auto parse_constructor_pattern
-        = parse_parenthesized<parse_top_level_pattern, "a parenthesized pattern">;
+    auto parse_field_pattern(Context& context) -> std::optional<cst::pattern::Field>
+    {
+        return parse_lower_name(context).transform([&](kieli::Name_lower const& name) {
+            return cst::pattern::Field {
+                .name = name,
+                .field_pattern
+                = context.try_extract(Token::Type::equals).transform([&](Token const& equals_sign) {
+                      return cst::pattern::Field::Field_pattern {
+                          .equals_sign_token = cst::Token::from_lexical(equals_sign),
+                          .pattern           = require<parse_pattern>(context, "a field pattern"),
+                      };
+                  }),
+            };
+        });
+    }
+
+    auto extract_constructor_body(Context& context) -> cst::pattern::Constructor_body
+    {
+        static constexpr parser auto parse_struct_fields
+            = parse_braced<parse_comma_separated_one_or_more<parse_field_pattern, "">, "">;
+        static constexpr parser auto parse_tuple_pattern
+            = parse_parenthesized<parse_top_level_pattern, "a pattern">;
+
+        if (auto fields = parse_struct_fields(context)) {
+            return cst::pattern::Struct_constructor { .fields = std::move(fields.value()) };
+        }
+        if (auto pattern = parse_tuple_pattern(context)) {
+            return cst::pattern::Tuple_constructor { .pattern = std::move(pattern.value()) };
+        }
+        return cst::pattern::Unit_constructor {};
+    }
 
     auto extract_name(Context& context, Stage const stage) -> cst::Pattern::Variant
     {
@@ -85,11 +114,11 @@ namespace {
             if (auto constructor_name = parse_constructor_name(context)) {
                 if (!constructor_name->is_unqualified()) {
                     return cst::pattern::Constructor {
-                        .constructor_name = std::move(constructor_name.value()),
-                        .payload_pattern  = parse_constructor_pattern(context),
+                        .name = std::move(constructor_name.value()),
+                        .body = extract_constructor_body(context),
                     };
                 }
-                name = constructor_name->primary_name.as_lower();
+                name = constructor_name.value().primary_name.as_lower();
             }
         }
         if (!name.has_value()) {
@@ -105,8 +134,8 @@ namespace {
     {
         context.unstage(stage);
         return cst::pattern::Constructor {
-            .constructor_name = require<parse_constructor_name>(context, "a constructor name"),
-            .payload_pattern  = parse_constructor_pattern(context),
+            .name = require<parse_constructor_name>(context, "a constructor name"),
+            .body = extract_constructor_body(context),
         };
     };
 
@@ -114,8 +143,8 @@ namespace {
         -> cst::Pattern::Variant
     {
         return cst::pattern::Abbreviated_constructor {
-            .constructor_name   = extract_lower_name(context, "a constructor name"),
-            .payload_pattern    = parse_constructor_pattern(context),
+            .name               = extract_upper_name(context, "a constructor name"),
+            .body               = extract_constructor_body(context),
             .double_colon_token = cst::Token::from_lexical(double_colon),
         };
     }

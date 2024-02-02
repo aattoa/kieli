@@ -118,11 +118,10 @@ TEST("method invocation")
 
 TEST("struct initializer")
 {
-    CHECK_SIMPLE_PARSE("S {}");
+    CHECK_SIMPLE_PARSE("S { x = 10 }");
     CHECK_SIMPLE_PARSE("S { x = 10, y = \"hello\" }");
-    CHECK_SIMPLE_PARSE("A::B {}");
-    CHECK_SIMPLE_PARSE("typeof(x) {}");
-    CHECK_SIMPLE_PARSE("typeof(x)::T {}");
+    CHECK_SIMPLE_PARSE("A::B { x = 10 }");
+    CHECK_SIMPLE_PARSE("typeof(x)::T {}"); // TODO
 }
 
 TEST("binary operator invocation")
