@@ -81,11 +81,11 @@ namespace {
             state.format(")");
         }
 
-        auto operator()(cst::expression::Binary_operator_invocation_sequence const& sequence)
+        auto operator()(cst::expression::Binary_operator_chain const& sequence)
         {
             state.format(*sequence.leftmost_operand);
             for (auto const& [right_operand, operator_name] : sequence.sequence_tail) {
-                state.format(" {} ", operator_name.operator_id);
+                state.format(" {} ", operator_name.identifier);
                 state.format(*right_operand);
             }
         }

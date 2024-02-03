@@ -653,23 +653,22 @@ namespace {
     }
 
     auto parse_operator_name(Context& context)
-        -> std::optional<cst::expression::Binary_operator_invocation_sequence::Operator_name>
+        -> std::optional<cst::expression::Binary_operator_chain::Operator_name>
     {
         auto const anchor_source_range = context.peek().source_range;
         return parse_operator_id(context).transform([&](kieli::Identifier const identifier) {
-            return cst::expression::Binary_operator_invocation_sequence::Operator_name {
-                .operator_id  = identifier,
+            return cst::expression::Binary_operator_chain::Operator_name {
+                .identifier   = identifier,
                 .source_range = anchor_source_range,
             };
         });
     }
 
-    auto parse_binary_operator_invocation_sequence(Context& context)
+    auto parse_binary_operator_chain(Context& context)
         -> std::optional<utl::Wrapper<cst::Expression>>
     {
         return parse_potential_type_cast(context).transform([&](utl::wrapper auto expression) {
-            std::vector<cst::expression::Binary_operator_invocation_sequence::Operator_and_operand>
-                tail;
+            std::vector<cst::expression::Binary_operator_chain::Operator_and_operand> tail;
             while (auto const operator_name = parse_operator_name(context)) {
                 tail.push_back({
                     .right_operand = require<parse_potential_type_cast>(context, "an operand"),
@@ -680,7 +679,7 @@ namespace {
                 return expression;
             }
             return context.wrap(cst::Expression {
-                .value { cst::expression::Binary_operator_invocation_sequence {
+                .value { cst::expression::Binary_operator_chain {
                     .sequence_tail    = std::move(tail),
                     .leftmost_operand = expression,
                 } },
@@ -700,5 +699,5 @@ auto libparse::parse_block_expression(Context& context)
 
 auto libparse::parse_expression(Context& context) -> std::optional<utl::Wrapper<cst::Expression>>
 {
-    return parse_binary_operator_invocation_sequence(context);
+    return parse_binary_operator_chain(context);
 }

@@ -42,43 +42,37 @@ namespace {
     constexpr std::size_t lowest_operator_precedence
         = -1 + std::tuple_size_v<decltype(operator_precedence_table)>;
 
-    using Operator_and_operand
-        = cst::expression::Binary_operator_invocation_sequence::Operator_and_operand;
-
     template <std::size_t precedence = lowest_operator_precedence>
-    auto desugar_binary_operator_invocation_sequence(
+    auto desugar_binary_operator_chain(
         Context&                            context,
         utl::Wrapper<cst::Expression> const leftmost_expression,
-        Operator_and_operand const*&        tail_begin,
-        Operator_and_operand const* const   tail_end) -> ast::Expression
+        std::span<cst::expression::Binary_operator_chain::Operator_and_operand const>& tail)
+        -> ast::Expression
     {
         // TODO: cleanup
         if constexpr (precedence != static_cast<std::size_t>(-1)) {
             auto const recurse = [&](utl::Wrapper<cst::Expression> const leftmost) {
-                return desugar_binary_operator_invocation_sequence<precedence - 1>(
-                    context, leftmost, tail_begin, tail_end);
+                return desugar_binary_operator_chain<precedence - 1>(context, leftmost, tail);
             };
             ast::Expression left = recurse(leftmost_expression);
-            while (tail_begin != tail_end) {
-                auto const& [right_operand, operator_name] = *tail_begin;
+            while (!tail.empty()) {
+                auto const& [right_operand, operator_name] = tail.front();
                 if constexpr (precedence != lowest_operator_precedence) {
-                    static constexpr auto current_operator_group
-                        = std::get<precedence>(operator_precedence_table);
-
-                    if (std::ranges::find(
-                            current_operator_group, operator_name.operator_id.string.view())
-                        == current_operator_group.end())
+                    if (!std::ranges::contains(
+                            std::get<precedence>(operator_precedence_table),
+                            operator_name.identifier.string.view()))
                     {
                         return left;
                     }
                 }
-                ++tail_begin;
+                tail = tail.subspan<1>();
+
                 auto const source_range = left.source_range.up_to(right_operand->source_range);
                 left = ast::Expression {
                     .value = ast::expression::Binary_operator_invocation {
                         .left  = context.wrap(std::move(left)),
                         .right = context.wrap(recurse(right_operand)),
-                        .op    = operator_name.operator_id,
+                        .op    = operator_name.identifier,
                     },
                     .source_range = source_range,
                 };
@@ -95,8 +89,7 @@ namespace {
         Context&               context;
         cst::Expression const& this_expression;
 
-        template <kieli::literal Literal>
-        auto operator()(Literal const literal) -> ast::Expression::Variant
+        auto operator()(kieli::literal auto const& literal) -> ast::Expression::Variant
         {
             return literal;
         }
@@ -112,9 +105,9 @@ namespace {
         auto operator()(cst::expression::Array_literal const& literal) -> ast::Expression::Variant
         {
             return ast::expression::Array_literal {
-                .elements
-                = std::views::transform(literal.elements.value.elements, context.deref_desugar())
-                | std::ranges::to<std::vector>(),
+                .elements = literal.elements.value.elements
+                          | std::views::transform(context.deref_desugar())
+                          | std::ranges::to<std::vector>(),
             };
         }
 
@@ -131,9 +124,9 @@ namespace {
         auto operator()(cst::expression::Tuple const& tuple) -> ast::Expression::Variant
         {
             return ast::expression::Tuple {
-                .fields
-                = std::views::transform(tuple.fields.value.elements, context.deref_desugar())
-                | std::ranges::to<std::vector>(),
+                .fields = tuple.fields.value.elements
+                        | std::views::transform(context.deref_desugar())
+                        | std::ranges::to<std::vector>(),
             };
         }
 
@@ -174,7 +167,7 @@ namespace {
                 };
             }
 
-            utl::wrapper auto condition = context.desugar(conditional.condition);
+            utl::wrapper auto const condition = context.desugar(conditional.condition);
             if (std::holds_alternative<kieli::Boolean>(condition->value)) {
                 context.diagnostics().emit(
                     cppdiag::Severity::information,
@@ -195,14 +188,14 @@ namespace {
 
         auto operator()(cst::expression::Match const& match) -> ast::Expression::Variant
         {
-            auto const desugar_match_case = [this](cst::expression::Match::Case const& match_case) {
+            auto const desugar_match_case = [&](cst::expression::Match::Case const& match_case) {
                 return ast::expression::Match::Case {
                     .pattern = context.desugar(match_case.pattern),
                     .handler = context.desugar(match_case.handler),
                 };
             };
             return ast::expression::Match {
-                .cases = std::views::transform(match.cases.value, desugar_match_case)
+                .cases = match.cases.value | std::views::transform(desugar_match_case)
                        | std::ranges::to<std::vector>(),
                 .matched_expression = context.desugar(match.matched_expression),
             };
@@ -325,9 +318,12 @@ namespace {
             };
         }
 
-        auto operator()(cst::expression::Unit_initializer const&) -> ast::Expression::Variant
+        auto operator()(cst::expression::Unit_initializer const& initializer)
+            -> ast::Expression::Variant
         {
-            cpputil::todo();
+            return ast::expression::Unit_initializer {
+                .constructor = context.desugar(initializer.constructor),
+            };
         }
 
         auto operator()(cst::expression::Tuple_initializer const& initializer)
@@ -349,14 +345,11 @@ namespace {
             };
         }
 
-        auto operator()(cst::expression::Binary_operator_invocation_sequence const& sequence)
+        auto operator()(cst::expression::Binary_operator_chain const& chain)
             -> ast::Expression::Variant
         {
-            Operator_and_operand const*       tail_begin = sequence.sequence_tail.data();
-            Operator_and_operand const* const tail_end = tail_begin + sequence.sequence_tail.size();
-            return desugar_binary_operator_invocation_sequence(
-                       context, sequence.leftmost_operand, tail_begin, tail_end)
-                .value;
+            std::span tail = chain.sequence_tail;
+            return desugar_binary_operator_chain(context, chain.leftmost_operand, tail).value;
         }
 
         auto operator()(cst::expression::Template_application const& application)

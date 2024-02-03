@@ -8,16 +8,10 @@
 
 ## libparse
 - Test definition parsing
-- Test rejection of invalid template parameter/argument combinations
 - Error node, error recovery
 
-## libresolve
-- Resolve names
-- Assign type variables
-
-## libtype
-- Solve type constraints
-- Instantiate templates
+## libdesugar
+- More tests
 
 ## Build process
 - Profile compilation with `-ftime-trace`

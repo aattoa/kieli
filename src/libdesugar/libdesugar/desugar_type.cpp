@@ -57,9 +57,9 @@ namespace {
         auto operator()(cst::type::Tuple const& tuple) -> ast::Type::Variant
         {
             return ast::type::Tuple {
-                .field_types
-                = std::views::transform(tuple.field_types.value.elements, context.deref_desugar())
-                | std::ranges::to<std::vector>(),
+                .field_types = tuple.field_types.value.elements
+                             | std::views::transform(context.deref_desugar())
+                             | std::ranges::to<std::vector>(),
             };
         }
 
@@ -79,9 +79,10 @@ namespace {
         auto operator()(cst::type::Function const& function) -> ast::Type::Variant
         {
             return ast::type::Function {
-                .argument_types = std::ranges::to<std::vector>(std::views::transform(
-                    function.parameter_types.value.elements, context.deref_desugar())),
-                .return_type    = context.wrap(context.desugar(function.return_type)),
+                .argument_types = function.parameter_types.value.elements
+                                | std::views::transform(context.deref_desugar())
+                                | std::ranges::to<std::vector>(),
+                .return_type = context.wrap(context.desugar(function.return_type)),
             };
         }
 

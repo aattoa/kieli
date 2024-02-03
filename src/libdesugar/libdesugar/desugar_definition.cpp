@@ -27,6 +27,20 @@ namespace {
         }
     }
 
+    auto normalize_function_body(Context& context, ast::Expression expression) -> ast::Expression
+    {
+        if (std::holds_alternative<ast::expression::Block>(expression.value)) {
+            return expression;
+        }
+        auto const source_range = expression.source_range;
+        return ast::Expression {
+            .value { ast::expression::Block {
+                .result_expression = context.wrap(std::move(expression)),
+            } },
+            .source_range = source_range,
+        };
+    }
+
     struct Definition_desugaring_visitor {
         Context&             context;
         utl::Source::Wrapper source;
@@ -43,17 +57,6 @@ namespace {
                 function.signature.function_parameters.value.normal_parameters.elements,
                 context.desugar()));
 
-            // Convert function bodies defined with shorthand syntax into blocks
-            ast::Expression function_body = context.desugar(*function.body);
-            if (!std::holds_alternative<ast::expression::Block>(function_body.value)) {
-                function_body.value = ast::expression::Block {
-                    .result_expression = context.wrap(ast::Expression {
-                        .value        = std::move(function_body.value),
-                        .source_range = function_body.source_range,
-                    }),
-                };
-            }
-
             return ast::definition::Function {
                 .signature {
                     .template_parameters
@@ -66,7 +69,7 @@ namespace {
                     .return_type = function.signature.return_type.transform(context.desugar()),
                     .name        = function.signature.name,
                 },
-                .body = std::move(function_body),
+                .body = normalize_function_body(context, context.desugar(*function.body)),
             };
         }
 

@@ -257,9 +257,9 @@ namespace cst {
             Surrounded<Separated_sequence<Field>> initializers;
         };
 
-        struct Binary_operator_invocation_sequence {
+        struct Binary_operator_chain {
             struct Operator_name {
-                kieli::Identifier operator_id;
+                kieli::Identifier identifier;
                 utl::Source_range source_range;
             };
 
@@ -458,7 +458,7 @@ namespace cst {
             expression::Unit_initializer,
             expression::Tuple_initializer,
             expression::Struct_initializer,
-            expression::Binary_operator_invocation_sequence,
+            expression::Binary_operator_chain,
             expression::Struct_field_access,
             expression::Tuple_field_access,
             expression::Array_index_access,

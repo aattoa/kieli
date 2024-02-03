@@ -1,7 +1,7 @@
-#include <charconv>
 #include <libutl/common/utilities.hpp>
 #include <libutl/common/safe_integer.hpp>
 #include <liblex/numeric.hpp>
+#include <charconv>
 
 namespace {
     auto without_separators(std::string_view const digits) -> std::string_view
