@@ -28,6 +28,12 @@ namespace {
     auto parse_default_argument(Context& context) -> std::optional<Default>
     {
         return context.try_extract(Token::Type::equals).transform([&](Token const& equals) {
+            if (auto const wildcard = context.try_extract(Token::Type::underscore)) {
+                return Default {
+                    .equals_sign_token = cst::Token::from_lexical(equals),
+                    .value = cst::Wildcard { .source_range = wildcard.value().source_range },
+                };
+            }
             return Default {
                 .equals_sign_token = cst::Token::from_lexical(equals),
                 .value             = require<parse_argument>(context, "a default argument"),
