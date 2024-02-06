@@ -5,11 +5,11 @@ target_include_directories(libresolve PUBLIC .)
 target_sources(libresolve
     PRIVATE libresolve/context.cpp
     PRIVATE libresolve/environment.cpp
+    PRIVATE libresolve/fwd.hpp
     PRIVATE libresolve/hir.cpp
     PRIVATE libresolve/hir.hpp
     PRIVATE libresolve/module.cpp
-    PRIVATE libresolve/module.hpp
-    PRIVATE libresolve/type.hpp)
+    PRIVATE libresolve/module.hpp)
 
 target_link_libraries(libresolve
     PUBLIC libphase

@@ -5,46 +5,9 @@
 #include <libphase/phase.hpp>
 #include <libdesugar/ast.hpp>
 #include <libresolve/hir.hpp>
+#include <libresolve/fwd.hpp>
 
 namespace libresolve {
-
-    struct Scope;
-    struct Environment;
-
-    struct Enumeration_info {
-        std::variant<ast::definition::Enum, hir::Enumeration> variant;
-        utl::Mutable_wrapper<Environment>                     environment;
-        kieli::Name_upper                                     name;
-        bool                                                  currently_resolving {};
-    };
-
-    struct Typeclass_info {
-        std::variant<ast::definition::Typeclass, hir::Typeclass> variant;
-        utl::Mutable_wrapper<Environment>                        environment;
-        kieli::Name_upper                                        name;
-        bool                                                     currently_resolving {};
-    };
-
-    struct Alias_info {
-        std::variant<ast::definition::Alias, hir::Alias> variant;
-        utl::Mutable_wrapper<Environment>                environment;
-        kieli::Name_upper                                name;
-        bool                                             currently_resolving {};
-    };
-
-    struct Function_info {
-        std::variant<ast::definition::Function, hir::Function> variant;
-        utl::Mutable_wrapper<Environment>                      environment;
-        kieli::Name_lower                                      name;
-        bool                                                   currently_resolving {};
-    };
-
-    struct Namespace_info {
-        std::variant<ast::definition::Namespace, hir::Namespace> variant;
-        utl::Mutable_wrapper<Environment>                        environment;
-        kieli::Name_lower                                        name;
-    };
-
     struct Lower_info {
         using Variant = std::variant<
             utl::Mutable_wrapper<Function_info>, //
@@ -85,8 +48,41 @@ namespace libresolve {
     using Module_map = utl::Flatmap<std::filesystem::path, Module>;
 
     auto read_module_map(Context& context, std::filesystem::path const& project_root) -> Module_map;
-
 } // namespace libresolve
+
+struct libresolve::Function_info {
+    std::variant<ast::definition::Function, hir::Function> variant;
+    utl::Mutable_wrapper<Environment>                      environment;
+    kieli::Name_lower                                      name;
+    bool                                                   currently_resolving {};
+};
+
+struct libresolve::Enumeration_info {
+    std::variant<ast::definition::Enum, hir::Enumeration> variant;
+    utl::Mutable_wrapper<Environment>                     environment;
+    kieli::Name_upper                                     name;
+    bool                                                  currently_resolving {};
+};
+
+struct libresolve::Typeclass_info {
+    std::variant<ast::definition::Typeclass, hir::Typeclass> variant;
+    utl::Mutable_wrapper<Environment>                        environment;
+    kieli::Name_upper                                        name;
+    bool                                                     currently_resolving {};
+};
+
+struct libresolve::Alias_info {
+    std::variant<ast::definition::Alias, hir::Alias> variant;
+    utl::Mutable_wrapper<Environment>                environment;
+    kieli::Name_upper                                name;
+    bool                                             currently_resolving {};
+};
+
+struct libresolve::Namespace_info {
+    std::variant<ast::definition::Namespace, hir::Namespace> variant;
+    utl::Mutable_wrapper<Environment>                        environment;
+    kieli::Name_lower                                        name;
+};
 
 struct libresolve::Scope {
     // TODO
