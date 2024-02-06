@@ -77,20 +77,25 @@ namespace utl {
         std::vector<Page> m_pages;
         std::size_t       m_page_size;
 
-        explicit Wrapper_arena(std::size_t const page_size) noexcept : m_page_size { page_size } {}
+        explicit constexpr Wrapper_arena(std::size_t const page_size) noexcept
+            : m_page_size { page_size }
+        {
+            cpputil::always_assert(page_size != 0);
+        }
     public:
-        static auto with_page_size(std::size_t const page_size) -> Wrapper_arena
+        static constexpr auto with_page_size(std::size_t const page_size) -> Wrapper_arena
         {
             return Wrapper_arena { page_size };
         }
 
-        static auto with_default_page_size() -> Wrapper_arena
+        static constexpr auto with_default_page_size() -> Wrapper_arena
         {
             return with_page_size(1024);
         }
 
         template <Wrapper_mutability mut = Wrapper_mutability::no, class... Args>
         auto wrap(Args&&... args) -> Wrapper<T, mut>
+            requires std::is_constructible_v<T, Args...>
         {
             auto const it   = std::ranges::find_if_not(m_pages, &Page::is_at_capacity);
             Page&      page = it != m_pages.end() ? *it : m_pages.emplace_back(m_page_size);
@@ -122,6 +127,7 @@ namespace utl {
 
         template <one_of<Ts...> T, Wrapper_mutability mut = Wrapper_mutability::no, class... Args>
         auto wrap(Args&&... args) -> Wrapper<T, mut>
+            requires std::is_constructible_v<T, Args...>
         {
             return Wrapper_arena<T>::template wrap<mut>(std::forward<Args>(args)...);
         }
