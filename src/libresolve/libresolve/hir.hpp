@@ -29,7 +29,7 @@ namespace libresolve::hir {
         using Strong_tag_base::Strong_tag_base;
     };
 
-    enum class Unification_type_variable_kind { general, integral, floating };
+    enum class Unification_type_variable_kind { general, integral };
 
     struct Mutability {
         struct Concrete {
@@ -50,34 +50,10 @@ namespace libresolve::hir {
         utl::Source_range             source_range;
     };
 
-    struct Unification_mutability_variable_state {
-        struct Solved {
-            Mutability solution;
-        };
-
-        struct Unsolved {
-            Unification_variable_tag tag;
-        };
-
-        std::variant<Solved, Unsolved> variant;
-    };
-
     struct Type {
         struct Variant;
         utl::Mutable_wrapper<Variant> variant;
         utl::Source_range             source_range;
-    };
-
-    struct Unification_type_variable_state {
-        struct Solved {
-            Type type;
-        };
-
-        struct Unsolved {
-            Unification_variable_tag tag;
-        };
-
-        std::variant<Solved, Unsolved> variant;
     };
 
     struct Function_argument {
@@ -168,8 +144,7 @@ namespace libresolve::hir {
         };
 
         struct Unification_variable {
-            Unification_variable_tag       tag;
-            Unification_type_variable_kind kind {};
+            Unification_variable_tag tag;
         };
 
         struct Error {};

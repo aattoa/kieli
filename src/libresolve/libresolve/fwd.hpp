@@ -11,8 +11,10 @@ namespace libresolve {
 } // namespace libresolve
 
 namespace libresolve::hir {
+    struct Mutability;
     struct Expression;
     struct Pattern;
     struct Type;
-    struct Mutability;
+    struct Unification_type_variable_state;
+    struct Unification_mutability_variable_state;
 } // namespace libresolve::hir

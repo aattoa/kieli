@@ -22,7 +22,7 @@ TEST("read module map")
     kieli::Compile_info info;
     libresolve::Context context {
         .info_arena        = libresolve::Info_arena::with_page_size(16),
-        .ast_node_arena    = ast::Node_arena::with_page_size(0),
+        .ast_node_arena    = ast::Node_arena::with_page_size(16),
         .environment_arena = utl::Wrapper_arena<libresolve::Environment>::with_page_size(16),
         .compile_info      = info,
     };

@@ -9,7 +9,9 @@ target_sources(libresolve
     PRIVATE libresolve/hir.cpp
     PRIVATE libresolve/hir.hpp
     PRIVATE libresolve/module.cpp
-    PRIVATE libresolve/module.hpp)
+    PRIVATE libresolve/module.hpp
+    PRIVATE libresolve/unification.cpp
+    PRIVATE libresolve/unification.hpp)
 
 target_link_libraries(libresolve
     PUBLIC libphase
