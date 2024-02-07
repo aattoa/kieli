@@ -1,4 +1,4 @@
-import "a"
-import "b/c"
+import a
+import b.c
 
 fn abc() = "abc"

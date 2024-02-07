@@ -797,9 +797,8 @@ namespace cst {
 
     struct [[nodiscard]] Module {
         struct Import {
-            utl::Pooled_string name;
-            utl::Source_range  source_range;
-            Token              import_keyword_token;
+            Separated_sequence<kieli::Name_lower> segments;
+            Token                                 import_keyword_token;
         };
 
         std::vector<Import>     imports;

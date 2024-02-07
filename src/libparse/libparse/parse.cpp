@@ -106,18 +106,12 @@ namespace {
 
     auto extract_import(Context& context, Token const& import_keyword) -> cst::Module::Import
     {
-        auto const path_token = context.require_extract(Token::Type::string_literal);
-        auto const path       = path_token.value_as<kieli::String>();
-        if (path.value.view().contains('.')) {
-            context.compile_info().diagnostics.emit(
-                cppdiag::Severity::error,
-                context.source(),
-                path_token.source_range,
-                "Module paths must not contain dots");
-        }
+        static constexpr parser auto parse_segments = parse_separated_one_or_more<
+            parse_lower_name,
+            "a module path segment",
+            Token::Type::dot>;
         return cst::Module::Import {
-            .name                 = path.value,
-            .source_range         = path_token.source_range,
+            .segments             = require<parse_segments>(context, "a module path"),
             .import_keyword_token = cst::Token::from_lexical(import_keyword),
         };
     }

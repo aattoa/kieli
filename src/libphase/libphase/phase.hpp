@@ -29,6 +29,19 @@ namespace kieli {
         std::vector<cppdiag::Diagnostic> vector;
         bool                             has_emitted_error {};
 
+        template <class... Args>
+        auto emit(
+            cppdiag::Severity const           severity,
+            std::format_string<Args...> const fmt,
+            Args&&... args) -> void
+        {
+            has_emitted_error = has_emitted_error || (severity == cppdiag::Severity::error);
+            vector.push_back(cppdiag::Diagnostic {
+                .message  = format_message(message_buffer, fmt, std::forward<Args>(args)...),
+                .severity = severity,
+            });
+        }
+
         template <std::size_t n, class... Args>
         auto emit(
             cppdiag::Severity const severity,
@@ -66,6 +79,13 @@ namespace kieli {
                 { Simple_text_section { source, source_range } },
                 fmt,
                 std::forward<Args>(args)...);
+        }
+
+        template <class... Args>
+        [[noreturn]] auto error(std::format_string<Args...> const fmt, Args&&... args) -> void
+        {
+            emit(cppdiag::Severity::error, fmt, std::forward<Args>(args)...);
+            throw Compilation_failure {};
         }
 
         template <std::size_t n, class... Args>

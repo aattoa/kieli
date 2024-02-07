@@ -231,7 +231,7 @@ namespace libresolve::hir {
         };
 
         struct Sizeof {
-            Type type;
+            Type inspected_type;
         };
 
         struct Address {
@@ -274,7 +274,18 @@ namespace libresolve::hir {
     };
 
     struct Function {
-        // TODO
+        struct Parameter {
+            Pattern pattern;
+            Type    type;
+        };
+
+        struct Signature {
+            std::vector<Parameter> parameters;
+            Type                   return_type;
+        };
+
+        Signature  signature;
+        Expression body;
     };
 
     struct Enumeration {

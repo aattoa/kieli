@@ -34,11 +34,12 @@ namespace libresolve {
         Function_info,
         Namespace_info>;
 
-    struct Context {
-        Info_arena                      info_arena;
-        ast::Node_arena                 ast_node_arena;
-        utl::Wrapper_arena<Environment> environment_arena;
-        kieli::Compile_info&            compile_info;
+    using Environment_arena = utl::Wrapper_arena<Environment>;
+
+    struct Arenas {
+        Info_arena        info_arena;
+        Environment_arena environment_arena;
+        ast::Node_arena   ast_node_arena;
     };
 
     struct Module {
@@ -47,41 +48,67 @@ namespace libresolve {
 
     using Module_map = utl::Flatmap<std::filesystem::path, Module>;
 
-    auto read_module_map(Context& context, std::filesystem::path const& project_root) -> Module_map;
+    auto read_module_map(
+        Arenas&                      arenas,
+        kieli::Compile_info&         compile_info,
+        std::filesystem::path const& project_root) -> Module_map;
+
+    struct Import_error {
+        kieli::Name_lower segment;
+        bool              expected_module {};
+    };
+
+    auto resolve_import_path(
+        std::filesystem::path const&       project_root_directory,
+        std::span<kieli::Name_lower const> path_segments)
+        -> std::expected<std::filesystem::path, Import_error>;
+
+    struct Function_with_resolved_signature {
+        hir::Function::Signature      signature;
+        utl::Wrapper<ast::Expression> unresolved_body;
+    };
 } // namespace libresolve
 
 struct libresolve::Function_info {
-    std::variant<ast::definition::Function, hir::Function> variant;
-    utl::Mutable_wrapper<Environment>                      environment;
-    kieli::Name_lower                                      name;
-    bool                                                   currently_resolving {};
+    using Variant = std::variant<
+        ast::definition::Function, //
+        Function_with_resolved_signature,
+        hir::Function>;
+    Variant                           variant;
+    utl::Mutable_wrapper<Environment> environment;
+    kieli::Name_lower                 name;
+    bool                              currently_resolving {};
 };
 
 struct libresolve::Enumeration_info {
-    std::variant<ast::definition::Enum, hir::Enumeration> variant;
-    utl::Mutable_wrapper<Environment>                     environment;
-    kieli::Name_upper                                     name;
-    bool                                                  currently_resolving {};
+    using Variant = std::variant<ast::definition::Enum, hir::Enumeration>;
+    Variant                           variant;
+    utl::Mutable_wrapper<Environment> environment;
+    kieli::Name_upper                 name;
+    bool                              currently_resolving {};
 };
 
 struct libresolve::Typeclass_info {
-    std::variant<ast::definition::Typeclass, hir::Typeclass> variant;
-    utl::Mutable_wrapper<Environment>                        environment;
-    kieli::Name_upper                                        name;
-    bool                                                     currently_resolving {};
+    using Variant = std::variant<ast::definition::Typeclass, hir::Typeclass>;
+    Variant                           variant;
+    utl::Mutable_wrapper<Environment> environment;
+    kieli::Name_upper                 name;
+    bool                              currently_resolving {};
 };
 
 struct libresolve::Alias_info {
-    std::variant<ast::definition::Alias, hir::Alias> variant;
-    utl::Mutable_wrapper<Environment>                environment;
-    kieli::Name_upper                                name;
-    bool                                             currently_resolving {};
+    using Variant = std::variant<ast::definition::Alias, hir::Alias>;
+    Variant                           variant;
+    utl::Mutable_wrapper<Environment> environment;
+    kieli::Name_upper                 name;
+    bool                              currently_resolving {};
 };
 
 struct libresolve::Namespace_info {
-    std::variant<ast::definition::Namespace, hir::Namespace> variant;
-    utl::Mutable_wrapper<Environment>                        environment;
-    kieli::Name_lower                                        name;
+    using Variant = std::variant<ast::definition::Namespace, hir::Namespace>;
+    Variant                           variant;
+    utl::Mutable_wrapper<Environment> environment;
+    kieli::Name_lower                 name;
 };
 
 struct libresolve::Scope {

@@ -41,7 +41,7 @@ FetchContent_Declare(
 FetchContent_Declare(
     cppunittest
     GIT_REPOSITORY https://github.com/aattoa/cppunittest.git
-    GIT_TAG        9396bcafe5a65178acce4f3962f91fb17777892d)
+    GIT_TAG        12e4bf4c101ae7c90be2cd68055d495d2b76a653)
 
 set(CPPARGS_BUILD_TESTS OFF)
 set(CPPDIAG_BUILD_TESTS OFF)
