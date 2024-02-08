@@ -11,7 +11,7 @@ namespace libresolve {
     struct Lower_info {
         using Variant = std::variant<
             utl::Mutable_wrapper<Function_info>, //
-            utl::Mutable_wrapper<Namespace_info>>;
+            utl::Mutable_wrapper<Module_info>>;
         kieli::Name_lower    name;
         utl::Source::Wrapper source;
         Variant              variant;
@@ -32,7 +32,7 @@ namespace libresolve {
         Typeclass_info,
         Alias_info,
         Function_info,
-        Namespace_info>;
+        Module_info>;
 
     using Environment_arena = utl::Wrapper_arena<Environment>;
 
@@ -104,8 +104,8 @@ struct libresolve::Alias_info {
     bool                              currently_resolving {};
 };
 
-struct libresolve::Namespace_info {
-    using Variant = std::variant<ast::definition::Namespace, hir::Namespace>;
+struct libresolve::Module_info {
+    using Variant = std::variant<ast::definition::Submodule, hir::Module>;
     Variant                           variant;
     utl::Mutable_wrapper<Environment> environment;
     kieli::Name_lower                 name;

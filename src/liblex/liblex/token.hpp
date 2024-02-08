@@ -59,7 +59,6 @@ namespace kieli {
             inst,
             impl,
             alias,
-            namespace_,
             import_,
             export_,
             module_,

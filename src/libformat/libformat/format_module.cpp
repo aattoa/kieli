@@ -90,7 +90,7 @@ namespace {
             cpputil::todo();
         }
 
-        auto operator()(cst::definition::Namespace const&) -> void
+        auto operator()(cst::definition::Submodule const&) -> void
         {
             cpputil::todo();
         }

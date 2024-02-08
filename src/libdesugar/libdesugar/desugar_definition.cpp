@@ -137,12 +137,12 @@ namespace {
             };
         }
 
-        auto operator()(cst::definition::Namespace const& space) -> ast::Definition::Variant
+        auto operator()(cst::definition::Submodule const& submodule) -> ast::Definition::Variant
         {
-            return ast::definition::Namespace {
-                .definitions         = context.desugar(space.definitions),
-                .name                = space.name,
-                .template_parameters = space.template_parameters.transform(context.desugar()),
+            return ast::definition::Submodule {
+                .definitions         = context.desugar(submodule.definitions),
+                .name                = submodule.name,
+                .template_parameters = submodule.template_parameters.transform(context.desugar()),
             };
         }
     };

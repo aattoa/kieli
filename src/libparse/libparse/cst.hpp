@@ -766,11 +766,11 @@ namespace cst {
             Token                               for_keyword_token;
         };
 
-        struct Namespace {
+        struct Submodule {
             std::optional<Template_parameters>  template_parameters;
             Surrounded<std::vector<Definition>> definitions;
             kieli::Name_lower                   name;
-            Token                               namespace_keyword_token;
+            Token                               module_keyword_token;
         };
     } // namespace definition
 
@@ -783,7 +783,7 @@ namespace cst {
             definition::Typeclass,
             definition::Implementation,
             definition::Instantiation,
-            definition::Namespace>;
+            definition::Submodule>;
 
         Variant              value;
         utl::Source::Wrapper source;

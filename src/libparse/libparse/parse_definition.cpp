@@ -249,15 +249,15 @@ namespace {
         };
     }
 
-    auto extract_namespace(Context& context, Token const& namespace_keyword)
+    auto extract_submodule(Context& context, Token const& module_keyword)
         -> cst::Definition::Variant
     {
         auto const name = extract_lower_name(context, "a namespace name");
-        return cst::definition::Namespace {
-            .template_parameters     = parse_template_parameters(context),
-            .definitions             = extract_definition_sequence(context),
-            .name                    = name,
-            .namespace_keyword_token = cst::Token::from_lexical(namespace_keyword),
+        return cst::definition::Submodule {
+            .template_parameters  = parse_template_parameters(context),
+            .definitions          = extract_definition_sequence(context),
+            .name                 = name,
+            .module_keyword_token = cst::Token::from_lexical(module_keyword),
         };
     }
 
@@ -266,14 +266,14 @@ namespace {
     {
         // clang-format off
         switch (token.type) {
-        case Token::Type::fn:         return extract_function(context, token);
-        case Token::Type::struct_:    return extract_structure(context, token);
-        case Token::Type::enum_:      return extract_enumeration(context, token);
-        case Token::Type::class_:     return extract_typeclass(context, token);
-        case Token::Type::alias:      return extract_alias(context, token);
-        case Token::Type::inst:       return extract_instantiation(context, token);
-        case Token::Type::impl:       return extract_implementation(context, token);
-        case Token::Type::namespace_: return extract_namespace(context, token);
+        case Token::Type::fn:      return extract_function(context, token);
+        case Token::Type::struct_: return extract_structure(context, token);
+        case Token::Type::enum_:   return extract_enumeration(context, token);
+        case Token::Type::class_:  return extract_typeclass(context, token);
+        case Token::Type::alias:   return extract_alias(context, token);
+        case Token::Type::inst:    return extract_instantiation(context, token);
+        case Token::Type::impl:    return extract_implementation(context, token);
+        case Token::Type::module_: return extract_submodule(context, token);
         default:
             context.unstage(stage);
             return std::nullopt;

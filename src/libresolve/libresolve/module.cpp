@@ -109,9 +109,14 @@ namespace {
                     add_to_environment<libresolve::Alias_info>(
                         arenas, compile_info, source, environment, alias.name, std::move(alias));
                 },
-                [&](ast::definition::Namespace&& space) {
-                    add_to_environment<libresolve::Namespace_info>(
-                        arenas, compile_info, source, environment, space.name, std::move(space));
+                [&](ast::definition::Submodule&& submodule) {
+                    add_to_environment<libresolve::Module_info>(
+                        arenas,
+                        compile_info,
+                        source,
+                        environment,
+                        submodule.name,
+                        std::move(submodule));
                 },
                 [&](ast::definition::Implementation&& implementation) {
                     (void)implementation;

@@ -451,7 +451,7 @@ namespace {
             cpputil::todo();
         }
 
-        auto operator()(ast::definition::Namespace const&)
+        auto operator()(ast::definition::Submodule const&)
         {
             cpputil::todo();
         }

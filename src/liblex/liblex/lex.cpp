@@ -64,7 +64,6 @@ namespace {
             { "inst", Token::Type::inst },
             { "impl", Token::Type::impl },
             { "alias", Token::Type::alias },
-            { "namespace", Token::Type::namespace_ },
             { "import", Token::Type::import_ },
             { "export", Token::Type::export_ },
             { "module", Token::Type::module_ },

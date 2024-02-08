@@ -572,7 +572,7 @@ namespace ast {
             Template_parameters     template_parameters;
         };
 
-        struct Namespace {
+        struct Submodule {
             std::vector<Definition> definitions;
             kieli::Name_lower       name;
             Template_parameters     template_parameters;
@@ -587,7 +587,7 @@ namespace ast {
             definition::Typeclass,
             definition::Implementation,
             definition::Instantiation,
-            definition::Namespace>;
+            definition::Submodule>;
 
         Variant              value;
         utl::Source::Wrapper source;

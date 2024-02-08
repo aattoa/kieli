@@ -54,7 +54,6 @@ namespace {
         "inst",
         "impl",
         "alias",
-        "namespace",
         "import",
         "export",
         "module",
@@ -147,7 +146,6 @@ auto kieli::Token::description(Type const type) -> std::string_view
     case Type::enum_:
     case Type::struct_:
     case Type::class_:
-    case Type::namespace_:
     case Type::inst:
     case Type::impl:
     case Type::alias:

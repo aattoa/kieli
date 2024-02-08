@@ -300,7 +300,7 @@ namespace libresolve::hir {
         // TODO
     };
 
-    struct Namespace {
+    struct Module {
         // TODO
     };
 

@@ -5,7 +5,7 @@ namespace libresolve {
     struct Enumeration_info;
     struct Typeclass_info;
     struct Alias_info;
-    struct Namespace_info;
+    struct Module_info;
     struct Scope;
     struct Environment;
 } // namespace libresolve
