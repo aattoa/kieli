@@ -34,34 +34,21 @@ namespace libresolve {
         Function_info,
         Module_info>;
 
-    using Environment_arena = utl::Wrapper_arena<Environment>;
+    using Environment_arena   = utl::Wrapper_arena<Environment>;
+    using Environment_wrapper = utl::Mutable_wrapper<Environment>;
 
     struct Arenas {
         Info_arena        info_arena;
         Environment_arena environment_arena;
         ast::Node_arena   ast_node_arena;
+        hir::Node_arena   hir_node_arena;
     };
 
-    struct Module {
-        utl::Mutable_wrapper<Environment> root_environment;
+    struct Import {
+        std::filesystem::file_time_type last_write_time;
+        std::filesystem::path           module_path;
+        kieli::Name_lower               name;
     };
-
-    using Module_map = utl::Flatmap<std::filesystem::path, Module>;
-
-    auto read_module_map(
-        Arenas&                      arenas,
-        kieli::Compile_info&         compile_info,
-        std::filesystem::path const& project_root) -> Module_map;
-
-    struct Import_error {
-        kieli::Name_lower segment;
-        bool              expected_module {};
-    };
-
-    auto resolve_import_path(
-        std::filesystem::path const&       project_root_directory,
-        std::span<kieli::Name_lower const> path_segments)
-        -> std::expected<std::filesystem::path, Import_error>;
 
     struct Function_with_resolved_signature {
         hir::Function::Signature      signature;
@@ -74,41 +61,41 @@ struct libresolve::Function_info {
         ast::definition::Function, //
         Function_with_resolved_signature,
         hir::Function>;
-    Variant                           variant;
-    utl::Mutable_wrapper<Environment> environment;
-    kieli::Name_lower                 name;
-    bool                              currently_resolving {};
+    Variant             variant;
+    Environment_wrapper environment;
+    kieli::Name_lower   name;
+    bool                currently_resolving {};
 };
 
 struct libresolve::Enumeration_info {
     using Variant = std::variant<ast::definition::Enum, hir::Enumeration>;
-    Variant                           variant;
-    utl::Mutable_wrapper<Environment> environment;
-    kieli::Name_upper                 name;
-    bool                              currently_resolving {};
+    Variant             variant;
+    Environment_wrapper environment;
+    kieli::Name_upper   name;
+    bool                currently_resolving {};
 };
 
 struct libresolve::Typeclass_info {
     using Variant = std::variant<ast::definition::Typeclass, hir::Typeclass>;
-    Variant                           variant;
-    utl::Mutable_wrapper<Environment> environment;
-    kieli::Name_upper                 name;
-    bool                              currently_resolving {};
+    Variant             variant;
+    Environment_wrapper environment;
+    kieli::Name_upper   name;
+    bool                currently_resolving {};
 };
 
 struct libresolve::Alias_info {
     using Variant = std::variant<ast::definition::Alias, hir::Alias>;
-    Variant                           variant;
-    utl::Mutable_wrapper<Environment> environment;
-    kieli::Name_upper                 name;
-    bool                              currently_resolving {};
+    Variant             variant;
+    Environment_wrapper environment;
+    kieli::Name_upper   name;
+    bool                currently_resolving {};
 };
 
 struct libresolve::Module_info {
-    using Variant = std::variant<ast::definition::Submodule, hir::Module>;
-    Variant                           variant;
-    utl::Mutable_wrapper<Environment> environment;
-    kieli::Name_lower                 name;
+    using Variant = std::variant<ast::definition::Submodule, Import, hir::Module>;
+    Variant             variant;
+    Environment_wrapper environment;
+    kieli::Name_lower   name;
 };
 
 struct libresolve::Scope {
@@ -116,9 +103,9 @@ struct libresolve::Scope {
 };
 
 struct libresolve::Environment {
-    utl::Flatmap<kieli::Identifier, Upper_info>      upper_map;
-    utl::Flatmap<kieli::Identifier, Lower_info>      lower_map;
-    std::optional<utl::Mutable_wrapper<Environment>> parent;
+    utl::Flatmap<kieli::Identifier, Upper_info> upper_map;
+    utl::Flatmap<kieli::Identifier, Lower_info> lower_map;
+    std::optional<Environment_wrapper>          parent;
 
     auto find_lower(kieli::Name_lower) -> std::optional<Lower_info>;
     auto find_upper(kieli::Name_upper) -> std::optional<Upper_info>;

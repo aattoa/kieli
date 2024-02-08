@@ -273,6 +273,8 @@ namespace libresolve::hir {
         utl::Source_range source_range;
     };
 
+    using Node_arena = utl::Wrapper_arena<Type::Variant, Pattern, Expression>;
+
     struct Function {
         struct Parameter {
             Pattern pattern;
@@ -301,7 +303,7 @@ namespace libresolve::hir {
     };
 
     struct Module {
-        // TODO
+        utl::Mutable_wrapper<Environment> environment;
     };
 
 } // namespace libresolve::hir
