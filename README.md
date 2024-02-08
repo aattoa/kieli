@@ -1,5 +1,5 @@
 # Kieli
-A general-purpose programming language inspired by C++, Rust, and Haskell.
+A general-purpose programming language.
 
 This is a work in progress, and can not be used for anything yet.
 
@@ -37,7 +37,7 @@ cmake --build build -j 8
 
 These build steps have been tested with the following:
 
-- CMake `3.28.1`
+- CMake `3.28.3`
 - Build systems: Ninja `1.11.1`, GNU Make `4.4.1`
 - Compilers: clang `18.0.0git`
 
