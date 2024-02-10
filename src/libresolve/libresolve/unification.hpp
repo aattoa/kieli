@@ -28,10 +28,14 @@ struct libresolve::hir::Unification_type_variable_state {
 };
 
 namespace libresolve {
+    using Unification_variable_state_arena = utl::Wrapper_arena<
+        hir::Unification_type_variable_state,
+        hir::Unification_mutability_variable_state>;
+
     class Unification_state {
-        utl::Wrapper_arena<hir::Unification_type_variable_state>       m_type_variable_arena;
-        utl::Wrapper_arena<hir::Unification_mutability_variable_state> m_mutability_variable_arena;
-        std::size_t                                                    m_current_variable_tag {};
+        Unification_variable_state_arena m_state_arena
+            = Unification_variable_state_arena::with_default_page_size();
+        std::size_t m_current_variable_tag {};
     public:
         auto fresh_general_type_variable()
             -> utl::Mutable_wrapper<hir::Unification_type_variable_state>;

@@ -6,7 +6,7 @@
 
 TEST("resolve_import")
 {
-    auto const path = std::filesystem::current_path();
+    kieli::Project_configuration const config { .root_directory = std::filesystem::current_path() };
 
     auto name = [pool = utl::String_pool {}](std::string_view const string) mutable {
         return kieli::Name_lower {
@@ -14,10 +14,11 @@ TEST("resolve_import")
             .source_range = utl::Source_range { {}, {} },
         };
     };
-    auto const import = [&](auto const& array) {
-        return libresolve::resolve_import(path, array).value().module_path.string();
+    auto const import = [&](auto const... strings) {
+        std::array const array { name(strings)... };
+        return libresolve::resolve_import(config, array).value().module_path.string();
     };
 
-    CHECK_EQUAL((path / "a.kieli").string(), import(std::array { name("a") }));
-    CHECK_EQUAL((path / "b" / "c.kieli").string(), import(std::array { name("b"), name("c") }));
+    CHECK_EQUAL((config.root_directory / "a.kieli").string(), import("a"));
+    CHECK_EQUAL((config.root_directory / "b" / "c.kieli").string(), import("b", "c"));
 }

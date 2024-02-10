@@ -27,6 +27,13 @@ namespace libresolve {
         Variant              variant;
     };
 
+    using Definition_variant = std::variant<
+        utl::Mutable_wrapper<Function_info>,
+        utl::Mutable_wrapper<Module_info>,
+        utl::Mutable_wrapper<Enumeration_info>,
+        utl::Mutable_wrapper<Typeclass_info>,
+        utl::Mutable_wrapper<Alias_info>>;
+
     using Info_arena = utl::Wrapper_arena< //
         Enumeration_info,
         Typeclass_info,
@@ -42,6 +49,8 @@ namespace libresolve {
         Environment_arena environment_arena;
         ast::Node_arena   ast_node_arena;
         hir::Node_arena   hir_node_arena;
+
+        static auto defaults() -> Arenas;
     };
 
     struct Import {
@@ -105,6 +114,7 @@ struct libresolve::Scope {
 struct libresolve::Environment {
     utl::Flatmap<kieli::Identifier, Upper_info> upper_map;
     utl::Flatmap<kieli::Identifier, Lower_info> lower_map;
+    std::vector<Definition_variant>             in_order;
     std::optional<Environment_wrapper>          parent;
 
     auto find_lower(kieli::Name_lower) -> std::optional<Lower_info>;
