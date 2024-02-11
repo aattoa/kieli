@@ -90,7 +90,7 @@ namespace utl {
 
         static constexpr auto with_default_page_size() -> Wrapper_arena
         {
-            return with_page_size(1024);
+            return with_page_size(256);
         }
 
         template <Wrapper_mutability mut = Wrapper_mutability::no, class... Args>
