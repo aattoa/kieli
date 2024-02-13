@@ -75,7 +75,7 @@ namespace {
 
         auto operator()(cst::definition::Struct const& structure) -> ast::Definition::Variant
         {
-            return ast::definition::Enum {
+            return ast::definition::Enumeration {
                 .constructors { utl::to_vector({ ast::definition::Constructor {
                     .name = structure.name,
                     .body = context.desugar(structure.body),
@@ -88,7 +88,7 @@ namespace {
         auto operator()(cst::definition::Enum const& enumeration) -> ast::Definition::Variant
         {
             ensure_no_duplicates(context, source, "constructor", enumeration.constructors.elements);
-            return ast::definition::Enum {
+            return ast::definition::Enumeration {
                 .constructors        = context.desugar(enumeration.constructors),
                 .name                = enumeration.name,
                 .template_parameters = enumeration.template_parameters.transform(context.desugar()),

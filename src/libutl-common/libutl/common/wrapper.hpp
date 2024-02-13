@@ -102,6 +102,13 @@ namespace utl {
             return Wrapper<T, mut> { page.unsafe_emplace_back(std::forward<Args>(args)...) };
         }
 
+        template <class... Args>
+        auto wrap_mutable(Args&&... args) -> Wrapper<T, Wrapper_mutability::yes>
+            requires std::is_constructible_v<T, Args...>
+        {
+            return wrap<Wrapper_mutability::yes>(std::forward<Args>(args)...);
+        }
+
         auto merge_with(Wrapper_arena&& other) & -> void
         {
             m_pages.append_range(std::views::as_rvalue(other.m_pages));
@@ -130,6 +137,13 @@ namespace utl {
             requires std::is_constructible_v<T, Args...>
         {
             return Wrapper_arena<T>::template wrap<mut>(std::forward<Args>(args)...);
+        }
+
+        template <one_of<Ts...> T, class... Args>
+        auto wrap_mutable(Args&&... args) -> Wrapper<T, Wrapper_mutability::yes>
+            requires std::is_constructible_v<T, Args...>
+        {
+            return Wrapper_arena<T>::wrap_mutable(std::forward<Args>(args)...);
         }
 
         auto merge_with(Wrapper_arena&& other) & -> void

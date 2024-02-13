@@ -435,7 +435,7 @@ namespace ast {
         };
 
         struct Function {
-            std::vector<Type>  argument_types;
+            std::vector<Type>  parameter_types;
             utl::Wrapper<Type> return_type;
         };
 
@@ -449,7 +449,7 @@ namespace ast {
         };
 
         struct Pointer {
-            utl::Wrapper<Type> pointed_to_type;
+            utl::Wrapper<Type> pointee_type;
             Mutability         mutability;
         };
 
@@ -540,7 +540,7 @@ namespace ast {
             Constructor_body  body;
         };
 
-        struct Enum {
+        struct Enumeration {
             std::vector<Constructor> constructors;
             kieli::Name_upper        name;
             Template_parameters      template_parameters;
@@ -582,7 +582,7 @@ namespace ast {
     struct Definition {
         using Variant = std::variant<
             definition::Function,
-            definition::Enum,
+            definition::Enumeration,
             definition::Alias,
             definition::Typeclass,
             definition::Implementation,

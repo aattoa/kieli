@@ -346,7 +346,7 @@ namespace {
 
         auto operator()(ast::type::Function const& function)
         {
-            std::format_to(out, "fn({:n}): {}", function.argument_types, function.return_type);
+            std::format_to(out, "fn({:n}): {}", function.parameter_types, function.return_type);
         }
 
         auto operator()(ast::type::Self const&)
@@ -371,7 +371,7 @@ namespace {
 
         auto operator()(ast::type::Pointer const& pointer)
         {
-            std::format_to(out, "*{} {}", pointer.mutability, pointer.pointed_to_type);
+            std::format_to(out, "*{} {}", pointer.mutability, pointer.pointee_type);
         }
 
         auto operator()(ast::type::Reference const& reference)
@@ -420,7 +420,7 @@ namespace {
             std::format_to(out, " {}", function.body);
         }
 
-        auto operator()(ast::definition::Enum const& enumeration)
+        auto operator()(ast::definition::Enumeration const& enumeration)
         {
             std::format_to(
                 out,

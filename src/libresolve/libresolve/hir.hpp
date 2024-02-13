@@ -103,6 +103,7 @@ namespace libresolve::hir {
             pattern::Alias,
             pattern::Guarded>;
         Variant           variant;
+        Type              type;
         utl::Source_range source_range;
     };
 
@@ -144,7 +145,7 @@ namespace libresolve::hir {
         };
 
         struct Unification_variable {
-            Unification_variable_tag tag;
+            utl::Mutable_wrapper<Unification_type_variable_state> state;
         };
 
         struct Error {};
@@ -273,7 +274,7 @@ namespace libresolve::hir {
         utl::Source_range source_range;
     };
 
-    using Node_arena = utl::Wrapper_arena<Type::Variant, Pattern, Expression>;
+    using Node_arena = utl::Wrapper_arena<Mutability::Variant, Type::Variant, Pattern, Expression>;
 
     struct Function {
         struct Parameter {
@@ -295,7 +296,8 @@ namespace libresolve::hir {
     };
 
     struct Alias {
-        // TODO
+        kieli::Name_upper name;
+        Type              type;
     };
 
     struct Typeclass {

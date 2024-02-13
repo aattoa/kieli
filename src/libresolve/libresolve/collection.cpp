@@ -33,7 +33,7 @@ namespace {
         auto const                            name,
         typename Info::Variant&&              variant) -> utl::Mutable_wrapper<Info>
     {
-        return context.arenas.info_arena.wrap<Info, utl::Wrapper_mutability::yes>(Info {
+        return context.arenas.info_arena.wrap_mutable<Info>(Info {
             .variant     = std::move(variant),
             .environment = environment,
             .name        = name,
@@ -65,7 +65,7 @@ namespace {
                     add_definition<libresolve::Function_info>(
                         context, source, environment, function.signature.name, std::move(function));
                 },
-                [&](ast::definition::Enum&& enumeration) {
+                [&](ast::definition::Enumeration&& enumeration) {
                     add_definition<libresolve::Enumeration_info>(
                         context, source, environment, enumeration.name, std::move(enumeration));
                 },
@@ -115,7 +115,7 @@ namespace {
 auto libresolve::collect_environment(Context& context, std::vector<ast::Definition>&& definitions)
     -> utl::Mutable_wrapper<libresolve::Environment>
 {
-    auto const environment = context.arenas.environment_arena.wrap<utl::Wrapper_mutability::yes>();
+    auto const environment = context.arenas.environment_arena.wrap_mutable();
     for (ast::Definition& definition : definitions) {
         add_definition_to_environment(context, std::move(definition), environment);
     }

@@ -51,6 +51,9 @@ namespace libresolve {
         hir::Node_arena   hir_node_arena;
 
         static auto defaults() -> Arenas;
+
+        auto type(hir::Type::Variant) -> utl::Mutable_wrapper<hir::Type::Variant>;
+        auto mutability(hir::Mutability::Variant) -> utl::Mutable_wrapper<hir::Mutability::Variant>;
     };
 
     struct Import {
@@ -77,7 +80,7 @@ struct libresolve::Function_info {
 };
 
 struct libresolve::Enumeration_info {
-    using Variant = std::variant<ast::definition::Enum, hir::Enumeration>;
+    using Variant = std::variant<ast::definition::Enumeration, hir::Enumeration>;
     Variant             variant;
     Environment_wrapper environment;
     kieli::Name_upper   name;
@@ -108,7 +111,40 @@ struct libresolve::Module_info {
 };
 
 struct libresolve::Scope {
-    // TODO
+    struct Variable_bind {
+        kieli::Name_lower       name;
+        hir::Type               type;
+        hir::Mutability         mutability;
+        hir::Local_variable_tag tag;
+        bool                    unused = true;
+    };
+
+    struct Type_bind {
+        kieli::Name_upper name;
+        hir::Type         type;
+        bool              unused = true;
+    };
+
+    struct Mutability_bind {
+        kieli::Name_lower name;
+        hir::Mutability   mutability;
+        bool              unused = true;
+    };
+private:
+    utl::Flatmap<kieli::Identifier, Variable_bind>   m_variables;
+    utl::Flatmap<kieli::Identifier, Type_bind>       m_types;
+    utl::Flatmap<kieli::Identifier, Mutability_bind> m_mutabilities;
+    Scope*                                           m_parent {};
+public:
+    auto bind_mutability(kieli::Identifier, Mutability_bind, kieli::Diagnostics&) -> void;
+    auto bind_variable(kieli::Identifier, Variable_bind, kieli::Diagnostics&) -> void;
+    auto bind_type(kieli::Identifier, Type_bind, kieli::Diagnostics&) -> void;
+
+    auto find_mutability(kieli::Identifier) -> Mutability_bind*;
+    auto find_variable(kieli::Identifier) -> Variable_bind*;
+    auto find_type(kieli::Identifier) -> Type_bind*;
+
+    auto child() -> Scope;
 };
 
 struct libresolve::Environment {

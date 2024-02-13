@@ -79,9 +79,9 @@ namespace {
         auto operator()(cst::type::Function const& function) -> ast::Type::Variant
         {
             return ast::type::Function {
-                .argument_types = function.parameter_types.value.elements
-                                | std::views::transform(context.deref_desugar())
-                                | std::ranges::to<std::vector>(),
+                .parameter_types = function.parameter_types.value.elements
+                                 | std::views::transform(context.deref_desugar())
+                                 | std::ranges::to<std::vector>(),
                 .return_type = context.wrap(context.desugar(function.return_type)),
             };
         }
@@ -105,8 +105,8 @@ namespace {
         auto operator()(cst::type::Pointer const& pointer) -> ast::Type::Variant
         {
             return ast::type::Pointer {
-                .pointed_to_type = context.desugar(pointer.pointee_type),
-                .mutability      = context.desugar_mutability(
+                .pointee_type = context.desugar(pointer.pointee_type),
+                .mutability   = context.desugar_mutability(
                     pointer.mutability, pointer.asterisk_token.source_range),
             };
         }

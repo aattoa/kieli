@@ -5,6 +5,7 @@
 #include <liblex/lex.hpp>
 #include <libparse/parse.hpp>
 #include <libdesugar/desugar.hpp>
+#include <libresolve/resolution_internals.hpp>
 #include <libformat/format.hpp>
 #include <cppargs.hpp>
 #include <cppdiag.hpp>
@@ -80,6 +81,24 @@ namespace {
         std::print("{}\n\n", output);
     }
 
+    auto debug_resolve(utl::Source::Wrapper const source, kieli::Compile_info& info) -> void
+    {
+        auto arenas    = libresolve::Arenas::defaults();
+        auto constants = libresolve::Constants::make_with(arenas);
+
+        kieli::Project_configuration configuration;
+
+        libresolve::Context context {
+            .arenas                = std::move(arenas),
+            .constants             = std::move(constants),
+            .project_configuration = configuration,
+            .compile_info          = info,
+        };
+
+        libresolve::resolve_definitions_in_order(
+            context, libresolve::make_environment(context, source));
+    }
+
     auto choose_debug_repl_callback(std::string_view const name)
         -> void (*)(utl::Source::Wrapper, kieli::Compile_info&)
     {
@@ -87,6 +106,7 @@ namespace {
         if (name == "lex") return debug_lex;
         if (name == "par") return debug_parse;
         if (name == "des") return debug_desugar;
+        if (name == "res") return debug_resolve;
         return nullptr;
         // clang-format on
     }

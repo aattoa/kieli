@@ -26,18 +26,21 @@ namespace {
     }
 } // namespace
 
-auto kieli::resolve_project(Project_configuration project_configuration) -> Resolved_project
+auto kieli::resolve_project(Project_configuration const& project_configuration) -> Resolved_project
 {
     Compile_info compile_info;
 
+    auto arenas    = libresolve::Arenas::defaults();
+    auto constants = libresolve::Constants::make_with(arenas);
+
     libresolve::Context context {
-        .arenas                = libresolve::Arenas::defaults(),
-        .project_configuration = std::move(project_configuration),
+        .arenas                = std::move(arenas),
+        .constants             = std::move(constants),
+        .project_configuration = project_configuration,
         .compile_info          = compile_info,
     };
 
-    auto const main_environment = make_main_environment(context);
-    libresolve::resolve_definitions_in_order(context, main_environment);
+    libresolve::resolve_definitions_in_order(context, make_main_environment(context));
 
     return Resolved_project {};
 }

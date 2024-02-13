@@ -28,7 +28,7 @@ namespace {
             source,
             environment,
             import.name,
-            context.arenas.info_arena.wrap<libresolve::Module_info, utl::Wrapper_mutability::yes>(
+            context.arenas.info_arena.wrap_mutable<libresolve::Module_info>(
                 std::move(import), environment, import.name));
     }
 
