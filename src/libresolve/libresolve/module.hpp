@@ -66,6 +66,26 @@ namespace libresolve {
         hir::Function::Signature      signature;
         utl::Wrapper<ast::Expression> unresolved_body;
     };
+
+    struct Variable_bind {
+        kieli::Name_lower       name;
+        hir::Type               type;
+        hir::Mutability         mutability;
+        hir::Local_variable_tag tag;
+        bool                    unused = true;
+    };
+
+    struct Type_bind {
+        kieli::Name_upper name;
+        hir::Type         type;
+        bool              unused = true;
+    };
+
+    struct Mutability_bind {
+        kieli::Name_lower name;
+        hir::Mutability   mutability;
+        bool              unused = true;
+    };
 } // namespace libresolve
 
 struct libresolve::Function_info {
@@ -110,49 +130,36 @@ struct libresolve::Module_info {
     kieli::Name_lower   name;
 };
 
-struct libresolve::Scope {
-    struct Variable_bind {
-        kieli::Name_lower       name;
-        hir::Type               type;
-        hir::Mutability         mutability;
-        hir::Local_variable_tag tag;
-        bool                    unused = true;
-    };
-
-    struct Type_bind {
-        kieli::Name_upper name;
-        hir::Type         type;
-        bool              unused = true;
-    };
-
-    struct Mutability_bind {
-        kieli::Name_lower name;
-        hir::Mutability   mutability;
-        bool              unused = true;
-    };
-private:
-    utl::Flatmap<kieli::Identifier, Variable_bind>   m_variables;
-    utl::Flatmap<kieli::Identifier, Type_bind>       m_types;
-    utl::Flatmap<kieli::Identifier, Mutability_bind> m_mutabilities;
-    Scope*                                           m_parent {};
-public:
-    auto bind_mutability(kieli::Identifier, Mutability_bind, kieli::Diagnostics&) -> void;
-    auto bind_variable(kieli::Identifier, Variable_bind, kieli::Diagnostics&) -> void;
-    auto bind_type(kieli::Identifier, Type_bind, kieli::Diagnostics&) -> void;
-
-    auto find_mutability(kieli::Identifier) -> Mutability_bind*;
-    auto find_variable(kieli::Identifier) -> Variable_bind*;
-    auto find_type(kieli::Identifier) -> Type_bind*;
-
-    auto child() -> Scope;
-};
-
 struct libresolve::Environment {
     utl::Flatmap<kieli::Identifier, Upper_info> upper_map;
     utl::Flatmap<kieli::Identifier, Lower_info> lower_map;
     std::vector<Definition_variant>             in_order;
     std::optional<Environment_wrapper>          parent;
 
-    auto find_lower(kieli::Name_lower) -> std::optional<Lower_info>;
-    auto find_upper(kieli::Name_upper) -> std::optional<Upper_info>;
+    auto find_lower(kieli::Name_lower name) -> std::optional<Lower_info>;
+    auto find_upper(kieli::Name_upper name) -> std::optional<Upper_info>;
+};
+
+class libresolve::Scope {
+    utl::Flatmap<kieli::Identifier, Variable_bind>   m_variables;
+    utl::Flatmap<kieli::Identifier, Type_bind>       m_types;
+    utl::Flatmap<kieli::Identifier, Mutability_bind> m_mutabilities;
+    Scope*                                           m_parent {};
+public:
+    auto bind_mutability(kieli::Identifier identifier, Mutability_bind binding) -> void;
+    auto bind_variable(kieli::Identifier identifier, Variable_bind binding) -> void;
+    auto bind_type(kieli::Identifier identifier, Type_bind binding) -> void;
+
+    auto find_mutability(kieli::Identifier identifier) -> Mutability_bind*;
+    auto find_variable(kieli::Identifier identifier) -> Variable_bind*;
+    auto find_type(kieli::Identifier identifier) -> Type_bind*;
+
+    // Make a child scope. `this` must not be moved or destroyed while the child lives.
+    auto child() noexcept -> Scope;
+
+    // Retrieve the parent pointer. Returns `nullptr` if there is no parent.
+    [[nodiscard]] auto parent() const noexcept -> Scope*;
+
+    // Emit warnings for any unused bindings.
+    auto report_unused(kieli::Diagnostics& diagnostics, utl::Source::Wrapper source) -> void;
 };

@@ -6,8 +6,8 @@ namespace libresolve {
     struct Typeclass_info;
     struct Alias_info;
     struct Module_info;
-    struct Scope;
     struct Environment;
+    class Scope;
 } // namespace libresolve
 
 namespace libresolve::hir {
