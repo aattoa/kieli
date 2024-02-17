@@ -62,13 +62,15 @@ namespace {
             context, context.compile_info.source_arena.wrap(read_import_source(std::move(import))));
     }
 
-    auto resolve_submodule(libresolve::Context& context, ast::definition::Submodule&& submodule)
-        -> libresolve::Environment_wrapper
+    auto resolve_submodule(
+        libresolve::Context&         context,
+        utl::Source::Wrapper const   source,
+        ast::definition::Submodule&& submodule) -> libresolve::Environment_wrapper
     {
         if (submodule.template_parameters.has_value()) {
             cpputil::todo();
         }
-        return libresolve::collect_environment(context, std::move(submodule.definitions));
+        return libresolve::collect_environment(context, source, std::move(submodule.definitions));
     }
 } // namespace
 
@@ -79,7 +81,7 @@ auto libresolve::make_environment(libresolve::Context& context, utl::Source::Wra
     ast::Module       ast = kieli::desugar(cst, context.compile_info);
     context.arenas.ast_node_arena.merge_with(std::move(ast.node_arena));
 
-    auto const environment = libresolve::collect_environment(context, std::move(ast.definitions));
+    auto const environment = collect_environment(context, source, std::move(ast.definitions));
     std::ranges::for_each(
         cst.imports, std::bind_front(collect_import, std::ref(context), source, environment));
     return environment;
@@ -88,7 +90,8 @@ auto libresolve::make_environment(libresolve::Context& context, utl::Source::Wra
 auto libresolve::resolve_module(Context& context, Module_info& module_info) -> Environment_wrapper
 {
     if (auto* const submodule = std::get_if<ast::definition::Submodule>(&module_info.variant)) {
-        module_info.variant = hir::Module { resolve_submodule(context, std::move(*submodule)) };
+        module_info.variant = hir::Module { resolve_submodule(
+            context, module_info.environment->source, std::move(*submodule)) };
     }
     else if (auto* const import = std::get_if<libresolve::Import>(&module_info.variant)) {
         module_info.variant = hir::Module { import_environment(context, std::move(*import)) };

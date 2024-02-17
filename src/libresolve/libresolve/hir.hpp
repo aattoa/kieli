@@ -218,7 +218,7 @@ namespace libresolve::hir {
         };
 
         struct Function_reference {
-            utl::Wrapper<Function_info> info;
+            utl::Mutable_wrapper<Function_info> info;
         };
 
         struct Indirect_invocation {
@@ -244,6 +244,8 @@ namespace libresolve::hir {
         };
 
         struct Hole {};
+
+        struct Error {};
     } // namespace expression
 
     struct Expression {
@@ -268,7 +270,8 @@ namespace libresolve::hir {
             expression::Sizeof,
             expression::Address,
             expression::Reference,
-            expression::Hole>;
+            expression::Hole,
+            expression::Error>;
         Variant           variant;
         Type              type;
         utl::Source_range source_range;
@@ -285,6 +288,7 @@ namespace libresolve::hir {
         struct Signature {
             std::vector<Parameter> parameters;
             Type                   return_type;
+            Type                   function_type;
         };
 
         Signature  signature;

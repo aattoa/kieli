@@ -1,21 +1,32 @@
 #include <libutl/common/utilities.hpp>
 #include <libresolve/resolution_internals.hpp>
 
-namespace hir = libresolve::hir;
-
 namespace {
+    using namespace libresolve;
+
     struct Expression_resolution_visitor {
-        libresolve::Context&            context;
-        libresolve::Unification_state&  state;
-        libresolve::Scope&              scope;
-        libresolve::Environment_wrapper environment;
-        ast::Expression const&          this_expression;
+        Context&               context;
+        Unification_state&     state;
+        Scope&                 scope;
+        Environment_wrapper    environment;
+        ast::Expression const& this_expression;
+
+        template <class... Args>
+        auto error(std::format_string<Args...> const fmt, Args&&... args) -> hir::Expression
+        {
+            context.compile_info.diagnostics.emit(
+                cppdiag::Severity::error,
+                environment->source,
+                this_expression.source_range,
+                fmt,
+                std::forward<Args>(args)...);
+            return error_expression(context.constants, this_expression.source_range);
+        }
 
         auto recurse()
         {
             return [&](ast::Expression const& expression) -> hir::Expression {
-                return libresolve::resolve_expression(
-                    context, state, scope, environment, expression);
+                return resolve_expression(context, state, scope, environment, expression);
             };
         }
 
@@ -27,50 +38,49 @@ namespace {
         auto operator()(kieli::Integer const& integer) -> hir::Expression
         {
             return {
-                .variant = integer,
-                .type {
-                    context.arenas.type(hir::type::Unification_variable {
-                        state.fresh_integral_type_variable(),
-                    }),
+                integer,
+                hir::Type {
+                    context.arenas.type(
+                        hir::type::Unification_variable { state.fresh_integral_type_variable() }),
                     this_expression.source_range,
                 },
-                .source_range = this_expression.source_range,
+                this_expression.source_range,
             };
         }
 
         auto operator()(kieli::Floating const& floating) -> hir::Expression
         {
             return {
-                .variant      = floating,
-                .type         = { context.constants.floating_type, this_expression.source_range },
-                .source_range = this_expression.source_range,
+                floating,
+                hir::Type { context.constants.floating_type, this_expression.source_range },
+                this_expression.source_range,
             };
         }
 
         auto operator()(kieli::Character const& character) -> hir::Expression
         {
             return {
-                .variant      = character,
-                .type         = { context.constants.character_type, this_expression.source_range },
-                .source_range = this_expression.source_range,
+                character,
+                hir::Type { context.constants.character_type, this_expression.source_range },
+                this_expression.source_range,
             };
         }
 
         auto operator()(kieli::Boolean const& boolean) -> hir::Expression
         {
             return {
-                .variant      = boolean,
-                .type         = { context.constants.boolean_type, this_expression.source_range },
-                .source_range = this_expression.source_range,
+                boolean,
+                hir::Type { context.constants.boolean_type, this_expression.source_range },
+                this_expression.source_range,
             };
         }
 
         auto operator()(kieli::String const& string) -> hir::Expression
         {
             return {
-                .variant      = string,
-                .type         = { context.constants.string_type, this_expression.source_range },
-                .source_range = this_expression.source_range,
+                string,
+                hir::Type { context.constants.string_type, this_expression.source_range },
+                this_expression.source_range,
             };
         }
 
@@ -84,26 +94,64 @@ namespace {
             cpputil::todo();
         }
 
-        auto operator()(ast::expression::Variable const&) -> hir::Expression
+        auto operator()(ast::expression::Variable const& variable) -> hir::Expression
         {
-            cpputil::todo();
+            if (variable.name.is_unqualified()) {
+                if (Variable_bind const* const bind
+                    = scope.find_variable(variable.name.primary_name.identifier))
+                {
+                    return hir::Expression {
+                        hir::expression::Variable_reference {
+                            .tag        = bind->tag,
+                            .identifier = bind->name.identifier,
+                        },
+                        bind->type,
+                        this_expression.source_range,
+                    };
+                }
+            }
+            if (auto const lookup_result
+                = lookup_lower(context, state, scope, environment, variable.name))
+            {
+                return std::visit(
+                    utl::Overload {
+                        [&](utl::Mutable_wrapper<Function_info> const function) {
+                            auto& signature
+                                = resolve_function_signature(context, function.as_mutable());
+                            return hir::Expression {
+                                hir::expression::Function_reference { .info = function },
+                                signature.function_type,
+                                this_expression.source_range,
+                            };
+                        },
+                        [&](utl::Mutable_wrapper<Module_info> const module) {
+                            return error(
+                                "Expected an expression, but found a reference to module '{}'",
+                                module->name);
+                        },
+                    },
+                    lookup_result.value().variant);
+            }
+            return error("Use of an undeclared identifier");
         }
 
         auto operator()(ast::expression::Tuple const& tuple) -> hir::Expression
         {
-            std::vector<hir::Expression> fields
-                = std::ranges::to<std::vector>(std::views::transform(tuple.fields, recurse()));
+            auto fields = tuple.fields                     //
+                        | std::views::transform(recurse()) //
+                        | std::ranges::to<std::vector>();
 
-            std::vector<hir::Type> types = std::ranges::to<std::vector>(
-                std::views::transform(fields, &hir::Expression::type));
+            auto types = fields //
+                       | std::views::transform(&hir::Expression::type)
+                       | std::ranges::to<std::vector>();
 
             return {
-                .variant = hir::expression::Tuple { .fields = std::move(fields) },
-                .type {
+                hir::expression::Tuple { .fields = std::move(fields) },
+                hir::Type {
                     context.arenas.type(hir::type::Tuple { .types = std::move(types) }),
                     this_expression.source_range,
                 },
-                .source_range = this_expression.source_range,
+                this_expression.source_range,
             };
         }
 
@@ -202,9 +250,15 @@ namespace {
             cpputil::todo();
         }
 
-        auto operator()(ast::expression::Local_type_alias const&) -> hir::Expression
+        auto operator()(ast::expression::Local_type_alias const& alias) -> hir::Expression
         {
-            cpputil::todo();
+            scope.bind_type(
+                alias.name.identifier,
+                Type_bind {
+                    .name = alias.name,
+                    .type = resolve_type(context, state, scope, environment, *alias.aliased_type),
+                });
+            return unit_expression(context.constants, this_expression.source_range);
         }
 
         auto operator()(ast::expression::Ret const&) -> hir::Expression
@@ -215,15 +269,14 @@ namespace {
         auto operator()(ast::expression::Sizeof const& sizeof_) -> hir::Expression
         {
             return {
-                .variant = hir::expression::Sizeof {
-                    libresolve::resolve_type(context, state, scope, environment, *sizeof_.inspected_type),
-                },
-                .type {
-                    .variant = context.arenas.type(
+                hir::expression::Sizeof {
+                    resolve_type(context, state, scope, environment, *sizeof_.inspected_type) },
+                hir::Type {
+                    context.arenas.type(
                         hir::type::Unification_variable { state.fresh_integral_type_variable() }),
-                    .source_range = this_expression.source_range,
+                    this_expression.source_range,
                 },
-                .source_range = this_expression.source_range,
+                this_expression.source_range,
             };
         }
 

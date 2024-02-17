@@ -112,10 +112,13 @@ namespace {
     }
 } // namespace
 
-auto libresolve::collect_environment(Context& context, std::vector<ast::Definition>&& definitions)
-    -> utl::Mutable_wrapper<libresolve::Environment>
+auto libresolve::collect_environment(
+    Context&                       context,
+    utl::Source::Wrapper const     source,
+    std::vector<ast::Definition>&& definitions) -> Environment_wrapper
 {
-    auto const environment = context.arenas.environment_arena.wrap_mutable();
+    auto const environment
+        = context.arenas.environment_arena.wrap_mutable(Environment { .source = source });
     for (ast::Definition& definition : definitions) {
         add_definition_to_environment(context, std::move(definition), environment);
     }

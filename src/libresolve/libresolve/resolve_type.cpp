@@ -1,12 +1,11 @@
 #include <libutl/common/utilities.hpp>
 #include <libresolve/resolution_internals.hpp>
 
-namespace hir = libresolve::hir;
-
 namespace {
-    auto integer_type(
-        libresolve::Constants const&        constants,
-        kieli::built_in_type::Integer const integer) -> utl::Mutable_wrapper<hir::Type::Variant>
+    using namespace libresolve;
+
+    auto integer_type(Constants const& constants, kieli::built_in_type::Integer const integer)
+        -> utl::Mutable_wrapper<hir::Type::Variant>
     {
         // clang-format off
         switch (integer) {
@@ -25,16 +24,16 @@ namespace {
     }
 
     struct Type_resolution_visitor {
-        libresolve::Context&            context;
-        libresolve::Unification_state&  state;
-        libresolve::Scope&              scope;
-        libresolve::Environment_wrapper environment;
-        ast::Type const&                this_type;
+        Context&            context;
+        Unification_state&  state;
+        Scope&              scope;
+        Environment_wrapper environment;
+        ast::Type const&    this_type;
 
         auto recurse()
         {
             return [&](ast::Type const& type) -> hir::Type {
-                return libresolve::resolve_type(context, state, scope, environment, type);
+                return resolve_type(context, state, scope, environment, type);
             };
         }
 
@@ -116,17 +115,21 @@ namespace {
             return { context.arenas.type(std::move(type)), this_type.source_range };
         }
 
-        auto operator()(ast::type::Typeof const&) -> hir::Type
+        auto operator()(ast::type::Typeof const& typeof_) -> hir::Type
         {
-            cpputil::todo();
+            auto inspection_scope = scope.child();
+
+            auto const expression = resolve_expression(
+                context, state, inspection_scope, environment, *typeof_.inspected_expression);
+
+            return expression.type;
         }
 
         auto operator()(ast::type::Reference const& reference) -> hir::Type
         {
             hir::type::Reference type {
                 .referenced_type = recurse(*reference.referenced_type),
-                .mutability
-                = libresolve::resolve_mutability(context, state, scope, reference.mutability),
+                .mutability      = resolve_mutability(context, state, scope, reference.mutability),
             };
             return { context.arenas.type(std::move(type)), this_type.source_range };
         }
@@ -135,8 +138,7 @@ namespace {
         {
             hir::type::Pointer type {
                 .pointee_type = recurse(*pointer.pointee_type),
-                .mutability
-                = libresolve::resolve_mutability(context, state, scope, pointer.mutability),
+                .mutability   = resolve_mutability(context, state, scope, pointer.mutability),
             };
             return { context.arenas.type(std::move(type)), this_type.source_range };
         }

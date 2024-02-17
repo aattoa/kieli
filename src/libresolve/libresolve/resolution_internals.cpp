@@ -39,7 +39,46 @@ auto libresolve::Constants::make_with(Arenas& arenas) -> Constants
         .string_type    = arenas.type(kieli::built_in_type::String {}),
         .character_type = arenas.type(kieli::built_in_type::Character {}),
         .unit_type      = arenas.type(hir::type::Tuple {}),
+        .error_type     = arenas.type(hir::type::Error {}),
         .mutability     = arenas.mutability(hir::Mutability::Concrete { .is_mutable = true }),
         .immutability   = arenas.mutability(hir::Mutability::Concrete { .is_mutable = false }),
+    };
+}
+
+auto libresolve::error_expression(Constants const& constants, utl::Source_range const source_range)
+    -> hir::Expression
+{
+    return hir::Expression {
+        .variant      = hir::expression::Error {},
+        .type         = error_type(constants, source_range),
+        .source_range = source_range,
+    };
+}
+
+auto libresolve::error_type(Constants const& constants, utl::Source_range const source_range)
+    -> hir::Type
+{
+    return hir::Type {
+        .variant      = constants.error_type,
+        .source_range = source_range,
+    };
+}
+
+auto libresolve::unit_expression(Constants const& constants, utl::Source_range const source_range)
+    -> hir::Expression
+{
+    return hir::Expression {
+        .variant      = hir::expression::Tuple {},
+        .type         = unit_type(constants, source_range),
+        .source_range = source_range,
+    };
+}
+
+auto libresolve::unit_type(Constants const& constants, utl::Source_range const source_range)
+    -> hir::Type
+{
+    return hir::Type {
+        .variant      = constants.unit_type,
+        .source_range = source_range,
     };
 }

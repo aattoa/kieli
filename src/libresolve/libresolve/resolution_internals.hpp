@@ -22,6 +22,7 @@ namespace libresolve {
         utl::Mutable_wrapper<hir::Type::Variant>       string_type;
         utl::Mutable_wrapper<hir::Type::Variant>       character_type;
         utl::Mutable_wrapper<hir::Type::Variant>       unit_type;
+        utl::Mutable_wrapper<hir::Type::Variant>       error_type;
         utl::Mutable_wrapper<hir::Mutability::Variant> mutability;
         utl::Mutable_wrapper<hir::Mutability::Variant> immutability;
 
@@ -59,8 +60,10 @@ namespace libresolve {
         kieli::Name_upper    name,
         Upper_info::Variant  variant) -> void;
 
-    auto collect_environment(Context& context, std::vector<ast::Definition>&& definitions)
-        -> Environment_wrapper;
+    auto collect_environment(
+        Context&                       context,
+        utl::Source::Wrapper           source,
+        std::vector<ast::Definition>&& definitions) -> Environment_wrapper;
 
     auto make_environment(Context& context, utl::Source::Wrapper source) -> Environment_wrapper;
 
@@ -107,5 +110,25 @@ namespace libresolve {
         Scope&              scope,
         Environment_wrapper environment,
         ast::Type const&    type) -> hir::Type;
+
+    auto lookup_lower(
+        Context&                   context,
+        Unification_state&         state,
+        Scope&                     scope,
+        Environment_wrapper        environment,
+        ast::Qualified_name const& name) -> std::optional<Lower_info>;
+
+    auto lookup_upper(
+        Context&                   context,
+        Unification_state&         state,
+        Scope&                     scope,
+        Environment_wrapper        environment,
+        ast::Qualified_name const& name) -> std::optional<Upper_info>;
+
+    auto error_expression(Constants const&, utl::Source_range) -> hir::Expression;
+    auto error_type(Constants const&, utl::Source_range) -> hir::Type;
+
+    auto unit_expression(Constants const&, utl::Source_range) -> hir::Expression;
+    auto unit_type(Constants const&, utl::Source_range) -> hir::Type;
 
 } // namespace libresolve

@@ -250,7 +250,7 @@ namespace ast {
         };
 
         struct Local_type_alias {
-            kieli::Name_upper  alias_name;
+            kieli::Name_upper  name;
             utl::Wrapper<Type> aliased_type;
         };
 
@@ -383,8 +383,8 @@ namespace ast {
         };
 
         struct Alias {
-            kieli::Name_lower     alias_name;
-            Mutability            alias_mutability;
+            kieli::Name_lower     name;
+            Mutability            mutability;
             utl::Wrapper<Pattern> aliased_pattern;
         };
 

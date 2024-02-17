@@ -191,7 +191,7 @@ namespace {
 
         auto operator()(ast::expression::Local_type_alias const& alias)
         {
-            std::format_to(out, "alias {} = {}", alias.alias_name, alias.aliased_type);
+            std::format_to(out, "alias {} = {}", alias.name, alias.aliased_type);
         }
 
         auto operator()(ast::expression::Loop const& loop)
@@ -279,12 +279,7 @@ namespace {
 
         auto operator()(ast::pattern::Alias const& alias)
         {
-            std::format_to(
-                out,
-                "{} as {} {}",
-                alias.aliased_pattern,
-                alias.alias_mutability,
-                alias.alias_name);
+            std::format_to(out, "{} as {} {}", alias.aliased_pattern, alias.mutability, alias.name);
         }
 
         auto operator()(ast::pattern::Constructor const& constructor)

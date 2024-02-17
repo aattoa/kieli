@@ -79,8 +79,8 @@ namespace {
         auto operator()(cst::pattern::Alias const& alias) -> ast::Pattern::Variant
         {
             return ast::pattern::Alias {
-                .alias_name = alias.alias_name,
-                .alias_mutability
+                .name = alias.alias_name,
+                .mutability
                 = context.desugar_mutability(alias.alias_mutability, alias.alias_name.source_range),
                 .aliased_pattern = context.desugar(alias.aliased_pattern),
             };

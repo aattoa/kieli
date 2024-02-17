@@ -5,10 +5,10 @@ target_include_directories(libresolve PUBLIC .)
 target_sources(libresolve
     PRIVATE libresolve/collection.cpp
     PRIVATE libresolve/context.cpp
-    PRIVATE libresolve/environment.cpp
     PRIVATE libresolve/fwd.hpp
     PRIVATE libresolve/hir.cpp
     PRIVATE libresolve/hir.hpp
+    PRIVATE libresolve/lookup.cpp
     PRIVATE libresolve/module.hpp
     PRIVATE libresolve/resolution_internals.cpp
     PRIVATE libresolve/resolution_internals.hpp

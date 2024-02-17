@@ -1,20 +1,20 @@
 #include <libutl/common/utilities.hpp>
 #include <libresolve/resolution_internals.hpp>
 
-namespace hir = libresolve::hir;
-
 namespace {
+    using namespace libresolve;
+
     struct Pattern_resolution_visitor {
-        libresolve::Context&                  context;
-        libresolve::Unification_state&        state;
-        libresolve::Scope&                    scope;
-        libresolve::Environment_wrapper const environment;
-        ast::Pattern const&                   this_pattern;
+        Context&            context;
+        Unification_state&  state;
+        Scope&              scope;
+        Environment_wrapper environment;
+        ast::Pattern const& this_pattern;
 
         auto recurse()
         {
             return [&](ast::Pattern const& pattern) -> hir::Pattern {
-                return libresolve::resolve_pattern(context, state, scope, environment, pattern);
+                return resolve_pattern(context, state, scope, environment, pattern);
             };
         }
 
@@ -23,29 +23,53 @@ namespace {
             return recurse()(pattern);
         }
 
-        auto operator()(kieli::Integer const&) -> hir::Pattern
+        auto operator()(kieli::Integer const& integer) -> hir::Pattern
         {
-            cpputil::todo();
+            return {
+                integer,
+                hir::Type {
+                    context.arenas.type(
+                        hir::type::Unification_variable { state.fresh_integral_type_variable() }),
+                    this_pattern.source_range,
+                },
+                this_pattern.source_range,
+            };
         }
 
-        auto operator()(kieli::Floating const&) -> hir::Pattern
+        auto operator()(kieli::Floating const& floating) -> hir::Pattern
         {
-            cpputil::todo();
+            return {
+                floating,
+                hir::Type { context.constants.floating_type, this_pattern.source_range },
+                this_pattern.source_range,
+            };
         }
 
-        auto operator()(kieli::Character const&) -> hir::Pattern
+        auto operator()(kieli::Character const& character) -> hir::Pattern
         {
-            cpputil::todo();
+            return {
+                character,
+                hir::Type { context.constants.character_type, this_pattern.source_range },
+                this_pattern.source_range,
+            };
         }
 
-        auto operator()(kieli::Boolean const&) -> hir::Pattern
+        auto operator()(kieli::Boolean const& boolean) -> hir::Pattern
         {
-            cpputil::todo();
+            return {
+                boolean,
+                hir::Type { context.constants.boolean_type, this_pattern.source_range },
+                this_pattern.source_range,
+            };
         }
 
-        auto operator()(kieli::String const&) -> hir::Pattern
+        auto operator()(kieli::String const& string) -> hir::Pattern
         {
-            cpputil::todo();
+            return {
+                string,
+                hir::Type { context.constants.string_type, this_pattern.source_range },
+                this_pattern.source_range,
+            };
         }
 
         auto operator()(ast::Wildcard const&) -> hir::Pattern

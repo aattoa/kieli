@@ -135,9 +135,7 @@ struct libresolve::Environment {
     utl::Flatmap<kieli::Identifier, Lower_info> lower_map;
     std::vector<Definition_variant>             in_order;
     std::optional<Environment_wrapper>          parent;
-
-    auto find_lower(kieli::Name_lower name) -> std::optional<Lower_info>;
-    auto find_upper(kieli::Name_upper name) -> std::optional<Upper_info>;
+    utl::Source::Wrapper                        source;
 };
 
 class libresolve::Scope {
@@ -146,19 +144,27 @@ class libresolve::Scope {
     utl::Flatmap<kieli::Identifier, Mutability_bind> m_mutabilities;
     Scope*                                           m_parent {};
 public:
+    Scope() = default;
+
+    Scope(Scope&&)                    = default;
+    auto operator=(Scope&&) -> Scope& = default;
+
+    Scope(Scope const&)                    = delete;
+    auto operator=(Scope const&) -> Scope& = delete;
+
     auto bind_mutability(kieli::Identifier identifier, Mutability_bind binding) -> void;
     auto bind_variable(kieli::Identifier identifier, Variable_bind binding) -> void;
     auto bind_type(kieli::Identifier identifier, Type_bind binding) -> void;
 
-    auto find_mutability(kieli::Identifier identifier) -> Mutability_bind*;
-    auto find_variable(kieli::Identifier identifier) -> Variable_bind*;
-    auto find_type(kieli::Identifier identifier) -> Type_bind*;
-
-    // Make a child scope. `this` must not be moved or destroyed while the child lives.
-    auto child() noexcept -> Scope;
+    [[nodiscard]] auto find_mutability(kieli::Identifier identifier) -> Mutability_bind*;
+    [[nodiscard]] auto find_variable(kieli::Identifier identifier) -> Variable_bind*;
+    [[nodiscard]] auto find_type(kieli::Identifier identifier) -> Type_bind*;
 
     // Retrieve the parent pointer. Returns `nullptr` if there is no parent.
     [[nodiscard]] auto parent() const noexcept -> Scope*;
+
+    // Make a child scope. `this` must not be moved or destroyed while the child lives.
+    [[nodiscard]] auto child() noexcept -> Scope;
 
     // Emit warnings for any unused bindings.
     auto report_unused(kieli::Diagnostics& diagnostics, utl::Source::Wrapper source) -> void;

@@ -429,7 +429,7 @@ namespace {
         auto operator()(cst::expression::Local_type_alias const& alias) -> ast::Expression::Variant
         {
             return ast::expression::Local_type_alias {
-                .alias_name   = alias.alias_name,
+                .name         = alias.alias_name,
                 .aliased_type = context.desugar(alias.aliased_type),
             };
         }
