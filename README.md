@@ -1,4 +1,5 @@
 # Kieli
+
 A general-purpose programming language.
 
 This is a work in progress, and can not be used for anything yet.
@@ -7,14 +8,10 @@ This is a work in progress, and can not be used for anything yet.
 
 Dependencies are installed automatically with CMake's `FetchContent` functionality.
 
-- https://github.com/aattoa/cppargs
-    - Required, for the command line interface
-- https://github.com/aattoa/cppdiag
-    - Required, for diagnostic messages
-- https://github.com/aattoa/cpputil
-    - Required, for general utilities
-- https://github.com/aattoa/cppunittest
-    - Optional, only for tests
+- [https://github.com/aattoa/cppargs](https://github.com/aattoa/cppargs)
+- [https://github.com/aattoa/cppdiag](https://github.com/aattoa/cppdiag)
+- [https://github.com/aattoa/cpputil](https://github.com/aattoa/cpputil)
+- [https://github.com/aattoa/cppunittest](https://github.com/aattoa/cppunittest)
 
 ## Building Kieli
 
@@ -24,7 +21,7 @@ Prerequisites:
 - A build system, such as GNU Make or Ninja
 - A C++23 compliant compiler toolchain
 
-At the time of writing, LLVM 18 is the only toolchain that supports C++23 well enough to build Kieli.
+At the time of writing, LLVM 18 (and later) is the only toolchain that supports C++23 well enough to build Kieli.
 
 Run the following commands to clone and build Kieli:
 
@@ -39,7 +36,7 @@ These build steps have been tested with the following:
 
 - CMake `3.28.3`
 - Build systems: Ninja `1.11.1`, GNU Make `4.4.1`
-- Compilers: clang `18.0.0git`
+- Compilers: clang `19.0.0git`
 
 ## Tests
 
