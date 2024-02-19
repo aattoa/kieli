@@ -11,7 +11,7 @@ TEST("resolve_import")
     auto name = [pool = utl::String_pool {}](std::string_view const string) mutable {
         return kieli::Name_lower {
             .identifier   = kieli::Identifier { pool.make(string) },
-            .source_range = utl::Source_range { {}, {} },
+            .source_range = utl::Source_range::dummy(),
         };
     };
     auto const import = [&](auto const... strings) {

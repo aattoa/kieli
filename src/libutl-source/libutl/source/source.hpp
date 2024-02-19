@@ -12,15 +12,18 @@ namespace utl {
         using Arena   = utl::Wrapper_arena<Source>;
         using Wrapper = utl::Wrapper<Source>;
 
-        // Create a source with the given path and content
-        explicit Source(std::filesystem::path&&, std::string&&);
-
         enum class Read_error { does_not_exist, failed_to_open, failed_to_read };
 
-        // Attempt to read a file with the given path
-        static auto read(std::filesystem::path&&) -> std::expected<Source, Read_error>;
+        // Create a source with the given path and content
+        explicit Source(std::filesystem::path&& path, std::string&& content);
 
+        // Attempt to read a file with the given path
+        [[nodiscard]] static auto read(std::filesystem::path) -> std::expected<Source, Read_error>;
+
+        // File path accessor.
         [[nodiscard]] auto path() const noexcept -> std::filesystem::path const&;
+
+        // File content accessor.
         [[nodiscard]] auto string() const noexcept -> std::string_view;
     };
 
@@ -28,25 +31,35 @@ namespace utl {
         std::uint32_t line   = 1;
         std::uint32_t column = 1;
 
-        auto advance_with(char) noexcept -> void;
+        // Advance this position with `character`.
+        auto advance_with(char character) -> void;
 
-        auto operator==(Source_position const&) const -> bool                  = default;
-        auto operator<=>(Source_position const&) const -> std::strong_ordering = default;
+        // Check that the position has non-zero components.
+        [[nodiscard]] auto is_valid() const noexcept -> bool;
+
+        auto operator==(Source_position const&) const -> bool = default;
+        auto operator<=>(Source_position const&) const        = default;
     };
 
     struct Source_range {
         Source_position start;
         Source_position stop;
 
-        // Deliberately non-aggregate.
+        // Construct a source range. Deliberately non-aggregate.
         explicit constexpr Source_range(
             Source_position const start, Source_position const stop) noexcept
             : start { start }
             , stop { stop }
         {}
 
+        // Compute the substring of `string` corresponding to this source range.
         [[nodiscard]] auto in(std::string_view string) const -> std::string_view;
+
+        // Create source range from `this` up to `other`.
         [[nodiscard]] auto up_to(Source_range other) const -> Source_range;
+
+        // Source range with default constructed components for mock purposes.
+        [[nodiscard]] static auto dummy() noexcept -> Source_range;
     };
 
 } // namespace utl
