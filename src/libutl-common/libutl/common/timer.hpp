@@ -1,58 +1,27 @@
 #pragma once
 
 #include <chrono>
-#include <libutl/common/utilities.hpp>
 
 namespace utl {
 
     template <class Clock_type, class Duration_type>
-    struct Basic_timer {
+    class Basic_timer {
+        Clock_type::time_point m_start = Clock_type::now();
+    public:
         using Clock    = Clock_type;
         using Duration = Duration_type;
-
-        Clock::time_point start = Clock::now();
 
         auto restart(Clock::time_point const new_start = Clock::now()) noexcept -> void
         {
-            start = new_start;
+            m_start = new_start;
         }
 
-        auto elapsed() const noexcept -> Duration
+        auto elapsed() const -> Duration
         {
-            return std::chrono::duration_cast<Duration>(Clock::now() - start);
+            return std::chrono::duration_cast<Duration>(Clock::now() - m_start);
         }
     };
 
-    template <class Clock_type, class Duration_type>
-    struct Basic_logging_timer : Basic_timer<Clock_type, Duration_type> {
-        using Clock    = Clock_type;
-        using Duration = Duration_type;
-
-        std::function<void(Duration)> scope_exit_logger;
-
-        Basic_logging_timer() noexcept
-            : scope_exit_logger { [](Duration const duration) {
-                std::print(
-                    "[utl::Logging_timer::~Logging_timer]: Total elapsed time: {}\n", duration);
-            } }
-        {}
-
-        explicit Basic_logging_timer(decltype(scope_exit_logger)&& scope_exit_logger) noexcept
-            : scope_exit_logger { std::move(scope_exit_logger) }
-        {}
-
-        ~Basic_logging_timer()
-        {
-            if (scope_exit_logger) {
-                scope_exit_logger(Basic_timer<Clock, Duration>::elapsed());
-            }
-            else {
-                cpputil::abort("utl::Logging_timer: scope_exit_logger was uninitialized");
-            }
-        }
-    };
-
-    using Timer         = Basic_timer<std::chrono::steady_clock, std::chrono::milliseconds>;
-    using Logging_timer = Basic_logging_timer<std::chrono::steady_clock, std::chrono::milliseconds>;
+    using Timer = Basic_timer<std::chrono::steady_clock, std::chrono::milliseconds>;
 
 } // namespace utl

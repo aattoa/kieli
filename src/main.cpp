@@ -1,6 +1,5 @@
 #include <libutl/common/utilities.hpp>
 #include <libutl/common/flatmap.hpp>
-#include <libutl/common/timer.hpp>
 #include <libutl/readline/readline.hpp>
 #include <liblex/lex.hpp>
 #include <libparse/parse.hpp>
@@ -153,26 +152,19 @@ namespace {
 
 } // namespace
 
-auto main(int argc, char const** argv) -> int
+auto main(int const argc, char const* const* const argv) -> int
 {
     cppargs::Parameters parameters;
 
     auto const help_flag    = parameters.add('h', "help", "Show this help text");
     auto const version_flag = parameters.add('v', "version", "Show Kieli version");
     auto const nocolor_flag = parameters.add("nocolor", "Disable colored output");
-    auto const time_flag    = parameters.add("time", "Print the execution time");
     auto const repl_option  = parameters.add<std::string_view>("repl", "Run the given REPL");
 
     cppdiag::Colors colors = cppdiag::Colors::defaults();
 
     try {
         cppargs::parse(argc, argv, parameters);
-
-        utl::Logging_timer const execution_timer { [&](auto const elapsed) {
-            if (time_flag) {
-                std::println("Execution time: {}", elapsed);
-            }
-        } };
 
         if (nocolor_flag) {
             colors = cppdiag::Colors::none();
