@@ -4,10 +4,12 @@
 
 #if !__has_include(<readline/readline.h>) || !__has_include(<readline/history.h>)
 
-auto utl::readline(std::string const& prompt) -> std::optional<std::string>
+auto utl::readline(char const* const prompt) -> std::optional<std::string>
 {
-    (void)cpputil::io::write(stdout, prompt);
-    (void)std::fflush(stdout);
+    if (prompt) {
+        (void)cpputil::io::write(stdout, prompt);
+        (void)std::fflush(stdout);
+    }
     return cpputil::io::read_line(stdin);
 }
 
@@ -78,24 +80,28 @@ namespace {
 
     auto add_line_to_history_file(std::string_view const line) -> void
     {
-        std::optional const path = history_file_path();
+        auto const path = history_file_path();
         if (!path.has_value() || !is_valid_history_file_path(path.value())) {
             return;
         }
-        if (auto file = cpputil::io::File::open_append(path.value().c_str())) {
+        if (auto const file = cpputil::io::File::open_append(path.value().c_str())) {
             (void)cpputil::io::write_line(file.get(), line);
         }
     }
+
+    auto underlying_readline(char const* const prompt)
+    {
+        using Free_fn = decltype([](void* const ptr) { std::free(ptr); }); // NOLINT: manual free
+        return std::unique_ptr<char, Free_fn> { ::readline(prompt) };
+    }
 } // namespace
 
-auto utl::readline(std::string const& prompt) -> std::optional<std::string>
+auto utl::readline(char const* const prompt) -> std::optional<std::string>
 {
     [[maybe_unused]] static auto const _ = (read_history_file_to_current_history(), 0);
-    using Free_fn = decltype([](void* const ptr) { std::free(ptr); }); // NOLINT: manual free
-    if (std::unique_ptr<char, Free_fn> const input { ::readline(prompt.c_str()) }) {
-        return input.get();
-    }
-    return std::nullopt;
+
+    auto const input = underlying_readline(prompt);
+    return input ? std::optional(input.get()) : std::nullopt;
 }
 
 auto utl::add_to_readline_history(std::string const& string) -> void
