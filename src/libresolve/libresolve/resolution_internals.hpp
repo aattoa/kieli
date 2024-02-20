@@ -125,10 +125,12 @@ namespace libresolve {
         Environment_wrapper        environment,
         ast::Qualified_name const& name) -> std::optional<Upper_info>;
 
-    auto error_expression(Constants const&, utl::Source_range) -> hir::Expression;
-    auto error_type(Constants const&, utl::Source_range) -> hir::Type;
+    auto occurs_check(hir::Unification_variable_tag tag, hir::Type type) -> bool;
 
+    auto error_expression(Constants const&, utl::Source_range) -> hir::Expression;
     auto unit_expression(Constants const&, utl::Source_range) -> hir::Expression;
+
+    auto error_type(Constants const&, utl::Source_range) -> hir::Type;
     auto unit_type(Constants const&, utl::Source_range) -> hir::Type;
 
 } // namespace libresolve

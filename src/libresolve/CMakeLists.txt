@@ -10,6 +10,7 @@ target_sources(libresolve
     PRIVATE libresolve/hir.hpp
     PRIVATE libresolve/lookup.cpp
     PRIVATE libresolve/module.hpp
+    PRIVATE libresolve/occurs_check.cpp
     PRIVATE libresolve/resolution_internals.cpp
     PRIVATE libresolve/resolution_internals.hpp
     PRIVATE libresolve/resolve.cpp
