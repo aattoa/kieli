@@ -55,15 +55,6 @@ auto libresolve::error_expression(Constants const& constants, utl::Source_range 
     };
 }
 
-auto libresolve::error_type(Constants const& constants, utl::Source_range const source_range)
-    -> hir::Type
-{
-    return hir::Type {
-        .variant      = constants.error_type,
-        .source_range = source_range,
-    };
-}
-
 auto libresolve::unit_expression(Constants const& constants, utl::Source_range const source_range)
     -> hir::Expression
 {
@@ -74,11 +65,75 @@ auto libresolve::unit_expression(Constants const& constants, utl::Source_range c
     };
 }
 
+auto libresolve::error_type(Constants const& constants, utl::Source_range const source_range)
+    -> hir::Type
+{
+    return hir::Type { constants.error_type, source_range };
+}
+
 auto libresolve::unit_type(Constants const& constants, utl::Source_range const source_range)
     -> hir::Type
 {
-    return hir::Type {
-        .variant      = constants.unit_type,
-        .source_range = source_range,
-    };
+    return hir::Type { constants.unit_type, source_range };
+}
+
+auto libresolve::Unification_state::fresh_general_type_variable(
+    Arenas& arenas, utl::Source_range const origin) -> hir::Type
+{
+    hir::Type_variable_tag const tag { type_states.size() };
+    type_states.emplace_back(hir::Type_variable_state::Unsolved {
+        .tag    = tag,
+        .kind   = hir::Type_variable_kind::general,
+        .origin = origin,
+    });
+    return hir::Type { arenas.type(hir::type::Variable { tag }), origin };
+}
+
+auto libresolve::Unification_state::fresh_integral_type_variable(
+    Arenas& arenas, utl::Source_range const origin) -> hir::Type
+{
+    hir::Type_variable_tag const tag { type_states.size() };
+    type_states.emplace_back(hir::Type_variable_state::Unsolved {
+        .tag    = tag,
+        .kind   = hir::Type_variable_kind::integral,
+        .origin = origin,
+    });
+    return hir::Type { arenas.type(hir::type::Variable { tag }), origin };
+}
+
+auto libresolve::Unification_state::fresh_mutability_variable(
+    Arenas& arenas, utl::Source_range const origin) -> hir::Mutability
+{
+    hir::Mutability_variable_tag const tag { mutability_states.size() };
+    mutability_states.emplace_back(hir::Mutability_variable_state::Unsolved {
+        .tag    = tag,
+        .origin = origin,
+    });
+    return hir::Mutability { arenas.mutability(hir::Mutability::Variable { tag }), origin };
+}
+
+auto libresolve::Unification_state::flatten(hir::Mutability const mutability) const -> void
+{
+    while (auto const* const variable
+           = std::get_if<hir::Mutability::Variable>(&*mutability.variant))
+    {
+        if (auto const* const solved = std::get_if<hir::Mutability_variable_state::Solved>(
+                &mutability_states.at(variable->tag.value).variant))
+        {
+            mutability.variant.as_mutable() = *solved->solution.variant;
+        }
+        break;
+    }
+}
+
+auto libresolve::Unification_state::flatten(hir::Type const type) const -> void
+{
+    while (auto const* const variable = std::get_if<hir::type::Variable>(&*type.variant)) {
+        if (auto const* const solved = std::get_if<hir::Type_variable_state::Solved>(
+                &type_states.at(variable->tag.value).variant))
+        {
+            type.variant.as_mutable() = *solved->solution.variant;
+        }
+        break;
+    }
 }

@@ -2,9 +2,20 @@
 
 #include <libresolve/resolve.hpp>
 #include <libresolve/module.hpp>
-#include <libresolve/unification.hpp>
 
 namespace libresolve {
+
+    struct Subtyping_constraint {
+        hir::Type         subtype;
+        hir::Type         supertype;
+        utl::Source_range origin;
+    };
+
+    struct Type_equality_constraint {
+        hir::Type         left;
+        hir::Type         right;
+        utl::Source_range origin;
+    };
 
     using Module_map = utl::Flatmap<std::filesystem::path, utl::Mutable_wrapper<Module_info>>;
 
@@ -27,6 +38,23 @@ namespace libresolve {
         utl::Mutable_wrapper<hir::Mutability::Variant> immutability;
 
         static auto make_with(Arenas& arenas) -> Constants;
+    };
+
+    struct Obligation {
+        hir::Type                            instance;
+        utl::Mutable_wrapper<Typeclass_info> typeclass;
+    };
+
+    struct Unification_state {
+        std::vector<hir::Type_variable_state>       type_states;
+        std::vector<hir::Mutability_variable_state> mutability_states;
+
+        auto fresh_general_type_variable(Arenas& arenas, utl::Source_range origin) -> hir::Type;
+        auto fresh_integral_type_variable(Arenas& arenas, utl::Source_range origin) -> hir::Type;
+        auto fresh_mutability_variable(Arenas& arenas, utl::Source_range origin) -> hir::Mutability;
+
+        auto flatten(hir::Type type) const -> void;
+        auto flatten(hir::Mutability mutability) const -> void;
     };
 
     struct Context {
@@ -125,11 +153,13 @@ namespace libresolve {
         Environment_wrapper        environment,
         ast::Qualified_name const& name) -> std::optional<Upper_info>;
 
-    auto occurs_check(hir::Unification_variable_tag tag, hir::Type type) -> bool;
+    auto occurs_check(Unification_state const& state, hir::Type_variable_tag tag, hir::Type type)
+        -> bool;
+
+    auto solve(Context& context, Subtyping_constraint const& constraint) -> void;
 
     auto error_expression(Constants const&, utl::Source_range) -> hir::Expression;
     auto unit_expression(Constants const&, utl::Source_range) -> hir::Expression;
-
     auto error_type(Constants const&, utl::Source_range) -> hir::Type;
     auto unit_type(Constants const&, utl::Source_range) -> hir::Type;
 

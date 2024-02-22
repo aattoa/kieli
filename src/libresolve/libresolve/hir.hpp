@@ -21,7 +21,11 @@ namespace libresolve::hir {
         using Strong_tag_base::Strong_tag_base;
     };
 
-    struct Unification_variable_tag : Strong_tag_base<Unification_variable_tag> {
+    struct Type_variable_tag : Strong_tag_base<Type_variable_tag> {
+        using Strong_tag_base::Strong_tag_base;
+    };
+
+    struct Mutability_variable_tag : Strong_tag_base<Mutability_variable_tag> {
         using Strong_tag_base::Strong_tag_base;
     };
 
@@ -29,7 +33,7 @@ namespace libresolve::hir {
         using Strong_tag_base::Strong_tag_base;
     };
 
-    enum class Unification_type_variable_kind { general, integral };
+    enum class Type_variable_kind { general, integral };
 
     struct Mutability {
         struct Concrete {
@@ -41,7 +45,7 @@ namespace libresolve::hir {
         };
 
         struct Variable {
-            Unification_variable_tag tag;
+            Mutability_variable_tag tag;
         };
 
         using Variant = std::variant<Concrete, Parameterized, Variable>;
@@ -52,6 +56,7 @@ namespace libresolve::hir {
 
     struct Type {
         struct Variant;
+
         utl::Mutable_wrapper<Variant> variant;
         utl::Source_range             source_range;
     };
@@ -144,8 +149,8 @@ namespace libresolve::hir {
             Template_parameter_tag tag;
         };
 
-        struct Unification_variable {
-            utl::Mutable_wrapper<Unification_type_variable_state> state;
+        struct Variable {
+            Type_variable_tag tag;
         };
 
         struct Error {};
@@ -166,7 +171,7 @@ namespace libresolve::hir {
               type::Enumeration,
               type::Tuple,
               type::Parameterized,
-              type::Unification_variable,
+              type::Variable,
               type::Error> {
         using variant::variant;
         using variant::operator=;
@@ -277,7 +282,7 @@ namespace libresolve::hir {
         utl::Source_range source_range;
     };
 
-    using Node_arena = utl::Wrapper_arena<Mutability::Variant, Type::Variant, Pattern, Expression>;
+    using Node_arena = utl::Wrapper_arena<Expression, Pattern, Type::Variant, Mutability::Variant>;
 
     struct Function {
         struct Parameter {
@@ -313,3 +318,30 @@ namespace libresolve::hir {
     };
 
 } // namespace libresolve::hir
+
+struct libresolve::hir::Mutability_variable_state {
+    struct Solved {
+        Mutability solution;
+    };
+
+    struct Unsolved {
+        Mutability_variable_tag tag;
+        utl::Source_range       origin;
+    };
+
+    std::variant<Solved, Unsolved> variant;
+};
+
+struct libresolve::hir::Type_variable_state {
+    struct Solved {
+        Type solution;
+    };
+
+    struct Unsolved {
+        Type_variable_tag  tag;
+        Type_variable_kind kind {};
+        utl::Source_range  origin;
+    };
+
+    std::variant<Solved, Unsolved> variant;
+};

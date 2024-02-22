@@ -4,7 +4,7 @@ target_include_directories(libresolve PUBLIC .)
 
 target_sources(libresolve
     PRIVATE libresolve/collection.cpp
-    PRIVATE libresolve/context.cpp
+    PRIVATE libresolve/constraint.cpp
     PRIVATE libresolve/fwd.hpp
     PRIVATE libresolve/hir.cpp
     PRIVATE libresolve/hir.hpp
@@ -21,9 +21,7 @@ target_sources(libresolve
     PRIVATE libresolve/resolve_mutability.cpp
     PRIVATE libresolve/resolve_pattern.cpp
     PRIVATE libresolve/resolve_type.cpp
-    PRIVATE libresolve/scope.cpp
-    PRIVATE libresolve/unification.cpp
-    PRIVATE libresolve/unification.hpp)
+    PRIVATE libresolve/scope.cpp)
 
 target_link_libraries(libresolve
     PUBLIC libphase

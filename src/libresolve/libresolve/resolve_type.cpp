@@ -69,8 +69,7 @@ namespace {
 
         auto operator()(ast::Wildcard const&) -> hir::Type
         {
-            hir::type::Unification_variable type { state.fresh_general_type_variable() };
-            return { context.arenas.type(std::move(type)), this_type.source_range };
+            return state.fresh_general_type_variable(context.arenas, this_type.source_range);
         }
 
         auto operator()(ast::type::Self const&) -> hir::Type

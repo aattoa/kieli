@@ -39,11 +39,7 @@ namespace {
         {
             return {
                 integer,
-                hir::Type {
-                    context.arenas.type(
-                        hir::type::Unification_variable { state.fresh_integral_type_variable() }),
-                    this_expression.source_range,
-                },
+                state.fresh_integral_type_variable(context.arenas, this_expression.source_range),
                 this_expression.source_range,
             };
         }
@@ -270,12 +266,9 @@ namespace {
         {
             return {
                 hir::expression::Sizeof {
-                    resolve_type(context, state, scope, environment, *sizeof_.inspected_type) },
-                hir::Type {
-                    context.arenas.type(
-                        hir::type::Unification_variable { state.fresh_integral_type_variable() }),
-                    this_expression.source_range,
+                    resolve_type(context, state, scope, environment, *sizeof_.inspected_type),
                 },
+                state.fresh_integral_type_variable(context.arenas, this_expression.source_range),
                 this_expression.source_range,
             };
         }

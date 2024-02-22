@@ -27,11 +27,7 @@ namespace {
         {
             return {
                 integer,
-                hir::Type {
-                    context.arenas.type(
-                        hir::type::Unification_variable { state.fresh_integral_type_variable() }),
-                    this_pattern.source_range,
-                },
+                state.fresh_integral_type_variable(context.arenas, this_pattern.source_range),
                 this_pattern.source_range,
             };
         }
