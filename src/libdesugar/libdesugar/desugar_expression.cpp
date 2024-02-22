@@ -69,7 +69,7 @@ namespace {
 
                 auto const source_range = left.source_range.up_to(right_operand->source_range);
                 left = ast::Expression {
-                    .value = ast::expression::Binary_operator_invocation {
+                    .variant = ast::expression::Binary_operator_invocation {
                         .left  = context.wrap(std::move(left)),
                         .right = context.wrap(recurse(right_operand)),
                         .op    = operator_name.identifier,
@@ -99,7 +99,7 @@ namespace {
         {
             return std::visit(
                 Expression_desugaring_visitor { context, *parenthesized.expression.value },
-                parenthesized.expression.value->value);
+                parenthesized.expression.value->variant);
         }
 
         auto operator()(cst::expression::Array_literal const& literal) -> ast::Expression::Variant
@@ -138,7 +138,7 @@ namespace {
                     : context.unit_value(this_expression.source_range);
 
             if (auto const* const let
-                = std::get_if<cst::expression::Conditional_let>(&conditional.condition->value))
+                = std::get_if<cst::expression::Conditional_let>(&conditional.condition->variant))
             {
                 /*
                     if let a = b { c } else { d }
@@ -168,7 +168,7 @@ namespace {
             }
 
             utl::wrapper auto const condition = context.desugar(conditional.condition);
-            if (std::holds_alternative<kieli::Boolean>(condition->value)) {
+            if (std::holds_alternative<kieli::Boolean>(condition->variant)) {
                 context.diagnostics().emit(
                     cppdiag::Severity::information,
                     context.source,
@@ -176,12 +176,11 @@ namespace {
                     "Constant condition");
             }
             return ast::expression::Conditional {
-                .condition                 = condition,
-                .true_branch               = context.desugar(conditional.true_branch),
-                .false_branch              = false_branch,
-                .source                    = conditional.is_elif_conditional.get()
-                                               ? ast::expression::Conditional::Source::elif_conditional
-                                               : ast::expression::Conditional::Source::normal_conditional,
+                .condition    = condition,
+                .true_branch  = context.desugar(conditional.true_branch),
+                .false_branch = false_branch,
+                .source = conditional.is_elif_conditional.get() ? ast::Conditional_source::elif
+                                                                : ast::Conditional_source::if_,
                 .has_explicit_false_branch = conditional.false_branch.has_value(),
             };
         }
@@ -223,7 +222,7 @@ namespace {
         auto operator()(cst::expression::While_loop const& loop) -> ast::Expression::Variant
         {
             if (auto const* const let
-                = std::get_if<cst::expression::Conditional_let>(&loop.condition->value))
+                = std::get_if<cst::expression::Conditional_let>(&loop.condition->variant))
             {
                 /*
                     while let a = b { c }
@@ -240,7 +239,7 @@ namespace {
 
                 return ast::expression::Loop {
                     .body = context.wrap(ast::Expression {
-                        .value = ast::expression::Match {
+                        .variant = ast::expression::Match {
                             .cases = utl::to_vector<ast::expression::Match::Case>({
                                 {
                                     .pattern = context.desugar(let->pattern),
@@ -249,7 +248,7 @@ namespace {
                                 {
                                     .pattern = context.wildcard_pattern(this_expression.source_range),
                                     .handler = context.wrap(ast::Expression {
-                                        .value = ast::expression::Break {
+                                        .variant = ast::expression::Break {
                                             .result = context.unit_value(this_expression.source_range),
                                         },
                                         .source_range = this_expression.source_range,
@@ -260,7 +259,7 @@ namespace {
                         },
                         .source_range = loop.body->source_range,
                     }),
-                    .source = ast::expression::Loop::Source::while_loop,
+                    .source = ast::Loop_source::while_loop,
                 };
             }
 
@@ -273,7 +272,7 @@ namespace {
             */
 
             utl::wrapper auto const condition = context.desugar(loop.condition);
-            if (auto const* const boolean = std::get_if<kieli::Boolean>(&condition->value)) {
+            if (auto const* const boolean = std::get_if<kieli::Boolean>(&condition->variant)) {
                 context.diagnostics().emit(
                     cppdiag::Severity::information,
                     context.source,
@@ -284,21 +283,21 @@ namespace {
             }
             return ast::expression::Loop {
                 .body = context.wrap(ast::Expression {
-                    .value = ast::expression::Conditional {
+                    .variant = ast::expression::Conditional {
                         .condition    = condition,
                         .true_branch  = context.desugar(loop.body),
                         .false_branch = context.wrap(ast::Expression {
-                            .value = ast::expression::Break {
+                            .variant = ast::expression::Break {
                                 .result = context.unit_value(this_expression.source_range),
                             },
                             .source_range = this_expression.source_range,
                         }),
-                        .source                    = ast::expression::Conditional::Source::while_loop_body,
+                        .source                    = ast::Conditional_source::while_loop_body,
                         .has_explicit_false_branch = true,
                     },
                     .source_range = loop.body->source_range,
                 }),
-                .source = ast::expression::Loop::Source::while_loop,
+                .source = ast::Loop_source::while_loop,
             };
         }
 
@@ -306,7 +305,7 @@ namespace {
         {
             return ast::expression::Loop {
                 .body   = context.desugar(loop.body),
-                .source = ast::expression::Loop::Source::plain_loop,
+                .source = ast::Loop_source::plain_loop,
             };
         }
 
@@ -349,7 +348,7 @@ namespace {
             -> ast::Expression::Variant
         {
             std::span tail = chain.sequence_tail;
-            return desugar_binary_operator_chain(context, chain.leftmost_operand, tail).value;
+            return desugar_binary_operator_chain(context, chain.leftmost_operand, tail).variant;
         }
 
         auto operator()(cst::expression::Template_application const& application)
@@ -454,7 +453,7 @@ namespace {
             return ast::expression::Block {
                 .side_effect_expressions = utl::to_vector({
                     ast::Expression {
-                        .value = ast::expression::Let_binding {
+                        .variant = ast::expression::Let_binding {
                             .pattern     = context.wildcard_pattern(this_expression.source_range),
                             .initializer = context.desugar(discard.discarded_expression),
                             .type        = std::nullopt,
@@ -558,7 +557,8 @@ namespace {
 auto libdesugar::Context::desugar(cst::Expression const& expression) -> ast::Expression
 {
     return {
-        .value = std::visit(Expression_desugaring_visitor { *this, expression }, expression.value),
+        .variant
+        = std::visit(Expression_desugaring_visitor { *this, expression }, expression.variant),
         .source_range = expression.source_range,
     };
 }

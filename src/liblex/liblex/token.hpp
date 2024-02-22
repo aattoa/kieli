@@ -106,7 +106,7 @@ namespace kieli {
             _enumerator_count
         };
 
-        Variant           value;
+        Variant           variant;
         Type              type;
         std::string_view  preceding_trivia;
         utl::Source_range source_range;
@@ -114,7 +114,7 @@ namespace kieli {
         template <class T>
         [[nodiscard]] auto value_as() const -> T
         {
-            T const* const pointer = std::get_if<T>(&value);
+            T const* const pointer = std::get_if<T>(&variant);
             cpputil::always_assert(pointer != nullptr);
             return *pointer;
         }
@@ -136,10 +136,10 @@ template <>
 struct std::formatter<kieli::Token> : std::formatter<std::string_view> {
     auto format(kieli::Token const& token, auto& context) const
     {
-        if (std::holds_alternative<std::monostate>(token.value)) {
+        if (std::holds_alternative<std::monostate>(token.variant)) {
             return std::formatter<std::string_view>::format(
                 kieli::Token::type_string(token.type), context);
         }
-        return std::format_to(context.out(), "({}: {})", token.type, token.value);
+        return std::format_to(context.out(), "({}: {})", token.type, token.variant);
     }
 };

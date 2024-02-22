@@ -24,7 +24,7 @@ namespace {
             auto const pattern     = require<parse_pattern>(context, "a pattern");
             auto const equals_sign = context.require_extract(Token::Type::equals);
             return context.wrap(cst::Expression {
-                .value { cst::expression::Conditional_let {
+                .variant { cst::expression::Conditional_let {
                     .pattern     = pattern,
                     .initializer = require<parse_expression>(context, "the initializer expression"),
                     .let_keyword_token = cst::Token::from_lexical(let_keyword.value()),
@@ -138,7 +138,7 @@ namespace {
         return extract_qualified_lower_name_or_initializer(
             context,
             cst::Root_qualifier {
-                .value { cst::Root_qualifier::Global {
+                .variant { cst::Global_root_qualifier {
                     .global_keyword = cst::Token::from_lexical(global),
                 } },
                 .double_colon_token
@@ -221,7 +221,7 @@ namespace {
 
             false_branch = cst::expression::Conditional::False_branch {
                 .body = context.wrap(cst::Expression {
-                    .value        = std::move(elif_conditional),
+                    .variant      = std::move(elif_conditional),
                     .source_range = context.up_to_current(elif_keyword.value().source_range),
                 }),
 
@@ -445,7 +445,7 @@ namespace {
                     return extract_qualified_lower_name_or_initializer(
                         context,
                         cst::Root_qualifier {
-                            .value              = type,
+                            .variant            = type,
                             .double_colon_token = cst::Token::from_lexical(double_colon.value()),
                             .source_range       = type->source_range,
                         });
@@ -505,7 +505,7 @@ namespace {
         Token const first_token = context.extract();
         if (auto variant = dispatch_parse_normal_expression(context, first_token, stage)) {
             return context.wrap(cst::Expression {
-                .value        = std::move(variant.value()),
+                .variant      = std::move(variant.value()),
                 .source_range = context.up_to_current(first_token.source_range),
             });
         }
@@ -520,7 +520,7 @@ namespace {
             [&](utl::Wrapper<cst::Expression> expression) {
                 while (auto arguments = parse_function_arguments(context)) {
                     expression = context.wrap(cst::Expression {
-                        .value = cst::expression::Invocation {
+                        .variant = cst::expression::Invocation {
                             .function_arguments  = std::move(arguments.value()),
                             .function_expression = expression,
                         },
@@ -590,7 +590,7 @@ namespace {
             [&](utl::Wrapper<cst::Expression> expression) {
                 while (auto const dot = context.try_extract(Token::Type::dot)) {
                     expression = context.wrap(cst::Expression {
-                        .value = extract_member_access(
+                        .variant = extract_member_access(
                             cst::Token::from_lexical(dot.value()), expression, context),
                         .source_range = context.up_to_current(expression->source_range),
                     });
@@ -627,7 +627,7 @@ namespace {
             [&](utl::Wrapper<cst::Expression> expression) {
                 while (auto type_cast = dispatch_parse_type_cast(context, expression)) {
                     expression = context.wrap(cst::Expression {
-                        .value        = std::move(type_cast.value()),
+                        .variant      = std::move(type_cast.value()),
                         .source_range = context.up_to_current(expression->source_range),
                     });
                 }
@@ -679,10 +679,10 @@ namespace {
                 return expression;
             }
             return context.wrap(cst::Expression {
-                .value { cst::expression::Binary_operator_chain {
+                .variant = cst::expression::Binary_operator_chain {
                     .sequence_tail    = std::move(tail),
                     .leftmost_operand = expression,
-                } },
+                },
                 .source_range = context.up_to_current(expression->source_range),
             });
         });

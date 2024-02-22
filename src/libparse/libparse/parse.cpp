@@ -31,12 +31,12 @@ namespace {
             if (auto const wildcard = context.try_extract(Token::Type::underscore)) {
                 return Default {
                     .equals_sign_token = cst::Token::from_lexical(equals),
-                    .value = cst::Wildcard { .source_range = wildcard.value().source_range },
+                    .variant = cst::Wildcard { .source_range = wildcard.value().source_range },
                 };
             }
             return Default {
                 .equals_sign_token = cst::Token::from_lexical(equals),
-                .value             = require<parse_argument>(context, "a default argument"),
+                .variant           = require<parse_argument>(context, "a default argument"),
             };
         });
     }
@@ -123,7 +123,7 @@ auto libparse::parse_mutability(Context& context) -> std::optional<cst::Mutabili
     if (auto mut_keyword = context.try_extract(Token::Type::mut)) {
         if (auto question_mark = context.try_extract(Token::Type::question)) {
             return cst::Mutability {
-                .value { cst::Mutability::Parameterized {
+                .variant { cst::Mutability::Parameterized {
                     .name = extract_lower_name(context, "a mutability parameter name"),
                     .question_mark_token = cst::Token::from_lexical(question_mark.value()),
                 } },
@@ -132,7 +132,7 @@ auto libparse::parse_mutability(Context& context) -> std::optional<cst::Mutabili
             };
         }
         return cst::Mutability {
-            .value                      = cst::Mutability::Concrete { .is_mutable = true },
+            .variant                    = cst::Mutability::Concrete { .is_mutable = true },
             .source_range               = mut_keyword.value().source_range,
             .mut_or_immut_keyword_token = cst::Token::from_lexical(mut_keyword.value()),
         };
@@ -159,9 +159,9 @@ auto libparse::parse_class_reference(Context& context) -> std::optional<cst::Cla
         {
             if (auto const global = context.try_extract(Token::Type::global)) {
                 root = cst::Root_qualifier {
-                    .value { cst::Root_qualifier::Global {
+                    .variant = cst::Global_root_qualifier {
                         .global_keyword = cst::Token::from_lexical(global.value()),
-                    } },
+                    },
                     .double_colon_token
                     = cst::Token::from_lexical(context.require_extract(Token::Type::double_colon)),
                     .source_range = global.value().source_range,
@@ -217,7 +217,7 @@ auto libparse::parse_template_parameter(Context& context) -> std::optional<cst::
     return dispatch_parse_template_parameter(context).transform(
         [&](cst::Template_parameter::Variant&& variant) {
             return cst::Template_parameter {
-                .value        = std::move(variant),
+                .variant      = std::move(variant),
                 .source_range = context.up_to_current(anchor_source_range),
             };
         });
@@ -236,7 +236,7 @@ auto libparse::parse_template_argument(Context& context) -> std::optional<cst::T
     }
     if (auto const immut_keyword = context.try_extract(Token::Type::immut)) {
         return cst::Template_argument { cst::Mutability {
-            .value                      = cst::Mutability::Concrete { .is_mutable = false },
+            .variant                    = cst::Mutability::Concrete { .is_mutable = false },
             .source_range               = immut_keyword->source_range,
             .mut_or_immut_keyword_token = cst::Token::from_lexical(immut_keyword.value()),
         } };

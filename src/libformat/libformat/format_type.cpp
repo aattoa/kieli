@@ -120,5 +120,5 @@ namespace {
 
 auto libformat::State::format(cst::Type const& type) -> void
 {
-    std::visit(Type_format_visitor { *this }, type.value);
+    std::visit(Type_format_visitor { *this }, type.variant);
 }

@@ -35,7 +35,7 @@ namespace {
         return extract_qualified_typename(
             context,
             cst::Root_qualifier {
-                .value = cst::Root_qualifier::Global { cst::Token::from_lexical(global) },
+                .variant = cst::Global_root_qualifier { cst::Token::from_lexical(global) },
                 .double_colon_token
                 = cst::Token::from_lexical(context.require_extract(Token::Type::double_colon)),
                 .source_range = global.source_range,
@@ -184,7 +184,7 @@ namespace {
             auto name = extract_qualified_name(
                 context,
                 cst::Root_qualifier {
-                    .value              = type,
+                    .variant            = type,
                     .double_colon_token = cst::Token::from_lexical(double_colon.value()),
                     .source_range       = type->source_range,
                 });
@@ -193,7 +193,7 @@ namespace {
                 // TODO: cleanup
                 auto template_arguments = parse_template_arguments(context);
                 return context.wrap(cst::Type {
-                    .value { std::invoke([&]() -> cst::Type::Variant {
+                    .variant { std::invoke([&]() -> cst::Type::Variant {
                         if (template_arguments.has_value()) {
                             return cst::type::Template_application {
                                 .template_arguments = std::move(template_arguments.value()),
@@ -222,7 +222,7 @@ auto libparse::parse_type(Context& context) -> std::optional<utl::Wrapper<cst::T
             return try_qualify(
                 context,
                 context.wrap(cst::Type {
-                    .value        = std::move(variant),
+                    .variant      = std::move(variant),
                     .source_range = context.up_to_current(first_token.source_range),
                 }));
         });

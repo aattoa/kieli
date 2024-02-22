@@ -11,7 +11,7 @@ namespace {
 
         auto operator()(cst::type::Parenthesized const& parenthesized) -> ast::Type::Variant
         {
-            return std::visit(*this, parenthesized.type.value->value);
+            return std::visit(*this, parenthesized.type.value->variant);
         }
 
         auto operator()(kieli::built_in_type::Integer const& integer) -> ast::Type::Variant
@@ -130,7 +130,7 @@ namespace {
 auto libdesugar::Context::desugar(cst::Type const& type) -> ast::Type
 {
     return {
-        .value        = std::visit(Type_desugaring_visitor { *this, type }, type.value),
+        .variant      = std::visit(Type_desugaring_visitor { *this, type }, type.variant),
         .source_range = type.source_range,
     };
 }

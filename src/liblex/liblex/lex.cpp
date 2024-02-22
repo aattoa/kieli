@@ -171,7 +171,7 @@ namespace {
                 --new_position.column;
             }
             return Token {
-                .value            = std::move(value),
+                .variant          = std::move(value),
                 .type             = type,
                 .preceding_trivia = m_trivia,
                 .source_range     = utl::Source_range { m_old_position, new_position },

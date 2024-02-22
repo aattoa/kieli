@@ -291,7 +291,7 @@ auto libparse::parse_definition(Context& context) -> std::optional<cst::Definiti
         .transform([&](cst::Definition::Variant&& variant) {
             context.commit(stage);
             return cst::Definition {
-                .value        = std::move(variant),
+                .variant      = std::move(variant),
                 .source       = context.source(),
                 .source_range = context.up_to_current(first_token.source_range),
             };

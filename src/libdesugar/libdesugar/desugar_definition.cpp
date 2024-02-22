@@ -29,12 +29,12 @@ namespace {
 
     auto normalize_function_body(Context& context, ast::Expression expression) -> ast::Expression
     {
-        if (std::holds_alternative<ast::expression::Block>(expression.value)) {
+        if (std::holds_alternative<ast::expression::Block>(expression.variant)) {
             return expression;
         }
         auto const source_range = expression.source_range;
         return ast::Expression {
-            .value { ast::expression::Block {
+            .variant { ast::expression::Block {
                 .result_expression = context.wrap(std::move(expression)),
             } },
             .source_range = source_range,
@@ -76,10 +76,11 @@ namespace {
         auto operator()(cst::definition::Struct const& structure) -> ast::Definition::Variant
         {
             return ast::definition::Enumeration {
-                .constructors { utl::to_vector({ ast::definition::Constructor {
+                .constructors = utl::to_vector({ ast::definition::Constructor {
                     .name = structure.name,
                     .body = context.desugar(structure.body),
-                } }) },
+                } }),
+
                 .name                = structure.name,
                 .template_parameters = structure.template_parameters.transform(context.desugar()),
             };
@@ -193,8 +194,8 @@ auto libdesugar::Context::desugar(cst::definition::Constructor const& constructo
 auto libdesugar::Context::desugar(cst::Definition const& definition) -> ast::Definition
 {
     return {
-        .value
-        = std::visit(Definition_desugaring_visitor { *this, definition.source }, definition.value),
+        .variant = std::visit(
+            Definition_desugaring_visitor { *this, definition.source }, definition.variant),
         .source       = definition.source,
         .source_range = definition.source_range,
     };

@@ -3,6 +3,7 @@
 #include <libformat/format.hpp>
 
 namespace {
+
     struct Definition_format_visitor {
         libformat::State& state;
 
@@ -25,7 +26,7 @@ namespace {
             case kieli::Format_configuration::Function_body::normalize_to_equals_sign:
             {
                 if (auto const* const block
-                    = std::get_if<cst::expression::Block>(&function.body->value))
+                    = std::get_if<cst::expression::Block>(&function.body->variant))
                 {
                     if (block->result_expression.has_value() && block->side_effects.empty()) {
                         state.format(" = ");
@@ -44,7 +45,7 @@ namespace {
             }
             case kieli::Format_configuration::Function_body::normalize_to_block:
             {
-                if (std::holds_alternative<cst::expression::Block>(function.body->value)) {
+                if (std::holds_alternative<cst::expression::Block>(function.body->variant)) {
                     state.format(" ");
                     state.format(*function.body);
                 }
@@ -108,6 +109,7 @@ namespace {
         state.format(node);
         return output_string;
     }
+
 } // namespace
 
 auto kieli::format_module(
@@ -120,7 +122,7 @@ auto kieli::format_module(
         .current_indentation = 0,
     };
     for (cst::Definition const& definition : module.definitions) {
-        std::visit(Definition_format_visitor { state }, definition.value);
+        std::visit(Definition_format_visitor { state }, definition.variant);
     }
     output_string.push_back('\n');
     return output_string;

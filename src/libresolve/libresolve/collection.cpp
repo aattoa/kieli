@@ -90,7 +90,7 @@ namespace {
                     cpputil::todo();
                 },
             },
-            std::move(definition.value));
+            std::move(definition.variant));
     }
 
     template <class Info>

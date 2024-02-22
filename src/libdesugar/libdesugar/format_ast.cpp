@@ -33,7 +33,7 @@ DECLARE_FORMATTER(ast::pattern::Constructor);
 DECLARE_FORMATTER(ast::definition::Field);
 DECLARE_FORMATTER(ast::definition::Constructor_body);
 DECLARE_FORMATTER(ast::definition::Constructor);
-DECLARE_FORMATTER(ast::definition::Template_parameters);
+DECLARE_FORMATTER(ast::Template_parameters);
 
 namespace {
     template <class Out>
@@ -196,7 +196,7 @@ namespace {
 
         auto operator()(ast::expression::Loop const& loop)
         {
-            if (std::holds_alternative<ast::expression::Block>(loop.body->value)) {
+            if (std::holds_alternative<ast::expression::Block>(loop.body->variant)) {
                 std::format_to(out, "loop {}", loop.body);
             }
             else {
@@ -411,7 +411,7 @@ namespace {
             if (function.signature.return_type.has_value()) {
                 std::format_to(out, ": {}", function.signature.return_type.value());
             }
-            assert(std::holds_alternative<ast::expression::Block>(function.body.value));
+            assert(std::holds_alternative<ast::expression::Block>(function.body.variant));
             std::format_to(out, " {}", function.body);
         }
 
@@ -455,25 +455,25 @@ namespace {
 
 DEFINE_FORMATTER(ast::Expression)
 {
-    std::visit(Expression_format_visitor { context.out() }, value.value);
+    std::visit(Expression_format_visitor { context.out() }, value.variant);
     return context.out();
 }
 
 DEFINE_FORMATTER(ast::Pattern)
 {
-    std::visit(Pattern_format_visitor { context.out() }, value.value);
+    std::visit(Pattern_format_visitor { context.out() }, value.variant);
     return context.out();
 }
 
 DEFINE_FORMATTER(ast::Type)
 {
-    std::visit(Type_format_visitor { context.out() }, value.value);
+    std::visit(Type_format_visitor { context.out() }, value.variant);
     return context.out();
 }
 
 DEFINE_FORMATTER(ast::Definition)
 {
-    std::visit(Definition_format_visitor { context.out() }, value.value);
+    std::visit(Definition_format_visitor { context.out() }, value.variant);
     return context.out();
 }
 
@@ -494,7 +494,7 @@ DEFINE_FORMATTER(ast::Mutability)
                 std::format_to(context.out(), "mut?{}", parameterized.name);
             },
         },
-        value.value);
+        value.variant);
     return context.out();
 }
 
@@ -503,12 +503,14 @@ DEFINE_FORMATTER(ast::Qualified_name)
     if (value.root_qualifier.has_value()) {
         std::visit(
             utl::Overload {
-                [&](ast::Root_qualifier::Global) { std::format_to(context.out(), "global::"); },
+                [&](ast::Global_root_qualifier const&) {
+                    std::format_to(context.out(), "global::");
+                },
                 [&](utl::Wrapper<ast::Type> const type) {
                     std::format_to(context.out(), "{}::", type);
                 },
             },
-            value.root_qualifier->value);
+            value.root_qualifier.value());
     }
     for (ast::Qualifier const& qualifier : value.middle_qualifiers) {
         std::format_to(context.out(), "{}", qualifier.name);
@@ -551,7 +553,7 @@ DEFINE_FORMATTER(ast::Function_parameter)
 
 DEFINE_FORMATTER(ast::Template_argument)
 {
-    return std::format_to(context.out(), "{}", value.value);
+    return std::format_to(context.out(), "{}", value);
 }
 
 DEFINE_FORMATTER(ast::Template_parameter)
@@ -583,7 +585,7 @@ DEFINE_FORMATTER(ast::Template_parameter)
                 }
             },
         },
-        value.value);
+        value.variant);
     return context.out();
 }
 
@@ -641,7 +643,7 @@ DEFINE_FORMATTER(ast::definition::Constructor)
     return std::format_to(context.out(), "{}{}", value.name, value.body);
 }
 
-DEFINE_FORMATTER(ast::definition::Template_parameters)
+DEFINE_FORMATTER(ast::Template_parameters)
 {
     return value.has_value() ? std::format_to(context.out(), "[{:n}]", value.value())
                              : context.out();

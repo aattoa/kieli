@@ -75,7 +75,7 @@ namespace cst {
         };
 
         using Variant = std::variant<Concrete, Parameterized>;
-        Variant           value;
+        Variant           variant;
         utl::Source_range source_range;
         Token             mut_or_immut_keyword_token;
     };
@@ -89,16 +89,11 @@ namespace cst {
         [[nodiscard]] auto is_reference() const noexcept -> bool;
     };
 
-    struct Template_argument {
-        using Variant = std::variant< //
-            utl::Wrapper<Type>,
-            utl::Wrapper<Expression>,
-            Mutability,
-            Wildcard>;
-        Variant value;
-
-        [[nodiscard]] auto source_range() const -> utl::Source_range;
-    };
+    using Template_argument = std::variant< //
+        utl::Wrapper<Type>,
+        utl::Wrapper<Expression>,
+        Mutability,
+        Wildcard>;
 
     using Template_arguments = Surrounded<Separated_sequence<Template_argument>>;
 
@@ -109,14 +104,14 @@ namespace cst {
         utl::Source_range                 source_range;
     };
 
-    struct Root_qualifier {
-        struct Global {
-            Token global_keyword;
-        };
+    struct Global_root_qualifier {
+        Token global_keyword;
+    };
 
-        std::variant<Global, utl::Wrapper<Type>> value;
-        Token                                    double_colon_token;
-        utl::Source_range                        source_range;
+    struct Root_qualifier {
+        std::variant<Global_root_qualifier, utl::Wrapper<Type>> variant;
+        Token                                                   double_colon_token;
+        utl::Source_range                                       source_range;
     };
 
     struct Qualified_name {
@@ -138,7 +133,7 @@ namespace cst {
     template <class T>
     struct Default_argument {
         Token                     equals_sign_token;
-        std::variant<T, Wildcard> value;
+        std::variant<T, Wildcard> variant;
     };
 
     using Type_parameter_default_argument       = Default_argument<utl::Wrapper<Type>>;
@@ -190,7 +185,7 @@ namespace cst {
             Template_value_parameter,
             Template_mutability_parameter>;
 
-        Variant           value;
+        Variant           variant;
         utl::Source_range source_range;
     };
 
@@ -487,7 +482,7 @@ namespace cst {
             expression::Meta,
             expression::Hole>;
 
-        Variant           value;
+        Variant           variant;
         utl::Source_range source_range;
     };
 
@@ -521,8 +516,10 @@ namespace cst {
 
         struct Unit_constructor {};
 
-        using Constructor_body
-            = std::variant<Struct_constructor, Tuple_constructor, Unit_constructor>;
+        using Constructor_body = std::variant<
+            Struct_constructor, //
+            Tuple_constructor,
+            Unit_constructor>;
 
         struct Constructor {
             Qualified_name   name;
@@ -579,7 +576,7 @@ namespace cst {
             pattern::Alias,
             pattern::Guarded>;
 
-        Variant           value;
+        Variant           variant;
         utl::Source_range source_range;
     };
 
@@ -665,7 +662,7 @@ namespace cst {
             type::Pointer,
             type::Template_application>;
 
-        Variant           value;
+        Variant           variant;
         utl::Source_range source_range;
     };
 
@@ -785,7 +782,7 @@ namespace cst {
             definition::Instantiation,
             definition::Submodule>;
 
-        Variant              value;
+        Variant              variant;
         utl::Source::Wrapper source;
         utl::Source_range    source_range;
     };

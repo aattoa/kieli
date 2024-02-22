@@ -48,26 +48,19 @@ namespace {
 
     auto debug_lex(utl::Source::Wrapper const source, kieli::Compile_info& info) -> void
     {
-        kieli::Lex_state state {
-            .compile_info = info,
-            .source       = source,
-            .string       = source->string(),
-        };
-        std::vector<kieli::Token> tokens;
-        for (;;) {
-            auto token = kieli::lex(state);
-            if (token.type == kieli::Token::Type::end_of_input) {
-                break;
-            }
-            tokens.push_back(std::move(token));
+        auto state = kieli::Lex_state::make(source, info);
+        auto token = kieli::lex(state);
+        while (token.type != kieli::Token::Type::end_of_input) {
+            std::print("{} ", token);
+            token = kieli::lex(state);
         }
-        std::println("Tokens: {}", tokens);
+        std::println("");
     }
 
     auto debug_parse(utl::Source::Wrapper const source, kieli::Compile_info& info) -> void
     {
         auto const module = kieli::parse(source, info);
-        std::print("{}", kieli::format_module(module, {}));
+        std::print("{}", kieli::format_module(module, kieli::Format_configuration {}));
     }
 
     auto debug_desugar(utl::Source::Wrapper const source, kieli::Compile_info& info) -> void
@@ -111,7 +104,7 @@ namespace {
     }
 
     auto run_debug_repl(
-        void (*callback)(utl::Source::Wrapper, kieli::Compile_info&),
+        void (&callback)(utl::Source::Wrapper, kieli::Compile_info&),
         cppdiag::Colors const colors) -> void
     {
         while (auto input = utl::readline(">>> ")) {
@@ -139,14 +132,13 @@ namespace {
         }
     }
 
-    [[nodiscard]] auto run_debug_repl(std::string_view const name, cppdiag::Colors const colors)
-        -> int
+    auto run_debug_repl(std::string_view const name, cppdiag::Colors const colors) -> int
     {
         if (auto* const callback = choose_debug_repl_callback(name)) {
-            run_debug_repl(callback, colors);
+            run_debug_repl(*callback, colors);
             return EXIT_SUCCESS;
         }
-        std::println(stderr, "{}Expected one of lex|par|des, not '{}'", error_header(colors), name);
+        std::println(stderr, "{}Unrecognized REPL name: '{}'", error_header(colors), name);
         return EXIT_FAILURE;
     }
 

@@ -118,5 +118,6 @@ auto libresolve::resolve_pattern(
     ast::Pattern const& pattern) -> hir::Pattern
 {
     return std::visit(
-        Pattern_resolution_visitor { context, state, scope, environment, pattern }, pattern.value);
+        Pattern_resolution_visitor { context, state, scope, environment, pattern },
+        pattern.variant);
 }

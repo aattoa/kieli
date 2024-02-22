@@ -18,13 +18,13 @@ auto libdesugar::Context::desugar(cst::Function_parameter const& parameter)
         .type             = parameter.type.transform(wrap_desugar()),
         .default_argument = parameter.default_argument.transform(
             [&](cst::Value_parameter_default_argument const& argument) {
-                if (auto const* const wildcard = std::get_if<cst::Wildcard>(&argument.value)) {
+                if (auto const* const wildcard = std::get_if<cst::Wildcard>(&argument.variant)) {
                     diagnostics().error(
                         source,
                         wildcard->source_range,
                         "A function default argument may not be a wildcard");
                 }
-                return desugar(std::get<utl::Wrapper<cst::Expression>>(argument.value));
+                return desugar(std::get<utl::Wrapper<cst::Expression>>(argument.variant));
             }),
     };
 }
@@ -46,14 +46,14 @@ auto libdesugar::Context::desugar(cst::Self_parameter const& self_parameter) -> 
 
 auto libdesugar::Context::desugar(cst::Template_argument const& argument) -> ast::Template_argument
 {
-    return { .value = std::visit<ast::Template_argument::Variant>(desugar(), argument.value) };
+    return std::visit<ast::Template_argument>(desugar(), argument);
 }
 
 auto libdesugar::Context::desugar(cst::Template_parameter const& template_parameter)
     -> ast::Template_parameter
 {
     return {
-        .value = std::visit<ast::Template_parameter::Variant>(
+        .variant = std::visit<ast::Template_parameter::Variant>(
             utl::Overload {
                 [&](cst::Template_type_parameter const& parameter) {
                     return ast::Template_type_parameter {
@@ -76,7 +76,7 @@ auto libdesugar::Context::desugar(cst::Template_parameter const& template_parame
                     };
                 },
             },
-            template_parameter.value),
+            template_parameter.variant),
         .source_range = template_parameter.source_range,
     };
 }
@@ -97,14 +97,14 @@ auto libdesugar::Context::desugar(cst::Qualified_name const& name) -> ast::Quali
         .root_qualifier    = name.root_qualifier.transform([&](cst::Root_qualifier const& root) {
             return std::visit(
                 utl::Overload {
-                    [](cst::Root_qualifier::Global const&) {
-                        return ast::Root_qualifier { .value = ast::Root_qualifier::Global {} };
+                    [](cst::Global_root_qualifier const&) -> ast::Root_qualifier {
+                        return ast::Global_root_qualifier {};
                     },
                     [this](utl::Wrapper<cst::Type> const type) -> ast::Root_qualifier {
-                        return { .value = desugar(type) };
+                        return desugar(type);
                     },
                 },
-                root.value);
+                root.variant);
         }),
         .primary_name = name.primary_name,
     };
@@ -148,7 +148,7 @@ auto libdesugar::Context::desugar(cst::expression::Struct_initializer::Field con
 auto libdesugar::Context::desugar(cst::Mutability const& mutability) -> ast::Mutability
 {
     return ast::Mutability {
-        .value = std::visit<ast::Mutability::Variant>(
+        .variant = std::visit<ast::Mutability::Variant>(
             utl::Overload {
                 [](cst::Mutability::Concrete const concrete) {
                     return ast::Mutability::Concrete { .is_mutable = concrete.is_mutable };
@@ -157,7 +157,7 @@ auto libdesugar::Context::desugar(cst::Mutability const& mutability) -> ast::Mut
                     return ast::Mutability::Parameterized { .name = parameterized.name };
                 },
             },
-            mutability.value),
+            mutability.variant),
         .is_explicit  = true,
         .source_range = mutability.source_range,
     };
@@ -205,7 +205,7 @@ auto libdesugar::Context::desugar_mutability(
         return desugar(mutability.value());
     }
     return ast::Mutability {
-        .value        = ast::Mutability::Concrete { .is_mutable = false },
+        .variant      = ast::Mutability::Concrete { .is_mutable = false },
         .is_explicit  = false,
         .source_range = source_range,
     };
@@ -215,12 +215,12 @@ auto libdesugar::Context::normalize_self_parameter(cst::Self_parameter const& se
     -> ast::Function_parameter
 {
     ast::Type self_type {
-        .value        = ast::type::Self {},
+        .variant      = ast::type::Self {},
         .source_range = self_parameter.source_range,
     };
     if (self_parameter.is_reference()) {
         self_type = ast::Type {
-            .value = ast::type::Reference {
+            .variant = ast::type::Reference {
                 .referenced_type = wrap(std::move(self_type)),
                 .mutability      = desugar_mutability(self_parameter.mutability, self_parameter.self_keyword_token.source_range),
             },
@@ -228,7 +228,7 @@ auto libdesugar::Context::normalize_self_parameter(cst::Self_parameter const& se
         };
     }
     ast::Pattern self_pattern {
-        .value = ast::pattern::Name {
+        .variant = ast::pattern::Name {
             .name {
                 .identifier  = self_variable_identifier,
                 .source_range = self_parameter.source_range,
@@ -249,26 +249,26 @@ auto libdesugar::Context::normalize_self_parameter(cst::Self_parameter const& se
 
 auto libdesugar::Context::unit_value(utl::Source_range const view) -> utl::Wrapper<ast::Expression>
 {
-    return wrap(ast::Expression { .value = ast::expression::Tuple {}, .source_range = view });
+    return wrap(ast::Expression { .variant = ast::expression::Tuple {}, .source_range = view });
 }
 
 auto libdesugar::Context::wildcard_pattern(utl::Source_range const view)
     -> utl::Wrapper<ast::Pattern>
 {
     return wrap(ast::Pattern {
-        .value        = ast::Wildcard { .source_range = view },
+        .variant      = ast::Wildcard { .source_range = view },
         .source_range = view,
     });
 }
 
 auto libdesugar::Context::true_pattern(utl::Source_range const view) -> utl::Wrapper<ast::Pattern>
 {
-    return wrap(ast::Pattern { .value = kieli::Boolean { true }, .source_range = view });
+    return wrap(ast::Pattern { .variant = kieli::Boolean { true }, .source_range = view });
 }
 
 auto libdesugar::Context::false_pattern(utl::Source_range const view) -> utl::Wrapper<ast::Pattern>
 {
-    return wrap(ast::Pattern { .value = kieli::Boolean { false }, .source_range = view });
+    return wrap(ast::Pattern { .variant = kieli::Boolean { false }, .source_range = view });
 }
 
 auto libdesugar::Context::diagnostics() noexcept -> kieli::Diagnostics&

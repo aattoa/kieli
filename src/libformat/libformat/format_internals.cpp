@@ -29,14 +29,14 @@ auto libformat::State::format(cst::Qualified_name const& name) -> void
     if (name.root_qualifier.has_value()) {
         std::visit(
             utl::Overload {
-                [&](cst::Root_qualifier::Global) { format("global::"); },
+                [&](cst::Global_root_qualifier) { format("global::"); },
                 [&](utl::Wrapper<cst::Type> const type) {
                     format(*type);
                     format("::");
                 },
 
             },
-            name.root_qualifier->value);
+            name.root_qualifier->variant);
     }
     for (auto const& qualifier : name.middle_qualifiers.elements) {
         format("{}", qualifier.name);
@@ -48,7 +48,7 @@ auto libformat::State::format(cst::Qualified_name const& name) -> void
 
 auto libformat::State::format(cst::Template_argument const& argument) -> void
 {
-    std::visit([&](auto const& other) { this->format(other); }, argument.value);
+    std::visit([&](auto const& other) { this->format(other); }, argument);
 }
 
 auto libformat::State::format(cst::Function_argument const& argument) -> void
@@ -70,7 +70,7 @@ auto libformat::State::format(cst::Mutability const& mutability) -> void
                 format("{}", concrete.is_mutable.get() ? "mut" : "immut");
             },
         },
-        mutability.value);
+        mutability.variant);
 }
 
 auto libformat::State::format(std::optional<cst::Template_arguments> const& arguments) -> void

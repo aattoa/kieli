@@ -11,7 +11,7 @@ namespace {
         auto operator()(cst::pattern::Parenthesized const& parenthesized) -> ast::Pattern::Variant
         {
             return std::visit(
-                Pattern_desugaring_visitor { context }, parenthesized.pattern.value->value);
+                Pattern_desugaring_visitor { context }, parenthesized.pattern.value->variant);
         }
 
         auto operator()(kieli::literal auto const& literal) -> ast::Pattern::Variant
@@ -100,7 +100,7 @@ namespace {
 auto libdesugar::Context::desugar(cst::Pattern const& pattern) -> ast::Pattern
 {
     return {
-        .value        = std::visit(Pattern_desugaring_visitor { *this }, pattern.value),
+        .variant      = std::visit(Pattern_desugaring_visitor { *this }, pattern.variant),
         .source_range = pattern.source_range,
     };
 }

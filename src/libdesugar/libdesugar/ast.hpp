@@ -40,19 +40,16 @@ namespace ast {
 
         using Variant = std::variant<Concrete, Parameterized>;
 
-        Variant             value;
+        Variant             variant;
         utl::Explicit<bool> is_explicit;
         utl::Source_range   source_range;
     };
 
-    struct Template_argument {
-        using Variant = std::variant< //
-            utl::Wrapper<Type>,
-            utl::Wrapper<Expression>,
-            Mutability,
-            Wildcard>;
-        Variant value;
-    };
+    using Template_argument = std::variant< //
+        utl::Wrapper<Type>,
+        utl::Wrapper<Expression>,
+        Mutability,
+        Wildcard>;
 
     struct Qualifier {
         std::optional<std::vector<Template_argument>> template_arguments;
@@ -60,11 +57,9 @@ namespace ast {
         utl::Source_range                             source_range;
     };
 
-    struct Root_qualifier {
-        struct Global {};
+    struct Global_root_qualifier {};
 
-        std::variant<Global, utl::Wrapper<Type>> value;
-    };
+    using Root_qualifier = std::variant<Global_root_qualifier, utl::Wrapper<Type>>;
 
     struct Qualified_name {
         std::vector<Qualifier>        middle_qualifiers;
@@ -107,11 +102,11 @@ namespace ast {
             Template_value_parameter,
             Template_mutability_parameter>;
 
-        Variant           value;
+        Variant           variant;
         utl::Source_range source_range;
-
-        static auto kind_description(Variant const&) noexcept -> std::string_view;
     };
+
+    using Template_parameters = std::optional<std::vector<Template_parameter>>;
 
     struct Function_argument {
         utl::Wrapper<Expression>         expression;
@@ -123,6 +118,9 @@ namespace ast {
         std::optional<utl::Wrapper<Type>>       type;
         std::optional<utl::Wrapper<Expression>> default_argument;
     };
+
+    enum class Loop_source { plain_loop, while_loop, for_loop };
+    enum class Conditional_source { if_, elif, while_loop_body };
 
     namespace expression {
         struct Array_literal {
@@ -140,9 +138,8 @@ namespace ast {
         };
 
         struct Loop {
-            enum class Source { plain_loop, while_loop, for_loop };
-            utl::Wrapper<Expression> body;
-            utl::Explicit<Source>    source;
+            utl::Wrapper<Expression>   body;
+            utl::Explicit<Loop_source> source;
         };
 
         struct Continue {};
@@ -210,12 +207,11 @@ namespace ast {
         };
 
         struct Conditional {
-            enum class Source { normal_conditional, elif_conditional, while_loop_body };
-            utl::Wrapper<Expression> condition;
-            utl::Wrapper<Expression> true_branch;
-            utl::Wrapper<Expression> false_branch;
-            utl::Explicit<Source>    source;
-            utl::Explicit<bool>      has_explicit_false_branch;
+            utl::Wrapper<Expression>          condition;
+            utl::Wrapper<Expression>          true_branch;
+            utl::Wrapper<Expression>          false_branch;
+            utl::Explicit<Conditional_source> source;
+            utl::Explicit<bool>               has_explicit_false_branch;
         };
 
         struct Match {
@@ -336,7 +332,7 @@ namespace ast {
             expression::Meta,
             expression::Hole>;
 
-        Variant           value;
+        Variant           variant;
         utl::Source_range source_range;
     };
 
@@ -361,8 +357,10 @@ namespace ast {
 
         struct Unit_constructor {};
 
-        using Constructor_body
-            = std::variant<Struct_constructor, Tuple_constructor, Unit_constructor>;
+        using Constructor_body = std::variant<
+            Struct_constructor, //
+            Tuple_constructor,
+            Unit_constructor>;
 
         struct Constructor {
             Qualified_name   name;
@@ -410,7 +408,7 @@ namespace ast {
             pattern::Alias,
             pattern::Guarded>;
 
-        Variant           value;
+        Variant           variant;
         utl::Source_range source_range;
     };
 
@@ -483,7 +481,7 @@ namespace ast {
             type::Instance_of,
             type::Template_application>;
 
-        Variant           value;
+        Variant           variant;
         utl::Source_range source_range;
     };
 
@@ -508,8 +506,6 @@ namespace ast {
     };
 
     namespace definition {
-        using Template_parameters = std::optional<std::vector<Template_parameter>>;
-
         struct Function {
             Function_signature  signature;
             Expression          body;
@@ -589,7 +585,7 @@ namespace ast {
             definition::Instantiation,
             definition::Submodule>;
 
-        Variant              value;
+        Variant              variant;
         utl::Source::Wrapper source;
         utl::Source_range    source_range;
     };
@@ -619,12 +615,12 @@ namespace ast {
     auto format_to(pattern::Field const&, std::string&) -> void;
     auto format_to(pattern::Constructor_body const&, std::string&) -> void;
     auto format_to(pattern::Constructor const&, std::string&) -> void;
+    auto format_to(Template_parameters const&, std::string&) -> void;
     auto format_to(definition::Field const&, std::string&) -> void;
     auto format_to(definition::Constructor_body const&, std::string&) -> void;
     auto format_to(definition::Constructor const&, std::string&) -> void;
-    auto format_to(definition::Template_parameters const&, std::string&) -> void;
 
-    inline constexpr auto to_string = [](auto const& x) -> std::string
+    auto to_string(auto const& x) -> std::string
         requires requires(std::string out) { ast::format_to(x, out); }
     {
         std::string output;

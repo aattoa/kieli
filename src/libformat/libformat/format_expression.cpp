@@ -43,7 +43,7 @@ namespace {
         static auto as_block(utl::Wrapper<cst::Expression> const expression)
             -> cst::expression::Block const&
         {
-            auto const* const block = std::get_if<cst::expression::Block>(&expression->value);
+            auto const* const block = std::get_if<cst::expression::Block>(&expression->variant);
             cpputil::always_assert(block != nullptr);
             return *block;
         }
@@ -327,8 +327,8 @@ namespace {
             if (!conditional.false_branch.has_value()) {
                 return;
             }
-            if (auto const* const else_conditional
-                = std::get_if<cst::expression::Conditional>(&conditional.false_branch->body->value))
+            if (auto const* const else_conditional = std::get_if<cst::expression::Conditional>(
+                    &conditional.false_branch->body->variant))
             {
                 if (else_conditional->is_elif_conditional.get()) {
                     state.format("{}", state.newline());
@@ -370,5 +370,5 @@ namespace {
 
 auto libformat::State::format(cst::Expression const& expression) -> void
 {
-    std::visit(Expression_format_visitor { *this }, expression.value);
+    std::visit(Expression_format_visitor { *this }, expression.variant);
 }

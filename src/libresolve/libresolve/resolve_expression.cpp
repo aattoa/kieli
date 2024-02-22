@@ -324,5 +324,5 @@ auto libresolve::resolve_expression(
 {
     return std::visit(
         Expression_resolution_visitor { context, state, scope, environment, expression },
-        expression.value);
+        expression.variant);
 }

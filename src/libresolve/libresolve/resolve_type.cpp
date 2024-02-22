@@ -162,5 +162,5 @@ auto libresolve::resolve_type(
     ast::Type const&    type) -> hir::Type
 {
     return std::visit(
-        Type_resolution_visitor { context, state, scope, environment, type }, type.value);
+        Type_resolution_visitor { context, state, scope, environment, type }, type.variant);
 }

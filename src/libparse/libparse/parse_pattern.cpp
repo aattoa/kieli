@@ -52,7 +52,7 @@ namespace {
             return extract_qualified_name(
                 context,
                 cst::Root_qualifier {
-                    .value = cst::Root_qualifier::Global { cst::Token::from_lexical(global) },
+                    .variant = cst::Global_root_qualifier { cst::Token::from_lexical(global) },
                     .double_colon_token = cst::Token::from_lexical(double_colon),
                     .source_range       = global.source_range,
                 });
@@ -63,7 +63,7 @@ namespace {
                 return extract_qualified_name(
                     context,
                     cst::Root_qualifier {
-                        .value              = type,
+                        .variant            = type,
                         .double_colon_token = cst::Token::from_lexical(double_colon),
                         .source_range       = type->source_range,
                     });
@@ -184,7 +184,7 @@ namespace {
                         .alias_mutability = parse_mutability(context),
                         .alias_name       = extract_lower_name(context, "a pattern alias"),
                         .aliased_pattern  = context.wrap(cst::Pattern {
-                             .value = std::move(variant),
+                             .variant = std::move(variant),
                              .source_range
                             = first_token.source_range.up_to(as_keyword.value().source_range),
                         }),
@@ -204,7 +204,7 @@ namespace {
                     auto guard = require<parse_expression>(context, "a guard expression");
                     return cst::pattern::Guarded {
                         .guarded_pattern  = context.wrap(cst::Pattern {
-                             .value = std::move(variant),
+                             .variant = std::move(variant),
                              .source_range
                             = anchor_source_range.up_to(if_keyword.value().source_range),
                         }),
@@ -224,7 +224,7 @@ auto libparse::parse_pattern(Context& context) -> std::optional<utl::Wrapper<cst
     return parse_potentially_guarded_pattern(context).transform(
         [&](cst::Pattern::Variant&& variant) {
             return context.wrap(cst::Pattern {
-                .value        = std::move(variant),
+                .variant      = std::move(variant),
                 .source_range = context.up_to_current(anchor_source_range),
             });
         });
@@ -240,7 +240,7 @@ auto libparse::parse_top_level_pattern(Context& context)
                 return patterns.elements.front();
             }
             return context.wrap(cst::Pattern {
-                .value        = cst::pattern::Top_level_tuple { std::move(patterns) },
+                .variant      = cst::pattern::Top_level_tuple { std::move(patterns) },
                 .source_range = context.up_to_current(anchor_source_range),
             });
         });

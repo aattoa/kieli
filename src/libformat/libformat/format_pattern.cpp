@@ -98,5 +98,5 @@ namespace {
 
 auto libformat::State::format(cst::Pattern const& pattern) -> void
 {
-    std::visit(Pattern_format_visitor { *this }, pattern.value);
+    std::visit(Pattern_format_visitor { *this }, pattern.variant);
 }

@@ -99,18 +99,18 @@ namespace libdesugar {
 
         auto desugar(cst::Type_parameter_default_argument const& argument)
         {
-            return std::visit<ast::Template_type_parameter::Default>(desugar(), argument.value);
+            return std::visit<ast::Template_type_parameter::Default>(desugar(), argument.variant);
         }
 
         auto desugar(cst::Value_parameter_default_argument const& argument)
         {
-            return std::visit<ast::Template_value_parameter::Default>(desugar(), argument.value);
+            return std::visit<ast::Template_value_parameter::Default>(desugar(), argument.variant);
         }
 
         auto desugar(cst::Mutability_parameter_default_argument const& default_argument)
         {
             return std::visit<ast::Template_mutability_parameter::Default>(
-                desugar(), default_argument.value);
+                desugar(), default_argument.variant);
         }
 
         auto deref_desugar()
