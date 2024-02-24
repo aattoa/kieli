@@ -4,6 +4,7 @@ target_include_directories(libutl-common PUBLIC .)
 
 target_sources(libutl-common
     PRIVATE libutl/common/flatmap.hpp
+    PRIVATE libutl/common/index_vector.hpp
     PRIVATE libutl/common/libutl-common.cpp
     PRIVATE libutl/common/pooled_string.cpp
     PRIVATE libutl/common/pooled_string.hpp
@@ -20,4 +21,4 @@ target_precompile_headers(libutl-common
     PUBLIC libutl/common/utilities.hpp)
 
 kieli_add_tests(libutl-common
-    TESTS utilities flatmap safe_integer pooled_string)
+    TESTS utilities flatmap safe_integer pooled_string index_vector)
