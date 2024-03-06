@@ -25,7 +25,7 @@ namespace {
 
     struct Type_resolution_visitor {
         Context&            context;
-        Unification_state&  state;
+        Inference_state&    state;
         Scope&              scope;
         Environment_wrapper environment;
         ast::Type const&    this_type;
@@ -156,7 +156,7 @@ namespace {
 
 auto libresolve::resolve_type(
     Context&            context,
-    Unification_state&  state,
+    Inference_state&    state,
     Scope&              scope,
     Environment_wrapper environment,
     ast::Type const&    type) -> hir::Type

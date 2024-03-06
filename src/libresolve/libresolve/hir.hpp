@@ -1,44 +1,41 @@
 #pragma once
 
 #include <libutl/common/utilities.hpp>
+#include <libutl/common/index_vector.hpp>
 #include <libutl/common/wrapper.hpp>
 #include <libutl/source/source.hpp>
 #include <libphase/phase.hpp>
 #include <libresolve/fwd.hpp>
 
+namespace libresolve {
+    struct Template_parameter_tag : utl::Vector_index<Template_parameter_tag> {
+        using Vector_index::Vector_index;
+    };
+
+    struct Type_variable_tag : utl::Vector_index<Type_variable_tag> {
+        using Vector_index::Vector_index;
+    };
+
+    struct Mutability_variable_tag : utl::Vector_index<Mutability_variable_tag> {
+        using Vector_index::Vector_index;
+    };
+
+    struct Local_variable_tag : utl::Vector_index<Local_variable_tag> {
+        using Vector_index::Vector_index;
+    };
+} // namespace libresolve
+
 namespace libresolve::hir {
 
-    template <class Derived>
-    struct Strong_tag_base {
-        std::size_t value;
-
-        explicit constexpr Strong_tag_base(std::size_t const value) noexcept : value { value } {}
-
-        [[nodiscard]] constexpr auto operator==(Strong_tag_base const&) const -> bool = default;
-    };
-
-    struct Template_parameter_tag : Strong_tag_base<Template_parameter_tag> {
-        using Strong_tag_base::Strong_tag_base;
-    };
-
-    struct Type_variable_tag : Strong_tag_base<Type_variable_tag> {
-        using Strong_tag_base::Strong_tag_base;
-    };
-
-    struct Mutability_variable_tag : Strong_tag_base<Mutability_variable_tag> {
-        using Strong_tag_base::Strong_tag_base;
-    };
-
-    struct Local_variable_tag : Strong_tag_base<Local_variable_tag> {
-        using Strong_tag_base::Strong_tag_base;
+    struct Class_reference {
+        utl::Mutable_wrapper<Typeclass_info> info;
+        utl::Source_range                    source_range;
     };
 
     enum class Type_variable_kind { general, integral };
 
-    struct Mutability {
-        struct Concrete {
-            utl::Explicit<bool> is_mutable;
-        };
+    namespace mutability {
+        enum class Concrete { mut, immut };
 
         struct Parameterized {
             Template_parameter_tag tag;
@@ -47,9 +44,13 @@ namespace libresolve::hir {
         struct Variable {
             Mutability_variable_tag tag;
         };
+    } // namespace mutability
 
-        using Variant = std::variant<Concrete, Parameterized, Variable>;
-
+    struct Mutability {
+        using Variant = std::variant<
+            mutability::Concrete, //
+            mutability::Parameterized,
+            mutability::Variable>;
         utl::Mutable_wrapper<Variant> variant;
         utl::Source_range             source_range;
     };
@@ -284,6 +285,33 @@ namespace libresolve::hir {
 
     using Node_arena = utl::Wrapper_arena<Expression, Pattern, Type::Variant, Mutability::Variant>;
 
+    using Template_argument = std::variant<Expression, Type, Mutability>;
+
+    struct Template_type_parameter {
+        std::vector<Class_reference> classes;
+        kieli::Name_upper            name;
+    };
+
+    struct Template_mutability_parameter {
+        kieli::Name_lower name;
+    };
+
+    struct Template_value_parameter {
+        Type              type;
+        kieli::Name_lower name;
+    };
+
+    struct Template_parameter {
+        using Variant = std::variant<
+            Template_type_parameter,
+            Template_mutability_parameter,
+            Template_value_parameter>;
+
+        Variant                variant;
+        Template_parameter_tag tag;
+        utl::Source_range      source_range;
+    };
+
     struct Function {
         struct Parameter {
             Pattern pattern;
@@ -318,30 +346,3 @@ namespace libresolve::hir {
     };
 
 } // namespace libresolve::hir
-
-struct libresolve::hir::Mutability_variable_state {
-    struct Solved {
-        Mutability solution;
-    };
-
-    struct Unsolved {
-        Mutability_variable_tag tag;
-        utl::Source_range       origin;
-    };
-
-    std::variant<Solved, Unsolved> variant;
-};
-
-struct libresolve::hir::Type_variable_state {
-    struct Solved {
-        Type solution;
-    };
-
-    struct Unsolved {
-        Type_variable_tag  tag;
-        Type_variable_kind kind {};
-        utl::Source_range  origin;
-    };
-
-    std::variant<Solved, Unsolved> variant;
-};

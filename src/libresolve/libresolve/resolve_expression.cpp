@@ -6,7 +6,7 @@ namespace {
 
     struct Expression_resolution_visitor {
         Context&               context;
-        Unification_state&     state;
+        Inference_state&       state;
         Scope&                 scope;
         Environment_wrapper    environment;
         ast::Expression const& this_expression;
@@ -317,7 +317,7 @@ namespace {
 
 auto libresolve::resolve_expression(
     Context&               context,
-    Unification_state&     state,
+    Inference_state&       state,
     Scope&                 scope,
     Environment_wrapper    environment,
     ast::Expression const& expression) -> hir::Expression

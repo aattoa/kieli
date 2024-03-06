@@ -3,7 +3,7 @@
 
 auto libresolve::resolve_mutability(
     Context&               context,
-    Unification_state&     state,
+    Inference_state&       state,
     Scope&                 scope,
     ast::Mutability const& mutability) -> hir::Mutability
 {

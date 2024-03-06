@@ -64,17 +64,17 @@ namespace cst {
         utl::Source_range source_range;
     };
 
-    struct Mutability {
-        struct Concrete {
-            utl::Explicit<bool> is_mutable;
-        };
+    namespace mutability {
+        enum class Concrete { mut, immut };
 
         struct Parameterized {
             kieli::Name_lower name;
             Token             question_mark_token;
         };
+    } // namespace mutability
 
-        using Variant = std::variant<Concrete, Parameterized>;
+    struct Mutability {
+        using Variant = std::variant<mutability::Concrete, mutability::Parameterized>;
         Variant           variant;
         utl::Source_range source_range;
         Token             mut_or_immut_keyword_token;

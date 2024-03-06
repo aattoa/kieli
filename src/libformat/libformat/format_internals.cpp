@@ -63,11 +63,11 @@ auto libformat::State::format(cst::Mutability const& mutability) -> void
 {
     return std::visit(
         utl::Overload {
-            [&](cst::Mutability::Parameterized const& parameterized) {
+            [&](cst::mutability::Parameterized const& parameterized) {
                 format("mut?{}", parameterized.name);
             },
-            [&](cst::Mutability::Concrete const& concrete) {
-                format("{}", concrete.is_mutable.get() ? "mut" : "immut");
+            [&](cst::mutability::Concrete const concrete) {
+                format("{}", concrete == cst::mutability::Concrete::mut ? "mut" : "immut");
             },
         },
         mutability.variant);

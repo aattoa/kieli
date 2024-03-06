@@ -3,7 +3,7 @@
 
 auto libresolve::lookup_lower(
     Context&                   context,
-    Unification_state&         state,
+    Inference_state&           state,
     Scope&                     scope,
     Environment_wrapper const  environment,
     ast::Qualified_name const& name) -> std::optional<Lower_info>
@@ -18,7 +18,7 @@ auto libresolve::lookup_lower(
 
 auto libresolve::lookup_upper(
     Context&                   context,
-    Unification_state&         state,
+    Inference_state&           state,
     Scope&                     scope,
     Environment_wrapper const  environment,
     ast::Qualified_name const& name) -> std::optional<Upper_info>

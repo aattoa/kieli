@@ -40,8 +40,8 @@ auto libresolve::Constants::make_with(Arenas& arenas) -> Constants
         .character_type = arenas.type(kieli::built_in_type::Character {}),
         .unit_type      = arenas.type(hir::type::Tuple {}),
         .error_type     = arenas.type(hir::type::Error {}),
-        .mutability     = arenas.mutability(hir::Mutability::Concrete { .is_mutable = true }),
-        .immutability   = arenas.mutability(hir::Mutability::Concrete { .is_mutable = false }),
+        .mutability     = arenas.mutability(hir::mutability::Concrete::mut),
+        .immutability   = arenas.mutability(hir::mutability::Concrete::immut),
     };
 }
 
@@ -77,63 +77,63 @@ auto libresolve::unit_type(Constants const& constants, utl::Source_range const s
     return hir::Type { constants.unit_type, source_range };
 }
 
-auto libresolve::Unification_state::fresh_general_type_variable(
-    Arenas& arenas, utl::Source_range const origin) -> hir::Type
+auto libresolve::Type_variable_data::solve_with(hir::Type::Variant solution) -> void
 {
-    hir::Type_variable_tag const tag { type_states.size() };
-    type_states.emplace_back(hir::Type_variable_state::Unsolved {
-        .tag    = tag,
-        .kind   = hir::Type_variable_kind::general,
-        .origin = origin,
-    });
-    return hir::Type { arenas.type(hir::type::Variable { tag }), origin };
+    cpputil::always_assert(!std::exchange(is_solved, true));
+    variant.as_mutable() = std::move(solution);
 }
 
-auto libresolve::Unification_state::fresh_integral_type_variable(
-    Arenas& arenas, utl::Source_range const origin) -> hir::Type
+auto libresolve::Mutability_variable_data::solve_with(hir::Mutability::Variant solution) -> void
 {
-    hir::Type_variable_tag const tag { type_states.size() };
-    type_states.emplace_back(hir::Type_variable_state::Unsolved {
-        .tag    = tag,
-        .kind   = hir::Type_variable_kind::integral,
-        .origin = origin,
-    });
-    return hir::Type { arenas.type(hir::type::Variable { tag }), origin };
+    cpputil::always_assert(!std::exchange(is_solved, true));
+    variant.as_mutable() = std::move(solution);
 }
 
-auto libresolve::Unification_state::fresh_mutability_variable(
+auto libresolve::Inference_state::fresh_general_type_variable(
+    Arenas& arenas, utl::Source_range const origin) -> hir::Type
+{
+    auto const tag     = Type_variable_tag { type_variables.underlying.size() };
+    auto const variant = arenas.type(hir::type::Variable { tag });
+    type_variables.underlying.push_back(Type_variable_data {
+        .tag     = tag,
+        .kind    = hir::Type_variable_kind::general,
+        .origin  = origin,
+        .variant = variant,
+    });
+    return hir::Type { variant, origin };
+}
+
+auto libresolve::Inference_state::fresh_integral_type_variable(
+    Arenas& arenas, utl::Source_range const origin) -> hir::Type
+{
+    auto const tag     = Type_variable_tag { type_variables.underlying.size() };
+    auto const variant = arenas.type(hir::type::Variable { tag });
+    type_variables.underlying.push_back(Type_variable_data {
+        .tag     = tag,
+        .kind    = hir::Type_variable_kind::integral,
+        .origin  = origin,
+        .variant = variant,
+    });
+    return hir::Type { variant, origin };
+}
+
+auto libresolve::Inference_state::fresh_mutability_variable(
     Arenas& arenas, utl::Source_range const origin) -> hir::Mutability
 {
-    hir::Mutability_variable_tag const tag { mutability_states.size() };
-    mutability_states.emplace_back(hir::Mutability_variable_state::Unsolved {
-        .tag    = tag,
-        .origin = origin,
+    auto const tag     = Mutability_variable_tag { mutability_variables.underlying.size() };
+    auto const variant = arenas.mutability(hir::mutability::Variable { tag });
+    mutability_variables.underlying.push_back(Mutability_variable_data {
+        .tag     = tag,
+        .origin  = origin,
+        .variant = variant,
     });
-    return hir::Mutability { arenas.mutability(hir::Mutability::Variable { tag }), origin };
+    return hir::Mutability { variant, origin };
 }
 
-auto libresolve::Unification_state::flatten(hir::Mutability const mutability) const -> void
+auto libresolve::Inference_state::ensure_no_unsolved_variables(kieli::Diagnostics& diagnostics)
+    -> void
 {
-    while (auto const* const variable
-           = std::get_if<hir::Mutability::Variable>(&*mutability.variant))
-    {
-        if (auto const* const solved = std::get_if<hir::Mutability_variable_state::Solved>(
-                &mutability_states.at(variable->tag.value).variant))
-        {
-            mutability.variant.as_mutable() = *solved->solution.variant;
-        }
-        break;
-    }
-}
-
-auto libresolve::Unification_state::flatten(hir::Type const type) const -> void
-{
-    while (auto const* const variable = std::get_if<hir::type::Variable>(&*type.variant)) {
-        if (auto const* const solved = std::get_if<hir::Type_variable_state::Solved>(
-                &type_states.at(variable->tag.value).variant))
-        {
-            type.variant.as_mutable() = *solved->solution.variant;
-        }
-        break;
-    }
+    (void)this;
+    (void)diagnostics;
+    cpputil::todo();
 }

@@ -29,17 +29,16 @@ namespace ast {
         utl::Source_range source_range;
     };
 
-    struct Mutability {
-        struct Concrete {
-            utl::Explicit<bool> is_mutable;
-        };
+    namespace mutability {
+        enum class Concrete { mut, immut };
 
         struct Parameterized {
             kieli::Name_lower name;
         };
+    } // namespace mutability
 
-        using Variant = std::variant<Concrete, Parameterized>;
-
+    struct Mutability {
+        using Variant = std::variant<mutability::Concrete, mutability::Parameterized>;
         Variant             variant;
         utl::Explicit<bool> is_explicit;
         utl::Source_range   source_range;

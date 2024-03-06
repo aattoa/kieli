@@ -1,23 +1,10 @@
 #pragma once
 
+#include <libutl/common/index_vector.hpp>
 #include <libresolve/resolve.hpp>
 #include <libresolve/module.hpp>
 
 namespace libresolve {
-
-    struct Subtyping_constraint {
-        hir::Type         subtype;
-        hir::Type         supertype;
-        utl::Source_range origin;
-    };
-
-    struct Type_equality_constraint {
-        hir::Type         left;
-        hir::Type         right;
-        utl::Source_range origin;
-    };
-
-    using Module_map = utl::Flatmap<std::filesystem::path, utl::Mutable_wrapper<Module_info>>;
 
     struct Constants {
         utl::Mutable_wrapper<hir::Type::Variant>       i8_type;
@@ -40,22 +27,55 @@ namespace libresolve {
         static auto make_with(Arenas& arenas) -> Constants;
     };
 
+    template <utl::vector_index Tag>
+    using Variable_equalities = utl::Index_vector<Tag, std::vector<Tag>>;
+
+    struct Unification_solutions {
+        utl::Flatmap<Type_variable_tag, hir::Type> type_map;
+        Variable_equalities<Type_variable_tag>     type_variable_equalities;
+
+        utl::Flatmap<Mutability_variable_tag, hir::Mutability> mutability_map;
+        Variable_equalities<Mutability_variable_tag>           mutability_variable_equalities;
+    };
+
     struct Obligation {
         hir::Type                            instance;
         utl::Mutable_wrapper<Typeclass_info> typeclass;
+        utl::Source_range                    origin;
     };
 
-    struct Unification_state {
-        std::vector<hir::Type_variable_state>       type_states;
-        std::vector<hir::Mutability_variable_state> mutability_states;
+    struct Type_variable_data {
+        Type_variable_tag                        tag;
+        hir::Type_variable_kind                  kind {};
+        utl::Source_range                        origin;
+        utl::Mutable_wrapper<hir::Type::Variant> variant;
+        bool                                     is_solved {};
+
+        auto solve_with(hir::Type::Variant solution) -> void;
+    };
+
+    struct Mutability_variable_data {
+        Mutability_variable_tag                        tag;
+        utl::Source_range                              origin;
+        utl::Mutable_wrapper<hir::Mutability::Variant> variant;
+        bool                                           is_solved {};
+
+        auto solve_with(hir::Mutability::Variant solution) -> void;
+    };
+
+    struct Inference_state {
+        utl::Index_vector<Type_variable_tag, Type_variable_data>             type_variables;
+        utl::Index_vector<Mutability_variable_tag, Mutability_variable_data> mutability_variables;
+        utl::Source::Wrapper                                                 source;
 
         auto fresh_general_type_variable(Arenas& arenas, utl::Source_range origin) -> hir::Type;
         auto fresh_integral_type_variable(Arenas& arenas, utl::Source_range origin) -> hir::Type;
         auto fresh_mutability_variable(Arenas& arenas, utl::Source_range origin) -> hir::Mutability;
 
-        auto flatten(hir::Type type) const -> void;
-        auto flatten(hir::Mutability mutability) const -> void;
+        auto ensure_no_unsolved_variables(kieli::Diagnostics& diagnostics) -> void;
     };
+
+    using Module_map = utl::Flatmap<std::filesystem::path, utl::Mutable_wrapper<Module_info>>;
 
     struct Context {
         Arenas                              arenas;
@@ -114,49 +134,55 @@ namespace libresolve {
 
     auto resolve_mutability(
         Context&               context,
-        Unification_state&     state,
+        Inference_state&       state,
         Scope&                 scope,
         ast::Mutability const& mutability) -> hir::Mutability;
 
     auto resolve_expression(
         Context&               context,
-        Unification_state&     state,
+        Inference_state&       state,
         Scope&                 scope,
         Environment_wrapper    environment,
         ast::Expression const& expression) -> hir::Expression;
 
     auto resolve_pattern(
         Context&            context,
-        Unification_state&  state,
+        Inference_state&    state,
         Scope&              scope,
         Environment_wrapper environment,
         ast::Pattern const& pattern) -> hir::Pattern;
 
     auto resolve_type(
         Context&            context,
-        Unification_state&  state,
+        Inference_state&    state,
         Scope&              scope,
         Environment_wrapper environment,
         ast::Type const&    type) -> hir::Type;
 
     auto lookup_lower(
         Context&                   context,
-        Unification_state&         state,
+        Inference_state&           state,
         Scope&                     scope,
         Environment_wrapper        environment,
         ast::Qualified_name const& name) -> std::optional<Lower_info>;
 
     auto lookup_upper(
         Context&                   context,
-        Unification_state&         state,
+        Inference_state&           state,
         Scope&                     scope,
         Environment_wrapper        environment,
         ast::Qualified_name const& name) -> std::optional<Upper_info>;
 
-    auto occurs_check(Unification_state const& state, hir::Type_variable_tag tag, hir::Type type)
-        -> bool;
+    // Check whether a type variable with `tag` occurs in `type`.
+    auto occurs_check(Type_variable_tag tag, hir::Type type) -> bool;
 
-    auto solve(Context& context, Subtyping_constraint const& constraint) -> void;
+    // Require that `sub` is equal to or a subtype of `super`.
+    auto require_subtype_relationship(
+        kieli::Diagnostics& diagnostics,
+        Inference_state&    state,
+        hir::Type           sub,
+        hir::Type           super,
+        utl::Source_range   origin) -> void;
 
     auto error_expression(Constants const&, utl::Source_range) -> hir::Expression;
     auto unit_expression(Constants const&, utl::Source_range) -> hir::Expression;

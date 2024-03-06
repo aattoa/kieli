@@ -6,7 +6,7 @@ namespace {
 
     struct Pattern_resolution_visitor {
         Context&            context;
-        Unification_state&  state;
+        Inference_state&    state;
         Scope&              scope;
         Environment_wrapper environment;
         ast::Pattern const& this_pattern;
@@ -112,7 +112,7 @@ namespace {
 
 auto libresolve::resolve_pattern(
     Context&            context,
-    Unification_state&  state,
+    Inference_state&    state,
     Scope&              scope,
     Environment_wrapper environment,
     ast::Pattern const& pattern) -> hir::Pattern

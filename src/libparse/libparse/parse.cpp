@@ -123,16 +123,16 @@ auto libparse::parse_mutability(Context& context) -> std::optional<cst::Mutabili
     if (auto mut_keyword = context.try_extract(Token::Type::mut)) {
         if (auto question_mark = context.try_extract(Token::Type::question)) {
             return cst::Mutability {
-                .variant { cst::Mutability::Parameterized {
+                .variant = cst::mutability::Parameterized {
                     .name = extract_lower_name(context, "a mutability parameter name"),
                     .question_mark_token = cst::Token::from_lexical(question_mark.value()),
-                } },
+                },
                 .source_range = context.up_to_current(mut_keyword.value().source_range),
                 .mut_or_immut_keyword_token = cst::Token::from_lexical(mut_keyword.value()),
             };
         }
         return cst::Mutability {
-            .variant                    = cst::Mutability::Concrete { .is_mutable = true },
+            .variant                    = cst::mutability::Concrete::mut,
             .source_range               = mut_keyword.value().source_range,
             .mut_or_immut_keyword_token = cst::Token::from_lexical(mut_keyword.value()),
         };
@@ -236,7 +236,7 @@ auto libparse::parse_template_argument(Context& context) -> std::optional<cst::T
     }
     if (auto const immut_keyword = context.try_extract(Token::Type::immut)) {
         return cst::Template_argument { cst::Mutability {
-            .variant                    = cst::Mutability::Concrete { .is_mutable = false },
+            .variant                    = cst::mutability::Concrete::immut,
             .source_range               = immut_keyword->source_range,
             .mut_or_immut_keyword_token = cst::Token::from_lexical(immut_keyword.value()),
         } };

@@ -487,10 +487,13 @@ DEFINE_FORMATTER(ast::Mutability)
 {
     std::visit(
         utl::Overload {
-            [&](ast::Mutability::Concrete const concrete) {
-                std::format_to(context.out(), "{}", concrete.is_mutable.get() ? "mut" : "immut");
+            [&](ast::mutability::Concrete const concrete) {
+                std::format_to(
+                    context.out(),
+                    "{}",
+                    concrete == ast::mutability::Concrete::mut ? "mut" : "immut");
             },
-            [&](ast::Mutability::Parameterized const parameterized) {
+            [&](ast::mutability::Parameterized const& parameterized) {
                 std::format_to(context.out(), "mut?{}", parameterized.name);
             },
         },

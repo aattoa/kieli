@@ -5,52 +5,41 @@ namespace {
     using namespace libresolve;
 
     struct Occurs_check_visitor {
-        Unification_state const& state;
-        hir::Type_variable_tag   tag;
+        Type_variable_tag tag;
 
         [[nodiscard]] auto recurse() const
         {
-            return std::bind_front(occurs_check, std::ref(state), tag);
+            return [*this](hir::Type const type) -> bool { return occurs_check(tag, type); };
         }
 
         auto operator()(hir::type::Variable const& variable) const -> bool
         {
-            return std::visit(
-                utl::Overload {
-                    [&](hir::Type_variable_state::Solved const& solved) -> bool {
-                        return occurs_check(state, tag, solved.solution);
-                    },
-                    [&](hir::Type_variable_state::Unsolved const& unsolved) -> bool {
-                        return tag == unsolved.tag;
-                    },
-                },
-                state.type_states.at(variable.tag.value).variant);
+            return tag == variable.tag;
         }
 
         auto operator()(hir::type::Array const& array) const -> bool
         {
-            return occurs_check(state, tag, array.element_type)
-                || occurs_check(state, tag, array.length->type);
+            return occurs_check(tag, array.element_type) || occurs_check(tag, array.length->type);
         }
 
         auto operator()(hir::type::Slice const& slice) const -> bool
         {
-            return occurs_check(state, tag, slice.element_type);
+            return occurs_check(tag, slice.element_type);
         }
 
         auto operator()(hir::type::Reference const& reference) const -> bool
         {
-            return occurs_check(state, tag, reference.referenced_type);
+            return occurs_check(tag, reference.referenced_type);
         }
 
         auto operator()(hir::type::Pointer const& pointer) const -> bool
         {
-            return occurs_check(state, tag, pointer.pointee_type);
+            return occurs_check(tag, pointer.pointee_type);
         }
 
         auto operator()(hir::type::Function const& function) const -> bool
         {
-            return occurs_check(state, tag, function.return_type)
+            return occurs_check(tag, function.return_type)
                 || std::ranges::any_of(function.parameter_types, recurse());
         }
 
@@ -79,8 +68,7 @@ namespace {
     };
 } // namespace
 
-auto libresolve::occurs_check(
-    Unification_state const& state, hir::Type_variable_tag const tag, hir::Type const type) -> bool
+auto libresolve::occurs_check(Type_variable_tag const tag, hir::Type const type) -> bool
 {
-    return std::visit(Occurs_check_visitor { state, tag }, *type.variant);
+    return std::visit(Occurs_check_visitor { tag }, *type.variant);
 }
