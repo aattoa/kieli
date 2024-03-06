@@ -187,6 +187,8 @@ namespace kieli {
     template <class T>
     concept literal = utl::one_of<T, Integer, Floating, Boolean, Character, String>;
 
+    enum class Mutability { mut, immut };
+
     namespace built_in_type {
         enum class Integer { i8, i16, i32, i64, u8, u16, u32, u64, _enumerator_count };
 
@@ -239,5 +241,13 @@ struct std::formatter<Literal> : utl::fmt::Formatter_base {
         else {
             static_assert(false);
         }
+    }
+};
+
+template <>
+struct std::formatter<kieli::Mutability> : utl::fmt::Formatter_base {
+    auto format(kieli::Mutability const mut, auto& context) const
+    {
+        return std::format_to(context.out(), "{}", mut == kieli::Mutability::mut ? "mut" : "immut");
     }
 };

@@ -30,7 +30,7 @@ namespace ast {
     };
 
     namespace mutability {
-        enum class Concrete { mut, immut };
+        using Concrete = kieli::Mutability;
 
         struct Parameterized {
             kieli::Name_lower name;

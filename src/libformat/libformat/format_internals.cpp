@@ -66,9 +66,7 @@ auto libformat::State::format(cst::Mutability const& mutability) -> void
             [&](cst::mutability::Parameterized const& parameterized) {
                 format("mut?{}", parameterized.name);
             },
-            [&](cst::mutability::Concrete const concrete) {
-                format("{}", concrete == cst::mutability::Concrete::mut ? "mut" : "immut");
-            },
+            [&](cst::mutability::Concrete const concrete) { format("{}", concrete); },
         },
         mutability.variant);
 }

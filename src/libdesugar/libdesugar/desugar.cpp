@@ -150,15 +150,8 @@ auto libdesugar::Context::desugar(cst::Mutability const& mutability) -> ast::Mut
     return ast::Mutability {
         .variant = std::visit<ast::Mutability::Variant>(
             utl::Overload {
-                [](cst::mutability::Concrete const concrete) {
-                    switch (concrete) {
-                    case cst::mutability::Concrete::mut:
-                        return ast::mutability::Concrete::mut;
-                    case cst::mutability::Concrete::immut:
-                        return ast::mutability::Concrete::immut;
-                    default:
-                        cpputil::unreachable();
-                    }
+                [](cst::mutability::Concrete const concrete) -> ast::mutability::Concrete {
+                    return concrete;
                 },
                 [](cst::mutability::Parameterized const parameterized) {
                     return ast::mutability::Parameterized { .name = parameterized.name };

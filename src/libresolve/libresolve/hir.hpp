@@ -35,7 +35,7 @@ namespace libresolve::hir {
     enum class Type_variable_kind { general, integral };
 
     namespace mutability {
-        enum class Concrete { mut, immut };
+        using Concrete = kieli::Mutability;
 
         struct Parameterized {
             Template_parameter_tag tag;
