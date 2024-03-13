@@ -69,7 +69,7 @@ namespace {
                 Token const close_bracket = context.require_extract(Token::Type::bracket_close);
                 return cst::type::Array {
                     .element_type        = element_type,
-                    .array_length        = length.value(),
+                    .length              = length.value(),
                     .open_bracket_token  = cst::Token::from_lexical(open_bracket),
                     .close_bracket_token = cst::Token::from_lexical(close_bracket),
                     .semicolon_token     = cst::Token::from_lexical(semicolon.value()),

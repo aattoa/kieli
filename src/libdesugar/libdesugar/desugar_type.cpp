@@ -67,7 +67,7 @@ namespace {
         {
             return ast::type::Array {
                 .element_type = context.desugar(array.element_type),
-                .array_length = context.desugar(array.array_length),
+                .length       = context.desugar(array.length),
             };
         }
 

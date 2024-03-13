@@ -147,12 +147,11 @@ namespace {
             });
     }
 
-    auto extract_reference_dereference(Context& context, Token const& asterisk)
-        -> cst::Expression::Variant
+    auto extract_dereference(Context& context, Token const& asterisk) -> cst::Expression::Variant
     {
-        return cst::expression::Reference_dereference {
-            .dereferenced_expression = require<parse_expression>(context, "an expression"),
-            .asterisk_token          = cst::Token::from_lexical(asterisk),
+        return cst::expression::Dereference {
+            .pointer_expression = require<parse_expression>(context, "an expression"),
+            .asterisk_token     = cst::Token::from_lexical(asterisk),
         };
     }
 
@@ -280,28 +279,6 @@ namespace {
         };
     }
 
-    auto extract_addressof(Context& context, Token const& addressof_keyword)
-        -> cst::Expression::Variant
-    {
-        return cst::expression::Addressof {
-            .lvalue_expression
-            = require<parse_parenthesized<parse_expression, "an addressable expression">>(
-                context, "a parenthesized addressable expression"),
-            .addressof_keyword_token = cst::Token::from_lexical(addressof_keyword),
-        };
-    }
-
-    auto extract_pointer_dereference(Context& context, Token const& dereference_keyword)
-        -> cst::Expression::Variant
-    {
-        return cst::expression::Pointer_dereference {
-            .pointer_expression
-            = require<parse_parenthesized<parse_expression, "a pointer expression">>(
-                context, "a parenthesized pointer expression"),
-            .dereference_keyword_token = cst::Token::from_lexical(dereference_keyword),
-        };
-    }
-
     auto parse_match_case(Context& context) -> std::optional<cst::expression::Match::Case>
     {
         return parse_top_level_pattern(context).transform(
@@ -371,13 +348,12 @@ namespace {
         };
     }
 
-    auto extract_reference(Context& context, Token const& ampersand) -> cst::Expression::Variant
+    auto extract_addressof(Context& context, Token const& ampersand) -> cst::Expression::Variant
     {
-        return cst::expression::Reference {
-            .mutability = parse_mutability(context),
-            .referenced_expression
-            = require<parse_expression>(context, "the referenced expression"),
-            .ampersand_token = cst::Token::from_lexical(ampersand),
+        return cst::expression::Addressof {
+            .mutability        = parse_mutability(context),
+            .lvalue_expression = require<parse_expression>(context, "the referenced expression"),
+            .ampersand_token   = cst::Token::from_lexical(ampersand),
         };
     }
 
@@ -472,7 +448,7 @@ namespace {
         case Token::Type::global:            return extract_global_identifier(context, token);
         case Token::Type::lower_self:        return cst::expression::Self {};
         case Token::Type::hole:              return cst::expression::Hole {};
-        case Token::Type::asterisk:          return extract_reference_dereference(context, token);
+        case Token::Type::asterisk:          return extract_dereference(context, token);
         case Token::Type::paren_open:        return extract_tuple(context, token);
         case Token::Type::bracket_open:      return extract_array(context, token);
         case Token::Type::if_:               return extract_conditional(context, token, Conditional_kind::if_);
@@ -482,15 +458,13 @@ namespace {
         case Token::Type::while_:            return extract_while_loop(context, token);
         case Token::Type::for_:              return extract_for_loop(context, token);
         case Token::Type::sizeof_:           return extract_sizeof(context, token);
-        case Token::Type::addressof:         return extract_addressof(context, token);
-        case Token::Type::dereference:       return extract_pointer_dereference(context, token);
         case Token::Type::unsafe:            return extract_unsafe_block(context, token);
         case Token::Type::match:             return extract_match(context, token);
         case Token::Type::continue_:         return extract_continue(context, token);
         case Token::Type::break_:            return extract_break(context, token);
         case Token::Type::ret:               return extract_ret(context, token);
         case Token::Type::discard:           return extract_discard(context, token);
-        case Token::Type::ampersand:         return extract_reference(context, token);
+        case Token::Type::ampersand:         return extract_addressof(context, token);
         case Token::Type::mov:               return extract_move(context, token);
         case Token::Type::meta:              return extract_meta(context, token);
         case Token::Type::brace_open:        return extract_block_expression(context, token);

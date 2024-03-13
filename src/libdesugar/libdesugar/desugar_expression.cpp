@@ -154,16 +154,16 @@ namespace {
                 return ast::expression::Match {
                     .cases = utl::to_vector<ast::expression::Match::Case>({
                         {
-                            .pattern = context.desugar(let->pattern),
-                            .handler = context.desugar(conditional.true_branch),
+                            .pattern    = context.desugar(let->pattern),
+                            .expression = context.desugar(conditional.true_branch),
                         },
                         {
-                            .pattern = context.wildcard_pattern(let->pattern->source_range),
-                            .handler = false_branch,
+                            .pattern    = context.wildcard_pattern(let->pattern->source_range),
+                            .expression = false_branch,
                         },
                     }),
 
-                    .matched_expression = context.desugar(let->initializer),
+                    .expression = context.desugar(let->initializer),
                 };
             }
 
@@ -189,14 +189,14 @@ namespace {
         {
             auto const desugar_match_case = [&](cst::expression::Match::Case const& match_case) {
                 return ast::expression::Match::Case {
-                    .pattern = context.desugar(match_case.pattern),
-                    .handler = context.desugar(match_case.handler),
+                    .pattern    = context.desugar(match_case.pattern),
+                    .expression = context.desugar(match_case.handler),
                 };
             };
             return ast::expression::Match {
                 .cases = match.cases.value | std::views::transform(desugar_match_case)
                        | std::ranges::to<std::vector>(),
-                .matched_expression = context.desugar(match.matched_expression),
+                .expression = context.desugar(match.matched_expression),
             };
         }
 
@@ -209,13 +209,13 @@ namespace {
             }
             if (block.result_expression.has_value()) {
                 return ast::expression::Block {
-                    .side_effect_expressions = std::move(side_effects),
-                    .result_expression       = context.desugar(block.result_expression.value()),
+                    .side_effects = std::move(side_effects),
+                    .result       = context.desugar(block.result_expression.value()),
                 };
             }
             return ast::expression::Block {
-                .side_effect_expressions = std::move(side_effects),
-                .result_expression       = context.unit_value(block.close_brace_token.source_range),
+                .side_effects = std::move(side_effects),
+                .result       = context.unit_value(block.close_brace_token.source_range),
             };
         }
 
@@ -243,11 +243,11 @@ namespace {
                             .cases = utl::to_vector<ast::expression::Match::Case>({
                                 {
                                     .pattern = context.desugar(let->pattern),
-                                    .handler = context.desugar(loop.body),
+                                    .expression = context.desugar(loop.body),
                                 },
                                 {
                                     .pattern = context.wildcard_pattern(this_expression.source_range),
-                                    .handler = context.wrap(ast::Expression {
+                                    .expression = context.wrap(ast::Expression {
                                         .variant = ast::expression::Break {
                                             .result = context.unit_value(this_expression.source_range),
                                         },
@@ -255,7 +255,7 @@ namespace {
                                     })
                                 }
                             }),
-                            .matched_expression = context.desugar(let->initializer),
+                            .expression = context.desugar(let->initializer),
                         },
                         .source_range = loop.body->source_range,
                     }),
@@ -436,7 +436,7 @@ namespace {
         auto operator()(cst::expression::Ret const& ret) -> ast::Expression::Variant
         {
             return ast::expression::Ret {
-                .returned_expression = ret.returned_expression.transform(context.desugar()),
+                .expression = ret.returned_expression.transform(context.desugar()),
             };
         }
 
@@ -451,7 +451,7 @@ namespace {
             */
 
             return ast::expression::Block {
-                .side_effect_expressions = utl::to_vector({
+                .side_effects = utl::to_vector({
                     ast::Expression {
                         .variant = ast::expression::Let_binding {
                             .pattern     = context.wildcard_pattern(this_expression.source_range),
@@ -461,7 +461,7 @@ namespace {
                         .source_range = this_expression.source_range,
                     }
                 }),
-                .result_expression = context.unit_value(this_expression.source_range),
+                .result = context.unit_value(this_expression.source_range),
             };
         }
 
@@ -486,35 +486,19 @@ namespace {
             };
         }
 
-        auto operator()(cst::expression::Reference const& reference) -> ast::Expression::Variant
-        {
-            return ast::expression::Reference {
-                .mutability = context.desugar_mutability(
-                    reference.mutability, reference.ampersand_token.source_range),
-                .referenced_expression = context.desugar(reference.referenced_expression),
-            };
-        }
-
         auto operator()(cst::expression::Addressof const& addressof) -> ast::Expression::Variant
         {
             return ast::expression::Addressof {
-                .lvalue_expression = context.desugar(addressof.lvalue_expression.value),
+                .mutability = context.desugar_mutability(
+                    addressof.mutability, addressof.ampersand_token.source_range),
+                .lvalue_expression = context.desugar(addressof.lvalue_expression),
             };
         }
 
-        auto operator()(cst::expression::Reference_dereference const& dereference)
-            -> ast::Expression::Variant
+        auto operator()(cst::expression::Dereference const& dereference) -> ast::Expression::Variant
         {
-            return ast::expression::Reference_dereference {
-                .dereferenced_expression = context.desugar(dereference.dereferenced_expression),
-            };
-        }
-
-        auto operator()(cst::expression::Pointer_dereference const& dereference)
-            -> ast::Expression::Variant
-        {
-            return ast::expression::Pointer_dereference {
-                .pointer_expression = context.desugar(dereference.pointer_expression.value),
+            return ast::expression::Dereference {
+                .pointer_expression = context.desugar(dereference.pointer_expression),
             };
         }
 

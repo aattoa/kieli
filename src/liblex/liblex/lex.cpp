@@ -69,8 +69,6 @@ namespace {
             { "module", Token::Type::module_ },
             { "sizeof", Token::Type::sizeof_ },
             { "typeof", Token::Type::typeof_ },
-            { "addressof", Token::Type::addressof },
-            { "dereference", Token::Type::dereference },
             { "unsafe", Token::Type::unsafe },
             { "mov", Token::Type::mov },
             { "meta", Token::Type::meta },

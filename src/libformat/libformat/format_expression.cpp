@@ -223,31 +223,17 @@ namespace {
             state.format("]");
         }
 
-        auto operator()(cst::expression::Reference const& reference)
+        auto operator()(cst::expression::Addressof const& reference)
         {
             state.format("&");
             state.format_mutability_with_trailing_whitespace(reference.mutability);
-            state.format(reference.referenced_expression);
+            state.format(reference.lvalue_expression);
         }
 
-        auto operator()(cst::expression::Addressof const& addressof)
-        {
-            state.format("addressof(");
-            state.format(addressof.lvalue_expression.value);
-            state.format(")");
-        }
-
-        auto operator()(cst::expression::Reference_dereference const& dereference)
+        auto operator()(cst::expression::Dereference const& dereference)
         {
             state.format("*");
-            state.format(dereference.dereferenced_expression);
-        }
-
-        auto operator()(cst::expression::Pointer_dereference const& dereference)
-        {
-            state.format("dereference(");
-            state.format(dereference.pointer_expression.value);
-            state.format(")");
+            state.format(dereference.pointer_expression);
         }
 
         auto operator()(cst::expression::Meta const& meta)

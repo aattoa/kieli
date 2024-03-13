@@ -59,8 +59,6 @@ namespace {
         "module",
         "sizeof",
         "typeof",
-        "addressof",
-        "dereference",
         "unsafe",
         "mov",
         "meta",
@@ -154,8 +152,6 @@ auto kieli::Token::description(Type const type) -> std::string_view
     case Type::module_:
     case Type::sizeof_:
     case Type::typeof_:
-    case Type::addressof:
-    case Type::dereference:
     case Type::unsafe:
     case Type::mov:
     case Type::meta:

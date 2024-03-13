@@ -92,7 +92,7 @@ namespace {
             state.format("[");
             state.format(array.element_type);
             state.format("; ");
-            state.format(array.array_length);
+            state.format(array.length);
             state.format("]");
         }
 

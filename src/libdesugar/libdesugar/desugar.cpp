@@ -5,8 +5,8 @@
 auto libdesugar::Context::desugar(cst::Function_argument const& argument) -> ast::Function_argument
 {
     return {
-        .expression    = desugar(argument.expression),
-        .argument_name = argument.name.transform([](auto const& syntax) { return syntax.name; }),
+        .expression = desugar(argument.expression),
+        .name       = argument.name.transform([](auto const& syntax) { return syntax.name; }),
     };
 }
 

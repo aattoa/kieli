@@ -109,7 +109,7 @@ namespace ast {
 
     struct Function_argument {
         utl::Wrapper<Expression>         expression;
-        std::optional<kieli::Name_lower> argument_name;
+        std::optional<kieli::Name_lower> name;
     };
 
     struct Function_parameter {
@@ -148,8 +148,8 @@ namespace ast {
         };
 
         struct Block {
-            std::vector<Expression>  side_effect_expressions;
-            utl::Wrapper<Expression> result_expression;
+            std::vector<Expression>  side_effects;
+            utl::Wrapper<Expression> result;
         };
 
         struct Invocation {
@@ -216,11 +216,11 @@ namespace ast {
         struct Match {
             struct Case {
                 utl::Wrapper<Pattern>    pattern;
-                utl::Wrapper<Expression> handler;
+                utl::Wrapper<Expression> expression;
             };
 
             std::vector<Case>        cases;
-            utl::Wrapper<Expression> matched_expression;
+            utl::Wrapper<Expression> expression;
         };
 
         struct Template_application {
@@ -250,28 +250,20 @@ namespace ast {
         };
 
         struct Ret {
-            std::optional<utl::Wrapper<Expression>> returned_expression;
+            std::optional<utl::Wrapper<Expression>> expression;
         };
 
         struct Sizeof {
             utl::Wrapper<Type> inspected_type;
         };
 
-        struct Reference {
-            Mutability               mutability;
-            utl::Wrapper<Expression> referenced_expression;
-        };
-
-        struct Reference_dereference {
-            utl::Wrapper<Expression> dereferenced_expression;
-        };
-
-        struct Pointer_dereference {
-            utl::Wrapper<Expression> pointer_expression;
-        };
-
         struct Addressof {
+            Mutability               mutability;
             utl::Wrapper<Expression> lvalue_expression;
+        };
+
+        struct Dereference {
+            utl::Wrapper<Expression> pointer_expression;
         };
 
         struct Unsafe {
@@ -322,10 +314,8 @@ namespace ast {
             expression::Local_type_alias,
             expression::Ret,
             expression::Sizeof,
-            expression::Reference,
             expression::Addressof,
-            expression::Reference_dereference,
-            expression::Pointer_dereference,
+            expression::Dereference,
             expression::Unsafe,
             expression::Move,
             expression::Meta,
@@ -424,7 +414,7 @@ namespace ast {
 
         struct Array {
             utl::Wrapper<Type>       element_type;
-            utl::Wrapper<Expression> array_length;
+            utl::Wrapper<Expression> length;
         };
 
         struct Slice {
@@ -599,7 +589,6 @@ namespace ast {
         Node_arena              node_arena;
     };
 
-    auto format_to(Wildcard const&, std::string&) -> void;
     auto format_to(Expression const&, std::string&) -> void;
     auto format_to(Pattern const&, std::string&) -> void;
     auto format_to(Type const&, std::string&) -> void;
@@ -611,13 +600,7 @@ namespace ast {
     auto format_to(Function_argument const&, std::string&) -> void;
     auto format_to(Template_parameter const&, std::string&) -> void;
     auto format_to(Template_argument const&, std::string&) -> void;
-    auto format_to(pattern::Field const&, std::string&) -> void;
-    auto format_to(pattern::Constructor_body const&, std::string&) -> void;
-    auto format_to(pattern::Constructor const&, std::string&) -> void;
     auto format_to(Template_parameters const&, std::string&) -> void;
-    auto format_to(definition::Field const&, std::string&) -> void;
-    auto format_to(definition::Constructor_body const&, std::string&) -> void;
-    auto format_to(definition::Constructor const&, std::string&) -> void;
 
     auto to_string(auto const& x) -> std::string
         requires requires(std::string out) { ast::format_to(x, out); }

@@ -51,10 +51,10 @@ namespace libdesugar::dtl {
         auto operator()(ast::expression::Block const& block)
         {
             std::format_to(out, "{{");
-            for (ast::Expression const& side_effect : block.side_effect_expressions) {
+            for (ast::Expression const& side_effect : block.side_effects) {
                 std::format_to(out, " {};", side_effect);
             }
-            std::format_to(out, " {} }}", block.result_expression);
+            std::format_to(out, " {} }}", block.result);
         }
 
         auto operator()(ast::expression::Tuple const& tuple)
@@ -67,9 +67,9 @@ namespace libdesugar::dtl {
             std::format_to(out, "{}[{:n}]", application.name, application.template_arguments);
         }
 
-        auto operator()(ast::expression::Reference const& reference)
+        auto operator()(ast::expression::Addressof const& reference)
         {
-            std::format_to(out, "(&{} {})", reference.mutability, reference.referenced_expression);
+            std::format_to(out, "(&{} {})", reference.mutability, reference.lvalue_expression);
         }
 
         auto operator()(ast::expression::Type_cast const& cast)
@@ -116,19 +116,9 @@ namespace libdesugar::dtl {
             std::format_to(out, " }}");
         }
 
-        auto operator()(ast::expression::Pointer_dereference const& dereference)
+        auto operator()(ast::expression::Dereference const& dereference)
         {
-            std::format_to(out, "dereference({})", dereference.pointer_expression);
-        }
-
-        auto operator()(ast::expression::Reference_dereference const& dereference)
-        {
-            std::format_to(out, "(*{})", dereference.dereferenced_expression);
-        }
-
-        auto operator()(ast::expression::Addressof const& addressof)
-        {
-            std::format_to(out, "addressof({})", addressof.lvalue_expression);
+            std::format_to(out, "(*{})", dereference.pointer_expression);
         }
 
         auto operator()(ast::expression::Struct_field_access const& access)
@@ -192,19 +182,14 @@ namespace libdesugar::dtl {
 
         auto operator()(ast::expression::Loop const& loop)
         {
-            if (std::holds_alternative<ast::expression::Block>(loop.body->variant)) {
-                std::format_to(out, "loop {}", loop.body);
-            }
-            else {
-                std::format_to(out, "loop {{ {} }}", loop.body);
-            }
+            std::format_to(out, "loop {}", loop.body);
         }
 
         auto operator()(ast::expression::Match const& match)
         {
-            std::format_to(out, "match {} {{", match.matched_expression);
+            std::format_to(out, "match {} {{", match.expression);
             for (auto const& match_case : match.cases) {
-                std::format_to(out, " {} -> {}", match_case.pattern, match_case.handler);
+                std::format_to(out, " {} -> {}", match_case.pattern, match_case.expression);
             }
             std::format_to(out, " }}");
         }
@@ -225,8 +210,8 @@ namespace libdesugar::dtl {
 
         auto operator()(ast::expression::Ret const& ret)
         {
-            if (ret.returned_expression.has_value()) {
-                std::format_to(out, "ret {}", ret.returned_expression.value());
+            if (ret.expression.has_value()) {
+                std::format_to(out, "ret {}", ret.expression.value());
             }
             std::format_to(out, "ret");
         }
@@ -348,7 +333,7 @@ namespace libdesugar::dtl {
 
         auto operator()(ast::type::Array const& array)
         {
-            std::format_to(out, "[{}; {}]", array.element_type, array.array_length);
+            std::format_to(out, "[{}; {}]", array.element_type, array.length);
         }
 
         auto operator()(ast::type::Instance_of const& instance_of)
@@ -523,8 +508,8 @@ LIBDESUGAR_DEFINE_FORMATTER(ast::Class_reference)
 
 LIBDESUGAR_DEFINE_FORMATTER(ast::Function_argument)
 {
-    if (value.argument_name.has_value()) {
-        std::format_to(context.out(), "{} = ", value.argument_name.value());
+    if (value.name.has_value()) {
+        std::format_to(context.out(), "{} = ", value.name.value());
     }
     return std::format_to(context.out(), "{}", value.expression);
 }

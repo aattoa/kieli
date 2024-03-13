@@ -273,22 +273,12 @@ namespace {
             };
         }
 
-        auto operator()(ast::expression::Reference const&) -> hir::Expression
-        {
-            cpputil::todo();
-        }
-
         auto operator()(ast::expression::Addressof const&) -> hir::Expression
         {
             cpputil::todo();
         }
 
-        auto operator()(ast::expression::Reference_dereference const&) -> hir::Expression
-        {
-            cpputil::todo();
-        }
-
-        auto operator()(ast::expression::Pointer_dereference const&) -> hir::Expression
+        auto operator()(ast::expression::Dereference const&) -> hir::Expression
         {
             cpputil::todo();
         }

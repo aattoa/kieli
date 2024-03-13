@@ -70,11 +70,10 @@ TEST("operator precedence")
 
 TEST("while loop expression")
 {
-    CHECK_EQUAL(
-        desugar("fn f() { while x { y } }"), "fn f() { loop { if x { y } else break () } }");
+    CHECK_EQUAL(desugar("fn f() { while x { y } }"), "fn f() { loop if x { y } else break () }");
     CHECK_EQUAL(
         desugar("fn f() { while let x = y { z } }"),
-        "fn f() { loop { match y { immut x -> { z } _ -> break () } } }");
+        "fn f() { loop match y { immut x -> { z } _ -> break () } }");
 }
 
 TEST("conditional expression")

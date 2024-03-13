@@ -391,30 +391,20 @@ namespace cst {
             Token                                   ret_keyword_token;
         };
 
-        struct Reference {
-            std::optional<Mutability> mutability;
-            utl::Wrapper<Expression>  referenced_expression;
-            Token                     ampersand_token;
-        };
-
         struct Sizeof {
             Surrounded<utl::Wrapper<Type>> inspected_type;
             Token                          sizeof_keyword_token;
         };
 
         struct Addressof {
-            Surrounded<utl::Wrapper<Expression>> lvalue_expression;
-            Token                                addressof_keyword_token;
+            std::optional<Mutability> mutability;
+            utl::Wrapper<Expression>  lvalue_expression;
+            Token                     ampersand_token;
         };
 
-        struct Reference_dereference {
-            utl::Wrapper<Expression> dereferenced_expression;
+        struct Dereference {
+            utl::Wrapper<Expression> pointer_expression;
             Token                    asterisk_token;
-        };
-
-        struct Pointer_dereference {
-            Surrounded<utl::Wrapper<Expression>> pointer_expression;
-            Token                                dereference_keyword_token;
         };
 
         struct Unsafe {
@@ -473,10 +463,8 @@ namespace cst {
             expression::Discard,
             expression::Ret,
             expression::Sizeof,
-            expression::Reference,
             expression::Addressof,
-            expression::Reference_dereference,
-            expression::Pointer_dereference,
+            expression::Dereference,
             expression::Unsafe,
             expression::Move,
             expression::Meta,
@@ -597,7 +585,7 @@ namespace cst {
 
         struct Array {
             utl::Wrapper<Type>       element_type;
-            utl::Wrapper<Expression> array_length;
+            utl::Wrapper<Expression> length;
             Token                    open_bracket_token;
             Token                    close_bracket_token;
             Token                    semicolon_token;

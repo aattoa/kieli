@@ -64,8 +64,6 @@ namespace kieli {
             module_,
             sizeof_,
             typeof_,
-            addressof,
-            dereference,
             unsafe,
             mov,
             meta,
