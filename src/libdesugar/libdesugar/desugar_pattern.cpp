@@ -89,8 +89,8 @@ namespace {
         auto operator()(cst::pattern::Guarded const& guarded) -> ast::Pattern::Variant
         {
             return ast::pattern::Guarded {
-                .guarded_pattern = context.desugar(guarded.guarded_pattern),
-                .guard           = context.desugar(*guarded.guard_expression),
+                .guarded_pattern  = context.desugar(guarded.guarded_pattern),
+                .guard_expression = context.desugar(*guarded.guard_expression),
             };
         }
     };

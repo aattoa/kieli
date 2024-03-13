@@ -7,6 +7,7 @@ target_sources(libresolve
     PRIVATE libresolve/fwd.hpp
     PRIVATE libresolve/hir.cpp
     PRIVATE libresolve/hir.hpp
+    PRIVATE libresolve/hir_formatters.hpp
     PRIVATE libresolve/lookup.cpp
     PRIVATE libresolve/module.hpp
     PRIVATE libresolve/occurs_check.cpp

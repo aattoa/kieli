@@ -63,7 +63,7 @@ namespace libresolve {
     };
 
     struct Function_with_resolved_signature {
-        hir::Function::Signature      signature;
+        hir::Function_signature       signature;
         utl::Wrapper<ast::Expression> unresolved_body;
     };
 

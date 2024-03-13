@@ -71,7 +71,7 @@ namespace libresolve::hir {
         struct Wildcard {};
 
         struct Tuple {
-            std::vector<Pattern> patterns;
+            std::vector<Pattern> field_patterns;
         };
 
         struct Slice {
@@ -86,7 +86,7 @@ namespace libresolve::hir {
 
         struct Alias {
             Name                  name;
-            utl::Wrapper<Pattern> pattern;
+            utl::Wrapper<Pattern> aliased_pattern;
         };
 
         struct Guarded {
@@ -241,12 +241,9 @@ namespace libresolve::hir {
             Type inspected_type;
         };
 
-        struct Address {
-            utl::Wrapper<Expression> lvalue;
-        };
-
-        struct Reference {
-            utl::Wrapper<Expression> lvalue;
+        struct Addressof {
+            Mutability               mutability;
+            utl::Wrapper<Expression> lvalue_expression;
         };
 
         struct Hole {};
@@ -274,8 +271,7 @@ namespace libresolve::hir {
             expression::Indirect_invocation,
             expression::Direct_invocation,
             expression::Sizeof,
-            expression::Address,
-            expression::Reference,
+            expression::Addressof,
             expression::Hole,
             expression::Error>;
         Variant           variant;
@@ -312,20 +308,20 @@ namespace libresolve::hir {
         utl::Source_range      source_range;
     };
 
+    struct Function_parameter {
+        Pattern pattern;
+        Type    type;
+    };
+
+    struct Function_signature {
+        std::vector<Function_parameter> parameters;
+        Type                            return_type;
+        Type                            function_type;
+    };
+
     struct Function {
-        struct Parameter {
-            Pattern pattern;
-            Type    type;
-        };
-
-        struct Signature {
-            std::vector<Parameter> parameters;
-            Type                   return_type;
-            Type                   function_type;
-        };
-
-        Signature  signature;
-        Expression body;
+        Function_signature signature;
+        Expression         body;
     };
 
     struct Enumeration {
@@ -343,6 +339,19 @@ namespace libresolve::hir {
 
     struct Module {
         utl::Mutable_wrapper<Environment> environment;
+    };
+
+    auto format_to(Expression const&, std::string&) -> void;
+    auto format_to(Pattern const&, std::string&) -> void;
+    auto format_to(Type const&, std::string&) -> void;
+    auto format_to(Mutability const&, std::string&) -> void;
+
+    auto to_string(auto const& x) -> std::string
+        requires requires(std::string out) { hir::format_to(x, out); }
+    {
+        std::string output;
+        hir::format_to(x, output);
+        return output;
     };
 
 } // namespace libresolve::hir

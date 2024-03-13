@@ -67,9 +67,9 @@ namespace libdesugar::dtl {
             std::format_to(out, "{}[{:n}]", application.name, application.template_arguments);
         }
 
-        auto operator()(ast::expression::Addressof const& reference)
+        auto operator()(ast::expression::Addressof const& addressof)
         {
-            std::format_to(out, "(&{} {})", reference.mutability, reference.lvalue_expression);
+            std::format_to(out, "(&{} {})", addressof.mutability, addressof.lvalue_expression);
         }
 
         auto operator()(ast::expression::Type_cast const& cast)
@@ -241,14 +241,14 @@ namespace libdesugar::dtl {
             std::format_to(out, "{}", literal);
         }
 
-        auto operator()(ast::pattern::Slice const& slice)
-        {
-            std::format_to(out, "[{}]", slice.element_patterns);
-        }
-
         auto operator()(ast::pattern::Tuple const& tuple)
         {
-            std::format_to(out, "({})", tuple.field_patterns);
+            std::format_to(out, "({:n})", tuple.field_patterns);
+        }
+
+        auto operator()(ast::pattern::Slice const& slice)
+        {
+            std::format_to(out, "[{:n}]", slice.element_patterns);
         }
 
         auto operator()(ast::Wildcard const&)
@@ -278,7 +278,7 @@ namespace libdesugar::dtl {
 
         auto operator()(ast::pattern::Guarded const& guarded)
         {
-            std::format_to(out, "{} if {}", guarded.guarded_pattern, guarded.guard);
+            std::format_to(out, "{} if {}", guarded.guarded_pattern, guarded.guard_expression);
         }
     };
 

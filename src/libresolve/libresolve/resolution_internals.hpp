@@ -130,7 +130,7 @@ namespace libresolve {
     auto resolve_function(Context& context, Function_info& info) -> hir::Function&;
 
     auto resolve_function_signature(Context& context, Function_info& info)
-        -> hir::Function::Signature&;
+        -> hir::Function_signature&;
 
     auto resolve_mutability(
         Context&               context,

@@ -15,7 +15,7 @@ auto libresolve::resolve_function(Context& context, Function_info& info) -> hir:
 }
 
 auto libresolve::resolve_function_signature(Context& context, Function_info& info)
-    -> hir::Function::Signature&
+    -> hir::Function_signature&
 {
     if (auto* const function = std::get_if<ast::definition::Function>(&info.variant)) {
         (void)context;

@@ -377,7 +377,7 @@ namespace ast {
 
         struct Guarded {
             utl::Wrapper<Pattern> guarded_pattern;
-            Expression            guard;
+            Expression            guard_expression;
         };
     } // namespace pattern
 
