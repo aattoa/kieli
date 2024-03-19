@@ -132,7 +132,7 @@ namespace {
         }
     }
 
-    auto run_debug_repl(std::string_view const name, cppdiag::Colors const colors) -> int
+    auto choose_and_run_debug_repl(std::string_view const name, cppdiag::Colors const colors) -> int
     {
         if (auto* const callback = choose_debug_repl_callback(name)) {
             run_debug_repl(*callback, colors);
@@ -168,7 +168,7 @@ auto main(int const argc, char const* const* const argv) -> int
             std::print("Valid options:\n{}", parameters.help_string());
         }
         if (repl_option) {
-            return run_debug_repl(repl_option.value(), colors);
+            return choose_and_run_debug_repl(repl_option.value(), colors);
         }
 
         return EXIT_SUCCESS;

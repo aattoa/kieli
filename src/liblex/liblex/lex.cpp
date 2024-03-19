@@ -108,7 +108,7 @@ namespace {
     constexpr auto is_digit8  = is_in_range<'0', '7'>;
     constexpr auto is_digit10 = is_in_range<'0', '9'>;
     constexpr auto is_digit12 = satisfies_one_of<is_digit10, is_one_of<"abAB">>;
-    constexpr auto is_digit16 = satisfies_one_of<is_digit12, is_one_of<"cdefCDEF">>;
+    constexpr auto is_digit16 = satisfies_one_of<is_digit10, is_one_of<"abcdefABCDEF">>;
 
     constexpr auto is_alpha = satisfies_one_of<is_lower, is_upper>;
     constexpr auto is_alnum = satisfies_one_of<is_alpha, is_digit10>;
@@ -120,25 +120,26 @@ namespace {
     constexpr auto is_invalid_character = std::not_fn(
         satisfies_one_of<is_identifier_tail, is_operator, is_space, is_one_of<"(){}[],\"'">>);
 
-    template <std::predicate<char> auto is_digit>
-    constexpr auto is_digit_or_separator
-        = satisfies_one_of<is_digit, [](char const c) { return c == '\''; }>;
-
     static_assert(is_one_of<"ab">('a'));
     static_assert(is_one_of<"ab">('b'));
     static_assert(!is_one_of<"ab">('c'));
-    static_assert(!is_one_of<"ab">('\0'));
+
+    template <std::predicate<char> auto predicate>
+    constexpr auto or_digit_separator(char const c)
+    {
+        return predicate(c) || c == '\'';
+    }
 
     constexpr auto digit_predicate_for(int const base) noexcept -> auto (*)(char) -> bool
     {
         // clang-format off
         switch (base) {
-        case 2:  return is_digit_or_separator<is_digit2>;
-        case 4:  return is_digit_or_separator<is_digit4>;
-        case 8:  return is_digit_or_separator<is_digit8>;
-        case 10: return is_digit_or_separator<is_digit10>;
-        case 12: return is_digit_or_separator<is_digit12>;
-        case 16: return is_digit_or_separator<is_digit16>;
+        case 2:  return or_digit_separator<is_digit2>;
+        case 4:  return or_digit_separator<is_digit4>;
+        case 8:  return or_digit_separator<is_digit8>;
+        case 10: return or_digit_separator<is_digit10>;
+        case 12: return or_digit_separator<is_digit12>;
+        case 16: return or_digit_separator<is_digit16>;
         default:
             cpputil::unreachable();
         }
@@ -160,9 +161,9 @@ namespace {
 
         auto operator()(Token::Variant&& value, Token::Type const type) const noexcept -> Token
         {
-            // If the context has advanced, the current position will be the starting position of
-            // the *next* token, so in that case we simply decrement the column here to acquire the
-            // ending position of the *current* token.
+            // If the context has advanced, the current position is the starting
+            // position of the _next_ token, so we simply decrement the column
+            // here to acquire the ending position of the _current_ token.
 
             utl::Source_position new_position = m_state.position;
             if (new_position > m_old_position && new_position.column > 1) {
@@ -177,12 +178,15 @@ namespace {
         }
     };
 
-    auto view_difference(std::string_view const longer, std::string_view const shorter)
+    // If `longer` is `"abcdef"` and `shorter` is `"def"`, return `"abc"`.
+    constexpr auto view_difference(std::string_view const longer, std::string_view const shorter)
         -> std::string_view
     {
-        cpputil::always_assert(longer.size() >= shorter.size());
+        assert(longer.size() >= shorter.size());
         return longer.substr(0, longer.size() - shorter.size());
     }
+
+    static_assert(view_difference("abcdef", "def") == "abc");
 
     auto ensure_no_trailing_separator(std::string_view const string, kieli::Lex_state& state)
         -> liblex::Expected<void>
@@ -403,7 +407,7 @@ namespace {
             return liblex::error(state, "Expected an exponent");
         }
         return ensure_no_trailing_separator(
-            liblex::extract(state, is_digit_or_separator<is_digit10>), state);
+            liblex::extract(state, or_digit_separator<is_digit10>), state);
     }
 
     auto parse_floating_value(kieli::Lex_state& state, std::string_view const literal_string)
@@ -422,11 +426,11 @@ namespace {
         std::string_view const old_string,
         kieli::Lex_state&      state) -> liblex::Expected<Token>
     {
-        if (state.string.empty() || !is_digit_or_separator<is_digit10>(liblex::current(state))) {
+        if (state.string.empty() || !or_digit_separator<is_digit10>(liblex::current(state))) {
             return liblex::error(state, "Expected one or more digits after the decimal separator");
         }
         return ensure_no_trailing_separator(
-                   liblex::extract(state, is_digit_or_separator<is_digit10>), state)
+                   liblex::extract(state, or_digit_separator<is_digit10>), state)
             .and_then([&] {
                 // Consume the suffix here so the next block can parse from old string to current
                 return consume_and_validate_floating_point_alphabetic_suffix(state);
@@ -572,26 +576,18 @@ namespace {
             return token(Token::Variant {}, type);
         };
         switch (char const current = liblex::current(state)) {
-        case '(':
-            return simple_token(Token::Type::paren_open);
-        case ')':
-            return simple_token(Token::Type::paren_close);
-        case '{':
-            return simple_token(Token::Type::brace_open);
-        case '}':
-            return simple_token(Token::Type::brace_close);
-        case '[':
-            return simple_token(Token::Type::bracket_open);
-        case ']':
-            return simple_token(Token::Type::bracket_close);
-        case ';':
-            return simple_token(Token::Type::semicolon);
-        case ',':
-            return simple_token(Token::Type::comma);
-        case '\'':
-            return extract_character_literal(token, state);
-        case '\"':
-            return extract_string_literal(token, state);
+            // clang-format off
+        case '(':  return simple_token(Token::Type::paren_open);
+        case ')':  return simple_token(Token::Type::paren_close);
+        case '{':  return simple_token(Token::Type::brace_open);
+        case '}':  return simple_token(Token::Type::brace_close);
+        case '[':  return simple_token(Token::Type::bracket_open);
+        case ']':  return simple_token(Token::Type::bracket_close);
+        case ';':  return simple_token(Token::Type::semicolon);
+        case ',':  return simple_token(Token::Type::comma);
+        case '\'': return extract_character_literal(token, state);
+        case '\"': return extract_string_literal(token, state);
+            // clang-format on
         default:
             if (is_identifier_head(current)) {
                 return extract_identifier(token, state);

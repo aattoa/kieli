@@ -212,7 +212,7 @@ namespace libresolve::dtl {
 
         auto operator()(hir::type::Function const& function)
         {
-            std::format_to(out, "fn({}): {}", function.parameter_types, function.return_type);
+            std::format_to(out, "fn({:n}): {}", function.parameter_types, function.return_type);
         }
 
         auto operator()(hir::type::Enumeration const& enumeration)
@@ -222,7 +222,7 @@ namespace libresolve::dtl {
 
         auto operator()(hir::type::Tuple const& tuple)
         {
-            std::format_to(out, "({})", tuple.types);
+            std::format_to(out, "({:n})", tuple.types);
         }
 
         auto operator()(hir::type::Parameterized const& parameterized)
