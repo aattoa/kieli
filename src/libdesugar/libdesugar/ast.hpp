@@ -481,7 +481,7 @@ namespace ast {
     };
 
     struct Function_signature {
-        std::vector<Template_parameter> template_parameters;
+        Template_parameters             template_parameters;
         std::vector<Function_parameter> function_parameters;
         std::optional<Self_parameter>   self_parameter;
         std::optional<Type>             return_type;
@@ -489,16 +489,14 @@ namespace ast {
     };
 
     struct Type_signature {
-        std::vector<Template_parameter> template_parameters;
-        std::vector<Class_reference>    classes;
-        kieli::Name_upper               name;
+        std::vector<Class_reference> classes;
+        kieli::Name_upper            name;
     };
 
     namespace definition {
         struct Function {
-            Function_signature  signature;
-            Expression          body;
-            Template_parameters template_parameters;
+            Function_signature signature;
+            Expression         body;
         };
 
         struct Field {

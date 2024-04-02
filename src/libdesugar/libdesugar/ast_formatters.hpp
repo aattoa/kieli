@@ -379,8 +379,8 @@ namespace libdesugar::dtl {
         auto operator()(ast::definition::Function const& function)
         {
             std::format_to(out, "fn {}", function.signature.name);
-            if (!function.signature.template_parameters.empty()) {
-                std::format_to(out, "[{:n}]", function.signature.template_parameters);
+            if (function.signature.template_parameters.has_value()) {
+                std::format_to(out, "[{:n}]", function.signature.template_parameters.value());
             }
             std::format_to(out, "({:n})", function.signature.function_parameters);
             if (function.signature.return_type.has_value()) {

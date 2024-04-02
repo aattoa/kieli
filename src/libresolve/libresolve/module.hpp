@@ -54,17 +54,15 @@ namespace libresolve {
 
         auto type(hir::Type::Variant) -> utl::Mutable_wrapper<hir::Type::Variant>;
         auto mutability(hir::Mutability::Variant) -> utl::Mutable_wrapper<hir::Mutability::Variant>;
+
+        auto wrap(hir::Expression) -> utl::Wrapper<hir::Expression>;
+        auto wrap(hir::Pattern) -> utl::Wrapper<hir::Pattern>;
     };
 
     struct Import {
         std::filesystem::file_time_type last_write_time;
         std::filesystem::path           module_path;
         kieli::Name_lower               name;
-    };
-
-    struct Function_with_resolved_signature {
-        hir::Function_signature       signature;
-        utl::Wrapper<ast::Expression> unresolved_body;
     };
 
     struct Variable_bind {
@@ -86,7 +84,47 @@ namespace libresolve {
         hir::Mutability   mutability;
         bool              unused = true;
     };
+
+    struct Function_with_resolved_signature;
 } // namespace libresolve
+
+class libresolve::Scope {
+    utl::Flatmap<kieli::Identifier, Variable_bind>   m_variables;
+    utl::Flatmap<kieli::Identifier, Type_bind>       m_types;
+    utl::Flatmap<kieli::Identifier, Mutability_bind> m_mutabilities;
+    Scope*                                           m_parent {};
+public:
+    Scope() = default;
+
+    Scope(Scope&&)                    = default;
+    auto operator=(Scope&&) -> Scope& = default;
+
+    Scope(Scope const&)                    = delete;
+    auto operator=(Scope const&) -> Scope& = delete;
+
+    auto bind_mutability(kieli::Identifier identifier, Mutability_bind binding) -> void;
+    auto bind_variable(kieli::Identifier identifier, Variable_bind binding) -> void;
+    auto bind_type(kieli::Identifier identifier, Type_bind binding) -> void;
+
+    [[nodiscard]] auto find_mutability(kieli::Identifier identifier) -> Mutability_bind*;
+    [[nodiscard]] auto find_variable(kieli::Identifier identifier) -> Variable_bind*;
+    [[nodiscard]] auto find_type(kieli::Identifier identifier) -> Type_bind*;
+
+    // Retrieve the parent pointer. Returns `nullptr` if there is no parent.
+    [[nodiscard]] auto parent() const noexcept -> Scope*;
+
+    // Make a child scope. `this` must not be moved or destroyed while the child lives.
+    [[nodiscard]] auto child() noexcept -> Scope;
+
+    // Emit warnings for any unused bindings.
+    auto report_unused(kieli::Diagnostics& diagnostics, utl::Source::Wrapper source) -> void;
+};
+
+struct libresolve::Function_with_resolved_signature {
+    ast::Expression         unresolved_body;
+    hir::Function_signature signature;
+    Scope                   signature_scope;
+};
 
 struct libresolve::Function_info {
     using Variant = std::variant<
@@ -136,36 +174,4 @@ struct libresolve::Environment {
     std::vector<Definition_variant>             in_order;
     std::optional<Environment_wrapper>          parent;
     utl::Source::Wrapper                        source;
-};
-
-class libresolve::Scope {
-    utl::Flatmap<kieli::Identifier, Variable_bind>   m_variables;
-    utl::Flatmap<kieli::Identifier, Type_bind>       m_types;
-    utl::Flatmap<kieli::Identifier, Mutability_bind> m_mutabilities;
-    Scope*                                           m_parent {};
-public:
-    Scope() = default;
-
-    Scope(Scope&&)                    = default;
-    auto operator=(Scope&&) -> Scope& = default;
-
-    Scope(Scope const&)                    = delete;
-    auto operator=(Scope const&) -> Scope& = delete;
-
-    auto bind_mutability(kieli::Identifier identifier, Mutability_bind binding) -> void;
-    auto bind_variable(kieli::Identifier identifier, Variable_bind binding) -> void;
-    auto bind_type(kieli::Identifier identifier, Type_bind binding) -> void;
-
-    [[nodiscard]] auto find_mutability(kieli::Identifier identifier) -> Mutability_bind*;
-    [[nodiscard]] auto find_variable(kieli::Identifier identifier) -> Variable_bind*;
-    [[nodiscard]] auto find_type(kieli::Identifier identifier) -> Type_bind*;
-
-    // Retrieve the parent pointer. Returns `nullptr` if there is no parent.
-    [[nodiscard]] auto parent() const noexcept -> Scope*;
-
-    // Make a child scope. `this` must not be moved or destroyed while the child lives.
-    [[nodiscard]] auto child() noexcept -> Scope;
-
-    // Emit warnings for any unused bindings.
-    auto report_unused(kieli::Diagnostics& diagnostics, utl::Source::Wrapper source) -> void;
 };

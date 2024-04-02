@@ -60,8 +60,7 @@ namespace {
             return ast::definition::Function {
                 .signature {
                     .template_parameters
-                    = function.signature.template_parameters.transform(context.desugar())
-                          .value_or(std::vector<ast::Template_parameter> {}),
+                    = function.signature.template_parameters.transform(context.desugar()),
                     .function_parameters = std::move(parameters),
                     .self_parameter
                     = function.signature.function_parameters.value.self_parameter.transform(

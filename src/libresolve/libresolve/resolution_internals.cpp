@@ -23,6 +23,16 @@ auto libresolve::Arenas::mutability(hir::Mutability::Variant variant)
     return hir_node_arena.wrap_mutable<hir::Mutability::Variant>(std::move(variant));
 }
 
+auto libresolve::Arenas::wrap(hir::Expression expression) -> utl::Wrapper<hir::Expression>
+{
+    return hir_node_arena.wrap<hir::Expression>(std::move(expression));
+}
+
+auto libresolve::Arenas::wrap(hir::Pattern pattern) -> utl::Wrapper<hir::Pattern>
+{
+    return hir_node_arena.wrap<hir::Pattern>(std::move(pattern));
+}
+
 auto libresolve::Constants::make_with(Arenas& arenas) -> Constants
 {
     return Constants {
@@ -133,7 +143,20 @@ auto libresolve::Inference_state::fresh_mutability_variable(
 auto libresolve::Inference_state::ensure_no_unsolved_variables(kieli::Diagnostics& diagnostics)
     -> void
 {
-    (void)this;
-    (void)diagnostics;
-    cpputil::todo();
+    for (Mutability_variable_data& data : mutability_variables.underlying) {
+        if (!data.is_solved) {
+            data.solve_with(hir::mutability::Concrete::immut);
+        }
+    }
+    for (Type_variable_data& data : type_variables.underlying) {
+        if (!data.is_solved) {
+            diagnostics.emit(
+                cppdiag::Severity::error,
+                source,
+                data.origin,
+                "Unsolved type variable: ?{}",
+                data.tag.get());
+            data.solve_with(hir::type::Error {});
+        }
+    }
 }

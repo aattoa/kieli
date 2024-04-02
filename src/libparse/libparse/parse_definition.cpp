@@ -26,8 +26,7 @@ namespace {
     auto extract_function_signature(Context& context, Token const& fn_keyword)
         -> cst::Function_signature
     {
-        auto name                = extract_lower_name(context, "a function name");
-        auto template_parameters = parse_template_parameters(context);
+        auto name = extract_lower_name(context, "a function name");
         auto function_parameters
             = parse_parenthesized<parse_function_parameters, "a function parameter list">(context);
 
@@ -45,7 +44,6 @@ namespace {
         }
 
         return cst::Function_signature {
-            .template_parameters = std::move(template_parameters),
             .function_parameters = std::move(function_parameters.value()),
             .return_type         = std::move(return_type_annotation),
             .name                = std::move(name),

@@ -306,7 +306,7 @@ namespace {
 
         auto operator()(cst::expression::Conditional const& conditional)
         {
-            state.format("{} ", conditional.is_elif_conditional.get() ? "elif" : "if");
+            state.format("{} ", conditional.is_elif.get() ? "elif" : "if");
             state.format(conditional.condition);
             state.format(" ");
             format_indented_block_body(as_block(conditional.true_branch));
@@ -316,7 +316,7 @@ namespace {
             if (auto const* const else_conditional = std::get_if<cst::expression::Conditional>(
                     &conditional.false_branch->body->variant))
             {
-                if (else_conditional->is_elif_conditional.get()) {
+                if (else_conditional->is_elif.get()) {
                     state.format("{}", state.newline());
                     state.format(conditional.false_branch->body);
                     return;

@@ -13,6 +13,12 @@
 ## libdesugar
 - More tests
 
+## libresolve
+- Unique type for each function, coerce to function pointer
+
+## libcodegen
+- Output C and bytecode
+
 ## Build process
 - Profile compilation with `-ftime-trace`
 - Try the mold linker, `-fuse-ld=mold`

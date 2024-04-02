@@ -239,7 +239,7 @@ namespace {
             .true_branch              = true_branch,
             .false_branch             = false_branch,
             .if_or_elif_keyword_token = cst::Token::from_lexical(if_or_elif_keyword),
-            .is_elif_conditional      = conditional_kind == Conditional_kind::elif,
+            .is_elif                  = conditional_kind == Conditional_kind::elif,
         };
     }
 

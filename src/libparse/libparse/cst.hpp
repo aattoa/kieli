@@ -303,7 +303,7 @@ namespace cst {
             utl::Wrapper<Expression>    true_branch;
             std::optional<False_branch> false_branch;
             Token                       if_or_elif_keyword_token;
-            utl::Explicit<bool>         is_elif_conditional;
+            utl::Explicit<bool>         is_elif;
         };
 
         struct Match {

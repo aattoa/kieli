@@ -179,8 +179,8 @@ namespace {
                 .condition    = condition,
                 .true_branch  = context.desugar(conditional.true_branch),
                 .false_branch = false_branch,
-                .source = conditional.is_elif_conditional.get() ? ast::Conditional_source::elif
-                                                                : ast::Conditional_source::if_,
+                .source       = conditional.is_elif.get() ? ast::Conditional_source::elif
+                                                          : ast::Conditional_source::if_,
                 .has_explicit_false_branch = conditional.false_branch.has_value(),
             };
         }
@@ -194,7 +194,8 @@ namespace {
                 };
             };
             return ast::expression::Match {
-                .cases = match.cases.value | std::views::transform(desugar_match_case)
+                .cases = match.cases.value                         //
+                       | std::views::transform(desugar_match_case) //
                        | std::ranges::to<std::vector>(),
                 .expression = context.desugar(match.matched_expression),
             };

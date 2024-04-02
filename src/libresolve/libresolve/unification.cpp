@@ -190,16 +190,16 @@ namespace {
             return true;
         }
 
-        auto operator()(hir::type::Variable const variable, auto const&) const -> bool
+        auto operator()(hir::type::Variable const sub, auto const&) const -> bool
         {
             // TODO: handle integrals
-            return solution(variable.tag, current_super);
+            return solution(sub.tag, current_super);
         }
 
-        auto operator()(auto const&, hir::type::Variable const variable) const -> bool
+        auto operator()(auto const&, hir::type::Variable const super) const -> bool
         {
             // TODO: handle integrals
-            return solution(variable.tag, current_sub);
+            return solution(super.tag, current_sub);
         }
 
         template <utl::one_of<
@@ -298,15 +298,14 @@ namespace {
     };
 
     auto unify(
+        Unification_solutions&            solutions,
         kieli::Diagnostics&               diagnostics,
         Type_unification_arguments const& arguments,
         hir::Type const                   sub,
-        hir::Type const                   super) -> std::optional<Unification_solutions>
+        hir::Type const                   super) -> bool
     {
-        Unification_solutions          solutions;
         Type_unification_visitor const visitor { diagnostics, solutions, arguments, sub, super };
-        bool const                     result = visitor.unify(sub, super);
-        return result ? std::optional(std::move(solutions)) : std::nullopt;
+        return visitor.unify(sub, super);
     }
 
     auto apply_solutions(Inference_state& state, Unification_solutions const& solutions) -> void
@@ -319,6 +318,16 @@ namespace {
                 equal.solve_with(*solution.variant);
             }
         }
+    }
+
+    auto solutions_for_state(Inference_state& state) -> Unification_solutions
+    {
+        Unification_solutions solutions;
+        solutions.type_variable_equalities.underlying.resize(
+            state.type_variables.underlying.size());
+        solutions.mutability_variable_equalities.underlying.resize(
+            state.mutability_variables.underlying.size());
+        return solutions;
     }
 } // namespace
 
@@ -333,16 +342,29 @@ auto libresolve::require_subtype_relationship(
         .origin = origin,
         .goal   = Unification_goal::subtype,
     };
-    if (auto solutions = unify(diagnostics, arguments, sub, super)) {
-        apply_solutions(state, solutions.value());
+
+    Unification_solutions solutions = solutions_for_state(state);
+
+    if (unify(solutions, diagnostics, arguments, sub, super)) {
+        apply_solutions(state, solutions);
     }
     else {
-        // TODO: fix message
+        auto const sub_type_string   = hir::to_string(sub);
+        auto const super_type_string = hir::to_string(super);
+
         diagnostics.error(
-            state.source,
-            origin,
-            "Unable to unify {} <: {}",
-            sub.variant->index(),
-            super.variant->index());
+            { kieli::Simple_text_section {
+                  .source       = state.source,
+                  .source_range = sub.source_range,
+                  .note         = sub_type_string,
+              },
+              kieli::Simple_text_section {
+                  .source       = state.source,
+                  .source_range = super.source_range,
+                  .note         = super_type_string,
+              } },
+            "Unable to unify {} ~ {}",
+            sub_type_string,
+            super_type_string);
     }
 }
