@@ -79,7 +79,7 @@ auto libresolve::Scope::find_type(kieli::Identifier const identifier) -> Type_bi
 
 auto libresolve::Scope::child() noexcept -> Scope
 {
-    Scope scope;
+    Scope scope { m_source };
     scope.m_parent = this;
     return scope;
 }
@@ -87,6 +87,11 @@ auto libresolve::Scope::child() noexcept -> Scope
 auto libresolve::Scope::parent() const noexcept -> Scope*
 {
     return m_parent;
+}
+
+auto libresolve::Scope::source() const noexcept -> utl::Source::Wrapper
+{
+    return m_source;
 }
 
 auto libresolve::Scope::report_unused(

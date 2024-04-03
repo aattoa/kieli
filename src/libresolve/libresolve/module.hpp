@@ -92,9 +92,10 @@ class libresolve::Scope {
     utl::Flatmap<kieli::Identifier, Variable_bind>   m_variables;
     utl::Flatmap<kieli::Identifier, Type_bind>       m_types;
     utl::Flatmap<kieli::Identifier, Mutability_bind> m_mutabilities;
+    utl::Source::Wrapper                             m_source;
     Scope*                                           m_parent {};
 public:
-    Scope() = default;
+    explicit Scope(utl::Source::Wrapper const source) : m_source { source } {}
 
     Scope(Scope&&)                    = default;
     auto operator=(Scope&&) -> Scope& = default;
@@ -110,11 +111,14 @@ public:
     [[nodiscard]] auto find_variable(kieli::Identifier identifier) -> Variable_bind*;
     [[nodiscard]] auto find_type(kieli::Identifier identifier) -> Type_bind*;
 
+    // Make a child scope. `this` must not be moved or destroyed while the child lives.
+    [[nodiscard]] auto child() noexcept -> Scope;
+
     // Retrieve the parent pointer. Returns `nullptr` if there is no parent.
     [[nodiscard]] auto parent() const noexcept -> Scope*;
 
-    // Make a child scope. `this` must not be moved or destroyed while the child lives.
-    [[nodiscard]] auto child() noexcept -> Scope;
+    // Retrieve the source wrapper.
+    [[nodiscard]] auto source() const noexcept -> utl::Source::Wrapper;
 
     // Emit warnings for any unused bindings.
     auto report_unused(kieli::Diagnostics& diagnostics, utl::Source::Wrapper source) -> void;

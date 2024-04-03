@@ -21,8 +21,9 @@ namespace libresolve {
         utl::Mutable_wrapper<hir::Type::Variant>       character_type;
         utl::Mutable_wrapper<hir::Type::Variant>       unit_type;
         utl::Mutable_wrapper<hir::Type::Variant>       error_type;
-        utl::Mutable_wrapper<hir::Mutability::Variant> mutability;
-        utl::Mutable_wrapper<hir::Mutability::Variant> immutability;
+        utl::Mutable_wrapper<hir::Mutability::Variant> mutability_yes;
+        utl::Mutable_wrapper<hir::Mutability::Variant> mutability_no;
+        utl::Mutable_wrapper<hir::Mutability::Variant> mutability_error;
 
         static auto make_with(Arenas& arenas) -> Constants;
     };
@@ -132,11 +133,8 @@ namespace libresolve {
     auto resolve_function_signature(Context& context, Function_info& info)
         -> hir::Function_signature&;
 
-    auto resolve_mutability(
-        Context&               context,
-        Inference_state&       state,
-        Scope&                 scope,
-        ast::Mutability const& mutability) -> hir::Mutability;
+    auto resolve_mutability(Context& context, Scope& scope, ast::Mutability const& mutability)
+        -> hir::Mutability;
 
     auto resolve_expression(
         Context&               context,

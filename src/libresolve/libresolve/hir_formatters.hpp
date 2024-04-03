@@ -275,6 +275,9 @@ LIBRESOLVE_DEFINE_FORMATTER(libresolve::hir::Mutability)
             [&](libresolve::hir::mutability::Parameterized const& parameterized) {
                 return std::format_to(context.out(), "mut?{}", parameterized.tag.get());
             },
+            [&](libresolve::hir::mutability::Error const&) {
+                return std::format_to(context.out(), "mut?ERROR");
+            },
             [&](libresolve::hir::mutability::Variable const& variable) {
                 return std::format_to(context.out(), "?mut{}", variable.tag.get());
             },

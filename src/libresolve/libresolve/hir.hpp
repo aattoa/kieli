@@ -44,13 +44,16 @@ namespace libresolve::hir {
         struct Variable {
             Mutability_variable_tag tag;
         };
+
+        struct Error {};
     } // namespace mutability
 
     struct Mutability {
         using Variant = std::variant<
-            mutability::Concrete, //
+            mutability::Concrete,
             mutability::Parameterized,
-            mutability::Variable>;
+            mutability::Variable,
+            mutability::Error>;
         utl::Mutable_wrapper<Variant> variant;
         utl::Source_range             source_range;
     };

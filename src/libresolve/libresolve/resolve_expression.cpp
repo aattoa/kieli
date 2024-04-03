@@ -306,8 +306,7 @@ namespace {
         {
             hir::Expression lvalue_expression = recurse(*addressof.lvalue_expression);
             hir::Type const referenced_type   = lvalue_expression.type;
-            hir::Mutability mutability
-                = resolve_mutability(context, state, scope, addressof.mutability);
+            hir::Mutability mutability = resolve_mutability(context, scope, addressof.mutability);
             return {
                 hir::expression::Addressof {
                     .mutability        = mutability,

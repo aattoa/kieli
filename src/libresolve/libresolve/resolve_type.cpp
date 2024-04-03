@@ -128,7 +128,7 @@ namespace {
         {
             hir::type::Reference type {
                 .referenced_type = recurse(*reference.referenced_type),
-                .mutability      = resolve_mutability(context, state, scope, reference.mutability),
+                .mutability      = resolve_mutability(context, scope, reference.mutability),
             };
             return { context.arenas.type(std::move(type)), this_type.source_range };
         }
@@ -137,7 +137,7 @@ namespace {
         {
             hir::type::Pointer type {
                 .pointee_type = recurse(*pointer.pointee_type),
-                .mutability   = resolve_mutability(context, state, scope, pointer.mutability),
+                .mutability   = resolve_mutability(context, scope, pointer.mutability),
             };
             return { context.arenas.type(std::move(type)), this_type.source_range };
         }
