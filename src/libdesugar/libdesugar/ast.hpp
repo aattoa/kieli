@@ -263,7 +263,7 @@ namespace ast {
         };
 
         struct Dereference {
-            utl::Wrapper<Expression> pointer_expression;
+            utl::Wrapper<Expression> reference_expression;
         };
 
         struct Unsafe {

@@ -499,7 +499,7 @@ namespace {
         auto operator()(cst::expression::Dereference const& dereference) -> ast::Expression::Variant
         {
             return ast::expression::Dereference {
-                .pointer_expression = context.desugar(dereference.pointer_expression),
+                .reference_expression = context.desugar(dereference.reference_expression),
             };
         }
 

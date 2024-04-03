@@ -118,7 +118,7 @@ namespace libdesugar::dtl {
 
         auto operator()(ast::expression::Dereference const& dereference)
         {
-            std::format_to(out, "(*{})", dereference.pointer_expression);
+            std::format_to(out, "(*{})", dereference.reference_expression);
         }
 
         auto operator()(ast::expression::Struct_field_access const& access)

@@ -150,8 +150,8 @@ namespace {
     auto extract_dereference(Context& context, Token const& asterisk) -> cst::Expression::Variant
     {
         return cst::expression::Dereference {
-            .pointer_expression = require<parse_expression>(context, "an expression"),
-            .asterisk_token     = cst::Token::from_lexical(asterisk),
+            .reference_expression = require<parse_expression>(context, "an expression"),
+            .asterisk_token       = cst::Token::from_lexical(asterisk),
         };
     }
 

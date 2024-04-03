@@ -166,9 +166,38 @@ namespace {
             cpputil::todo();
         }
 
-        auto operator()(ast::expression::Block const&) -> hir::Expression
+        auto operator()(ast::expression::Block const& block) -> hir::Expression
         {
-            cpputil::todo();
+            Scope block_scope = scope.child();
+
+            auto const resolve_effect = [&](ast::Expression const& expression) {
+                hir::Expression effect
+                    = resolve_expression(context, state, block_scope, environment, expression);
+                require_subtype_relationship( // TODO: better error message
+                    context.compile_info.diagnostics,
+                    state,
+                    effect.type,
+                    hir::Type { context.constants.unit_type, effect.source_range },
+                    effect.source_range);
+                return effect;
+            };
+
+            auto side_effects = block.side_effects                    //
+                              | std::views::transform(resolve_effect) //
+                              | std::ranges::to<std::vector>();
+
+            hir::Expression result
+                = resolve_expression(context, state, scope, environment, *block.result);
+            hir::Type const result_type = result.type;
+
+            return {
+                hir::expression::Block {
+                    .side_effects = std::move(side_effects),
+                    .result       = context.arenas.wrap(std::move(result)),
+                },
+                result_type,
+                this_expression.source_range,
+            };
         }
 
         auto operator()(ast::expression::Invocation const&) -> hir::Expression
@@ -273,14 +302,58 @@ namespace {
             };
         }
 
-        auto operator()(ast::expression::Addressof const&) -> hir::Expression
+        auto operator()(ast::expression::Addressof const& addressof) -> hir::Expression
         {
-            cpputil::todo();
+            hir::Expression lvalue_expression = recurse(*addressof.lvalue_expression);
+            hir::Type const referenced_type   = lvalue_expression.type;
+            hir::Mutability mutability
+                = resolve_mutability(context, state, scope, addressof.mutability);
+            return {
+                hir::expression::Addressof {
+                    .mutability        = mutability,
+                    .lvalue_expression = context.arenas.wrap(std::move(lvalue_expression)),
+                },
+                hir::Type {
+                    context.arenas.type(hir::type::Reference {
+                        .referenced_type = referenced_type,
+                        .mutability      = mutability,
+                    }),
+                    this_expression.source_range,
+                },
+                this_expression.source_range,
+            };
         }
 
-        auto operator()(ast::expression::Dereference const&) -> hir::Expression
+        auto operator()(ast::expression::Dereference const& dereference) -> hir::Expression
         {
-            cpputil::todo();
+            hir::Type const referenced_type
+                = state.fresh_general_type_variable(context.arenas, this_expression.source_range);
+            hir::Mutability const reference_mutability
+                = state.fresh_mutability_variable(context.arenas, this_expression.source_range);
+
+            hir::Type const reference_type {
+                context.arenas.type(hir::type::Reference {
+                    .referenced_type = referenced_type,
+                    .mutability      = reference_mutability,
+                }),
+                this_expression.source_range,
+            };
+            hir::Expression reference_expression = recurse(*dereference.reference_expression);
+
+            require_subtype_relationship(
+                context.compile_info.diagnostics,
+                state,
+                reference_expression.type,
+                reference_type,
+                this_expression.source_range);
+
+            return {
+                hir::expression::Dereference {
+                    .reference_expression = context.arenas.wrap(std::move(reference_expression)),
+                },
+                referenced_type,
+                this_expression.source_range,
+            };
         }
 
         auto operator()(ast::expression::Unsafe const&) -> hir::Expression
@@ -300,7 +373,11 @@ namespace {
 
         auto operator()(ast::expression::Hole const&) -> hir::Expression
         {
-            cpputil::todo();
+            return {
+                hir::expression::Hole {},
+                state.fresh_general_type_variable(context.arenas, this_expression.source_range),
+                this_expression.source_range,
+            };
         }
     };
 } // namespace

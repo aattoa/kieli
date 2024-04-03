@@ -233,7 +233,7 @@ namespace {
         auto operator()(cst::expression::Dereference const& dereference)
         {
             state.format("*");
-            state.format(dereference.pointer_expression);
+            state.format(dereference.reference_expression);
         }
 
         auto operator()(cst::expression::Meta const& meta)

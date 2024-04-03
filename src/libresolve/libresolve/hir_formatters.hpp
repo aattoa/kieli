@@ -109,6 +109,11 @@ namespace libresolve::dtl {
             std::format_to(out, "(&{} {})", addressof.mutability, addressof.lvalue_expression);
         }
 
+        auto operator()(hir::expression::Dereference const& dereference)
+        {
+            std::format_to(out, "(*{})", dereference.reference_expression);
+        }
+
         auto operator()(hir::expression::Hole const&)
         {
             std::format_to(out, R"(???)");
