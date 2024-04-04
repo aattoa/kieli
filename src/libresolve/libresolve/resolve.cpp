@@ -40,7 +40,9 @@ auto kieli::resolve_project(Project_configuration const& project_configuration) 
         .compile_info          = compile_info,
     };
 
-    libresolve::resolve_definitions_in_order(context, make_main_environment(context));
+    auto const main_environment = make_main_environment(context);
+    libresolve::resolve_definitions_in_order(context, main_environment);
+    libresolve::resolve_function_bodies(context, main_environment);
 
     return Resolved_project {};
 }

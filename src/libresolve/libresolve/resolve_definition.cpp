@@ -1,15 +1,85 @@
 #include <libutl/common/utilities.hpp>
 #include <libresolve/resolution_internals.hpp>
 
-auto libresolve::resolve_function(Context& context, Function_info& info) -> hir::Function&
-{
-    if (auto* const function = std::get_if<ast::definition::Function>(&info.variant)) {
-        (void)context;
-        cpputil::todo();
+namespace {
+    using namespace libresolve;
+
+    auto resolve_function_parameter(
+        Context&                       context,
+        Inference_state&               state,
+        Scope&                         scope,
+        Environment_wrapper const      environment,
+        ast::Function_parameter const& parameter) -> hir::Function_parameter
+    {
+        cpputil::always_assert(parameter.type.has_value()); // TODO
+        return hir::Function_parameter {
+            .pattern = resolve_pattern(context, state, scope, environment, *parameter.pattern),
+            .type    = resolve_type(context, state, scope, environment, *parameter.type.value()),
+            .default_argument = parameter.default_argument.transform(
+                [&](utl::Wrapper<ast::Expression> const argument) {
+                    return resolve_expression(context, state, scope, environment, *argument);
+                }),
+        };
     }
+
+    auto resolve_signature(
+        Context&                       context,
+        Scope&                         scope,
+        Environment_wrapper const      environment,
+        ast::Function_signature const& signature,
+        utl::Source::Wrapper const     source) -> hir::Function_signature
+    {
+        cpputil::always_assert(signature.return_type.has_value());     // TODO
+        cpputil::always_assert(!signature.self_parameter.has_value()); // TODO
+
+        Inference_state state { .source = source };
+
+        auto const resolve_parameter = [&](ast::Function_parameter const& parameter) {
+            return resolve_function_parameter(context, state, scope, environment, parameter);
+        };
+
+        auto parameters = std::views::transform(signature.function_parameters, resolve_parameter)
+                        | std::ranges::to<std::vector>();
+        auto parameter_types = std::views::transform(parameters, &hir::Function_parameter::type)
+                             | std::ranges::to<std::vector>();
+
+        hir::Type const return_type
+            = resolve_type(context, state, scope, environment, signature.return_type.value());
+
+        ensure_no_unsolved_variables(state, context.compile_info.diagnostics);
+
+        return hir::Function_signature {
+            .parameters  = std::move(parameters),
+            .return_type = return_type,
+            .function_type {
+                context.arenas.type(hir::type::Function {
+                    .parameter_types = std::move(parameter_types),
+                    .return_type     = return_type,
+                }),
+                signature.name.source_range,
+            },
+        };
+    }
+} // namespace
+
+auto libresolve::resolve_function_body(Context& context, Function_info& info) -> hir::Function&
+{
+    resolve_function_signature(context, info);
     if (auto* const function = std::get_if<Function_with_resolved_signature>(&info.variant)) {
-        (void)context;
-        cpputil::todo();
+        Inference_state state { .source = info.environment->source };
+        hir::Expression body = resolve_expression(
+            context, state, function->signature_scope, info.environment, function->unresolved_body);
+        require_subtype_relationship(
+            context.compile_info.diagnostics,
+            state,
+            body.type,
+            function->signature.return_type,
+            info.name.source_range);
+        info.variant = hir::Function {
+            .signature = std::move(function->signature),
+            .body      = std::move(body),
+        };
+        ensure_no_unsolved_variables(state, context.compile_info.diagnostics);
     }
     return std::get<hir::Function>(info.variant);
 }
@@ -18,8 +88,13 @@ auto libresolve::resolve_function_signature(Context& context, Function_info& inf
     -> hir::Function_signature&
 {
     if (auto* const function = std::get_if<ast::definition::Function>(&info.variant)) {
-        (void)context;
-        cpputil::todo();
+        Scope scope { info.environment->source };
+        info.variant = Function_with_resolved_signature {
+            .unresolved_body = std::move(function->body),
+            .signature       = resolve_signature(
+                context, scope, info.environment, function->signature, info.environment->source),
+            .signature_scope = std::move(scope),
+        };
     }
     if (auto* const function = std::get_if<Function_with_resolved_signature>(&info.variant)) {
         return function->signature;
@@ -54,11 +129,16 @@ auto libresolve::resolve_alias(Context& context, Alias_info& info) -> hir::Alias
     return std::get<hir::Alias>(info.variant);
 }
 
-auto libresolve::resolve_definitions_in_order(
-    Context& context, Environment_wrapper const environment) -> void
+auto libresolve::resolve_function_bodies(Context& context, Environment_wrapper const environment)
+    -> void
 {
     for (Definition_variant const& variant : environment->in_order) {
-        resolve_definition(context, variant);
+        if (auto* const info = std::get_if<utl::Mutable_wrapper<Function_info>>(&variant)) {
+            resolve_function_body(context, info->as_mutable());
+        }
+        else if (auto* const info = std::get_if<utl::Mutable_wrapper<Module_info>>(&variant)) {
+            resolve_function_bodies(context, (*info)->environment);
+        }
     }
 }
 
@@ -70,7 +150,7 @@ auto libresolve::resolve_definition(Context& context, Definition_variant const& 
                 resolve_definitions_in_order(context, resolve_module(context, module.as_mutable()));
             },
             [&](utl::Mutable_wrapper<Function_info> const function) {
-                (void)resolve_function(context, function.as_mutable());
+                (void)resolve_function_signature(context, function.as_mutable());
             },
             [&](utl::Mutable_wrapper<Enumeration_info> const enumeration) {
                 (void)resolve_enumeration(context, enumeration.as_mutable());
@@ -83,4 +163,12 @@ auto libresolve::resolve_definition(Context& context, Definition_variant const& 
             },
         },
         definition);
+}
+
+auto libresolve::resolve_definitions_in_order(
+    Context& context, Environment_wrapper const environment) -> void
+{
+    for (Definition_variant const& variant : environment->in_order) {
+        resolve_definition(context, variant);
+    }
 }

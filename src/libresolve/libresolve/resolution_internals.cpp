@@ -141,19 +141,19 @@ auto libresolve::Inference_state::fresh_mutability_variable(
     return hir::Mutability { variant, origin };
 }
 
-auto libresolve::Inference_state::ensure_no_unsolved_variables(kieli::Diagnostics& diagnostics)
-    -> void
+auto libresolve::ensure_no_unsolved_variables(
+    Inference_state& state, kieli::Diagnostics& diagnostics) -> void
 {
-    for (Mutability_variable_data& data : mutability_variables.underlying) {
+    for (Mutability_variable_data& data : state.mutability_variables.underlying) {
         if (!data.is_solved) {
             data.solve_with(hir::mutability::Concrete::immut);
         }
     }
-    for (Type_variable_data& data : type_variables.underlying) {
+    for (Type_variable_data& data : state.type_variables.underlying) {
         if (!data.is_solved) {
             diagnostics.emit(
                 cppdiag::Severity::error,
-                source,
+                state.source,
                 data.origin,
                 "Unsolved type variable: ?{}",
                 data.tag.get());

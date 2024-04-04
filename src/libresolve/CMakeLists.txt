@@ -20,6 +20,7 @@ target_sources(libresolve
     PRIVATE libresolve/resolve_module.cpp
     PRIVATE libresolve/resolve_mutability.cpp
     PRIVATE libresolve/resolve_pattern.cpp
+    PRIVATE libresolve/resolve_template.cpp
     PRIVATE libresolve/resolve_type.cpp
     PRIVATE libresolve/scope.cpp
     PRIVATE libresolve/unification.cpp)

@@ -87,8 +87,9 @@ namespace {
             .compile_info          = info,
         };
 
-        libresolve::resolve_definitions_in_order(
-            context, libresolve::make_environment(context, source));
+        auto const environment = libresolve::make_environment(context, source);
+        libresolve::resolve_definitions_in_order(context, environment);
+        libresolve::resolve_function_bodies(context, environment);
     }
 
     auto choose_debug_repl_callback(std::string_view const name)
@@ -174,9 +175,8 @@ auto main(int const argc, char const* const* const argv) -> int
         return EXIT_SUCCESS;
     }
     catch (cppargs::Exception const& exception) {
-        auto const program_name = *argv ? *argv : "kieli";
-        auto const message      = format_command_line_error(exception.info(), program_name, colors);
-        std::println(stderr, "{}", message);
+        auto const name = *argv ? *argv : "kieli";
+        std::println(stderr, "{}", format_command_line_error(exception.info(), name, colors));
         return EXIT_FAILURE;
     }
     catch (std::exception const& exception) {

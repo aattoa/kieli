@@ -287,7 +287,11 @@ LIBRESOLVE_DEFINE_FORMATTER(libresolve::hir::Mutability)
 
 LIBRESOLVE_DEFINE_FORMATTER(libresolve::hir::Function_parameter)
 {
-    return std::format_to(context.out(), "{}: {}", value.pattern, value.type);
+    std::format_to(context.out(), "{}: {}", value.pattern, value.type);
+    if (value.default_argument.has_value()) {
+        std::format_to(context.out(), " = {}", value.default_argument.value());
+    }
+    return context.out();
 }
 
 LIBRESOLVE_DEFINE_FORMATTER(libresolve::hir::Function_argument)

@@ -85,8 +85,7 @@ namespace {
         auto operator()(ast::type::Tuple const& tuple) -> hir::Type
         {
             hir::type::Tuple type {
-                .types = tuple.field_types                //
-                       | std::views::transform(recurse()) //
+                .types = std::views::transform(tuple.field_types, recurse())
                        | std::ranges::to<std::vector>(),
             };
             return { context.arenas.type(std::move(type)), this_type.source_range };
@@ -116,11 +115,9 @@ namespace {
 
         auto operator()(ast::type::Typeof const& typeof_) -> hir::Type
         {
-            auto inspection_scope = scope.child();
-
-            auto const expression = resolve_expression(
-                context, state, inspection_scope, environment, *typeof_.inspected_expression);
-
+            auto       typeof_scope = scope.child();
+            auto const expression   = resolve_expression(
+                context, state, typeof_scope, environment, *typeof_.inspected_expression);
             return expression.type;
         }
 

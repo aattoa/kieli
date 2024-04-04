@@ -317,8 +317,9 @@ namespace libresolve::hir {
     };
 
     struct Function_parameter {
-        Pattern pattern;
-        Type    type;
+        Pattern                   pattern;
+        Type                      type;
+        std::optional<Expression> default_argument;
     };
 
     struct Function_signature {

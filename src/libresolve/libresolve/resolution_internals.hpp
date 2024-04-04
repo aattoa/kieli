@@ -72,8 +72,6 @@ namespace libresolve {
         auto fresh_general_type_variable(Arenas& arenas, utl::Source_range origin) -> hir::Type;
         auto fresh_integral_type_variable(Arenas& arenas, utl::Source_range origin) -> hir::Type;
         auto fresh_mutability_variable(Arenas& arenas, utl::Source_range origin) -> hir::Mutability;
-
-        auto ensure_no_unsolved_variables(kieli::Diagnostics& diagnostics) -> void;
     };
 
     using Module_map = utl::Flatmap<std::filesystem::path, utl::Mutable_wrapper<Module_info>>;
@@ -94,6 +92,9 @@ namespace libresolve {
     auto resolve_import(
         kieli::Project_configuration const& configuration,
         std::span<kieli::Name_lower const>  path_segments) -> std::expected<Import, Import_error>;
+
+    auto ensure_no_unsolved_variables(Inference_state& state, kieli::Diagnostics& diagnostics)
+        -> void;
 
     auto add_to_environment(
         Context&             context,
@@ -118,9 +119,14 @@ namespace libresolve {
 
     auto resolve_module(Context& context, Module_info& module_info) -> Environment_wrapper;
 
+    // Recursively resolve every definition in `environment`. Will not resolve function bodies.
     auto resolve_definitions_in_order(Context& context, Environment_wrapper environment) -> void;
 
+    // Recursively resolve a definition. Will not resolve function bodies.
     auto resolve_definition(Context& context, Definition_variant const& definition) -> void;
+
+    // Recursively resolve every function body in `environment`.
+    auto resolve_function_bodies(Context& context, Environment_wrapper environment) -> void;
 
     auto resolve_enumeration(Context& context, Enumeration_info& info) -> hir::Enumeration&;
 
@@ -128,10 +134,21 @@ namespace libresolve {
 
     auto resolve_alias(Context& context, Alias_info& info) -> hir::Alias&;
 
-    auto resolve_function(Context& context, Function_info& info) -> hir::Function&;
+    auto resolve_function_body(Context& context, Function_info& info) -> hir::Function&;
 
     auto resolve_function_signature(Context& context, Function_info& info)
         -> hir::Function_signature&;
+
+    auto resolve_template_parameters(
+        Context&                        context,
+        Scope&                          scope,
+        ast::Template_parameters const& parameters) -> std::vector<hir::Template_parameter>;
+
+    auto resolve_template_arguments(
+        Context&                                    context,
+        std::vector<hir::Template_parameter> const& parameters,
+        std::vector<ast::Template_argument> const&  arguments)
+        -> std::vector<hir::Template_argument>;
 
     auto resolve_mutability(Context& context, Scope& scope, ast::Mutability const& mutability)
         -> hir::Mutability;
