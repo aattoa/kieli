@@ -382,10 +382,13 @@ namespace libdesugar::dtl {
             if (function.signature.template_parameters.has_value()) {
                 std::format_to(out, "[{:n}]", function.signature.template_parameters.value());
             }
-            std::format_to(out, "({:n})", function.signature.function_parameters);
-            if (function.signature.return_type.has_value()) {
-                std::format_to(out, ": {}", function.signature.return_type.value());
-            }
+
+            std::format_to(
+                out,
+                "({:n}): {}",
+                function.signature.function_parameters,
+                function.signature.return_type);
+
             assert(std::holds_alternative<ast::expression::Block>(function.body.variant));
             std::format_to(out, " {}", function.body);
         }

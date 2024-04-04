@@ -29,7 +29,6 @@ namespace {
         ast::Function_signature const& signature,
         utl::Source::Wrapper const     source) -> hir::Function_signature
     {
-        cpputil::always_assert(signature.return_type.has_value());     // TODO
         cpputil::always_assert(!signature.self_parameter.has_value()); // TODO
 
         Inference_state state { .source = source };
@@ -44,7 +43,7 @@ namespace {
                              | std::ranges::to<std::vector>();
 
         hir::Type const return_type
-            = resolve_type(context, state, scope, environment, signature.return_type.value());
+            = resolve_type(context, state, scope, environment, signature.return_type);
 
         ensure_no_unsolved_variables(state, context.compile_info.diagnostics);
 

@@ -27,6 +27,7 @@ namespace {
         }
     }
 
+    // Convert function bodies defined with `=body` syntax into block form.
     auto normalize_function_body(Context& context, ast::Expression expression) -> ast::Expression
     {
         if (std::holds_alternative<ast::expression::Block>(expression.variant)) {
@@ -34,9 +35,7 @@ namespace {
         }
         auto const source_range = expression.source_range;
         return ast::Expression {
-            .variant = ast::expression::Block {
-                .result = context.wrap(std::move(expression)),
-            },
+            .variant = ast::expression::Block { .result = context.wrap(std::move(expression)) },
             .source_range = source_range,
         };
     }
@@ -47,28 +46,9 @@ namespace {
 
         auto operator()(cst::definition::Function const& function) -> ast::Definition::Variant
         {
-            std::vector<ast::Function_parameter> parameters;
-            if (function.signature.function_parameters.value.self_parameter.has_value()) {
-                parameters.push_back(context.normalize_self_parameter(
-                    function.signature.function_parameters.value.self_parameter.value()));
-            }
-
-            parameters.append_range(std::views::transform(
-                function.signature.function_parameters.value.normal_parameters.elements,
-                context.desugar()));
-
             return ast::definition::Function {
-                .signature {
-                    .template_parameters
-                    = function.signature.template_parameters.transform(context.desugar()),
-                    .function_parameters = std::move(parameters),
-                    .self_parameter
-                    = function.signature.function_parameters.value.self_parameter.transform(
-                        context.desugar()),
-                    .return_type = function.signature.return_type.transform(context.desugar()),
-                    .name        = function.signature.name,
-                },
-                .body = normalize_function_body(context, context.desugar(*function.body)),
+                .signature = context.desugar(function.signature),
+                .body      = normalize_function_body(context, context.desugar(*function.body)),
             };
         }
 

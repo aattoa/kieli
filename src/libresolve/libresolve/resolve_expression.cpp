@@ -133,14 +133,10 @@ namespace {
 
         auto operator()(ast::expression::Tuple const& tuple) -> hir::Expression
         {
-            auto fields = tuple.fields                     //
-                        | std::views::transform(recurse()) //
+            auto fields = std::views::transform(tuple.fields, recurse()) //
                         | std::ranges::to<std::vector>();
-
-            auto types = fields //
-                       | std::views::transform(&hir::Expression::type)
+            auto types = std::views::transform(fields, &hir::Expression::type)
                        | std::ranges::to<std::vector>();
-
             return {
                 hir::expression::Tuple { .fields = std::move(fields) },
                 hir::Type {

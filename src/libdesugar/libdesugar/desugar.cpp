@@ -122,11 +122,22 @@ auto libdesugar::Context::desugar(cst::Class_reference const& reference) -> ast:
 auto libdesugar::Context::desugar(cst::Function_signature const& signature)
     -> ast::Function_signature
 {
+    std::vector<ast::Function_parameter> parameters;
+    if (signature.function_parameters.value.self_parameter.has_value()) {
+        parameters.push_back(
+            normalize_self_parameter(signature.function_parameters.value.self_parameter.value()));
+    }
+    parameters.append_range(std::views::transform(
+        signature.function_parameters.value.normal_parameters.elements, desugar()));
+
+    ast::Type return_type = signature.return_type.has_value()
+                              ? desugar(*signature.return_type.value().type)
+                              : unit_type(signature.name.source_range);
+
     return ast::Function_signature {
-        .function_parameters
-        = desugar(signature.function_parameters.value.normal_parameters.elements),
+        .function_parameters = std::move(parameters),
         .self_parameter = signature.function_parameters.value.self_parameter.transform(desugar()),
-        .return_type    = signature.return_type.transform(desugar()),
+        .return_type    = std::move(return_type),
         .name           = signature.name,
     };
 }
@@ -247,28 +258,19 @@ auto libdesugar::Context::normalize_self_parameter(cst::Self_parameter const& se
     };
 }
 
-auto libdesugar::Context::unit_value(utl::Source_range const view) -> utl::Wrapper<ast::Expression>
+auto libdesugar::unit_type(utl::Source_range const source_range) -> ast::Type
 {
-    return wrap(ast::Expression { .variant = ast::expression::Tuple {}, .source_range = view });
+    return ast::Type { ast::type::Tuple {}, source_range };
 }
 
-auto libdesugar::Context::wildcard_pattern(utl::Source_range const view)
-    -> utl::Wrapper<ast::Pattern>
+auto libdesugar::unit_value(utl::Source_range const source_range) -> ast::Expression
 {
-    return wrap(ast::Pattern {
-        .variant      = ast::Wildcard { .source_range = view },
-        .source_range = view,
-    });
+    return ast::Expression { ast::expression::Tuple {}, source_range };
 }
 
-auto libdesugar::Context::true_pattern(utl::Source_range const view) -> utl::Wrapper<ast::Pattern>
+auto libdesugar::wildcard_pattern(utl::Source_range const source_range) -> ast::Pattern
 {
-    return wrap(ast::Pattern { .variant = kieli::Boolean { true }, .source_range = view });
-}
-
-auto libdesugar::Context::false_pattern(utl::Source_range const view) -> utl::Wrapper<ast::Pattern>
-{
-    return wrap(ast::Pattern { .variant = kieli::Boolean { false }, .source_range = view });
+    return ast::Pattern { ast::Wildcard { source_range }, source_range };
 }
 
 auto libdesugar::Context::diagnostics() noexcept -> kieli::Diagnostics&

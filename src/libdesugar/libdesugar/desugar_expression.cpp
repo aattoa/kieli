@@ -85,6 +85,15 @@ namespace {
         }
     }
 
+    auto break_expression(Context& context, utl::Source_range const source_range)
+        -> utl::Wrapper<ast::Expression>
+    {
+        return context.wrap(ast::Expression {
+            ast::expression::Break { context.wrap(unit_value(source_range)) },
+            source_range,
+        });
+    }
+
     struct Expression_desugaring_visitor {
         Context&               context;
         cst::Expression const& this_expression;
@@ -135,7 +144,7 @@ namespace {
             utl::wrapper auto const false_branch
                 = conditional.false_branch.has_value()
                     ? context.desugar(conditional.false_branch->body)
-                    : context.unit_value(this_expression.source_range);
+                    : context.wrap(unit_value(this_expression.source_range));
 
             if (auto const* const let
                 = std::get_if<cst::expression::Conditional_let>(&conditional.condition->variant))
@@ -158,7 +167,7 @@ namespace {
                             .expression = context.desugar(conditional.true_branch),
                         },
                         {
-                            .pattern    = context.wildcard_pattern(let->pattern->source_range),
+                            .pattern = context.wrap(wildcard_pattern(let->pattern->source_range)),
                             .expression = false_branch,
                         },
                     }),
@@ -194,8 +203,7 @@ namespace {
                 };
             };
             return ast::expression::Match {
-                .cases = match.cases.value                         //
-                       | std::views::transform(desugar_match_case) //
+                .cases = std::views::transform(match.cases.value, desugar_match_case)
                        | std::ranges::to<std::vector>(),
                 .expression = context.desugar(match.matched_expression),
             };
@@ -216,7 +224,7 @@ namespace {
             }
             return ast::expression::Block {
                 .side_effects = std::move(side_effects),
-                .result       = context.unit_value(block.close_brace_token.source_range),
+                .result       = context.wrap(unit_value(block.close_brace_token.source_range)),
             };
         }
 
@@ -247,13 +255,8 @@ namespace {
                                     .expression = context.desugar(loop.body),
                                 },
                                 {
-                                    .pattern = context.wildcard_pattern(this_expression.source_range),
-                                    .expression = context.wrap(ast::Expression {
-                                        .variant = ast::expression::Break {
-                                            .result = context.unit_value(this_expression.source_range),
-                                        },
-                                        .source_range = this_expression.source_range,
-                                    })
+                                    .pattern = context.wrap(wildcard_pattern(this_expression.source_range)),
+                                    .expression = break_expression(context, this_expression.source_range),
                                 }
                             }),
                             .expression = context.desugar(let->initializer),
@@ -287,12 +290,7 @@ namespace {
                     .variant = ast::expression::Conditional {
                         .condition    = condition,
                         .true_branch  = context.desugar(loop.body),
-                        .false_branch = context.wrap(ast::Expression {
-                            .variant = ast::expression::Break {
-                                .result = context.unit_value(this_expression.source_range),
-                            },
-                            .source_range = this_expression.source_range,
-                        }),
+                        .false_branch = break_expression(context, this_expression.source_range),
                         .source                    = ast::Conditional_source::while_loop_body,
                         .has_explicit_false_branch = true,
                     },
@@ -455,14 +453,14 @@ namespace {
                 .side_effects = utl::to_vector({
                     ast::Expression {
                         .variant = ast::expression::Let_binding {
-                            .pattern     = context.wildcard_pattern(this_expression.source_range),
+                            .pattern     = context.wrap(wildcard_pattern(this_expression.source_range)),
                             .initializer = context.desugar(discard.discarded_expression),
                             .type        = std::nullopt,
                         },
                         .source_range = this_expression.source_range,
                     }
                 }),
-                .result = context.unit_value(this_expression.source_range),
+                .result = context.wrap(unit_value(this_expression.source_range)),
             };
         }
 
@@ -471,7 +469,7 @@ namespace {
             return ast::expression::Break {
                 .result = break_.result.has_value()
                             ? context.desugar(break_.result.value())
-                            : context.unit_value(this_expression.source_range),
+                            : context.wrap(unit_value(this_expression.source_range)),
             };
         }
 

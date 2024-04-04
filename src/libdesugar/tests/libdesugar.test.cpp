@@ -29,18 +29,18 @@ namespace {
 
 TEST("block expression")
 {
-    CHECK_EQUAL(desugar("fn f() {}"), "fn f() { () }");
-    CHECK_EQUAL(desugar("fn f() { 5 }"), "fn f() { 5 }");
-    CHECK_EQUAL(desugar("fn f() { 5; }"), "fn f() { 5; () }");
-    CHECK_EQUAL(desugar("fn f() { 5; 10 }"), "fn f() { 5; 10 }");
-    CHECK_EQUAL(desugar("fn f() { 5; 10; }"), "fn f() { 5; 10; () }");
+    CHECK_EQUAL(desugar("fn f() {}"), "fn f(): () { () }");
+    CHECK_EQUAL(desugar("fn f() { 5 }"), "fn f(): () { 5 }");
+    CHECK_EQUAL(desugar("fn f() { 5; }"), "fn f(): () { 5; () }");
+    CHECK_EQUAL(desugar("fn f() { 5; 10 }"), "fn f(): () { 5; 10 }");
+    CHECK_EQUAL(desugar("fn f() { 5; 10; }"), "fn f(): () { 5; 10; () }");
 }
 
 TEST("function body normalization")
 {
-    CHECK_EQUAL("fn f() { 5 }", desugar("fn f() { 5 }"));
-    CHECK_EQUAL("fn f() { 5 }", desugar("fn f() = 5"));
-    CHECK_EQUAL("fn f() { 5 }", desugar("fn f() = { 5 }"));
+    CHECK_EQUAL("fn f(): () { 5 }", desugar("fn f() { 5 }"));
+    CHECK_EQUAL("fn f(): () { 5 }", desugar("fn f() = 5"));
+    CHECK_EQUAL("fn f(): () { 5 }", desugar("fn f() = { 5 }"));
 }
 
 TEST("operator precedence")
@@ -56,41 +56,42 @@ TEST("operator precedence")
      */
     CHECK_EQUAL(
         desugar("fn f() { (a * b + c) + (d + e * f) }"),
-        "fn f() { (((a * b) + c) + (d + (e * f))) }");
+        "fn f(): () { (((a * b) + c) + (d + (e * f))) }");
     CHECK_EQUAL(
         desugar("fn f() { a <$> b && c <= d ?= e + f / g }"),
-        "fn f() { (a <$> (b && (c <= (d ?= (e + (f / g)))))) }");
+        "fn f(): () { (a <$> (b && (c <= (d ?= (e + (f / g)))))) }");
     CHECK_EQUAL(
         desugar("fn f() { a / b + c ?= d <= e && f <$> g }"),
-        "fn f() { ((((((a / b) + c) ?= d) <= e) && f) <$> g) }");
-    CHECK_EQUAL(desugar("fn f() { a + b && c }"), "fn f() { ((a + b) && c) }");
-    CHECK_EQUAL(desugar("fn f() { a %% c % d ?= e }"), "fn f() { (a %% ((c % d) ?= e)) }");
-    CHECK_EQUAL(desugar("fn f() { a + b + c + d }"), "fn f() { (((a + b) + c) + d) }");
+        "fn f(): () { ((((((a / b) + c) ?= d) <= e) && f) <$> g) }");
+    CHECK_EQUAL(desugar("fn f() { a + b && c }"), "fn f(): () { ((a + b) && c) }");
+    CHECK_EQUAL(desugar("fn f() { a %% c % d ?= e }"), "fn f(): () { (a %% ((c % d) ?= e)) }");
+    CHECK_EQUAL(desugar("fn f() { a + b + c + d }"), "fn f(): () { (((a + b) + c) + d) }");
 }
 
 TEST("while loop expression")
 {
-    CHECK_EQUAL(desugar("fn f() { while x { y } }"), "fn f() { loop if x { y } else break () }");
+    CHECK_EQUAL(
+        desugar("fn f() { while x { y } }"), "fn f(): () { loop if x { y } else break () }");
     CHECK_EQUAL(
         desugar("fn f() { while let x = y { z } }"),
-        "fn f() { loop match y { immut x -> { z } _ -> break () } }");
+        "fn f(): () { loop match y { immut x -> { z } _ -> break () } }");
 }
 
 TEST("conditional expression")
 {
-    CHECK_SIMPLE_DESUGAR("fn f() { if x { y } else { z } }");
-    CHECK_EQUAL(desugar("fn f() { if x { y } }"), "fn f() { if x { y } else () }");
+    CHECK_SIMPLE_DESUGAR("fn f(): () { if x { y } else { z } }");
+    CHECK_EQUAL(desugar("fn f() { if x { y } }"), "fn f(): () { if x { y } else () }");
     CHECK_EQUAL(
         desugar("fn f() { if let x = y { z } }"),
-        "fn f() { match y { immut x -> { z } _ -> () } }");
+        "fn f(): () { match y { immut x -> { z } _ -> () } }");
     CHECK_EQUAL(
         desugar("fn f() { if let a = b { c } else { d } }"),
-        "fn f() { match b { immut a -> { c } _ -> { d } } }");
+        "fn f(): () { match b { immut a -> { c } _ -> { d } } }");
 }
 
 TEST("discard expression")
 {
-    CHECK_EQUAL(desugar("fn f() { discard x; }"), "fn f() { { let _ = x; () }; () }");
+    CHECK_EQUAL(desugar("fn f() { discard x; }"), "fn f(): () { { let _ = x; () }; () }");
 }
 
 TEST("struct")

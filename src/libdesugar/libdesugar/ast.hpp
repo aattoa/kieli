@@ -484,7 +484,7 @@ namespace ast {
         Template_parameters             template_parameters;
         std::vector<Function_parameter> function_parameters;
         std::optional<Self_parameter>   self_parameter;
-        std::optional<Type>             return_type;
+        Type                            return_type;
         kieli::Name_lower               name;
     };
 

@@ -7,6 +7,11 @@
 #include <libdesugar/ast.hpp>
 
 namespace libdesugar {
+
+    auto unit_type(utl::Source_range range) -> ast::Type;
+    auto unit_value(utl::Source_range range) -> ast::Expression;
+    auto wildcard_pattern(utl::Source_range range) -> ast::Pattern;
+
     struct Context {
         kieli::Compile_info& compile_info;
         ast::Node_arena&     node_arena;
@@ -118,17 +123,11 @@ namespace libdesugar {
             return [this](utl::wrapper auto const node) { return this->desugar(*node); };
         }
 
+        auto        desugar_mutability(cst::Mutability const&, utl::Source_range) = delete;
         static auto desugar_mutability(std::optional<cst::Mutability> const&, utl::Source_range)
             -> ast::Mutability;
 
-        auto desugar_mutability(cst::Mutability const&, utl::Source_range) = delete;
-
         auto normalize_self_parameter(cst::Self_parameter const&) -> ast::Function_parameter;
-
-        auto unit_value(utl::Source_range) -> utl::Wrapper<ast::Expression>;
-        auto wildcard_pattern(utl::Source_range) -> utl::Wrapper<ast::Pattern>;
-        auto true_pattern(utl::Source_range) -> utl::Wrapper<ast::Pattern>;
-        auto false_pattern(utl::Source_range) -> utl::Wrapper<ast::Pattern>;
 
         [[nodiscard]] auto diagnostics() noexcept -> kieli::Diagnostics&;
     };
