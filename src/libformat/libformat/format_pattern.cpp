@@ -64,10 +64,10 @@ namespace {
 
         auto operator()(cst::pattern::Alias const& alias)
         {
-            state.format(alias.aliased_pattern);
+            state.format(alias.pattern);
             state.format(" as ");
-            state.format_mutability_with_trailing_whitespace(alias.alias_mutability);
-            state.format("{}", alias.alias_name);
+            state.format_mutability_with_trailing_whitespace(alias.mutability);
+            state.format("{}", alias.name);
         }
 
         auto operator()(cst::pattern::Guarded const& guarded)

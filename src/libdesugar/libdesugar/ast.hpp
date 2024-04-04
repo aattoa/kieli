@@ -372,7 +372,7 @@ namespace ast {
         struct Alias {
             kieli::Name_lower     name;
             Mutability            mutability;
-            utl::Wrapper<Pattern> aliased_pattern;
+            utl::Wrapper<Pattern> pattern;
         };
 
         struct Guarded {

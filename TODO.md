@@ -2,9 +2,7 @@
 
 ## liblex
 - Integer types should be simple identifiers
-- Test token description
-- Reject identifiers that are unreasonably long (100 chars?)
-- Delay numeric literal parsing to libparse
+- Delay numeric literal parsing to libparse?
 
 ## libparse
 - Test definition parsing

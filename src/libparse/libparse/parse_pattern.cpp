@@ -181,12 +181,11 @@ namespace {
             .transform([&](cst::Pattern::Variant variant) -> cst::Pattern::Variant {
                 if (auto const as_keyword = context.try_extract(Token::Type::as)) {
                     return cst::pattern::Alias {
-                        .alias_mutability = parse_mutability(context),
-                        .alias_name       = extract_lower_name(context, "a pattern alias"),
-                        .aliased_pattern  = context.wrap(cst::Pattern {
-                             .variant = std::move(variant),
-                             .source_range
-                            = first_token.source_range.up_to(as_keyword.value().source_range),
+                        .mutability       = parse_mutability(context),
+                        .name             = extract_lower_name(context, "a pattern alias"),
+                        .pattern          = context.wrap(cst::Pattern {
+                            std::move(variant),
+                            first_token.source_range.up_to(as_keyword.value().source_range),
                         }),
                         .as_keyword_token = cst::Token::from_lexical(as_keyword.value()),
                     };
@@ -204,9 +203,8 @@ namespace {
                     auto guard = require<parse_expression>(context, "a guard expression");
                     return cst::pattern::Guarded {
                         .guarded_pattern  = context.wrap(cst::Pattern {
-                             .variant = std::move(variant),
-                             .source_range
-                            = anchor_source_range.up_to(if_keyword.value().source_range),
+                            std::move(variant),
+                            anchor_source_range.up_to(if_keyword.value().source_range),
                         }),
                         .guard_expression = std::move(guard),
                         .if_keyword_token = cst::Token::from_lexical(if_keyword.value()),
@@ -224,8 +222,8 @@ auto libparse::parse_pattern(Context& context) -> std::optional<utl::Wrapper<cst
     return parse_potentially_guarded_pattern(context).transform(
         [&](cst::Pattern::Variant&& variant) {
             return context.wrap(cst::Pattern {
-                .variant      = std::move(variant),
-                .source_range = context.up_to_current(anchor_source_range),
+                std::move(variant),
+                context.up_to_current(anchor_source_range),
             });
         });
 }

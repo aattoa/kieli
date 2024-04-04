@@ -2,7 +2,6 @@
 #include <libdesugar/desugaring_internals.hpp>
 
 namespace {
-
     using namespace libdesugar;
 
     struct Type_desugaring_visitor {
@@ -88,9 +87,7 @@ namespace {
 
         auto operator()(cst::type::Typeof const& typeof_) -> ast::Type::Variant
         {
-            return ast::type::Typeof {
-                .inspected_expression = context.desugar(typeof_.inspected_expression.value),
-            };
+            return ast::type::Typeof { context.desugar(typeof_.inspected_expression.value) };
         }
 
         auto operator()(cst::type::Reference const& reference) -> ast::Type::Variant
@@ -124,13 +121,12 @@ namespace {
             };
         }
     };
-
 } // namespace
 
 auto libdesugar::Context::desugar(cst::Type const& type) -> ast::Type
 {
     return {
-        .variant      = std::visit(Type_desugaring_visitor { *this, type }, type.variant),
-        .source_range = type.source_range,
+        std::visit(Type_desugaring_visitor { *this, type }, type.variant),
+        type.source_range,
     };
 }

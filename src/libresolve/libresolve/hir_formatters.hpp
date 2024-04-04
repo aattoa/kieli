@@ -156,7 +156,7 @@ namespace libresolve::dtl {
 
         auto operator()(hir::pattern::Alias const& alias)
         {
-            std::format_to(out, "{} as ", alias.aliased_pattern);
+            std::format_to(out, "{} as ", alias.pattern);
             operator()(alias.name); // TODO: improve
         }
 

@@ -258,7 +258,7 @@ namespace libdesugar::dtl {
 
         auto operator()(ast::pattern::Alias const& alias)
         {
-            std::format_to(out, "{} as {} {}", alias.aliased_pattern, alias.mutability, alias.name);
+            std::format_to(out, "{} as {} {}", alias.pattern, alias.mutability, alias.name);
         }
 
         auto operator()(ast::pattern::Constructor const& constructor)

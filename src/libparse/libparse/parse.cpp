@@ -19,7 +19,6 @@ namespace {
                 .source_range       = self_token.value().source_range,
             };
         }
-
         context.unstage(stage);
         return std::nullopt;
     }

@@ -2,7 +2,6 @@
 #include <libdesugar/desugaring_internals.hpp>
 
 namespace {
-
     using namespace libdesugar;
 
     template <class T>
@@ -126,7 +125,6 @@ namespace {
             };
         }
     };
-
 } // namespace
 
 auto libdesugar::Context::desugar(cst::definition::Field const& field) -> ast::definition::Field
@@ -145,14 +143,10 @@ auto libdesugar::Context::desugar(cst::definition::Constructor_body const& body)
         utl::Overload {
             [&](cst::definition::Struct_constructor const& constructor) {
                 ensure_no_duplicates(*this, source, "field", constructor.fields.value.elements);
-                return ast::definition::Struct_constructor {
-                    .fields = desugar(constructor.fields),
-                };
+                return ast::definition::Struct_constructor { desugar(constructor.fields) };
             },
             [&](cst::definition::Tuple_constructor const& constructor) {
-                return ast::definition::Tuple_constructor {
-                    .types = desugar(constructor.types),
-                };
+                return ast::definition::Tuple_constructor { desugar(constructor.types) };
             },
             [&](cst::definition::Unit_constructor const&) {
                 return ast::definition::Unit_constructor {};
@@ -173,9 +167,8 @@ auto libdesugar::Context::desugar(cst::definition::Constructor const& constructo
 auto libdesugar::Context::desugar(cst::Definition const& definition) -> ast::Definition
 {
     return {
-        .variant = std::visit(
-            Definition_desugaring_visitor { *this, definition.source }, definition.variant),
-        .source       = definition.source,
-        .source_range = definition.source_range,
+        std::visit(Definition_desugaring_visitor { *this, definition.source }, definition.variant),
+        definition.source,
+        definition.source_range,
     };
 }

@@ -533,9 +533,9 @@ namespace cst {
         };
 
         struct Alias {
-            std::optional<Mutability> alias_mutability;
-            kieli::Name_lower         alias_name;
-            utl::Wrapper<Pattern>     aliased_pattern;
+            std::optional<Mutability> mutability;
+            kieli::Name_lower         name;
+            utl::Wrapper<Pattern>     pattern;
             Token                     as_keyword_token;
         };
 

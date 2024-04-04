@@ -89,7 +89,7 @@ namespace libresolve::hir {
 
         struct Alias {
             Name                  name;
-            utl::Wrapper<Pattern> aliased_pattern;
+            utl::Wrapper<Pattern> pattern;
         };
 
         struct Guarded {

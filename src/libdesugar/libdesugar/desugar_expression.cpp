@@ -2,7 +2,6 @@
 #include <libdesugar/desugaring_internals.hpp>
 
 namespace {
-
     using namespace libdesugar;
 
     auto ensure_no_duplicate_fields(
@@ -141,7 +140,7 @@ namespace {
 
         auto operator()(cst::expression::Conditional const& conditional) -> ast::Expression::Variant
         {
-            utl::wrapper auto const false_branch
+            utl::Wrapper<ast::Expression> const false_branch
                 = conditional.false_branch.has_value()
                     ? context.desugar(conditional.false_branch->body)
                     : context.wrap(unit_value(this_expression.source_range));
@@ -161,12 +160,12 @@ namespace {
                 */
 
                 return ast::expression::Match {
-                    .cases = utl::to_vector<ast::expression::Match::Case>({
-                        {
+                    .cases = utl::to_vector({
+                        ast::expression::Match::Case {
                             .pattern    = context.desugar(let->pattern),
                             .expression = context.desugar(conditional.true_branch),
                         },
-                        {
+                        ast::expression::Match::Case {
                             .pattern = context.wrap(wildcard_pattern(let->pattern->source_range)),
                             .expression = false_branch,
                         },
@@ -176,7 +175,7 @@ namespace {
                 };
             }
 
-            utl::wrapper auto const condition = context.desugar(conditional.condition);
+            utl::Wrapper<ast::Expression> const condition = context.desugar(conditional.condition);
             if (std::holds_alternative<kieli::Boolean>(condition->variant)) {
                 context.diagnostics().emit(
                     cppdiag::Severity::information,
@@ -184,6 +183,7 @@ namespace {
                     condition->source_range,
                     "Constant condition");
             }
+
             return ast::expression::Conditional {
                 .condition    = condition,
                 .true_branch  = context.desugar(conditional.true_branch),
@@ -196,14 +196,14 @@ namespace {
 
         auto operator()(cst::expression::Match const& match) -> ast::Expression::Variant
         {
-            auto const desugar_match_case = [&](cst::expression::Match::Case const& match_case) {
+            auto const desugar_case = [&](cst::expression::Match::Case const& match_case) {
                 return ast::expression::Match::Case {
                     .pattern    = context.desugar(match_case.pattern),
                     .expression = context.desugar(match_case.handler),
                 };
             };
             return ast::expression::Match {
-                .cases = std::views::transform(match.cases.value, desugar_match_case)
+                .cases = std::views::transform(match.cases.value, desugar_case)
                        | std::ranges::to<std::vector>(),
                 .expression = context.desugar(match.matched_expression),
             };
@@ -249,12 +249,12 @@ namespace {
                 return ast::expression::Loop {
                     .body = context.wrap(ast::Expression {
                         .variant = ast::expression::Match {
-                            .cases = utl::to_vector<ast::expression::Match::Case>({
-                                {
+                            .cases = utl::to_vector({
+                                ast::expression::Match::Case {
                                     .pattern = context.desugar(let->pattern),
                                     .expression = context.desugar(loop.body),
                                 },
-                                {
+                                ast::expression::Match::Case {
                                     .pattern = context.wrap(wildcard_pattern(this_expression.source_range)),
                                     .expression = break_expression(context, this_expression.source_range),
                                 }
@@ -319,9 +319,7 @@ namespace {
         auto operator()(cst::expression::Unit_initializer const& initializer)
             -> ast::Expression::Variant
         {
-            return ast::expression::Unit_initializer {
-                .constructor = context.desugar(initializer.constructor),
-            };
+            return ast::expression::Unit_initializer { context.desugar(initializer.constructor) };
         }
 
         auto operator()(cst::expression::Tuple_initializer const& initializer)
@@ -434,9 +432,7 @@ namespace {
 
         auto operator()(cst::expression::Ret const& ret) -> ast::Expression::Variant
         {
-            return ast::expression::Ret {
-                .expression = ret.returned_expression.transform(context.desugar()),
-            };
+            return ast::expression::Ret { ret.returned_expression.transform(context.desugar()) };
         }
 
         auto operator()(cst::expression::Discard const& discard) -> ast::Expression::Variant
@@ -458,7 +454,7 @@ namespace {
                             .type        = std::nullopt,
                         },
                         .source_range = this_expression.source_range,
-                    }
+                    },
                 }),
                 .result = context.wrap(unit_value(this_expression.source_range)),
             };
@@ -480,9 +476,7 @@ namespace {
 
         auto operator()(cst::expression::Sizeof const& sizeof_) -> ast::Expression::Variant
         {
-            return ast::expression::Sizeof {
-                .inspected_type = context.desugar(sizeof_.inspected_type.value),
-            };
+            return ast::expression::Sizeof { context.desugar(sizeof_.inspected_type.value) };
         }
 
         auto operator()(cst::expression::Addressof const& addressof) -> ast::Expression::Variant
@@ -534,14 +528,12 @@ namespace {
             cpputil::unreachable();
         }
     };
-
 } // namespace
 
 auto libdesugar::Context::desugar(cst::Expression const& expression) -> ast::Expression
 {
     return {
-        .variant
-        = std::visit(Expression_desugaring_visitor { *this, expression }, expression.variant),
-        .source_range = expression.source_range,
+        std::visit(Expression_desugaring_visitor { *this, expression }, expression.variant),
+        expression.source_range,
     };
 }

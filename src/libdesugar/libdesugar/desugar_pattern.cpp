@@ -2,7 +2,6 @@
 #include <libdesugar/desugaring_internals.hpp>
 
 namespace {
-
     using namespace libdesugar;
 
     struct Pattern_desugaring_visitor {
@@ -79,10 +78,9 @@ namespace {
         auto operator()(cst::pattern::Alias const& alias) -> ast::Pattern::Variant
         {
             return ast::pattern::Alias {
-                .name = alias.alias_name,
-                .mutability
-                = context.desugar_mutability(alias.alias_mutability, alias.alias_name.source_range),
-                .aliased_pattern = context.desugar(alias.aliased_pattern),
+                .name       = alias.name,
+                .mutability = context.desugar_mutability(alias.mutability, alias.name.source_range),
+                .pattern    = context.desugar(alias.pattern),
             };
         }
 
@@ -94,13 +92,12 @@ namespace {
             };
         }
     };
-
 } // namespace
 
 auto libdesugar::Context::desugar(cst::Pattern const& pattern) -> ast::Pattern
 {
     return {
-        .variant      = std::visit(Pattern_desugaring_visitor { *this }, pattern.variant),
-        .source_range = pattern.source_range,
+        std::visit(Pattern_desugaring_visitor { *this }, pattern.variant),
+        pattern.source_range,
     };
 }
