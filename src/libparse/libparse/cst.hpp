@@ -398,7 +398,7 @@ namespace cst {
 
         struct Addressof {
             std::optional<Mutability> mutability;
-            utl::Wrapper<Expression>  lvalue_expression;
+            utl::Wrapper<Expression>  place_expression;
             Token                     ampersand_token;
         };
 
@@ -413,7 +413,7 @@ namespace cst {
         };
 
         struct Move {
-            utl::Wrapper<Expression> lvalue;
+            utl::Wrapper<Expression> place_expression;
             Token                    mov_keyword_token;
         };
 

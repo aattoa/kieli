@@ -69,7 +69,7 @@ namespace libdesugar::dtl {
 
         auto operator()(ast::expression::Addressof const& addressof)
         {
-            std::format_to(out, "(&{} {})", addressof.mutability, addressof.lvalue_expression);
+            std::format_to(out, "(&{} {})", addressof.mutability, addressof.place_expression);
         }
 
         auto operator()(ast::expression::Type_cast const& cast)
@@ -205,7 +205,7 @@ namespace libdesugar::dtl {
 
         auto operator()(ast::expression::Move const& move)
         {
-            std::format_to(out, "mov {}", move.lvalue);
+            std::format_to(out, "mov {}", move.place_expression);
         }
 
         auto operator()(ast::expression::Ret const& ret)

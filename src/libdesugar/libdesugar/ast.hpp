@@ -259,7 +259,7 @@ namespace ast {
 
         struct Addressof {
             Mutability               mutability;
-            utl::Wrapper<Expression> lvalue_expression;
+            utl::Wrapper<Expression> place_expression;
         };
 
         struct Dereference {
@@ -271,7 +271,7 @@ namespace ast {
         };
 
         struct Move {
-            utl::Wrapper<Expression> lvalue;
+            utl::Wrapper<Expression> place_expression;
         };
 
         struct Meta {

@@ -34,6 +34,8 @@ namespace libresolve::hir {
 
     enum class Type_variable_kind { general, integral };
 
+    enum class Expression_kind { place, value };
+
     namespace mutability {
         using Concrete = kieli::Mutability;
 
@@ -60,7 +62,6 @@ namespace libresolve::hir {
 
     struct Type {
         struct Variant;
-
         utl::Mutable_wrapper<Variant> variant;
         utl::Source_range             source_range;
     };
@@ -246,7 +247,7 @@ namespace libresolve::hir {
 
         struct Addressof {
             Mutability               mutability;
-            utl::Wrapper<Expression> lvalue_expression;
+            utl::Wrapper<Expression> place_expression;
         };
 
         struct Dereference {
@@ -284,6 +285,7 @@ namespace libresolve::hir {
             expression::Error>;
         Variant           variant;
         Type              type;
+        Expression_kind   kind {};
         utl::Source_range source_range;
     };
 

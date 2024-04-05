@@ -484,7 +484,7 @@ namespace {
             return ast::expression::Addressof {
                 .mutability = context.desugar_mutability(
                     addressof.mutability, addressof.ampersand_token.source_range),
-                .lvalue_expression = context.desugar(addressof.lvalue_expression),
+                .place_expression = context.desugar(addressof.place_expression),
             };
         }
 
@@ -502,7 +502,7 @@ namespace {
 
         auto operator()(cst::expression::Move const& move) -> ast::Expression::Variant
         {
-            return ast::expression::Move { .lvalue = context.desugar(move.lvalue) };
+            return ast::expression::Move { context.desugar(move.place_expression) };
         }
 
         auto operator()(cst::expression::Meta const& meta) -> ast::Expression::Variant

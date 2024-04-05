@@ -351,9 +351,9 @@ namespace {
     auto extract_addressof(Context& context, Token const& ampersand) -> cst::Expression::Variant
     {
         return cst::expression::Addressof {
-            .mutability        = parse_mutability(context),
-            .lvalue_expression = require<parse_expression>(context, "the referenced expression"),
-            .ampersand_token   = cst::Token::from_lexical(ampersand),
+            .mutability       = parse_mutability(context),
+            .place_expression = require<parse_expression>(context, "the referenced expression"),
+            .ampersand_token  = cst::Token::from_lexical(ampersand),
         };
     }
 
@@ -369,7 +369,7 @@ namespace {
     auto extract_move(Context& context, Token const& mov_keyword) -> cst::Expression::Variant
     {
         return cst::expression::Move {
-            .lvalue            = require<parse_expression>(context, "an expression"),
+            .place_expression  = require<parse_expression>(context, "a place expression"),
             .mov_keyword_token = cst::Token::from_lexical(mov_keyword),
         };
     }

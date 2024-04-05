@@ -175,7 +175,7 @@ namespace {
         auto operator()(cst::expression::Move const& move)
         {
             state.format("mov ");
-            state.format(move.lvalue);
+            state.format(move.place_expression);
         }
 
         auto operator()(cst::expression::Local_type_alias const& alias)
@@ -227,7 +227,7 @@ namespace {
         {
             state.format("&");
             state.format_mutability_with_trailing_whitespace(reference.mutability);
-            state.format(reference.lvalue_expression);
+            state.format(reference.place_expression);
         }
 
         auto operator()(cst::expression::Dereference const& dereference)

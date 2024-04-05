@@ -40,6 +40,7 @@ namespace {
             return {
                 integer,
                 state.fresh_integral_type_variable(context.arenas, this_expression.source_range),
+                hir::Expression_kind::value,
                 this_expression.source_range,
             };
         }
@@ -49,6 +50,7 @@ namespace {
             return {
                 floating,
                 hir::Type { context.constants.floating_type, this_expression.source_range },
+                hir::Expression_kind::value,
                 this_expression.source_range,
             };
         }
@@ -58,6 +60,7 @@ namespace {
             return {
                 character,
                 hir::Type { context.constants.character_type, this_expression.source_range },
+                hir::Expression_kind::value,
                 this_expression.source_range,
             };
         }
@@ -67,6 +70,7 @@ namespace {
             return {
                 boolean,
                 hir::Type { context.constants.boolean_type, this_expression.source_range },
+                hir::Expression_kind::value,
                 this_expression.source_range,
             };
         }
@@ -76,6 +80,7 @@ namespace {
             return {
                 string,
                 hir::Type { context.constants.string_type, this_expression.source_range },
+                hir::Expression_kind::value,
                 this_expression.source_range,
             };
         }
@@ -102,6 +107,7 @@ namespace {
                             .identifier = bind->name.identifier,
                         },
                         bind->type,
+                        hir::Expression_kind::place,
                         this_expression.source_range,
                     };
                 }
@@ -117,6 +123,7 @@ namespace {
                             return hir::Expression {
                                 hir::expression::Function_reference { .info = function },
                                 signature.function_type,
+                                hir::Expression_kind::value,
                                 this_expression.source_range,
                             };
                         },
@@ -143,6 +150,7 @@ namespace {
                     context.arenas.type(hir::type::Tuple { .types = std::move(types) }),
                     this_expression.source_range,
                 },
+                hir::Expression_kind::value,
                 this_expression.source_range,
             };
         }
@@ -178,13 +186,14 @@ namespace {
                 return effect;
             };
 
-            auto side_effects = block.side_effects                    //
-                              | std::views::transform(resolve_effect) //
+            auto side_effects = std::views::transform(block.side_effects, resolve_effect)
                               | std::ranges::to<std::vector>();
 
             hir::Expression result
                 = resolve_expression(context, state, scope, environment, *block.result);
-            hir::Type const result_type = result.type;
+
+            auto const result_kind = result.kind;
+            auto const result_type = result.type;
 
             return {
                 hir::expression::Block {
@@ -192,6 +201,7 @@ namespace {
                     .result       = context.arenas.wrap(std::move(result)),
                 },
                 result_type,
+                result_kind,
                 this_expression.source_range,
             };
         }
@@ -294,19 +304,24 @@ namespace {
                     resolve_type(context, state, scope, environment, *sizeof_.inspected_type),
                 },
                 state.fresh_integral_type_variable(context.arenas, this_expression.source_range),
+                hir::Expression_kind::value,
                 this_expression.source_range,
             };
         }
 
         auto operator()(ast::expression::Addressof const& addressof) -> hir::Expression
         {
-            hir::Expression lvalue_expression = recurse(*addressof.lvalue_expression);
-            hir::Type const referenced_type   = lvalue_expression.type;
+            hir::Expression place_expression = recurse(*addressof.place_expression);
+            hir::Type const referenced_type  = place_expression.type;
             hir::Mutability mutability = resolve_mutability(context, scope, addressof.mutability);
+            if (place_expression.kind != hir::Expression_kind::place) {
+                return error("This expression does not identify a place in memory, so its address "
+                             "can not be taken");
+            }
             return {
                 hir::expression::Addressof {
-                    .mutability        = mutability,
-                    .lvalue_expression = context.arenas.wrap(std::move(lvalue_expression)),
+                    .mutability       = mutability,
+                    .place_expression = context.arenas.wrap(std::move(place_expression)),
                 },
                 hir::Type {
                     context.arenas.type(hir::type::Reference {
@@ -315,6 +330,7 @@ namespace {
                     }),
                     this_expression.source_range,
                 },
+                hir::Expression_kind::value,
                 this_expression.source_range,
             };
         }
@@ -347,6 +363,7 @@ namespace {
                     .reference_expression = context.arenas.wrap(std::move(reference_expression)),
                 },
                 referenced_type,
+                hir::Expression_kind::place,
                 this_expression.source_range,
             };
         }
@@ -371,6 +388,7 @@ namespace {
             return {
                 hir::expression::Hole {},
                 state.fresh_general_type_variable(context.arenas, this_expression.source_range),
+                hir::Expression_kind::value,
                 this_expression.source_range,
             };
         }

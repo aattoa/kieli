@@ -106,7 +106,7 @@ namespace libresolve::dtl {
 
         auto operator()(hir::expression::Addressof const& addressof)
         {
-            std::format_to(out, "(&{} {})", addressof.mutability, addressof.lvalue_expression);
+            std::format_to(out, "(&{} {})", addressof.mutability, addressof.place_expression);
         }
 
         auto operator()(hir::expression::Dereference const& dereference)
