@@ -21,7 +21,7 @@ namespace {
                 .name               = std::move(name),
             };
         }
-        return cst::type::Typename { .name = std::move(name) };
+        return cst::type::Typename { std::move(name) };
     }
 
     auto extract_typename(Context& context, Stage const stage) -> cst::Type::Variant
@@ -190,10 +190,9 @@ namespace {
                 });
 
             if (name.primary_name.is_upper.get()) {
-                // TODO: cleanup
-                auto template_arguments = parse_template_arguments(context);
                 return context.wrap(cst::Type {
-                    .variant { std::invoke([&]() -> cst::Type::Variant {
+                    std::invoke([&]() -> cst::Type::Variant {
+                        auto template_arguments = parse_template_arguments(context);
                         if (template_arguments.has_value()) {
                             return cst::type::Template_application {
                                 .template_arguments = std::move(template_arguments.value()),
@@ -201,8 +200,8 @@ namespace {
                             };
                         }
                         return cst::type::Typename { std::move(name) };
-                    }) },
-                    .source_range = context.up_to_current(type->source_range),
+                    }),
+                    context.up_to_current(type->source_range),
                 });
             }
             // Not a qualified type, retreat
@@ -219,11 +218,7 @@ auto libparse::parse_type(Context& context) -> std::optional<utl::Wrapper<cst::T
     Token const first_token = context.extract();
     return dispatch_parse_type(context, first_token, stage)
         .transform([&](cst::Type::Variant&& variant) -> utl::Wrapper<cst::Type> {
-            return try_qualify(
-                context,
-                context.wrap(cst::Type {
-                    .variant      = std::move(variant),
-                    .source_range = context.up_to_current(first_token.source_range),
-                }));
+            auto const range = context.up_to_current(first_token.source_range);
+            return try_qualify(context, context.wrap(cst::Type { std::move(variant), range }));
         });
 }

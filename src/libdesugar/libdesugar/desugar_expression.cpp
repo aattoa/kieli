@@ -48,8 +48,10 @@ namespace {
         std::span<cst::expression::Binary_operator_chain::Operator_and_operand const>& tail)
         -> ast::Expression
     {
-        // TODO: cleanup
-        if constexpr (precedence != static_cast<std::size_t>(-1)) {
+        if constexpr (precedence == static_cast<std::size_t>(-1)) {
+            return context.desugar(*leftmost_expression);
+        }
+        else {
             auto const recurse = [&](utl::Wrapper<cst::Expression> const leftmost) {
                 return desugar_binary_operator_chain<precedence - 1>(context, leftmost, tail);
             };
@@ -65,22 +67,16 @@ namespace {
                     }
                 }
                 tail = tail.subspan<1>();
-
-                auto const source_range = left.source_range.up_to(right_operand->source_range);
                 left = ast::Expression {
-                    .variant = ast::expression::Binary_operator_invocation {
+                    ast::expression::Binary_operator_invocation {
                         .left  = context.wrap(std::move(left)),
                         .right = context.wrap(recurse(right_operand)),
                         .op    = operator_name.identifier,
                     },
-                    .source_range = source_range,
+                    left.source_range.up_to(right_operand->source_range),
                 };
             }
             return left;
-        }
-        else {
-            // precedence == -1
-            return context.desugar(*leftmost_expression);
         }
     }
 
@@ -228,45 +224,47 @@ namespace {
             };
         }
 
-        auto operator()(cst::expression::While_loop const& loop) -> ast::Expression::Variant
+        auto desugar_while_let_loop(
+            cst::expression::While_loop const&      loop,
+            cst::expression::Conditional_let const& let) -> ast::Expression::Variant
         {
-            if (auto const* const let
-                = std::get_if<cst::expression::Conditional_let>(&loop.condition->variant))
-            {
-                /*
-                    while let a = b { c }
+            /*
+                while let a = b { c }
 
-                    is transformed into
+                is transformed into
 
-                    loop {
-                        match b {
-                            a -> c
-                            _ -> break
-                        }
+                loop {
+                    match b {
+                        a -> c
+                        _ -> break
                     }
-                */
+                }
+            */
 
-                return ast::expression::Loop {
-                    .body = context.wrap(ast::Expression {
-                        .variant = ast::expression::Match {
-                            .cases = utl::to_vector({
-                                ast::expression::Match::Case {
-                                    .pattern = context.desugar(let->pattern),
-                                    .expression = context.desugar(loop.body),
-                                },
-                                ast::expression::Match::Case {
-                                    .pattern = context.wrap(wildcard_pattern(this_expression.source_range)),
-                                    .expression = break_expression(context, this_expression.source_range),
-                                }
-                            }),
-                            .expression = context.desugar(let->initializer),
-                        },
-                        .source_range = loop.body->source_range,
-                    }),
-                    .source = ast::Loop_source::while_loop,
-                };
-            }
+            return ast::expression::Loop {
+                .body = context.wrap(ast::Expression {
+                    ast::expression::Match {
+                        .cases      = utl::to_vector({
+                            ast::expression::Match::Case {
+                                context.desugar(let.pattern),
+                                context.desugar(loop.body),
+                            },
+                            ast::expression::Match::Case {
+                                context.wrap(wildcard_pattern(this_expression.source_range)),
+                                break_expression(context, this_expression.source_range),
+                            },
+                        }),
+                        .expression = context.desugar(let.initializer),
+                    },
+                    loop.body->source_range,
+                }),
 
+                .source = ast::Loop_source::while_loop,
+            };
+        }
+
+        auto desugar_while_loop(cst::expression::While_loop const& loop) -> ast::Expression::Variant
+        {
             /*
                 while a { b }
 
@@ -275,7 +273,7 @@ namespace {
                 loop { if a { b } else { break } }
             */
 
-            utl::wrapper auto const condition = context.desugar(loop.condition);
+            auto const condition = context.desugar(loop.condition);
             if (auto const* const boolean = std::get_if<kieli::Boolean>(&condition->variant)) {
                 context.diagnostics().emit(
                     cppdiag::Severity::information,
@@ -298,6 +296,16 @@ namespace {
                 }),
                 .source = ast::Loop_source::while_loop,
             };
+        }
+
+        auto operator()(cst::expression::While_loop const& loop) -> ast::Expression::Variant
+        {
+            if (auto const* const let
+                = std::get_if<cst::expression::Conditional_let>(&loop.condition->variant))
+            {
+                return desugar_while_let_loop(loop, *let);
+            }
+            return desugar_while_loop(loop);
         }
 
         auto operator()(cst::expression::Infinite_loop const& loop) -> ast::Expression::Variant
@@ -425,8 +433,8 @@ namespace {
         auto operator()(cst::expression::Local_type_alias const& alias) -> ast::Expression::Variant
         {
             return ast::expression::Local_type_alias {
-                .name         = alias.alias_name,
-                .aliased_type = context.desugar(alias.aliased_type),
+                .name = alias.name,
+                .type = context.desugar(alias.type),
             };
         }
 
@@ -448,24 +456,24 @@ namespace {
             return ast::expression::Block {
                 .side_effects = utl::to_vector({
                     ast::Expression {
-                        .variant = ast::expression::Let_binding {
-                            .pattern     = context.wrap(wildcard_pattern(this_expression.source_range)),
+                        ast::expression::Let_binding {
+                            .pattern = context.wrap(wildcard_pattern(this_expression.source_range)),
                             .initializer = context.desugar(discard.discarded_expression),
                             .type        = std::nullopt,
                         },
-                        .source_range = this_expression.source_range,
+                        this_expression.source_range,
                     },
                 }),
-                .result = context.wrap(unit_value(this_expression.source_range)),
+                .result       = context.wrap(unit_value(this_expression.source_range)),
             };
         }
 
-        auto operator()(cst::expression::Break const& break_) -> ast::Expression::Variant
+        auto operator()(cst::expression::Break const& break_expression) -> ast::Expression::Variant
         {
             return ast::expression::Break {
-                .result = break_.result.has_value()
-                            ? context.desugar(break_.result.value())
-                            : context.wrap(unit_value(this_expression.source_range)),
+                break_expression.result.has_value()
+                    ? context.desugar(break_expression.result.value())
+                    : context.wrap(unit_value(this_expression.source_range)),
             };
         }
 

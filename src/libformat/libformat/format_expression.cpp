@@ -180,8 +180,8 @@ namespace {
 
         auto operator()(cst::expression::Local_type_alias const& alias)
         {
-            state.format("alias {} = ", alias.alias_name);
-            state.format(alias.aliased_type);
+            state.format("alias {} = ", alias.name);
+            state.format(alias.type);
         }
 
         auto operator()(cst::expression::Let_binding const& let)

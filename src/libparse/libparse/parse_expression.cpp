@@ -263,8 +263,8 @@ namespace {
         auto const name        = extract_upper_name(context, "an alias name");
         auto const equals_sign = context.require_extract(Token::Type::equals);
         return cst::expression::Local_type_alias {
-            .alias_name          = name,
-            .aliased_type        = require<parse_type>(context, "an aliased type"),
+            .name                = name,
+            .type                = require<parse_type>(context, "an aliased type"),
             .alias_keyword_token = cst::Token::from_lexical(alias_keyword),
             .equals_sign_token   = cst::Token::from_lexical(equals_sign),
         };
@@ -494,11 +494,11 @@ namespace {
             [&](utl::Wrapper<cst::Expression> expression) {
                 while (auto arguments = parse_function_arguments(context)) {
                     expression = context.wrap(cst::Expression {
-                        .variant = cst::expression::Invocation {
+                        cst::expression::Invocation {
                             .function_arguments  = std::move(arguments.value()),
                             .function_expression = expression,
                         },
-                        .source_range = context.up_to_current(expression->source_range),
+                        context.up_to_current(expression->source_range),
                     });
                 }
                 return expression;
@@ -564,9 +564,9 @@ namespace {
             [&](utl::Wrapper<cst::Expression> expression) {
                 while (auto const dot = context.try_extract(Token::Type::dot)) {
                     expression = context.wrap(cst::Expression {
-                        .variant = extract_member_access(
+                        extract_member_access(
                             cst::Token::from_lexical(dot.value()), expression, context),
-                        .source_range = context.up_to_current(expression->source_range),
+                        context.up_to_current(expression->source_range),
                     });
                 }
                 return expression;

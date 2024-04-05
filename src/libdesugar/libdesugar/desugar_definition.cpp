@@ -34,8 +34,8 @@ namespace {
         }
         auto const source_range = expression.source_range;
         return ast::Expression {
-            .variant = ast::expression::Block { .result = context.wrap(std::move(expression)) },
-            .source_range = source_range,
+            ast::expression::Block { .result = context.wrap(std::move(expression)) },
+            source_range,
         };
     }
 

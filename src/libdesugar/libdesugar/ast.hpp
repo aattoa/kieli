@@ -246,7 +246,7 @@ namespace ast {
 
         struct Local_type_alias {
             kieli::Name_upper  name;
-            utl::Wrapper<Type> aliased_type;
+            utl::Wrapper<Type> type;
         };
 
         struct Ret {

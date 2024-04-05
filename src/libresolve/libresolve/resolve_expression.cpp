@@ -287,7 +287,7 @@ namespace {
                 alias.name.identifier,
                 Type_bind {
                     .name = alias.name,
-                    .type = resolve_type(context, state, scope, environment, *alias.aliased_type),
+                    .type = resolve_type(context, state, scope, environment, *alias.type),
                 });
             return unit_expression(context.constants, this_expression.source_range);
         }

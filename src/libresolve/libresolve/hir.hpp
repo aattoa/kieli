@@ -83,13 +83,15 @@ namespace libresolve::hir {
         };
 
         struct Name {
-            Local_variable_tag variable_tag;
-            kieli::Identifier  identifier;
             Mutability         mutability;
+            kieli::Identifier  identifier;
+            Local_variable_tag variable_tag;
         };
 
         struct Alias {
-            Name                  name;
+            Mutability            mutability;
+            kieli::Identifier     identifier;
+            Local_variable_tag    variable_tag;
             utl::Wrapper<Pattern> pattern;
         };
 

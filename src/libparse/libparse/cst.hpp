@@ -347,8 +347,8 @@ namespace cst {
         };
 
         struct Local_type_alias {
-            kieli::Name_upper  alias_name;
-            utl::Wrapper<Type> aliased_type;
+            kieli::Name_upper  name;
+            utl::Wrapper<Type> type;
             Token              alias_keyword_token;
             Token              equals_sign_token;
         };

@@ -53,7 +53,7 @@ auto libdesugar::Context::desugar(cst::Template_parameter const& template_parame
     -> ast::Template_parameter
 {
     return {
-        .variant = std::visit<ast::Template_parameter::Variant>(
+        std::visit<ast::Template_parameter::Variant>(
             utl::Overload {
                 [&](cst::Template_type_parameter const& parameter) {
                     return ast::Template_type_parameter {
@@ -77,7 +77,7 @@ auto libdesugar::Context::desugar(cst::Template_parameter const& template_parame
                 },
             },
             template_parameter.variant),
-        .source_range = template_parameter.source_range,
+        template_parameter.source_range,
     };
 }
 
@@ -165,7 +165,7 @@ auto libdesugar::Context::desugar(cst::Mutability const& mutability) -> ast::Mut
                     return concrete;
                 },
                 [](cst::mutability::Parameterized const parameterized) {
-                    return ast::mutability::Parameterized { .name = parameterized.name };
+                    return ast::mutability::Parameterized { parameterized.name };
                 },
             },
             mutability.variant),
@@ -231,29 +231,27 @@ auto libdesugar::Context::normalize_self_parameter(cst::Self_parameter const& se
     };
     if (self_parameter.is_reference()) {
         self_type = ast::Type {
-            .variant = ast::type::Reference {
+            ast::type::Reference {
                 .referenced_type = wrap(std::move(self_type)),
-                .mutability      = desugar_mutability(self_parameter.mutability, self_parameter.self_keyword_token.source_range),
+                .mutability      = desugar_mutability(
+                    self_parameter.mutability, self_parameter.self_keyword_token.source_range),
             },
-            .source_range = self_parameter.source_range,
+            self_parameter.source_range,
         };
     }
-    ast::Pattern self_pattern {
-        .variant = ast::pattern::Name {
-            .name {
-                .identifier  = self_variable_identifier,
-                .source_range = self_parameter.source_range,
-            },
-            .mutability = desugar_mutability(
-                self_parameter.is_reference()
-                    ? std::nullopt
-                    : self_parameter.mutability,
-                self_parameter.source_range),
-        },
-        .source_range = self_parameter.source_range,
-    };
     return ast::Function_parameter {
-        .pattern = wrap(std::move(self_pattern)),
+        .pattern = wrap(ast::Pattern {
+            ast::pattern::Name {
+                .name {
+                    .identifier   = self_variable_identifier,
+                    .source_range = self_parameter.source_range,
+                },
+                .mutability = desugar_mutability(
+                    self_parameter.is_reference() ? std::nullopt : self_parameter.mutability,
+                    self_parameter.source_range),
+            },
+            self_parameter.source_range,
+        }),
         .type    = wrap(std::move(self_type)),
     };
 }

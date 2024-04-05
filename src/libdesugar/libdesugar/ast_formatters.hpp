@@ -177,7 +177,7 @@ namespace libdesugar::dtl {
 
         auto operator()(ast::expression::Local_type_alias const& alias)
         {
-            std::format_to(out, "alias {} = {}", alias.name, alias.aliased_type);
+            std::format_to(out, "alias {} = {}", alias.name, alias.type);
         }
 
         auto operator()(ast::expression::Loop const& loop)

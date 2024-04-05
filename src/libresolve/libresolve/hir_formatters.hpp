@@ -151,13 +151,12 @@ namespace libresolve::dtl {
 
         auto operator()(hir::pattern::Name const& name)
         {
-            std::format_to(out, "{} {}", name.identifier, name.mutability);
+            std::format_to(out, "{} {}", name.mutability, name.identifier);
         }
 
         auto operator()(hir::pattern::Alias const& alias)
         {
-            std::format_to(out, "{} as ", alias.pattern);
-            operator()(alias.name); // TODO: improve
+            std::format_to(out, "{} as {} {}", alias.pattern, alias.mutability, alias.identifier);
         }
 
         auto operator()(hir::pattern::Guarded const& guarded)
