@@ -33,6 +33,9 @@ namespace {
 
         Inference_state state { .source = source };
 
+        auto template_parameters = resolve_template_parameters(
+            context, state, scope, environment, signature.template_parameters);
+
         auto const resolve_parameter = [&](ast::Function_parameter const& parameter) {
             return resolve_function_parameter(context, state, scope, environment, parameter);
         };
@@ -48,8 +51,9 @@ namespace {
         ensure_no_unsolved_variables(state, context.compile_info.diagnostics);
 
         return hir::Function_signature {
-            .parameters  = std::move(parameters),
-            .return_type = return_type,
+            .template_paramters = std::move(template_parameters),
+            .parameters         = std::move(parameters),
+            .return_type        = return_type,
             .function_type {
                 context.arenas.type(hir::type::Function {
                     .parameter_types = std::move(parameter_types),
@@ -57,6 +61,7 @@ namespace {
                 }),
                 signature.name.source_range,
             },
+            .name = signature.name,
         };
     }
 } // namespace

@@ -231,7 +231,7 @@ namespace libresolve::dtl {
 
         auto operator()(hir::type::Parameterized const& parameterized)
         {
-            std::format_to(out, "parameter-{}", parameterized.tag.get());
+            std::format_to(out, "template-parameter-{}", parameterized.tag.get());
         }
 
         auto operator()(hir::type::Variable const& variable)

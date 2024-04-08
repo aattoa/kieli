@@ -139,7 +139,7 @@ namespace libresolve::hir {
         };
 
         struct Enumeration {
-            utl::Wrapper<Enumeration_info> info;
+            utl::Mutable_wrapper<Enumeration_info> info;
         };
 
         struct Reference {
@@ -295,13 +295,21 @@ namespace libresolve::hir {
 
     using Template_argument = std::variant<Expression, Type, Mutability>;
 
+    struct Wildcard {
+        utl::Source_range source_range;
+    };
+
     struct Template_type_parameter {
+        using Default = std::variant<Type, Wildcard>;
         std::vector<Class_reference> classes;
         kieli::Name_upper            name;
+        std::optional<Default>       default_argument;
     };
 
     struct Template_mutability_parameter {
-        kieli::Name_lower name;
+        using Default = std::variant<Mutability, Wildcard>;
+        kieli::Name_lower      name;
+        std::optional<Default> default_argument;
     };
 
     struct Template_value_parameter {
@@ -327,9 +335,11 @@ namespace libresolve::hir {
     };
 
     struct Function_signature {
+        std::vector<Template_parameter> template_paramters;
         std::vector<Function_parameter> parameters;
         Type                            return_type;
         Type                            function_type;
+        kieli::Name_lower               name;
     };
 
     struct Function {

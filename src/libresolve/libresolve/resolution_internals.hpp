@@ -76,12 +76,19 @@ namespace libresolve {
 
     using Module_map = utl::Flatmap<std::filesystem::path, utl::Mutable_wrapper<Module_info>>;
 
+    class Template_state {
+        std::size_t m_current_tag {};
+    public:
+        auto fresh_parameter_tag() -> Template_parameter_tag;
+    };
+
     struct Context {
         Arenas                              arenas;
         Constants                           constants;
         Module_map                          module_map;
         kieli::Project_configuration const& project_configuration;
         kieli::Compile_info&                compile_info;
+        Template_state                      template_state;
     };
 
     struct Import_error {
@@ -99,14 +106,14 @@ namespace libresolve {
     auto add_to_environment(
         Context&             context,
         utl::Source::Wrapper source,
-        Environment_wrapper  environment,
+        Environment&         environment,
         kieli::Name_lower    name,
         Lower_info::Variant  variant) -> void;
 
     auto add_to_environment(
         Context&             context,
         utl::Source::Wrapper source,
-        Environment_wrapper  environment,
+        Environment&         environment,
         kieli::Name_upper    name,
         Upper_info::Variant  variant) -> void;
 
@@ -139,13 +146,19 @@ namespace libresolve {
     auto resolve_function_signature(Context& context, Function_info& info)
         -> hir::Function_signature&;
 
+    // Resolve template parameters and register them in the given `scope`.
     auto resolve_template_parameters(
         Context&                        context,
+        Inference_state&                state,
         Scope&                          scope,
+        Environment_wrapper             environment,
         ast::Template_parameters const& parameters) -> std::vector<hir::Template_parameter>;
 
     auto resolve_template_arguments(
         Context&                                    context,
+        Inference_state&                            state,
+        Scope&                                      scope,
+        Environment_wrapper                         environment,
         std::vector<hir::Template_parameter> const& parameters,
         std::vector<ast::Template_argument> const&  arguments)
         -> std::vector<hir::Template_argument>;
@@ -173,6 +186,13 @@ namespace libresolve {
         Scope&              scope,
         Environment_wrapper environment,
         ast::Type const&    type) -> hir::Type;
+
+    auto resolve_class_reference(
+        Context&                    context,
+        Inference_state&            state,
+        Scope&                      scope,
+        Environment_wrapper         environment,
+        ast::Class_reference const& class_reference) -> hir::Class_reference;
 
     auto lookup_lower(
         Context&                   context,

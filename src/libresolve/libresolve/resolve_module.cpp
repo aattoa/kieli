@@ -26,7 +26,7 @@ namespace {
         libresolve::add_to_environment(
             context,
             source,
-            environment,
+            environment.as_mutable(),
             import.name,
             context.arenas.info_arena.wrap_mutable<libresolve::Module_info>(
                 std::move(import), environment, import.name));

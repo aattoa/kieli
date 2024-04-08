@@ -55,6 +55,12 @@ namespace libresolve {
         auto type(hir::Type::Variant) -> utl::Mutable_wrapper<hir::Type::Variant>;
         auto mutability(hir::Mutability::Variant) -> utl::Mutable_wrapper<hir::Mutability::Variant>;
 
+        template <class Info>
+        auto info(Info info) -> utl::Mutable_wrapper<Info>
+        {
+            return info_arena.wrap_mutable<Info>(std::move(info));
+        }
+
         auto wrap(hir::Expression) -> utl::Wrapper<hir::Expression>;
         auto wrap(hir::Pattern) -> utl::Wrapper<hir::Pattern>;
     };
@@ -146,6 +152,7 @@ struct libresolve::Enumeration_info {
     Variant             variant;
     Environment_wrapper environment;
     kieli::Name_upper   name;
+    hir::Type           type;
     bool                currently_resolving {};
 };
 

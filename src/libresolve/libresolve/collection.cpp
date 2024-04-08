@@ -2,6 +2,8 @@
 #include <libresolve/resolution_internals.hpp>
 
 namespace {
+    using namespace libresolve;
+
     [[noreturn]] auto report_duplicate_definitions_error(
         kieli::Diagnostics&        diagnostics,
         utl::Source::Wrapper const source,
@@ -26,60 +28,63 @@ namespace {
             first.identifier);
     }
 
-    template <class Info>
-    auto make_info(
-        libresolve::Context&                  context,
-        libresolve::Environment_wrapper const environment,
-        auto const                            name,
-        typename Info::Variant&&              variant) -> utl::Mutable_wrapper<Info>
-    {
-        return context.arenas.info_arena.wrap_mutable<Info>(Info {
-            .variant     = std::move(variant),
-            .environment = environment,
-            .name        = name,
-        });
-    }
-
-    template <class Info, bool is_upper>
-    auto add_definition(
-        libresolve::Context&                  context,
-        utl::Source::Wrapper const            source,
-        libresolve::Environment_wrapper const environment,
-        kieli::Basic_name<is_upper> const     name,
-        typename Info::Variant&&              variant) -> void
-    {
-        auto const info = make_info<Info>(context, environment, name, std::move(variant));
-        environment.as_mutable().in_order.push_back(info);
-        libresolve::add_to_environment(context, source, environment, name, info);
-    }
-
     auto add_definition_to_environment(
-        libresolve::Context&                  context,
-        ast::Definition&&                     definition,
-        libresolve::Environment_wrapper const environment) -> void
+        Context&                  context,
+        ast::Definition&&         definition,
+        Environment_wrapper const environment) -> void
     {
         utl::Source::Wrapper const source = definition.source;
         std::visit(
             utl::Overload {
-                [&](ast::definition::Function&& function) {
-                    add_definition<libresolve::Function_info>(
-                        context, source, environment, function.signature.name, std::move(function));
-                },
                 [&](ast::definition::Enumeration&& enumeration) {
-                    add_definition<libresolve::Enumeration_info>(
-                        context, source, environment, enumeration.name, std::move(enumeration));
+                    auto const info = context.arenas.info(Enumeration_info {
+                        .variant     = std::move(enumeration),
+                        .environment = environment,
+                        .name        = enumeration.name,
+                        .type {
+                            context.arenas.type(hir::type::Error {}), // Overwritten below
+                            enumeration.name.source_range,
+                        },
+                    });
+                    environment.as_mutable().in_order.emplace_back(info);
+                    add_to_environment(context, source, environment.as_mutable(), info->name, info);
+                    info->type.variant.as_mutable() = hir::type::Enumeration { info };
+                },
+                [&](ast::definition::Function&& function) {
+                    auto const info = context.arenas.info(Function_info {
+                        .variant     = std::move(function),
+                        .environment = environment,
+                        .name        = function.signature.name,
+                    });
+                    add_to_environment(context, source, environment.as_mutable(), info->name, info);
+                    environment.as_mutable().in_order.emplace_back(info);
                 },
                 [&](ast::definition::Typeclass&& typeclass) {
-                    add_definition<libresolve::Typeclass_info>(
-                        context, source, environment, typeclass.name, std::move(typeclass));
+                    auto const info = context.arenas.info(Typeclass_info {
+                        .variant     = std::move(typeclass),
+                        .environment = environment,
+                        .name        = typeclass.name,
+                    });
+                    add_to_environment(context, source, environment.as_mutable(), info->name, info);
+                    environment.as_mutable().in_order.emplace_back(info);
                 },
                 [&](ast::definition::Alias&& alias) {
-                    add_definition<libresolve::Alias_info>(
-                        context, source, environment, alias.name, std::move(alias));
+                    auto const info = context.arenas.info(Alias_info {
+                        .variant     = std::move(alias),
+                        .environment = environment,
+                        .name        = alias.name,
+                    });
+                    add_to_environment(context, source, environment.as_mutable(), info->name, info);
+                    environment.as_mutable().in_order.emplace_back(info);
                 },
                 [&](ast::definition::Submodule&& submodule) {
-                    add_definition<libresolve::Module_info>(
-                        context, source, environment, submodule.name, std::move(submodule));
+                    auto const info = context.arenas.info(Module_info {
+                        .variant     = std::move(submodule),
+                        .environment = environment,
+                        .name        = submodule.name,
+                    });
+                    add_to_environment(context, source, environment.as_mutable(), info->name, info);
+                    environment.as_mutable().in_order.emplace_back(info);
                 },
                 [&](ast::definition::Implementation&& implementation) {
                     (void)implementation;
@@ -95,22 +100,44 @@ namespace {
 
     template <class Info>
     auto do_add_to_environment(
-        libresolve::Context&                   context,
+        Context&                               context,
         utl::Source::Wrapper const             source,
-        utl::Flatmap<kieli::Identifier, Info>& environment,
+        utl::Flatmap<kieli::Identifier, Info>& map,
         auto const                             name,
         typename Info::Variant&&               variant) -> void
     {
-        if (auto const* const existing = environment.find(name.identifier)) {
+        if (auto const* const existing = map.find(name.identifier)) {
             report_duplicate_definitions_error(
                 context.compile_info.diagnostics,
                 source,
                 existing->name.as_dynamic(),
                 name.as_dynamic());
         }
-        environment.add_new_unchecked(name.identifier, Info { name, source, std::move(variant) });
+        map.add_new_unchecked(name.identifier, Info { name, source, std::move(variant) });
     }
 } // namespace
+
+auto libresolve::add_to_environment(
+    Context&                   context,
+    utl::Source::Wrapper const source,
+    Environment&               environment,
+    kieli::Name_lower const    name,
+    Lower_info::Variant        variant) -> void
+{
+    do_add_to_environment<Lower_info>(
+        context, source, environment.lower_map, name, std::move(variant));
+}
+
+auto libresolve::add_to_environment(
+    Context&                   context,
+    utl::Source::Wrapper const source,
+    Environment&               environment,
+    kieli::Name_upper const    name,
+    Upper_info::Variant        variant) -> void
+{
+    do_add_to_environment<Upper_info>(
+        context, source, environment.upper_map, name, std::move(variant));
+}
 
 auto libresolve::collect_environment(
     Context&                       context,
@@ -123,26 +150,4 @@ auto libresolve::collect_environment(
         add_definition_to_environment(context, std::move(definition), environment);
     }
     return environment;
-}
-
-auto libresolve::add_to_environment(
-    Context&                   context,
-    utl::Source::Wrapper const source,
-    Environment_wrapper const  environment,
-    kieli::Name_lower const    name,
-    Lower_info::Variant        variant) -> void
-{
-    do_add_to_environment<Lower_info>(
-        context, source, environment.as_mutable().lower_map, name, std::move(variant));
-}
-
-auto libresolve::add_to_environment(
-    Context&                   context,
-    utl::Source::Wrapper const source,
-    Environment_wrapper const  environment,
-    kieli::Name_upper const    name,
-    Upper_info::Variant        variant) -> void
-{
-    do_add_to_environment<Upper_info>(
-        context, source, environment.as_mutable().upper_map, name, std::move(variant));
 }

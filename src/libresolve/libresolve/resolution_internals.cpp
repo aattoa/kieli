@@ -1,4 +1,5 @@
 #include <libutl/common/utilities.hpp>
+#include <libutl/common/safe_integer.hpp>
 #include <libresolve/resolution_internals.hpp>
 
 auto libresolve::Arenas::defaults() -> Arenas
@@ -56,13 +57,20 @@ auto libresolve::Constants::make_with(Arenas& arenas) -> Constants
     };
 }
 
+auto libresolve::Template_state::fresh_parameter_tag() -> Template_parameter_tag
+{
+    cpputil::always_assert(!utl::would_increment_overflow(m_current_tag));
+    return Template_parameter_tag { ++m_current_tag };
+}
+
 auto libresolve::error_expression(Constants const& constants, utl::Source_range const source_range)
     -> hir::Expression
 {
     return hir::Expression {
-        .variant      = hir::expression::Error {},
-        .type         = error_type(constants, source_range),
-        .source_range = source_range,
+        hir::expression::Error {},
+        error_type(constants, source_range),
+        hir::Expression_kind::place,
+        source_range,
     };
 }
 
@@ -70,9 +78,10 @@ auto libresolve::unit_expression(Constants const& constants, utl::Source_range c
     -> hir::Expression
 {
     return hir::Expression {
-        .variant      = hir::expression::Tuple {},
-        .type         = unit_type(constants, source_range),
-        .source_range = source_range,
+        hir::expression::Tuple {},
+        unit_type(constants, source_range),
+        hir::Expression_kind::value,
+        source_range,
     };
 }
 
@@ -160,4 +169,19 @@ auto libresolve::ensure_no_unsolved_variables(
             data.solve_with(hir::type::Error {});
         }
     }
+}
+
+auto libresolve::resolve_class_reference(
+    Context&                    context,
+    Inference_state&            state,
+    Scope&                      scope,
+    Environment_wrapper const   environment,
+    ast::Class_reference const& class_reference) -> hir::Class_reference
+{
+    (void)context;
+    (void)state;
+    (void)scope;
+    (void)environment;
+    (void)class_reference;
+    cpputil::todo();
 }

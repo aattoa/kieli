@@ -135,6 +135,7 @@ auto libdesugar::Context::desugar(cst::Function_signature const& signature)
                               : unit_type(signature.name.source_range);
 
     return ast::Function_signature {
+        .template_parameters = signature.template_parameters.transform(desugar()),
         .function_parameters = std::move(parameters),
         .self_parameter = signature.function_parameters.value.self_parameter.transform(desugar()),
         .return_type    = std::move(return_type),
