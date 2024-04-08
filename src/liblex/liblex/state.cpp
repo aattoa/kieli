@@ -37,7 +37,7 @@ auto liblex::extract_current(kieli::Lex_state& state) noexcept -> char
 {
     cpputil::always_assert(!state.string.empty());
     char const character = state.string.front();
-    state.string.remove_prefix(1);
+    advance(state);
     return character;
 }
 
