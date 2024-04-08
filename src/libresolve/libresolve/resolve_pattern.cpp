@@ -70,12 +70,66 @@ namespace {
 
         auto operator()(ast::Wildcard const&) -> hir::Pattern
         {
-            cpputil::todo();
+            return {
+                hir::pattern::Wildcard {},
+                state.fresh_general_type_variable(context.arenas, this_pattern.source_range),
+                this_pattern.source_range,
+            };
         }
 
-        auto operator()(ast::pattern::Name const&) -> hir::Pattern
+        auto operator()(ast::pattern::Name const& pattern) -> hir::Pattern
         {
-            cpputil::todo();
+            hir::Mutability const mutability
+                = resolve_mutability(context, scope, pattern.mutability);
+            hir::Type const type
+                = state.fresh_general_type_variable(context.arenas, pattern.name.source_range);
+            Local_variable_tag const tag = context.tag_state.fresh_local_variable_tag();
+
+            scope.bind_variable(
+                pattern.name.identifier,
+                Variable_bind {
+                    .name       = pattern.name,
+                    .type       = type,
+                    .mutability = mutability,
+                    .tag        = tag,
+                });
+
+            return {
+                hir::pattern::Name {
+                    .mutability   = mutability,
+                    .identifier   = pattern.name.identifier,
+                    .variable_tag = tag,
+                },
+                type,
+                this_pattern.source_range,
+            };
+        }
+
+        auto operator()(ast::pattern::Alias const& alias) -> hir::Pattern
+        {
+            hir::Pattern          pattern    = recurse(*alias.pattern);
+            hir::Mutability const mutability = resolve_mutability(context, scope, alias.mutability);
+            Local_variable_tag const tag     = context.tag_state.fresh_local_variable_tag();
+
+            scope.bind_variable(
+                alias.name.identifier,
+                Variable_bind {
+                    .name       = alias.name,
+                    .type       = pattern.type,
+                    .mutability = mutability,
+                    .tag        = tag,
+                });
+
+            return {
+                hir::pattern::Alias {
+                    .mutability   = mutability,
+                    .identifier   = alias.name.identifier,
+                    .variable_tag = tag,
+                    .pattern      = context.arenas.wrap(std::move(pattern)),
+                },
+                pattern.type,
+                this_pattern.source_range,
+            };
         }
 
         auto operator()(ast::pattern::Constructor const&) -> hir::Pattern
@@ -88,24 +142,77 @@ namespace {
             cpputil::todo();
         }
 
-        auto operator()(ast::pattern::Tuple const&) -> hir::Pattern
+        auto operator()(ast::pattern::Tuple const& tuple) -> hir::Pattern
         {
-            cpputil::todo();
+            auto patterns = std::views::transform(tuple.field_patterns, recurse())
+                          | std::ranges::to<std::vector>();
+            auto types = std::views::transform(patterns, &hir::Pattern::type)
+                       | std::ranges::to<std::vector>();
+            return {
+                hir::pattern::Tuple {
+                    .field_patterns = std::move(patterns),
+                },
+                hir::Type {
+                    context.arenas.type(hir::type::Tuple { std::move(types) }),
+                    this_pattern.source_range,
+                },
+                this_pattern.source_range,
+            };
         }
 
-        auto operator()(ast::pattern::Slice const&) -> hir::Pattern
+        auto operator()(ast::pattern::Slice const& slice) -> hir::Pattern
         {
-            cpputil::todo();
+            auto patterns = std::views::transform(slice.element_patterns, recurse())
+                          | std::ranges::to<std::vector>();
+
+            hir::Type const element_type
+                = state.fresh_general_type_variable(context.arenas, this_pattern.source_range);
+
+            for (hir::Pattern const& pattern : patterns) {
+                require_subtype_relationship(
+                    context.compile_info.diagnostics,
+                    state,
+                    pattern.type,
+                    element_type,
+                    this_pattern.source_range);
+            }
+
+            return {
+                hir::pattern::Slice {
+                    .patterns = std::move(patterns),
+                },
+                hir::Type {
+                    context.arenas.type(hir::type::Slice { element_type }),
+                    this_pattern.source_range,
+                },
+                this_pattern.source_range,
+            };
         }
 
-        auto operator()(ast::pattern::Alias const&) -> hir::Pattern
+        auto operator()(ast::pattern::Guarded const& guarded) -> hir::Pattern
         {
-            cpputil::todo();
-        }
+            hir::Pattern    guarded_pattern = recurse(*guarded.guarded_pattern);
+            hir::Expression guard_expression
+                = resolve_expression(context, state, scope, environment, guarded.guard_expression);
 
-        auto operator()(ast::pattern::Guarded const&) -> hir::Pattern
-        {
-            cpputil::todo();
+            require_subtype_relationship(
+                context.compile_info.diagnostics,
+                state,
+                guard_expression.type,
+                hir::Type {
+                    context.constants.boolean_type,
+                    this_pattern.source_range, // TODO: fix source range
+                },
+                this_pattern.source_range);
+
+            return {
+                hir::pattern::Guarded {
+                    .guarded_pattern  = context.arenas.wrap(std::move(guarded_pattern)),
+                    .guard_expression = context.arenas.wrap(std::move(guard_expression)),
+                },
+                guarded_pattern.type,
+                this_pattern.source_range,
+            };
         }
     };
 } // namespace

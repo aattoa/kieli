@@ -95,7 +95,7 @@ auto libresolve::resolve_template_parameters(
     ast::Template_parameters const& parameters) -> std::vector<hir::Template_parameter>
 {
     auto const resolve_parameter = [&](ast::Template_parameter const& parameter) {
-        auto const tag = context.template_state.fresh_parameter_tag();
+        auto const tag = context.tag_state.fresh_template_parameter_tag();
         return hir::Template_parameter {
             .variant = std::visit(
                 Template_parameter_resolution_visitor { context, state, scope, environment, tag },

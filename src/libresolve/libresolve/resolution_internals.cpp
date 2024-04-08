@@ -57,10 +57,16 @@ auto libresolve::Constants::make_with(Arenas& arenas) -> Constants
     };
 }
 
-auto libresolve::Template_state::fresh_parameter_tag() -> Template_parameter_tag
+auto libresolve::Tag_state::fresh_template_parameter_tag() -> Template_parameter_tag
 {
-    cpputil::always_assert(!utl::would_increment_overflow(m_current_tag));
-    return Template_parameter_tag { ++m_current_tag };
+    cpputil::always_assert(!utl::would_increment_overflow(m_current_template_parameter_tag));
+    return Template_parameter_tag { ++m_current_template_parameter_tag };
+}
+
+auto libresolve::Tag_state::fresh_local_variable_tag() -> Local_variable_tag
+{
+    cpputil::always_assert(!utl::would_increment_overflow(m_current_local_variable_tag));
+    return Local_variable_tag { ++m_current_local_variable_tag };
 }
 
 auto libresolve::error_expression(Constants const& constants, utl::Source_range const source_range)

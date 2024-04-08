@@ -12,13 +12,36 @@ namespace {
         ast::Function_parameter const& parameter) -> hir::Function_parameter
     {
         cpputil::always_assert(parameter.type.has_value()); // TODO
+
+        hir::Pattern pattern
+            = resolve_pattern(context, state, scope, environment, *parameter.pattern);
+        hir::Type const type
+            = resolve_type(context, state, scope, environment, *parameter.type.value());
+
+        require_subtype_relationship(
+            context.compile_info.diagnostics,
+            state,
+            pattern.type,
+            type,
+            parameter.pattern->source_range);
+
+        auto default_argument = parameter.default_argument.transform(
+            [&](utl::Wrapper<ast::Expression> const argument) {
+                hir::Expression expression
+                    = resolve_expression(context, state, scope, environment, *argument);
+                require_subtype_relationship(
+                    context.compile_info.diagnostics,
+                    state,
+                    expression.type,
+                    type,
+                    parameter.pattern->source_range);
+                return expression;
+            });
+
         return hir::Function_parameter {
-            .pattern = resolve_pattern(context, state, scope, environment, *parameter.pattern),
-            .type    = resolve_type(context, state, scope, environment, *parameter.type.value()),
-            .default_argument = parameter.default_argument.transform(
-                [&](utl::Wrapper<ast::Expression> const argument) {
-                    return resolve_expression(context, state, scope, environment, *argument);
-                }),
+            .pattern          = std::move(pattern),
+            .type             = type,
+            .default_argument = std::move(default_argument),
         };
     }
 

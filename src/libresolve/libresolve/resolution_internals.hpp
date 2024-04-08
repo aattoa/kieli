@@ -76,10 +76,12 @@ namespace libresolve {
 
     using Module_map = utl::Flatmap<std::filesystem::path, utl::Mutable_wrapper<Module_info>>;
 
-    class Template_state {
-        std::size_t m_current_tag {};
+    class Tag_state {
+        std::size_t m_current_template_parameter_tag {};
+        std::size_t m_current_local_variable_tag {};
     public:
-        auto fresh_parameter_tag() -> Template_parameter_tag;
+        auto fresh_template_parameter_tag() -> Template_parameter_tag;
+        auto fresh_local_variable_tag() -> Local_variable_tag;
     };
 
     struct Context {
@@ -88,7 +90,7 @@ namespace libresolve {
         Module_map                          module_map;
         kieli::Project_configuration const& project_configuration;
         kieli::Compile_info&                compile_info;
-        Template_state                      template_state;
+        Tag_state                           tag_state;
     };
 
     struct Import_error {
