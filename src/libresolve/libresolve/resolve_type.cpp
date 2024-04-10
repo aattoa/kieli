@@ -77,9 +77,34 @@ namespace {
             cpputil::todo();
         }
 
-        auto operator()(ast::type::Typename const&) -> hir::Type
+        auto operator()(ast::type::Typename const& type_name) -> hir::Type
         {
-            cpputil::todo();
+            if (type_name.name.is_unqualified()) {
+                if (auto* const bind = scope.find_type(type_name.name.primary_name.identifier)) {
+                    return bind->type;
+                }
+            }
+            if (auto const lookup_result
+                = lookup_upper(context, state, scope, environment, type_name.name))
+            {
+                return std::visit(
+                    utl::Overload {
+                        [&](utl::Mutable_wrapper<Enumeration_info> const enumeration) -> hir::Type {
+                            return enumeration->type;
+                        },
+                        [&](utl::Mutable_wrapper<Alias_info> const alias) -> hir::Type {
+                            return resolve_alias(context, alias.as_mutable()).type;
+                        },
+                        [](utl::Mutable_wrapper<Typeclass_info>) -> hir::Type { cpputil::todo(); },
+                    },
+                    lookup_result.value().variant);
+            }
+            context.compile_info.diagnostics.emit(
+                cppdiag::Severity::error,
+                scope.source(),
+                this_type.source_range,
+                "Use of an undeclared identifier");
+            return { context.constants.error_type, this_type.source_range };
         }
 
         auto operator()(ast::type::Tuple const& tuple) -> hir::Type
@@ -91,9 +116,14 @@ namespace {
             return { context.arenas.type(std::move(type)), this_type.source_range };
         }
 
-        auto operator()(ast::type::Array const&) -> hir::Type
+        auto operator()(ast::type::Array const& array) -> hir::Type
         {
-            cpputil::todo();
+            hir::type::Array type {
+                .element_type = recurse(*array.element_type),
+                .length       = context.arenas.wrap(
+                    resolve_expression(context, state, scope, environment, *array.length)),
+            };
+            return { context.arenas.type(std::move(type)), this_type.source_range };
         }
 
         auto operator()(ast::type::Slice const& slice) -> hir::Type
@@ -105,8 +135,7 @@ namespace {
         auto operator()(ast::type::Function const& function) -> hir::Type
         {
             hir::type::Function type {
-                .parameter_types = function.parameter_types //
-                                 | std::views::transform(recurse())
+                .parameter_types = std::views::transform(function.parameter_types, recurse())
                                  | std::ranges::to<std::vector>(),
                 .return_type = recurse(*function.return_type),
             };

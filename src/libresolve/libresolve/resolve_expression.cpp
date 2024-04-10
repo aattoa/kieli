@@ -12,12 +12,12 @@ namespace {
         ast::Expression const& this_expression;
 
         template <class... Args>
-        auto error(std::format_string<Args...> const fmt, Args&&... args) -> hir::Expression
+        auto error(utl::Source_range range, std::format_string<Args...> const fmt, Args&&... args)
         {
             context.compile_info.diagnostics.emit(
                 cppdiag::Severity::error,
                 environment->source,
-                this_expression.source_range,
+                range,
                 fmt,
                 std::forward<Args>(args)...);
             return error_expression(context.constants, this_expression.source_range);
@@ -85,9 +85,39 @@ namespace {
             };
         }
 
-        auto operator()(ast::expression::Array_literal const&) -> hir::Expression
+        auto operator()(ast::expression::Array_literal const& array) -> hir::Expression
         {
-            cpputil::todo();
+            hir::Type const element_type
+                = state.fresh_general_type_variable(context.arenas, this_expression.source_range);
+
+            std::vector<hir::Expression> elements;
+            for (ast::Expression const& element : array.elements) {
+                elements.push_back(recurse(element));
+                require_subtype_relationship(
+                    context.compile_info.diagnostics,
+                    state,
+                    elements.back().type,
+                    element_type,
+                    this_expression.source_range);
+            }
+
+            return {
+                hir::expression::Array_literal { std::move(elements) },
+                hir::Type {
+                    context.arenas.type(hir::type::Array {
+                        .element_type = element_type,
+                        .length       = context.arenas.wrap(hir::Expression {
+                            kieli::Integer { elements.size() },
+                            hir::Type { context.constants.u64_type, this_expression.source_range },
+                            hir::Expression_kind::value,
+                            this_expression.source_range,
+                        }),
+                    }),
+                    this_expression.source_range,
+                },
+                hir::Expression_kind::value,
+                this_expression.source_range,
+            };
         }
 
         auto operator()(ast::expression::Self const&) -> hir::Expression
@@ -118,24 +148,24 @@ namespace {
                 return std::visit(
                     utl::Overload {
                         [&](utl::Mutable_wrapper<Function_info> const function) {
-                            auto& signature
-                                = resolve_function_signature(context, function.as_mutable());
                             return hir::Expression {
                                 hir::expression::Function_reference { .info = function },
-                                signature.function_type,
+                                resolve_function_signature(context, function.as_mutable())
+                                    .function_type,
                                 hir::Expression_kind::value,
                                 this_expression.source_range,
                             };
                         },
                         [&](utl::Mutable_wrapper<Module_info> const module) {
                             return error(
+                                this_expression.source_range,
                                 "Expected an expression, but found a reference to module '{}'",
                                 module->name);
                         },
                     },
                     lookup_result.value().variant);
             }
-            return error("Use of an undeclared identifier");
+            return error(this_expression.source_range, "Use of an undeclared identifier");
         }
 
         auto operator()(ast::expression::Tuple const& tuple) -> hir::Expression
@@ -256,9 +286,46 @@ namespace {
             cpputil::todo();
         }
 
-        auto operator()(ast::expression::Match const&) -> hir::Expression
+        auto operator()(ast::expression::Match const& match) -> hir::Expression
         {
-            cpputil::todo();
+            hir::Expression matched_expression = recurse(*match.expression);
+
+            hir::Type const result_type
+                = state.fresh_general_type_variable(context.arenas, this_expression.source_range);
+
+            auto const resolve_case = [&](ast::expression::Match::Case const& match_case) {
+                hir::Pattern pattern
+                    = resolve_pattern(context, state, scope, environment, *match_case.pattern);
+                require_subtype_relationship(
+                    context.compile_info.diagnostics,
+                    state,
+                    matched_expression.type,
+                    pattern.type,
+                    this_expression.source_range);
+                hir::Expression expression = recurse(*match_case.expression);
+                require_subtype_relationship(
+                    context.compile_info.diagnostics,
+                    state,
+                    expression.type,
+                    result_type,
+                    this_expression.source_range);
+
+                return hir::expression::Match::Case {
+                    .pattern    = context.arenas.wrap(std::move(pattern)),
+                    .expression = context.arenas.wrap(std::move(expression)),
+                };
+            };
+
+            return {
+                hir::expression::Match {
+                    .cases = std::views::transform(match.cases, resolve_case)
+                           | std::ranges::to<std::vector>(),
+                    .expression = context.arenas.wrap(std::move(matched_expression)),
+                },
+                result_type,
+                hir::Expression_kind::value, // TODO
+                this_expression.source_range,
+            };
         }
 
         auto operator()(ast::expression::Template_application const&) -> hir::Expression
@@ -271,14 +338,56 @@ namespace {
             cpputil::todo();
         }
 
-        auto operator()(ast::expression::Type_ascription const&) -> hir::Expression
+        auto operator()(ast::expression::Type_ascription const& ascription) -> hir::Expression
         {
-            cpputil::todo();
+            hir::Expression expression = recurse(*ascription.expression);
+            require_subtype_relationship(
+                context.compile_info.diagnostics,
+                state,
+                expression.type,
+                resolve_type(context, state, scope, environment, *ascription.ascribed_type),
+                this_expression.source_range);
+            return expression;
         }
 
-        auto operator()(ast::expression::Let_binding const&) -> hir::Expression
+        auto operator()(ast::expression::Let_binding const& let) -> hir::Expression
         {
-            cpputil::todo();
+            hir::Pattern pattern
+                = resolve_pattern(context, state, scope, environment, *let.pattern);
+
+            std::optional<hir::Type> type;
+            if (let.type.has_value()) {
+                type = resolve_type(context, state, scope, environment, *let.type.value());
+                require_subtype_relationship(
+                    context.compile_info.diagnostics,
+                    state,
+                    pattern.type,
+                    type.value(),
+                    this_expression.source_range);
+            }
+            type = type.value_or(pattern.type);
+
+            hir::Expression initializer = recurse(*let.initializer);
+            require_subtype_relationship(
+                context.compile_info.diagnostics,
+                state,
+                initializer.type,
+                type.value(),
+                this_expression.source_range);
+
+            return {
+                hir::expression::Let_binding {
+                    .pattern     = context.arenas.wrap(std::move(pattern)),
+                    .type        = type.value(),
+                    .initializer = context.arenas.wrap(std::move(initializer)),
+                },
+                hir::Type {
+                    context.constants.unit_type,
+                    this_expression.source_range,
+                },
+                hir::Expression_kind::value,
+                this_expression.source_range,
+            };
         }
 
         auto operator()(ast::expression::Local_type_alias const& alias) -> hir::Expression
@@ -315,8 +424,10 @@ namespace {
             hir::Type const referenced_type  = place_expression.type;
             hir::Mutability mutability = resolve_mutability(context, scope, addressof.mutability);
             if (place_expression.kind != hir::Expression_kind::place) {
-                return error("This expression does not identify a place in memory, so its address "
-                             "can not be taken");
+                return error(
+                    place_expression.source_range,
+                    "This expression does not identify a place in memory, so its address can not "
+                    "be taken");
             }
             return {
                 hir::expression::Addressof {
@@ -341,7 +452,6 @@ namespace {
                 = state.fresh_general_type_variable(context.arenas, this_expression.source_range);
             hir::Mutability const reference_mutability
                 = state.fresh_mutability_variable(context.arenas, this_expression.source_range);
-
             hir::Type const reference_type {
                 context.arenas.type(hir::type::Reference {
                     .referenced_type = referenced_type,
@@ -349,8 +459,8 @@ namespace {
                 }),
                 this_expression.source_range,
             };
-            hir::Expression reference_expression = recurse(*dereference.reference_expression);
 
+            hir::Expression reference_expression = recurse(*dereference.reference_expression);
             require_subtype_relationship(
                 context.compile_info.diagnostics,
                 state,

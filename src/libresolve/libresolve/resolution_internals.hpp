@@ -223,7 +223,5 @@ namespace libresolve {
 
     auto error_expression(Constants const&, utl::Source_range) -> hir::Expression;
     auto unit_expression(Constants const&, utl::Source_range) -> hir::Expression;
-    auto error_type(Constants const&, utl::Source_range) -> hir::Type;
-    auto unit_type(Constants const&, utl::Source_range) -> hir::Type;
 
 } // namespace libresolve

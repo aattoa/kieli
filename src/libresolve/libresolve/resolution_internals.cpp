@@ -74,7 +74,7 @@ auto libresolve::error_expression(Constants const& constants, utl::Source_range 
 {
     return hir::Expression {
         hir::expression::Error {},
-        error_type(constants, source_range),
+        hir::Type { constants.error_type, source_range },
         hir::Expression_kind::place,
         source_range,
     };
@@ -85,22 +85,10 @@ auto libresolve::unit_expression(Constants const& constants, utl::Source_range c
 {
     return hir::Expression {
         hir::expression::Tuple {},
-        unit_type(constants, source_range),
+        hir::Type { constants.unit_type, source_range },
         hir::Expression_kind::value,
         source_range,
     };
-}
-
-auto libresolve::error_type(Constants const& constants, utl::Source_range const source_range)
-    -> hir::Type
-{
-    return hir::Type { constants.error_type, source_range };
-}
-
-auto libresolve::unit_type(Constants const& constants, utl::Source_range const source_range)
-    -> hir::Type
-{
-    return hir::Type { constants.unit_type, source_range };
 }
 
 auto libresolve::Type_variable_data::solve_with(hir::Type::Variant solution) -> void
