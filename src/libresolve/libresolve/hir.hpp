@@ -60,11 +60,15 @@ namespace libresolve::hir {
         utl::Source_range             source_range;
     };
 
+    using Mutability_wrapper = utl::Mutable_wrapper<Mutability::Variant>;
+
     struct Type {
         struct Variant;
         utl::Mutable_wrapper<Variant> variant;
         utl::Source_range             source_range;
     };
+
+    using Type_wrapper = utl::Mutable_wrapper<Type::Variant>;
 
     struct Function_argument {
         utl::Wrapper<Expression>         expression;
@@ -364,10 +368,12 @@ namespace libresolve::hir {
         utl::Mutable_wrapper<Environment> environment;
     };
 
-    auto format_to(Expression const&, std::string&) -> void;
     auto format_to(Pattern const&, std::string&) -> void;
+    auto format_to(Expression const&, std::string&) -> void;
     auto format_to(Type const&, std::string&) -> void;
+    auto format_to(Type::Variant const&, std::string&) -> void;
     auto format_to(Mutability const&, std::string&) -> void;
+    auto format_to(Mutability::Variant const&, std::string&) -> void;
 
     auto to_string(auto const& x) -> std::string
         requires requires(std::string out) { hir::format_to(x, out); }

@@ -96,9 +96,8 @@ namespace {
                 require_subtype_relationship(
                     context.compile_info.diagnostics,
                     state,
-                    elements.back().type,
-                    element_type,
-                    this_expression.source_range);
+                    *elements.back().type.variant,
+                    *element_type.variant);
             }
 
             return {
@@ -210,9 +209,8 @@ namespace {
                 require_subtype_relationship( // TODO: better error message
                     context.compile_info.diagnostics,
                     state,
-                    effect.type,
-                    hir::Type { context.constants.unit_type, effect.source_range },
-                    effect.source_range);
+                    *effect.type.variant,
+                    *context.constants.unit_type);
                 return effect;
             };
 
@@ -299,16 +297,14 @@ namespace {
                 require_subtype_relationship(
                     context.compile_info.diagnostics,
                     state,
-                    matched_expression.type,
-                    pattern.type,
-                    this_expression.source_range);
+                    *matched_expression.type.variant,
+                    *pattern.type.variant);
                 hir::Expression expression = recurse(*match_case.expression);
                 require_subtype_relationship(
                     context.compile_info.diagnostics,
                     state,
-                    expression.type,
-                    result_type,
-                    this_expression.source_range);
+                    *expression.type.variant,
+                    *result_type.variant);
 
                 return hir::expression::Match::Case {
                     .pattern    = context.arenas.wrap(std::move(pattern)),
@@ -344,9 +340,9 @@ namespace {
             require_subtype_relationship(
                 context.compile_info.diagnostics,
                 state,
-                expression.type,
-                resolve_type(context, state, scope, environment, *ascription.ascribed_type),
-                this_expression.source_range);
+                *expression.type.variant,
+                *resolve_type(context, state, scope, environment, *ascription.ascribed_type)
+                     .variant);
             return expression;
         }
 
@@ -361,9 +357,8 @@ namespace {
                 require_subtype_relationship(
                     context.compile_info.diagnostics,
                     state,
-                    pattern.type,
-                    type.value(),
-                    this_expression.source_range);
+                    *pattern.type.variant,
+                    *type.value().variant);
             }
             type = type.value_or(pattern.type);
 
@@ -371,9 +366,8 @@ namespace {
             require_subtype_relationship(
                 context.compile_info.diagnostics,
                 state,
-                initializer.type,
-                type.value(),
-                this_expression.source_range);
+                *initializer.type.variant,
+                *type.value().variant);
 
             return {
                 hir::expression::Let_binding {
@@ -464,9 +458,8 @@ namespace {
             require_subtype_relationship(
                 context.compile_info.diagnostics,
                 state,
-                reference_expression.type,
-                reference_type,
-                this_expression.source_range);
+                *reference_expression.type.variant,
+                *reference_type.variant);
 
             return {
                 hir::expression::Dereference {

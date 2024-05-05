@@ -8,11 +8,12 @@ namespace {
     enum class Unification_goal { equality, subtype };
 
     struct Type_unification_arguments {
-        using Report_unification_failure
-            = void(kieli::Diagnostics& diagnostics, hir::Type sub, hir::Type super);
-        using Report_recursive_solution
-            = void(kieli::Diagnostics& diagnostics, Type_variable_tag tag, hir::Type type);
-        utl::Source_range           origin;
+        using Report_unification_failure = void(
+            kieli::Diagnostics&       diagnostics,
+            hir::Type::Variant const& sub,
+            hir::Type::Variant const& super);
+        using Report_recursive_solution = void(
+            kieli::Diagnostics& diagnostics, Type_variable_tag tag, hir::Type::Variant const& type);
         Unification_goal            goal {};
         Report_unification_failure* report_unification_failure {};
         Report_recursive_solution*  report_recursive_solution {};
@@ -21,14 +22,13 @@ namespace {
     struct Mutability_unification_arguments {
         using Report_unification_failure
             = void(kieli::Diagnostics& diagnostics, hir::Mutability sub, hir::Mutability super);
-        utl::Source_range           origin;
         Unification_goal            goal {};
         Report_unification_failure* report_unification_failure {};
     };
 
     struct Mutability_unification_visitor {
         kieli::Diagnostics&                     diagnostics;
-        Unification_solutions&                  solutions;
+        Inference_state&                        state;
         Mutability_unification_arguments const& arguments;
         hir::Mutability const&                  current_sub;
         hir::Mutability const&                  current_super;
@@ -41,11 +41,7 @@ namespace {
         [[nodiscard]] auto solution(
             Mutability_variable_tag const tag, hir::Mutability const mutability) const -> bool
         {
-            if (auto const* const previous_solution = solutions.mutability_map.find(tag)) {
-                // TODO: Should coercion be disallowed here?
-                return unify(mutability, *previous_solution);
-            }
-            solutions.mutability_map.add_new_unchecked(tag, mutability);
+            state.set_solution(diagnostics, state.mutability_variables[tag], *mutability.variant);
             return true;
         }
 
@@ -53,13 +49,12 @@ namespace {
             -> bool
         {
             Mutability_unification_arguments const recurse_arguments {
-                arguments.origin,
                 arguments.goal,
                 arguments.report_unification_failure,
             };
             bool const result = std::visit(
                 Mutability_unification_visitor {
-                    diagnostics, solutions, recurse_arguments, sub, super },
+                    diagnostics, state, recurse_arguments, sub, super },
                 *sub.variant,
                 *super.variant);
             if (!result && arguments.report_unification_failure) {
@@ -78,8 +73,7 @@ namespace {
             const -> bool
         {
             if (sub.tag != super.tag) {
-                solutions.mutability_variable_equalities[sub.tag].push_back(super.tag);
-                solutions.mutability_variable_equalities[super.tag].push_back(sub.tag);
+                state.mutability_variable_disjoint_set.merge(sub.tag.get(), super.tag.get());
             }
             return true;
         }
@@ -109,17 +103,18 @@ namespace {
 
     struct Type_unification_visitor {
         kieli::Diagnostics&               diagnostics;
-        Unification_solutions&            solutions;
+        Inference_state&                  state;
         Type_unification_arguments const& arguments;
-        hir::Type const&                  current_sub;
-        hir::Type const&                  current_super;
+        hir::Type::Variant const&         current_sub;
+        hir::Type::Variant const&         current_super;
 
         [[nodiscard]] auto allow_coercion() const noexcept -> bool
         {
             return arguments.goal == Unification_goal::subtype;
         }
 
-        [[nodiscard]] auto solution(Type_variable_tag const tag, hir::Type const type) const -> bool
+        [[nodiscard]] auto solution(Type_variable_tag const tag, hir::Type::Variant type) const
+            -> bool
         {
             if (occurs_check(tag, type)) {
                 if (arguments.report_recursive_solution) {
@@ -127,30 +122,30 @@ namespace {
                 }
                 return false;
             }
-            if (auto const* const previous_solution = solutions.type_map.find(tag)) {
-                // TODO: Should coercion be disallowed here?
-                return unify(type, *previous_solution);
-            }
-            solutions.type_map.add_new_unchecked(tag, type);
+            state.flatten(type);
+            state.set_solution(diagnostics, state.type_variables[tag], std::move(type));
             return true;
         }
 
-        [[nodiscard]] auto unify(hir::Type const sub, hir::Type const super) const -> bool
+        [[nodiscard]] auto unify(
+            hir::Type::Variant const& sub, hir::Type::Variant const& super) const -> bool
         {
             Type_unification_arguments const recurse_arguments {
-                .origin                     = arguments.origin,
                 .goal                       = arguments.goal,
                 .report_unification_failure = arguments.report_unification_failure,
                 .report_recursive_solution  = arguments.report_recursive_solution,
             };
-            bool const result = std::visit(
-                Type_unification_visitor { diagnostics, solutions, recurse_arguments, sub, super },
-                *sub.variant,
-                *super.variant);
+            Type_unification_visitor visitor { diagnostics, state, recurse_arguments, sub, super };
+            bool const               result = std::visit(visitor, sub, super);
             if (!result && arguments.report_unification_failure) {
                 arguments.report_unification_failure(diagnostics, sub, super);
             }
             return result;
+        }
+
+        [[nodiscard]] auto unify(hir::Type const sub, hir::Type const super) const -> bool
+        {
+            return unify(*sub.variant, *super.variant);
         }
 
         [[nodiscard]] auto unify() const
@@ -169,12 +164,11 @@ namespace {
             -> bool
         {
             Mutability_unification_arguments const mutability_arguments {
-                .origin                     = arguments.origin,
                 .goal                       = arguments.goal,
                 .report_unification_failure = nullptr,
             };
             Mutability_unification_visitor visitor {
-                diagnostics, solutions, mutability_arguments, sub, super
+                diagnostics, state, mutability_arguments, sub, super
             };
             return visitor.unify(sub, super);
         }
@@ -184,8 +178,7 @@ namespace {
         {
             // TODO: handle integrals
             if (sub.tag != super.tag) {
-                solutions.type_variable_equalities[sub.tag].push_back(super.tag);
-                solutions.type_variable_equalities[super.tag].push_back(sub.tag);
+                state.type_variable_disjoint_set.merge(sub.tag.get(), super.tag.get());
             }
             return true;
         }
@@ -298,73 +291,31 @@ namespace {
     };
 
     auto unify(
-        Unification_solutions&            solutions,
         kieli::Diagnostics&               diagnostics,
+        Inference_state&                  state,
         Type_unification_arguments const& arguments,
-        hir::Type const                   sub,
-        hir::Type const                   super) -> bool
+        hir::Type::Variant const&         sub,
+        hir::Type::Variant const&         super) -> bool
     {
-        Type_unification_visitor const visitor { diagnostics, solutions, arguments, sub, super };
+        Type_unification_visitor const visitor { diagnostics, state, arguments, sub, super };
         return visitor.unify(sub, super);
-    }
-
-    auto apply_solutions(Inference_state& state, Unification_solutions const& solutions) -> void
-    {
-        for (auto const& [tag, solution] : solutions.type_map) {
-            state.type_variables[tag].solve_with(*solution.variant);
-            for (auto const equal_tag : solutions.type_variable_equalities[tag]) {
-                Type_variable_data& equal = state.type_variables[equal_tag];
-                cpputil::always_assert(!equal.is_solved); // TODO
-                equal.solve_with(*solution.variant);
-            }
-        }
-    }
-
-    auto solutions_for_state(Inference_state& state) -> Unification_solutions
-    {
-        Unification_solutions solutions;
-        solutions.type_variable_equalities.underlying.resize(
-            state.type_variables.underlying.size());
-        solutions.mutability_variable_equalities.underlying.resize(
-            state.mutability_variables.underlying.size());
-        return solutions;
     }
 } // namespace
 
 auto libresolve::require_subtype_relationship(
-    kieli::Diagnostics&     diagnostics,
-    Inference_state&        state,
-    hir::Type const         sub,
-    hir::Type const         super,
-    utl::Source_range const origin) -> void
+    kieli::Diagnostics&       diagnostics,
+    Inference_state&          state,
+    hir::Type::Variant const& sub,
+    hir::Type::Variant const& super) -> void
 {
     Type_unification_arguments const arguments {
-        .origin = origin,
-        .goal   = Unification_goal::subtype,
+        .goal = Unification_goal::subtype,
     };
 
-    Unification_solutions solutions = solutions_for_state(state);
-
-    if (unify(solutions, diagnostics, arguments, sub, super)) {
-        apply_solutions(state, solutions);
-    }
-    else {
+    if (!unify(diagnostics, state, arguments, sub, super)) {
         auto const sub_type_string   = hir::to_string(sub);
         auto const super_type_string = hir::to_string(super);
 
-        diagnostics.error(
-            { kieli::Simple_text_section {
-                  .source       = state.source,
-                  .source_range = sub.source_range,
-                  .note         = sub_type_string,
-              },
-              kieli::Simple_text_section {
-                  .source       = state.source,
-                  .source_range = super.source_range,
-                  .note         = super_type_string,
-              } },
-            "Unable to unify {} ~ {}",
-            sub_type_string,
-            super_type_string);
+        diagnostics.error("Unable to unify {} ~ {}", sub_type_string, super_type_string);
     }
 }

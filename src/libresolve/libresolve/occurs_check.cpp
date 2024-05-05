@@ -7,9 +7,14 @@ namespace {
     struct Occurs_check_visitor {
         Type_variable_tag tag;
 
+        [[nodiscard]] auto recurse(hir::Type const type) const -> bool
+        {
+            return occurs_check(tag, *type.variant);
+        }
+
         [[nodiscard]] auto recurse() const
         {
-            return [*this](hir::Type const type) -> bool { return occurs_check(tag, type); };
+            return [*this](hir::Type const type) -> bool { return recurse(type); };
         }
 
         auto operator()(hir::type::Variable const& variable) const -> bool
@@ -19,27 +24,27 @@ namespace {
 
         auto operator()(hir::type::Array const& array) const -> bool
         {
-            return occurs_check(tag, array.element_type) || occurs_check(tag, array.length->type);
+            return recurse(array.element_type) || recurse(array.length->type);
         }
 
         auto operator()(hir::type::Slice const& slice) const -> bool
         {
-            return occurs_check(tag, slice.element_type);
+            return recurse(slice.element_type);
         }
 
         auto operator()(hir::type::Reference const& reference) const -> bool
         {
-            return occurs_check(tag, reference.referenced_type);
+            return recurse(reference.referenced_type);
         }
 
         auto operator()(hir::type::Pointer const& pointer) const -> bool
         {
-            return occurs_check(tag, pointer.pointee_type);
+            return recurse(pointer.pointee_type);
         }
 
         auto operator()(hir::type::Function const& function) const -> bool
         {
-            return occurs_check(tag, function.return_type)
+            return recurse(function.return_type)
                 || std::ranges::any_of(function.parameter_types, recurse());
         }
 
@@ -68,7 +73,7 @@ namespace {
     };
 } // namespace
 
-auto libresolve::occurs_check(Type_variable_tag const tag, hir::Type const type) -> bool
+auto libresolve::occurs_check(Type_variable_tag const tag, hir::Type::Variant const& type) -> bool
 {
-    return std::visit(Occurs_check_visitor { tag }, *type.variant);
+    return std::visit(Occurs_check_visitor { tag }, type);
 }

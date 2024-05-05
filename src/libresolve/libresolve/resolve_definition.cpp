@@ -19,11 +19,7 @@ namespace {
             = resolve_type(context, state, scope, environment, *parameter.type.value());
 
         require_subtype_relationship(
-            context.compile_info.diagnostics,
-            state,
-            pattern.type,
-            type,
-            parameter.pattern->source_range);
+            context.compile_info.diagnostics, state, *pattern.type.variant, *type.variant);
 
         auto default_argument = parameter.default_argument.transform(
             [&](utl::Wrapper<ast::Expression> const argument) {
@@ -32,9 +28,8 @@ namespace {
                 require_subtype_relationship(
                     context.compile_info.diagnostics,
                     state,
-                    expression.type,
-                    type,
-                    parameter.pattern->source_range);
+                    *expression.type.variant,
+                    *type.variant);
                 return expression;
             });
 
@@ -99,9 +94,8 @@ auto libresolve::resolve_function_body(Context& context, Function_info& info) ->
         require_subtype_relationship(
             context.compile_info.diagnostics,
             state,
-            body.type,
-            function->signature.return_type,
-            info.name.source_range);
+            *body.type.variant,
+            *function->signature.return_type.variant);
         info.variant = hir::Function {
             .signature = std::move(function->signature),
             .body      = std::move(body),
@@ -133,6 +127,7 @@ auto libresolve::resolve_enumeration(Context& context, Enumeration_info& info) -
 {
     if (auto* const enumeration = std::get_if<ast::definition::Enumeration>(&info.variant)) {
         (void)context;
+        (void)enumeration;
         cpputil::todo();
     }
     return std::get<hir::Enumeration>(info.variant);
@@ -142,6 +137,7 @@ auto libresolve::resolve_typeclass(Context& context, Typeclass_info& info) -> hi
 {
     if (auto* const typeclass = std::get_if<ast::definition::Typeclass>(&info.variant)) {
         (void)context;
+        (void)typeclass;
         cpputil::todo();
     }
     return std::get<hir::Typeclass>(info.variant);
@@ -151,6 +147,7 @@ auto libresolve::resolve_alias(Context& context, Alias_info& info) -> hir::Alias
 {
     if (auto* const alias = std::get_if<ast::definition::Alias>(&info.variant)) {
         (void)context;
+        (void)alias;
         cpputil::todo();
     }
     return std::get<hir::Alias>(info.variant);

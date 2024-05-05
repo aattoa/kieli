@@ -172,9 +172,8 @@ namespace {
                 require_subtype_relationship(
                     context.compile_info.diagnostics,
                     state,
-                    pattern.type,
-                    element_type,
-                    this_pattern.source_range);
+                    *pattern.type.variant,
+                    *element_type.variant);
             }
 
             return {
@@ -198,12 +197,8 @@ namespace {
             require_subtype_relationship(
                 context.compile_info.diagnostics,
                 state,
-                guard_expression.type,
-                hir::Type {
-                    context.constants.boolean_type,
-                    this_pattern.source_range, // TODO: fix source range
-                },
-                this_pattern.source_range);
+                *guard_expression.type.variant,
+                *context.constants.boolean_type);
 
             return {
                 hir::pattern::Guarded {
