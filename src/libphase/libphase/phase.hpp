@@ -2,7 +2,7 @@
 
 #include <libutl/common/wrapper.hpp>
 #include <libutl/common/pooled_string.hpp>
-#include <libutl/source/source.hpp>
+#include <libutl/common/source.hpp>
 #include <cppdiag.hpp>
 
 namespace kieli {

@@ -3,14 +3,16 @@ add_library(libutl-common STATIC)
 target_include_directories(libutl-common PUBLIC .)
 
 target_sources(libutl-common
+    PRIVATE libutl/common/common.cpp
     PRIVATE libutl/common/disjoint_set.cpp
     PRIVATE libutl/common/disjoint_set.hpp
     PRIVATE libutl/common/flatmap.hpp
     PRIVATE libutl/common/index_vector.hpp
-    PRIVATE libutl/common/common.cpp
     PRIVATE libutl/common/pooled_string.cpp
     PRIVATE libutl/common/pooled_string.hpp
     PRIVATE libutl/common/safe_integer.hpp
+    PRIVATE libutl/common/source.cpp
+    PRIVATE libutl/common/source.hpp
     PRIVATE libutl/common/timer.hpp
     PRIVATE libutl/common/utilities.cpp
     PRIVATE libutl/common/utilities.hpp
@@ -23,4 +25,4 @@ target_precompile_headers(libutl-common
     PUBLIC libutl/common/utilities.hpp)
 
 kieli_add_tests(libutl-common
-    TESTS utilities disjoint_set flatmap safe_integer pooled_string index_vector)
+    TESTS disjoint_set flatmap index_vector pooled_string safe_integer source utilities)

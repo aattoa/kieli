@@ -86,7 +86,6 @@ endfunction ()
 
 add_subdirectory(src/libutl-common)
 add_subdirectory(src/libutl-readline)
-add_subdirectory(src/libutl-source)
 add_subdirectory(src/libphase)
 add_subdirectory(src/liblex)
 add_subdirectory(src/libparse)

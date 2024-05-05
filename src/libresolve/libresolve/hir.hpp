@@ -3,7 +3,7 @@
 #include <libutl/common/utilities.hpp>
 #include <libutl/common/index_vector.hpp>
 #include <libutl/common/wrapper.hpp>
-#include <libutl/source/source.hpp>
+#include <libutl/common/source.hpp>
 #include <libphase/phase.hpp>
 #include <libresolve/fwd.hpp>
 
