@@ -1,6 +1,4 @@
-add_library(libutl-common STATIC)
-
-target_include_directories(libutl-common PUBLIC .)
+kieli_library(libutl-common)
 
 target_sources(libutl-common
     PRIVATE libutl/common/common.cpp
@@ -23,6 +21,3 @@ target_link_libraries(libutl-common
 
 target_precompile_headers(libutl-common
     PUBLIC libutl/common/utilities.hpp)
-
-kieli_add_tests(libutl-common
-    TESTS disjoint_set flatmap index_vector pooled_string safe_integer source utilities)

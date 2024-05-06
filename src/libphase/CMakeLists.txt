@@ -1,6 +1,4 @@
-add_library(libphase STATIC)
-
-target_include_directories(libphase PUBLIC .)
+kieli_library(libphase)
 
 target_sources(libphase
     PRIVATE libphase/phase.cpp
@@ -8,5 +6,3 @@ target_sources(libphase
 
 target_link_libraries(libphase
     PUBLIC cppdiag)
-
-kieli_consume_libutl_common(libphase)

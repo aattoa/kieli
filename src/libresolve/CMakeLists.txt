@@ -1,6 +1,4 @@
-add_library(libresolve STATIC)
-
-target_include_directories(libresolve PUBLIC .)
+kieli_library(libresolve)
 
 target_sources(libresolve
     PRIVATE libresolve/collection.cpp
@@ -28,9 +26,3 @@ target_sources(libresolve
 target_link_libraries(libresolve
     PUBLIC libphase
     PUBLIC libdesugar)
-
-kieli_consume_libutl_common(libresolve)
-
-kieli_add_tests(libresolve
-    WORKING_DIR ${CMAKE_CURRENT_SOURCE_DIR}/tests/test-project
-    TESTS resolve_module resolve_project)

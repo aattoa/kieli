@@ -1,6 +1,4 @@
-add_library(libformat STATIC)
-
-target_include_directories(libformat PUBLIC .)
+kieli_library(libformat)
 
 target_sources(libformat
     PRIVATE libformat/format.hpp
@@ -13,5 +11,3 @@ target_sources(libformat
 
 target_link_libraries(libformat
     PUBLIC libparse)
-
-kieli_consume_libutl_common(libformat)

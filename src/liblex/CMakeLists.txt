@@ -1,6 +1,4 @@
-add_library(liblex STATIC)
-
-target_include_directories(liblex PUBLIC .)
+kieli_library(liblex)
 
 target_sources(liblex
     PRIVATE liblex/lex.cpp
@@ -14,9 +12,3 @@ target_sources(liblex
 
 target_link_libraries(liblex
     PUBLIC libphase)
-
-kieli_consume_libutl_common(liblex)
-
-kieli_add_tests(liblex
-    EXTRA_SOURCES test_liblex.hpp test_liblex.cpp
-    TESTS floating_literal identifier integer_literal numeric punctuation quoted_literal trivia)

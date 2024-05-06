@@ -1,6 +1,4 @@
-add_library(libparse STATIC)
-
-target_include_directories(libparse PUBLIC .)
+kieli_library(libparse)
 
 target_sources(libparse
     PRIVATE libparse/cst.cpp
@@ -20,9 +18,3 @@ target_link_libraries(libparse
     PUBLIC liblex
     PUBLIC libformat
     PUBLIC libphase)
-
-kieli_consume_libutl_common(libparse)
-
-kieli_add_tests(libparse
-    LINK liblex libformat
-    TESTS expression pattern type definition)

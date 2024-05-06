@@ -1,20 +1,12 @@
 cmake_minimum_required(VERSION 3.24)
 project(kieli CXX)
 
-set(CMAKE_CXX_STANDARD 23)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_CXX_EXTENSIONS OFF)
-
-# Produce compile_commands.json for language servers
+set(CMAKE_CXX_STANDARD            23)
+set(CMAKE_CXX_STANDARD_REQUIRED   ON)
+set(CMAKE_CXX_EXTENSIONS          OFF)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-if (MSVC)
-    add_compile_options(
-        "/W4"
-        "/wd4127"  # Conditional expression is constant
-        "/wd4459"  # Declaration hides global declaration
-        "/wd4063") # Invalid value for switch
-else ()
+if (NOT MSVC)
     add_compile_options(
         "-Wall"
         "-Wextra"
@@ -24,7 +16,6 @@ else ()
         "-Wno-switch")
 endif ()
 
-# Dependencies
 include(FetchContent)
 FetchContent_Declare(
     cppargs
@@ -57,31 +48,32 @@ if (${KIELI_BUILD_TESTS})
     include(cppunittest)
 endif ()
 
-# Convenience function for registering Kieli component tests
-function (kieli_add_tests component)
-    cmake_parse_arguments(PARSE_ARGV 1 "" "" "" "EXTRA_SOURCES;LINK;WORKING_DIR;TESTS")
-    if (NOT ${KIELI_BUILD_TESTS})
-        return ()
-    endif ()
-    foreach (test IN LISTS _TESTS)
-        set(executable ${component}-test-${test})
-        add_executable(${executable} ${CMAKE_CURRENT_SOURCE_DIR}/tests/${test}.test.cpp)
-        target_include_directories(${executable} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
-        foreach (source IN LISTS _EXTRA_SOURCES)
-            target_sources(${executable} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/tests/${source})
-        endforeach ()
-        kieli_consume_libutl_common(${executable})
-        target_link_libraries(${executable} PRIVATE ${component})
-        foreach (library IN LISTS _LINK)
-            target_link_libraries(${executable} PRIVATE ${library})
-        endforeach ()
-        cppunittest_add_tests(${executable} WORKING_DIR "${_WORKING_DIR}")
-    endforeach ()
+function (kieli_use_libutl target)
+    target_precompile_headers(${target} REUSE_FROM libutl-common)
+    target_link_libraries(${target} PUBLIC libutl-common)
 endfunction ()
 
-function (kieli_consume_libutl_common component)
-    target_precompile_headers(${component} REUSE_FROM libutl-common)
-    target_link_libraries(${component} PUBLIC libutl-common)
+# Create a Kieli library
+function (kieli_library name)
+    add_library(${name})
+    target_include_directories(${name} PUBLIC ${PROJECT_SOURCE_DIR}/src/${name})
+    if (NOT "${name}" STREQUAL "libutl-common")
+        kieli_use_libutl(${name})
+    endif ()
+    set(tests ${PROJECT_SOURCE_DIR}/src/${name}/tests)
+    if (${KIELI_BUILD_TESTS} AND EXISTS ${tests})
+        add_subdirectory(${tests})
+    endif ()
+endfunction ()
+
+# Create a Kieli library test executable
+function (kieli_test library name)
+    cmake_parse_arguments(PARSE_ARGV 2 "" "" "" "WORKING_DIR")
+    set(target test-${library}-${name})
+    add_executable(${target} ${name}.test.cpp)
+    target_link_libraries(${target} PRIVATE ${library})
+    kieli_use_libutl(${target})
+    cppunittest_add_tests(${target} WORKING_DIR "${_WORKING_DIR}")
 endfunction ()
 
 add_subdirectory(src/libutl-common)
@@ -94,6 +86,7 @@ add_subdirectory(src/libformat)
 add_subdirectory(src/libresolve)
 
 add_executable(debug-kieli src/main.cpp)
+kieli_use_libutl(debug-kieli)
 target_link_libraries(debug-kieli
     PRIVATE libutl-readline
     PRIVATE liblex
@@ -104,4 +97,3 @@ target_link_libraries(debug-kieli
     PRIVATE cppargs
     PRIVATE cppdiag
     PRIVATE cpputil)
-kieli_consume_libutl_common(debug-kieli)

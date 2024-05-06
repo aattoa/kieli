@@ -1,6 +1,4 @@
-add_library(libdesugar STATIC)
-
-target_include_directories(libdesugar PUBLIC .)
+kieli_library(libdesugar)
 
 target_sources(libdesugar
     PRIVATE libdesugar/ast.cpp
@@ -17,9 +15,3 @@ target_sources(libdesugar
 target_link_libraries(libdesugar
     PUBLIC libparse
     PUBLIC libphase)
-
-kieli_consume_libutl_common(libdesugar)
-
-kieli_add_tests(libdesugar
-    LINK libphase libparse
-    TESTS libdesugar)
