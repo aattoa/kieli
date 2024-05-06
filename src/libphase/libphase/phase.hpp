@@ -229,8 +229,13 @@ struct std::formatter<Literal> : std::formatter<decltype(Literal::value)> {
 };
 
 template <utl::one_of<kieli::Character, kieli::String> Literal>
-struct std::formatter<Literal> : utl::fmt::Formatter_base {
-    auto format(Literal const& literal, auto& context) const
+struct std::formatter<Literal> {
+    static constexpr auto parse(auto& context)
+    {
+        return context.begin();
+    }
+
+    static auto format(Literal const& literal, auto& context)
     {
         if constexpr (std::is_same_v<Literal, kieli::Character>) {
             return std::format_to(context.out(), "'{}'", literal.value);
@@ -245,8 +250,13 @@ struct std::formatter<Literal> : utl::fmt::Formatter_base {
 };
 
 template <>
-struct std::formatter<kieli::Mutability> : utl::fmt::Formatter_base {
-    auto format(kieli::Mutability const mut, auto& context) const
+struct std::formatter<kieli::Mutability> {
+    static constexpr auto parse(auto& context)
+    {
+        return context.begin();
+    }
+
+    static auto format(kieli::Mutability const mut, auto& context)
     {
         return std::format_to(context.out(), "{}", mut == kieli::Mutability::mut ? "mut" : "immut");
     }

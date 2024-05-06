@@ -3,15 +3,19 @@
 #include <libutl/utilities.hpp>
 #include <libdesugar/ast.hpp>
 
-#define LIBDESUGAR_DECLARE_FORMATTER(...)                                                \
-    template <>                                                                          \
-    struct std::formatter<__VA_ARGS__> : utl::fmt::Formatter_base {                      \
-        auto format(__VA_ARGS__ const&, auto& context) const -> decltype(context.out()); \
+#define LIBDESUGAR_DECLARE_FORMATTER(...)                                                 \
+    template <>                                                                           \
+    struct std::formatter<__VA_ARGS__> {                                                  \
+        static constexpr auto parse(auto& context)                                        \
+        {                                                                                 \
+            return context.begin();                                                       \
+        }                                                                                 \
+        static auto format(__VA_ARGS__ const&, auto& context) -> decltype(context.out()); \
     }
 
-#define LIBDESUGAR_DEFINE_FORMATTER(...)                                              \
-    auto std::formatter<__VA_ARGS__>::format(__VA_ARGS__ const& value, auto& context) \
-        const -> decltype(context.out())
+#define LIBDESUGAR_DEFINE_FORMATTER(...)      \
+    auto std::formatter<__VA_ARGS__>::format( \
+        __VA_ARGS__ const& value, auto& context) -> decltype(context.out())
 
 LIBDESUGAR_DECLARE_FORMATTER(ast::Wildcard);
 LIBDESUGAR_DECLARE_FORMATTER(ast::Expression);

@@ -73,8 +73,13 @@ namespace libformat {
 } // namespace libformat
 
 template <>
-struct std::formatter<libformat::Newline> : utl::fmt::Formatter_base {
-    auto format(libformat::Newline const newline, auto& context) const
+struct std::formatter<libformat::Newline> {
+    static constexpr auto parse(auto& context)
+    {
+        return context.begin();
+    }
+
+    static auto format(libformat::Newline const newline, auto& context)
     {
         return std::format_to(context.out(), "\n{:{}}", "", newline.indentation);
     }

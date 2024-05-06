@@ -27,12 +27,17 @@ namespace {
 } // namespace
 
 template <>
-struct std::formatter<Move_only>
-    : utl::fmt::Formatter_base { auto format(Move_only const& move_only, auto& context) const {
-          return std::format_to(context.out(), "Move_only({})", move_only.value);
-}
-}
-;
+struct std::formatter<Move_only> {
+    static constexpr auto parse(auto& context)
+    {
+        return context.begin();
+    }
+
+    static auto format(Move_only const& move_only, auto& context)
+    {
+        return std::format_to(context.out(), "Move_only({})", move_only.value);
+    }
+};
 
 TEST("vector capacity operations")
 {

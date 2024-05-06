@@ -40,7 +40,24 @@
 
 #include <cpputil/util.hpp>
 
+// Literal operators are useless when not easily accessible.
+using namespace std::literals;
+
+namespace utl::dtl {
+    template <class, template <class...> class>
+    struct Is_specialization_of : std::false_type {};
+
+    template <class... Ts, template <class...> class F>
+    struct Is_specialization_of<F<Ts...>, F> : std::true_type {};
+} // namespace utl::dtl
+
 namespace utl {
+    template <class T, template <class...> class F>
+    concept specialization_of = dtl::Is_specialization_of<T, F>::value;
+
+    template <class T, class... Ts>
+    concept one_of = std::disjunction_v<std::is_same<T, Ts>...>;
+
     template <class From, class To>
     concept losslessly_convertible_to = std::integral<From> && std::integral<To>
                                      && std::in_range<To>(std::numeric_limits<From>::min())
@@ -76,36 +93,6 @@ namespace utl {
             return { m_string.data(), length - 1 };
         }
     };
-} // namespace utl
-
-namespace utl::inline literals {
-    template <Metastring string>
-    consteval auto operator""_format() noexcept
-    {
-        return []<class... Args>(Args&&... args) -> std::string {
-            return std::format(string.view(), std::forward<Args>(args)...);
-        };
-    }
-} // namespace utl::inline literals
-
-// Literal operators are useless when not easily accessible.
-using namespace utl::literals;
-using namespace std::literals;
-
-namespace utl::dtl {
-    template <class, template <class...> class>
-    struct Is_specialization_of : std::false_type {};
-
-    template <class... Ts, template <class...> class F>
-    struct Is_specialization_of<F<Ts...>, F> : std::true_type {};
-} // namespace utl::dtl
-
-namespace utl {
-    template <class T, template <class...> class F>
-    concept specialization_of = dtl::Is_specialization_of<T, F>::value;
-
-    template <class T, class... Ts>
-    concept one_of = std::disjunction_v<std::is_same<T, Ts>...>;
 
     template <class... Fs>
     struct Overload : Fs... {
@@ -137,8 +124,7 @@ namespace utl {
         T m_value;
     public:
         template <class Arg>
-        constexpr Explicit(Arg&& arg) // NOLINT: implicit
-            noexcept(std::is_nothrow_constructible_v<T, Arg&&>)
+        constexpr Explicit(Arg&& arg) noexcept(std::is_nothrow_constructible_v<T, Arg&&>)
             requires(!std::is_same_v<Explicit, std::remove_cvref_t<Arg>>)
                  && std::is_constructible_v<T, Arg&&>
             : m_value { std::forward<Arg>(arg) }
@@ -214,13 +200,6 @@ namespace utl {
     };
 
     namespace fmt {
-        struct Formatter_base {
-            constexpr auto parse(auto& parse_context)
-            {
-                return parse_context.begin();
-            }
-        };
-
         template <std::integral Integer>
         struct Integer_with_ordinal_indicator_closure {
             Integer integer {};
@@ -248,20 +227,29 @@ namespace utl {
 } // namespace utl
 
 template <class Char, std::formattable<Char>... Ts>
-struct std::formatter<std::variant<Ts...>, Char> : utl::fmt::Formatter_base {
-    auto format(std::variant<Ts...> const& variant, auto& context) const
+struct std::formatter<std::variant<Ts...>, Char> {
+    static constexpr auto parse(auto& context)
     {
-        return std::visit(
-            [&](auto const& alternative) {
-                return std::format_to(context.out(), "{}", alternative);
-            },
-            variant);
+        return context.begin();
+    }
+
+    static auto format(std::variant<Ts...> const& variant, auto& context)
+    {
+        auto const visitor = [&](auto const& alternative) {
+            return std::format_to(context.out(), "{}", alternative);
+        };
+        return std::visit(visitor, variant);
     }
 };
 
 template <class Char, std::formattable<Char> T, std::formattable<Char> E>
-struct std::formatter<std::expected<T, E>, Char> : utl::fmt::Formatter_base {
-    auto format(std::expected<T, E> const& expected, auto& context) const
+struct std::formatter<std::expected<T, E>, Char> {
+    static constexpr auto parse(auto& context)
+    {
+        return context.begin();
+    }
+
+    static auto format(std::expected<T, E> const& expected, auto& context)
     {
         if (expected.has_value()) {
             return std::format_to(context.out(), "{}", expected.value());
@@ -271,16 +259,26 @@ struct std::formatter<std::expected<T, E>, Char> : utl::fmt::Formatter_base {
 };
 
 template <class Char, std::formattable<Char> E>
-struct std::formatter<std::unexpected<E>, Char> : utl::fmt::Formatter_base {
-    auto format(std::unexpected<E> const& unexpected, auto& context) const
+struct std::formatter<std::unexpected<E>, Char> {
+    static constexpr auto parse(auto& context)
+    {
+        return context.begin();
+    }
+
+    static auto format(std::unexpected<E> const& unexpected, auto& context)
     {
         return std::format_to(context.out(), "std::unexpected({})", unexpected.error());
     }
 };
 
 template <class Char, class Range>
-struct std::formatter<utl::fmt::Join_closure<Range>, Char> : utl::fmt::Formatter_base {
-    auto format(auto const closure, auto& context) const
+struct std::formatter<utl::fmt::Join_closure<Range>, Char> {
+    static constexpr auto parse(auto& context)
+    {
+        return context.begin();
+    }
+
+    static auto format(auto const closure, auto& context)
     {
         if (closure.range->empty()) {
             return context.out();
@@ -296,17 +294,21 @@ struct std::formatter<utl::fmt::Join_closure<Range>, Char> : utl::fmt::Formatter
 };
 
 template <class Char, std::formattable<Char> T>
-struct std::formatter<utl::fmt::Integer_with_ordinal_indicator_closure<T>, Char>
-    : utl::fmt::Formatter_base {
-    auto format(auto const closure, auto& context) const
+struct std::formatter<utl::fmt::Integer_with_ordinal_indicator_closure<T>, Char> {
+    static constexpr auto parse(auto& context)
+    {
+        return context.begin();
+    }
+
+    static auto format(auto const closure, auto& context)
     {
         return std::format_to(
             context.out(), "{}{}", closure.integer, utl::ordinal_indicator(closure.integer));
     }
 };
 
-template <class Char, std::formattable<Char> T>
-struct std::formatter<utl::Explicit<T>, Char> : std::formatter<T> {
+template <std::formattable<char> T>
+struct std::formatter<utl::Explicit<T>> : std::formatter<T> {
     auto format(utl::Explicit<T> const& expl, auto& context) const
     {
         return std::formatter<T>::format(expl.get(), context);
@@ -314,8 +316,13 @@ struct std::formatter<utl::Explicit<T>, Char> : std::formatter<T> {
 };
 
 template <class Char>
-struct std::formatter<std::monostate, Char> : utl::fmt::Formatter_base {
-    auto format(std::monostate const&, auto& context) const
+struct std::formatter<std::monostate, Char> {
+    static constexpr auto parse(auto& context)
+    {
+        return context.begin();
+    }
+
+    static auto format(std::monostate const&, auto& context)
     {
         return std::format_to(context.out(), "std::monostate");
     }

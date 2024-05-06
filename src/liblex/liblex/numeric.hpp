@@ -18,7 +18,12 @@ namespace liblex {
 } // namespace liblex
 
 template <>
-struct std::formatter<liblex::Numeric_error> : utl::fmt::Formatter_base {
+struct std::formatter<liblex::Numeric_error> {
+    static constexpr auto parse(auto& context)
+    {
+        return context.begin();
+    }
+
     auto format(liblex::Numeric_error const& error, auto& context) const
     {
         return std::format_to(context.out(), "{}", liblex::numeric_error_string(error));

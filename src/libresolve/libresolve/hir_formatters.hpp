@@ -4,15 +4,19 @@
 #include <libresolve/hir.hpp>
 #include <libresolve/resolution_internals.hpp>
 
-#define LIBRESOLVE_DECLARE_FORMATTER(...)                                                \
-    template <>                                                                          \
-    struct std::formatter<__VA_ARGS__> : utl::fmt::Formatter_base {                      \
-        auto format(__VA_ARGS__ const&, auto& context) const -> decltype(context.out()); \
+#define LIBRESOLVE_DECLARE_FORMATTER(...)                                                 \
+    template <>                                                                           \
+    struct std::formatter<__VA_ARGS__> {                                                  \
+        static constexpr auto parse(auto& context)                                        \
+        {                                                                                 \
+            return context.begin();                                                       \
+        }                                                                                 \
+        static auto format(__VA_ARGS__ const&, auto& context) -> decltype(context.out()); \
     }
 
-#define LIBRESOLVE_DEFINE_FORMATTER(...)                                              \
-    auto std::formatter<__VA_ARGS__>::format(__VA_ARGS__ const& value, auto& context) \
-        const -> decltype(context.out())
+#define LIBRESOLVE_DEFINE_FORMATTER(...)      \
+    auto std::formatter<__VA_ARGS__>::format( \
+        __VA_ARGS__ const& value, auto& context) -> decltype(context.out())
 
 LIBRESOLVE_DECLARE_FORMATTER(libresolve::hir::Pattern);
 LIBRESOLVE_DECLARE_FORMATTER(libresolve::hir::Expression);
