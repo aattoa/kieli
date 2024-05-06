@@ -1,4 +1,4 @@
-#include <libutl/common/utilities.hpp>
+#include <libutl/utilities.hpp>
 #include <cppunittest/unittest.hpp>
 #include "test_liblex.hpp"
 

@@ -1,4 +1,4 @@
-#include <libutl/common/utilities.hpp>
+#include <libutl/utilities.hpp>
 #include <libparse/parser_internals.hpp>
 
 libparse::Context::Context(cst::Node_arena& arena, kieli::Lex_state const state)

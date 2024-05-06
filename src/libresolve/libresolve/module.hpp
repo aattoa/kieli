@@ -1,7 +1,7 @@
 #pragma once
 
-#include <libutl/common/utilities.hpp>
-#include <libutl/common/flatmap.hpp>
+#include <libutl/utilities.hpp>
+#include <libutl/flatmap.hpp>
 #include <libphase/phase.hpp>
 #include <libdesugar/ast.hpp>
 #include <libresolve/hir.hpp>

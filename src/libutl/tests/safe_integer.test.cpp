@@ -1,8 +1,8 @@
-#include <libutl/common/utilities.hpp>
-#include <libutl/common/safe_integer.hpp>
+#include <libutl/utilities.hpp>
+#include <libutl/safe_integer.hpp>
 #include <cppunittest/unittest.hpp>
 
-#define TEST(name) UNITTEST("libutl-common safe-integer: " name)
+#define TEST(name) UNITTEST("libutl: " name)
 
 namespace {
     template <class T>

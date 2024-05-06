@@ -1,4 +1,4 @@
-#include <libutl/common/utilities.hpp>
+#include <libutl/utilities.hpp>
 #include <libresolve/resolution_internals.hpp>
 #include <libparse/parse.hpp>
 #include <libdesugar/desugar.hpp>

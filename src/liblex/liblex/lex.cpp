@@ -1,5 +1,5 @@
-#include <libutl/common/utilities.hpp>
-#include <libutl/common/flatmap.hpp>
+#include <libutl/utilities.hpp>
+#include <libutl/flatmap.hpp>
 #include <liblex/numeric.hpp>
 #include <liblex/lex.hpp>
 #include <liblex/state.hpp>

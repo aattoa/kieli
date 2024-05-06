@@ -1,6 +1,6 @@
 #include <cppunittest/unittest.hpp>
 #include <libparse/test_interface.hpp>
-#include <libutl/common/utilities.hpp>
+#include <libutl/utilities.hpp>
 
 namespace {
     constexpr auto parse = libparse::test_parse_expression;

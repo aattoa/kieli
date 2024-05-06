@@ -1,6 +1,6 @@
 #pragma once
 
-#include <libutl/common/utilities.hpp>
+#include <libutl/utilities.hpp>
 
 namespace utl::dtl {
     template <class T>

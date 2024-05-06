@@ -1,6 +1,6 @@
 #pragma once
 
-#include <libutl/common/utilities.hpp>
+#include <libutl/utilities.hpp>
 
 namespace libparse {
     auto test_parse_expression(std::string&&) -> std::string;

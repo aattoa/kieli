@@ -1,6 +1,6 @@
 #pragma once
 
-#include <libutl/common/utilities.hpp>
+#include <libutl/utilities.hpp>
 #include <libdesugar/ast.hpp>
 
 #define LIBDESUGAR_DECLARE_FORMATTER(...)                                                \

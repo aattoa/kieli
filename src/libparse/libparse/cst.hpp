@@ -2,8 +2,8 @@
 
 #include <libphase/phase.hpp>
 #include <liblex/token.hpp>
-#include <libutl/common/utilities.hpp>
-#include <libutl/common/wrapper.hpp>
+#include <libutl/utilities.hpp>
+#include <libutl/wrapper.hpp>
 
 /*
 

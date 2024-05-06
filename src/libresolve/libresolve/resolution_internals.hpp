@@ -1,8 +1,8 @@
 #pragma once
 
-#include <libutl/common/utilities.hpp>
-#include <libutl/common/index_vector.hpp>
-#include <libutl/common/disjoint_set.hpp>
+#include <libutl/utilities.hpp>
+#include <libutl/index_vector.hpp>
+#include <libutl/disjoint_set.hpp>
 #include <libresolve/resolve.hpp>
 #include <libresolve/module.hpp>
 

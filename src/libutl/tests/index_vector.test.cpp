@@ -1,5 +1,5 @@
-#include <libutl/common/utilities.hpp>
-#include <libutl/common/index_vector.hpp>
+#include <libutl/utilities.hpp>
+#include <libutl/index_vector.hpp>
 
 namespace {
 

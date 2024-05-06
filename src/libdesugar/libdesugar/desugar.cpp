@@ -1,4 +1,4 @@
-#include <libutl/common/utilities.hpp>
+#include <libutl/utilities.hpp>
 #include <libdesugar/desugar.hpp>
 #include <libdesugar/desugaring_internals.hpp>
 

@@ -1,6 +1,6 @@
 #pragma once
 
-#include <libutl/common/utilities.hpp>
+#include <libutl/utilities.hpp>
 
 namespace liblex {
     struct [[nodiscard]] Test_lex_result {

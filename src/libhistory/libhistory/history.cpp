@@ -1,4 +1,4 @@
-#include <libutl/common/utilities.hpp>
+#include <libutl/utilities.hpp>
 #include <libhistory/history.hpp>
 #include <cpputil/input.hpp>
 #include <cpputil/io.hpp>

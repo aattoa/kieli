@@ -1,4 +1,4 @@
-#include <libutl/common/utilities.hpp>
+#include <libutl/utilities.hpp>
 #include <liblex/token.hpp>
 
 static_assert(std::is_trivially_copyable_v<kieli::Token>);

@@ -1,8 +1,8 @@
-#include <libutl/common/utilities.hpp>
-#include <libutl/common/pooled_string.hpp>
+#include <libutl/utilities.hpp>
+#include <libutl/pooled_string.hpp>
 #include <cppunittest/unittest.hpp>
 
-#define TEST(name) UNITTEST("libutl-common pooled-string: " name)
+#define TEST(name) UNITTEST("libutl pooled-string: " name)
 
 static constexpr auto voidify = [](auto const* const ptr) { return static_cast<void const*>(ptr); };
 

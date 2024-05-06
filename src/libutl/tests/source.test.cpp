@@ -1,8 +1,8 @@
-#include <libutl/common/utilities.hpp>
-#include <libutl/common/source.hpp>
+#include <libutl/utilities.hpp>
+#include <libutl/source.hpp>
 #include <cppunittest/unittest.hpp>
 
-#define TEST(name) UNITTEST("libutl-common source: " name)
+#define TEST(name) UNITTEST("libutl: " name)
 
 TEST("Source::Source")
 {

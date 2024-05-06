@@ -1,5 +1,5 @@
-#include <libutl/common/utilities.hpp>
-#include <libutl/common/safe_integer.hpp>
+#include <libutl/utilities.hpp>
+#include <libutl/safe_integer.hpp>
 #include <liblex/numeric.hpp>
 #include <charconv>
 

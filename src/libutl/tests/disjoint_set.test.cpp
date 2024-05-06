@@ -1,5 +1,5 @@
-#include <libutl/common/utilities.hpp>
-#include <libutl/common/disjoint_set.hpp>
+#include <libutl/utilities.hpp>
+#include <libutl/disjoint_set.hpp>
 #include <cppunittest/unittest.hpp>
 
 namespace {
@@ -20,7 +20,7 @@ namespace {
     }
 } // namespace
 
-UNITTEST("libutl-common disjoint_set")
+UNITTEST("libutl disjoint_set")
 {
     utl::Disjoint_set set { 10 };
 

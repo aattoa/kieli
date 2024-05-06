@@ -1,4 +1,4 @@
-#include <libutl/common/utilities.hpp>
+#include <libutl/utilities.hpp>
 #include <libdesugar/ast.hpp>
 #include <libdesugar/ast_formatters.hpp>
 

@@ -1,5 +1,5 @@
-#include <libutl/common/utilities.hpp>
-#include <libutl/common/pooled_string.hpp>
+#include <libutl/utilities.hpp>
+#include <libutl/pooled_string.hpp>
 
 utl::Pooled_string::Pooled_string(Relative_string const relative, std::string const* const pool)
     : m_relative { relative }

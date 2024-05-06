@@ -1,5 +1,5 @@
 #include <libparse/cst.hpp>
-#include <libutl/common/utilities.hpp>
+#include <libutl/utilities.hpp>
 
 auto cst::Token::from_lexical(kieli::Token const& lexical) -> Token
 {

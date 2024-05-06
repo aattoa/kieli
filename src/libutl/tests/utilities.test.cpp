@@ -1,7 +1,7 @@
-#include <libutl/common/utilities.hpp>
+#include <libutl/utilities.hpp>
 #include <cppunittest/unittest.hpp>
 
-#define TEST(name) UNITTEST("libutl-common: " name)
+#define TEST(name) UNITTEST("libutl: " name)
 
 namespace {
     struct Move_only {
@@ -27,12 +27,12 @@ namespace {
 } // namespace
 
 template <>
-struct std::formatter<Move_only> : utl::fmt::Formatter_base {
-    auto format(Move_only const& move_only, auto& context) const
-    {
-        return std::format_to(context.out(), "Move_only({})", move_only.value);
-    }
-};
+struct std::formatter<Move_only>
+    : utl::fmt::Formatter_base { auto format(Move_only const& move_only, auto& context) const {
+          return std::format_to(context.out(), "Move_only({})", move_only.value);
+}
+}
+;
 
 TEST("vector capacity operations")
 {

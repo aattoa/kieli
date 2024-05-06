@@ -1,6 +1,6 @@
 #pragma once
 
-#include <libutl/common/utilities.hpp>
+#include <libutl/utilities.hpp>
 #include <libresolve/hir.hpp>
 #include <libresolve/resolution_internals.hpp>
 

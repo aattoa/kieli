@@ -1,7 +1,7 @@
 #pragma once
 
-#include <libutl/common/utilities.hpp>
-#include <libutl/common/wrapper.hpp>
+#include <libutl/utilities.hpp>
+#include <libutl/wrapper.hpp>
 
 namespace utl {
 
@@ -65,17 +65,18 @@ namespace utl {
 } // namespace utl
 
 template <>
-struct std::formatter<utl::Source_position> : utl::fmt::Formatter_base {
-    auto format(utl::Source_position const position, auto& context) const
-    {
-        return std::format_to(context.out(), "{}:{}", position.line, position.column);
-    }
-};
+struct std::formatter<utl::Source_position>
+    : utl::fmt::Formatter_base {
+        auto format(utl::Source_position const position, auto& context)
+            const { return std::format_to(context.out(), "{}:{}", position.line, position.column);
+}
+}
+;
 
 template <>
-struct std::formatter<utl::Source_range> : utl::fmt::Formatter_base {
-    auto format(utl::Source_range const range, auto& context) const
-    {
-        return std::format_to(context.out(), "({})-({})", range.start, range.stop);
-    }
-};
+struct std::formatter<utl::Source_range>
+    : utl::fmt::Formatter_base { auto format(utl::Source_range const range, auto& context) const {
+          return std::format_to(context.out(), "({})-({})", range.start, range.stop);
+}
+}
+;

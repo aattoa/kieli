@@ -1,8 +1,8 @@
 #pragma once
 
-#include <libutl/common/wrapper.hpp>
-#include <libutl/common/pooled_string.hpp>
-#include <libutl/common/source.hpp>
+#include <libutl/wrapper.hpp>
+#include <libutl/pooled_string.hpp>
+#include <libutl/source.hpp>
 #include <cppdiag/cppdiag.hpp>
 
 namespace kieli {

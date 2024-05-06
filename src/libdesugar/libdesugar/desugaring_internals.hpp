@@ -1,7 +1,7 @@
 #pragma once
 
-#include <libutl/common/utilities.hpp>
-#include <libutl/common/safe_integer.hpp>
+#include <libutl/utilities.hpp>
+#include <libutl/safe_integer.hpp>
 #include <libphase/phase.hpp>
 #include <libparse/cst.hpp>
 #include <libdesugar/ast.hpp>

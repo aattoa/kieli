@@ -1,5 +1,5 @@
-#include <libutl/common/utilities.hpp>
-#include <libutl/common/flatmap.hpp>
+#include <libutl/utilities.hpp>
+#include <libutl/flatmap.hpp>
 #include <libresolve/resolution_internals.hpp>
 
 namespace {

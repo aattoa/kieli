@@ -1,5 +1,5 @@
-#include <libutl/common/utilities.hpp>
-#include <libutl/common/source.hpp>
+#include <libutl/utilities.hpp>
+#include <libutl/source.hpp>
 #include <cpputil/io.hpp>
 
 namespace {

@@ -1,10 +1,10 @@
-#include <libutl/common/utilities.hpp>
-#include <libutl/common/flatmap.hpp>
+#include <libutl/utilities.hpp>
+#include <libutl/flatmap.hpp>
 #include <cppunittest/unittest.hpp>
 
-#define TEST(name) UNITTEST("libutl-common flatmap: " name)
+#define TEST(name) UNITTEST("libutl: " name)
 
-TEST("add_or_assign")
+TEST("Flatmap::add_or_assign")
 {
     utl::Flatmap<std::string, int> map;
     REQUIRE(map.empty());

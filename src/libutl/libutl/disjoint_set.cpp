@@ -1,5 +1,5 @@
-#include <libutl/common/utilities.hpp>
-#include <libutl/common/disjoint_set.hpp>
+#include <libutl/utilities.hpp>
+#include <libutl/disjoint_set.hpp>
 
 utl::Disjoint_set::Disjoint_set(std::size_t const size)
     : m_parents(std::from_range, std::views::iota(0UZ, size))

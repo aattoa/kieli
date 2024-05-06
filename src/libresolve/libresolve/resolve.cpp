@@ -1,4 +1,4 @@
-#include <libutl/common/utilities.hpp>
+#include <libutl/utilities.hpp>
 #include <libresolve/resolve.hpp>
 #include <libresolve/resolution_internals.hpp>
 
