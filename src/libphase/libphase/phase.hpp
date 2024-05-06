@@ -3,7 +3,7 @@
 #include <libutl/common/wrapper.hpp>
 #include <libutl/common/pooled_string.hpp>
 #include <libutl/common/source.hpp>
-#include <cppdiag.hpp>
+#include <cppdiag/cppdiag.hpp>
 
 namespace kieli {
     // Thrown when an unrecoverable error is encountered

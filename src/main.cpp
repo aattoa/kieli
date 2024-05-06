@@ -7,7 +7,6 @@
 #include <libresolve/resolution_internals.hpp>
 #include <libformat/format.hpp>
 #include <cppargs.hpp>
-#include <cppdiag.hpp>
 
 namespace {
 

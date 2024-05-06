@@ -24,11 +24,11 @@ FetchContent_Declare(
 FetchContent_Declare(
     cppdiag
     GIT_REPOSITORY https://github.com/aattoa/cppdiag.git
-    GIT_TAG        69a878ecf974290d3f10e90ece49433a374f2099)
+    GIT_TAG        302d6212f5b4313e285a0e703d4b4dd6155cc6d9)
 FetchContent_Declare(
     cpputil
     GIT_REPOSITORY https://github.com/aattoa/cpputil.git
-    GIT_TAG        dabf5399fa82be60d695f006058881b1d228cb4d)
+    GIT_TAG        0ee8e43852cb5aa20803f59529ff7e1a4cbc09ae)
 FetchContent_Declare(
     cppunittest
     GIT_REPOSITORY https://github.com/aattoa/cppunittest.git
@@ -96,4 +96,4 @@ target_link_libraries(debug-kieli
     PRIVATE libformat
     PRIVATE cppargs
     PRIVATE cppdiag
-    PRIVATE cpputil)
+    PRIVATE cpputil::util)
