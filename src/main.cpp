@@ -1,11 +1,12 @@
 #include <libutl/common/utilities.hpp>
 #include <libutl/common/flatmap.hpp>
-#include <libutl/readline/readline.hpp>
 #include <liblex/lex.hpp>
 #include <libparse/parse.hpp>
 #include <libdesugar/desugar.hpp>
 #include <libresolve/resolution_internals.hpp>
 #include <libformat/format.hpp>
+#include <libhistory/history.hpp>
+#include <cpputil/input.hpp>
 #include <cppargs.hpp>
 
 namespace {
@@ -107,7 +108,9 @@ namespace {
         void (&callback)(utl::Source::Wrapper, kieli::Compile_info&),
         cppdiag::Colors const colors) -> void
     {
-        while (auto input = utl::readline(">>> ")) {
+        kieli::libhistory::read_history_file_to_active_history();
+
+        while (auto input = cpputil::input::read_line(">>> ")) {
             if (input == "q") {
                 return;
             }
@@ -115,7 +118,7 @@ namespace {
                 continue;
             }
 
-            utl::add_to_readline_history(input.value());
+            kieli::libhistory::add_to_history(input.value().c_str());
 
             auto [info, source] = kieli::test_info_and_source(std::move(input.value()));
             try {
