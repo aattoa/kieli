@@ -471,6 +471,21 @@ namespace {
             };
         }
 
+        auto operator()(ast::expression::Defer const& defer) -> hir::Expression
+        {
+            return {
+                hir::expression::Defer {
+                    .expression = context.arenas.wrap(recurse(*defer.expression)),
+                },
+                hir::Type {
+                    context.constants.unit_type,
+                    this_expression.source_range,
+                },
+                hir::Expression_kind::value,
+                this_expression.source_range,
+            };
+        }
+
         auto operator()(ast::expression::Unsafe const&) -> hir::Expression
         {
             cpputil::todo();

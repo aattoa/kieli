@@ -66,6 +66,7 @@ namespace {
         "dyn",
         "macro",
         "global",
+        "defer",
 
         "_",
         "lower",
@@ -159,6 +160,7 @@ auto kieli::Token::description(Type const type) -> std::string_view
     case Type::dyn:
     case Type::macro:
     case Type::global:
+    case Type::defer:
     case Type::lower_self:
     case Type::upper_self:        return "a keyword";
     case Type::underscore:        return "a wildcard pattern";

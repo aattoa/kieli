@@ -71,6 +71,7 @@ namespace kieli {
             dyn,
             macro,
             global,
+            defer,
 
             underscore,
             lower_name,

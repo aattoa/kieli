@@ -374,6 +374,14 @@ namespace {
         };
     }
 
+    auto extract_defer(Context& context, Token const& defer_keyword) -> cst::Expression::Variant
+    {
+        return cst::expression::Defer {
+            .expression          = require<parse_expression>(context, "an expression"),
+            .defer_keyword_token = cst::Token::from_lexical(defer_keyword),
+        };
+    }
+
     auto extract_meta(Context& context, Token const& meta_keyword) -> cst::Expression::Variant
     {
         return cst::expression::Meta {
@@ -466,6 +474,7 @@ namespace {
         case Token::Type::discard:           return extract_discard(context, token);
         case Token::Type::ampersand:         return extract_addressof(context, token);
         case Token::Type::mov:               return extract_move(context, token);
+        case Token::Type::defer:             return extract_defer(context, token);
         case Token::Type::meta:              return extract_meta(context, token);
         case Token::Type::brace_open:        return extract_block_expression(context, token);
         default:                             return parse_complicated_type(context, stage);

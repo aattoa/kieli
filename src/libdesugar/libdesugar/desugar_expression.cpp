@@ -513,6 +513,11 @@ namespace {
             return ast::expression::Move { context.desugar(move.place_expression) };
         }
 
+        auto operator()(cst::expression::Defer const& defer) -> ast::Expression::Variant
+        {
+            return ast::expression::Defer { context.desugar(defer.expression) };
+        }
+
         auto operator()(cst::expression::Meta const& meta) -> ast::Expression::Variant
         {
             return ast::expression::Meta { .expression = context.desugar(meta.expression.value) };

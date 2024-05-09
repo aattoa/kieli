@@ -274,6 +274,10 @@ namespace ast {
             utl::Wrapper<Expression> place_expression;
         };
 
+        struct Defer {
+            utl::Wrapper<Expression> expression;
+        };
+
         struct Meta {
             utl::Wrapper<Expression> expression;
         };
@@ -318,6 +322,7 @@ namespace ast {
             expression::Dereference,
             expression::Unsafe,
             expression::Move,
+            expression::Defer,
             expression::Meta,
             expression::Hole>;
 

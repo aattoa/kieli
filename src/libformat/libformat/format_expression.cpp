@@ -337,6 +337,12 @@ namespace {
             }
         }
 
+        auto operator()(cst::expression::Defer const& defer)
+        {
+            state.format("defer ");
+            state.format(defer.expression);
+        }
+
         auto operator()(cst::expression::Continue const&)
         {
             state.format("continue");

@@ -260,6 +260,10 @@ namespace libresolve::hir {
             utl::Wrapper<Expression> reference_expression;
         };
 
+        struct Defer {
+            utl::Wrapper<Expression> expression;
+        };
+
         struct Hole {};
 
         struct Error {};
@@ -287,6 +291,7 @@ namespace libresolve::hir {
             expression::Sizeof,
             expression::Addressof,
             expression::Dereference,
+            expression::Defer,
             expression::Hole,
             expression::Error>;
         Variant           variant;

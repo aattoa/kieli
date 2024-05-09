@@ -77,6 +77,7 @@ namespace {
             { "dyn", Token::Type::dyn },
             { "macro", Token::Type::macro },
             { "global", Token::Type::global },
+            { "defer", Token::Type::defer },
         })
     };
 

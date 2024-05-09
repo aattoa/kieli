@@ -230,6 +230,11 @@ namespace libdesugar::dtl {
             std::format_to(out, "unsafe {}", unsafe.expression);
         }
 
+        auto operator()(ast::expression::Defer const& defer)
+        {
+            std::format_to(out, "defer {}", defer.expression);
+        }
+
         auto operator()(ast::expression::Variable const& variable)
         {
             std::format_to(out, "{}", variable.name);

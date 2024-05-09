@@ -16,9 +16,9 @@ namespace {
         "let",    "mut",      "immut", "if",    "else",  "elif",    "for",    "in",     "while",
         "loop",   "continue", "break", "match", "ret",   "discard", "fn",     "as",     "enum",
         "struct", "class",    "inst",  "impl",  "alias", "import",  "export", "module", "sizeof",
-        "typeof", "unsafe",   "mov",   "meta",  "where", "dyn",     "macro",  "global", "String",
-        "Float",  "Char",     "Bool",  "I8",    "I16",   "I32",     "I64",    "U8",     "U16",
-        "U32",    "U64",      "self",  "Self",
+        "typeof", "unsafe",   "mov",   "meta",  "where", "dyn",     "macro",  "global", "defer",
+        "String", "Float",    "Char",  "Bool",  "I8",    "I16",     "I32",    "I64",    "U8",
+        "U16",    "U32",      "U64",   "self",  "Self",
     });
 } // namespace
 

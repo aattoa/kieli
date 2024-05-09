@@ -120,6 +120,11 @@ namespace libresolve::dtl {
             std::format_to(out, "(*{})", dereference.reference_expression);
         }
 
+        auto operator()(hir::expression::Defer const& defer)
+        {
+            std::format_to(out, "defer {}", defer.expression);
+        }
+
         auto operator()(hir::expression::Hole const&)
         {
             std::format_to(out, R"(???)");

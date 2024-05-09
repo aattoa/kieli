@@ -417,6 +417,11 @@ namespace cst {
             Token                    mov_keyword_token;
         };
 
+        struct Defer {
+            utl::Wrapper<Expression> expression;
+            Token                    defer_keyword_token;
+        };
+
         struct Meta {
             Surrounded<utl::Wrapper<Expression>> expression;
             Token                                meta_keyword_token;
@@ -467,6 +472,7 @@ namespace cst {
             expression::Dereference,
             expression::Unsafe,
             expression::Move,
+            expression::Defer,
             expression::Meta,
             expression::Hole>;
 
