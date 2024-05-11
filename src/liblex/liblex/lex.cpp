@@ -362,20 +362,20 @@ namespace {
             if (state.string.empty()) {
                 return liblex::error(state, "Unterminating string literal");
             }
-            switch (char c = liblex::extract_current(state)) {
+            switch (char const character = liblex::extract_current(state)) {
             case '"':
                 return token(
                     liblex::make_string_literal(state, string), Token::Type::string_literal);
             case '\\':
-                if (auto const character = handle_escape_sequence(state)) {
-                    c = character.value();
+                if (auto const escaped = handle_escape_sequence(state)) {
+                    string.push_back(escaped.value());
+                    continue;
                 }
                 else {
-                    return std::unexpected { character.error() };
+                    return std::unexpected { escaped.error() };
                 }
-                [[fallthrough]];
             default:
-                string.push_back(c);
+                string.push_back(character);
             }
         }
     }
@@ -411,14 +411,13 @@ namespace {
             liblex::extract(state, or_digit_separator<is_digit10>), state);
     }
 
-    auto parse_floating_value(kieli::Lex_state& state, std::string_view const literal_string)
+    auto parse_floating_value(kieli::Lex_state& state, std::string_view const string)
         -> liblex::Expected<double>
     {
-        return liblex::parse_floating(literal_string)
-            .transform_error([&](liblex::Numeric_error const error) {
+        return liblex::parse_floating(string).transform_error(
+            [&](liblex::Numeric_error const error) {
                 cpputil::always_assert(error == liblex::Numeric_error::out_of_range);
-                return liblex::error(state, literal_string, "Floating point literal is too large")
-                    .error();
+                return liblex::error(state, string, "Floating point literal is too large").error();
             });
     }
 
@@ -453,19 +452,18 @@ namespace {
 
     auto extract_integer_exponent(kieli::Lex_state& state) -> liblex::Expected<std::size_t>
     {
-        std::string_view const exponent_digits = liblex::extract(state, is_digit10);
-        return ensure_no_trailing_separator(exponent_digits, state)
+        std::string_view const digits = liblex::extract(state, is_digit10);
+        return ensure_no_trailing_separator(digits, state)
             .and_then([&]() -> liblex::Expected<std::size_t> {
                 std::string_view const extraneous_suffix = liblex::extract(state, is_alpha);
                 if (!extraneous_suffix.empty()) {
                     return liblex::error(
                         state, extraneous_suffix, "Erroneous integer literal alphabetic suffix");
                 }
-                return liblex::parse_integer(exponent_digits)
-                    .transform_error([&](liblex::Numeric_error const error) {
+                return liblex::parse_integer(digits).transform_error(
+                    [&](liblex::Numeric_error const error) {
                         cpputil::always_assert(error == liblex::Numeric_error::out_of_range);
-                        return liblex::error(state, exponent_digits, "Exponent is too large")
-                            .error();
+                        return liblex::error(state, digits, "Exponent is too large").error();
                     });
             });
     }

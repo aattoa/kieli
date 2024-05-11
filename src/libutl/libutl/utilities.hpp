@@ -1,44 +1,39 @@
 #pragma once
 
-// This file is intended to be included by every translation unit in the project
+// This file is intended to be used as a precompiled header across the entire project.
 
+#include <cpputil/util.hpp>
+
+#include <algorithm>
+#include <array>
+#include <cassert>
+#include <concepts>
+#include <cstddef>
+#include <cstdint>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
-#include <cstddef>
-#include <cstdint>
-#include <cassert>
-
-#include <new>
+#include <exception>
+#include <expected>
+#include <filesystem>
+#include <format>
+#include <functional>
 #include <limits>
 #include <memory>
-#include <utility>
-#include <concepts>
-#include <exception>
-#include <filesystem>
-#include <functional>
-#include <type_traits>
-#include <source_location>
-
-#include <span>
-#include <array>
-#include <vector>
-
-#include <tuple>
-#include <variant>
+#include <new>
+#include <numeric>
 #include <optional>
-#include <expected>
-
 #include <print>
-#include <format>
+#include <ranges>
+#include <source_location>
+#include <span>
 #include <string>
 #include <string_view>
-
-#include <ranges>
-#include <numeric>
-#include <algorithm>
-
-#include <cpputil/util.hpp>
+#include <tuple>
+#include <type_traits>
+#include <utility>
+#include <variant>
+#include <vector>
 
 // Literal operators are useless when not easily accessible.
 using namespace std::literals;
@@ -198,33 +193,33 @@ namespace utl {
             return { .offset = old_size, .length = out.size() - old_size };
         }
     };
-
-    namespace fmt {
-        template <std::integral Integer>
-        struct Integer_with_ordinal_indicator_closure {
-            Integer integer {};
-        };
-
-        template <std::integral Integer>
-        constexpr auto integer_with_ordinal_indicator(Integer const integer) noexcept
-            -> Integer_with_ordinal_indicator_closure<Integer>
-        {
-            return { .integer = integer };
-        }
-
-        template <std::ranges::input_range Range>
-        struct Join_closure {
-            Range*           range {};
-            std::string_view delimiter;
-        };
-
-        template <std::ranges::input_range Range>
-        auto join(Range&& range, std::string_view const delimiter)
-        {
-            return Join_closure { std::addressof(range), delimiter };
-        }
-    } // namespace fmt
 } // namespace utl
+
+namespace utl::fmt {
+    template <std::integral Integer>
+    struct Integer_with_ordinal_indicator_closure {
+        Integer integer {};
+    };
+
+    template <std::integral Integer>
+    constexpr auto integer_with_ordinal_indicator(Integer const integer) noexcept
+        -> Integer_with_ordinal_indicator_closure<Integer>
+    {
+        return { .integer = integer };
+    }
+
+    template <std::ranges::input_range Range>
+    struct Join_closure {
+        Range*           range {};
+        std::string_view delimiter;
+    };
+
+    template <std::ranges::input_range Range>
+    auto join(Range&& range, std::string_view const delimiter)
+    {
+        return Join_closure { std::addressof(range), delimiter };
+    }
+} // namespace utl::fmt
 
 template <class Char, std::formattable<Char>... Ts>
 struct std::formatter<std::variant<Ts...>, Char> {
@@ -239,6 +234,19 @@ struct std::formatter<std::variant<Ts...>, Char> {
             return std::format_to(context.out(), "{}", alternative);
         };
         return std::visit(visitor, variant);
+    }
+};
+
+template <class Char>
+struct std::formatter<std::monostate, Char> {
+    static constexpr auto parse(auto& context)
+    {
+        return context.begin();
+    }
+
+    static auto format(std::monostate const&, auto& context)
+    {
+        return std::format_to(context.out(), "std::monostate");
     }
 };
 
@@ -309,21 +317,8 @@ struct std::formatter<utl::fmt::Integer_with_ordinal_indicator_closure<T>, Char>
 
 template <std::formattable<char> T>
 struct std::formatter<utl::Explicit<T>> : std::formatter<T> {
-    auto format(utl::Explicit<T> const& expl, auto& context) const
+    auto format(utl::Explicit<T> const& e, auto& context) const
     {
-        return std::formatter<T>::format(expl.get(), context);
-    }
-};
-
-template <class Char>
-struct std::formatter<std::monostate, Char> {
-    static constexpr auto parse(auto& context)
-    {
-        return context.begin();
-    }
-
-    static auto format(std::monostate const&, auto& context)
-    {
-        return std::format_to(context.out(), "std::monostate");
+        return std::formatter<T>::format(e.get(), context);
     }
 };
