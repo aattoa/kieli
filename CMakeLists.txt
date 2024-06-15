@@ -28,7 +28,7 @@ FetchContent_Declare(
 FetchContent_Declare(
     cpputil
     GIT_REPOSITORY https://github.com/aattoa/cpputil.git
-    GIT_TAG        0ee8e43852cb5aa20803f59529ff7e1a4cbc09ae)
+    GIT_TAG        6f0399ee942877d2e619879802518ffd1290e103)
 FetchContent_Declare(
     cppunittest
     GIT_REPOSITORY https://github.com/aattoa/cppunittest.git
@@ -37,9 +37,6 @@ FetchContent_Declare(
 set(CPPARGS_BUILD_TESTS OFF)
 set(CPPDIAG_BUILD_TESTS OFF)
 set(CPPUTIL_BUILD_TESTS OFF)
-
-# TODO: fix cpputil::input readline availability detection
-set(READLINE readline)
 
 message(STATUS "<KIELI> Fetching dependencies...")
 FetchContent_MakeAvailable(cppargs cppdiag cpputil cppunittest)
@@ -86,18 +83,4 @@ add_subdirectory(src/libparse)
 add_subdirectory(src/libdesugar)
 add_subdirectory(src/libformat)
 add_subdirectory(src/libresolve)
-add_subdirectory(src/libhistory)
-
-add_executable(debug-kieli src/main.cpp)
-kieli_use_libutl(debug-kieli)
-target_link_libraries(debug-kieli
-    PRIVATE liblex
-    PRIVATE libparse
-    PRIVATE libformat
-    PRIVATE libdesugar
-    PRIVATE libresolve
-    PRIVATE libhistory
-    PRIVATE cppargs
-    PRIVATE cppdiag
-    PRIVATE cpputil::util
-    PRIVATE cpputil::input)
+add_subdirectory(src/devmain)

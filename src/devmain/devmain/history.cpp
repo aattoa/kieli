@@ -1,5 +1,5 @@
 #include <libutl/utilities.hpp>
-#include <libhistory/history.hpp>
+#include <devmain/history.hpp>
 #include <cpputil/input.hpp>
 #include <cpputil/io.hpp>
 
@@ -57,7 +57,7 @@ namespace {
         previous_history_line; // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
 } // namespace
 
-auto kieli::libhistory::add_to_history(char const* const line) -> void
+auto kieli::add_to_history(char const* const line) -> void
 {
     if (!line || previous_history_line == line) {
         return;
@@ -67,7 +67,7 @@ auto kieli::libhistory::add_to_history(char const* const line) -> void
     previous_history_line = line;
 }
 
-auto kieli::libhistory::read_history_file_to_active_history() -> void
+auto kieli::read_history_file_to_active_history() -> void
 {
     auto const path = history_file_path();
     if (!path.has_value() || !is_valid_history_file_path(path.value())) {
