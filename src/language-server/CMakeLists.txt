@@ -6,7 +6,12 @@ target_include_directories(language-server
 kieli_use_libutl(language-server)
 
 target_sources(language-server
-    PRIVATE language-server/main.cpp)
+    PRIVATE language-server/lsp.cpp
+    PRIVATE language-server/lsp.hpp
+    PRIVATE language-server/main.cpp
+    PRIVATE language-server/rpc.cpp
+    PRIVATE language-server/rpc.hpp)
 
 target_link_libraries(language-server
-    PRIVATE libutl)
+    PRIVATE libutl
+    PRIVATE cpputil::json)

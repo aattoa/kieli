@@ -1,6 +1,36 @@
 #include <libutl/utilities.hpp>
+#include <cpputil/json/encode.hpp>
+#include <cpputil/json/decode.hpp>
+#include <cpputil/json/format.hpp>
+#include <language-server/lsp.hpp>
+#include <language-server/rpc.hpp>
+
+#include <iostream>
+
+namespace {
+    auto run(std::istream& in, std::ostream& out) -> void
+    {
+        while (auto content = kieli::lsp::rpc_read_message(in)) {
+            if (auto json = cpputil::json::decode(content.value())) {
+                if (auto reply = kieli::lsp::handle_message(json.value().as_object())) {
+                    kieli::lsp::rpc_write_message(out, reply.value());
+                }
+            }
+            else {
+                std::println(stderr, "Failed to parse json content: {}", json.error());
+            }
+        }
+    }
+} // namespace
 
 auto main() -> int
 {
-    std::println("LSP");
+    try {
+        run(std::cin, std::cout);
+        return EXIT_SUCCESS;
+    }
+    catch (std::exception const& exception) {
+        std::println(stderr, "Caught exception: {}", exception.what());
+        return EXIT_FAILURE;
+    }
 }

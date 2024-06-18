@@ -6,16 +6,6 @@ set(CMAKE_CXX_STANDARD_REQUIRED   ON)
 set(CMAKE_CXX_EXTENSIONS          OFF)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-if (NOT MSVC)
-    add_compile_options(
-        "-Wall"
-        "-Wextra"
-        "-Wpedantic"
-        "-Werror"
-        "-Wno-missing-field-initializers"
-        "-Wno-switch")
-endif ()
-
 include(FetchContent)
 FetchContent_Declare(
     cppargs
@@ -28,7 +18,7 @@ FetchContent_Declare(
 FetchContent_Declare(
     cpputil
     GIT_REPOSITORY https://github.com/aattoa/cpputil.git
-    GIT_TAG        6f0399ee942877d2e619879802518ffd1290e103)
+    GIT_TAG        4eb9299a3f692ba55cec4137cb0e8ff7211a8006)
 FetchContent_Declare(
     cppunittest
     GIT_REPOSITORY https://github.com/aattoa/cppunittest.git
@@ -41,6 +31,15 @@ set(CPPUTIL_BUILD_TESTS OFF)
 message(STATUS "<KIELI> Fetching dependencies...")
 FetchContent_MakeAvailable(cppargs cppdiag cpputil cppunittest)
 message(STATUS "<KIELI> Dependencies fetched.")
+
+if (NOT MSVC)
+    add_compile_options(
+        "-Wall"
+        "-Wextra"
+        "-Wpedantic"
+        "-Werror"
+        "-Wno-missing-field-initializers")
+endif ()
 
 # Build kieli tests by default
 option(KIELI_BUILD_TESTS "Build kieli tests" ON)
