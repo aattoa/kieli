@@ -116,9 +116,9 @@ auto libresolve::Inference_state::flatten(hir::Type::Variant& type) -> void
 }
 
 auto libresolve::Inference_state::set_solution(
-    kieli::Diagnostics& diagnostics,
-    Type_variable_data& variable_data,
-    hir::Type::Variant  solution) -> void
+    std::vector<cppdiag::Diagnostic>& diagnostics,
+    Type_variable_data&               variable_data,
+    hir::Type::Variant                solution) -> void
 {
     std::size_t const   index          = type_variable_disjoint_set.find(variable_data.tag.get());
     Type_variable_data& representative = type_variables.underlying.at(index);
@@ -130,7 +130,7 @@ auto libresolve::Inference_state::set_solution(
 }
 
 auto libresolve::Inference_state::set_solution(
-    kieli::Diagnostics& /*diagnostics*/,
+    std::vector<cppdiag::Diagnostic>& /*diagnostics*/,
     Mutability_variable_data& variable_data,
     hir::Mutability::Variant  solution) -> void
 {
@@ -185,24 +185,24 @@ auto libresolve::Inference_state::fresh_mutability_variable(
     return hir::Mutability { variant, origin };
 }
 
-auto libresolve::ensure_no_unsolved_variables(
-    Inference_state& state, kieli::Diagnostics& diagnostics) -> void
+auto libresolve::ensure_no_unsolved_variables(kieli::Compile_info& info, Inference_state& state)
+    -> void
 {
     for (Mutability_variable_data& data : state.mutability_variables.underlying) {
         if (!data.is_solved) {
-            state.set_solution(diagnostics, data, hir::mutability::Concrete::immut);
+            state.set_solution(info.diagnostics, data, hir::mutability::Concrete::immut);
         }
     }
     for (Type_variable_data& data : state.type_variables.underlying) {
         state.flatten(data.variant.as_mutable());
         if (!data.is_solved) {
-            diagnostics.emit(
+            kieli::emit_diagnostic(
                 cppdiag::Severity::error,
+                info,
                 state.source,
                 data.origin,
-                "Unsolved type variable: ?{}",
-                data.tag.get());
-            state.set_solution(diagnostics, data, hir::type::Error {});
+                std::format("Unsolved type variable: ?{}", data.tag.get()));
+            state.set_solution(info.diagnostics, data, hir::type::Error {});
         }
     }
 }

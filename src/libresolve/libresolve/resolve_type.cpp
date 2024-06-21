@@ -99,8 +99,9 @@ namespace {
                     },
                     lookup_result.value().variant);
             }
-            context.compile_info.diagnostics.emit(
+            kieli::emit_diagnostic(
                 cppdiag::Severity::error,
+                context.compile_info,
                 scope.source(),
                 this_type.source_range,
                 "Use of an undeclared identifier");

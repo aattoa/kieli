@@ -434,7 +434,8 @@ namespace {
                             .source_range       = type->source_range,
                         });
                 }
-                context.compile_info().diagnostics.error(
+                kieli::fatal_error(
+                    context.compile_info(),
                     context.source(),
                     type->source_range,
                     "Expected an expression, but found a type");

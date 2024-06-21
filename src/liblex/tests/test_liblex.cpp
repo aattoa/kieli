@@ -18,6 +18,6 @@ auto liblex::test_lex(std::string&& string) -> Test_lex_result
 
     return Test_lex_result {
         .formatted_tokens    = std::format("{}", utl::fmt::join(tokens, ", ")),
-        .diagnostic_messages = info.diagnostics.format_all({}),
+        .diagnostic_messages = kieli::format_diagnostics(info.diagnostics),
     };
 }

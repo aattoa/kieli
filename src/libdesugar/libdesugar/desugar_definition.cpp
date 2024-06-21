@@ -6,22 +6,26 @@ namespace {
 
     template <class T>
     auto ensure_no_duplicates(
-        Context&                   context,
-        utl::Source::Wrapper const source,
-        std::string_view const     description,
-        std::vector<T> const&      elements)
+        Context& context, std::string_view const description, std::vector<T> const& elements)
     {
+        utl::Source const& source = context.compile_info.source_vector[context.source];
+
         for (auto it = elements.begin(); it != elements.end(); ++it) {
             auto const duplicate = std::ranges::find(it + 1, elements.end(), it->name, &T::name);
             if (duplicate != elements.end()) {
-                context.diagnostics().error(
-                    {
-                        { source, it->name.source_range, "First specified here" },
-                        { source, duplicate->name.source_range, "Later specified here" },
-                    },
-                    "More than one definition for {} {}",
-                    description,
-                    it->name);
+                context.compile_info.diagnostics.push_back(cppdiag::Diagnostic {
+                    .text_sections = utl::to_vector({
+                        kieli::text_section(
+                            source,
+                            it->name.source_range,
+                            "First defined here",
+                            cppdiag::Severity::hint),
+                        kieli::text_section(
+                            source, duplicate->name.source_range, "Later defined here"),
+                    }),
+                    .message = std::format("Multiple definitions for {} {}", description, it->name),
+                    .severity = cppdiag::Severity::error,
+                });
             }
         }
     }
@@ -40,8 +44,8 @@ namespace {
     }
 
     struct Definition_desugaring_visitor {
-        Context&             context;
-        utl::Source::Wrapper source;
+        Context&       context;
+        utl::Source_id source;
 
         auto operator()(cst::definition::Function const& function) -> ast::Definition::Variant
         {
@@ -66,7 +70,7 @@ namespace {
 
         auto operator()(cst::definition::Enum const& enumeration) -> ast::Definition::Variant
         {
-            ensure_no_duplicates(context, source, "constructor", enumeration.constructors.elements);
+            ensure_no_duplicates(context, "constructor", enumeration.constructors.elements);
             return ast::definition::Enumeration {
                 .constructors        = context.desugar(enumeration.constructors),
                 .name                = enumeration.name,
@@ -142,7 +146,7 @@ auto libdesugar::Context::desugar(cst::definition::Constructor_body const& body)
     return std::visit<ast::definition::Constructor_body>(
         utl::Overload {
             [&](cst::definition::Struct_constructor const& constructor) {
-                ensure_no_duplicates(*this, source, "field", constructor.fields.value.elements);
+                ensure_no_duplicates(*this, "field", constructor.fields.value.elements);
                 return ast::definition::Struct_constructor { desugar(constructor.fields) };
             },
             [&](cst::definition::Tuple_constructor const& constructor) {

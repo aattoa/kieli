@@ -11,15 +11,18 @@ namespace {
         Environment_wrapper    environment;
         ast::Expression const& this_expression;
 
-        template <class... Args>
-        auto error(utl::Source_range range, std::format_string<Args...> const fmt, Args&&... args)
+        auto error(
+            utl::Source_range const    range,
+            std::string                message,
+            std::optional<std::string> help_note = std::nullopt)
         {
-            context.compile_info.diagnostics.emit(
+            kieli::emit_diagnostic(
                 cppdiag::Severity::error,
+                context.compile_info,
                 environment->source,
                 range,
-                fmt,
-                std::forward<Args>(args)...);
+                std::move(message),
+                std::move(help_note));
             return error_expression(context.constants, this_expression.source_range);
         }
 
@@ -158,8 +161,9 @@ namespace {
                         [&](utl::Mutable_wrapper<Module_info> const module) {
                             return error(
                                 this_expression.source_range,
-                                "Expected an expression, but found a reference to module '{}'",
-                                module->name);
+                                std::format(
+                                    "Expected an expression, but found a reference to module '{}'",
+                                    module->name));
                         },
                     },
                     lookup_result.value().variant);
@@ -206,7 +210,7 @@ namespace {
             auto const resolve_effect = [&](ast::Expression const& expression) {
                 hir::Expression effect
                     = resolve_expression(context, state, block_scope, environment, expression);
-                require_subtype_relationship( // TODO: better error message
+                require_subtype_relationship(
                     context.compile_info.diagnostics,
                     state,
                     *effect.type.variant,
@@ -220,7 +224,6 @@ namespace {
             hir::Expression result
                 = resolve_expression(context, state, scope, environment, *block.result);
 
-            auto const result_kind = result.kind;
             auto const result_type = result.type;
 
             return {
@@ -229,7 +232,7 @@ namespace {
                     .result       = context.arenas.wrap(std::move(result)),
                 },
                 result_type,
-                result_kind,
+                hir::Expression_kind::value,
                 this_expression.source_range,
             };
         }

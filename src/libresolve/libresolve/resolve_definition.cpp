@@ -1,9 +1,9 @@
 #include <libutl/utilities.hpp>
 #include <libresolve/resolution_internals.hpp>
 
-namespace {
-    using namespace libresolve;
+using namespace libresolve;
 
+namespace {
     auto resolve_function_parameter(
         Context&                       context,
         Inference_state&               state,
@@ -45,7 +45,7 @@ namespace {
         Scope&                         scope,
         Environment_wrapper const      environment,
         ast::Function_signature const& signature,
-        utl::Source::Wrapper const     source) -> hir::Function_signature
+        utl::Source_id const           source) -> hir::Function_signature
     {
         cpputil::always_assert(!signature.self_parameter.has_value()); // TODO
 
@@ -66,7 +66,7 @@ namespace {
         hir::Type const return_type
             = resolve_type(context, state, scope, environment, signature.return_type);
 
-        ensure_no_unsolved_variables(state, context.compile_info.diagnostics);
+        ensure_no_unsolved_variables(context.compile_info, state);
 
         return hir::Function_signature {
             .template_paramters = std::move(template_parameters),
@@ -100,7 +100,7 @@ auto libresolve::resolve_function_body(Context& context, Function_info& info) ->
             .signature = std::move(function->signature),
             .body      = std::move(body),
         };
-        ensure_no_unsolved_variables(state, context.compile_info.diagnostics);
+        ensure_no_unsolved_variables(context.compile_info, state);
     }
     return std::get<hir::Function>(info.variant);
 }

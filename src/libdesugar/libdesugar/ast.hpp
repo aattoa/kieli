@@ -577,9 +577,9 @@ namespace ast {
             definition::Instantiation,
             definition::Submodule>;
 
-        Variant              variant;
-        utl::Source::Wrapper source;
-        utl::Source_range    source_range;
+        Variant           variant;
+        utl::Source_id    source;
+        utl::Source_range source_range;
     };
 
     template <class T>

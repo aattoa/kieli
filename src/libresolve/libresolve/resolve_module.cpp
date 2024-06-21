@@ -5,21 +5,20 @@
 
 namespace {
     [[noreturn]] auto report_import_error(
-        kieli::Diagnostics&             diagnostics,
-        utl::Source::Wrapper const      source,
+        kieli::Compile_info&            info,
+        utl::Source_id const            source,
         libresolve::Import_error const& error) -> void
     {
-        diagnostics.error(
-            source,
-            error.erroneous_segment.source_range,
-            "No {} '{}' exists",
+        auto const message = std::format(
+            "No {} `{}` exists",
             error.expected_module ? "module" : "directory",
             error.erroneous_segment);
+        kieli::fatal_error(info, source, error.erroneous_segment.source_range, message);
     }
 
     auto collect_import_info(
         libresolve::Context&                  context,
-        utl::Source::Wrapper const            source,
+        utl::Source_id const                  source,
         libresolve::Environment_wrapper const environment,
         libresolve::Import&&                  import) -> void
     {
@@ -34,7 +33,7 @@ namespace {
 
     auto collect_import(
         libresolve::Context&                  context,
-        utl::Source::Wrapper const            source,
+        utl::Source_id const                  source,
         libresolve::Environment_wrapper const environment,
         cst::Module::Import const&            import) -> void
     {
@@ -44,27 +43,27 @@ namespace {
             collect_import_info(context, source, environment, std::move(resolved_import.value()));
         }
         else {
-            report_import_error(context.compile_info.diagnostics, source, resolved_import.error());
+            report_import_error(context.compile_info, source, resolved_import.error());
         }
     }
 
-    auto read_import_source(libresolve::Import&& import) -> utl::Source
+    auto read_import_source(libresolve::Import const& import) -> std::string
     {
         cpputil::always_assert(exists(import.module_path));
         cpputil::always_assert(last_write_time(import.module_path) == import.last_write_time);
-        return utl::Source::read(std::move(import.module_path)).value();
+        return utl::read_file(import.module_path).value(); // TODO
     }
 
     auto import_environment(libresolve::Context& context, libresolve::Import&& import)
         -> libresolve::Environment_wrapper
     {
         return libresolve::make_environment(
-            context, context.compile_info.source_arena.wrap(read_import_source(std::move(import))));
+            context, context.compile_info.source_vector.push(read_import_source(import)));
     }
 
     auto resolve_submodule(
         libresolve::Context&         context,
-        utl::Source::Wrapper const   source,
+        utl::Source_id const         source,
         ast::definition::Submodule&& submodule) -> libresolve::Environment_wrapper
     {
         if (submodule.template_parameters.has_value()) {
@@ -74,7 +73,7 @@ namespace {
     }
 } // namespace
 
-auto libresolve::make_environment(libresolve::Context& context, utl::Source::Wrapper const source)
+auto libresolve::make_environment(libresolve::Context& context, utl::Source_id const source)
     -> Environment_wrapper
 {
     cst::Module const cst = kieli::parse(source, context.compile_info);

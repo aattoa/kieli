@@ -4,28 +4,23 @@
 namespace {
     using namespace libresolve;
 
-    [[noreturn]] auto report_duplicate_definitions_error(
-        kieli::Diagnostics&        diagnostics,
-        utl::Source::Wrapper const source,
+    auto duplicate_definitions_error(
+        utl::Source const&         source,
         kieli::Name_dynamic const& first,
-        kieli::Name_dynamic const& second) -> void
+        kieli::Name_dynamic const& second) -> cppdiag::Diagnostic
     {
-        diagnostics.error(
-            {
-                kieli::Simple_text_section {
-                    .source       = source,
-                    .source_range = first.source_range,
-                    .note         = "First defined here",
-                    .severity     = cppdiag::Severity::information,
-                },
-                kieli::Simple_text_section {
-                    .source       = source,
-                    .source_range = second.source_range,
-                    .note         = "Later defined here",
-                },
-            },
-            "Duplicate definitions of '{}' in the same module",
-            first.identifier);
+        return cppdiag::Diagnostic {
+            .text_sections = utl::to_vector({
+                kieli::text_section(
+                    source,
+                    first.source_range,
+                    "First defined here",
+                    cppdiag::Severity::information),
+                kieli::text_section(source, second.source_range, "Later defined here"),
+            }),
+            .message       = std::format("Multiple definitions for '{}'", first.identifier),
+            .severity      = cppdiag::Severity::error,
+        };
     }
 
     auto add_definition_to_environment(
@@ -33,7 +28,7 @@ namespace {
         ast::Definition&&         definition,
         Environment_wrapper const environment) -> void
     {
-        utl::Source::Wrapper const source = definition.source;
+        utl::Source_id const source = definition.source;
         std::visit(
             utl::Overload {
                 [&](ast::definition::Enumeration&& enumeration) {
@@ -101,39 +96,39 @@ namespace {
     template <class Info>
     auto do_add_to_environment(
         Context&                               context,
-        utl::Source::Wrapper const             source,
+        utl::Source_id const                   source,
         utl::Flatmap<kieli::Identifier, Info>& map,
         auto const                             name,
         typename Info::Variant&&               variant) -> void
     {
         if (auto const* const existing = map.find(name.identifier)) {
-            report_duplicate_definitions_error(
-                context.compile_info.diagnostics,
-                source,
+            context.compile_info.diagnostics.push_back(duplicate_definitions_error(
+                context.compile_info.source_vector[source],
                 existing->name.as_dynamic(),
-                name.as_dynamic());
+                name.as_dynamic()));
+            throw kieli::Compile_info {};
         }
         map.add_new_unchecked(name.identifier, Info { name, source, std::move(variant) });
     }
 } // namespace
 
 auto libresolve::add_to_environment(
-    Context&                   context,
-    utl::Source::Wrapper const source,
-    Environment&               environment,
-    kieli::Name_lower const    name,
-    Lower_info::Variant        variant) -> void
+    Context&                context,
+    utl::Source_id const    source,
+    Environment&            environment,
+    kieli::Name_lower const name,
+    Lower_info::Variant     variant) -> void
 {
     do_add_to_environment<Lower_info>(
         context, source, environment.lower_map, name, std::move(variant));
 }
 
 auto libresolve::add_to_environment(
-    Context&                   context,
-    utl::Source::Wrapper const source,
-    Environment&               environment,
-    kieli::Name_upper const    name,
-    Upper_info::Variant        variant) -> void
+    Context&                context,
+    utl::Source_id const    source,
+    Environment&            environment,
+    kieli::Name_upper const name,
+    Upper_info::Variant     variant) -> void
 {
     do_add_to_environment<Upper_info>(
         context, source, environment.upper_map, name, std::move(variant));
@@ -141,7 +136,7 @@ auto libresolve::add_to_environment(
 
 auto libresolve::collect_environment(
     Context&                       context,
-    utl::Source::Wrapper const     source,
+    utl::Source_id const           source,
     std::vector<ast::Definition>&& definitions) -> Environment_wrapper
 {
     auto const environment

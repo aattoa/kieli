@@ -19,26 +19,25 @@ namespace {
         static constexpr auto position = [](auto const column) {
             return cppdiag::Position { .column = utl::safe_cast<std::uint32_t>(column) };
         };
-        cppdiag::Message_buffer   message_buffer;
         cppdiag::Diagnostic const diagnostic {
-            .text_sections { {
-                .source_string  = info.command_line,
-                .source_name    = "command line",
-                .start_position = position(info.error_column),
-                .stop_position  = position(info.error_column + info.error_width - 1),
-                .note           = cppdiag::format_message(
-                    message_buffer, "{}", cppargs::Parse_error_info::kind_to_string(info.kind)),
-            } },
-            .message   = cppdiag::format_message(message_buffer, "Command line parse failure"),
-            .help_note = cppdiag::format_message(
-                message_buffer,
+            .text_sections = utl::to_vector({
+                cppdiag::Text_section {
+                    .source_string  = info.command_line,
+                    .source_name    = "command line",
+                    .start_position = position(info.error_column),
+                    .stop_position  = position(info.error_column + info.error_width - 1),
+                    .note = std::string(cppargs::Parse_error_info::kind_to_string(info.kind)),
+                },
+            }),
+            .message       = "Command line parse failure",
+            .help_note     = std::format(
                 "To see a list of valid options, use {}{} --help{}",
                 colors.hint.code,
                 program_name,
                 colors.normal.code),
             .severity = cppdiag::Severity::error,
         };
-        return cppdiag::format_diagnostic(diagnostic, message_buffer, colors);
+        return cppdiag::format_diagnostic(diagnostic, colors);
     }
 
     [[nodiscard]] auto error_header(cppdiag::Colors const& colors) -> cppdiag::Severity_header
@@ -46,7 +45,7 @@ namespace {
         return cppdiag::Severity_header::make(cppdiag::Severity::error, colors);
     }
 
-    auto debug_lex(utl::Source::Wrapper const source, kieli::Compile_info& info) -> void
+    auto debug_lex(utl::Source_id const source, kieli::Compile_info& info) -> void
     {
         auto state = kieli::Lex_state::make(source, info);
         auto token = kieli::lex(state);
@@ -57,13 +56,13 @@ namespace {
         std::println("");
     }
 
-    auto debug_parse(utl::Source::Wrapper const source, kieli::Compile_info& info) -> void
+    auto debug_parse(utl::Source_id const source, kieli::Compile_info& info) -> void
     {
         auto const module = kieli::parse(source, info);
         std::print("{}", kieli::format_module(module, kieli::Format_configuration {}));
     }
 
-    auto debug_desugar(utl::Source::Wrapper const source, kieli::Compile_info& info) -> void
+    auto debug_desugar(utl::Source_id const source, kieli::Compile_info& info) -> void
     {
         auto const  module = kieli::desugar(kieli::parse(source, info), info);
         std::string output;
@@ -73,7 +72,7 @@ namespace {
         std::print("{}\n\n", output);
     }
 
-    auto debug_resolve(utl::Source::Wrapper const source, kieli::Compile_info& info) -> void
+    auto debug_resolve(utl::Source_id const source, kieli::Compile_info& info) -> void
     {
         auto arenas    = libresolve::Arenas::defaults();
         auto constants = libresolve::Constants::make_with(arenas);
@@ -93,7 +92,7 @@ namespace {
     }
 
     auto choose_debug_repl_callback(std::string_view const name)
-        -> void (*)(utl::Source::Wrapper, kieli::Compile_info&)
+        -> void (*)(utl::Source_id, kieli::Compile_info&)
     {
         // clang-format off
         if (name == "lex") return debug_lex;
@@ -105,7 +104,7 @@ namespace {
     }
 
     auto run_debug_repl(
-        void (&callback)(utl::Source::Wrapper, kieli::Compile_info&),
+        void (&callback)(utl::Source_id, kieli::Compile_info&),
         cppdiag::Colors const colors) -> void
     {
         kieli::read_history_file_to_active_history();
@@ -131,7 +130,7 @@ namespace {
                 std::print(stderr, "{}{}\n\n", error_header(colors), exception.what());
             }
 
-            std::print(stderr, "{}", info.diagnostics.format_all(colors));
+            std::print(stderr, "{}", kieli::format_diagnostics(info.diagnostics, colors));
         }
     }
 

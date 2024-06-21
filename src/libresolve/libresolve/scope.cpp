@@ -15,7 +15,7 @@ namespace {
         bindings.container().emplace(it, identifier, std::move(binding));
     }
 
-    template <auto libresolve::Scope::*bindings>
+    template <auto libresolve::Scope::* bindings>
     auto do_find(libresolve::Scope* scope, kieli::Identifier const identifier)
         -> decltype((scope->*bindings).find(identifier))
     {
@@ -29,18 +29,20 @@ namespace {
 
     template <class Binding>
     auto do_report_unused(
-        kieli::Diagnostics&                             diagnostics,
-        utl::Source::Wrapper const                      source,
+        kieli::Compile_info&                            info,
+        utl::Source_id const                            source,
         utl::Flatmap<kieli::Identifier, Binding> const& bindings)
     {
         auto const unused = std::views::values | std::views::filter(&Binding::unused);
         for (auto const& binding : unused(bindings)) {
-            diagnostics.emit(
-                cppdiag::Severity::warning,
-                source,
-                binding.name.source_range,
-                "Unused binding: {}",
-                binding.name);
+            info.diagnostics.push_back(cppdiag::Diagnostic {
+                .text_sections = utl::to_vector({
+                    kieli::text_section(info.source_vector[source], binding.name.source_range),
+                }),
+                .message       = std::format("Unused binding: {}", binding.name),
+                .help_note     = std::format("If this is intentional, use _{}", binding.name),
+                .severity      = cppdiag::Severity::warning,
+            });
         }
     }
 } // namespace
@@ -89,15 +91,14 @@ auto libresolve::Scope::parent() const noexcept -> Scope*
     return m_parent;
 }
 
-auto libresolve::Scope::source() const noexcept -> utl::Source::Wrapper
+auto libresolve::Scope::source() const noexcept -> utl::Source_id
 {
     return m_source;
 }
 
-auto libresolve::Scope::report_unused(
-    kieli::Diagnostics& diagnostics, utl::Source::Wrapper const source) -> void
+auto libresolve::Scope::report_unused(kieli::Compile_info& info) -> void
 {
-    do_report_unused(diagnostics, source, m_types);
-    do_report_unused(diagnostics, source, m_variables);
-    do_report_unused(diagnostics, source, m_mutabilities);
+    do_report_unused(info, m_source, m_types);
+    do_report_unused(info, m_source, m_variables);
+    do_report_unused(info, m_source, m_mutabilities);
 }

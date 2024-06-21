@@ -38,7 +38,8 @@ namespace {
         auto return_type_annotation = parse_type_annotation(context);
 
         if (auto const where = context.try_extract(Token::Type::where)) {
-            context.compile_info().diagnostics.error(
+            kieli::fatal_error(
+                context.compile_info(),
                 context.source(),
                 where.value().source_range,
                 "where clauses are not supported yet");

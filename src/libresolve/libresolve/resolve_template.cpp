@@ -79,7 +79,8 @@ namespace {
         auto operator()(ast::Template_value_parameter const& parameter)
             -> hir::Template_parameter::Variant
         {
-            context.compile_info.diagnostics.error(
+            kieli::fatal_error(
+                context.compile_info,
                 scope.source(),
                 parameter.name.source_range,
                 "Template value parameters are not supported yet");

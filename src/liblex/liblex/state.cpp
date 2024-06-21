@@ -19,12 +19,12 @@ namespace {
 
 auto liblex::source_begin(const kieli::Lex_state& state) noexcept -> char const*
 {
-    return state.source->string().data();
+    return state.compile_info.source_vector[state.source].content.data();
 }
 
 auto liblex::source_end(const kieli::Lex_state& state) noexcept -> char const*
 {
-    return source_begin(state) + state.source->string().size();
+    return state.string.data() + state.string.size();
 }
 
 auto liblex::current(const kieli::Lex_state& state) noexcept -> char
@@ -95,24 +95,26 @@ auto liblex::make_identifier(kieli::Lex_state const& state, std::string_view con
 auto liblex::error(
     kieli::Lex_state const& state,
     std::string_view const  position,
-    std::string_view const  message) -> std::unexpected<Token_extraction_failure>
+    std::string             message) -> std::unexpected<Token_extraction_failure>
 {
-    state.compile_info.diagnostics.emit(
-        cppdiag::Severity::error, state.source, source_range_for(state, position), "{}", message);
+    kieli::emit_diagnostic(
+        cppdiag::Severity::error,
+        state.compile_info,
+        state.source,
+        source_range_for(state, position),
+        std::move(message));
     return std::unexpected { Token_extraction_failure {} };
 }
 
-auto liblex::error(
-    kieli::Lex_state const& state,
-    char const* const       position,
-    std::string_view const  message) -> std::unexpected<Token_extraction_failure>
+auto liblex::error(kieli::Lex_state const& state, char const* const position, std::string message)
+    -> std::unexpected<Token_extraction_failure>
 {
-    return error(state, { position, position }, message);
+    return error(state, { position, position }, std::move(message));
 }
 
-auto liblex::error(kieli::Lex_state const& state, std::string_view const message)
+auto liblex::error(kieli::Lex_state const& state, std::string message)
     -> std::unexpected<Token_extraction_failure>
 {
     cpputil::always_assert(state.string.data() != nullptr);
-    return error(state, state.string.data(), message);
+    return error(state, state.string.data(), std::move(message));
 }

@@ -73,14 +73,16 @@ auto libparse::Context::up_to_current(utl::Source_range const start) const -> ut
 }
 
 auto libparse::Context::error_expected(
-    utl::Source_range const error_view, std::string_view const description) -> void
+    utl::Source_range const    error_range,
+    std::string_view const     description,
+    std::optional<std::string> help_note) -> void
 {
-    m_lex_state.compile_info.diagnostics.error(
-        m_lex_state.source,
-        error_view,
-        "Expected {}, but found {}",
-        description,
-        Token::description(peek().type));
+    kieli::fatal_error(
+        compile_info(),
+        source(),
+        error_range,
+        std::format("Expected {}, but found {}", Token::description(peek().type), description),
+        std::move(help_note));
 }
 
 auto libparse::Context::error_expected(std::string_view const description) -> void
@@ -98,7 +100,7 @@ auto libparse::Context::special_identifiers() const -> Special_identifiers
     return m_special_identifiers;
 }
 
-auto libparse::Context::source() const -> utl::Source::Wrapper
+auto libparse::Context::source() const -> utl::Source_id
 {
     return m_lex_state.source;
 }

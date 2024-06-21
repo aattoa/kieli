@@ -6,12 +6,7 @@ namespace {
     auto lex(std::string&& string) -> std::string
     {
         auto [info, source] = kieli::test_info_and_source(std::move(string));
-
-        kieli::Lex_state state {
-            .compile_info = info,
-            .source       = source,
-            .string       = source->string(),
-        };
+        auto state          = kieli::Lex_state::make(source, info);
 
         std::string output;
         for (;;) {

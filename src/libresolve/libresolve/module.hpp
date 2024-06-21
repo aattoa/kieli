@@ -12,9 +12,9 @@ namespace libresolve {
         using Variant = std::variant<
             utl::Mutable_wrapper<Function_info>, //
             utl::Mutable_wrapper<Module_info>>;
-        kieli::Name_lower    name;
-        utl::Source::Wrapper source;
-        Variant              variant;
+        kieli::Name_lower name;
+        utl::Source_id    source;
+        Variant           variant;
     };
 
     struct Upper_info {
@@ -22,9 +22,9 @@ namespace libresolve {
             utl::Mutable_wrapper<Enumeration_info>,
             utl::Mutable_wrapper<Typeclass_info>,
             utl::Mutable_wrapper<Alias_info>>;
-        kieli::Name_upper    name;
-        utl::Source::Wrapper source;
-        Variant              variant;
+        kieli::Name_upper name;
+        utl::Source_id    source;
+        Variant           variant;
     };
 
     using Definition_variant = std::variant<
@@ -98,10 +98,10 @@ class libresolve::Scope {
     utl::Flatmap<kieli::Identifier, Variable_bind>   m_variables;
     utl::Flatmap<kieli::Identifier, Type_bind>       m_types;
     utl::Flatmap<kieli::Identifier, Mutability_bind> m_mutabilities;
-    utl::Source::Wrapper                             m_source;
+    utl::Source_id                                   m_source;
     Scope*                                           m_parent {};
 public:
-    explicit Scope(utl::Source::Wrapper const source) : m_source { source } {}
+    explicit Scope(utl::Source_id const source) : m_source { source } {}
 
     Scope(Scope&&)                    = default;
     auto operator=(Scope&&) -> Scope& = default;
@@ -123,11 +123,11 @@ public:
     // Retrieve the parent pointer. Returns `nullptr` if there is no parent.
     [[nodiscard]] auto parent() const noexcept -> Scope*;
 
-    // Retrieve the source wrapper.
-    [[nodiscard]] auto source() const noexcept -> utl::Source::Wrapper;
+    // Retrieve the source id.
+    [[nodiscard]] auto source() const noexcept -> utl::Source_id;
 
     // Emit warnings for any unused bindings.
-    auto report_unused(kieli::Diagnostics& diagnostics, utl::Source::Wrapper source) -> void;
+    auto report_unused(kieli::Compile_info& info) -> void;
 };
 
 struct libresolve::Function_with_resolved_signature {
@@ -184,5 +184,5 @@ struct libresolve::Environment {
     utl::Flatmap<kieli::Identifier, Lower_info> lower_map;
     std::vector<Definition_variant>             in_order;
     std::optional<Environment_wrapper>          parent;
-    utl::Source::Wrapper                        source;
+    utl::Source_id                              source;
 };

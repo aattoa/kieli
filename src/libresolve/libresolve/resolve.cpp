@@ -3,26 +3,23 @@
 #include <libresolve/resolution_internals.hpp>
 
 namespace {
-    auto read_main_source(
-        kieli::Diagnostics&                 diagnostics,
-        kieli::Project_configuration const& configuration) -> utl::Source
+    // TODO: rewrite this function
+    auto read_main_source(kieli::Project_configuration const& config) -> std::string
     {
         std::filesystem::path main_file_path
-            = configuration.root_directory
-            / std::format("{}{}", configuration.main_name, configuration.file_extension);
-
+            = config.root_directory / std::format("{}{}", config.main_name, config.file_extension);
         if (!is_regular_file(main_file_path)) {
-            diagnostics.error("Project main file not found: '{}'", main_file_path.c_str());
+            throw std::runtime_error(
+                std::format("Project main file not found: '{}'", main_file_path.c_str()));
         }
-        return utl::Source::read(std::move(main_file_path)).value();
+        return utl::read_file(main_file_path).value();
     }
 
     auto make_main_environment(libresolve::Context& context) -> libresolve::Environment_wrapper
     {
-        auto main_source
-            = read_main_source(context.compile_info.diagnostics, context.project_configuration);
-        return libresolve::make_environment(
-            context, context.compile_info.source_arena.wrap(std::move(main_source)));
+        utl::Source_id const source = context.compile_info.source_vector.push(
+            read_main_source(context.project_configuration));
+        return libresolve::make_environment(context, source);
     }
 } // namespace
 

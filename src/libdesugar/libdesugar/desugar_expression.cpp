@@ -4,6 +4,26 @@
 namespace {
     using namespace libdesugar;
 
+    // TODO: just mark the duplicate as erroneous
+    [[noreturn]] auto emit_duplicate_fields_error(
+        Context&                context,
+        kieli::Name_lower const name,
+        utl::Source_range const first,
+        utl::Source_range const second) -> void
+    {
+        utl::Source const& source = context.compile_info.source_vector[context.source];
+        context.compile_info.diagnostics.push_back(cppdiag::Diagnostic {
+            .text_sections = utl::to_vector({
+                kieli::text_section(
+                    source, first, "First specified here", cppdiag::Severity::information),
+                kieli::text_section(source, second, "Later specified here"),
+            }),
+            .message       = std::format("More than one initializer for struct member {}", name),
+            .severity      = cppdiag::Severity::error,
+        });
+        throw kieli::Compilation_failure {};
+    }
+
     auto ensure_no_duplicate_fields(
         Context& context, cst::expression::Struct_initializer const& initializer) -> void
     {
@@ -16,16 +36,8 @@ namespace {
                     &cst::expression::Struct_initializer::Field::name);
                 duplicate != initializers.end())
             {
-                context.diagnostics().error(
-                    {
-                        { context.source,
-                          it->name.source_range,
-                          "First specified here",
-                          cppdiag::Severity::information },
-                        { context.source, duplicate->name.source_range, "Later specified here" },
-                    },
-                    "Struct initializer contains more than one initializer for member {}",
-                    it->name);
+                emit_duplicate_fields_error(
+                    context, it->name, it->name.source_range, duplicate->name.source_range);
             }
         }
     }
@@ -173,8 +185,9 @@ namespace {
 
             utl::Wrapper<ast::Expression> const condition = context.desugar(conditional.condition);
             if (std::holds_alternative<kieli::Boolean>(condition->variant)) {
-                context.diagnostics().emit(
+                kieli::emit_diagnostic(
                     cppdiag::Severity::information,
+                    context.compile_info,
                     context.source,
                     condition->source_range,
                     "Constant condition");
@@ -275,13 +288,14 @@ namespace {
 
             auto const condition = context.desugar(loop.condition);
             if (auto const* const boolean = std::get_if<kieli::Boolean>(&condition->variant)) {
-                context.diagnostics().emit(
+                kieli::emit_diagnostic(
                     cppdiag::Severity::information,
+                    context.compile_info,
                     context.source,
                     condition->source_range,
-                    "Constant condition: {}",
-                    boolean->value ? "consider using `loop` instead of `while true`"
-                                   : "loop body will never be executed");
+                    "Constant condition",
+                    boolean->value ? "Consider using `loop` instead of `while true`"
+                                   : "The loop body will never be executed");
             }
             return ast::expression::Loop {
                 .body = context.wrap(ast::Expression {
@@ -530,8 +544,11 @@ namespace {
 
         auto operator()(cst::expression::For_loop const&) -> ast::Expression::Variant
         {
-            context.diagnostics().error(
-                context.source, this_expression.source_range, "For loops are not supported yet");
+            kieli::fatal_error(
+                context.compile_info,
+                context.source,
+                this_expression.source_range,
+                "For loops are not supported yet");
         }
 
         auto operator()(cst::expression::Conditional_let const&) -> ast::Expression::Variant

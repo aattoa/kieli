@@ -1,6 +1,7 @@
 add_executable(devmain devmain/main.cpp)
 
-target_include_directories(devmain PRIVATE ${PROJECT_SOURCE_DIR}/src/devmain)
+target_include_directories(devmain
+    PRIVATE ${PROJECT_SOURCE_DIR}/src/devmain)
 
 kieli_use_libutl(devmain)
 

@@ -4,13 +4,6 @@
 
 #define TEST(name) UNITTEST("libutl: " name)
 
-TEST("Source::Source")
-{
-    utl::Source const source { "filename 123", "content 321" };
-    CHECK_EQUAL(source.path().string(), "filename 123");
-    CHECK_EQUAL(source.string(), "content 321");
-}
-
 TEST("Source_position::advance_with")
 {
     utl::Source_position position { .line = 5, .column = 7 };
@@ -38,7 +31,6 @@ TEST("Source_range::in")
     CHECK_EQUAL(utl::Source_range { { 1, 1 }, { 3, 6 } }.in(source), source);
 }
 
-static_assert(!std::is_default_constructible_v<utl::Source>);
 static_assert(!std::is_default_constructible_v<utl::Source_range>);
 static_assert(std::is_trivially_copyable_v<utl::Source_range>);
 static_assert(std::is_trivially_copyable_v<utl::Source_position>);

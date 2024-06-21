@@ -51,9 +51,11 @@ namespace libparse {
         auto commit(Stage stage) -> void;
 
         // Emit an error that describes an expectation failure:
-        // Encountered `error_view` where `description` was expected.
-        [[noreturn]] auto error_expected(utl::Source_range error_view, std::string_view description)
-            -> void;
+        // Encountered `error_range` where `description` was expected.
+        [[noreturn]] auto error_expected(
+            utl::Source_range          error_range,
+            std::string_view           description,
+            std::optional<std::string> help_note = std::nullopt) -> void;
 
         // Emit an error that describes an expectation failure:
         // Encountered the current token where `description` was expected.
@@ -64,7 +66,7 @@ namespace libparse {
 
         [[nodiscard]] auto compile_info() -> kieli::Compile_info&;
         [[nodiscard]] auto special_identifiers() const -> Special_identifiers;
-        [[nodiscard]] auto source() const -> utl::Source::Wrapper;
+        [[nodiscard]] auto source() const -> utl::Source_id;
 
         template <cst::node Node>
         auto wrap(Node&& node) -> utl::Wrapper<Node>

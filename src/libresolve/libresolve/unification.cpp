@@ -9,25 +9,29 @@ namespace {
 
     struct Type_unification_arguments {
         using Report_unification_failure = void(
-            kieli::Diagnostics&       diagnostics,
-            hir::Type::Variant const& sub,
-            hir::Type::Variant const& super);
+            std::vector<cppdiag::Diagnostic>& diagnostics,
+            hir::Type::Variant const&         sub,
+            hir::Type::Variant const&         super);
         using Report_recursive_solution = void(
-            kieli::Diagnostics& diagnostics, Type_variable_tag tag, hir::Type::Variant const& type);
+            std::vector<cppdiag::Diagnostic>& diagnostics,
+            Type_variable_tag                 tag,
+            hir::Type::Variant const&         type);
         Unification_goal            goal {};
         Report_unification_failure* report_unification_failure {};
         Report_recursive_solution*  report_recursive_solution {};
     };
 
     struct Mutability_unification_arguments {
-        using Report_unification_failure
-            = void(kieli::Diagnostics& diagnostics, hir::Mutability sub, hir::Mutability super);
+        using Report_unification_failure = void(
+            std::vector<cppdiag::Diagnostic>& diagnostics,
+            hir::Mutability                   sub,
+            hir::Mutability                   super);
         Unification_goal            goal {};
         Report_unification_failure* report_unification_failure {};
     };
 
     struct Mutability_unification_visitor {
-        kieli::Diagnostics&                     diagnostics;
+        std::vector<cppdiag::Diagnostic>&       diagnostics;
         Inference_state&                        state;
         Mutability_unification_arguments const& arguments;
         hir::Mutability const&                  current_sub;
@@ -102,7 +106,7 @@ namespace {
     };
 
     struct Type_unification_visitor {
-        kieli::Diagnostics&               diagnostics;
+        std::vector<cppdiag::Diagnostic>& diagnostics;
         Inference_state&                  state;
         Type_unification_arguments const& arguments;
         hir::Type::Variant const&         current_sub;
@@ -291,7 +295,7 @@ namespace {
     };
 
     auto unify(
-        kieli::Diagnostics&               diagnostics,
+        std::vector<cppdiag::Diagnostic>& diagnostics,
         Inference_state&                  state,
         Type_unification_arguments const& arguments,
         hir::Type::Variant const&         sub,
@@ -303,10 +307,10 @@ namespace {
 } // namespace
 
 auto libresolve::require_subtype_relationship(
-    kieli::Diagnostics&       diagnostics,
-    Inference_state&          state,
-    hir::Type::Variant const& sub,
-    hir::Type::Variant const& super) -> void
+    std::vector<cppdiag::Diagnostic>& diagnostics,
+    Inference_state&                  state,
+    hir::Type::Variant const&         sub,
+    hir::Type::Variant const&         super) -> void
 {
     Type_unification_arguments const arguments {
         .goal = Unification_goal::subtype,
@@ -315,7 +319,9 @@ auto libresolve::require_subtype_relationship(
     if (!unify(diagnostics, state, arguments, sub, super)) {
         auto const sub_type_string   = hir::to_string(sub);
         auto const super_type_string = hir::to_string(super);
-
-        diagnostics.error("Unable to unify {} ~ {}", sub_type_string, super_type_string);
+        diagnostics.push_back(cppdiag::Diagnostic {
+            .message  = std::format("Unable to unify {} ~ {}", sub_type_string, super_type_string),
+            .severity = cppdiag::Severity::error,
+        });
     }
 }

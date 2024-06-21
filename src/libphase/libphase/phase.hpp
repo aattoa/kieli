@@ -7,123 +7,48 @@
 
 namespace kieli {
     // Thrown when an unrecoverable error is encountered
+    // TODO: Remove this!
     struct Compilation_failure : std::exception {
         [[nodiscard]] auto what() const noexcept -> char const* override;
     };
 
-    struct Simple_text_section {
-        utl::Source::Wrapper             source;
-        utl::Source_range                source_range;
-        std::optional<std::string_view>  note;
-        std::optional<cppdiag::Severity> severity;
+    struct Compile_info {
+        std::vector<cppdiag::Diagnostic> diagnostics;
+        utl::Source_vector               source_vector;
+        utl::String_pool                 string_literal_pool;
+        utl::String_pool                 operator_pool;
+        utl::String_pool                 identifier_pool;
     };
+
+    auto emit_diagnostic(
+        cppdiag::Severity          severity,
+        Compile_info&              info,
+        utl::Source_id             source,
+        utl::Source_range          error_range,
+        std::string                message,
+        std::optional<std::string> help_note = std::nullopt) -> void;
+
+    [[noreturn]] auto fatal_error(
+        Compile_info&              info,
+        utl::Source_id             source,
+        utl::Source_range          error_range,
+        std::string                message,
+        std::optional<std::string> help_note = std::nullopt) -> void;
 
     auto text_section(
-        utl::Source::Wrapper                   section_source,
-        utl::Source_range                      section_range,
-        std::optional<cppdiag::Message_string> section_note = std::nullopt,
-        std::optional<cppdiag::Severity>       severity = std::nullopt) -> cppdiag::Text_section;
+        utl::Source const&               source,
+        utl::Source_range                range,
+        std::optional<std::string>       note          = std::nullopt,
+        std::optional<cppdiag::Severity> note_severity = std::nullopt) -> cppdiag::Text_section;
 
-    struct Diagnostics {
-        cppdiag::Message_buffer          message_buffer;
-        std::vector<cppdiag::Diagnostic> vector;
-        bool                             has_emitted_error {};
-
-        template <class... Args>
-        auto emit(
-            cppdiag::Severity const           severity,
-            std::format_string<Args...> const fmt,
-            Args&&... args) -> void
-        {
-            has_emitted_error = has_emitted_error || (severity == cppdiag::Severity::error);
-            vector.push_back(cppdiag::Diagnostic {
-                .message  = format_message(message_buffer, fmt, std::forward<Args>(args)...),
-                .severity = severity,
-            });
-        }
-
-        template <std::size_t n, class... Args>
-        auto emit(
-            cppdiag::Severity const severity,
-            Simple_text_section (&&sections)[n],
-            std::format_string<Args...> const fmt,
-            Args&&... args) -> void
-        {
-            has_emitted_error = has_emitted_error || (severity == cppdiag::Severity::error);
-            vector.push_back(cppdiag::Diagnostic {
-                .text_sections = std::apply(
-                    [&](auto&&... sections) {
-                        return utl::to_vector({ text_section(
-                            sections.source,
-                            sections.source_range,
-                            sections.note.transform([&](std::string_view const string) {
-                                return cppdiag::format_message(message_buffer, "{}", string);
-                            }))... });
-                    },
-                    std::to_array(std::move(sections))),
-                .message  = format_message(message_buffer, fmt, std::forward<Args>(args)...),
-                .severity = severity,
-            });
-        }
-
-        template <class... Args>
-        auto emit(
-            cppdiag::Severity const           severity,
-            utl::Source::Wrapper const        source,
-            utl::Source_range const           source_range,
-            std::format_string<Args...> const fmt,
-            Args&&... args) -> void
-        {
-            emit(
-                severity,
-                { Simple_text_section { source, source_range } },
-                fmt,
-                std::forward<Args>(args)...);
-        }
-
-        template <class... Args>
-        [[noreturn]] auto error(std::format_string<Args...> const fmt, Args&&... args) -> void
-        {
-            emit(cppdiag::Severity::error, fmt, std::forward<Args>(args)...);
-            throw Compilation_failure {};
-        }
-
-        template <std::size_t n, class... Args>
-        [[noreturn]] auto error(
-            Simple_text_section (&&sections)[n],
-            std::format_string<Args...> const fmt,
-            Args&&... args) -> void
-        {
-            emit(cppdiag::Severity::error, std::move(sections), fmt, std::forward<Args>(args)...);
-            throw Compilation_failure {};
-        }
-
-        template <class... Args>
-        [[noreturn]] auto error(
-            utl::Source::Wrapper const        source,
-            utl::Source_range const           source_range,
-            std::format_string<Args...> const fmt,
-            Args&&... args) -> void
-        {
-            error(
-                { Simple_text_section { source, source_range } }, fmt, std::forward<Args>(args)...);
-        }
-
-        [[nodiscard]] auto format_all(cppdiag::Colors) const -> std::string;
-    };
-
-    struct Compile_info {
-        Diagnostics        diagnostics;
-        utl::Source::Arena source_arena = utl::Source::Arena::with_page_size(8);
-        utl::String_pool   string_literal_pool;
-        utl::String_pool   operator_pool;
-        utl::String_pool   identifier_pool;
-    };
-
-    auto predefinitions_source(Compile_info&) -> utl::Source::Wrapper;
+    auto format_diagnostics(
+        std::span<cppdiag::Diagnostic const> diagnostics,
+        cppdiag::Colors                      colors = cppdiag::Colors::defaults()) -> std::string;
 
     auto test_info_and_source(std::string&& source_string)
-        -> std::pair<Compile_info, utl::Source::Wrapper>;
+        -> std::pair<Compile_info, utl::Source_id>;
+
+    auto predefinitions_source(Compile_info&) -> utl::Source_id;
 
     struct Identifier {
         utl::Pooled_string string;

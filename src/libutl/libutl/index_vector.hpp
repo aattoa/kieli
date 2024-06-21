@@ -10,7 +10,7 @@ namespace utl {
         // clang-format off
         { index.get() } -> std::same_as<std::size_t>;
         // clang-format on
-    };
+    } && std::is_constructible_v<Index, std::size_t>;
 
     // Wraps a `std::size_t`. Specializations model `vector_index`.
     template <class Uniqueness_tag>
@@ -28,14 +28,21 @@ namespace utl {
         auto operator<=>(Vector_index const& other) const        = default;
     };
 
-    // Wraps a `std::vector`. The subscript operator uses `Index` instead of `std::size_t`.
+    // Wraps a `std::vector`. The subscript operator uses `Index` instead of `size_t`.
     template <vector_index Index, class T, class Allocator = std::allocator<T>>
     struct [[nodiscard]] Index_vector {
         std::vector<T, Allocator> underlying;
 
-        constexpr auto operator[](this auto&& self, Index const index) -> decltype(auto)
+        [[nodiscard]] constexpr auto operator[](this auto&& self, Index index) -> decltype(auto)
         {
             return std::forward_like<decltype(self)>(self.underlying.at(index.get()));
+        }
+
+        template <class... Args>
+        [[nodiscard]] constexpr auto push(Args&&... args) -> Index
+        {
+            underlying.emplace_back(std::forward<Args>(args)...);
+            return Index(underlying.size() - 1);
         }
 
         auto operator==(Index_vector const& other) const -> bool = default;

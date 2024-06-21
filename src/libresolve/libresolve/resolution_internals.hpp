@@ -59,7 +59,7 @@ namespace libresolve {
         Mutability_variables mutability_variables;
         utl::Disjoint_set    type_variable_disjoint_set;
         utl::Disjoint_set    mutability_variable_disjoint_set;
-        utl::Source::Wrapper source;
+        utl::Source_id       source;
 
         auto flatten(hir::Type::Variant& type) -> void;
 
@@ -68,14 +68,14 @@ namespace libresolve {
         auto fresh_mutability_variable(Arenas& arenas, utl::Source_range origin) -> hir::Mutability;
 
         auto set_solution(
-            kieli::Diagnostics& diagnostics,
-            Type_variable_data& variable_data,
-            hir::Type::Variant  solution) -> void;
+            std::vector<cppdiag::Diagnostic>& diagnostics,
+            Type_variable_data&               variable_data,
+            hir::Type::Variant                solution) -> void;
 
         auto set_solution(
-            kieli::Diagnostics&       diagnostics,
-            Mutability_variable_data& variable_data,
-            hir::Mutability::Variant  solution) -> void;
+            std::vector<cppdiag::Diagnostic>& diagnostics,
+            Mutability_variable_data&         variable_data,
+            hir::Mutability::Variant          solution) -> void;
     };
 
     class Tag_state {
@@ -106,29 +106,28 @@ namespace libresolve {
         kieli::Project_configuration const& configuration,
         std::span<kieli::Name_lower const>  path_segments) -> std::expected<Import, Import_error>;
 
-    auto ensure_no_unsolved_variables(Inference_state& state, kieli::Diagnostics& diagnostics)
-        -> void;
+    auto ensure_no_unsolved_variables(kieli::Compile_info& info, Inference_state& state) -> void;
 
     auto add_to_environment(
-        Context&             context,
-        utl::Source::Wrapper source,
-        Environment&         environment,
-        kieli::Name_lower    name,
-        Lower_info::Variant  variant) -> void;
+        Context&            context,
+        utl::Source_id      source,
+        Environment&        environment,
+        kieli::Name_lower   name,
+        Lower_info::Variant variant) -> void;
 
     auto add_to_environment(
-        Context&             context,
-        utl::Source::Wrapper source,
-        Environment&         environment,
-        kieli::Name_upper    name,
-        Upper_info::Variant  variant) -> void;
+        Context&            context,
+        utl::Source_id      source,
+        Environment&        environment,
+        kieli::Name_upper   name,
+        Upper_info::Variant variant) -> void;
 
     auto collect_environment(
         Context&                       context,
-        utl::Source::Wrapper           source,
+        utl::Source_id                 source,
         std::vector<ast::Definition>&& definitions) -> Environment_wrapper;
 
-    auto make_environment(Context& context, utl::Source::Wrapper source) -> Environment_wrapper;
+    auto make_environment(Context& context, utl::Source_id source) -> Environment_wrapper;
 
     auto resolve_module(Context& context, Module_info& module_info) -> Environment_wrapper;
 
@@ -219,10 +218,10 @@ namespace libresolve {
 
     // Require that `sub` is equal to or a subtype of `super`.
     auto require_subtype_relationship(
-        kieli::Diagnostics&       diagnostics,
-        Inference_state&          state,
-        hir::Type::Variant const& sub,
-        hir::Type::Variant const& super) -> void;
+        std::vector<cppdiag::Diagnostic>& diagnostics,
+        Inference_state&                  state,
+        hir::Type::Variant const&         sub,
+        hir::Type::Variant const&         super) -> void;
 
     auto error_expression(Constants const&, utl::Source_range) -> hir::Expression;
     auto unit_expression(Constants const&, utl::Source_range) -> hir::Expression;

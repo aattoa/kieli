@@ -20,14 +20,14 @@ namespace liblex {
     [[nodiscard]] auto error(
         kieli::Lex_state const& state,
         std::string_view        position,
-        std::string_view        message) -> std::unexpected<Token_extraction_failure>;
+        std::string             message) -> std::unexpected<Token_extraction_failure>;
 
     [[nodiscard]] auto error(
         kieli::Lex_state const& state,
         char const*             position,
-        std::string_view        message) -> std::unexpected<Token_extraction_failure>;
+        std::string             message) -> std::unexpected<Token_extraction_failure>;
 
-    [[nodiscard]] auto error(kieli::Lex_state const& state, std::string_view message)
+    [[nodiscard]] auto error(kieli::Lex_state const& state, std::string message)
         -> std::unexpected<Token_extraction_failure>;
 
     auto advance(kieli::Lex_state&, std::size_t offset = 1) noexcept -> void;

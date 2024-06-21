@@ -15,18 +15,9 @@ namespace libdesugar {
     struct Context {
         kieli::Compile_info& compile_info;
         ast::Node_arena&     node_arena;
-        utl::Source::Wrapper source;
+        utl::Source_id       source;
         kieli::Identifier    self_variable_identifier
             = kieli::Identifier { compile_info.identifier_pool.make("self") };
-
-        explicit Context(
-            kieli::Compile_info&       compile_info,
-            ast::Node_arena&           node_arena,
-            utl::Source::Wrapper const source) noexcept
-            : compile_info { compile_info }
-            , node_arena { node_arena }
-            , source { source }
-        {}
 
         template <ast::node Node>
         auto wrap(Node&& node) -> utl::Wrapper<Node>
@@ -128,7 +119,5 @@ namespace libdesugar {
             -> ast::Mutability;
 
         auto normalize_self_parameter(cst::Self_parameter const&) -> ast::Function_parameter;
-
-        [[nodiscard]] auto diagnostics() noexcept -> kieli::Diagnostics&;
     };
 } // namespace libdesugar

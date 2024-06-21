@@ -10,7 +10,8 @@ namespace {
     {
         auto name = extract_qualified_name(context, std::move(root));
         if (!name.is_upper()) {
-            context.compile_info().diagnostics.error(
+            kieli::fatal_error(
+                context.compile_info(),
                 context.source(),
                 context.up_to_current(name.primary_name.source_range),
                 "Expected a type, but found a lowercase name");

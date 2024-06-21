@@ -606,13 +606,9 @@ namespace {
 
 } // namespace
 
-auto kieli::Lex_state::make(utl::Source::Wrapper const source, Compile_info& info) -> Lex_state
+auto kieli::Lex_state::make(utl::Source_id const source, Compile_info& info) -> Lex_state
 {
-    return Lex_state {
-        .compile_info = info,
-        .source       = source,
-        .string       = source->string(),
-    };
+    return Lex_state { info, source, utl::Source_position {}, info.source_vector[source].content };
 }
 
 auto kieli::lex(Lex_state& state) -> Token

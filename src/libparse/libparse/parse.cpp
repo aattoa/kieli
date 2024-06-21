@@ -2,9 +2,9 @@
 #include <libparse/parse.hpp>
 #include <libparse/parser_internals.hpp>
 
-namespace {
+using namespace libparse;
 
-    using namespace libparse;
+namespace {
 
     auto parse_self_parameter(Context& context) -> std::optional<cst::Self_parameter>
     {
@@ -137,10 +137,12 @@ auto libparse::parse_mutability(Context& context) -> std::optional<cst::Mutabili
         };
     }
     if (auto immut_keyword = context.try_extract(Token::Type::immut)) {
-        context.compile_info().diagnostics.error(
+        kieli::fatal_error(
+            context.compile_info(),
             context.source(),
             immut_keyword.value().source_range,
-            "Immutability may not be specified here, as it is the default");
+            "`immut` may not appear here",
+            "Immutability is the default, so it does not need to be specified");
     }
     return std::nullopt;
 }
@@ -173,10 +175,7 @@ auto libparse::parse_class_reference(Context& context) -> std::optional<cst::Cla
 
         auto name = extract_qualified_name(context, std::move(root));
         if (!name.primary_name.is_upper.get()) {
-            context.compile_info().diagnostics.error(
-                context.source(),
-                name.primary_name.source_range,
-                "Expected a class name, but found a lowercase identifier");
+            context.error_expected(name.primary_name.source_range, "a class name");
         }
         return name;
     });
@@ -377,7 +376,7 @@ auto libparse::extract_class_references(Context& context)
         context, "one or more '+'-separated class references");
 }
 
-auto kieli::parse(utl::Source::Wrapper const source, Compile_info& compile_info) -> cst::Module
+auto kieli::parse(utl::Source_id const source, Compile_info& compile_info) -> cst::Module
 {
     cst::Node_arena   node_arena = cst::Node_arena::with_default_page_size();
     libparse::Context context { node_arena, Lex_state::make(source, compile_info) };

@@ -31,44 +31,11 @@ namespace {
     }
 } // namespace
 
-utl::Source::Source(std::filesystem::path&& path, std::string&& content)
-    : m_file_path { std::move(path) }
-    , m_file_content { std::move(content) }
-{
-    disable_short_string_optimization(m_file_content);
-}
-
-auto utl::Source::read(std::filesystem::path path) -> std::expected<Source, Read_error>
-{
-    if (auto file = cpputil::io::File::open_read(path.c_str())) {
-        if (auto content = cpputil::io::read(file.get())) {
-            disable_short_string_optimization(content.value());
-            return Source { std::move(path), std::move(content.value()) };
-        }
-        return std::unexpected { Read_error::failed_to_read };
-    }
-    if (std::filesystem::exists(path)) {
-        return std::unexpected { Read_error::failed_to_open };
-    }
-    return std::unexpected { Read_error::does_not_exist };
-}
-
-auto utl::Source::path() const noexcept -> std::filesystem::path const&
-{
-    return m_file_path;
-}
-
-auto utl::Source::string() const noexcept -> std::string_view
-{
-    return m_file_content;
-}
-
 auto utl::Source_position::advance_with(char const c) -> void
 {
     assert(is_valid());
     if (c == '\n') {
-        ++line;
-        column = 1;
+        ++line, column = 1;
     }
     else {
         ++column;
@@ -97,4 +64,18 @@ auto utl::Source_range::up_to(Source_range const other) const -> Source_range
 auto utl::Source_range::dummy() noexcept -> Source_range
 {
     return Source_range { Source_position {}, Source_position {} };
+}
+
+auto utl::read_file(std::filesystem::path const& path) -> std::expected<std::string, Read_error>
+{
+    if (auto file = cpputil::io::File::open_read(path.c_str())) {
+        if (auto content = cpputil::io::read(file.get())) {
+            return std::move(content).value();
+        }
+        return std::unexpected(Read_error::failed_to_read);
+    }
+    if (std::filesystem::exists(path)) {
+        return std::unexpected(Read_error::failed_to_open);
+    }
+    return std::unexpected(Read_error::does_not_exist);
 }

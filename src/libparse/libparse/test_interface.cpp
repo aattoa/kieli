@@ -18,7 +18,7 @@ namespace {
             context.error_expected(expectation);
         }
         catch (kieli::Compilation_failure const&) {
-            return info.diagnostics.format_all(cppdiag::Colors::none());
+            return kieli::format_diagnostics(info.diagnostics, cppdiag::Colors::none());
         }
     }
 } // namespace

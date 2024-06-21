@@ -1,9 +1,10 @@
 #include <libutl/utilities.hpp>
 #include <libresolve/resolution_internals.hpp>
 
+using namespace libresolve;
+
 namespace {
-    auto resolve_concrete(
-        libresolve::Constants const& constants, ast::mutability::Concrete const concrete)
+    auto resolve_concrete(Constants const& constants, ast::mutability::Concrete const concrete)
     {
         switch (concrete) {
         case ast::mutability::Concrete::mut:
@@ -13,6 +14,20 @@ namespace {
         default:
             cpputil::unreachable();
         }
+    }
+
+    auto binding_not_in_scope(
+        Context&                context,
+        utl::Source_id const    source,
+        kieli::Name_lower const name) -> hir::Mutability
+    {
+        kieli::emit_diagnostic(
+            cppdiag::Severity::error,
+            context.compile_info,
+            source,
+            name.source_range,
+            std::format("No mutability binding '{}' in scope", name));
+        return hir::Mutability { context.constants.mutability_error, name.source_range };
     }
 } // namespace
 
@@ -32,16 +47,7 @@ auto libresolve::resolve_mutability(
                 {
                     return bound->mutability;
                 }
-                context.compile_info.diagnostics.emit(
-                    cppdiag::Severity::error,
-                    scope.source(),
-                    parameterized.name.source_range,
-                    "No mutability binding '{}' in scope",
-                    parameterized.name);
-                return hir::Mutability {
-                    .variant      = context.constants.mutability_error,
-                    .source_range = mutability.source_range,
-                };
+                return binding_not_in_scope(context, scope.source(), parameterized.name);
             },
         },
         mutability.variant);
