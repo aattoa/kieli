@@ -4,7 +4,7 @@
 #include <libutl/index_vector.hpp>
 #include <libutl/wrapper.hpp>
 #include <libutl/source.hpp>
-#include <libphase/phase.hpp>
+#include <libcompiler/compiler.hpp>
 #include <libresolve/fwd.hpp>
 
 namespace libresolve {

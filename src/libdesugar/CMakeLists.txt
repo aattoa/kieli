@@ -13,5 +13,5 @@ target_sources(libdesugar
     PRIVATE libdesugar/desugaring_internals.hpp)
 
 target_link_libraries(libdesugar
-    PUBLIC libparse
-    PUBLIC libphase)
+    PUBLIC libcompiler
+    PUBLIC libparse)

@@ -17,4 +17,4 @@ target_sources(libparse
 target_link_libraries(libparse
     PUBLIC liblex
     PUBLIC libformat
-    PUBLIC libphase)
+    PUBLIC libcompiler)

@@ -76,7 +76,7 @@ function (kieli_test library name)
 endfunction ()
 
 add_subdirectory(src/libutl)
-add_subdirectory(src/libphase)
+add_subdirectory(src/libcompiler)
 add_subdirectory(src/liblex)
 add_subdirectory(src/libparse)
 add_subdirectory(src/libdesugar)

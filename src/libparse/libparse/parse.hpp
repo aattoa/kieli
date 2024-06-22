@@ -1,6 +1,6 @@
 #pragma once
 
-#include <libphase/phase.hpp>
+#include <libcompiler/compiler.hpp>
 #include <libparse/cst.hpp>
 
 namespace kieli {

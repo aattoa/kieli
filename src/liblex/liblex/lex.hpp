@@ -1,7 +1,7 @@
 #pragma once
 
 #include <libutl/utilities.hpp>
-#include <libphase/phase.hpp>
+#include <libcompiler/compiler.hpp>
 #include <liblex/token.hpp>
 
 namespace kieli {

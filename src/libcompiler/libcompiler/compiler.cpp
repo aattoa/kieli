@@ -1,5 +1,5 @@
 #include <libutl/utilities.hpp>
-#include <libphase/phase.hpp>
+#include <libcompiler/compiler.hpp>
 
 auto kieli::emit_diagnostic(
     cppdiag::Severity const    severity,

@@ -11,4 +11,4 @@ target_sources(liblex
     PRIVATE liblex/state.hpp)
 
 target_link_libraries(liblex
-    PUBLIC libphase)
+    PUBLIC libcompiler)

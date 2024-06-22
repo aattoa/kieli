@@ -1,6 +1,6 @@
 #pragma once
 
-#include <libphase/phase.hpp>
+#include <libcompiler/compiler.hpp>
 #include <liblex/token.hpp>
 #include <libutl/utilities.hpp>
 #include <libutl/wrapper.hpp>

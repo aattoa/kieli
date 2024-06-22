@@ -24,5 +24,5 @@ target_sources(libresolve
     PRIVATE libresolve/unification.cpp)
 
 target_link_libraries(libresolve
-    PUBLIC libphase
+    PUBLIC libcompiler
     PUBLIC libdesugar)

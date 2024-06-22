@@ -2,7 +2,7 @@
 
 #include <libutl/utilities.hpp>
 #include <libutl/flatmap.hpp>
-#include <libphase/phase.hpp>
+#include <libcompiler/compiler.hpp>
 #include <libdesugar/ast.hpp>
 #include <libresolve/hir.hpp>
 #include <libresolve/fwd.hpp>
