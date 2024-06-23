@@ -1,7 +1,7 @@
 #pragma once
 
 #include <libcompiler/compiler.hpp>
-#include <liblex/token.hpp>
+#include <libcompiler/token/token.hpp>
 #include <libutl/utilities.hpp>
 #include <libutl/wrapper.hpp>
 

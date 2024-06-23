@@ -1,5 +1,5 @@
-#include <libresolve/hir.hpp>
-#include <libresolve/hir_formatters.hpp>
+#include <libcompiler/hir/hir.hpp>
+#include <libcompiler/hir/formatters.hpp>
 
 #define DEFINE_HIR_FORMAT_TO(...)                                                           \
     auto libresolve::hir::format_to(__VA_ARGS__ const& object, std::string& output) -> void \

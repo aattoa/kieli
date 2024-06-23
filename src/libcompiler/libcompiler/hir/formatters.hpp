@@ -1,8 +1,7 @@
 #pragma once
 
 #include <libutl/utilities.hpp>
-#include <libresolve/hir.hpp>
-#include <libresolve/resolution_internals.hpp>
+#include <libcompiler/hir/hir.hpp>
 
 #define LIBRESOLVE_DECLARE_FORMATTER(...)                                                 \
     template <>                                                                           \
@@ -92,7 +91,7 @@ namespace libresolve::dtl {
 
         auto operator()(hir::expression::Function_reference const& reference)
         {
-            std::format_to(out, "{}", reference.info->name);
+            std::format_to(out, "{}", reference.name);
         }
 
         auto operator()(hir::expression::Indirect_invocation const& invocation)
@@ -102,7 +101,7 @@ namespace libresolve::dtl {
 
         auto operator()(hir::expression::Direct_invocation const& invocation)
         {
-            std::format_to(out, "{}({:n})", invocation.function_info->name, invocation.arguments);
+            std::format_to(out, "{}({:n})", invocation.function_name, invocation.arguments);
         }
 
         auto operator()(hir::expression::Sizeof const& sizeof_)
@@ -232,7 +231,7 @@ namespace libresolve::dtl {
 
         auto operator()(hir::type::Enumeration const& enumeration)
         {
-            std::format_to(out, "{}", enumeration.info->name);
+            std::format_to(out, "{}", enumeration.name);
         }
 
         auto operator()(hir::type::Tuple const& tuple)

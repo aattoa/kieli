@@ -1,7 +1,7 @@
 #pragma once
 
 #include <libutl/utilities.hpp>
-#include <libparse/cst.hpp>
+#include <libcompiler/cst/cst.hpp>
 
 // TODO: collapse string literals, expand integer literals, insert digit separators
 

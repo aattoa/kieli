@@ -1,7 +1,7 @@
 #pragma once
 
 #include <libutl/utilities.hpp>
-#include <libdesugar/ast.hpp>
+#include <libcompiler/ast/ast.hpp>
 
 #define LIBDESUGAR_DECLARE_FORMATTER(...)                                                 \
     template <>                                                                           \

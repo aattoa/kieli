@@ -2,10 +2,6 @@ kieli_library(libresolve)
 
 target_sources(libresolve
     PRIVATE libresolve/collection.cpp
-    PRIVATE libresolve/fwd.hpp
-    PRIVATE libresolve/hir.cpp
-    PRIVATE libresolve/hir.hpp
-    PRIVATE libresolve/hir_formatters.hpp
     PRIVATE libresolve/lookup.cpp
     PRIVATE libresolve/module.hpp
     PRIVATE libresolve/occurs_check.cpp
@@ -24,5 +20,6 @@ target_sources(libresolve
     PRIVATE libresolve/unification.cpp)
 
 target_link_libraries(libresolve
-    PUBLIC libcompiler
-    PUBLIC libdesugar)
+    PUBLIC libparse
+    PUBLIC libdesugar
+    PUBLIC libcompiler)

@@ -151,7 +151,7 @@ namespace {
                     utl::Overload {
                         [&](utl::Mutable_wrapper<Function_info> const function) {
                             return hir::Expression {
-                                hir::expression::Function_reference { .info = function },
+                                hir::expression::Function_reference { function->name, function },
                                 resolve_function_signature(context, function.as_mutable())
                                     .function_type,
                                 hir::Expression_kind::value,
@@ -423,8 +423,8 @@ namespace {
             if (place_expression.kind != hir::Expression_kind::place) {
                 return error(
                     place_expression.source_range,
-                    "This expression does not identify a place in memory, so its address can not "
-                    "be taken");
+                    "This expression does not identify a place in memory, "
+                    "so its address can not be taken");
             }
             return {
                 hir::expression::Addressof {

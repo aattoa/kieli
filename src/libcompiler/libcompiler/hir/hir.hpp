@@ -5,7 +5,25 @@
 #include <libutl/wrapper.hpp>
 #include <libutl/source.hpp>
 #include <libcompiler/compiler.hpp>
-#include <libresolve/fwd.hpp>
+
+// TODO: remove libresolve references
+
+namespace libresolve {
+    struct Function_info;
+    struct Enumeration_info;
+    struct Typeclass_info;
+    struct Alias_info;
+    struct Module_info;
+    struct Environment;
+    class Scope;
+} // namespace libresolve
+
+namespace libresolve::hir {
+    struct Mutability;
+    struct Expression;
+    struct Pattern;
+    struct Type;
+} // namespace libresolve::hir
 
 namespace libresolve {
     struct Template_parameter_tag : utl::Vector_index<Template_parameter_tag> {
@@ -143,6 +161,7 @@ namespace libresolve::hir {
         };
 
         struct Enumeration {
+            kieli::Name_upper                      name;
             utl::Mutable_wrapper<Enumeration_info> info;
         };
 
@@ -234,6 +253,7 @@ namespace libresolve::hir {
         };
 
         struct Function_reference {
+            kieli::Name_lower                   name;
             utl::Mutable_wrapper<Function_info> info;
         };
 
@@ -243,6 +263,7 @@ namespace libresolve::hir {
         };
 
         struct Direct_invocation {
+            kieli::Name_lower              function_name;
             utl::Wrapper<Function_info>    function_info;
             std::vector<Function_argument> arguments;
         };

@@ -43,7 +43,8 @@ namespace {
                     });
                     environment.as_mutable().in_order.emplace_back(info);
                     add_to_environment(context, source, environment.as_mutable(), info->name, info);
-                    info->type.variant.as_mutable() = hir::type::Enumeration { info };
+                    info->type.variant.as_mutable()
+                        = hir::type::Enumeration { enumeration.name, info };
                 },
                 [&](ast::definition::Function&& function) {
                     auto const info = context.arenas.info(Function_info {

@@ -1,7 +1,7 @@
 #pragma once
 
 #include <liblex/lex.hpp>
-#include <libparse/cst.hpp>
+#include <libcompiler/cst/cst.hpp>
 
 namespace libparse {
 

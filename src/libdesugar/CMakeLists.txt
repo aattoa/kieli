@@ -1,9 +1,6 @@
 kieli_library(libdesugar)
 
 target_sources(libdesugar
-    PRIVATE libdesugar/ast.cpp
-    PRIVATE libdesugar/ast.hpp
-    PRIVATE libdesugar/ast_formatters.hpp
     PRIVATE libdesugar/desugar.cpp
     PRIVATE libdesugar/desugar.hpp
     PRIVATE libdesugar/desugar_definition.cpp
@@ -13,5 +10,4 @@ target_sources(libdesugar
     PRIVATE libdesugar/desugaring_internals.hpp)
 
 target_link_libraries(libdesugar
-    PUBLIC libcompiler
-    PUBLIC libparse)
+    PUBLIC libcompiler)

@@ -1,6 +1,6 @@
 #include <libutl/utilities.hpp>
-#include <libdesugar/ast.hpp>
-#include <libdesugar/ast_formatters.hpp>
+#include <libcompiler/ast/ast.hpp>
+#include <libcompiler/ast/formatters.hpp>
 
 auto ast::Qualified_name::is_upper() const noexcept -> bool
 {

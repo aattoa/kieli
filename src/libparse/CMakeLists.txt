@@ -1,8 +1,6 @@
 kieli_library(libparse)
 
 target_sources(libparse
-    PRIVATE libparse/cst.cpp
-    PRIVATE libparse/cst.hpp
     PRIVATE libparse/parse.cpp
     PRIVATE libparse/parse.hpp
     PRIVATE libparse/parse_definition.cpp

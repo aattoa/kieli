@@ -3,9 +3,8 @@
 #include <libutl/utilities.hpp>
 #include <libutl/flatmap.hpp>
 #include <libcompiler/compiler.hpp>
-#include <libdesugar/ast.hpp>
-#include <libresolve/hir.hpp>
-#include <libresolve/fwd.hpp>
+#include <libcompiler/ast/ast.hpp>
+#include <libcompiler/hir/hir.hpp>
 
 namespace libresolve {
     struct Lower_info {

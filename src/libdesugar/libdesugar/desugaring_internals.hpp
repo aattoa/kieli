@@ -3,8 +3,8 @@
 #include <libutl/utilities.hpp>
 #include <libutl/safe_integer.hpp>
 #include <libcompiler/compiler.hpp>
-#include <libparse/cst.hpp>
-#include <libdesugar/ast.hpp>
+#include <libcompiler/cst/cst.hpp>
+#include <libcompiler/ast/ast.hpp>
 
 namespace libdesugar {
 

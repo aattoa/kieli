@@ -2,7 +2,7 @@
 
 #include <libutl/utilities.hpp>
 #include <libcompiler/compiler.hpp>
-#include <liblex/token.hpp>
+#include <libcompiler/token/token.hpp>
 
 namespace kieli {
 
