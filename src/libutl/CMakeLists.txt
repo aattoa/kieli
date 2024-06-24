@@ -8,8 +8,6 @@ target_sources(libutl
     PRIVATE libutl/pooled_string.cpp
     PRIVATE libutl/pooled_string.hpp
     PRIVATE libutl/safe_integer.hpp
-    PRIVATE libutl/source.cpp
-    PRIVATE libutl/source.hpp
     PRIVATE libutl/timer.hpp
     PRIVATE libutl/utilities.cpp
     PRIVATE libutl/utilities.hpp
