@@ -38,14 +38,14 @@ namespace libresolve {
     struct Type_variable_data {
         Type_variable_tag       tag;
         hir::Type_variable_kind kind {};
-        utl::Source_range       origin;
+        kieli::Range            origin;
         bool                    is_solved {};
         hir::Type_wrapper       variant;
     };
 
     struct Mutability_variable_data {
         Mutability_variable_tag tag;
-        utl::Source_range       origin;
+        kieli::Range            origin;
         bool                    is_solved {};
         hir::Mutability_wrapper variant;
     };
@@ -59,13 +59,13 @@ namespace libresolve {
         Mutability_variables mutability_variables;
         utl::Disjoint_set    type_variable_disjoint_set;
         utl::Disjoint_set    mutability_variable_disjoint_set;
-        utl::Source_id       source;
+        kieli::Source_id     source;
 
         auto flatten(hir::Type::Variant& type) -> void;
 
-        auto fresh_general_type_variable(Arenas& arenas, utl::Source_range origin) -> hir::Type;
-        auto fresh_integral_type_variable(Arenas& arenas, utl::Source_range origin) -> hir::Type;
-        auto fresh_mutability_variable(Arenas& arenas, utl::Source_range origin) -> hir::Mutability;
+        auto fresh_general_type_variable(Arenas& arenas, kieli::Range origin) -> hir::Type;
+        auto fresh_integral_type_variable(Arenas& arenas, kieli::Range origin) -> hir::Type;
+        auto fresh_mutability_variable(Arenas& arenas, kieli::Range origin) -> hir::Mutability;
 
         auto set_solution(
             std::vector<cppdiag::Diagnostic>& diagnostics,
@@ -89,12 +89,12 @@ namespace libresolve {
     using Module_map = utl::Flatmap<std::filesystem::path, utl::Mutable_wrapper<Module_info>>;
 
     struct Context {
-        Arenas                              arenas;
-        Constants                           constants;
-        Module_map                          module_map;
-        kieli::Project_configuration const& project_configuration;
-        kieli::Compile_info&                compile_info;
-        Tag_state                           tag_state;
+        Arenas                       arenas;
+        Constants                    constants;
+        Module_map                   module_map;
+        kieli::Project_configuration configuration;
+        kieli::Compile_info&         compile_info;
+        Tag_state                    tag_state;
     };
 
     struct Import_error {
@@ -110,24 +110,24 @@ namespace libresolve {
 
     auto add_to_environment(
         Context&            context,
-        utl::Source_id      source,
+        kieli::Source_id    source,
         Environment&        environment,
         kieli::Name_lower   name,
         Lower_info::Variant variant) -> void;
 
     auto add_to_environment(
         Context&            context,
-        utl::Source_id      source,
+        kieli::Source_id    source,
         Environment&        environment,
         kieli::Name_upper   name,
         Upper_info::Variant variant) -> void;
 
     auto collect_environment(
         Context&                       context,
-        utl::Source_id                 source,
+        kieli::Source_id               source,
         std::vector<ast::Definition>&& definitions) -> Environment_wrapper;
 
-    auto make_environment(Context& context, utl::Source_id source) -> Environment_wrapper;
+    auto make_environment(Context& context, kieli::Source_id source) -> Environment_wrapper;
 
     auto resolve_module(Context& context, Module_info& module_info) -> Environment_wrapper;
 
@@ -223,7 +223,7 @@ namespace libresolve {
         hir::Type::Variant const&         sub,
         hir::Type::Variant const&         super) -> void;
 
-    auto error_expression(Constants const&, utl::Source_range) -> hir::Expression;
-    auto unit_expression(Constants const&, utl::Source_range) -> hir::Expression;
+    auto error_expression(Constants const& constants, kieli::Range range) -> hir::Expression;
+    auto unit_expression(Constants const& constants, kieli::Range range) -> hir::Expression;
 
 } // namespace libresolve

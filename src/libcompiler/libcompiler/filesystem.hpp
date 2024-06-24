@@ -30,6 +30,9 @@ namespace kieli {
             return { utl::safe_cast<std::uint32_t>(line), utl::safe_cast<std::uint32_t>(column) };
         }
 
+        // Advance this position with `character`.
+        auto advance_with(char character) noexcept -> void;
+
         auto operator==(Position const&) const -> bool                  = default;
         auto operator<=>(Position const&) const -> std::strong_ordering = default;
     };
@@ -41,9 +44,6 @@ namespace kieli {
 
         auto operator==(Range const&) const -> bool = default;
     };
-
-    // Advance `position` with `character`.
-    auto advance_position(Position& position, char character) -> void;
 
     // Replace `range` in `text` with `new_text`.
     auto edit_text(std::string& text, Range range, std::string_view new_text) -> void;

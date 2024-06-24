@@ -18,16 +18,16 @@ namespace {
 
     auto binding_not_in_scope(
         Context&                context,
-        utl::Source_id const    source,
+        kieli::Source_id const  source,
         kieli::Name_lower const name) -> hir::Mutability
     {
         kieli::emit_diagnostic(
             cppdiag::Severity::error,
             context.compile_info,
             source,
-            name.source_range,
+            name.range,
             std::format("No mutability binding '{}' in scope", name));
-        return hir::Mutability { context.constants.mutability_error, name.source_range };
+        return hir::Mutability { context.constants.mutability_error, name.range };
     }
 } // namespace
 
@@ -38,8 +38,8 @@ auto libresolve::resolve_mutability(
         utl::Overload {
             [&](ast::mutability::Concrete const& concrete) {
                 return hir::Mutability {
-                    .variant      = resolve_concrete(context.constants, concrete),
-                    .source_range = mutability.source_range,
+                    .variant = resolve_concrete(context.constants, concrete),
+                    .range   = mutability.range,
                 };
             },
             [&](ast::mutability::Parameterized const& parameterized) {

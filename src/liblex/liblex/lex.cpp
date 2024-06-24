@@ -148,33 +148,25 @@ namespace {
     }
 
     class Token_maker {
-        utl::Source_position m_old_position;
-        std::string_view     m_old_string;
-        std::string_view     m_trivia;
-        kieli::Lex_state&    m_state;
+        std::string_view  m_old_string;
+        std::string_view  m_trivia;
+        kieli::Position   m_old_position;
+        kieli::Lex_state& m_state;
     public:
         explicit Token_maker(std::string_view const trivia, kieli::Lex_state& state) noexcept
-            : m_old_position { state.position }
-            , m_old_string { state.string }
+            : m_old_string { state.string }
             , m_trivia { trivia }
+            , m_old_position { state.position }
             , m_state { state }
         {}
 
         auto operator()(Token::Variant&& value, Token::Type const type) const noexcept -> Token
         {
-            // If the context has advanced, the current position is the starting
-            // position of the _next_ token, so we simply decrement the column
-            // here to acquire the ending position of the _current_ token.
-
-            utl::Source_position new_position = m_state.position;
-            if (new_position > m_old_position && new_position.column > 1) {
-                --new_position.column;
-            }
             return Token {
                 .variant          = std::move(value),
                 .type             = type,
                 .preceding_trivia = m_trivia,
-                .source_range     = utl::Source_range { m_old_position, new_position },
+                .range            = kieli::Range { m_old_position, m_state.position },
             };
         }
     };
@@ -606,9 +598,9 @@ namespace {
 
 } // namespace
 
-auto kieli::Lex_state::make(utl::Source_id const source, Compile_info& info) -> Lex_state
+auto kieli::Lex_state::make(Source_id const source, Compile_info& info) -> Lex_state
 {
-    return Lex_state { info, source, utl::Source_position {}, info.source_vector[source].content };
+    return Lex_state { info, source, Position {}, info.source_vector[source].content };
 }
 
 auto kieli::lex(Lex_state& state) -> Token

@@ -8,14 +8,14 @@
 
 namespace libdesugar {
 
-    auto unit_type(utl::Source_range range) -> ast::Type;
-    auto unit_value(utl::Source_range range) -> ast::Expression;
-    auto wildcard_pattern(utl::Source_range range) -> ast::Pattern;
+    auto unit_type(kieli::Range range) -> ast::Type;
+    auto unit_value(kieli::Range range) -> ast::Expression;
+    auto wildcard_pattern(kieli::Range range) -> ast::Pattern;
 
     struct Context {
         kieli::Compile_info& compile_info;
         ast::Node_arena&     node_arena;
-        utl::Source_id       source;
+        kieli::Source_id     source;
         kieli::Identifier    self_variable_identifier
             = kieli::Identifier { compile_info.identifier_pool.make("self") };
 
@@ -114,8 +114,9 @@ namespace libdesugar {
             return [this](utl::wrapper auto const node) { return this->desugar(*node); };
         }
 
-        auto        desugar_mutability(cst::Mutability const&, utl::Source_range) = delete;
-        static auto desugar_mutability(std::optional<cst::Mutability> const&, utl::Source_range)
+        auto desugar_mutability(cst::Mutability const&, kieli::Range) = delete;
+
+        static auto desugar_mutability(std::optional<cst::Mutability> const&, kieli::Range)
             -> ast::Mutability;
 
         auto normalize_self_parameter(cst::Self_parameter const&) -> ast::Function_parameter;

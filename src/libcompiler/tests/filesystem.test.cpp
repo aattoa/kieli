@@ -40,12 +40,12 @@ TEST("edit_text")
     REQUIRE_EQUAL(text, "helloworld");
 }
 
-TEST("advance_position")
+TEST("Position::advance_with")
 {
     kieli::Position position;
-    kieli::advance_position(position, 'a');
+    position.advance_with('a');
     REQUIRE_EQUAL(position, kieli::Position { 0, 1 });
-    kieli::advance_position(position, '\n');
+    position.advance_with('\n');
     REQUIRE_EQUAL(position, kieli::Position { 1, 0 });
 }
 

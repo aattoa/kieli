@@ -45,7 +45,7 @@ namespace {
         Scope&                         scope,
         Environment_wrapper const      environment,
         ast::Function_signature const& signature,
-        utl::Source_id const           source) -> hir::Function_signature
+        kieli::Source_id const         source) -> hir::Function_signature
     {
         cpputil::always_assert(!signature.self_parameter.has_value()); // TODO
 
@@ -77,7 +77,7 @@ namespace {
                     .parameter_types = std::move(parameter_types),
                     .return_type     = return_type,
                 }),
-                signature.name.source_range,
+                signature.name.range,
             },
             .name = signature.name,
         };

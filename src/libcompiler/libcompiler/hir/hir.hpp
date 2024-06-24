@@ -3,7 +3,6 @@
 #include <libutl/utilities.hpp>
 #include <libutl/index_vector.hpp>
 #include <libutl/wrapper.hpp>
-#include <libutl/source.hpp>
 #include <libcompiler/compiler.hpp>
 
 // TODO: remove libresolve references
@@ -47,7 +46,7 @@ namespace libresolve::hir {
 
     struct Class_reference {
         utl::Mutable_wrapper<Typeclass_info> info;
-        utl::Source_range                    source_range;
+        kieli::Range                         range;
     };
 
     enum class Type_variable_kind { general, integral };
@@ -75,7 +74,7 @@ namespace libresolve::hir {
             mutability::Variable,
             mutability::Error>;
         utl::Mutable_wrapper<Variant> variant;
-        utl::Source_range             source_range;
+        kieli::Range                  range;
     };
 
     using Mutability_wrapper = utl::Mutable_wrapper<Mutability::Variant>;
@@ -83,7 +82,7 @@ namespace libresolve::hir {
     struct Type {
         struct Variant;
         utl::Mutable_wrapper<Variant> variant;
-        utl::Source_range             source_range;
+        kieli::Range                  range;
     };
 
     using Type_wrapper = utl::Mutable_wrapper<Type::Variant>;
@@ -136,9 +135,9 @@ namespace libresolve::hir {
             pattern::Name,
             pattern::Alias,
             pattern::Guarded>;
-        Variant           variant;
-        Type              type;
-        utl::Source_range source_range;
+        Variant      variant;
+        Type         type;
+        kieli::Range range;
     };
 
     namespace type {
@@ -315,10 +314,10 @@ namespace libresolve::hir {
             expression::Defer,
             expression::Hole,
             expression::Error>;
-        Variant           variant;
-        Type              type;
-        Expression_kind   kind {};
-        utl::Source_range source_range;
+        Variant         variant;
+        Type            type;
+        Expression_kind kind {};
+        kieli::Range    range;
     };
 
     using Node_arena = utl::Wrapper_arena<Expression, Pattern, Type::Variant, Mutability::Variant>;
@@ -326,7 +325,7 @@ namespace libresolve::hir {
     using Template_argument = std::variant<Expression, Type, Mutability>;
 
     struct Wildcard {
-        utl::Source_range source_range;
+        kieli::Range range;
     };
 
     struct Template_type_parameter {
@@ -355,7 +354,7 @@ namespace libresolve::hir {
 
         Variant                variant;
         Template_parameter_tag tag;
-        utl::Source_range      source_range;
+        kieli::Range           range;
     };
 
     struct Function_parameter {

@@ -45,7 +45,7 @@ namespace {
         return cppdiag::Severity_header::make(cppdiag::Severity::error, colors);
     }
 
-    auto debug_lex(utl::Source_id const source, kieli::Compile_info& info) -> void
+    auto debug_lex(kieli::Source_id const source, kieli::Compile_info& info) -> void
     {
         auto state = kieli::Lex_state::make(source, info);
         auto token = kieli::lex(state);
@@ -56,13 +56,13 @@ namespace {
         std::println("");
     }
 
-    auto debug_parse(utl::Source_id const source, kieli::Compile_info& info) -> void
+    auto debug_parse(kieli::Source_id const source, kieli::Compile_info& info) -> void
     {
         auto const module = kieli::parse(source, info);
         std::print("{}", kieli::format_module(module, kieli::Format_configuration {}));
     }
 
-    auto debug_desugar(utl::Source_id const source, kieli::Compile_info& info) -> void
+    auto debug_desugar(kieli::Source_id const source, kieli::Compile_info& info) -> void
     {
         auto const  module = kieli::desugar(kieli::parse(source, info), info);
         std::string output;
@@ -72,18 +72,15 @@ namespace {
         std::print("{}\n\n", output);
     }
 
-    auto debug_resolve(utl::Source_id const source, kieli::Compile_info& info) -> void
+    auto debug_resolve(kieli::Source_id const source, kieli::Compile_info& info) -> void
     {
         auto arenas    = libresolve::Arenas::defaults();
         auto constants = libresolve::Constants::make_with(arenas);
 
-        kieli::Project_configuration configuration;
-
         libresolve::Context context {
-            .arenas                = std::move(arenas),
-            .constants             = std::move(constants),
-            .project_configuration = configuration,
-            .compile_info          = info,
+            .arenas       = std::move(arenas),
+            .constants    = std::move(constants),
+            .compile_info = info,
         };
 
         auto const environment = libresolve::make_environment(context, source);
@@ -92,7 +89,7 @@ namespace {
     }
 
     auto choose_debug_repl_callback(std::string_view const name)
-        -> void (*)(utl::Source_id, kieli::Compile_info&)
+        -> void (*)(kieli::Source_id, kieli::Compile_info&)
     {
         // clang-format off
         if (name == "lex") return debug_lex;
@@ -104,7 +101,7 @@ namespace {
     }
 
     auto run_debug_repl(
-        void (&callback)(utl::Source_id, kieli::Compile_info&),
+        void (&callback)(kieli::Source_id, kieli::Compile_info&),
         cppdiag::Colors const colors) -> void
     {
         kieli::read_history_file_to_active_history();

@@ -1,17 +1,18 @@
 #include <libutl/utilities.hpp>
 #include <libdesugar/desugaring_internals.hpp>
 
+using namespace libdesugar;
+
 namespace {
-    using namespace libdesugar;
 
     // TODO: just mark the duplicate as erroneous
     [[noreturn]] auto emit_duplicate_fields_error(
         Context&                context,
         kieli::Name_lower const name,
-        utl::Source_range const first,
-        utl::Source_range const second) -> void
+        kieli::Range const      first,
+        kieli::Range const      second) -> void
     {
-        utl::Source const& source = context.compile_info.source_vector[context.source];
+        kieli::Source const& source = context.compile_info.source_vector[context.source];
         context.compile_info.diagnostics.push_back(cppdiag::Diagnostic {
             .text_sections = utl::to_vector({
                 kieli::text_section(
@@ -37,7 +38,7 @@ namespace {
                 duplicate != initializers.end())
             {
                 emit_duplicate_fields_error(
-                    context, it->name, it->name.source_range, duplicate->name.source_range);
+                    context, it->name, it->name.range, duplicate->name.range);
             }
         }
     }
@@ -85,19 +86,19 @@ namespace {
                         .right = context.wrap(recurse(right_operand)),
                         .op    = operator_name.identifier,
                     },
-                    left.source_range.up_to(right_operand->source_range),
+                    kieli::Range { left.range.start, right_operand->range.stop },
                 };
             }
             return left;
         }
     }
 
-    auto break_expression(Context& context, utl::Source_range const source_range)
+    auto break_expression(Context& context, kieli::Range const range)
         -> utl::Wrapper<ast::Expression>
     {
         return context.wrap(ast::Expression {
-            ast::expression::Break { context.wrap(unit_value(source_range)) },
-            source_range,
+            .variant = ast::expression::Break { context.wrap(unit_value(range)) },
+            .range   = range,
         });
     }
 
@@ -151,7 +152,7 @@ namespace {
             utl::Wrapper<ast::Expression> const false_branch
                 = conditional.false_branch.has_value()
                     ? context.desugar(conditional.false_branch->body)
-                    : context.wrap(unit_value(this_expression.source_range));
+                    : context.wrap(unit_value(this_expression.range));
 
             if (auto const* const let
                 = std::get_if<cst::expression::Conditional_let>(&conditional.condition->variant))
@@ -174,7 +175,7 @@ namespace {
                             .expression = context.desugar(conditional.true_branch),
                         },
                         ast::expression::Match::Case {
-                            .pattern = context.wrap(wildcard_pattern(let->pattern->source_range)),
+                            .pattern    = context.wrap(wildcard_pattern(let->pattern->range)),
                             .expression = false_branch,
                         },
                     }),
@@ -189,7 +190,7 @@ namespace {
                     cppdiag::Severity::information,
                     context.compile_info,
                     context.source,
-                    condition->source_range,
+                    condition->range,
                     "Constant condition");
             }
 
@@ -233,7 +234,7 @@ namespace {
             }
             return ast::expression::Block {
                 .side_effects = std::move(side_effects),
-                .result       = context.wrap(unit_value(block.close_brace_token.source_range)),
+                .result       = context.wrap(unit_value(block.close_brace_token.range)),
             };
         }
 
@@ -263,13 +264,13 @@ namespace {
                                 context.desugar(loop.body),
                             },
                             ast::expression::Match::Case {
-                                context.wrap(wildcard_pattern(this_expression.source_range)),
-                                break_expression(context, this_expression.source_range),
+                                context.wrap(wildcard_pattern(this_expression.range)),
+                                break_expression(context, this_expression.range),
                             },
                         }),
                         .expression = context.desugar(let.initializer),
                     },
-                    loop.body->source_range,
+                    loop.body->range,
                 }),
 
                 .source = ast::Loop_source::while_loop,
@@ -292,7 +293,7 @@ namespace {
                     cppdiag::Severity::information,
                     context.compile_info,
                     context.source,
-                    condition->source_range,
+                    condition->range,
                     "Constant condition",
                     boolean->value ? "Consider using `loop` instead of `while true`"
                                    : "The loop body will never be executed");
@@ -302,11 +303,11 @@ namespace {
                     .variant = ast::expression::Conditional {
                         .condition    = condition,
                         .true_branch  = context.desugar(loop.body),
-                        .false_branch = break_expression(context, this_expression.source_range),
+                        .false_branch = break_expression(context, this_expression.range),
                         .source                    = ast::Conditional_source::while_loop_body,
                         .has_explicit_false_branch = true,
                     },
-                    .source_range = loop.body->source_range,
+                    .range = loop.body->range,
                 }),
                 .source = ast::Loop_source::while_loop,
             };
@@ -393,9 +394,9 @@ namespace {
             -> ast::Expression::Variant
         {
             return ast::expression::Tuple_field_access {
-                .base_expression          = context.desugar(access.base_expression),
-                .field_index              = access.field_index,
-                .field_index_source_range = access.field_index_token.source_range,
+                .base_expression   = context.desugar(access.base_expression),
+                .field_index       = access.field_index,
+                .field_index_range = access.field_index_token.range,
             };
         }
 
@@ -471,14 +472,14 @@ namespace {
                 .side_effects = utl::to_vector({
                     ast::Expression {
                         ast::expression::Let_binding {
-                            .pattern = context.wrap(wildcard_pattern(this_expression.source_range)),
+                            .pattern     = context.wrap(wildcard_pattern(this_expression.range)),
                             .initializer = context.desugar(discard.discarded_expression),
                             .type        = std::nullopt,
                         },
-                        this_expression.source_range,
+                        this_expression.range,
                     },
                 }),
-                .result       = context.wrap(unit_value(this_expression.source_range)),
+                .result       = context.wrap(unit_value(this_expression.range)),
             };
         }
 
@@ -487,7 +488,7 @@ namespace {
             return ast::expression::Break {
                 break_expression.result.has_value()
                     ? context.desugar(break_expression.result.value())
-                    : context.wrap(unit_value(this_expression.source_range)),
+                    : context.wrap(unit_value(this_expression.range)),
             };
         }
 
@@ -504,8 +505,8 @@ namespace {
         auto operator()(cst::expression::Addressof const& addressof) -> ast::Expression::Variant
         {
             return ast::expression::Addressof {
-                .mutability = context.desugar_mutability(
-                    addressof.mutability, addressof.ampersand_token.source_range),
+                .mutability
+                = context.desugar_mutability(addressof.mutability, addressof.ampersand_token.range),
                 .place_expression = context.desugar(addressof.place_expression),
             };
         }
@@ -547,7 +548,7 @@ namespace {
             kieli::fatal_error(
                 context.compile_info,
                 context.source,
-                this_expression.source_range,
+                this_expression.range,
                 "For loops are not supported yet");
         }
 
@@ -564,6 +565,6 @@ auto libdesugar::Context::desugar(cst::Expression const& expression) -> ast::Exp
 {
     return {
         std::visit(Expression_desugaring_visitor { *this, expression }, expression.variant),
-        expression.source_range,
+        expression.range,
     };
 }

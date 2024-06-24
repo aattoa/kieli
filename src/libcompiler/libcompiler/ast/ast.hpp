@@ -26,7 +26,7 @@ namespace ast {
     struct [[nodiscard]] Definition;
 
     struct Wildcard {
-        utl::Source_range source_range;
+        kieli::Range range;
     };
 
     namespace mutability {
@@ -41,7 +41,7 @@ namespace ast {
         using Variant = std::variant<mutability::Concrete, mutability::Parameterized>;
         Variant             variant;
         utl::Explicit<bool> is_explicit;
-        utl::Source_range   source_range;
+        kieli::Range        range;
     };
 
     using Template_argument = std::variant< //
@@ -53,7 +53,7 @@ namespace ast {
     struct Qualifier {
         std::optional<std::vector<Template_argument>> template_arguments;
         kieli::Name_dynamic                           name;
-        utl::Source_range                             source_range;
+        kieli::Range                                  range;
     };
 
     struct Global_root_qualifier {};
@@ -72,7 +72,7 @@ namespace ast {
     struct Class_reference {
         std::optional<std::vector<Template_argument>> template_arguments;
         Qualified_name                                name;
-        utl::Source_range                             source_range;
+        kieli::Range                                  range;
     };
 
     struct Template_type_parameter {
@@ -101,8 +101,8 @@ namespace ast {
             Template_value_parameter,
             Template_mutability_parameter>;
 
-        Variant           variant;
-        utl::Source_range source_range;
+        Variant      variant;
+        kieli::Range range;
     };
 
     using Template_parameters = std::optional<std::vector<Template_parameter>>;
@@ -190,7 +190,7 @@ namespace ast {
         struct Tuple_field_access {
             utl::Wrapper<Expression>   base_expression;
             utl::Explicit<std::size_t> field_index;
-            utl::Source_range          field_index_source_range;
+            kieli::Range               field_index_range;
         };
 
         struct Array_index_access {
@@ -326,8 +326,8 @@ namespace ast {
             expression::Meta,
             expression::Hole>;
 
-        Variant           variant;
-        utl::Source_range source_range;
+        Variant      variant;
+        kieli::Range range;
     };
 
     namespace pattern {
@@ -402,8 +402,8 @@ namespace ast {
             pattern::Alias,
             pattern::Guarded>;
 
-        Variant           variant;
-        utl::Source_range source_range;
+        Variant      variant;
+        kieli::Range range;
     };
 
     namespace type {
@@ -475,14 +475,14 @@ namespace ast {
             type::Instance_of,
             type::Template_application>;
 
-        Variant           variant;
-        utl::Source_range source_range;
+        Variant      variant;
+        kieli::Range range;
     };
 
     struct Self_parameter {
         Mutability          mutability;
         utl::Explicit<bool> is_reference;
-        utl::Source_range   source_range;
+        kieli::Range        range;
     };
 
     struct Function_signature {
@@ -507,7 +507,7 @@ namespace ast {
         struct Field {
             kieli::Name_lower name;
             Type              type;
-            utl::Source_range source_range;
+            kieli::Range      range;
         };
 
         struct Struct_constructor {
@@ -577,9 +577,9 @@ namespace ast {
             definition::Instantiation,
             definition::Submodule>;
 
-        Variant           variant;
-        utl::Source_id    source;
-        utl::Source_range source_range;
+        Variant          variant;
+        kieli::Source_id source;
+        kieli::Range     range;
     };
 
     template <class T>

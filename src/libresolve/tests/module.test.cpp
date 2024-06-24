@@ -2,17 +2,12 @@
 #include <libresolve/resolution_internals.hpp>
 #include <cppunittest/unittest.hpp>
 
-#define TEST(name) UNITTEST("libresolve: " name)
-
-TEST("resolve_import")
+UNITTEST("libresolve resolve_import")
 {
     kieli::Project_configuration const config { .root_directory = std::filesystem::current_path() };
 
     auto name = [pool = utl::String_pool {}](std::string_view const string) mutable {
-        return kieli::Name_lower {
-            .identifier   = kieli::Identifier { pool.make(string) },
-            .source_range = utl::Source_range::dummy(),
-        };
+        return kieli::Name_lower { kieli::Identifier { pool.make(string) } };
     };
     auto const import = [&](auto const... strings) {
         std::array const array { name(strings)... };

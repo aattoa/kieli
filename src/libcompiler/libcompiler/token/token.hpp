@@ -6,8 +6,14 @@
 namespace kieli {
 
     struct [[nodiscard]] Token {
-        using Variant = std::
-            variant<std::monostate, Integer, Floating, Character, Boolean, String, Identifier>;
+        using Variant = std::variant< //
+            std::monostate,
+            Integer,
+            Floating,
+            Character,
+            Boolean,
+            String,
+            Identifier>;
 
         enum class Type {
             error,
@@ -105,10 +111,10 @@ namespace kieli {
             _enumerator_count
         };
 
-        Variant           variant;
-        Type              type;
-        std::string_view  preceding_trivia;
-        utl::Source_range source_range;
+        Variant          variant;
+        Type             type;
+        std::string_view preceding_trivia;
+        Range            range;
 
         template <class T>
         [[nodiscard]] auto value_as() const -> T

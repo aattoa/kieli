@@ -18,7 +18,7 @@ namespace {
                 return std::visit<Default>(
                     utl::Overload {
                         [&](ast::Wildcard const& wildcard) {
-                            return hir::Wildcard { .source_range = wildcard.source_range };
+                            return hir::Wildcard { .range = wildcard.range };
                         },
 
                         [&](utl::Wrapper<ast::Type> const type) {
@@ -42,7 +42,7 @@ namespace {
                     .name = parameter.name,
                     .type {
                         context.arenas.type(hir::type::Parameterized { .tag = tag }),
-                        parameter.name.source_range,
+                        parameter.name.range,
                     },
                 });
             auto const resolve_class = [&](ast::Class_reference const& class_reference) {
@@ -66,7 +66,7 @@ namespace {
                     .name = parameter.name,
                     .mutability {
                         context.arenas.mutability(hir::mutability::Parameterized { .tag = tag }),
-                        parameter.name.source_range,
+                        parameter.name.range,
                     },
                 });
             return hir::Template_mutability_parameter {
@@ -82,7 +82,7 @@ namespace {
             kieli::fatal_error(
                 context.compile_info,
                 scope.source(),
-                parameter.name.source_range,
+                parameter.name.range,
                 "Template value parameters are not supported yet");
         }
     };
@@ -101,8 +101,8 @@ auto libresolve::resolve_template_parameters(
             .variant = std::visit(
                 Template_parameter_resolution_visitor { context, state, scope, environment, tag },
                 parameter.variant),
-            .tag          = tag,
-            .source_range = parameter.source_range,
+            .tag   = tag,
+            .range = parameter.range,
         };
     };
     return parameters

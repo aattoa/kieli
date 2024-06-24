@@ -12,7 +12,7 @@ namespace libresolve {
             utl::Mutable_wrapper<Function_info>, //
             utl::Mutable_wrapper<Module_info>>;
         kieli::Name_lower name;
-        utl::Source_id    source;
+        kieli::Source_id  source;
         Variant           variant;
     };
 
@@ -22,7 +22,7 @@ namespace libresolve {
             utl::Mutable_wrapper<Typeclass_info>,
             utl::Mutable_wrapper<Alias_info>>;
         kieli::Name_upper name;
-        utl::Source_id    source;
+        kieli::Source_id  source;
         Variant           variant;
     };
 
@@ -97,10 +97,10 @@ class libresolve::Scope {
     utl::Flatmap<kieli::Identifier, Variable_bind>   m_variables;
     utl::Flatmap<kieli::Identifier, Type_bind>       m_types;
     utl::Flatmap<kieli::Identifier, Mutability_bind> m_mutabilities;
-    utl::Source_id                                   m_source;
+    kieli::Source_id                                 m_source;
     Scope*                                           m_parent {};
 public:
-    explicit Scope(utl::Source_id const source) : m_source { source } {}
+    explicit Scope(kieli::Source_id const source) : m_source { source } {}
 
     Scope(Scope&&)                    = default;
     auto operator=(Scope&&) -> Scope& = default;
@@ -123,7 +123,7 @@ public:
     [[nodiscard]] auto parent() const noexcept -> Scope*;
 
     // Retrieve the source id.
-    [[nodiscard]] auto source() const noexcept -> utl::Source_id;
+    [[nodiscard]] auto source() const noexcept -> kieli::Source_id;
 
     // Emit warnings for any unused bindings.
     auto report_unused(kieli::Compile_info& info) -> void;
@@ -183,5 +183,5 @@ struct libresolve::Environment {
     utl::Flatmap<kieli::Identifier, Lower_info> lower_map;
     std::vector<Definition_variant>             in_order;
     std::optional<Environment_wrapper>          parent;
-    utl::Source_id                              source;
+    kieli::Source_id                            source;
 };

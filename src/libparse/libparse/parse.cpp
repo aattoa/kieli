@@ -16,7 +16,7 @@ namespace {
                 .mutability         = mutability,
                 .ampersand_token    = ampersand_token.transform(cst::Token::from_lexical),
                 .self_keyword_token = cst::Token::from_lexical(self_token.value()),
-                .source_range       = self_token.value().source_range,
+                .range              = self_token.value().range,
             };
         }
         context.unstage(stage);
@@ -30,7 +30,7 @@ namespace {
             if (auto const wildcard = context.try_extract(Token::Type::underscore)) {
                 return Default {
                     .equals_sign_token = cst::Token::from_lexical(equals),
-                    .variant = cst::Wildcard { .source_range = wildcard.value().source_range },
+                    .variant           = cst::Wildcard { .range = wildcard.value().range },
                 };
             }
             return Default {
@@ -126,13 +126,13 @@ auto libparse::parse_mutability(Context& context) -> std::optional<cst::Mutabili
                     .name = extract_lower_name(context, "a mutability parameter name"),
                     .question_mark_token = cst::Token::from_lexical(question_mark.value()),
                 },
-                .source_range = context.up_to_current(mut_keyword.value().source_range),
+                .range = context.up_to_current(mut_keyword.value().range),
                 .mut_or_immut_keyword_token = cst::Token::from_lexical(mut_keyword.value()),
             };
         }
         return cst::Mutability {
             .variant                    = cst::mutability::Concrete::mut,
-            .source_range               = mut_keyword.value().source_range,
+            .range                      = mut_keyword.value().range,
             .mut_or_immut_keyword_token = cst::Token::from_lexical(mut_keyword.value()),
         };
     }
@@ -140,7 +140,7 @@ auto libparse::parse_mutability(Context& context) -> std::optional<cst::Mutabili
         kieli::fatal_error(
             context.compile_info(),
             context.source(),
-            immut_keyword.value().source_range,
+            immut_keyword.value().range,
             "`immut` may not appear here",
             "Immutability is the default, so it does not need to be specified");
     }
@@ -151,7 +151,7 @@ auto libparse::parse_class_reference(Context& context) -> std::optional<cst::Cla
 {
     // TODO: cleanup
 
-    auto const anchor_source_range = context.peek().source_range;
+    auto const anchor_range = context.peek().range;
 
     auto name = std::invoke([&]() -> std::optional<cst::Qualified_name> {
         std::optional<cst::Root_qualifier> root;
@@ -165,7 +165,7 @@ auto libparse::parse_class_reference(Context& context) -> std::optional<cst::Cla
                     },
                     .double_colon_token
                     = cst::Token::from_lexical(context.require_extract(Token::Type::double_colon)),
-                    .source_range = global.value().source_range,
+                    .range = global.value().range,
                 };
             }
             else {
@@ -175,7 +175,7 @@ auto libparse::parse_class_reference(Context& context) -> std::optional<cst::Cla
 
         auto name = extract_qualified_name(context, std::move(root));
         if (!name.primary_name.is_upper.get()) {
-            context.error_expected(name.primary_name.source_range, "a class name");
+            context.error_expected(name.primary_name.range, "a class name");
         }
         return name;
     });
@@ -185,7 +185,7 @@ auto libparse::parse_class_reference(Context& context) -> std::optional<cst::Cla
         return cst::Class_reference {
             .template_arguments = std::move(template_arguments),
             .name               = std::move(name.value()),
-            .source_range       = context.up_to_current(anchor_source_range),
+            .range              = context.up_to_current(anchor_range),
         };
     }
     return std::nullopt;
@@ -211,12 +211,12 @@ auto libparse::parse_template_parameters(Context& context)
 
 auto libparse::parse_template_parameter(Context& context) -> std::optional<cst::Template_parameter>
 {
-    auto const anchor_source_range = context.peek().source_range;
+    auto const anchor_range = context.peek().range;
     return dispatch_parse_template_parameter(context).transform(
         [&](cst::Template_parameter::Variant&& variant) {
             return cst::Template_parameter {
-                .variant      = std::move(variant),
-                .source_range = context.up_to_current(anchor_source_range),
+                .variant = std::move(variant),
+                .range   = context.up_to_current(anchor_range),
             };
         });
 }
@@ -224,7 +224,7 @@ auto libparse::parse_template_parameter(Context& context) -> std::optional<cst::
 auto libparse::parse_template_argument(Context& context) -> std::optional<cst::Template_argument>
 {
     if (auto const wildcard = context.try_extract(Token::Type::underscore)) {
-        return cst::Template_argument { cst::Wildcard { .source_range = wildcard->source_range } };
+        return cst::Template_argument { cst::Wildcard { .range = wildcard->range } };
     }
     if (auto const type = parse_type(context)) {
         return cst::Template_argument { type.value() };
@@ -235,7 +235,7 @@ auto libparse::parse_template_argument(Context& context) -> std::optional<cst::T
     if (auto const immut_keyword = context.try_extract(Token::Type::immut)) {
         return cst::Template_argument { cst::Mutability {
             .variant                    = cst::mutability::Concrete::immut,
-            .source_range               = immut_keyword->source_range,
+            .range                      = immut_keyword->range,
             .mut_or_immut_keyword_token = cst::Token::from_lexical(immut_keyword.value()),
         } };
     }
@@ -264,7 +264,7 @@ auto libparse::parse_function_parameters(Context& context)
 
     if (!self_parameter.has_value() && comma_token_after_self.has_value()) {
         context.error_expected(
-            comma_token_after_self.value().source_range, "a function parameter before the comma");
+            comma_token_after_self.value().range, "a function parameter before the comma");
     }
     if (comma_token_after_self.has_value() && normal_parameters.elements.empty()) {
         context.error_expected("a function parameter");
@@ -273,7 +273,7 @@ auto libparse::parse_function_parameters(Context& context)
         && !normal_parameters.elements.empty())
     {
         context.error_expected(
-            normal_parameters.elements.front().pattern->source_range,
+            normal_parameters.elements.front().pattern->range,
             "a comma separating the self parameter from the other function parameters");
     }
 
@@ -326,16 +326,16 @@ auto libparse::parse_function_arguments(Context& context) -> std::optional<cst::
 auto libparse::extract_qualified_name(Context& context, std::optional<cst::Root_qualifier>&& root)
     -> cst::Qualified_name
 {
-    auto const anchor_source_range = context.peek().source_range;
+    auto const anchor_range = context.peek().range;
 
     cst::Separated_sequence<cst::Qualifier> middle_qualifiers;
     for (;;) {
         Token const token = context.extract();
         if (token.type == Token::Type::upper_name || token.type == Token::Type::lower_name) {
             kieli::Name_dynamic const qualifier_name {
-                .identifier   = token.value_as<kieli::Identifier>(),
-                .source_range = token.source_range,
-                .is_upper     = token.type == Token::Type::upper_name,
+                .identifier = token.value_as<kieli::Identifier>(),
+                .range      = token.range,
+                .is_upper   = token.type == Token::Type::upper_name,
             };
             Stage const template_arguments_stage = context.stage();
             auto        template_arguments       = parse_template_arguments(context);
@@ -347,24 +347,24 @@ auto libparse::extract_qualified_name(Context& context, std::optional<cst::Root_
                     .template_arguments          = std::move(template_arguments),
                     .name                        = qualifier_name,
                     .trailing_double_colon_token = cst::Token::from_lexical(double_colon.value()),
-                    .source_range                = token.source_range,
+                    .range                       = token.range,
                 });
                 continue;
             }
             // Primary name encountered
             context.unstage(template_arguments_stage);
 
-            auto const source_range = context.up_to_current(
-                root.has_value() ? root.value().source_range : anchor_source_range);
+            auto const range
+                = context.up_to_current(root.has_value() ? root.value().range : anchor_range);
 
             return cst::Qualified_name {
                 .middle_qualifiers = std::move(middle_qualifiers),
                 .root_qualifier    = std::move(root),
                 .primary_name      = qualifier_name,
-                .source_range      = source_range,
+                .range             = range,
             };
         }
-        context.error_expected(token.source_range, "an identifier");
+        context.error_expected(token.range, "an identifier");
     }
 }
 
@@ -376,7 +376,7 @@ auto libparse::extract_class_references(Context& context)
         context, "one or more '+'-separated class references");
 }
 
-auto kieli::parse(utl::Source_id const source, Compile_info& compile_info) -> cst::Module
+auto kieli::parse(Source_id const source, Compile_info& compile_info) -> cst::Module
 {
     cst::Node_arena   node_arena = cst::Node_arena::with_default_page_size();
     libparse::Context context { node_arena, Lex_state::make(source, compile_info) };

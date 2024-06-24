@@ -30,14 +30,14 @@ namespace {
     template <class Binding>
     auto do_report_unused(
         kieli::Compile_info&                            info,
-        utl::Source_id const                            source,
+        kieli::Source_id const                          source,
         utl::Flatmap<kieli::Identifier, Binding> const& bindings)
     {
         auto const unused = std::views::values | std::views::filter(&Binding::unused);
         for (auto const& binding : unused(bindings)) {
             info.diagnostics.push_back(cppdiag::Diagnostic {
                 .text_sections = utl::to_vector({
-                    kieli::text_section(info.source_vector[source], binding.name.source_range),
+                    kieli::text_section(info.source_vector[source], binding.name.range),
                 }),
                 .message       = std::format("Unused binding: {}", binding.name),
                 .help_note     = std::format("If this is intentional, use _{}", binding.name),
@@ -91,7 +91,7 @@ auto libresolve::Scope::parent() const noexcept -> Scope*
     return m_parent;
 }
 
-auto libresolve::Scope::source() const noexcept -> utl::Source_id
+auto libresolve::Scope::source() const noexcept -> kieli::Source_id
 {
     return m_source;
 }

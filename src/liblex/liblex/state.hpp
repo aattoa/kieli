@@ -10,7 +10,7 @@ namespace liblex {
 
     [[nodiscard]] auto source_begin(kieli::Lex_state const&) noexcept -> char const*;
     [[nodiscard]] auto source_end(kieli::Lex_state const&) noexcept -> char const*;
-    [[nodiscard]] auto position(kieli::Lex_state const&) noexcept -> utl::Source_position;
+    [[nodiscard]] auto position(kieli::Lex_state const&) noexcept -> kieli::Position;
     [[nodiscard]] auto current(kieli::Lex_state const&) noexcept -> char;
     [[nodiscard]] auto extract_current(kieli::Lex_state&) noexcept -> char;
 

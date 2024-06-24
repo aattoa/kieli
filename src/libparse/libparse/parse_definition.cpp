@@ -41,7 +41,7 @@ namespace {
             kieli::fatal_error(
                 context.compile_info(),
                 context.source(),
-                where.value().source_range,
+                where.value().range,
                 "where clauses are not supported yet");
         }
 
@@ -80,9 +80,9 @@ namespace {
     {
         return parse_lower_name(context).transform([&](kieli::Name_lower const& name) {
             return cst::definition::Field {
-                .name         = name,
-                .type         = require<parse_type_annotation>(context, "a ':' followed by a type"),
-                .source_range = context.up_to_current(name.source_range),
+                .name  = name,
+                .type  = require<parse_type_annotation>(context, "a ':' followed by a type"),
+                .range = context.up_to_current(name.range),
             };
         });
     }
@@ -292,9 +292,9 @@ auto libparse::parse_definition(Context& context) -> std::optional<cst::Definiti
         .transform([&](cst::Definition::Variant&& variant) {
             context.commit(stage);
             return cst::Definition {
-                .variant      = std::move(variant),
-                .source       = context.source(),
-                .source_range = context.up_to_current(first_token.source_range),
+                .variant = std::move(variant),
+                .source  = context.source(),
+                .range   = context.up_to_current(first_token.range),
             };
         });
 }

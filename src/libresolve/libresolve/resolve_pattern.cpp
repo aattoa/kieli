@@ -27,8 +27,8 @@ namespace {
         {
             return {
                 integer,
-                state.fresh_integral_type_variable(context.arenas, this_pattern.source_range),
-                this_pattern.source_range,
+                state.fresh_integral_type_variable(context.arenas, this_pattern.range),
+                this_pattern.range,
             };
         }
 
@@ -36,8 +36,8 @@ namespace {
         {
             return {
                 floating,
-                hir::Type { context.constants.floating_type, this_pattern.source_range },
-                this_pattern.source_range,
+                hir::Type { context.constants.floating_type, this_pattern.range },
+                this_pattern.range,
             };
         }
 
@@ -45,8 +45,8 @@ namespace {
         {
             return {
                 character,
-                hir::Type { context.constants.character_type, this_pattern.source_range },
-                this_pattern.source_range,
+                hir::Type { context.constants.character_type, this_pattern.range },
+                this_pattern.range,
             };
         }
 
@@ -54,8 +54,8 @@ namespace {
         {
             return {
                 boolean,
-                hir::Type { context.constants.boolean_type, this_pattern.source_range },
-                this_pattern.source_range,
+                hir::Type { context.constants.boolean_type, this_pattern.range },
+                this_pattern.range,
             };
         }
 
@@ -63,8 +63,8 @@ namespace {
         {
             return {
                 string,
-                hir::Type { context.constants.string_type, this_pattern.source_range },
-                this_pattern.source_range,
+                hir::Type { context.constants.string_type, this_pattern.range },
+                this_pattern.range,
             };
         }
 
@@ -72,8 +72,8 @@ namespace {
         {
             return {
                 hir::pattern::Wildcard {},
-                state.fresh_general_type_variable(context.arenas, this_pattern.source_range),
-                this_pattern.source_range,
+                state.fresh_general_type_variable(context.arenas, this_pattern.range),
+                this_pattern.range,
             };
         }
 
@@ -82,7 +82,7 @@ namespace {
             hir::Mutability const mutability
                 = resolve_mutability(context, scope, pattern.mutability);
             hir::Type const type
-                = state.fresh_general_type_variable(context.arenas, pattern.name.source_range);
+                = state.fresh_general_type_variable(context.arenas, pattern.name.range);
             Local_variable_tag const tag = context.tag_state.fresh_local_variable_tag();
 
             scope.bind_variable(
@@ -101,7 +101,7 @@ namespace {
                     .variable_tag = tag,
                 },
                 type,
-                this_pattern.source_range,
+                this_pattern.range,
             };
         }
 
@@ -128,7 +128,7 @@ namespace {
                     .pattern      = context.arenas.wrap(std::move(pattern)),
                 },
                 pattern.type,
-                this_pattern.source_range,
+                this_pattern.range,
             };
         }
 
@@ -154,9 +154,9 @@ namespace {
                 },
                 hir::Type {
                     context.arenas.type(hir::type::Tuple { std::move(types) }),
-                    this_pattern.source_range,
+                    this_pattern.range,
                 },
-                this_pattern.source_range,
+                this_pattern.range,
             };
         }
 
@@ -166,7 +166,7 @@ namespace {
                           | std::ranges::to<std::vector>();
 
             hir::Type const element_type
-                = state.fresh_general_type_variable(context.arenas, this_pattern.source_range);
+                = state.fresh_general_type_variable(context.arenas, this_pattern.range);
 
             for (hir::Pattern const& pattern : patterns) {
                 require_subtype_relationship(
@@ -182,9 +182,9 @@ namespace {
                 },
                 hir::Type {
                     context.arenas.type(hir::type::Slice { element_type }),
-                    this_pattern.source_range,
+                    this_pattern.range,
                 },
-                this_pattern.source_range,
+                this_pattern.range,
             };
         }
 
@@ -206,7 +206,7 @@ namespace {
                     .guard_expression = context.arenas.wrap(std::move(guard_expression)),
                 },
                 guarded_pattern.type,
-                this_pattern.source_range,
+                this_pattern.range,
             };
         }
     };

@@ -22,7 +22,7 @@ auto libdesugar::Context::desugar(cst::Function_parameter const& parameter)
                     kieli::fatal_error(
                         compile_info,
                         source,
-                        wildcard->source_range,
+                        wildcard->range,
                         "A function default argument may not be a wildcard");
                 }
                 return desugar(std::get<utl::Wrapper<cst::Expression>>(argument.variant));
@@ -32,16 +32,16 @@ auto libdesugar::Context::desugar(cst::Function_parameter const& parameter)
 
 auto libdesugar::Context::desugar(cst::Wildcard const& wildcard) -> ast::Wildcard
 {
-    return ast::Wildcard { .source_range = wildcard.source_range };
+    return ast::Wildcard { .range = wildcard.range };
 }
 
 auto libdesugar::Context::desugar(cst::Self_parameter const& self_parameter) -> ast::Self_parameter
 {
     return ast::Self_parameter {
-        .mutability = desugar_mutability(
-            self_parameter.mutability, self_parameter.self_keyword_token.source_range),
+        .mutability
+        = desugar_mutability(self_parameter.mutability, self_parameter.self_keyword_token.range),
         .is_reference = self_parameter.is_reference(),
-        .source_range = self_parameter.source_range,
+        .range        = self_parameter.range,
     };
 }
 
@@ -78,7 +78,7 @@ auto libdesugar::Context::desugar(cst::Template_parameter const& template_parame
                 },
             },
             template_parameter.variant),
-        template_parameter.source_range,
+        template_parameter.range,
     };
 }
 
@@ -87,7 +87,7 @@ auto libdesugar::Context::desugar(cst::Qualifier const& qualifier) -> ast::Quali
     return ast::Qualifier {
         .template_arguments = qualifier.template_arguments.transform(desugar()),
         .name               = qualifier.name,
-        .source_range       = qualifier.source_range,
+        .range              = qualifier.range,
     };
 }
 
@@ -116,7 +116,7 @@ auto libdesugar::Context::desugar(cst::Class_reference const& reference) -> ast:
     return ast::Class_reference {
         .template_arguments = reference.template_arguments.transform(desugar()),
         .name               = desugar(reference.name),
-        .source_range       = reference.source_range,
+        .range              = reference.range,
     };
 }
 
@@ -133,7 +133,7 @@ auto libdesugar::Context::desugar(cst::Function_signature const& signature)
 
     ast::Type return_type = signature.return_type.has_value()
                               ? desugar(*signature.return_type.value().type)
-                              : unit_type(signature.name.source_range);
+                              : unit_type(signature.name.range);
 
     return ast::Function_signature {
         .template_parameters = signature.template_parameters.transform(desugar()),
@@ -171,8 +171,8 @@ auto libdesugar::Context::desugar(cst::Mutability const& mutability) -> ast::Mut
                 },
             },
             mutability.variant),
-        .is_explicit  = true,
-        .source_range = mutability.source_range,
+        .is_explicit = true,
+        .range       = mutability.range,
     };
 }
 
@@ -211,16 +211,15 @@ auto libdesugar::Context::desugar(cst::Type_annotation const& annotation) -> ast
 }
 
 auto libdesugar::Context::desugar_mutability(
-    std::optional<cst::Mutability> const& mutability,
-    utl::Source_range const               source_range) -> ast::Mutability
+    std::optional<cst::Mutability> const& mutability, kieli::Range const range) -> ast::Mutability
 {
     if (mutability.has_value()) {
         return desugar(mutability.value());
     }
     return ast::Mutability {
-        .variant      = ast::mutability::Concrete::immut,
-        .is_explicit  = false,
-        .source_range = source_range,
+        .variant     = ast::mutability::Concrete::immut,
+        .is_explicit = false,
+        .range       = range,
     };
 }
 
@@ -228,49 +227,49 @@ auto libdesugar::Context::normalize_self_parameter(cst::Self_parameter const& se
     -> ast::Function_parameter
 {
     ast::Type self_type {
-        .variant      = ast::type::Self {},
-        .source_range = self_parameter.source_range,
+        .variant = ast::type::Self {},
+        .range   = self_parameter.range,
     };
     if (self_parameter.is_reference()) {
         self_type = ast::Type {
             ast::type::Reference {
                 .referenced_type = wrap(std::move(self_type)),
                 .mutability      = desugar_mutability(
-                    self_parameter.mutability, self_parameter.self_keyword_token.source_range),
+                    self_parameter.mutability, self_parameter.self_keyword_token.range),
             },
-            self_parameter.source_range,
+            self_parameter.range,
         };
     }
     return ast::Function_parameter {
         .pattern = wrap(ast::Pattern {
             ast::pattern::Name {
                 .name {
-                    .identifier   = self_variable_identifier,
-                    .source_range = self_parameter.source_range,
+                    .identifier = self_variable_identifier,
+                    .range      = self_parameter.range,
                 },
                 .mutability = desugar_mutability(
                     self_parameter.is_reference() ? std::nullopt : self_parameter.mutability,
-                    self_parameter.source_range),
+                    self_parameter.range),
             },
-            self_parameter.source_range,
+            self_parameter.range,
         }),
         .type    = wrap(std::move(self_type)),
     };
 }
 
-auto libdesugar::unit_type(utl::Source_range const source_range) -> ast::Type
+auto libdesugar::unit_type(kieli::Range const range) -> ast::Type
 {
-    return ast::Type { ast::type::Tuple {}, source_range };
+    return ast::Type { ast::type::Tuple {}, range };
 }
 
-auto libdesugar::unit_value(utl::Source_range const source_range) -> ast::Expression
+auto libdesugar::unit_value(kieli::Range const range) -> ast::Expression
 {
-    return ast::Expression { ast::expression::Tuple {}, source_range };
+    return ast::Expression { ast::expression::Tuple {}, range };
 }
 
-auto libdesugar::wildcard_pattern(utl::Source_range const source_range) -> ast::Pattern
+auto libdesugar::wildcard_pattern(kieli::Range const range) -> ast::Pattern
 {
-    return ast::Pattern { ast::Wildcard { source_range }, source_range };
+    return ast::Pattern { ast::Wildcard { range }, range };
 }
 
 auto kieli::desugar(cst::Module const& module, Compile_info& compile_info) -> ast::Module

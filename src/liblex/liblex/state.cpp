@@ -2,18 +2,18 @@
 #include <liblex/state.hpp>
 
 namespace {
-    auto source_range_for(kieli::Lex_state const& state, std::string_view const view) noexcept
-        -> utl::Source_range
+    auto range_for(kieli::Lex_state const& state, std::string_view const view) noexcept
+        -> kieli::Range
     {
-        utl::Source_position start;
+        kieli::Position start;
         for (char const* ptr = liblex::source_begin(state); ptr != view.data(); ++ptr) {
             start.advance_with(*ptr);
         }
-        utl::Source_position stop = start;
+        kieli::Position stop = start;
         for (char const c : view) {
             stop.advance_with(c);
         }
-        return utl::Source_range { start, stop };
+        return kieli::Range { start, stop };
     }
 } // namespace
 

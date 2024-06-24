@@ -54,7 +54,7 @@ namespace {
                 cst::Root_qualifier {
                     .variant = cst::Global_root_qualifier { cst::Token::from_lexical(global) },
                     .double_colon_token = cst::Token::from_lexical(double_colon),
-                    .source_range       = global.source_range,
+                    .range              = global.range,
                 });
         }
         default:
@@ -65,7 +65,7 @@ namespace {
                     cst::Root_qualifier {
                         .variant            = type,
                         .double_colon_token = cst::Token::from_lexical(double_colon),
-                        .source_range       = type->source_range,
+                        .range              = type->range,
                     });
             });
         }
@@ -154,7 +154,7 @@ namespace {
     {
         // clang-format off
         switch (token.type) {
-        case Token::Type::underscore:        return cst::Wildcard { token.source_range };
+        case Token::Type::underscore:        return cst::Wildcard { token.range };
         case Token::Type::integer_literal:   return token.value_as<kieli::Integer>();
         case Token::Type::floating_literal:  return token.value_as<kieli::Floating>();
         case Token::Type::character_literal: return token.value_as<kieli::Character>();
@@ -185,7 +185,10 @@ namespace {
                         .name             = extract_lower_name(context, "a pattern alias"),
                         .pattern          = context.wrap(cst::Pattern {
                             std::move(variant),
-                            first_token.source_range.up_to(as_keyword.value().source_range),
+                            kieli::Range {
+                                first_token.range.start,
+                                as_keyword.value().range.stop,
+                            },
                         }),
                         .as_keyword_token = cst::Token::from_lexical(as_keyword.value()),
                     };
@@ -196,7 +199,7 @@ namespace {
 
     auto parse_potentially_guarded_pattern(Context& context) -> std::optional<cst::Pattern::Variant>
     {
-        auto const anchor_source_range = context.peek().source_range;
+        auto const anchor_range = context.peek().range;
         return parse_potentially_aliased_pattern(context).transform(
             [&](cst::Pattern::Variant variant) -> cst::Pattern::Variant {
                 if (auto const if_keyword = context.try_extract(Token::Type::if_)) {
@@ -204,7 +207,10 @@ namespace {
                     return cst::pattern::Guarded {
                         .guarded_pattern  = context.wrap(cst::Pattern {
                             std::move(variant),
-                            anchor_source_range.up_to(if_keyword.value().source_range),
+                            kieli::Range {
+                                anchor_range.start,
+                                if_keyword.value().range.stop,
+                            },
                         }),
                         .guard_expression = std::move(guard),
                         .if_keyword_token = cst::Token::from_lexical(if_keyword.value()),
@@ -218,12 +224,12 @@ namespace {
 
 auto libparse::parse_pattern(Context& context) -> std::optional<utl::Wrapper<cst::Pattern>>
 {
-    auto const anchor_source_range = context.peek().source_range;
+    auto const anchor_range = context.peek().range;
     return parse_potentially_guarded_pattern(context).transform(
         [&](cst::Pattern::Variant&& variant) {
             return context.wrap(cst::Pattern {
                 std::move(variant),
-                context.up_to_current(anchor_source_range),
+                context.up_to_current(anchor_range),
             });
         });
 }
@@ -231,15 +237,15 @@ auto libparse::parse_pattern(Context& context) -> std::optional<utl::Wrapper<cst
 auto libparse::parse_top_level_pattern(Context& context)
     -> std::optional<utl::Wrapper<cst::Pattern>>
 {
-    auto const anchor_source_range = context.peek().source_range;
+    auto const anchor_range = context.peek().range;
     return parse_comma_separated_one_or_more<parse_pattern, "a pattern">(context).transform(
         [&](cst::Separated_sequence<utl::Wrapper<cst::Pattern>>&& patterns) {
             if (patterns.elements.size() == 1) {
                 return patterns.elements.front();
             }
             return context.wrap(cst::Pattern {
-                .variant      = cst::pattern::Top_level_tuple { std::move(patterns) },
-                .source_range = context.up_to_current(anchor_source_range),
+                .variant = cst::pattern::Top_level_tuple { std::move(patterns) },
+                .range   = context.up_to_current(anchor_range),
             });
         });
 }

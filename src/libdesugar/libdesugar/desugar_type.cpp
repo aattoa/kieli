@@ -94,8 +94,8 @@ namespace {
         {
             return ast::type::Reference {
                 .referenced_type = context.desugar(reference.referenced_type),
-                .mutability      = context.desugar_mutability(
-                    reference.mutability, reference.ampersand_token.source_range),
+                .mutability
+                = context.desugar_mutability(reference.mutability, reference.ampersand_token.range),
             };
         }
 
@@ -103,8 +103,8 @@ namespace {
         {
             return ast::type::Pointer {
                 .pointee_type = context.desugar(pointer.pointee_type),
-                .mutability   = context.desugar_mutability(
-                    pointer.mutability, pointer.asterisk_token.source_range),
+                .mutability
+                = context.desugar_mutability(pointer.mutability, pointer.asterisk_token.range),
             };
         }
 
@@ -127,6 +127,6 @@ auto libdesugar::Context::desugar(cst::Type const& type) -> ast::Type
 {
     return {
         std::visit(Type_desugaring_visitor { *this, type }, type.variant),
-        type.source_range,
+        type.range,
     };
 }

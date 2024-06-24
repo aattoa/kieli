@@ -2,6 +2,16 @@
 #include <libcompiler/filesystem.hpp>
 #include <cpputil/io.hpp>
 
+auto kieli::Position::advance_with(char const character) noexcept -> void
+{
+    if (character == '\n') {
+        ++line, column = 0;
+    }
+    else {
+        ++column;
+    }
+}
+
 auto kieli::text_range(std::string_view const string, Range const range) -> std::string_view
 {
     cpputil::always_assert(range.start <= range.stop);
@@ -18,7 +28,7 @@ auto kieli::text_range(std::string_view const string, Range const range) -> std:
     auto pos = range.start;
     while (pos != range.stop) {
         cpputil::always_assert(end != string.end());
-        advance_position(pos, *end++);
+        pos.advance_with(*end++);
     }
 
     return { begin, end };
@@ -29,17 +39,6 @@ auto kieli::edit_text(std::string& text, Range const range, std::string_view con
     auto const where = text_range(text, range);
     auto const index = static_cast<std::size_t>(where.data() - text.data());
     text.replace(index, where.size(), new_text);
-}
-
-auto kieli::advance_position(Position& position, char const character) -> void
-{
-    if (character == '\n') {
-        ++position.line;
-        position.column = 0;
-    }
-    else {
-        ++position.column;
-    }
 }
 
 auto kieli::find_source(std::filesystem::path const& path, Source_vector const& sources)

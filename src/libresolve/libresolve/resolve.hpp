@@ -12,6 +12,6 @@ namespace kieli {
 
     struct Resolved_project {};
 
-    auto resolve_project(Project_configuration const& project_configuration) -> Resolved_project;
+    auto resolve_project(Project_configuration configuration) -> Resolved_project;
 
 } // namespace kieli

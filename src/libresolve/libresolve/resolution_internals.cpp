@@ -69,25 +69,25 @@ auto libresolve::Tag_state::fresh_local_variable_tag() -> Local_variable_tag
     return Local_variable_tag { ++m_current_local_variable_tag };
 }
 
-auto libresolve::error_expression(Constants const& constants, utl::Source_range const source_range)
+auto libresolve::error_expression(Constants const& constants, kieli::Range const range)
     -> hir::Expression
 {
     return hir::Expression {
         hir::expression::Error {},
-        hir::Type { constants.error_type, source_range },
+        hir::Type { constants.error_type, range },
         hir::Expression_kind::place,
-        source_range,
+        range,
     };
 }
 
-auto libresolve::unit_expression(Constants const& constants, utl::Source_range const source_range)
+auto libresolve::unit_expression(Constants const& constants, kieli::Range const range)
     -> hir::Expression
 {
     return hir::Expression {
         hir::expression::Tuple {},
-        hir::Type { constants.unit_type, source_range },
+        hir::Type { constants.unit_type, range },
         hir::Expression_kind::value,
-        source_range,
+        range,
     };
 }
 
@@ -141,7 +141,7 @@ auto libresolve::Inference_state::set_solution(
 }
 
 auto libresolve::Inference_state::fresh_general_type_variable(
-    Arenas& arenas, utl::Source_range const origin) -> hir::Type
+    Arenas& arenas, kieli::Range const origin) -> hir::Type
 {
     auto const tag = Type_variable_tag { type_variables.underlying.size() };
 
@@ -157,7 +157,7 @@ auto libresolve::Inference_state::fresh_general_type_variable(
 }
 
 auto libresolve::Inference_state::fresh_integral_type_variable(
-    Arenas& arenas, utl::Source_range const origin) -> hir::Type
+    Arenas& arenas, kieli::Range const origin) -> hir::Type
 {
     auto const tag     = Type_variable_tag { type_variables.underlying.size() };
     auto const variant = arenas.type(hir::type::Variable { tag });
@@ -172,7 +172,7 @@ auto libresolve::Inference_state::fresh_integral_type_variable(
 }
 
 auto libresolve::Inference_state::fresh_mutability_variable(
-    Arenas& arenas, utl::Source_range const origin) -> hir::Mutability
+    Arenas& arenas, kieli::Range const origin) -> hir::Mutability
 {
     auto const tag     = Mutability_variable_tag { mutability_variables.underlying.size() };
     auto const variant = arenas.mutability(hir::mutability::Variable { tag });

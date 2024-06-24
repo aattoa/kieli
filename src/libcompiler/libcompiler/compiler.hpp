@@ -2,7 +2,7 @@
 
 #include <libutl/wrapper.hpp>
 #include <libutl/pooled_string.hpp>
-#include <libutl/source.hpp>
+#include <libcompiler/filesystem.hpp>
 #include <cppdiag/cppdiag.hpp>
 
 namespace kieli {
@@ -14,7 +14,7 @@ namespace kieli {
 
     struct Compile_info {
         std::vector<cppdiag::Diagnostic> diagnostics;
-        utl::Source_vector               source_vector;
+        Source_vector                    source_vector;
         utl::String_pool                 string_literal_pool;
         utl::String_pool                 operator_pool;
         utl::String_pool                 identifier_pool;
@@ -23,21 +23,21 @@ namespace kieli {
     auto emit_diagnostic(
         cppdiag::Severity          severity,
         Compile_info&              info,
-        utl::Source_id             source,
-        utl::Source_range          error_range,
+        Source_id                  source,
+        Range                      error_range,
         std::string                message,
         std::optional<std::string> help_note = std::nullopt) -> void;
 
     [[noreturn]] auto fatal_error(
         Compile_info&              info,
-        utl::Source_id             source,
-        utl::Source_range          error_range,
+        Source_id                  source,
+        Range                      error_range,
         std::string                message,
         std::optional<std::string> help_note = std::nullopt) -> void;
 
     auto text_section(
-        utl::Source const&               source,
-        utl::Source_range                range,
+        Source const&                    source,
+        Range                            range,
         std::optional<std::string>       note          = std::nullopt,
         std::optional<cppdiag::Severity> note_severity = std::nullopt) -> cppdiag::Text_section;
 
@@ -45,10 +45,9 @@ namespace kieli {
         std::span<cppdiag::Diagnostic const> diagnostics,
         cppdiag::Colors                      colors = cppdiag::Colors::defaults()) -> std::string;
 
-    auto test_info_and_source(std::string&& source_string)
-        -> std::pair<Compile_info, utl::Source_id>;
+    auto test_info_and_source(std::string&& source_string) -> std::pair<Compile_info, Source_id>;
 
-    auto predefinitions_source(Compile_info&) -> utl::Source_id;
+    auto predefinitions_source(Compile_info&) -> Source_id;
 
     struct Identifier {
         utl::Pooled_string string;
@@ -62,7 +61,7 @@ namespace kieli {
 
     struct Name_dynamic {
         Identifier          identifier;
-        utl::Source_range   source_range;
+        Range               range;
         utl::Explicit<bool> is_upper;
         [[nodiscard]] auto  as_upper() const noexcept -> Name_upper;
         [[nodiscard]] auto  as_lower() const noexcept -> Name_lower;
@@ -75,12 +74,12 @@ namespace kieli {
 
     template <bool is_upper>
     struct Basic_name {
-        Identifier        identifier;
-        utl::Source_range source_range;
+        Identifier identifier;
+        Range      range;
 
         [[nodiscard]] auto as_dynamic() const -> Name_dynamic
         {
-            return Name_dynamic { identifier, source_range, is_upper };
+            return Name_dynamic { identifier, range, is_upper };
         }
 
         [[nodiscard]] auto operator==(Basic_name const& other) const noexcept -> bool

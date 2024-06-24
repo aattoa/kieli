@@ -4,7 +4,7 @@
 auto cst::Token::from_lexical(kieli::Token const& lexical) -> Token
 {
     return Token {
-        .source_range     = lexical.source_range,
+        .range            = lexical.range,
         .preceding_trivia = lexical.preceding_trivia,
     };
 }

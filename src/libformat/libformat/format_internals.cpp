@@ -19,9 +19,9 @@ libformat::Indentation::~Indentation()
 
 auto libformat::State::format(cst::Wildcard const& wildcard) -> void
 {
-    auto const [start, stop] = wildcard.source_range;
-    cpputil::always_assert(start.column <= stop.column);
-    format("{:_^{}}", "", stop.column - start.column + 1);
+    auto const [start, stop] = wildcard.range;
+    cpputil::always_assert(start.column < stop.column);
+    format("{:_^{}}", "", stop.column - start.column);
 }
 
 auto libformat::State::format(cst::Qualified_name const& name) -> void

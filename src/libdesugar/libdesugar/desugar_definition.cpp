@@ -8,7 +8,7 @@ namespace {
     auto ensure_no_duplicates(
         Context& context, std::string_view const description, std::vector<T> const& elements)
     {
-        utl::Source const& source = context.compile_info.source_vector[context.source];
+        kieli::Source const& source = context.compile_info.source_vector[context.source];
 
         for (auto it = elements.begin(); it != elements.end(); ++it) {
             auto const duplicate = std::ranges::find(it + 1, elements.end(), it->name, &T::name);
@@ -16,12 +16,8 @@ namespace {
                 context.compile_info.diagnostics.push_back(cppdiag::Diagnostic {
                     .text_sections = utl::to_vector({
                         kieli::text_section(
-                            source,
-                            it->name.source_range,
-                            "First defined here",
-                            cppdiag::Severity::hint),
-                        kieli::text_section(
-                            source, duplicate->name.source_range, "Later defined here"),
+                            source, it->name.range, "First defined here", cppdiag::Severity::hint),
+                        kieli::text_section(source, duplicate->name.range, "Later defined here"),
                     }),
                     .message = std::format("Multiple definitions for {} {}", description, it->name),
                     .severity = cppdiag::Severity::error,
@@ -36,16 +32,16 @@ namespace {
         if (std::holds_alternative<ast::expression::Block>(expression.variant)) {
             return expression;
         }
-        auto const source_range = expression.source_range;
+        auto const range = expression.range;
         return ast::Expression {
-            ast::expression::Block { .result = context.wrap(std::move(expression)) },
-            source_range,
+            .variant = ast::expression::Block { .result = context.wrap(std::move(expression)) },
+            .range   = range,
         };
     }
 
     struct Definition_desugaring_visitor {
-        Context&       context;
-        utl::Source_id source;
+        Context&         context;
+        kieli::Source_id source;
 
         auto operator()(cst::definition::Function const& function) -> ast::Definition::Variant
         {
@@ -134,9 +130,9 @@ namespace {
 auto libdesugar::Context::desugar(cst::definition::Field const& field) -> ast::definition::Field
 {
     return ast::definition::Field {
-        .name         = field.name,
-        .type         = desugar(field.type),
-        .source_range = field.source_range,
+        .name  = field.name,
+        .type  = desugar(field.type),
+        .range = field.range,
     };
 };
 
@@ -173,6 +169,6 @@ auto libdesugar::Context::desugar(cst::Definition const& definition) -> ast::Def
     return {
         std::visit(Definition_desugaring_visitor { *this, definition.source }, definition.variant),
         definition.source,
-        definition.source_range,
+        definition.range,
     };
 }

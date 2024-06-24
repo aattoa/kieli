@@ -13,7 +13,7 @@ namespace {
             kieli::fatal_error(
                 context.compile_info(),
                 context.source(),
-                context.up_to_current(name.primary_name.source_range),
+                context.up_to_current(name.primary_name.range),
                 "Expected a type, but found a lowercase name");
         }
         if (auto template_arguments = parse_template_arguments(context)) {
@@ -39,7 +39,7 @@ namespace {
                 .variant = cst::Global_root_qualifier { cst::Token::from_lexical(global) },
                 .double_colon_token
                 = cst::Token::from_lexical(context.require_extract(Token::Type::double_colon)),
-                .source_range = global.source_range,
+                .range = global.range,
             });
     }
 
@@ -157,7 +157,7 @@ namespace {
         case Token::Type::character_type: return kieli::built_in_type::Character {};
         case Token::Type::boolean_type:   return kieli::built_in_type::Boolean {};
         case Token::Type::string_type:    return kieli::built_in_type::String {};
-        case Token::Type::underscore:     return cst::Wildcard { token.source_range };
+        case Token::Type::underscore:     return cst::Wildcard { token.range };
         case Token::Type::upper_self:     return cst::type::Self {};
         case Token::Type::paren_open:     return extract_tuple(context, token);
         case Token::Type::bracket_open:   return extract_array_or_slice(context, token);
@@ -187,7 +187,7 @@ namespace {
                 cst::Root_qualifier {
                     .variant            = type,
                     .double_colon_token = cst::Token::from_lexical(double_colon.value()),
-                    .source_range       = type->source_range,
+                    .range              = type->range,
                 });
 
             if (name.primary_name.is_upper.get()) {
@@ -202,7 +202,7 @@ namespace {
                         }
                         return cst::type::Typename { std::move(name) };
                     }),
-                    context.up_to_current(type->source_range),
+                    context.up_to_current(type->range),
                 });
             }
             // Not a qualified type, retreat
@@ -219,7 +219,7 @@ auto libparse::parse_type(Context& context) -> std::optional<utl::Wrapper<cst::T
     Token const first_token = context.extract();
     return dispatch_parse_type(context, first_token, stage)
         .transform([&](cst::Type::Variant&& variant) -> utl::Wrapper<cst::Type> {
-            auto const range = context.up_to_current(first_token.source_range);
+            auto const range = context.up_to_current(first_token.range);
             return try_qualify(context, context.wrap(cst::Type { std::move(variant), range }));
         });
 }

@@ -4,8 +4,8 @@
 auto kieli::emit_diagnostic(
     cppdiag::Severity const    severity,
     Compile_info&              info,
-    utl::Source_id const       source,
-    utl::Source_range const    error_range,
+    Source_id const            source,
+    Range const                error_range,
     std::string                message,
     std::optional<std::string> help_note) -> void
 {
@@ -21,8 +21,8 @@ auto kieli::emit_diagnostic(
 
 auto kieli::fatal_error(
     Compile_info&              info,
-    utl::Source_id             source,
-    utl::Source_range          error_range,
+    Source_id const            source,
+    Range const                error_range,
     std::string                message,
     std::optional<std::string> help_note) -> void
 {
@@ -37,16 +37,16 @@ auto kieli::fatal_error(
 }
 
 auto kieli::text_section(
-    utl::Source const&                     source,
-    utl::Source_range const                range,
+    Source const&                          source,
+    Range const                            range,
     std::optional<std::string>             note,
     std::optional<cppdiag::Severity> const note_severity) -> cppdiag::Text_section
 {
     return cppdiag::Text_section {
         .source_string  = source.content,
         .source_name    = source.path.string(),
-        .start_position = { range.start.line, range.start.column },
-        .stop_position  = { range.stop.line, range.stop.column },
+        .start_position = { range.start.line + 1, range.start.column + 1 },
+        .stop_position  = { range.stop.line + 1, range.stop.column + 1 },
         .note           = std::move(note),
         .note_severity  = note_severity,
     };
@@ -63,16 +63,17 @@ auto kieli::format_diagnostics(
     return output;
 }
 
-auto kieli::test_info_and_source(std::string&& source_string)
-    -> std::pair<Compile_info, utl::Source_id>
+auto kieli::test_info_and_source(std::string&& source_string) -> std::pair<Compile_info, Source_id>
 {
-    Compile_info   info;
-    utl::Source_id source = info.source_vector.push(std::move(source_string), "[test]");
+    Compile_info info;
+    Source_id    source = info.source_vector.push(std::move(source_string), "[test]");
     return { std::move(info), source };
 }
 
-auto kieli::predefinitions_source(Compile_info& info) -> utl::Source_id
+auto kieli::predefinitions_source(Compile_info& info) -> Source_id
 {
+    // TODO: check if predefinitions already exist
+
     static constexpr std::string_view source = R"(
         mod std {
             class Copy { fn copy(&self): Self }
@@ -91,13 +92,13 @@ auto kieli::Compilation_failure::what() const noexcept -> char const*
 auto kieli::Name_dynamic::as_upper() const noexcept -> Name_upper
 {
     cpputil::always_assert(is_upper.get());
-    return { identifier, source_range };
+    return { identifier, range };
 }
 
 auto kieli::Name_dynamic::as_lower() const noexcept -> Name_lower
 {
     cpputil::always_assert(!is_upper.get());
-    return { identifier, source_range };
+    return { identifier, range };
 }
 
 auto kieli::built_in_type::integer_name(Integer const integer) noexcept -> std::string_view

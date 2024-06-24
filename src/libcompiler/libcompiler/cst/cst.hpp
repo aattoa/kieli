@@ -29,8 +29,8 @@ namespace cst {
     struct [[nodiscard]] Definition;
 
     struct [[nodiscard]] Token {
-        utl::Source_range source_range;
-        std::string_view  preceding_trivia;
+        kieli::Range     range;
+        std::string_view preceding_trivia;
 
         // TODO: std::string_view succeeding_trivia
 
@@ -61,7 +61,7 @@ namespace cst {
     };
 
     struct Wildcard {
-        utl::Source_range source_range;
+        kieli::Range range;
     };
 
     namespace mutability {
@@ -75,16 +75,16 @@ namespace cst {
 
     struct Mutability {
         using Variant = std::variant<mutability::Concrete, mutability::Parameterized>;
-        Variant           variant;
-        utl::Source_range source_range;
-        Token             mut_or_immut_keyword_token;
+        Variant      variant;
+        kieli::Range range;
+        Token        mut_or_immut_keyword_token;
     };
 
     struct Self_parameter {
         std::optional<Mutability> mutability;
         std::optional<Token>      ampersand_token;
         Token                     self_keyword_token;
-        utl::Source_range         source_range;
+        kieli::Range              range;
 
         [[nodiscard]] auto is_reference() const noexcept -> bool;
     };
@@ -101,7 +101,7 @@ namespace cst {
         std::optional<Template_arguments> template_arguments;
         kieli::Name_dynamic               name;
         std::optional<Token>              trailing_double_colon_token;
-        utl::Source_range                 source_range;
+        kieli::Range                      range;
     };
 
     struct Global_root_qualifier {
@@ -111,14 +111,14 @@ namespace cst {
     struct Root_qualifier {
         std::variant<Global_root_qualifier, utl::Wrapper<Type>> variant;
         Token                                                   double_colon_token;
-        utl::Source_range                                       source_range;
+        kieli::Range                                            range;
     };
 
     struct Qualified_name {
         Separated_sequence<Qualifier> middle_qualifiers;
         std::optional<Root_qualifier> root_qualifier;
         kieli::Name_dynamic           primary_name;
-        utl::Source_range             source_range;
+        kieli::Range                  range;
 
         [[nodiscard]] auto is_upper() const noexcept -> bool;
         [[nodiscard]] auto is_unqualified() const noexcept -> bool;
@@ -127,7 +127,7 @@ namespace cst {
     struct Class_reference {
         std::optional<Template_arguments> template_arguments;
         Qualified_name                    name;
-        utl::Source_range                 source_range;
+        kieli::Range                      range;
     };
 
     template <class T>
@@ -185,8 +185,8 @@ namespace cst {
             Template_value_parameter,
             Template_mutability_parameter>;
 
-        Variant           variant;
-        utl::Source_range source_range;
+        Variant      variant;
+        kieli::Range range;
     };
 
     using Template_parameters = Surrounded<Separated_sequence<Template_parameter>>;
@@ -255,7 +255,7 @@ namespace cst {
         struct Binary_operator_chain {
             struct Operator_name {
                 kieli::Identifier identifier;
-                utl::Source_range source_range;
+                kieli::Range      range;
             };
 
             struct Operator_and_operand {
@@ -476,8 +476,8 @@ namespace cst {
             expression::Meta,
             expression::Hole>;
 
-        Variant           variant;
-        utl::Source_range source_range;
+        Variant      variant;
+        kieli::Range range;
     };
 
     namespace pattern {
@@ -570,8 +570,8 @@ namespace cst {
             pattern::Alias,
             pattern::Guarded>;
 
-        Variant           variant;
-        utl::Source_range source_range;
+        Variant      variant;
+        kieli::Range range;
     };
 
     namespace type {
@@ -656,8 +656,8 @@ namespace cst {
             type::Pointer,
             type::Template_application>;
 
-        Variant           variant;
-        utl::Source_range source_range;
+        Variant      variant;
+        kieli::Range range;
     };
 
     struct Function_signature {
@@ -687,7 +687,7 @@ namespace cst {
         struct Field {
             kieli::Name_lower name;
             Type_annotation   type;
-            utl::Source_range source_range;
+            kieli::Range      range;
         };
 
         struct Struct_constructor {
@@ -776,9 +776,9 @@ namespace cst {
             definition::Instantiation,
             definition::Submodule>;
 
-        Variant           variant;
-        utl::Source_id    source;
-        utl::Source_range source_range;
+        Variant          variant;
+        kieli::Source_id source;
+        kieli::Range     range;
     };
 
     template <class T>
@@ -795,7 +795,7 @@ namespace cst {
         std::vector<Import>     imports;
         std::vector<Definition> definitions;
         Node_arena              node_arena;
-        utl::Source_id          source;
+        kieli::Source_id        source;
     };
 
 } // namespace cst
