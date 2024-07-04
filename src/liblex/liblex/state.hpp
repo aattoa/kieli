@@ -3,10 +3,10 @@
 #include <liblex/lex.hpp>
 
 namespace liblex {
-    struct Token_extraction_failure {};
+    struct Error {};
 
     template <class T>
-    using Expected = std::expected<T, Token_extraction_failure>;
+    using Expected = std::expected<T, Error>;
 
     [[nodiscard]] auto source_begin(kieli::Lex_state const&) noexcept -> char const*;
     [[nodiscard]] auto source_end(kieli::Lex_state const&) noexcept -> char const*;
@@ -18,17 +18,13 @@ namespace liblex {
     [[nodiscard]] auto try_consume(kieli::Lex_state&, std::string_view) noexcept -> bool;
 
     [[nodiscard]] auto error(
-        kieli::Lex_state const& state,
-        std::string_view        position,
-        std::string             message) -> std::unexpected<Token_extraction_failure>;
-
-    [[nodiscard]] auto error(
-        kieli::Lex_state const& state,
-        char const*             position,
-        std::string             message) -> std::unexpected<Token_extraction_failure>;
+        kieli::Lex_state const&    state,
+        std::string_view           position,
+        std::string                message,
+        std::optional<std::string> help_note = std::nullopt) -> std::unexpected<Error>;
 
     [[nodiscard]] auto error(kieli::Lex_state const& state, std::string message)
-        -> std::unexpected<Token_extraction_failure>;
+        -> std::unexpected<Error>;
 
     auto advance(kieli::Lex_state&, std::size_t offset = 1) noexcept -> void;
 

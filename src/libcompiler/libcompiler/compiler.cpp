@@ -45,8 +45,8 @@ auto kieli::text_section(
     return cppdiag::Text_section {
         .source_string  = source.content,
         .source_name    = source.path.string(),
-        .start_position = { range.start.line + 1, range.start.column + 1 },
-        .stop_position  = { range.stop.line + 1, range.stop.column + 1 },
+        .start_position = { range.start.line, range.start.column },
+        .stop_position  = { range.stop.line, range.stop.column },
         .note           = std::move(note),
         .note_severity  = note_severity,
     };

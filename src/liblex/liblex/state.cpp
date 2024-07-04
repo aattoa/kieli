@@ -93,28 +93,23 @@ auto liblex::make_identifier(kieli::Lex_state const& state, std::string_view con
 }
 
 auto liblex::error(
-    kieli::Lex_state const& state,
-    std::string_view const  position,
-    std::string             message) -> std::unexpected<Token_extraction_failure>
+    kieli::Lex_state const&    state,
+    std::string_view const     position,
+    std::string                message,
+    std::optional<std::string> help_note) -> std::unexpected<Error>
 {
     kieli::emit_diagnostic(
         cppdiag::Severity::error,
         state.compile_info,
         state.source,
-        source_range_for(state, position),
-        std::move(message));
-    return std::unexpected { Token_extraction_failure {} };
+        range_for(state, position),
+        std::move(message),
+        std::move(help_note));
+    return std::unexpected { Error {} };
 }
 
-auto liblex::error(kieli::Lex_state const& state, char const* const position, std::string message)
-    -> std::unexpected<Token_extraction_failure>
-{
-    return error(state, { position, position }, std::move(message));
-}
-
-auto liblex::error(kieli::Lex_state const& state, std::string message)
-    -> std::unexpected<Token_extraction_failure>
+auto liblex::error(kieli::Lex_state const& state, std::string message) -> std::unexpected<Error>
 {
     cpputil::always_assert(state.string.data() != nullptr);
-    return error(state, state.string.data(), std::move(message));
+    return error(state, { state.string.data(), 1 }, std::move(message));
 }

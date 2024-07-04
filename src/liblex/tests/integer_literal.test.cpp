@@ -96,5 +96,5 @@ TEST("integer literal digit separators")
     CHECK_EQUAL(lex_success("0x123'abc"), "(int: 1194684)");
     CHECK_EQUAL(lex_success("0x'123'abc"), "(int: 1194684)");
     CHECK(lex_failure("1'").contains("Expected one or more digits after the digit separator"));
-    CHECK(lex_failure("0x'").contains("Expected one or more digits after the base specifier"));
+    CHECK(lex_failure("0x'").contains("Expected one or more digits after the base-16 specifier"));
 }

@@ -17,7 +17,7 @@ namespace {
         cppdiag::Colors const            colors) -> std::string
     {
         static constexpr auto position = [](auto const column) {
-            return cppdiag::Position { .column = utl::safe_cast<std::uint32_t>(column) };
+            return cppdiag::Position { .column = utl::safe_cast<std::uint32_t>(column) - 1 };
         };
         cppdiag::Diagnostic const diagnostic {
             .text_sections = utl::to_vector({
@@ -25,7 +25,7 @@ namespace {
                     .source_string  = info.command_line,
                     .source_name    = "command line",
                     .start_position = position(info.error_column),
-                    .stop_position  = position(info.error_column + info.error_width - 1),
+                    .stop_position  = position(info.error_column + info.error_width),
                     .note = std::string(cppargs::Parse_error_info::kind_to_string(info.kind)),
                 },
             }),

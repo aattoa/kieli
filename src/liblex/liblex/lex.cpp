@@ -1,5 +1,6 @@
 #include <libutl/utilities.hpp>
 #include <libutl/flatmap.hpp>
+#include <libutl/safe_integer.hpp>
 #include <liblex/numeric.hpp>
 #include <liblex/lex.hpp>
 #include <liblex/state.hpp>
@@ -210,7 +211,7 @@ namespace {
         case '\"': return '\"';
         case '\\': return '\\';
         default:
-            return liblex::error(state, anchor, "Unrecognized escape sequence");
+            return liblex::error(state, { anchor, 1 }, "Unrecognized escape sequence");
         }
         // clang-format on
     }
@@ -224,7 +225,7 @@ namespace {
         for (;;) {
             if (state.string.empty()) {
                 return liblex::error(
-                    state, anchor, "Unterminating string literal within comment block");
+                    state, { anchor, 1 }, "Unterminating string literal within comment block");
             }
             switch (liblex::extract_current(state)) {
             case '"':
@@ -238,7 +239,7 @@ namespace {
         }
     }
 
-    auto skip_block_comment(kieli::Lex_state& state, std::string_view old_string)
+    auto skip_block_comment(kieli::Lex_state& state, std::string_view const comment_begin)
         -> liblex::Expected<void>
     {
         for (std::size_t depth = 1; depth != 0;) {
@@ -246,20 +247,18 @@ namespace {
                 return result;
             }
             if (liblex::try_consume(state, "*/")) {
-                cpputil::always_assert(depth != 0);
                 --depth;
             }
             else if (liblex::try_consume(state, "/*")) {
-                if (depth == 50) { // Arbitrary depth limit for now
-                    return liblex::error(
-                        state, old_string.substr(0, 2), "This block comment is too deeply nested");
-                }
-                old_string.remove_prefix(2);
+                cpputil::always_assert(!utl::would_increment_overflow(depth));
                 ++depth;
             }
             else if (state.string.empty()) {
-                // TODO: help note: "Comments starting with '/*' must be terminated with '*/'"
-                return liblex::error(state, old_string, "Unterminating comment block");
+                return liblex::error(
+                    state,
+                    comment_begin.substr(0, 2),
+                    "Unterminating comment block",
+                    "Comments starting with `/*` must be terminated with `*/`");
             }
             else {
                 liblex::advance(state);
@@ -273,11 +272,12 @@ namespace {
         std::string_view const old_string = state.string;
         for (;;) {
             liblex::consume(state, is_space);
+            std::string_view const comment_begin = state.string;
             if (liblex::try_consume(state, "//")) {
                 liblex::consume(state, [](char const c) { return c != '\n'; });
             }
             else if (liblex::try_consume(state, "/*")) {
-                (void)skip_block_comment(state, old_string);
+                (void)skip_block_comment(state, comment_begin);
             }
             else {
                 break;
@@ -346,13 +346,14 @@ namespace {
     auto extract_string_literal(Token_maker const& token, kieli::Lex_state& state)
         -> liblex::Expected<Token>
     {
+        char const* const anchor = state.string.data();
         cpputil::always_assert(liblex::current(state) == '"');
         liblex::advance(state);
 
         std::string string;
         for (;;) {
             if (state.string.empty()) {
-                return liblex::error(state, "Unterminating string literal");
+                return liblex::error(state, { anchor, 1 }, "Unterminating string literal");
             }
             switch (char const character = liblex::extract_current(state)) {
             case '"':
@@ -406,11 +407,10 @@ namespace {
     auto parse_floating_value(kieli::Lex_state& state, std::string_view const string)
         -> liblex::Expected<double>
     {
-        return liblex::parse_floating(string).transform_error(
-            [&](liblex::Numeric_error const error) {
-                cpputil::always_assert(error == liblex::Numeric_error::out_of_range);
-                return liblex::error(state, string, "Floating point literal is too large").error();
-            });
+        return liblex::parse_floating(string).transform_error([&](liblex::Numeric_error error) {
+            cpputil::always_assert(error == liblex::Numeric_error::out_of_range);
+            return liblex::error(state, string, "Floating point literal is too large").error();
+        });
     }
 
     auto extract_numeric_floating(
@@ -531,8 +531,9 @@ namespace {
 
         if (base.has_value()) {
             if (digits.find_first_not_of('\'') == std::string_view::npos) {
-                // TODO: Specify base value in message
-                return liblex::error(state, "Expected one or more digits after the base specifier");
+                std::string message = std::format(
+                    "Expected one or more digits after the base-{} specifier", base.value());
+                return liblex::error(state, std::move(message));
             }
         }
 
@@ -607,6 +608,7 @@ auto kieli::lex(Lex_state& state) -> Token
 {
     Token_maker const token_maker { extract_comments_and_whitespace(state), state };
     if (state.string.empty()) {
+        ++state.position.column; // According to the LSP spec, the stop position is exclusive.
         return token_maker({}, Token::Type::end_of_input);
     }
     if (auto token = extract_token(token_maker, state)) {
