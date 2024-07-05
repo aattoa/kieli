@@ -8,7 +8,7 @@ namespace {
         Context&                    context;
         Inference_state&            state;
         Scope&                      scope;
-        Environment_wrapper         environment;
+        hir::Environment_id         environment;
         hir::Template_parameter_tag tag;
 
         template <class Default>
@@ -90,7 +90,7 @@ auto libresolve::resolve_template_parameters(
     Context&                        context,
     Inference_state&                state,
     Scope&                          scope,
-    Environment_wrapper             environment,
+    hir::Environment_id             environment,
     ast::Template_parameters const& parameters) -> std::vector<hir::Template_parameter>
 {
     auto const resolve_parameter = [&](ast::Template_parameter const& parameter) {
@@ -112,7 +112,7 @@ auto libresolve::resolve_template_arguments(
     Context&                                    context,
     Inference_state&                            state,
     Scope&                                      scope,
-    Environment_wrapper                         environment,
+    hir::Environment_id                         environment,
     std::vector<hir::Template_parameter> const& parameters,
     std::vector<ast::Template_argument> const&  arguments) -> std::vector<hir::Template_argument>
 {

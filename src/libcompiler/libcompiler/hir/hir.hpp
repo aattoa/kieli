@@ -5,18 +5,6 @@
 #include <libutl/wrapper.hpp>
 #include <libcompiler/compiler.hpp>
 
-// TODO: remove libresolve references
-
-namespace libresolve {
-    struct Function_info;
-    struct Enumeration_info;
-    struct Typeclass_info;
-    struct Alias_info;
-    struct Module_info;
-    struct Environment;
-    class Scope;
-} // namespace libresolve
-
 namespace hir {
     struct Mutability;
     struct Expression;
@@ -39,9 +27,33 @@ namespace hir {
         using Vector_index::Vector_index;
     };
 
+    struct Module_id : utl::Vector_index<Module_id> {
+        using Vector_index::Vector_index;
+    };
+
+    struct Environment_id : utl::Vector_index<Environment_id> {
+        using Vector_index::Vector_index;
+    };
+
+    struct Function_id : utl::Vector_index<Function_id> {
+        using Vector_index::Vector_index;
+    };
+
+    struct Enumeration_id : utl::Vector_index<Enumeration_id> {
+        using Vector_index::Vector_index;
+    };
+
+    struct Alias_id : utl::Vector_index<Alias_id> {
+        using Vector_index::Vector_index;
+    };
+
+    struct Typeclass_id : utl::Vector_index<Typeclass_id> {
+        using Vector_index::Vector_index;
+    };
+
     struct Class_reference {
-        utl::Mutable_wrapper<libresolve::Typeclass_info> info;
-        kieli::Range                                     range;
+        kieli::Name_upper name;
+        Typeclass_id      id;
     };
 
     enum class Type_variable_kind { general, integral };
@@ -155,8 +167,8 @@ namespace hir {
         };
 
         struct Enumeration {
-            kieli::Name_upper                                  name;
-            utl::Mutable_wrapper<libresolve::Enumeration_info> info;
+            kieli::Name_upper name;
+            Enumeration_id    id;
         };
 
         struct Reference {
@@ -247,8 +259,8 @@ namespace hir {
         };
 
         struct Function_reference {
-            kieli::Name_lower                               name;
-            utl::Mutable_wrapper<libresolve::Function_info> info;
+            kieli::Name_lower name;
+            Function_id       id;
         };
 
         struct Indirect_invocation {
@@ -257,9 +269,9 @@ namespace hir {
         };
 
         struct Direct_invocation {
-            kieli::Name_lower                       function_name;
-            utl::Wrapper<libresolve::Function_info> function_info;
-            std::vector<Function_argument>          arguments;
+            kieli::Name_lower              function_name;
+            Function_id                    function_id;
+            std::vector<Function_argument> arguments;
         };
 
         struct Sizeof {
@@ -385,7 +397,7 @@ namespace hir {
     };
 
     struct Module {
-        utl::Mutable_wrapper<libresolve::Environment> environment;
+        Environment_id environment;
     };
 
     auto format_to(Pattern const&, std::string&) -> void;

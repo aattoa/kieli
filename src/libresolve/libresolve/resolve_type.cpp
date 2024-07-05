@@ -27,7 +27,7 @@ namespace {
         Context&            context;
         Inference_state&    state;
         Scope&              scope;
-        Environment_wrapper environment;
+        hir::Environment_id environment;
         ast::Type const&    this_type;
 
         auto recurse()
@@ -88,13 +88,13 @@ namespace {
                 = lookup_upper(context, state, scope, environment, type_name.name)) {
                 return std::visit(
                     utl::Overload {
-                        [&](utl::Mutable_wrapper<Enumeration_info> const enumeration) -> hir::Type {
-                            return enumeration->type;
+                        [&](hir::Enumeration_id const enumeration) -> hir::Type {
+                            return context.arenas.enumerations[enumeration].type;
                         },
-                        [&](utl::Mutable_wrapper<Alias_info> const alias) -> hir::Type {
-                            return resolve_alias(context, alias.as_mutable()).type;
+                        [&](hir::Alias_id const alias) -> hir::Type {
+                            return resolve_alias(context, context.arenas.aliases[alias]).type;
                         },
-                        [](utl::Mutable_wrapper<Typeclass_info>) -> hir::Type { cpputil::todo(); },
+                        [](hir::Typeclass_id) -> hir::Type { cpputil::todo(); },
                     },
                     lookup_result.value().variant);
             }
@@ -184,7 +184,7 @@ auto libresolve::resolve_type(
     Context&            context,
     Inference_state&    state,
     Scope&              scope,
-    Environment_wrapper environment,
+    hir::Environment_id environment,
     ast::Type const&    type) -> hir::Type
 {
     return std::visit(

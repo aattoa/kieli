@@ -266,7 +266,7 @@ namespace {
             hir::type::Enumeration const& sub, hir::type::Enumeration const& super) const -> bool
         {
             // TODO: visit template arguments
-            return sub.info.is(super.info);
+            return sub.id == super.id;
         }
 
         auto operator()(hir::type::Error, hir::type::Error) const -> bool

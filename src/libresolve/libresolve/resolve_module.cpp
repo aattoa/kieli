@@ -17,25 +17,24 @@ namespace {
     }
 
     auto collect_import_info(
-        libresolve::Context&                  context,
-        kieli::Source_id const                source,
-        libresolve::Environment_wrapper const environment,
-        libresolve::Import&&                  import) -> void
+        libresolve::Context&      context,
+        kieli::Source_id const    source,
+        hir::Environment_id const environment,
+        libresolve::Import&&      import) -> void
     {
         libresolve::add_to_environment(
             context,
             source,
-            environment.as_mutable(),
+            context.arenas.environments[environment],
             import.name,
-            context.arenas.info_arena.wrap_mutable<libresolve::Module_info>(
-                std::move(import), environment, import.name));
+            context.arenas.modules.push(std::move(import), environment, source, import.name));
     }
 
     auto collect_import(
-        libresolve::Context&                  context,
-        kieli::Source_id const                source,
-        libresolve::Environment_wrapper const environment,
-        cst::Module::Import const&            import) -> void
+        libresolve::Context&       context,
+        kieli::Source_id const     source,
+        hir::Environment_id const  environment,
+        cst::Module::Import const& import) -> void
     {
         auto resolved_import
             = libresolve::resolve_import(context.configuration, import.segments.elements);
@@ -57,7 +56,7 @@ namespace {
     }
 
     auto import_environment(libresolve::Context& context, libresolve::Import&& import)
-        -> libresolve::Environment_wrapper
+        -> hir::Environment_id
     {
         return libresolve::make_environment(
             context, read_import_source(std::move(import), context.compile_info.source_vector));
@@ -66,7 +65,7 @@ namespace {
     auto resolve_submodule(
         libresolve::Context&         context,
         kieli::Source_id const       source,
-        ast::definition::Submodule&& submodule) -> libresolve::Environment_wrapper
+        ast::definition::Submodule&& submodule) -> hir::Environment_id
     {
         if (submodule.template_parameters.has_value()) {
             cpputil::todo();
@@ -76,7 +75,7 @@ namespace {
 } // namespace
 
 auto libresolve::make_environment(libresolve::Context& context, kieli::Source_id const source)
-    -> Environment_wrapper
+    -> hir::Environment_id
 {
     cst::Module const cst = kieli::parse(source, context.compile_info);
     ast::Module       ast = kieli::desugar(cst, context.compile_info);
@@ -88,11 +87,12 @@ auto libresolve::make_environment(libresolve::Context& context, kieli::Source_id
     return environment;
 }
 
-auto libresolve::resolve_module(Context& context, Module_info& module_info) -> Environment_wrapper
+auto libresolve::resolve_module(Context& context, Module_info& module_info) -> hir::Environment_id
 {
     if (auto* const submodule = std::get_if<ast::definition::Submodule>(&module_info.variant)) {
-        module_info.variant = hir::Module { resolve_submodule(
-            context, module_info.environment->source, std::move(*submodule)) };
+        auto const source      = context.arenas.environments[module_info.environment].source;
+        auto const environment = resolve_submodule(context, source, std::move(*submodule));
+        module_info.variant    = hir::Module { environment };
     }
     else if (auto* const import = std::get_if<libresolve::Import>(&module_info.variant)) {
         module_info.variant = hir::Module { import_environment(context, std::move(*import)) };

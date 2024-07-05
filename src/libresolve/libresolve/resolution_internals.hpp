@@ -125,20 +125,20 @@ namespace libresolve {
     auto collect_environment(
         Context&                       context,
         kieli::Source_id               source,
-        std::vector<ast::Definition>&& definitions) -> Environment_wrapper;
+        std::vector<ast::Definition>&& definitions) -> hir::Environment_id;
 
-    auto make_environment(Context& context, kieli::Source_id source) -> Environment_wrapper;
+    auto make_environment(Context& context, kieli::Source_id source) -> hir::Environment_id;
 
-    auto resolve_module(Context& context, Module_info& module_info) -> Environment_wrapper;
+    auto resolve_module(Context& context, Module_info& module_info) -> hir::Environment_id;
 
     // Recursively resolve every definition in `environment`. Will not resolve function bodies.
-    auto resolve_definitions_in_order(Context& context, Environment_wrapper environment) -> void;
+    auto resolve_definitions_in_order(Context& context, hir::Environment_id environment) -> void;
 
     // Recursively resolve a definition. Will not resolve function bodies.
     auto resolve_definition(Context& context, Definition_variant const& definition) -> void;
 
     // Recursively resolve every function body in `environment`.
-    auto resolve_function_bodies(Context& context, Environment_wrapper environment) -> void;
+    auto resolve_function_bodies(Context& context, hir::Environment_id environment) -> void;
 
     auto resolve_enumeration(Context& context, Enumeration_info& info) -> hir::Enumeration&;
 
@@ -156,14 +156,14 @@ namespace libresolve {
         Context&                        context,
         Inference_state&                state,
         Scope&                          scope,
-        Environment_wrapper             environment,
+        hir::Environment_id             environment,
         ast::Template_parameters const& parameters) -> std::vector<hir::Template_parameter>;
 
     auto resolve_template_arguments(
         Context&                                    context,
         Inference_state&                            state,
         Scope&                                      scope,
-        Environment_wrapper                         environment,
+        hir::Environment_id                         environment,
         std::vector<hir::Template_parameter> const& parameters,
         std::vector<ast::Template_argument> const&  arguments)
         -> std::vector<hir::Template_argument>;
@@ -175,42 +175,42 @@ namespace libresolve {
         Context&               context,
         Inference_state&       state,
         Scope&                 scope,
-        Environment_wrapper    environment,
+        hir::Environment_id    environment,
         ast::Expression const& expression) -> hir::Expression;
 
     auto resolve_pattern(
         Context&            context,
         Inference_state&    state,
         Scope&              scope,
-        Environment_wrapper environment,
+        hir::Environment_id environment,
         ast::Pattern const& pattern) -> hir::Pattern;
 
     auto resolve_type(
         Context&            context,
         Inference_state&    state,
         Scope&              scope,
-        Environment_wrapper environment,
+        hir::Environment_id environment,
         ast::Type const&    type) -> hir::Type;
 
     auto resolve_class_reference(
         Context&                    context,
         Inference_state&            state,
         Scope&                      scope,
-        Environment_wrapper         environment,
+        hir::Environment_id         environment,
         ast::Class_reference const& class_reference) -> hir::Class_reference;
 
     auto lookup_lower(
         Context&                   context,
         Inference_state&           state,
         Scope&                     scope,
-        Environment_wrapper        environment,
+        hir::Environment_id        environment,
         ast::Qualified_name const& name) -> std::optional<Lower_info>;
 
     auto lookup_upper(
         Context&                   context,
         Inference_state&           state,
         Scope&                     scope,
-        Environment_wrapper        environment,
+        hir::Environment_id        environment,
         ast::Qualified_name const& name) -> std::optional<Upper_info>;
 
     // Check whether a type variable with `tag` occurs in `type`.

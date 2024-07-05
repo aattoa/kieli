@@ -7,58 +7,50 @@
 #include <libcompiler/hir/hir.hpp>
 
 namespace libresolve {
+    struct Function_info;
+    struct Enumeration_info;
+    struct Typeclass_info;
+    struct Alias_info;
+    struct Module_info;
+    struct Environment;
+    class Scope;
+
     struct Lower_info {
-        using Variant = std::variant<
-            utl::Mutable_wrapper<Function_info>, //
-            utl::Mutable_wrapper<Module_info>>;
+        using Variant = std::variant<hir::Function_id, hir::Module_id>;
         kieli::Name_lower name;
         kieli::Source_id  source;
         Variant           variant;
     };
 
     struct Upper_info {
-        using Variant = std::variant<
-            utl::Mutable_wrapper<Enumeration_info>,
-            utl::Mutable_wrapper<Typeclass_info>,
-            utl::Mutable_wrapper<Alias_info>>;
+        using Variant = std::variant<hir::Enumeration_id, hir::Typeclass_id, hir::Alias_id>;
         kieli::Name_upper name;
         kieli::Source_id  source;
         Variant           variant;
     };
 
     using Definition_variant = std::variant<
-        utl::Mutable_wrapper<Function_info>,
-        utl::Mutable_wrapper<Module_info>,
-        utl::Mutable_wrapper<Enumeration_info>,
-        utl::Mutable_wrapper<Typeclass_info>,
-        utl::Mutable_wrapper<Alias_info>>;
-
-    using Info_arena = utl::Wrapper_arena< //
-        Enumeration_info,
-        Typeclass_info,
-        Alias_info,
-        Function_info,
-        Module_info>;
-
-    using Environment_arena   = utl::Wrapper_arena<Environment>;
-    using Environment_wrapper = utl::Mutable_wrapper<Environment>;
+        hir::Function_id,
+        hir::Module_id,
+        hir::Enumeration_id,
+        hir::Typeclass_id,
+        hir::Alias_id>;
 
     struct Arenas {
-        Info_arena        info_arena;
-        Environment_arena environment_arena;
-        ast::Node_arena   ast_node_arena;
-        hir::Node_arena   hir_node_arena;
+        utl::Index_vector<hir::Module_id, Module_info>           modules;
+        utl::Index_vector<hir::Environment_id, Environment>      environments;
+        utl::Index_vector<hir::Function_id, Function_info>       functions;
+        utl::Index_vector<hir::Enumeration_id, Enumeration_info> enumerations;
+        utl::Index_vector<hir::Typeclass_id, Typeclass_info>     typeclasses;
+        utl::Index_vector<hir::Alias_id, Alias_info>             aliases;
+
+        ast::Node_arena ast_node_arena;
+        hir::Node_arena hir_node_arena;
 
         static auto defaults() -> Arenas;
 
         auto type(hir::Type::Variant) -> utl::Mutable_wrapper<hir::Type::Variant>;
         auto mutability(hir::Mutability::Variant) -> utl::Mutable_wrapper<hir::Mutability::Variant>;
-
-        template <class Info>
-        auto info(Info info) -> utl::Mutable_wrapper<Info>
-        {
-            return info_arena.wrap_mutable<Info>(std::move(info));
-        }
 
         auto wrap(hir::Expression) -> utl::Wrapper<hir::Expression>;
         auto wrap(hir::Pattern) -> utl::Wrapper<hir::Pattern>;
@@ -141,7 +133,8 @@ struct libresolve::Function_info {
         Function_with_resolved_signature,
         hir::Function>;
     Variant             variant;
-    Environment_wrapper environment;
+    hir::Environment_id environment;
+    kieli::Source_id    source;
     kieli::Name_lower   name;
     bool                currently_resolving {};
 };
@@ -149,7 +142,8 @@ struct libresolve::Function_info {
 struct libresolve::Enumeration_info {
     using Variant = std::variant<ast::definition::Enumeration, hir::Enumeration>;
     Variant             variant;
-    Environment_wrapper environment;
+    hir::Environment_id environment;
+    kieli::Source_id    source;
     kieli::Name_upper   name;
     hir::Type           type;
     bool                currently_resolving {};
@@ -158,7 +152,8 @@ struct libresolve::Enumeration_info {
 struct libresolve::Typeclass_info {
     using Variant = std::variant<ast::definition::Typeclass, hir::Typeclass>;
     Variant             variant;
-    Environment_wrapper environment;
+    hir::Environment_id environment;
+    kieli::Source_id    source;
     kieli::Name_upper   name;
     bool                currently_resolving {};
 };
@@ -166,7 +161,8 @@ struct libresolve::Typeclass_info {
 struct libresolve::Alias_info {
     using Variant = std::variant<ast::definition::Alias, hir::Alias>;
     Variant             variant;
-    Environment_wrapper environment;
+    hir::Environment_id environment;
+    kieli::Source_id    source;
     kieli::Name_upper   name;
     bool                currently_resolving {};
 };
@@ -174,7 +170,8 @@ struct libresolve::Alias_info {
 struct libresolve::Module_info {
     using Variant = std::variant<ast::definition::Submodule, Import, hir::Module>;
     Variant             variant;
-    Environment_wrapper environment;
+    hir::Environment_id environment;
+    kieli::Source_id    source;
     kieli::Name_lower   name;
 };
 
@@ -182,6 +179,6 @@ struct libresolve::Environment {
     utl::Flatmap<kieli::Identifier, Upper_info> upper_map;
     utl::Flatmap<kieli::Identifier, Lower_info> lower_map;
     std::vector<Definition_variant>             in_order;
-    std::optional<Environment_wrapper>          parent;
+    std::optional<hir::Environment_id>          parent;
     kieli::Source_id                            source;
 };

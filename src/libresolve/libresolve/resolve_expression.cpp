@@ -8,7 +8,7 @@ namespace {
         Context&               context;
         Inference_state&       state;
         Scope&                 scope;
-        Environment_wrapper    environment;
+        hir::Environment_id    environment;
         ast::Expression const& this_expression;
 
         auto error(
@@ -19,7 +19,7 @@ namespace {
             kieli::emit_diagnostic(
                 cppdiag::Severity::error,
                 context.compile_info,
-                environment->source,
+                context.arenas.environments[environment].source,
                 range,
                 std::move(message),
                 std::move(help_note));
@@ -147,21 +147,23 @@ namespace {
                 = lookup_lower(context, state, scope, environment, variable.name)) {
                 return std::visit(
                     utl::Overload {
-                        [&](utl::Mutable_wrapper<Function_info> const function) {
+                        [&](hir::Function_id const function) {
+                            auto& info      = context.arenas.functions[function];
+                            auto& signature = resolve_function_signature(context, info);
+
                             return hir::Expression {
-                                hir::expression::Function_reference { function->name, function },
-                                resolve_function_signature(context, function.as_mutable())
-                                    .function_type,
+                                hir::expression::Function_reference { info.name, function },
+                                signature.function_type,
                                 hir::Expression_kind::value,
                                 this_expression.range,
                             };
                         },
-                        [&](utl::Mutable_wrapper<Module_info> const module) {
+                        [&](hir::Module_id const module) {
                             return error(
                                 this_expression.range,
                                 std::format(
                                     "Expected an expression, but found a reference to module '{}'",
-                                    module->name));
+                                    context.arenas.modules[module].name));
                         },
                     },
                     lookup_result.value().variant);
@@ -518,7 +520,7 @@ auto libresolve::resolve_expression(
     Context&               context,
     Inference_state&       state,
     Scope&                 scope,
-    Environment_wrapper    environment,
+    hir::Environment_id    environment,
     ast::Expression const& expression) -> hir::Expression
 {
     return std::visit(

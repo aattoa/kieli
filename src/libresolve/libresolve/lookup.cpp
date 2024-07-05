@@ -5,7 +5,7 @@ auto libresolve::lookup_lower(
     Context&                   context,
     Inference_state&           state,
     Scope&                     scope,
-    Environment_wrapper const  environment,
+    hir::Environment_id const  environment,
     ast::Qualified_name const& name) -> std::optional<Lower_info>
 {
     cpputil::always_assert(!name.is_upper());
@@ -20,7 +20,7 @@ auto libresolve::lookup_upper(
     Context&                   context,
     Inference_state&           state,
     Scope&                     scope,
-    Environment_wrapper const  environment,
+    hir::Environment_id const  environment,
     ast::Qualified_name const& name) -> std::optional<Upper_info>
 {
     cpputil::always_assert(name.is_upper());

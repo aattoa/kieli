@@ -23,61 +23,55 @@ namespace {
     auto add_definition_to_environment(
         Context&                  context,
         ast::Definition&&         definition,
-        Environment_wrapper const environment) -> void
+        hir::Environment_id const environment_id) -> void
     {
-        kieli::Source_id const source = definition.source;
+        kieli::Source_id const   source      = definition.source;
+        libresolve::Environment& environment = context.arenas.environments[environment_id];
+
         std::visit(
             utl::Overload {
                 [&](ast::definition::Enumeration&& enumeration) {
-                    auto const info = context.arenas.info(Enumeration_info {
-                        .variant     = std::move(enumeration),
-                        .environment = environment,
-                        .name        = enumeration.name,
-                        .type {
-                            context.arenas.type(hir::type::Error {}), // Overwritten below
-                            enumeration.name.range,
-                        },
-                    });
-                    environment.as_mutable().in_order.emplace_back(info);
-                    add_to_environment(context, source, environment.as_mutable(), info->name, info);
-                    info->type.variant.as_mutable()
-                        = hir::type::Enumeration { enumeration.name, info };
+                    auto const      name = enumeration.name;
+                    hir::Type const type { context.arenas.type(hir::type::Error {}), name.range };
+
+                    auto const info = context.arenas.enumerations.push(
+                        std::move(enumeration), environment_id, source, name, type);
+                    type.variant.as_mutable() = hir::type::Enumeration { enumeration.name, info };
+
+                    environment.in_order.emplace_back(info);
+                    add_to_environment(context, source, environment, name, info);
                 },
                 [&](ast::definition::Function&& function) {
-                    auto const info = context.arenas.info(Function_info {
-                        .variant     = std::move(function),
-                        .environment = environment,
-                        .name        = function.signature.name,
-                    });
-                    add_to_environment(context, source, environment.as_mutable(), info->name, info);
-                    environment.as_mutable().in_order.emplace_back(info);
+                    auto const name = function.signature.name;
+                    auto const info = context.arenas.functions.push(
+                        std::move(function), environment_id, source, name);
+
+                    add_to_environment(context, source, environment, name, info);
+                    environment.in_order.emplace_back(info);
                 },
                 [&](ast::definition::Typeclass&& typeclass) {
-                    auto const info = context.arenas.info(Typeclass_info {
-                        .variant     = std::move(typeclass),
-                        .environment = environment,
-                        .name        = typeclass.name,
-                    });
-                    add_to_environment(context, source, environment.as_mutable(), info->name, info);
-                    environment.as_mutable().in_order.emplace_back(info);
+                    auto const name = typeclass.name;
+                    auto const info = context.arenas.typeclasses.push(
+                        std::move(typeclass), environment_id, source, name);
+
+                    add_to_environment(context, source, environment, name, info);
+                    environment.in_order.emplace_back(info);
                 },
                 [&](ast::definition::Alias&& alias) {
-                    auto const info = context.arenas.info(Alias_info {
-                        .variant     = std::move(alias),
-                        .environment = environment,
-                        .name        = alias.name,
-                    });
-                    add_to_environment(context, source, environment.as_mutable(), info->name, info);
-                    environment.as_mutable().in_order.emplace_back(info);
+                    auto const name = alias.name;
+                    auto const info = context.arenas.aliases.push(
+                        std::move(alias), environment_id, source, name);
+
+                    add_to_environment(context, source, environment, name, info);
+                    environment.in_order.emplace_back(info);
                 },
                 [&](ast::definition::Submodule&& submodule) {
-                    auto const info = context.arenas.info(Module_info {
-                        .variant     = std::move(submodule),
-                        .environment = environment,
-                        .name        = submodule.name,
-                    });
-                    add_to_environment(context, source, environment.as_mutable(), info->name, info);
-                    environment.as_mutable().in_order.emplace_back(info);
+                    auto const name = submodule.name;
+                    auto const info = context.arenas.modules.push(
+                        std::move(submodule), environment_id, source, submodule.name);
+
+                    add_to_environment(context, source, environment, name, info);
+                    environment.in_order.emplace_back(info);
                 },
                 [&](ast::definition::Implementation&& implementation) {
                     (void)implementation;
@@ -135,10 +129,9 @@ auto libresolve::add_to_environment(
 auto libresolve::collect_environment(
     Context&                       context,
     kieli::Source_id const         source,
-    std::vector<ast::Definition>&& definitions) -> Environment_wrapper
+    std::vector<ast::Definition>&& definitions) -> hir::Environment_id
 {
-    auto const environment
-        = context.arenas.environment_arena.wrap_mutable(Environment { .source = source });
+    auto const environment = context.arenas.environments.push(Environment { .source = source });
     for (ast::Definition& definition : definitions) {
         add_definition_to_environment(context, std::move(definition), environment);
     }

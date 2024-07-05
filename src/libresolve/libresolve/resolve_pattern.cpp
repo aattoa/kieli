@@ -8,7 +8,7 @@ namespace {
         Context&            context;
         Inference_state&    state;
         Scope&              scope;
-        Environment_wrapper environment;
+        hir::Environment_id environment;
         ast::Pattern const& this_pattern;
 
         auto recurse()
@@ -216,10 +216,9 @@ auto libresolve::resolve_pattern(
     Context&            context,
     Inference_state&    state,
     Scope&              scope,
-    Environment_wrapper environment,
+    hir::Environment_id environment,
     ast::Pattern const& pattern) -> hir::Pattern
 {
-    return std::visit(
-        Pattern_resolution_visitor { context, state, scope, environment, pattern },
-        pattern.variant);
+    Pattern_resolution_visitor visitor { context, state, scope, environment, pattern };
+    return std::visit(visitor, pattern.variant);
 }

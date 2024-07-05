@@ -43,7 +43,7 @@ namespace hir::dtl {
 
         auto operator()(hir::expression::Tuple const& tuple)
         {
-            std::format_to(out, "({})", tuple.fields);
+            std::format_to(out, "({:n})", tuple.fields);
         }
 
         auto operator()(hir::expression::Loop const& loop)
