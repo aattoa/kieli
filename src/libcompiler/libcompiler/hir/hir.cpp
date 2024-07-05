@@ -1,10 +1,10 @@
 #include <libcompiler/hir/hir.hpp>
 #include <libcompiler/hir/formatters.hpp>
 
-#define DEFINE_HIR_FORMAT_TO(...)                                                           \
-    auto libresolve::hir::format_to(__VA_ARGS__ const& object, std::string& output) -> void \
-    {                                                                                       \
-        std::format_to(std::back_inserter(output), "{}", object);                           \
+#define DEFINE_HIR_FORMAT_TO(...)                                               \
+    auto hir::format_to(__VA_ARGS__ const& object, std::string& output) -> void \
+    {                                                                           \
+        std::format_to(std::back_inserter(output), "{}", object);               \
     }
 
 DEFINE_HIR_FORMAT_TO(Expression);

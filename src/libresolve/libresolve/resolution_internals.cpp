@@ -57,16 +57,16 @@ auto libresolve::Constants::make_with(Arenas& arenas) -> Constants
     };
 }
 
-auto libresolve::Tag_state::fresh_template_parameter_tag() -> Template_parameter_tag
+auto libresolve::Tag_state::fresh_template_parameter_tag() -> hir::Template_parameter_tag
 {
     cpputil::always_assert(!utl::would_increment_overflow(m_current_template_parameter_tag));
-    return Template_parameter_tag { ++m_current_template_parameter_tag };
+    return hir::Template_parameter_tag { ++m_current_template_parameter_tag };
 }
 
-auto libresolve::Tag_state::fresh_local_variable_tag() -> Local_variable_tag
+auto libresolve::Tag_state::fresh_local_variable_tag() -> hir::Local_variable_tag
 {
     cpputil::always_assert(!utl::would_increment_overflow(m_current_local_variable_tag));
-    return Local_variable_tag { ++m_current_local_variable_tag };
+    return hir::Local_variable_tag { ++m_current_local_variable_tag };
 }
 
 auto libresolve::error_expression(Constants const& constants, kieli::Range const range)
@@ -143,7 +143,7 @@ auto libresolve::Inference_state::set_solution(
 auto libresolve::Inference_state::fresh_general_type_variable(
     Arenas& arenas, kieli::Range const origin) -> hir::Type
 {
-    auto const tag = Type_variable_tag { type_variables.underlying.size() };
+    hir::Type_variable_tag const tag { type_variables.size() };
 
     auto const variant = arenas.type(hir::type::Variable { tag });
     type_variables.underlying.push_back(Type_variable_data {
@@ -159,7 +159,8 @@ auto libresolve::Inference_state::fresh_general_type_variable(
 auto libresolve::Inference_state::fresh_integral_type_variable(
     Arenas& arenas, kieli::Range const origin) -> hir::Type
 {
-    auto const tag     = Type_variable_tag { type_variables.underlying.size() };
+    hir::Type_variable_tag const tag { type_variables.size() };
+
     auto const variant = arenas.type(hir::type::Variable { tag });
     type_variables.underlying.push_back(Type_variable_data {
         .tag     = tag,
@@ -174,7 +175,8 @@ auto libresolve::Inference_state::fresh_integral_type_variable(
 auto libresolve::Inference_state::fresh_mutability_variable(
     Arenas& arenas, kieli::Range const origin) -> hir::Mutability
 {
-    auto const tag     = Mutability_variable_tag { mutability_variables.underlying.size() };
+    hir::Mutability_variable_tag const tag { mutability_variables.size() };
+
     auto const variant = arenas.mutability(hir::mutability::Variable { tag });
     mutability_variables.underlying.push_back(Mutability_variable_data {
         .tag     = tag,

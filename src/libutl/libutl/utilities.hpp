@@ -175,24 +175,6 @@ namespace utl {
             return "th";
         }
     }
-
-    struct [[nodiscard]] Relative_string {
-        std::size_t offset {};
-        std::size_t length {};
-
-        [[nodiscard]] auto view_in(std::string_view) const -> std::string_view;
-
-        template <class... Args>
-        static auto format_to(
-            std::string&                      out,
-            std::format_string<Args...> const fmt,
-            Args&&... args) -> Relative_string
-        {
-            auto const old_size = out.size();
-            std::format_to(std::back_inserter(out), fmt, std::forward<Args>(args)...);
-            return { .offset = old_size, .length = out.size() - old_size };
-        }
-    };
 } // namespace utl
 
 namespace utl::fmt {
@@ -205,7 +187,7 @@ namespace utl::fmt {
     constexpr auto integer_with_ordinal_indicator(Integer const integer) noexcept
         -> Integer_with_ordinal_indicator_closure<Integer>
     {
-        return { .integer = integer };
+        return { integer };
     }
 
     template <std::ranges::input_range Range>

@@ -17,14 +17,12 @@ namespace libresolve {
     class Scope;
 } // namespace libresolve
 
-namespace libresolve::hir {
+namespace hir {
     struct Mutability;
     struct Expression;
     struct Pattern;
     struct Type;
-} // namespace libresolve::hir
 
-namespace libresolve {
     struct Template_parameter_tag : utl::Vector_index<Template_parameter_tag> {
         using Vector_index::Vector_index;
     };
@@ -40,13 +38,10 @@ namespace libresolve {
     struct Local_variable_tag : utl::Vector_index<Local_variable_tag> {
         using Vector_index::Vector_index;
     };
-} // namespace libresolve
-
-namespace libresolve::hir {
 
     struct Class_reference {
-        utl::Mutable_wrapper<Typeclass_info> info;
-        kieli::Range                         range;
+        utl::Mutable_wrapper<libresolve::Typeclass_info> info;
+        kieli::Range                                     range;
     };
 
     enum class Type_variable_kind { general, integral };
@@ -160,8 +155,8 @@ namespace libresolve::hir {
         };
 
         struct Enumeration {
-            kieli::Name_upper                      name;
-            utl::Mutable_wrapper<Enumeration_info> info;
+            kieli::Name_upper                                  name;
+            utl::Mutable_wrapper<libresolve::Enumeration_info> info;
         };
 
         struct Reference {
@@ -252,8 +247,8 @@ namespace libresolve::hir {
         };
 
         struct Function_reference {
-            kieli::Name_lower                   name;
-            utl::Mutable_wrapper<Function_info> info;
+            kieli::Name_lower                               name;
+            utl::Mutable_wrapper<libresolve::Function_info> info;
         };
 
         struct Indirect_invocation {
@@ -262,9 +257,9 @@ namespace libresolve::hir {
         };
 
         struct Direct_invocation {
-            kieli::Name_lower              function_name;
-            utl::Wrapper<Function_info>    function_info;
-            std::vector<Function_argument> arguments;
+            kieli::Name_lower                       function_name;
+            utl::Wrapper<libresolve::Function_info> function_info;
+            std::vector<Function_argument>          arguments;
         };
 
         struct Sizeof {
@@ -390,7 +385,7 @@ namespace libresolve::hir {
     };
 
     struct Module {
-        utl::Mutable_wrapper<Environment> environment;
+        utl::Mutable_wrapper<libresolve::Environment> environment;
     };
 
     auto format_to(Pattern const&, std::string&) -> void;
@@ -407,5 +402,4 @@ namespace libresolve::hir {
         hir::format_to(x, output);
         return output;
     };
-
-} // namespace libresolve::hir
+} // namespace hir

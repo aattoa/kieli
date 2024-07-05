@@ -7,10 +7,9 @@ namespace utl {
     // A type that models `vector_index` can be used as the index type of `Index_vector`.
     template <class Index>
     concept vector_index = requires(Index const index) {
-        // clang-format off
         { index.get() } -> std::same_as<std::size_t>;
-        // clang-format on
-    } && std::is_constructible_v<Index, std::size_t>;
+        requires std::is_constructible_v<Index, std::size_t>;
+    };
 
     // Wraps a `std::size_t`. Specializations model `vector_index`.
     template <class Uniqueness_tag>
@@ -40,9 +39,20 @@ namespace utl {
 
         template <class... Args>
         [[nodiscard]] constexpr auto push(Args&&... args) -> Index
+            requires std::is_constructible_v<T, Args...>
         {
             underlying.emplace_back(std::forward<Args>(args)...);
-            return Index(underlying.size() - 1);
+            return Index(size() - 1);
+        }
+
+        [[nodiscard]] constexpr auto size() const noexcept -> std::size_t
+        {
+            return underlying.size();
+        }
+
+        [[nodiscard]] constexpr auto empty() const noexcept -> bool
+        {
+            return underlying.empty();
         }
 
         auto operator==(Index_vector const& other) const -> bool = default;

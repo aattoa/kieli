@@ -3,6 +3,24 @@
 #include <libutl/utilities.hpp>
 
 namespace utl {
+    struct Relative_string {
+        std::size_t offset {};
+        std::size_t length {};
+
+        [[nodiscard]] auto view_in(std::string_view) const -> std::string_view;
+
+        template <class... Args>
+        static auto format_to(
+            std::string&                      out,
+            std::format_string<Args...> const fmt,
+            Args&&... args) -> Relative_string
+        {
+            auto const old_size = out.size();
+            std::format_to(std::back_inserter(out), fmt, std::forward<Args>(args)...);
+            return { .offset = old_size, .length = out.size() - old_size };
+        }
+    };
+
     class [[nodiscard]] String_pool;
     class [[nodiscard]] Pooled_string;
 

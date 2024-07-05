@@ -45,8 +45,6 @@ namespace kieli {
         std::span<cppdiag::Diagnostic const> diagnostics,
         cppdiag::Colors                      colors = cppdiag::Colors::defaults()) -> std::string;
 
-    auto test_info_and_source(std::string&& source_string) -> std::pair<Compile_info, Source_id>;
-
     auto predefinitions_source(Compile_info&) -> Source_id;
 
     struct Identifier {

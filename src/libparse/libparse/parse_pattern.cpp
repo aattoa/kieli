@@ -1,9 +1,9 @@
 #include <libutl/utilities.hpp>
 #include <libparse/parser_internals.hpp>
 
-namespace {
+using namespace libparse;
 
-    using namespace libparse;
+namespace {
 
     auto extract_tuple(Context& context, Token const& paren_open) -> cst::Pattern::Variant
     {

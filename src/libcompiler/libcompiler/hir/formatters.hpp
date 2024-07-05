@@ -17,16 +17,16 @@
     auto std::formatter<__VA_ARGS__>::format( \
         __VA_ARGS__ const& value, auto& context) -> decltype(context.out())
 
-LIBRESOLVE_DECLARE_FORMATTER(libresolve::hir::Pattern);
-LIBRESOLVE_DECLARE_FORMATTER(libresolve::hir::Expression);
-LIBRESOLVE_DECLARE_FORMATTER(libresolve::hir::Type);
-LIBRESOLVE_DECLARE_FORMATTER(libresolve::hir::Type::Variant);
-LIBRESOLVE_DECLARE_FORMATTER(libresolve::hir::Mutability);
-LIBRESOLVE_DECLARE_FORMATTER(libresolve::hir::Mutability::Variant);
-LIBRESOLVE_DECLARE_FORMATTER(libresolve::hir::Function_parameter);
-LIBRESOLVE_DECLARE_FORMATTER(libresolve::hir::Function_argument);
+LIBRESOLVE_DECLARE_FORMATTER(hir::Pattern);
+LIBRESOLVE_DECLARE_FORMATTER(hir::Expression);
+LIBRESOLVE_DECLARE_FORMATTER(hir::Type);
+LIBRESOLVE_DECLARE_FORMATTER(hir::Type::Variant);
+LIBRESOLVE_DECLARE_FORMATTER(hir::Mutability);
+LIBRESOLVE_DECLARE_FORMATTER(hir::Mutability::Variant);
+LIBRESOLVE_DECLARE_FORMATTER(hir::Function_parameter);
+LIBRESOLVE_DECLARE_FORMATTER(hir::Function_argument);
 
-namespace libresolve::dtl {
+namespace hir::dtl {
     template <class Out>
     struct Expression_format_visitor {
         Out out;
@@ -254,60 +254,60 @@ namespace libresolve::dtl {
             std::format_to(out, "ERROR-TYPE");
         }
     };
-} // namespace libresolve::dtl
+} // namespace hir::dtl
 
-LIBRESOLVE_DEFINE_FORMATTER(libresolve::hir::Expression)
+LIBRESOLVE_DEFINE_FORMATTER(hir::Expression)
 {
     std::format_to(context.out(), "(");
-    std::visit(libresolve::dtl::Expression_format_visitor { context.out() }, value.variant);
+    std::visit(hir::dtl::Expression_format_visitor { context.out() }, value.variant);
     std::format_to(context.out(), ": ");
-    std::visit(libresolve::dtl::Type_format_visitor { context.out() }, *value.type.variant);
+    std::visit(hir::dtl::Type_format_visitor { context.out() }, *value.type.variant);
     return std::format_to(context.out(), ")");
 }
 
-LIBRESOLVE_DEFINE_FORMATTER(libresolve::hir::Pattern)
+LIBRESOLVE_DEFINE_FORMATTER(hir::Pattern)
 {
-    std::visit(libresolve::dtl::Pattern_format_visitor { context.out() }, value.variant);
+    std::visit(hir::dtl::Pattern_format_visitor { context.out() }, value.variant);
     return context.out();
 }
 
-LIBRESOLVE_DEFINE_FORMATTER(libresolve::hir::Type::Variant)
+LIBRESOLVE_DEFINE_FORMATTER(hir::Type::Variant)
 {
-    std::visit(libresolve::dtl::Type_format_visitor { context.out() }, value);
+    std::visit(hir::dtl::Type_format_visitor { context.out() }, value);
     return context.out();
 }
 
-LIBRESOLVE_DEFINE_FORMATTER(libresolve::hir::Mutability::Variant)
+LIBRESOLVE_DEFINE_FORMATTER(hir::Mutability::Variant)
 {
     return std::visit(
         utl::Overload {
-            [&](libresolve::hir::mutability::Concrete const concrete) {
+            [&](hir::mutability::Concrete const concrete) {
                 return std::format_to(context.out(), "{}", concrete);
             },
-            [&](libresolve::hir::mutability::Parameterized const& parameterized) {
+            [&](hir::mutability::Parameterized const& parameterized) {
                 return std::format_to(context.out(), "mut?{}", parameterized.tag.get());
             },
-            [&](libresolve::hir::mutability::Error const&) {
+            [&](hir::mutability::Error const&) {
                 return std::format_to(context.out(), "mut?ERROR");
             },
-            [&](libresolve::hir::mutability::Variable const& variable) {
+            [&](hir::mutability::Variable const& variable) {
                 return std::format_to(context.out(), "?mut{}", variable.tag.get());
             },
         },
         value);
 }
 
-LIBRESOLVE_DEFINE_FORMATTER(libresolve::hir::Type)
+LIBRESOLVE_DEFINE_FORMATTER(hir::Type)
 {
     return std::format_to(context.out(), "{}", *value.variant);
 }
 
-LIBRESOLVE_DEFINE_FORMATTER(libresolve::hir::Mutability)
+LIBRESOLVE_DEFINE_FORMATTER(hir::Mutability)
 {
     return std::format_to(context.out(), "{}", *value.variant);
 }
 
-LIBRESOLVE_DEFINE_FORMATTER(libresolve::hir::Function_parameter)
+LIBRESOLVE_DEFINE_FORMATTER(hir::Function_parameter)
 {
     std::format_to(context.out(), "{}: {}", value.pattern, value.type);
     if (value.default_argument.has_value()) {
@@ -316,7 +316,7 @@ LIBRESOLVE_DEFINE_FORMATTER(libresolve::hir::Function_parameter)
     return context.out();
 }
 
-LIBRESOLVE_DEFINE_FORMATTER(libresolve::hir::Function_argument)
+LIBRESOLVE_DEFINE_FORMATTER(hir::Function_argument)
 {
     if (value.name.has_value()) {
         std::format_to(context.out(), "{} = ", value.name.value());

@@ -2,9 +2,9 @@
 #include <libutl/flatmap.hpp>
 #include <libresolve/resolution_internals.hpp>
 
-namespace {
-    using namespace libresolve;
+using namespace libresolve;
 
+namespace {
     enum class Unification_goal { equality, subtype };
 
     struct Type_unification_arguments {
@@ -14,7 +14,7 @@ namespace {
             hir::Type::Variant const&         super);
         using Report_recursive_solution = void(
             std::vector<cppdiag::Diagnostic>& diagnostics,
-            Type_variable_tag                 tag,
+            hir::Type_variable_tag            tag,
             hir::Type::Variant const&         type);
         Unification_goal            goal {};
         Report_unification_failure* report_unification_failure {};
@@ -43,7 +43,7 @@ namespace {
         }
 
         [[nodiscard]] auto solution(
-            Mutability_variable_tag const tag, hir::Mutability const mutability) const -> bool
+            hir::Mutability_variable_tag const tag, hir::Mutability const mutability) const -> bool
         {
             state.set_solution(diagnostics, state.mutability_variables[tag], *mutability.variant);
             return true;
@@ -117,7 +117,7 @@ namespace {
             return arguments.goal == Unification_goal::subtype;
         }
 
-        [[nodiscard]] auto solution(Type_variable_tag const tag, hir::Type::Variant type) const
+        [[nodiscard]] auto solution(hir::Type_variable_tag const tag, hir::Type::Variant type) const
             -> bool
         {
             if (occurs_check(tag, type)) {
@@ -315,7 +315,6 @@ auto libresolve::require_subtype_relationship(
     Type_unification_arguments const arguments {
         .goal = Unification_goal::subtype,
     };
-
     if (!unify(diagnostics, state, arguments, sub, super)) {
         auto const sub_type_string   = hir::to_string(sub);
         auto const super_type_string = hir::to_string(super);

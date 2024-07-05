@@ -131,8 +131,7 @@ namespace {
         {
             if (variable.name.is_unqualified()) {
                 if (Variable_bind const* const bind
-                    = scope.find_variable(variable.name.primary_name.identifier))
-                {
+                    = scope.find_variable(variable.name.primary_name.identifier)) {
                     return hir::Expression {
                         hir::expression::Variable_reference {
                             .tag        = bind->tag,
@@ -145,8 +144,7 @@ namespace {
                 }
             }
             if (auto const lookup_result
-                = lookup_lower(context, state, scope, environment, variable.name))
-            {
+                = lookup_lower(context, state, scope, environment, variable.name)) {
                 return std::visit(
                     utl::Overload {
                         [&](utl::Mutable_wrapper<Function_info> const function) {

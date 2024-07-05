@@ -36,7 +36,7 @@ namespace libresolve {
     };
 
     struct Type_variable_data {
-        Type_variable_tag       tag;
+        hir::Type_variable_tag  tag;
         hir::Type_variable_kind kind {};
         kieli::Range            origin;
         bool                    is_solved {};
@@ -44,16 +44,16 @@ namespace libresolve {
     };
 
     struct Mutability_variable_data {
-        Mutability_variable_tag tag;
-        kieli::Range            origin;
-        bool                    is_solved {};
-        hir::Mutability_wrapper variant;
+        hir::Mutability_variable_tag tag;
+        kieli::Range                 origin;
+        bool                         is_solved {};
+        hir::Mutability_wrapper      variant;
     };
 
     struct Inference_state {
-        using Type_variables = utl::Index_vector<Type_variable_tag, Type_variable_data>;
+        using Type_variables = utl::Index_vector<hir::Type_variable_tag, Type_variable_data>;
         using Mutability_variables
-            = utl::Index_vector<Mutability_variable_tag, Mutability_variable_data>;
+            = utl::Index_vector<hir::Mutability_variable_tag, Mutability_variable_data>;
 
         Type_variables       type_variables;
         Mutability_variables mutability_variables;
@@ -82,8 +82,8 @@ namespace libresolve {
         std::size_t m_current_template_parameter_tag {};
         std::size_t m_current_local_variable_tag {};
     public:
-        auto fresh_template_parameter_tag() -> Template_parameter_tag;
-        auto fresh_local_variable_tag() -> Local_variable_tag;
+        auto fresh_template_parameter_tag() -> hir::Template_parameter_tag;
+        auto fresh_local_variable_tag() -> hir::Local_variable_tag;
     };
 
     using Module_map = utl::Flatmap<std::filesystem::path, utl::Mutable_wrapper<Module_info>>;
@@ -214,7 +214,7 @@ namespace libresolve {
         ast::Qualified_name const& name) -> std::optional<Upper_info>;
 
     // Check whether a type variable with `tag` occurs in `type`.
-    auto occurs_check(Type_variable_tag tag, hir::Type::Variant const& type) -> bool;
+    auto occurs_check(hir::Type_variable_tag tag, hir::Type::Variant const& type) -> bool;
 
     // Require that `sub` is equal to or a subtype of `super`.
     auto require_subtype_relationship(

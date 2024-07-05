@@ -1,15 +1,15 @@
 #include <libutl/utilities.hpp>
 #include <libresolve/resolution_internals.hpp>
 
-namespace {
-    using namespace libresolve;
+using namespace libresolve;
 
+namespace {
     struct Template_parameter_resolution_visitor {
-        Context&               context;
-        Inference_state&       state;
-        Scope&                 scope;
-        Environment_wrapper    environment;
-        Template_parameter_tag tag;
+        Context&                    context;
+        Inference_state&            state;
+        Scope&                      scope;
+        Environment_wrapper         environment;
+        hir::Template_parameter_tag tag;
 
         template <class Default>
         auto resolve_default_argument()
@@ -20,11 +20,9 @@ namespace {
                         [&](ast::Wildcard const& wildcard) {
                             return hir::Wildcard { .range = wildcard.range };
                         },
-
                         [&](utl::Wrapper<ast::Type> const type) {
                             return resolve_type(context, state, scope, environment, *type);
                         },
-
                         [&](ast::Mutability const& mutability) {
                             return resolve_mutability(context, scope, mutability);
                         },

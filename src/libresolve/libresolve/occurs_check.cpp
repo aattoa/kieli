@@ -2,14 +2,12 @@
 #include <libresolve/resolution_internals.hpp>
 
 namespace {
-    using namespace libresolve;
-
     struct Occurs_check_visitor {
-        Type_variable_tag tag;
+        hir::Type_variable_tag tag;
 
         [[nodiscard]] auto recurse(hir::Type const type) const -> bool
         {
-            return occurs_check(tag, *type.variant);
+            return libresolve::occurs_check(tag, *type.variant);
         }
 
         [[nodiscard]] auto recurse() const
@@ -73,7 +71,7 @@ namespace {
     };
 } // namespace
 
-auto libresolve::occurs_check(Type_variable_tag const tag, hir::Type::Variant const& type) -> bool
+auto libresolve::occurs_check(hir::Type_variable_tag tag, hir::Type::Variant const& type) -> bool
 {
     return std::visit(Occurs_check_visitor { tag }, type);
 }

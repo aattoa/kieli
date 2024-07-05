@@ -68,22 +68,6 @@ TEST("pop_back")
     CHECK(!utl::pop_back(vector).has_value());
 }
 
-TEST("Relative_string::view_in")
-{
-    utl::Relative_string rs { .offset = 2, .length = 3 };
-    CHECK_EQUAL(rs.view_in("abcdefg"), "cde");
-}
-
-TEST("Relative_string::format_to")
-{
-    std::string s  = "abc";
-    auto const  rs = utl::Relative_string::format_to(s, "d{}fg", 'e');
-    CHECK_EQUAL(s, "abcdefg");
-    CHECK_EQUAL(rs.offset, 3UZ);
-    CHECK_EQUAL(rs.length, 4UZ);
-    CHECK_EQUAL(rs.view_in(s), "defg");
-}
-
 static_assert(utl::losslessly_convertible_to<std::int8_t, std::int16_t>);
 static_assert(utl::losslessly_convertible_to<std::int32_t, std::int32_t>);
 static_assert(utl::losslessly_convertible_to<std::uint8_t, std::int32_t>);

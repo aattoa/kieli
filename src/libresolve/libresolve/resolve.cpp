@@ -11,8 +11,8 @@ namespace {
     auto make_main_environment(libresolve::Context& context) -> libresolve::Environment_wrapper
     {
         auto path = main_path(context.configuration);
-        if (auto const id = kieli::read_source(std::move(path), context.compile_info.source_vector))
-        {
+        if (auto const id
+            = kieli::read_source(std::move(path), context.compile_info.source_vector)) {
             return libresolve::make_environment(context, id.value());
         }
         // TODO: figure out how to properly to handle this

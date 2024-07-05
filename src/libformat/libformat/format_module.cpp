@@ -26,8 +26,7 @@ namespace {
             case kieli::Format_configuration::Function_body::normalize_to_equals_sign:
             {
                 if (auto const* const block
-                    = std::get_if<cst::expression::Block>(&function.body->variant))
-                {
+                    = std::get_if<cst::expression::Block>(&function.body->variant)) {
                     if (block->result_expression.has_value() && block->side_effects.empty()) {
                         state.format(" = ");
                         state.format(**block->result_expression);

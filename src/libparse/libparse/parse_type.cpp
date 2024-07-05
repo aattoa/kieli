@@ -1,10 +1,9 @@
 #include <libutl/utilities.hpp>
 #include <libparse/parser_internals.hpp>
 
+using namespace libparse;
+
 namespace {
-
-    using namespace libparse;
-
     auto extract_qualified_typename(Context& context, std::optional<cst::Root_qualifier>&& root)
         -> cst::Type::Variant
     {
@@ -210,7 +209,6 @@ namespace {
         }
         return type;
     }
-
 } // namespace
 
 auto libparse::parse_type(Context& context) -> std::optional<utl::Wrapper<cst::Type>>

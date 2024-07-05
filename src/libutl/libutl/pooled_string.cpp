@@ -1,6 +1,12 @@
 #include <libutl/utilities.hpp>
 #include <libutl/pooled_string.hpp>
 
+auto utl::Relative_string::view_in(std::string_view const string) const -> std::string_view
+{
+    cpputil::always_assert(string.size() >= (offset + length));
+    return string.substr(offset, length);
+}
+
 utl::Pooled_string::Pooled_string(Relative_string const relative, std::string const* const pool)
     : m_relative { relative }
     , m_pool { pool }

@@ -156,8 +156,7 @@ auto libparse::parse_class_reference(Context& context) -> std::optional<cst::Cla
     auto name = std::invoke([&]() -> std::optional<cst::Qualified_name> {
         std::optional<cst::Root_qualifier> root;
         if (context.peek().type != Token::Type::upper_name
-            && context.peek().type != Token::Type::lower_name)
-        {
+            && context.peek().type != Token::Type::lower_name) {
             if (auto const global = context.try_extract(Token::Type::global)) {
                 root = cst::Root_qualifier {
                     .variant = cst::Global_root_qualifier {
@@ -270,8 +269,7 @@ auto libparse::parse_function_parameters(Context& context)
         context.error_expected("a function parameter");
     }
     if (self_parameter.has_value() && !comma_token_after_self.has_value()
-        && !normal_parameters.elements.empty())
-    {
+        && !normal_parameters.elements.empty()) {
         context.error_expected(
             normal_parameters.elements.front().pattern->range,
             "a comma separating the self parameter from the other function parameters");

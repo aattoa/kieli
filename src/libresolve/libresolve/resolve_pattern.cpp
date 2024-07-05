@@ -1,9 +1,9 @@
 #include <libutl/utilities.hpp>
 #include <libresolve/resolution_internals.hpp>
 
-namespace {
-    using namespace libresolve;
+using namespace libresolve;
 
+namespace {
     struct Pattern_resolution_visitor {
         Context&            context;
         Inference_state&    state;
@@ -83,7 +83,7 @@ namespace {
                 = resolve_mutability(context, scope, pattern.mutability);
             hir::Type const type
                 = state.fresh_general_type_variable(context.arenas, pattern.name.range);
-            Local_variable_tag const tag = context.tag_state.fresh_local_variable_tag();
+            hir::Local_variable_tag const tag = context.tag_state.fresh_local_variable_tag();
 
             scope.bind_variable(
                 pattern.name.identifier,
@@ -109,7 +109,7 @@ namespace {
         {
             hir::Pattern          pattern    = recurse(*alias.pattern);
             hir::Mutability const mutability = resolve_mutability(context, scope, alias.mutability);
-            Local_variable_tag const tag     = context.tag_state.fresh_local_variable_tag();
+            hir::Local_variable_tag const tag = context.tag_state.fresh_local_variable_tag();
 
             scope.bind_variable(
                 alias.name.identifier,

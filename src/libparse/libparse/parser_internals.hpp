@@ -103,9 +103,7 @@ namespace libparse {
 
     template <class Function>
     concept parser = requires(Function const function, Context context) {
-        // clang-format off
         { function(context) } -> utl::specialization_of<std::optional>;
-        // clang-format on
     };
 
     template <parser auto parser>

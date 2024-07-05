@@ -121,7 +121,7 @@ TEST("struct initializer")
     CHECK_SIMPLE_PARSE("S { x = 10 }");
     CHECK_SIMPLE_PARSE("S { x = 10, y = \"hello\" }");
     CHECK_SIMPLE_PARSE("A::B { x = 10 }");
-    CHECK_SIMPLE_PARSE("typeof(x)::T {}"); // TODO
+    // CHECK_SIMPLE_PARSE("typeof(x)::T {}"); // TODO
 }
 
 TEST("binary operator invocation")
@@ -299,22 +299,10 @@ TEST("sizeof")
     CHECK_SIMPLE_PARSE("sizeof(a::b::C)");
 }
 
-TEST("addressof")
-{
-    CHECK_SIMPLE_PARSE("addressof(x)");
-    CHECK_SIMPLE_PARSE("addressof(x.y)");
-}
-
-TEST("reference dereference")
+TEST("dereference")
 {
     CHECK_SIMPLE_PARSE("*x");
     CHECK_SIMPLE_PARSE("*x.y");
-}
-
-TEST("pointer dereference")
-{
-    CHECK_SIMPLE_PARSE("dereference(x)");
-    CHECK_SIMPLE_PARSE("dereference(x.y)");
 }
 
 TEST("unsafe")

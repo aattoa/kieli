@@ -1,9 +1,9 @@
 #include <libutl/utilities.hpp>
 #include <libresolve/resolution_internals.hpp>
 
-namespace {
-    using namespace libresolve;
+using namespace libresolve;
 
+namespace {
     auto duplicate_definitions_error(
         kieli::Source const&       source,
         kieli::Name_dynamic const& first,

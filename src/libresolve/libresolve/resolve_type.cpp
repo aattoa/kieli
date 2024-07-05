@@ -1,9 +1,9 @@
 #include <libutl/utilities.hpp>
 #include <libresolve/resolution_internals.hpp>
 
-namespace {
-    using namespace libresolve;
+using namespace libresolve;
 
+namespace {
     auto integer_type(Constants const& constants, kieli::built_in_type::Integer const integer)
         -> utl::Mutable_wrapper<hir::Type::Variant>
     {
@@ -85,8 +85,7 @@ namespace {
                 }
             }
             if (auto const lookup_result
-                = lookup_upper(context, state, scope, environment, type_name.name))
-            {
+                = lookup_upper(context, state, scope, environment, type_name.name)) {
                 return std::visit(
                     utl::Overload {
                         [&](utl::Mutable_wrapper<Enumeration_info> const enumeration) -> hir::Type {

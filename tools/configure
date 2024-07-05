@@ -9,4 +9,4 @@ cmake -B out/debug -G Ninja                         \
     -DCMAKE_MODULE_LINKER_FLAGS_INIT="-fuse-ld=lld" \
     -DCMAKE_SHARED_LINKER_FLAGS_INIT="-fuse-ld=lld"
 
-[ -e compile_commands.json ] || [ -L compile_commands.json ] || ln -s out/debug/compile_commands.json .
+ln -s out/debug/compile_commands.json . 2>/dev/null

@@ -43,8 +43,8 @@ auto libresolve::resolve_mutability(
                 };
             },
             [&](ast::mutability::Parameterized const& parameterized) {
-                if (auto const* const bound = scope.find_mutability(parameterized.name.identifier))
-                {
+                if (auto const* const bound
+                    = scope.find_mutability(parameterized.name.identifier)) {
                     return bound->mutability;
                 }
                 return binding_not_in_scope(context, scope.source(), parameterized.name);

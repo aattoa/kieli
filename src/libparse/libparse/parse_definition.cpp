@@ -1,10 +1,9 @@
 #include <libutl/utilities.hpp>
 #include <libparse/parser_internals.hpp>
 
+using namespace libparse;
+
 namespace {
-
-    using namespace libparse;
-
     auto extract_definition_sequence(Context& context)
         -> cst::Surrounded<std::vector<cst::Definition>>
     {
@@ -281,7 +280,6 @@ namespace {
         }
         // clang-format on
     }
-
 } // namespace
 
 auto libparse::parse_definition(Context& context) -> std::optional<cst::Definition>

@@ -53,8 +53,8 @@ namespace {
         }
     }
 
-    thread_local std::string
-        previous_history_line; // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
+    // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
+    thread_local std::string previous_history_line;
 } // namespace
 
 auto kieli::add_to_history(char const* const line) -> void

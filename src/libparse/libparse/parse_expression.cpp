@@ -1,10 +1,9 @@
 #include <libutl/utilities.hpp>
 #include <libparse/parser_internals.hpp>
 
+using namespace libparse;
+
 namespace {
-
-    using namespace libparse;
-
     auto extract_string_literal(Context& context, Token const& token) -> cst::Expression::Variant
     {
         auto const first_string = token.value_as<kieli::String>();
@@ -671,7 +670,6 @@ namespace {
             });
         });
     }
-
 } // namespace
 
 auto libparse::parse_block_expression(Context& context)

@@ -2,11 +2,25 @@
 #include <libutl/pooled_string.hpp>
 #include <cppunittest/unittest.hpp>
 
-#define TEST(name) UNITTEST("libutl pooled-string: " name)
-
 static constexpr auto voidify = [](auto const* const ptr) { return static_cast<void const*>(ptr); };
 
-TEST("equality")
+UNITTEST("utl::Relative_string::view_in")
+{
+    utl::Relative_string rs { .offset = 2, .length = 3 };
+    CHECK_EQUAL(rs.view_in("abcdefg"), "cde");
+}
+
+UNITTEST("utl::Relative_string::format_to")
+{
+    std::string s  = "abc";
+    auto const  rs = utl::Relative_string::format_to(s, "d{}fg", 'e');
+    CHECK_EQUAL(s, "abcdefg");
+    CHECK_EQUAL(rs.offset, 3UZ);
+    CHECK_EQUAL(rs.length, 4UZ);
+    CHECK_EQUAL(rs.view_in(s), "defg");
+}
+
+UNITTEST("utl::Pooled_string equality")
 {
     utl::String_pool pool;
 
@@ -22,7 +36,7 @@ TEST("equality")
     CHECK_EQUAL(voidify(b.view().data()), voidify(d.view().data()));
 }
 
-TEST("overlap")
+UNITTEST("utl::Pooled_string overlap")
 {
     utl::String_pool pool;
 

@@ -4,8 +4,9 @@
 
 auto liblex::test_lex(std::string&& string) -> Test_lex_result
 {
-    auto [info, source] = kieli::test_info_and_source(std::move(string));
-    auto state          = kieli::Lex_state::make(source, info);
+    kieli::Compile_info    info;
+    kieli::Source_id const source = info.source_vector.push(std::move(string), "[test]");
+    auto                   state  = kieli::Lex_state::make(source, info);
 
     std::vector<kieli::Token> tokens;
     for (;;) {

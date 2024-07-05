@@ -567,8 +567,8 @@ namespace {
             liblex::advance(state);
             return token(Token::Variant {}, type);
         };
+        // clang-format off
         switch (char const current = liblex::current(state)) {
-            // clang-format off
         case '(':  return simple_token(Token::Type::paren_open);
         case ')':  return simple_token(Token::Type::paren_close);
         case '{':  return simple_token(Token::Type::brace_open);
@@ -579,7 +579,7 @@ namespace {
         case ',':  return simple_token(Token::Type::comma);
         case '\'': return extract_character_literal(token, state);
         case '\"': return extract_string_literal(token, state);
-            // clang-format on
+        // clang-format on
         default:
             if (is_identifier_head(current)) {
                 return extract_identifier(token, state);

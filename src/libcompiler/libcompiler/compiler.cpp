@@ -63,13 +63,6 @@ auto kieli::format_diagnostics(
     return output;
 }
 
-auto kieli::test_info_and_source(std::string&& source_string) -> std::pair<Compile_info, Source_id>
-{
-    Compile_info info;
-    Source_id    source = info.source_vector.push(std::move(source_string), "[test]");
-    return { std::move(info), source };
-}
-
 auto kieli::predefinitions_source(Compile_info& info) -> Source_id
 {
     // TODO: check if predefinitions already exist

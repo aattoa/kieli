@@ -71,11 +71,11 @@ namespace libresolve {
     };
 
     struct Variable_bind {
-        kieli::Name_lower  name;
-        hir::Type          type;
-        hir::Mutability    mutability;
-        Local_variable_tag tag;
-        bool               unused = true;
+        kieli::Name_lower       name;
+        hir::Type               type;
+        hir::Mutability         mutability;
+        hir::Local_variable_tag tag;
+        bool                    unused = true;
     };
 
     struct Type_bind {

@@ -1,9 +1,9 @@
 #include <libutl/utilities.hpp>
 #include <libdesugar/desugaring_internals.hpp>
 
-namespace {
-    using namespace libdesugar;
+using namespace libdesugar;
 
+namespace {
     template <class T>
     auto ensure_no_duplicates(
         Context& context, std::string_view const description, std::vector<T> const& elements)

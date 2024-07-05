@@ -58,9 +58,12 @@ namespace {
             return resolve_function_parameter(context, state, scope, environment, parameter);
         };
 
-        auto parameters = std::views::transform(signature.function_parameters, resolve_parameter)
+        auto parameters = signature.function_parameters            //
+                        | std::views::transform(resolve_parameter) //
                         | std::ranges::to<std::vector>();
-        auto parameter_types = std::views::transform(parameters, &hir::Function_parameter::type)
+
+        auto parameter_types = parameters //
+                             | std::views::transform(&hir::Function_parameter::type)
                              | std::ranges::to<std::vector>();
 
         hir::Type const return_type

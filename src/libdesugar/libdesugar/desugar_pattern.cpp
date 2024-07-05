@@ -1,9 +1,9 @@
 #include <libutl/utilities.hpp>
 #include <libdesugar/desugaring_internals.hpp>
 
-namespace {
-    using namespace libdesugar;
+using namespace libdesugar;
 
+namespace {
     struct Pattern_desugaring_visitor {
         Context& context;
 

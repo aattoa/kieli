@@ -116,7 +116,10 @@ namespace {
 
             kieli::add_to_history(input.value().c_str());
 
-            auto [info, source] = kieli::test_info_and_source(std::move(input.value()));
+            kieli::Compile_info    info;
+            kieli::Source_id const source
+                = info.source_vector.push(std::move(input).value(), "[repl]");
+
             try {
                 callback(source, info);
             }

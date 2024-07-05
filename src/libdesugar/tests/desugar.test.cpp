@@ -6,7 +6,8 @@
 namespace {
     auto desugar(std::string&& string) -> std::string
     {
-        auto [info, source] = kieli::test_info_and_source(std::move(string));
+        kieli::Compile_info    info;
+        kieli::Source_id const source = info.source_vector.push(std::move(string), "[test]");
         try {
             auto const  module = kieli::desugar(kieli::parse(source, info), info);
             std::string output;

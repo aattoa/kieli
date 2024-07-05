@@ -35,8 +35,7 @@ namespace {
                     initializers.end(),
                     it->name,
                     &cst::expression::Struct_initializer::Field::name);
-                duplicate != initializers.end())
-            {
+                duplicate != initializers.end()) {
                 emit_duplicate_fields_error(
                     context, it->name, it->name.range, duplicate->name.range);
             }
@@ -74,8 +73,7 @@ namespace {
                 if constexpr (precedence != lowest_operator_precedence) {
                     if (!std::ranges::contains(
                             std::get<precedence>(operator_precedence_table),
-                            operator_name.identifier.string.view()))
-                    {
+                            operator_name.identifier.string.view())) {
                         return left;
                     }
                 }
@@ -155,8 +153,7 @@ namespace {
                     : context.wrap(unit_value(this_expression.range));
 
             if (auto const* const let
-                = std::get_if<cst::expression::Conditional_let>(&conditional.condition->variant))
-            {
+                = std::get_if<cst::expression::Conditional_let>(&conditional.condition->variant)) {
                 /*
                     if let a = b { c } else { d }
 
@@ -316,8 +313,7 @@ namespace {
         auto operator()(cst::expression::While_loop const& loop) -> ast::Expression::Variant
         {
             if (auto const* const let
-                = std::get_if<cst::expression::Conditional_let>(&loop.condition->variant))
-            {
+                = std::get_if<cst::expression::Conditional_let>(&loop.condition->variant)) {
                 return desugar_while_let_loop(loop, *let);
             }
             return desugar_while_loop(loop);
