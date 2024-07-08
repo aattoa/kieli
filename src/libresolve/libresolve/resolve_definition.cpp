@@ -19,17 +19,14 @@ namespace {
             = resolve_type(context, state, scope, environment, *parameter.type.value());
 
         require_subtype_relationship(
-            context.compile_info.diagnostics, state, *pattern.type.variant, *type.variant);
+            context, state, context.hir.types[pattern.type], context.hir.types[type.id]);
 
         auto default_argument = parameter.default_argument.transform(
             [&](utl::Wrapper<ast::Expression> const argument) {
                 hir::Expression expression
                     = resolve_expression(context, state, scope, environment, *argument);
                 require_subtype_relationship(
-                    context.compile_info.diagnostics,
-                    state,
-                    *expression.type.variant,
-                    *type.variant);
+                    context, state, context.hir.types[expression.type], context.hir.types[type.id]);
                 return expression;
             });
 
@@ -69,14 +66,14 @@ namespace {
         hir::Type const return_type
             = resolve_type(context, state, scope, environment, signature.return_type);
 
-        ensure_no_unsolved_variables(context.compile_info, state);
+        ensure_no_unsolved_variables(context, state);
 
         return hir::Function_signature {
             .template_paramters = std::move(template_parameters),
             .parameters         = std::move(parameters),
             .return_type        = return_type,
             .function_type {
-                context.arenas.type(hir::type::Function {
+                context.hir.types.push(hir::type::Function {
                     .parameter_types = std::move(parameter_types),
                     .return_type     = return_type,
                 }),
@@ -95,15 +92,15 @@ auto libresolve::resolve_function_body(Context& context, Function_info& info) ->
         hir::Expression body = resolve_expression(
             context, state, function->signature_scope, info.environment, function->unresolved_body);
         require_subtype_relationship(
-            context.compile_info.diagnostics,
+            context,
             state,
-            *body.type.variant,
-            *function->signature.return_type.variant);
+            context.hir.types[body.type],
+            context.hir.types[function->signature.return_type.id]);
         info.variant = hir::Function {
             .signature = std::move(function->signature),
             .body      = std::move(body),
         };
-        ensure_no_unsolved_variables(context.compile_info, state);
+        ensure_no_unsolved_variables(context, state);
     }
     return std::get<hir::Function>(info.variant);
 }
@@ -159,12 +156,12 @@ auto libresolve::resolve_alias(Context& context, Alias_info& info) -> hir::Alias
 auto libresolve::resolve_function_bodies(Context& context, hir::Environment_id const environment)
     -> void
 {
-    for (Definition_variant const& variant : context.arenas.environments[environment].in_order) {
+    for (Definition_variant const& variant : context.info.environments[environment].in_order) {
         if (auto* const id = std::get_if<hir::Function_id>(&variant)) {
-            resolve_function_body(context, context.arenas.functions[*id]);
+            resolve_function_body(context, context.info.functions[*id]);
         }
         else if (auto* const id = std::get_if<hir::Module_id>(&variant)) {
-            resolve_function_bodies(context, context.arenas.modules[*id].environment);
+            resolve_function_bodies(context, context.info.modules[*id].environment);
         }
     }
 }
@@ -175,19 +172,19 @@ auto libresolve::resolve_definition(Context& context, Definition_variant const& 
         utl::Overload {
             [&](hir::Module_id const module) {
                 resolve_definitions_in_order(
-                    context, resolve_module(context, context.arenas.modules[module]));
+                    context, resolve_module(context, context.info.modules[module]));
             },
             [&](hir::Function_id const function) {
-                (void)resolve_function_signature(context, context.arenas.functions[function]);
+                (void)resolve_function_signature(context, context.info.functions[function]);
             },
             [&](hir::Enumeration_id const enumeration) {
-                (void)resolve_enumeration(context, context.arenas.enumerations[enumeration]);
+                (void)resolve_enumeration(context, context.info.enumerations[enumeration]);
             },
             [&](hir::Typeclass_id const typeclass) {
-                (void)resolve_typeclass(context, context.arenas.typeclasses[typeclass]);
+                (void)resolve_typeclass(context, context.info.typeclasses[typeclass]);
             },
             [&](hir::Alias_id const alias) {
-                (void)resolve_alias(context, context.arenas.aliases[alias]);
+                (void)resolve_alias(context, context.info.aliases[alias]);
             },
         },
         definition);
@@ -196,7 +193,7 @@ auto libresolve::resolve_definition(Context& context, Definition_variant const& 
 auto libresolve::resolve_definitions_in_order(
     Context& context, hir::Environment_id const environment) -> void
 {
-    for (Definition_variant const& variant : context.arenas.environments[environment].in_order) {
+    for (Definition_variant const& variant : context.info.environments[environment].in_order) {
         resolve_definition(context, variant);
     }
 }

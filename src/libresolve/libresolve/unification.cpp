@@ -8,30 +8,24 @@ namespace {
     enum class Unification_goal { equality, subtype };
 
     struct Type_unification_arguments {
-        using Report_unification_failure = void(
-            std::vector<cppdiag::Diagnostic>& diagnostics,
-            hir::Type::Variant const&         sub,
-            hir::Type::Variant const&         super);
-        using Report_recursive_solution = void(
-            std::vector<cppdiag::Diagnostic>& diagnostics,
-            hir::Type_variable_tag            tag,
-            hir::Type::Variant const&         type);
+        using Report_unification_failure
+            = void(Context& context, hir::Type_variant const& sub, hir::Type_variant const& super);
+        using Report_recursive_solution
+            = void(Context& context, hir::Type_variable_id id, hir::Type_variant const& type);
         Unification_goal            goal {};
         Report_unification_failure* report_unification_failure {};
         Report_recursive_solution*  report_recursive_solution {};
     };
 
     struct Mutability_unification_arguments {
-        using Report_unification_failure = void(
-            std::vector<cppdiag::Diagnostic>& diagnostics,
-            hir::Mutability                   sub,
-            hir::Mutability                   super);
+        using Report_unification_failure
+            = void(Context& context, hir::Mutability_id sub, hir::Mutability_id super);
         Unification_goal            goal {};
         Report_unification_failure* report_unification_failure {};
     };
 
     struct Mutability_unification_visitor {
-        std::vector<cppdiag::Diagnostic>&       diagnostics;
+        Context&                                context;
         Inference_state&                        state;
         Mutability_unification_arguments const& arguments;
         hir::Mutability const&                  current_sub;
@@ -43,9 +37,13 @@ namespace {
         }
 
         [[nodiscard]] auto solution(
-            hir::Mutability_variable_tag const tag, hir::Mutability const mutability) const -> bool
+            hir::Mutability_variable_id const variable_id,
+            hir::Mutability const             mutability) const -> bool
         {
-            state.set_solution(diagnostics, state.mutability_variables[tag], *mutability.variant);
+            state.set_solution(
+                context,
+                state.mutability_variables[variable_id],
+                context.hir.mutabilities[mutability.id]);
             return true;
         }
 
@@ -57,12 +55,11 @@ namespace {
                 arguments.report_unification_failure,
             };
             bool const result = std::visit(
-                Mutability_unification_visitor {
-                    diagnostics, state, recurse_arguments, sub, super },
-                *sub.variant,
-                *super.variant);
+                Mutability_unification_visitor { context, state, recurse_arguments, sub, super },
+                context.hir.mutabilities[sub.id],
+                context.hir.mutabilities[super.id]);
             if (!result && arguments.report_unification_failure) {
-                arguments.report_unification_failure(diagnostics, sub, super);
+                arguments.report_unification_failure(context, sub.id, super.id);
             }
             return result;
         }
@@ -76,27 +73,27 @@ namespace {
         auto operator()(hir::mutability::Variable const sub, hir::mutability::Variable const super)
             const -> bool
         {
-            if (sub.tag != super.tag) {
-                state.mutability_variable_disjoint_set.merge(sub.tag.get(), super.tag.get());
+            if (sub.id != super.id) {
+                state.mutability_variable_disjoint_set.merge(sub.id.get(), super.id.get());
             }
             return true;
         }
 
         auto operator()(hir::mutability::Variable const variable, auto const&) const -> bool
         {
-            return solution(variable.tag, current_super);
+            return solution(variable.id, current_super);
         }
 
         auto operator()(auto const&, hir::mutability::Variable const variable) const -> bool
         {
-            return solution(variable.tag, current_sub);
+            return solution(variable.id, current_sub);
         }
 
         auto operator()(
             hir::mutability::Parameterized const sub,
             hir::mutability::Parameterized const super) const -> bool
         {
-            return sub.tag == super.tag;
+            return sub.tag.get() == super.tag.get();
         }
 
         auto operator()(auto const&, auto const&) const -> bool
@@ -106,50 +103,50 @@ namespace {
     };
 
     struct Type_unification_visitor {
-        std::vector<cppdiag::Diagnostic>& diagnostics;
+        Context&                          context;
         Inference_state&                  state;
         Type_unification_arguments const& arguments;
-        hir::Type::Variant const&         current_sub;
-        hir::Type::Variant const&         current_super;
+        hir::Type_variant const&          current_sub;
+        hir::Type_variant const&          current_super;
 
         [[nodiscard]] auto allow_coercion() const noexcept -> bool
         {
             return arguments.goal == Unification_goal::subtype;
         }
 
-        [[nodiscard]] auto solution(hir::Type_variable_tag const tag, hir::Type::Variant type) const
+        [[nodiscard]] auto solution(hir::Type_variable_id const tag, hir::Type_variant type) const
             -> bool
         {
-            if (occurs_check(tag, type)) {
+            if (occurs_check(context.hir, tag, type)) {
                 if (arguments.report_recursive_solution) {
-                    arguments.report_recursive_solution(diagnostics, tag, type);
+                    arguments.report_recursive_solution(context, tag, type);
                 }
                 return false;
             }
-            state.flatten(type);
-            state.set_solution(diagnostics, state.type_variables[tag], std::move(type));
+            state.flatten(context, type);
+            state.set_solution(context, state.type_variables[tag], std::move(type));
             return true;
         }
 
-        [[nodiscard]] auto unify(
-            hir::Type::Variant const& sub, hir::Type::Variant const& super) const -> bool
+        [[nodiscard]] auto unify(hir::Type_variant const& sub, hir::Type_variant const& super) const
+            -> bool
         {
             Type_unification_arguments const recurse_arguments {
                 .goal                       = arguments.goal,
                 .report_unification_failure = arguments.report_unification_failure,
                 .report_recursive_solution  = arguments.report_recursive_solution,
             };
-            Type_unification_visitor visitor { diagnostics, state, recurse_arguments, sub, super };
+            Type_unification_visitor visitor { context, state, recurse_arguments, sub, super };
             bool const               result = std::visit(visitor, sub, super);
             if (!result && arguments.report_unification_failure) {
-                arguments.report_unification_failure(diagnostics, sub, super);
+                arguments.report_unification_failure(context, sub, super);
             }
             return result;
         }
 
         [[nodiscard]] auto unify(hir::Type const sub, hir::Type const super) const -> bool
         {
-            return unify(*sub.variant, *super.variant);
+            return unify(context.hir.types[sub.id], context.hir.types[super.id]);
         }
 
         [[nodiscard]] auto unify() const
@@ -172,7 +169,7 @@ namespace {
                 .report_unification_failure = nullptr,
             };
             Mutability_unification_visitor visitor {
-                diagnostics, state, mutability_arguments, sub, super
+                context, state, mutability_arguments, sub, super
             };
             return visitor.unify(sub, super);
         }
@@ -181,8 +178,8 @@ namespace {
             -> bool
         {
             // TODO: handle integrals
-            if (sub.tag != super.tag) {
-                state.type_variable_disjoint_set.merge(sub.tag.get(), super.tag.get());
+            if (sub.id != super.id) {
+                state.type_variable_disjoint_set.merge(sub.id.get(), super.id.get());
             }
             return true;
         }
@@ -190,13 +187,13 @@ namespace {
         auto operator()(hir::type::Variable const sub, auto const&) const -> bool
         {
             // TODO: handle integrals
-            return solution(sub.tag, current_super);
+            return solution(sub.id, current_super);
         }
 
         auto operator()(auto const&, hir::type::Variable const super) const -> bool
         {
             // TODO: handle integrals
-            return solution(super.tag, current_sub);
+            return solution(super.id, current_sub);
         }
 
         template <utl::one_of<
@@ -219,7 +216,7 @@ namespace {
         auto operator()(hir::type::Parameterized const& sub, hir::type::Parameterized const& super)
             const -> bool
         {
-            return sub.tag == super.tag;
+            return sub.tag.get() == super.tag.get();
         }
 
         auto operator()(hir::type::Tuple const& sub, hir::type::Tuple const& super) const -> bool
@@ -231,7 +228,9 @@ namespace {
         auto operator()(hir::type::Array const& sub, hir::type::Array const& super) const -> bool
         {
             return unify(sub.element_type, super.element_type)
-                && unify(sub.length->type, super.length->type);
+                && unify(
+                       hir::expression_type(context.hir.expressions[sub.length]),
+                       hir::expression_type(context.hir.expressions[super.length]));
         }
 
         auto operator()(hir::type::Slice const& sub, hir::type::Slice const& super) const -> bool
@@ -295,30 +294,30 @@ namespace {
     };
 
     auto unify(
-        std::vector<cppdiag::Diagnostic>& diagnostics,
+        Context&                          context,
         Inference_state&                  state,
         Type_unification_arguments const& arguments,
-        hir::Type::Variant const&         sub,
-        hir::Type::Variant const&         super) -> bool
+        hir::Type_variant const&          sub,
+        hir::Type_variant const&          super) -> bool
     {
-        Type_unification_visitor const visitor { diagnostics, state, arguments, sub, super };
+        Type_unification_visitor const visitor { context, state, arguments, sub, super };
         return visitor.unify(sub, super);
     }
 } // namespace
 
 auto libresolve::require_subtype_relationship(
-    std::vector<cppdiag::Diagnostic>& diagnostics,
-    Inference_state&                  state,
-    hir::Type::Variant const&         sub,
-    hir::Type::Variant const&         super) -> void
+    Context&                 context,
+    Inference_state&         state,
+    hir::Type_variant const& sub,
+    hir::Type_variant const& super) -> void
 {
     Type_unification_arguments const arguments {
         .goal = Unification_goal::subtype,
     };
-    if (!unify(diagnostics, state, arguments, sub, super)) {
-        auto const sub_type_string   = hir::to_string(sub);
-        auto const super_type_string = hir::to_string(super);
-        diagnostics.push_back(cppdiag::Diagnostic {
+    if (!unify(context, state, arguments, sub, super)) {
+        auto const sub_type_string   = hir::to_string(context.hir, sub);
+        auto const super_type_string = hir::to_string(context.hir, super);
+        context.compile_info.diagnostics.push_back(cppdiag::Diagnostic {
             .message  = std::format("Unable to unify {} ~ {}", sub_type_string, super_type_string),
             .severity = cppdiag::Severity::error,
         });

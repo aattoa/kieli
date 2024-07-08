@@ -22,16 +22,16 @@ namespace {
 
 auto kieli::resolve_project(Project_configuration configuration) -> Resolved_project
 {
-    Compile_info compile_info;
-
-    auto arenas    = libresolve::Arenas::defaults();
-    auto constants = libresolve::Constants::make_with(arenas);
+    auto info      = Compile_info {};
+    auto hir       = hir::Arena {};
+    auto constants = libresolve::Constants::make_with(hir);
 
     libresolve::Context context {
-        .arenas        = std::move(arenas),
+        .ast           = ast::Node_arena::with_default_page_size(),
+        .hir           = std::move(hir),
         .constants     = std::move(constants),
         .configuration = std::move(configuration),
-        .compile_info  = compile_info,
+        .compile_info  = info,
     };
 
     auto const main = make_main_environment(context);

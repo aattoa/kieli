@@ -15,6 +15,15 @@ namespace libresolve {
     struct Environment;
     class Scope;
 
+    struct Info_arena {
+        utl::Index_vector<hir::Module_id, Module_info>           modules;
+        utl::Index_vector<hir::Environment_id, Environment>      environments;
+        utl::Index_vector<hir::Function_id, Function_info>       functions;
+        utl::Index_vector<hir::Enumeration_id, Enumeration_info> enumerations;
+        utl::Index_vector<hir::Typeclass_id, Typeclass_info>     typeclasses;
+        utl::Index_vector<hir::Alias_id, Alias_info>             aliases;
+    };
+
     struct Lower_info {
         using Variant = std::variant<hir::Function_id, hir::Module_id>;
         kieli::Name_lower name;
@@ -36,26 +45,6 @@ namespace libresolve {
         hir::Typeclass_id,
         hir::Alias_id>;
 
-    struct Arenas {
-        utl::Index_vector<hir::Module_id, Module_info>           modules;
-        utl::Index_vector<hir::Environment_id, Environment>      environments;
-        utl::Index_vector<hir::Function_id, Function_info>       functions;
-        utl::Index_vector<hir::Enumeration_id, Enumeration_info> enumerations;
-        utl::Index_vector<hir::Typeclass_id, Typeclass_info>     typeclasses;
-        utl::Index_vector<hir::Alias_id, Alias_info>             aliases;
-
-        ast::Node_arena ast_node_arena;
-        hir::Node_arena hir_node_arena;
-
-        static auto defaults() -> Arenas;
-
-        auto type(hir::Type::Variant) -> utl::Mutable_wrapper<hir::Type::Variant>;
-        auto mutability(hir::Mutability::Variant) -> utl::Mutable_wrapper<hir::Mutability::Variant>;
-
-        auto wrap(hir::Expression) -> utl::Wrapper<hir::Expression>;
-        auto wrap(hir::Pattern) -> utl::Wrapper<hir::Pattern>;
-    };
-
     struct Import {
         std::filesystem::file_time_type last_write_time;
         std::filesystem::path           module_path;
@@ -64,7 +53,7 @@ namespace libresolve {
 
     struct Variable_bind {
         kieli::Name_lower       name;
-        hir::Type               type;
+        hir::Type_id            type;
         hir::Mutability         mutability;
         hir::Local_variable_tag tag;
         bool                    unused = true;
@@ -72,7 +61,7 @@ namespace libresolve {
 
     struct Type_bind {
         kieli::Name_upper name;
-        hir::Type         type;
+        hir::Type_id      type;
         bool              unused = true;
     };
 

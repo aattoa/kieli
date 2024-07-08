@@ -3,26 +3,32 @@
 
 namespace {
     struct Occurs_check_visitor {
-        hir::Type_variable_tag tag;
+        hir::Arena const&     arena;
+        hir::Type_variable_id id;
+
+        [[nodiscard]] auto recurse(hir::Type_id const type_id) const -> bool
+        {
+            return libresolve::occurs_check(arena, id, arena.types[type_id]);
+        }
 
         [[nodiscard]] auto recurse(hir::Type const type) const -> bool
         {
-            return libresolve::occurs_check(tag, *type.variant);
+            return recurse(type.id);
         }
 
         [[nodiscard]] auto recurse() const
         {
-            return [*this](hir::Type const type) -> bool { return recurse(type); };
+            return [*this](auto const type) -> bool { return recurse(type); };
         }
 
         auto operator()(hir::type::Variable const& variable) const -> bool
         {
-            return tag == variable.tag;
+            return id == variable.id;
         }
 
         auto operator()(hir::type::Array const& array) const -> bool
         {
-            return recurse(array.element_type) || recurse(array.length->type);
+            return recurse(array.element_type) || recurse(arena.expressions[array.length].type);
         }
 
         auto operator()(hir::type::Slice const& slice) const -> bool
@@ -71,7 +77,8 @@ namespace {
     };
 } // namespace
 
-auto libresolve::occurs_check(hir::Type_variable_tag tag, hir::Type::Variant const& type) -> bool
+auto libresolve::occurs_check(
+    hir::Arena const& arena, hir::Type_variable_id const id, hir::Type_variant const& type) -> bool
 {
-    return std::visit(Occurs_check_visitor { tag }, type);
+    return std::visit(Occurs_check_visitor { arena, id }, type);
 }

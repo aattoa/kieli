@@ -2,7 +2,6 @@
 
 #include <libutl/utilities.hpp>
 #include <libutl/index_vector.hpp>
-#include <libutl/wrapper.hpp>
 #include <libcompiler/compiler.hpp>
 
 namespace hir {
@@ -11,19 +10,35 @@ namespace hir {
     struct Pattern;
     struct Type;
 
-    struct Template_parameter_tag : utl::Vector_index<Template_parameter_tag> {
+    struct Template_parameter_tag : utl::Explicit<std::size_t> {
+        using Explicit::Explicit;
+    };
+
+    struct Local_variable_tag : utl::Explicit<std::size_t> {
+        using Explicit::Explicit;
+    };
+
+    struct Expression_id : utl::Vector_index<Expression_id> {
         using Vector_index::Vector_index;
     };
 
-    struct Type_variable_tag : utl::Vector_index<Type_variable_tag> {
+    struct Pattern_id : utl::Vector_index<Pattern_id> {
         using Vector_index::Vector_index;
     };
 
-    struct Mutability_variable_tag : utl::Vector_index<Mutability_variable_tag> {
+    struct Type_id : utl::Vector_index<Type_id> {
         using Vector_index::Vector_index;
     };
 
-    struct Local_variable_tag : utl::Vector_index<Local_variable_tag> {
+    struct Mutability_id : utl::Vector_index<Mutability_id> {
+        using Vector_index::Vector_index;
+    };
+
+    struct Type_variable_id : utl::Vector_index<Type_variable_id> {
+        using Vector_index::Vector_index;
+    };
+
+    struct Mutability_variable_id : utl::Vector_index<Mutability_variable_id> {
         using Vector_index::Vector_index;
     };
 
@@ -51,51 +66,27 @@ namespace hir {
         using Vector_index::Vector_index;
     };
 
-    struct Class_reference {
-        kieli::Name_upper name;
-        Typeclass_id      id;
-    };
-
     enum class Type_variable_kind { general, integral };
 
     enum class Expression_kind { place, value };
 
-    namespace mutability {
-        using Concrete = kieli::Mutability;
-
-        struct Parameterized {
-            Template_parameter_tag tag;
-        };
-
-        struct Variable {
-            Mutability_variable_tag tag;
-        };
-
-        struct Error {};
-    } // namespace mutability
-
     struct Mutability {
-        using Variant = std::variant<
-            mutability::Concrete,
-            mutability::Parameterized,
-            mutability::Variable,
-            mutability::Error>;
-        utl::Mutable_wrapper<Variant> variant;
-        kieli::Range                  range;
+        Mutability_id id;
+        kieli::Range  range;
     };
-
-    using Mutability_wrapper = utl::Mutable_wrapper<Mutability::Variant>;
 
     struct Type {
-        struct Variant;
-        utl::Mutable_wrapper<Variant> variant;
-        kieli::Range                  range;
+        Type_id      id;
+        kieli::Range range;
     };
 
-    using Type_wrapper = utl::Mutable_wrapper<Type::Variant>;
+    struct Class_reference {
+        Typeclass_id      id;
+        kieli::Name_upper name;
+    };
 
     struct Function_argument {
-        utl::Wrapper<Expression>         expression;
+        Expression_id                    expression;
         std::optional<kieli::Name_lower> name;
     };
 
@@ -117,40 +108,162 @@ namespace hir {
         };
 
         struct Alias {
-            Mutability            mutability;
-            kieli::Identifier     identifier;
-            Local_variable_tag    variable_tag;
-            utl::Wrapper<Pattern> pattern;
+            Mutability         mutability;
+            kieli::Identifier  identifier;
+            Local_variable_tag variable_tag;
+            Pattern_id         pattern;
         };
 
         struct Guarded {
-            utl::Wrapper<Pattern>    guarded_pattern;
-            utl::Wrapper<Expression> guard_expression;
+            Pattern_id    guarded_pattern;
+            Expression_id guard_expression;
         };
     } // namespace pattern
 
+    struct Pattern_variant
+        : std::variant<
+              kieli::Integer,
+              kieli::Floating,
+              kieli::Character,
+              kieli::Boolean,
+              kieli::String,
+              pattern::Wildcard,
+              pattern::Tuple,
+              pattern::Slice,
+              pattern::Name,
+              pattern::Alias,
+              pattern::Guarded> {
+        using variant::variant, variant::operator=;
+    };
+
     struct Pattern {
-        using Variant = std::variant<
-            kieli::Integer,
-            kieli::Floating,
-            kieli::Character,
-            kieli::Boolean,
-            kieli::String,
-            pattern::Wildcard,
-            pattern::Tuple,
-            pattern::Slice,
-            pattern::Name,
-            pattern::Alias,
-            pattern::Guarded>;
-        Variant      variant;
-        Type         type;
-        kieli::Range range;
+        Pattern_variant variant;
+        Type_id         type;
+        kieli::Range    range;
+    };
+
+    namespace expression {
+        struct Array_literal {
+            std::vector<Expression> elements;
+        };
+
+        struct Tuple {
+            std::vector<Expression> fields;
+        };
+
+        struct Loop {
+            Expression_id body;
+        };
+
+        struct Break {
+            Expression_id result;
+        };
+
+        struct Continue {};
+
+        struct Block {
+            std::vector<Expression> side_effects;
+            Expression_id           result;
+        };
+
+        struct Let_binding {
+            Pattern_id    pattern;
+            Type          type;
+            Expression_id initializer;
+        };
+
+        struct Match {
+            struct Case {
+                Pattern_id    pattern;
+                Expression_id expression;
+            };
+
+            std::vector<Case> cases;
+            Expression_id     expression;
+        };
+
+        struct Variable_reference {
+            kieli::Name_lower  name;
+            Local_variable_tag tag;
+        };
+
+        struct Function_reference {
+            kieli::Name_lower name;
+            Function_id       id;
+        };
+
+        struct Indirect_invocation {
+            Expression_id                  function;
+            std::vector<Function_argument> arguments;
+        };
+
+        struct Direct_invocation {
+            kieli::Name_lower              function_name;
+            Function_id                    function_id;
+            std::vector<Function_argument> arguments;
+        };
+
+        struct Sizeof {
+            Type inspected_type;
+        };
+
+        struct Addressof {
+            Mutability    mutability;
+            Expression_id place_expression;
+        };
+
+        struct Dereference {
+            Expression_id reference_expression;
+        };
+
+        struct Defer {
+            Expression_id expression;
+        };
+
+        struct Hole {};
+
+        struct Error {};
+    } // namespace expression
+
+    struct Expression_variant
+        : std::variant<
+              kieli::Integer,
+              kieli::Floating,
+              kieli::Character,
+              kieli::Boolean,
+              kieli::String,
+              expression::Array_literal,
+              expression::Tuple,
+              expression::Loop,
+              expression::Break,
+              expression::Continue,
+              expression::Block,
+              expression::Let_binding,
+              expression::Match,
+              expression::Variable_reference,
+              expression::Function_reference,
+              expression::Indirect_invocation,
+              expression::Direct_invocation,
+              expression::Sizeof,
+              expression::Addressof,
+              expression::Dereference,
+              expression::Defer,
+              expression::Hole,
+              expression::Error> {
+        using variant::variant, variant::operator=;
+    };
+
+    struct Expression {
+        Expression_variant variant;
+        Type_id            type;
+        Expression_kind    kind;
+        kieli::Range       range;
     };
 
     namespace type {
         struct Array {
-            Type                     element_type;
-            utl::Wrapper<Expression> length;
+            Type          element_type;
+            Expression_id length;
         };
 
         struct Slice {
@@ -186,13 +299,13 @@ namespace hir {
         };
 
         struct Variable {
-            Type_variable_tag tag;
+            Type_variable_id id;
         };
 
         struct Error {};
     } // namespace type
 
-    struct Type::Variant
+    struct Type_variant
         : std::variant<
               kieli::built_in_type::Integer,
               kieli::built_in_type::Floating,
@@ -209,125 +322,31 @@ namespace hir {
               type::Parameterized,
               type::Variable,
               type::Error> {
-        using variant::variant;
-        using variant::operator=;
+        using variant::variant, variant::operator=;
     };
 
-    namespace expression {
-        struct Array_literal {
-            std::vector<Expression> elements;
+    namespace mutability {
+        using Concrete = kieli::Mutability;
+
+        struct Parameterized {
+            Template_parameter_tag tag;
         };
 
-        struct Tuple {
-            std::vector<Expression> fields;
+        struct Variable {
+            Mutability_variable_id id;
         };
-
-        struct Loop {
-            utl::Wrapper<Expression> body;
-        };
-
-        struct Break {
-            utl::Wrapper<Expression> result;
-        };
-
-        struct Continue {};
-
-        struct Block {
-            std::vector<Expression>  side_effects;
-            utl::Wrapper<Expression> result;
-        };
-
-        struct Let_binding {
-            utl::Wrapper<Pattern>    pattern;
-            Type                     type;
-            utl::Wrapper<Expression> initializer;
-        };
-
-        struct Match {
-            struct Case {
-                utl::Wrapper<Pattern>    pattern;
-                utl::Wrapper<Expression> expression;
-            };
-
-            std::vector<Case>        cases;
-            utl::Wrapper<Expression> expression;
-        };
-
-        struct Variable_reference {
-            Local_variable_tag tag;
-            kieli::Identifier  identifier;
-        };
-
-        struct Function_reference {
-            kieli::Name_lower name;
-            Function_id       id;
-        };
-
-        struct Indirect_invocation {
-            utl::Wrapper<Expression>       function;
-            std::vector<Function_argument> arguments;
-        };
-
-        struct Direct_invocation {
-            kieli::Name_lower              function_name;
-            Function_id                    function_id;
-            std::vector<Function_argument> arguments;
-        };
-
-        struct Sizeof {
-            Type inspected_type;
-        };
-
-        struct Addressof {
-            Mutability               mutability;
-            utl::Wrapper<Expression> place_expression;
-        };
-
-        struct Dereference {
-            utl::Wrapper<Expression> reference_expression;
-        };
-
-        struct Defer {
-            utl::Wrapper<Expression> expression;
-        };
-
-        struct Hole {};
 
         struct Error {};
-    } // namespace expression
+    } // namespace mutability
 
-    struct Expression {
-        using Variant = std::variant<
-            kieli::Integer,
-            kieli::Floating,
-            kieli::Character,
-            kieli::Boolean,
-            kieli::String,
-            expression::Array_literal,
-            expression::Tuple,
-            expression::Loop,
-            expression::Break,
-            expression::Continue,
-            expression::Block,
-            expression::Let_binding,
-            expression::Match,
-            expression::Variable_reference,
-            expression::Function_reference,
-            expression::Indirect_invocation,
-            expression::Direct_invocation,
-            expression::Sizeof,
-            expression::Addressof,
-            expression::Dereference,
-            expression::Defer,
-            expression::Hole,
-            expression::Error>;
-        Variant         variant;
-        Type            type;
-        Expression_kind kind {};
-        kieli::Range    range;
+    struct Mutability_variant
+        : std::variant<
+              mutability::Concrete,
+              mutability::Parameterized,
+              mutability::Variable,
+              mutability::Error> {
+        using variant::variant, variant::operator=;
     };
-
-    using Node_arena = utl::Wrapper_arena<Expression, Pattern, Type::Variant, Mutability::Variant>;
 
     using Template_argument = std::variant<Expression, Type, Mutability>;
 
@@ -400,18 +419,28 @@ namespace hir {
         Environment_id environment;
     };
 
-    auto format_to(Pattern const&, std::string&) -> void;
-    auto format_to(Expression const&, std::string&) -> void;
-    auto format_to(Type const&, std::string&) -> void;
-    auto format_to(Type::Variant const&, std::string&) -> void;
-    auto format_to(Mutability const&, std::string&) -> void;
-    auto format_to(Mutability::Variant const&, std::string&) -> void;
+    struct Arena {
+        utl::Index_vector<Expression_id, Expression>         expressions;
+        utl::Index_vector<Pattern_id, Pattern>               patterns;
+        utl::Index_vector<Type_id, Type_variant>             types;
+        utl::Index_vector<Mutability_id, Mutability_variant> mutabilities;
+    };
 
-    auto to_string(auto const& x) -> std::string
-        requires requires(std::string out) { hir::format_to(x, out); }
+    auto expression_type(Expression const& expression) -> hir::Type;
+    auto pattern_type(Pattern const& pattern) -> hir::Type;
+
+    auto format(Arena const&, Pattern const&, std::string&) -> void;
+    auto format(Arena const&, Expression const&, std::string&) -> void;
+    auto format(Arena const&, Type const&, std::string&) -> void;
+    auto format(Arena const&, Type_variant const&, std::string&) -> void;
+    auto format(Arena const&, Mutability const&, std::string&) -> void;
+    auto format(Arena const&, Mutability_variant const&, std::string&) -> void;
+
+    auto to_string(Arena const& arena, auto const& x) -> std::string
+        requires requires(std::string output) { hir::format(arena, x, output); }
     {
         std::string output;
-        hir::format_to(x, output);
+        hir::format(arena, x, output);
         return output;
     };
 } // namespace hir

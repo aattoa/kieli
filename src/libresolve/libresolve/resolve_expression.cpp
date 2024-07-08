@@ -19,7 +19,7 @@ namespace {
             kieli::emit_diagnostic(
                 cppdiag::Severity::error,
                 context.compile_info,
-                context.arenas.environments[environment].source,
+                context.info.environments[environment].source,
                 range,
                 std::move(message),
                 std::move(help_note));
@@ -42,7 +42,7 @@ namespace {
         {
             return {
                 integer,
-                state.fresh_integral_type_variable(context.arenas, this_expression.range),
+                state.fresh_integral_type_variable(context.hir, this_expression.range).id,
                 hir::Expression_kind::value,
                 this_expression.range,
             };
@@ -52,7 +52,7 @@ namespace {
         {
             return {
                 floating,
-                hir::Type { context.constants.floating_type, this_expression.range },
+                context.constants.floating_type,
                 hir::Expression_kind::value,
                 this_expression.range,
             };
@@ -62,7 +62,7 @@ namespace {
         {
             return {
                 character,
-                hir::Type { context.constants.character_type, this_expression.range },
+                context.constants.character_type,
                 hir::Expression_kind::value,
                 this_expression.range,
             };
@@ -72,7 +72,7 @@ namespace {
         {
             return {
                 boolean,
-                hir::Type { context.constants.boolean_type, this_expression.range },
+                context.constants.boolean_type,
                 hir::Expression_kind::value,
                 this_expression.range,
             };
@@ -82,7 +82,7 @@ namespace {
         {
             return {
                 string,
-                hir::Type { context.constants.string_type, this_expression.range },
+                context.constants.string_type,
                 hir::Expression_kind::value,
                 this_expression.range,
             };
@@ -91,32 +91,29 @@ namespace {
         auto operator()(ast::expression::Array_literal const& array) -> hir::Expression
         {
             hir::Type const element_type
-                = state.fresh_general_type_variable(context.arenas, this_expression.range);
+                = state.fresh_general_type_variable(context.hir, this_expression.range);
 
             std::vector<hir::Expression> elements;
             for (ast::Expression const& element : array.elements) {
                 elements.push_back(recurse(element));
                 require_subtype_relationship(
-                    context.compile_info.diagnostics,
+                    context,
                     state,
-                    *elements.back().type.variant,
-                    *element_type.variant);
+                    context.hir.types[elements.back().type],
+                    context.hir.types[element_type.id]);
             }
 
             return {
                 hir::expression::Array_literal { std::move(elements) },
-                hir::Type {
-                    context.arenas.type(hir::type::Array {
-                        .element_type = element_type,
-                        .length       = context.arenas.wrap(hir::Expression {
-                            kieli::Integer { elements.size() },
-                            hir::Type { context.constants.u64_type, this_expression.range },
-                            hir::Expression_kind::value,
-                            this_expression.range,
-                        }),
+                context.hir.types.push(hir::type::Array {
+                    .element_type = element_type,
+                    .length       = context.hir.expressions.push(hir::Expression {
+                        kieli::Integer { elements.size() },
+                        context.constants.u64_type,
+                        hir::Expression_kind::value,
+                        this_expression.range,
                     }),
-                    this_expression.range,
-                },
+                }),
                 hir::Expression_kind::value,
                 this_expression.range,
             };
@@ -134,8 +131,8 @@ namespace {
                     = scope.find_variable(variable.name.primary_name.identifier)) {
                     return hir::Expression {
                         hir::expression::Variable_reference {
-                            .tag        = bind->tag,
-                            .identifier = bind->name.identifier,
+                            .name = bind->name,
+                            .tag  = bind->tag,
                         },
                         bind->type,
                         hir::Expression_kind::place,
@@ -148,12 +145,12 @@ namespace {
                 return std::visit(
                     utl::Overload {
                         [&](hir::Function_id const function) {
-                            auto& info      = context.arenas.functions[function];
+                            auto& info      = context.info.functions[function];
                             auto& signature = resolve_function_signature(context, info);
 
                             return hir::Expression {
                                 hir::expression::Function_reference { info.name, function },
-                                signature.function_type,
+                                signature.function_type.id,
                                 hir::Expression_kind::value,
                                 this_expression.range,
                             };
@@ -163,7 +160,7 @@ namespace {
                                 this_expression.range,
                                 std::format(
                                     "Expected an expression, but found a reference to module '{}'",
-                                    context.arenas.modules[module].name));
+                                    context.info.modules[module].name));
                         },
                     },
                     lookup_result.value().variant);
@@ -175,14 +172,11 @@ namespace {
         {
             auto fields = std::views::transform(tuple.fields, recurse()) //
                         | std::ranges::to<std::vector>();
-            auto types = std::views::transform(fields, &hir::Expression::type)
+            auto types = std::views::transform(fields, hir::expression_type)
                        | std::ranges::to<std::vector>();
             return {
                 hir::expression::Tuple { .fields = std::move(fields) },
-                hir::Type {
-                    context.arenas.type(hir::type::Tuple { .types = std::move(types) }),
-                    this_expression.range,
-                },
+                context.hir.types.push(hir::type::Tuple { std::move(types) }),
                 hir::Expression_kind::value,
                 this_expression.range,
             };
@@ -211,10 +205,10 @@ namespace {
                 hir::Expression effect
                     = resolve_expression(context, state, block_scope, environment, expression);
                 require_subtype_relationship(
-                    context.compile_info.diagnostics,
+                    context,
                     state,
-                    *effect.type.variant,
-                    *context.constants.unit_type);
+                    context.hir.types[effect.type],
+                    context.hir.types[context.constants.unit_type]);
                 return effect;
             };
 
@@ -229,7 +223,7 @@ namespace {
             return {
                 hir::expression::Block {
                     .side_effects = std::move(side_effects),
-                    .result       = context.arenas.wrap(std::move(result)),
+                    .result       = context.hir.expressions.push(std::move(result)),
                 },
                 result_type,
                 hir::Expression_kind::value,
@@ -292,26 +286,25 @@ namespace {
             hir::Expression matched_expression = recurse(*match.expression);
 
             hir::Type const result_type
-                = state.fresh_general_type_variable(context.arenas, this_expression.range);
+                = state.fresh_general_type_variable(context.hir, this_expression.range);
 
             auto const resolve_case = [&](ast::expression::Match::Case const& match_case) {
                 hir::Pattern pattern
                     = resolve_pattern(context, state, scope, environment, *match_case.pattern);
                 require_subtype_relationship(
-                    context.compile_info.diagnostics,
+                    context,
                     state,
-                    *matched_expression.type.variant,
-                    *pattern.type.variant);
+                    context.hir.types[matched_expression.type],
+                    context.hir.types[pattern.type]);
                 hir::Expression expression = recurse(*match_case.expression);
                 require_subtype_relationship(
-                    context.compile_info.diagnostics,
+                    context,
                     state,
-                    *expression.type.variant,
-                    *result_type.variant);
-
+                    context.hir.types[expression.type],
+                    context.hir.types[result_type.id]);
                 return hir::expression::Match::Case {
-                    .pattern    = context.arenas.wrap(std::move(pattern)),
-                    .expression = context.arenas.wrap(std::move(expression)),
+                    .pattern    = context.hir.patterns.push(std::move(pattern)),
+                    .expression = context.hir.expressions.push(std::move(expression)),
                 };
             };
 
@@ -319,9 +312,9 @@ namespace {
                 hir::expression::Match {
                     .cases = std::views::transform(match.cases, resolve_case)
                            | std::ranges::to<std::vector>(),
-                    .expression = context.arenas.wrap(std::move(matched_expression)),
+                    .expression = context.hir.expressions.push(std::move(matched_expression)),
                 },
-                result_type,
+                result_type.id,
                 hir::Expression_kind::value, // TODO
                 this_expression.range,
             };
@@ -340,12 +333,10 @@ namespace {
         auto operator()(ast::expression::Type_ascription const& ascription) -> hir::Expression
         {
             hir::Expression expression = recurse(*ascription.expression);
+            hir::Type const ascribed
+                = resolve_type(context, state, scope, environment, *ascription.ascribed_type);
             require_subtype_relationship(
-                context.compile_info.diagnostics,
-                state,
-                *expression.type.variant,
-                *resolve_type(context, state, scope, environment, *ascription.ascribed_type)
-                     .variant);
+                context, state, context.hir.types[expression.type], context.hir.types[ascribed.id]);
             return expression;
         }
 
@@ -358,30 +349,27 @@ namespace {
             if (let.type.has_value()) {
                 type = resolve_type(context, state, scope, environment, *let.type.value());
                 require_subtype_relationship(
-                    context.compile_info.diagnostics,
+                    context,
                     state,
-                    *pattern.type.variant,
-                    *type.value().variant);
+                    context.hir.types[pattern.type],
+                    context.hir.types[type.value().id]);
             }
-            type = type.value_or(pattern.type);
+            type = type.value_or(hir::pattern_type(pattern));
 
             hir::Expression initializer = recurse(*let.initializer);
             require_subtype_relationship(
-                context.compile_info.diagnostics,
+                context,
                 state,
-                *initializer.type.variant,
-                *type.value().variant);
+                context.hir.types[initializer.type],
+                context.hir.types[type.value().id]);
 
             return {
                 hir::expression::Let_binding {
-                    .pattern     = context.arenas.wrap(std::move(pattern)),
+                    .pattern     = context.hir.patterns.push(std::move(pattern)),
                     .type        = type.value(),
-                    .initializer = context.arenas.wrap(std::move(initializer)),
+                    .initializer = context.hir.expressions.push(std::move(initializer)),
                 },
-                hir::Type {
-                    context.constants.unit_type,
-                    this_expression.range,
-                },
+                context.constants.unit_type,
                 hir::Expression_kind::value,
                 this_expression.range,
             };
@@ -393,7 +381,7 @@ namespace {
                 alias.name.identifier,
                 Type_bind {
                     .name = alias.name,
-                    .type = resolve_type(context, state, scope, environment, *alias.type),
+                    .type = resolve_type(context, state, scope, environment, *alias.type).id,
                 });
             return unit_expression(context.constants, this_expression.range);
         }
@@ -409,7 +397,7 @@ namespace {
                 hir::expression::Sizeof {
                     resolve_type(context, state, scope, environment, *sizeof_.inspected_type),
                 },
-                state.fresh_integral_type_variable(context.arenas, this_expression.range),
+                state.fresh_integral_type_variable(context.hir, this_expression.range).id,
                 hir::Expression_kind::value,
                 this_expression.range,
             };
@@ -417,8 +405,8 @@ namespace {
 
         auto operator()(ast::expression::Addressof const& addressof) -> hir::Expression
         {
-            hir::Expression place_expression = recurse(*addressof.place_expression);
-            hir::Type const referenced_type  = place_expression.type;
+            hir::Expression    place_expression = recurse(*addressof.place_expression);
+            hir::Type_id const referenced_type  = place_expression.type;
             hir::Mutability mutability = resolve_mutability(context, scope, addressof.mutability);
             if (place_expression.kind != hir::Expression_kind::place) {
                 return error(
@@ -429,15 +417,12 @@ namespace {
             return {
                 hir::expression::Addressof {
                     .mutability       = mutability,
-                    .place_expression = context.arenas.wrap(std::move(place_expression)),
+                    .place_expression = context.hir.expressions.push(std::move(place_expression)),
                 },
-                hir::Type {
-                    context.arenas.type(hir::type::Reference {
-                        .referenced_type = referenced_type,
-                        .mutability      = mutability,
-                    }),
-                    this_expression.range,
-                },
+                context.hir.types.push(hir::type::Reference {
+                    .referenced_type { referenced_type, this_expression.range },
+                    .mutability = mutability,
+                }),
                 hir::Expression_kind::value,
                 this_expression.range,
             };
@@ -446,11 +431,11 @@ namespace {
         auto operator()(ast::expression::Dereference const& dereference) -> hir::Expression
         {
             hir::Type const referenced_type
-                = state.fresh_general_type_variable(context.arenas, this_expression.range);
+                = state.fresh_general_type_variable(context.hir, this_expression.range);
             hir::Mutability const reference_mutability
-                = state.fresh_mutability_variable(context.arenas, this_expression.range);
+                = state.fresh_mutability_variable(context.hir, this_expression.range);
             hir::Type const reference_type {
-                context.arenas.type(hir::type::Reference {
+                context.hir.types.push(hir::type::Reference {
                     .referenced_type = referenced_type,
                     .mutability      = reference_mutability,
                 }),
@@ -459,16 +444,16 @@ namespace {
 
             hir::Expression reference_expression = recurse(*dereference.reference_expression);
             require_subtype_relationship(
-                context.compile_info.diagnostics,
+                context,
                 state,
-                *reference_expression.type.variant,
-                *reference_type.variant);
+                context.hir.types[reference_expression.type],
+                context.hir.types[reference_type.id]);
 
             return {
                 hir::expression::Dereference {
-                    .reference_expression = context.arenas.wrap(std::move(reference_expression)),
+                    context.hir.expressions.push(std::move(reference_expression)),
                 },
-                referenced_type,
+                referenced_type.id,
                 hir::Expression_kind::place,
                 this_expression.range,
             };
@@ -478,12 +463,9 @@ namespace {
         {
             return {
                 hir::expression::Defer {
-                    .expression = context.arenas.wrap(recurse(*defer.expression)),
+                    context.hir.expressions.push(recurse(*defer.expression)),
                 },
-                hir::Type {
-                    context.constants.unit_type,
-                    this_expression.range,
-                },
+                context.constants.unit_type,
                 hir::Expression_kind::value,
                 this_expression.range,
             };
@@ -508,7 +490,7 @@ namespace {
         {
             return {
                 hir::expression::Hole {},
-                state.fresh_general_type_variable(context.arenas, this_expression.range),
+                state.fresh_general_type_variable(context.hir, this_expression.range).id,
                 hir::Expression_kind::value,
                 this_expression.range,
             };

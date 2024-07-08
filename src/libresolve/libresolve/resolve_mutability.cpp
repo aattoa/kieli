@@ -38,16 +38,14 @@ auto libresolve::resolve_mutability(
         utl::Overload {
             [&](ast::mutability::Concrete const& concrete) {
                 return hir::Mutability {
-                    .variant = resolve_concrete(context.constants, concrete),
-                    .range   = mutability.range,
+                    .id    = resolve_concrete(context.constants, concrete),
+                    .range = mutability.range,
                 };
             },
             [&](ast::mutability::Parameterized const& parameterized) {
-                if (auto const* const bound
-                    = scope.find_mutability(parameterized.name.identifier)) {
-                    return bound->mutability;
-                }
-                return binding_not_in_scope(context, scope.source(), parameterized.name);
+                auto const* const bound = scope.find_mutability(parameterized.name.identifier);
+                return bound ? bound->mutability
+                             : binding_not_in_scope(context, scope.source(), parameterized.name);
             },
         },
         mutability.variant);

@@ -39,8 +39,8 @@ namespace kieli {
 
     // https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#range
     struct Range {
-        Position start;
-        Position stop; // Exclusive position
+        Position start; // Inclusive
+        Position stop;  // Exclusive
 
         auto operator==(Range const&) const -> bool = default;
     };
@@ -75,7 +75,7 @@ struct std::formatter<kieli::Position> {
         return context.begin();
     }
 
-    static auto format(kieli::Position const& position, auto& context)
+    static auto format(kieli::Position const position, auto& context)
     {
         return std::format_to(context.out(), "{}:{}", position.line, position.column);
     }

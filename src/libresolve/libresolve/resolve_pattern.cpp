@@ -27,7 +27,7 @@ namespace {
         {
             return {
                 integer,
-                state.fresh_integral_type_variable(context.arenas, this_pattern.range),
+                state.fresh_integral_type_variable(context.hir, this_pattern.range).id,
                 this_pattern.range,
             };
         }
@@ -36,7 +36,7 @@ namespace {
         {
             return {
                 floating,
-                hir::Type { context.constants.floating_type, this_pattern.range },
+                context.constants.floating_type,
                 this_pattern.range,
             };
         }
@@ -45,7 +45,7 @@ namespace {
         {
             return {
                 character,
-                hir::Type { context.constants.character_type, this_pattern.range },
+                context.constants.character_type,
                 this_pattern.range,
             };
         }
@@ -54,7 +54,7 @@ namespace {
         {
             return {
                 boolean,
-                hir::Type { context.constants.boolean_type, this_pattern.range },
+                context.constants.boolean_type,
                 this_pattern.range,
             };
         }
@@ -63,7 +63,7 @@ namespace {
         {
             return {
                 string,
-                hir::Type { context.constants.string_type, this_pattern.range },
+                context.constants.string_type,
                 this_pattern.range,
             };
         }
@@ -72,7 +72,7 @@ namespace {
         {
             return {
                 hir::pattern::Wildcard {},
-                state.fresh_general_type_variable(context.arenas, this_pattern.range),
+                state.fresh_general_type_variable(context.hir, this_pattern.range).id,
                 this_pattern.range,
             };
         }
@@ -82,14 +82,14 @@ namespace {
             hir::Mutability const mutability
                 = resolve_mutability(context, scope, pattern.mutability);
             hir::Type const type
-                = state.fresh_general_type_variable(context.arenas, pattern.name.range);
+                = state.fresh_general_type_variable(context.hir, pattern.name.range);
             hir::Local_variable_tag const tag = context.tag_state.fresh_local_variable_tag();
 
             scope.bind_variable(
                 pattern.name.identifier,
                 Variable_bind {
                     .name       = pattern.name,
-                    .type       = type,
+                    .type       = type.id,
                     .mutability = mutability,
                     .tag        = tag,
                 });
@@ -100,7 +100,7 @@ namespace {
                     .identifier   = pattern.name.identifier,
                     .variable_tag = tag,
                 },
-                type,
+                type.id,
                 this_pattern.range,
             };
         }
@@ -125,7 +125,7 @@ namespace {
                     .mutability   = mutability,
                     .identifier   = alias.name.identifier,
                     .variable_tag = tag,
-                    .pattern      = context.arenas.wrap(std::move(pattern)),
+                    .pattern      = context.hir.patterns.push(std::move(pattern)),
                 },
                 pattern.type,
                 this_pattern.range,
@@ -146,16 +146,11 @@ namespace {
         {
             auto patterns = std::views::transform(tuple.field_patterns, recurse())
                           | std::ranges::to<std::vector>();
-            auto types = std::views::transform(patterns, &hir::Pattern::type)
+            auto types = std::views::transform(patterns, hir::pattern_type)
                        | std::ranges::to<std::vector>();
             return {
-                hir::pattern::Tuple {
-                    .field_patterns = std::move(patterns),
-                },
-                hir::Type {
-                    context.arenas.type(hir::type::Tuple { std::move(types) }),
-                    this_pattern.range,
-                },
+                hir::pattern::Tuple { std::move(patterns) },
+                context.hir.types.push(hir::type::Tuple { std::move(types) }),
                 this_pattern.range,
             };
         }
@@ -166,24 +161,21 @@ namespace {
                           | std::ranges::to<std::vector>();
 
             hir::Type const element_type
-                = state.fresh_general_type_variable(context.arenas, this_pattern.range);
+                = state.fresh_general_type_variable(context.hir, this_pattern.range);
 
             for (hir::Pattern const& pattern : patterns) {
                 require_subtype_relationship(
-                    context.compile_info.diagnostics,
+                    context,
                     state,
-                    *pattern.type.variant,
-                    *element_type.variant);
+                    context.hir.types[pattern.type],
+                    context.hir.types[element_type.id]);
             }
 
             return {
                 hir::pattern::Slice {
                     .patterns = std::move(patterns),
                 },
-                hir::Type {
-                    context.arenas.type(hir::type::Slice { element_type }),
-                    this_pattern.range,
-                },
+                context.hir.types.push(hir::type::Slice { element_type }),
                 this_pattern.range,
             };
         }
@@ -195,15 +187,15 @@ namespace {
                 = resolve_expression(context, state, scope, environment, guarded.guard_expression);
 
             require_subtype_relationship(
-                context.compile_info.diagnostics,
+                context,
                 state,
-                *guard_expression.type.variant,
-                *context.constants.boolean_type);
+                context.hir.types[guard_expression.type],
+                context.hir.types[context.constants.boolean_type]);
 
             return {
                 hir::pattern::Guarded {
-                    .guarded_pattern  = context.arenas.wrap(std::move(guarded_pattern)),
-                    .guard_expression = context.arenas.wrap(std::move(guard_expression)),
+                    .guarded_pattern  = context.hir.patterns.push(std::move(guarded_pattern)),
+                    .guard_expression = context.hir.expressions.push(std::move(guard_expression)),
                 },
                 guarded_pattern.type,
                 this_pattern.range,

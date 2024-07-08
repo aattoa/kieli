@@ -56,7 +56,6 @@ namespace utl {
         }
 
         auto operator==(Index_vector const& other) const -> bool = default;
-        auto operator<=>(Index_vector const& other) const        = default;
     };
 
 } // namespace utl

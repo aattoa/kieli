@@ -25,9 +25,9 @@ namespace {
         libresolve::add_to_environment(
             context,
             source,
-            context.arenas.environments[environment],
+            context.info.environments[environment],
             import.name,
-            context.arenas.modules.push(std::move(import), environment, source, import.name));
+            context.info.modules.push(std::move(import), environment, source, import.name));
     }
 
     auto collect_import(
@@ -79,7 +79,7 @@ auto libresolve::make_environment(libresolve::Context& context, kieli::Source_id
 {
     cst::Module const cst = kieli::parse(source, context.compile_info);
     ast::Module       ast = kieli::desugar(cst, context.compile_info);
-    context.arenas.ast_node_arena.merge_with(std::move(ast.node_arena));
+    context.ast.merge_with(std::move(ast.node_arena));
 
     auto const environment = collect_environment(context, source, std::move(ast.definitions));
     std::ranges::for_each(
@@ -90,7 +90,7 @@ auto libresolve::make_environment(libresolve::Context& context, kieli::Source_id
 auto libresolve::resolve_module(Context& context, Module_info& module_info) -> hir::Environment_id
 {
     if (auto* const submodule = std::get_if<ast::definition::Submodule>(&module_info.variant)) {
-        auto const source      = context.arenas.environments[module_info.environment].source;
+        auto const source      = context.info.environments[module_info.environment].source;
         auto const environment = resolve_submodule(context, source, std::move(*submodule));
         module_info.variant    = hir::Module { environment };
     }

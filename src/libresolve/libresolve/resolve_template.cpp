@@ -9,7 +9,7 @@ namespace {
         Inference_state&            state;
         Scope&                      scope;
         hir::Environment_id         environment;
-        hir::Template_parameter_tag tag;
+        hir::Template_parameter_tag parameter_id;
 
         template <class Default>
         auto resolve_default_argument()
@@ -37,11 +37,8 @@ namespace {
             scope.bind_type(
                 parameter.name.identifier,
                 Type_bind {
-                    .name = parameter.name,
-                    .type {
-                        context.arenas.type(hir::type::Parameterized { .tag = tag }),
-                        parameter.name.range,
-                    },
+                    parameter.name,
+                    context.hir.types.push(hir::type::Parameterized { parameter_id }),
                 });
             auto const resolve_class = [&](ast::Class_reference const& class_reference) {
                 return resolve_class_reference(context, state, scope, environment, class_reference);
@@ -63,7 +60,8 @@ namespace {
                 Mutability_bind {
                     .name = parameter.name,
                     .mutability {
-                        context.arenas.mutability(hir::mutability::Parameterized { .tag = tag }),
+                        context.hir.mutabilities.push(
+                            hir::mutability::Parameterized { parameter_id }),
                         parameter.name.range,
                     },
                 });
@@ -94,12 +92,12 @@ auto libresolve::resolve_template_parameters(
     ast::Template_parameters const& parameters) -> std::vector<hir::Template_parameter>
 {
     auto const resolve_parameter = [&](ast::Template_parameter const& parameter) {
-        auto const tag = context.tag_state.fresh_template_parameter_tag();
+        auto const id = context.tag_state.fresh_template_parameter_tag();
         return hir::Template_parameter {
             .variant = std::visit(
-                Template_parameter_resolution_visitor { context, state, scope, environment, tag },
+                Template_parameter_resolution_visitor { context, state, scope, environment, id },
                 parameter.variant),
-            .tag   = tag,
+            .tag   = id,
             .range = parameter.range,
         };
     };

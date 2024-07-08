@@ -74,11 +74,12 @@ namespace {
 
     auto debug_resolve(kieli::Source_id const source, kieli::Compile_info& info) -> void
     {
-        auto arenas    = libresolve::Arenas::defaults();
-        auto constants = libresolve::Constants::make_with(arenas);
+        auto hir       = hir::Arena {};
+        auto constants = libresolve::Constants::make_with(hir);
 
         libresolve::Context context {
-            .arenas       = std::move(arenas),
+            .ast          = ast::Node_arena::with_default_page_size(),
+            .hir          = std::move(hir),
             .constants    = std::move(constants),
             .compile_info = info,
         };

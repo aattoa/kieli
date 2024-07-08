@@ -9,73 +9,45 @@
 namespace libresolve {
 
     struct Constants {
-        hir::Type_wrapper       i8_type;
-        hir::Type_wrapper       i16_type;
-        hir::Type_wrapper       i32_type;
-        hir::Type_wrapper       i64_type;
-        hir::Type_wrapper       u8_type;
-        hir::Type_wrapper       u16_type;
-        hir::Type_wrapper       u32_type;
-        hir::Type_wrapper       u64_type;
-        hir::Type_wrapper       boolean_type;
-        hir::Type_wrapper       floating_type;
-        hir::Type_wrapper       string_type;
-        hir::Type_wrapper       character_type;
-        hir::Type_wrapper       unit_type;
-        hir::Type_wrapper       error_type;
-        hir::Mutability_wrapper mutability_yes;
-        hir::Mutability_wrapper mutability_no;
-        hir::Mutability_wrapper mutability_error;
+        hir::Type_id       i8_type;
+        hir::Type_id       i16_type;
+        hir::Type_id       i32_type;
+        hir::Type_id       i64_type;
+        hir::Type_id       u8_type;
+        hir::Type_id       u16_type;
+        hir::Type_id       u32_type;
+        hir::Type_id       u64_type;
+        hir::Type_id       boolean_type;
+        hir::Type_id       floating_type;
+        hir::Type_id       string_type;
+        hir::Type_id       character_type;
+        hir::Type_id       unit_type;
+        hir::Type_id       error_type;
+        hir::Mutability_id mutability_yes;
+        hir::Mutability_id mutability_no;
+        hir::Mutability_id mutability_error;
 
-        static auto make_with(Arenas& arenas) -> Constants;
+        static auto make_with(hir::Arena& arena) -> Constants;
     };
 
     struct Obligation {
-        hir::Type                            instance;
-        utl::Mutable_wrapper<Typeclass_info> typeclass;
+        hir::Type         instance;
+        hir::Typeclass_id typeclass;
     };
 
     struct Type_variable_data {
-        hir::Type_variable_tag  tag;
         hir::Type_variable_kind kind {};
+        hir::Type_variable_id   variable_id;
+        hir::Type_id            type_id;
         kieli::Range            origin;
         bool                    is_solved {};
-        hir::Type_wrapper       variant;
     };
 
     struct Mutability_variable_data {
-        hir::Mutability_variable_tag tag;
-        kieli::Range                 origin;
-        bool                         is_solved {};
-        hir::Mutability_wrapper      variant;
-    };
-
-    struct Inference_state {
-        using Type_variables = utl::Index_vector<hir::Type_variable_tag, Type_variable_data>;
-        using Mutability_variables
-            = utl::Index_vector<hir::Mutability_variable_tag, Mutability_variable_data>;
-
-        Type_variables       type_variables;
-        Mutability_variables mutability_variables;
-        utl::Disjoint_set    type_variable_disjoint_set;
-        utl::Disjoint_set    mutability_variable_disjoint_set;
-        kieli::Source_id     source;
-
-        auto flatten(hir::Type::Variant& type) -> void;
-
-        auto fresh_general_type_variable(Arenas& arenas, kieli::Range origin) -> hir::Type;
-        auto fresh_integral_type_variable(Arenas& arenas, kieli::Range origin) -> hir::Type;
-        auto fresh_mutability_variable(Arenas& arenas, kieli::Range origin) -> hir::Mutability;
-
-        auto set_solution(
-            std::vector<cppdiag::Diagnostic>& diagnostics,
-            Type_variable_data&               variable_data,
-            hir::Type::Variant                solution) -> void;
-
-        auto set_solution(
-            std::vector<cppdiag::Diagnostic>& diagnostics,
-            Mutability_variable_data&         variable_data,
-            hir::Mutability::Variant          solution) -> void;
+        hir::Mutability_variable_id variable_id;
+        hir::Mutability_id          mutability_id;
+        kieli::Range                origin;
+        bool                        is_solved {};
     };
 
     class Tag_state {
@@ -86,15 +58,46 @@ namespace libresolve {
         auto fresh_local_variable_tag() -> hir::Local_variable_tag;
     };
 
-    using Module_map = utl::Flatmap<std::filesystem::path, utl::Mutable_wrapper<Module_info>>;
+    // TODO: refactor out
+    using Module_map = utl::Flatmap<std::filesystem::path, hir::Module_id>;
 
     struct Context {
-        Arenas                       arenas;
+        ast::Node_arena              ast;
+        hir::Arena                   hir;
+        Info_arena                   info;
         Constants                    constants;
         Module_map                   module_map;
+        Tag_state                    tag_state;
         kieli::Project_configuration configuration;
         kieli::Compile_info&         compile_info;
-        Tag_state                    tag_state;
+    };
+
+    struct Inference_state {
+        using Type_variables = utl::Index_vector<hir::Type_variable_id, Type_variable_data>;
+        using Mutability_variables
+            = utl::Index_vector<hir::Mutability_variable_id, Mutability_variable_data>;
+
+        Type_variables       type_variables;
+        Mutability_variables mutability_variables;
+        utl::Disjoint_set    type_variable_disjoint_set;
+        utl::Disjoint_set    mutability_variable_disjoint_set;
+        kieli::Source_id     source;
+
+        auto flatten(Context& context, hir::Type_variant& type) -> void;
+
+        auto fresh_general_type_variable(hir::Arena& arena, kieli::Range origin) -> hir::Type;
+        auto fresh_integral_type_variable(hir::Arena& arena, kieli::Range origin) -> hir::Type;
+        auto fresh_mutability_variable(hir::Arena& arena, kieli::Range origin) -> hir::Mutability;
+
+        auto set_solution(
+            Context&            context,
+            Type_variable_data& variable_data,
+            hir::Type_variant   solution) -> void;
+
+        auto set_solution(
+            Context&                  context,
+            Mutability_variable_data& variable_data,
+            hir::Mutability_variant   solution) -> void;
     };
 
     struct Import_error {
@@ -106,7 +109,7 @@ namespace libresolve {
         kieli::Project_configuration const& configuration,
         std::span<kieli::Name_lower const>  path_segments) -> std::expected<Import, Import_error>;
 
-    auto ensure_no_unsolved_variables(kieli::Compile_info& info, Inference_state& state) -> void;
+    auto ensure_no_unsolved_variables(Context& context, Inference_state& state) -> void;
 
     auto add_to_environment(
         Context&            context,
@@ -214,14 +217,15 @@ namespace libresolve {
         ast::Qualified_name const& name) -> std::optional<Upper_info>;
 
     // Check whether a type variable with `tag` occurs in `type`.
-    auto occurs_check(hir::Type_variable_tag tag, hir::Type::Variant const& type) -> bool;
+    auto occurs_check(
+        hir::Arena const& arena, hir::Type_variable_id id, hir::Type_variant const& type) -> bool;
 
     // Require that `sub` is equal to or a subtype of `super`.
     auto require_subtype_relationship(
-        std::vector<cppdiag::Diagnostic>& diagnostics,
-        Inference_state&                  state,
-        hir::Type::Variant const&         sub,
-        hir::Type::Variant const&         super) -> void;
+        Context&                 context,
+        Inference_state&         state,
+        hir::Type_variant const& sub,
+        hir::Type_variant const& super) -> void;
 
     auto error_expression(Constants const& constants, kieli::Range range) -> hir::Expression;
     auto unit_expression(Constants const& constants, kieli::Range range) -> hir::Expression;

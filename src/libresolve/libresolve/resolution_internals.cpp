@@ -2,56 +2,26 @@
 #include <libutl/utilities.hpp>
 #include <libresolve/resolution_internals.hpp>
 
-auto libresolve::Arenas::defaults() -> Arenas
-{
-    return Arenas {
-        .ast_node_arena = ast::Node_arena::with_default_page_size(),
-        .hir_node_arena = hir::Node_arena::with_default_page_size(),
-    };
-}
-
-auto libresolve::Arenas::type(hir::Type::Variant variant)
-    -> utl::Mutable_wrapper<hir::Type::Variant>
-{
-    return hir_node_arena.wrap_mutable<hir::Type::Variant>(std::move(variant));
-}
-
-auto libresolve::Arenas::mutability(hir::Mutability::Variant variant)
-    -> utl::Mutable_wrapper<hir::Mutability::Variant>
-{
-    return hir_node_arena.wrap_mutable<hir::Mutability::Variant>(std::move(variant));
-}
-
-auto libresolve::Arenas::wrap(hir::Expression expression) -> utl::Wrapper<hir::Expression>
-{
-    return hir_node_arena.wrap<hir::Expression>(std::move(expression));
-}
-
-auto libresolve::Arenas::wrap(hir::Pattern pattern) -> utl::Wrapper<hir::Pattern>
-{
-    return hir_node_arena.wrap<hir::Pattern>(std::move(pattern));
-}
-
-auto libresolve::Constants::make_with(Arenas& arenas) -> Constants
+auto libresolve::Constants::make_with(hir::Arena& arenas) -> Constants
 {
     return Constants {
-        .i8_type          = arenas.type(kieli::built_in_type::Integer::i8),
-        .i16_type         = arenas.type(kieli::built_in_type::Integer::i16),
-        .i32_type         = arenas.type(kieli::built_in_type::Integer::i32),
-        .i64_type         = arenas.type(kieli::built_in_type::Integer::i64),
-        .u8_type          = arenas.type(kieli::built_in_type::Integer::u8),
-        .u16_type         = arenas.type(kieli::built_in_type::Integer::u16),
-        .u32_type         = arenas.type(kieli::built_in_type::Integer::u32),
-        .u64_type         = arenas.type(kieli::built_in_type::Integer::u64),
-        .boolean_type     = arenas.type(kieli::built_in_type::Boolean {}),
-        .floating_type    = arenas.type(kieli::built_in_type::Floating {}),
-        .string_type      = arenas.type(kieli::built_in_type::String {}),
-        .character_type   = arenas.type(kieli::built_in_type::Character {}),
-        .unit_type        = arenas.type(hir::type::Tuple {}),
-        .error_type       = arenas.type(hir::type::Error {}),
-        .mutability_yes   = arenas.mutability(hir::mutability::Concrete::mut),
-        .mutability_no    = arenas.mutability(hir::mutability::Concrete::immut),
-        .mutability_error = arenas.mutability(hir::mutability::Error {}),
+        .i8_type          = arenas.types.push(kieli::built_in_type::Integer::i8),
+        .i16_type         = arenas.types.push(kieli::built_in_type::Integer::i16),
+        .i32_type         = arenas.types.push(kieli::built_in_type::Integer::i32),
+        .i64_type         = arenas.types.push(kieli::built_in_type::Integer::i64),
+        .u8_type          = arenas.types.push(kieli::built_in_type::Integer::u8),
+        .u16_type         = arenas.types.push(kieli::built_in_type::Integer::u16),
+        .u32_type         = arenas.types.push(kieli::built_in_type::Integer::u32),
+        .u64_type         = arenas.types.push(kieli::built_in_type::Integer::u64),
+        .boolean_type     = arenas.types.push(kieli::built_in_type::Boolean {}),
+        .floating_type    = arenas.types.push(kieli::built_in_type::Floating {}),
+        .string_type      = arenas.types.push(kieli::built_in_type::String {}),
+        .character_type   = arenas.types.push(kieli::built_in_type::Character {}),
+        .unit_type        = arenas.types.push(hir::type::Tuple {}),
+        .error_type       = arenas.types.push(hir::type::Error {}),
+        .mutability_yes   = arenas.mutabilities.push(hir::mutability::Concrete::mut),
+        .mutability_no    = arenas.mutabilities.push(hir::mutability::Concrete::immut),
+        .mutability_error = arenas.mutabilities.push(hir::mutability::Error {}),
     };
 }
 
@@ -72,7 +42,7 @@ auto libresolve::error_expression(Constants const& constants, kieli::Range const
 {
     return hir::Expression {
         hir::expression::Error {},
-        hir::Type { constants.error_type, range },
+        constants.error_type,
         hir::Expression_kind::place,
         range,
     };
@@ -83,30 +53,32 @@ auto libresolve::unit_expression(Constants const& constants, kieli::Range const 
 {
     return hir::Expression {
         hir::expression::Tuple {},
-        hir::Type { constants.unit_type, range },
+        constants.unit_type,
         hir::Expression_kind::value,
         range,
     };
 }
 
-auto libresolve::Inference_state::flatten(hir::Type::Variant& type) -> void
+auto libresolve::Inference_state::flatten(Context& context, hir::Type_variant& type) -> void
 {
     if (auto const* const variable = std::get_if<hir::type::Variable>(&type)) {
-        Type_variable_data& data = type_variables[variable->tag];
-        assert(variable->tag == data.tag);
+        Type_variable_data& data = type_variables[variable->id];
+        assert(variable->id == data.variable_id);
         if (data.is_solved) {
-            type           = *data.variant;
+            type = context.hir.types[data.type_id];
+
             data.is_solved = true;
             return;
         }
-        std::size_t const index = type_variable_disjoint_set.find(data.tag.get());
-        if (data.tag.get() == index) {
+        std::size_t const index = type_variable_disjoint_set.find(data.variable_id.get());
+        if (data.variable_id.get() == index) {
             return;
         }
-        Type_variable_data& representative = type_variables.underlying.at(index);
-        flatten(representative.variant.as_mutable());
-        if (representative.is_solved) {
-            type           = *representative.variant;
+        Type_variable_data& representative_data = type_variables.underlying.at(index);
+        hir::Type_variant&  representative_type = context.hir.types[representative_data.type_id];
+        flatten(context, representative_type);
+        if (representative_data.is_solved) {
+            type           = representative_type;
             data.is_solved = true;
             return;
         }
@@ -114,95 +86,91 @@ auto libresolve::Inference_state::flatten(hir::Type::Variant& type) -> void
 }
 
 auto libresolve::Inference_state::set_solution(
-    std::vector<cppdiag::Diagnostic>& diagnostics,
-    Type_variable_data&               variable_data,
-    hir::Type::Variant                solution) -> void
+    Context& context, Type_variable_data& variable_data, hir::Type_variant solution) -> void
 {
-    std::size_t const   index          = type_variable_disjoint_set.find(variable_data.tag.get());
-    Type_variable_data& representative = type_variables.underlying.at(index);
-    if (representative.is_solved) {
-        require_subtype_relationship(diagnostics, *this, solution, *representative.variant);
+    std::size_t const   index = type_variable_disjoint_set.find(variable_data.variable_id.get());
+    Type_variable_data& representative_data = type_variables.underlying.at(index);
+    hir::Type_variant&  representative_type = context.hir.types[representative_data.type_id];
+    if (representative_data.is_solved) {
+        require_subtype_relationship(context, *this, solution, representative_type);
     }
-    representative.variant.as_mutable() = std::move(solution);
-    representative.is_solved            = true;
+    representative_type           = std::move(solution);
+    representative_data.is_solved = true;
 }
 
 auto libresolve::Inference_state::set_solution(
-    std::vector<cppdiag::Diagnostic>& /*diagnostics*/,
+    Context&                  context,
     Mutability_variable_data& variable_data,
-    hir::Mutability::Variant  solution) -> void
+    hir::Mutability_variant   solution) -> void
 {
-    std::size_t const index = mutability_variable_disjoint_set.find(variable_data.tag.get());
+    std::size_t const index
+        = mutability_variable_disjoint_set.find(variable_data.variable_id.get());
     Mutability_variable_data& representative = mutability_variables.underlying.at(index);
     cpputil::always_assert(!std::exchange(representative.is_solved, true));
-    representative.variant.as_mutable() = std::move(solution);
+    context.hir.mutabilities[representative.mutability_id] = std::move(solution);
 }
 
 auto libresolve::Inference_state::fresh_general_type_variable(
-    Arenas& arenas, kieli::Range const origin) -> hir::Type
+    hir::Arena& arena, kieli::Range const origin) -> hir::Type
 {
-    hir::Type_variable_tag const tag { type_variables.size() };
-
-    auto const variant = arenas.type(hir::type::Variable { tag });
+    auto const variable_id = hir::Type_variable_id { type_variables.size() };
+    auto const type_id     = arena.types.push(hir::type::Variable { variable_id });
     type_variables.underlying.push_back(Type_variable_data {
-        .tag     = tag,
-        .kind    = hir::Type_variable_kind::general,
-        .origin  = origin,
-        .variant = variant,
+        .kind        = hir::Type_variable_kind::general,
+        .variable_id = variable_id,
+        .type_id     = type_id,
+        .origin      = origin,
     });
     (void)type_variable_disjoint_set.add();
-    return hir::Type { variant, origin };
+    return hir::Type { type_id, origin };
 }
 
 auto libresolve::Inference_state::fresh_integral_type_variable(
-    Arenas& arenas, kieli::Range const origin) -> hir::Type
+    hir::Arena& arena, kieli::Range const origin) -> hir::Type
 {
-    hir::Type_variable_tag const tag { type_variables.size() };
-
-    auto const variant = arenas.type(hir::type::Variable { tag });
+    auto const variable_id = hir::Type_variable_id { type_variables.size() };
+    auto const type_id     = arena.types.push(hir::type::Variable { variable_id });
     type_variables.underlying.push_back(Type_variable_data {
-        .tag     = tag,
-        .kind    = hir::Type_variable_kind::integral,
-        .origin  = origin,
-        .variant = variant,
+        .kind        = hir::Type_variable_kind::integral,
+        .variable_id = variable_id,
+        .type_id     = type_id,
+        .origin      = origin,
     });
     (void)type_variable_disjoint_set.add();
-    return hir::Type { variant, origin };
+    return hir::Type { type_id, origin };
 }
 
 auto libresolve::Inference_state::fresh_mutability_variable(
-    Arenas& arenas, kieli::Range const origin) -> hir::Mutability
+    hir::Arena& arena, kieli::Range const origin) -> hir::Mutability
 {
-    hir::Mutability_variable_tag const tag { mutability_variables.size() };
-
-    auto const variant = arenas.mutability(hir::mutability::Variable { tag });
+    auto const variable_id   = hir::Mutability_variable_id { mutability_variables.size() };
+    auto const mutability_id = arena.mutabilities.push(hir::mutability::Variable { variable_id });
     mutability_variables.underlying.push_back(Mutability_variable_data {
-        .tag     = tag,
-        .origin  = origin,
-        .variant = variant,
+        .variable_id   = variable_id,
+        .mutability_id = mutability_id,
+        .origin        = origin,
     });
     (void)mutability_variable_disjoint_set.add();
-    return hir::Mutability { variant, origin };
+    return hir::Mutability { mutability_id, origin };
 }
 
-auto libresolve::ensure_no_unsolved_variables(kieli::Compile_info& info, Inference_state& state)
-    -> void
+auto libresolve::ensure_no_unsolved_variables(Context& context, Inference_state& state) -> void
 {
     for (Mutability_variable_data& data : state.mutability_variables.underlying) {
         if (!data.is_solved) {
-            state.set_solution(info.diagnostics, data, hir::mutability::Concrete::immut);
+            state.set_solution(context, data, hir::mutability::Concrete::immut);
         }
     }
     for (Type_variable_data& data : state.type_variables.underlying) {
-        state.flatten(data.variant.as_mutable());
+        state.flatten(context, context.hir.types[data.type_id]);
         if (!data.is_solved) {
             kieli::emit_diagnostic(
                 cppdiag::Severity::error,
-                info,
+                context.compile_info,
                 state.source,
                 data.origin,
-                std::format("Unsolved type variable: ?{}", data.tag.get()));
-            state.set_solution(info.diagnostics, data, hir::type::Error {});
+                std::format("Unsolved type variable: ?{}", data.variable_id.get()));
+            state.set_solution(context, data, hir::type::Error {});
         }
     }
 }

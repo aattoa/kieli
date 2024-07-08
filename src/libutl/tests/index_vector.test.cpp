@@ -14,7 +14,6 @@ namespace {
 
     static_assert(utl::vector_index<Index>);
     static_assert(std::three_way_comparable<Index>);
-    static_assert(std::three_way_comparable<Vector>);
     static_assert(std::same_as<Subscript<Vector&&>, std::string&&>);
     static_assert(std::same_as<Subscript<Vector const&&>, std::string const&&>);
     static_assert(std::same_as<Subscript<Vector&>, std::string&>);

@@ -5,7 +5,7 @@ using namespace libresolve;
 
 namespace {
     auto integer_type(Constants const& constants, kieli::built_in_type::Integer const integer)
-        -> utl::Mutable_wrapper<hir::Type::Variant>
+        -> hir::Type_id
     {
         // clang-format off
         switch (integer) {
@@ -69,7 +69,7 @@ namespace {
 
         auto operator()(ast::Wildcard const&) -> hir::Type
         {
-            return state.fresh_general_type_variable(context.arenas, this_type.range);
+            return state.fresh_general_type_variable(context.hir, this_type.range);
         }
 
         auto operator()(ast::type::Self const&) -> hir::Type
@@ -81,7 +81,7 @@ namespace {
         {
             if (type_name.name.is_unqualified()) {
                 if (auto* const bind = scope.find_type(type_name.name.primary_name.identifier)) {
-                    return bind->type;
+                    return { bind->type, this_type.range };
                 }
             }
             if (auto const lookup_result
@@ -89,10 +89,10 @@ namespace {
                 return std::visit(
                     utl::Overload {
                         [&](hir::Enumeration_id const enumeration) -> hir::Type {
-                            return context.arenas.enumerations[enumeration].type;
+                            return context.info.enumerations[enumeration].type;
                         },
                         [&](hir::Alias_id const alias) -> hir::Type {
-                            return resolve_alias(context, context.arenas.aliases[alias]).type;
+                            return resolve_alias(context, context.info.aliases[alias]).type;
                         },
                         [](hir::Typeclass_id) -> hir::Type { cpputil::todo(); },
                     },
@@ -113,23 +113,23 @@ namespace {
                 .types = std::views::transform(tuple.field_types, recurse())
                        | std::ranges::to<std::vector>(),
             };
-            return { context.arenas.type(std::move(type)), this_type.range };
+            return { context.hir.types.push(std::move(type)), this_type.range };
         }
 
         auto operator()(ast::type::Array const& array) -> hir::Type
         {
             hir::type::Array type {
                 .element_type = recurse(*array.element_type),
-                .length       = context.arenas.wrap(
+                .length       = context.hir.expressions.push(
                     resolve_expression(context, state, scope, environment, *array.length)),
             };
-            return { context.arenas.type(std::move(type)), this_type.range };
+            return { context.hir.types.push(std::move(type)), this_type.range };
         }
 
         auto operator()(ast::type::Slice const& slice) -> hir::Type
         {
             hir::type::Slice type { .element_type = recurse(*slice.element_type) };
-            return { context.arenas.type(std::move(type)), this_type.range };
+            return { context.hir.types.push(std::move(type)), this_type.range };
         }
 
         auto operator()(ast::type::Function const& function) -> hir::Type
@@ -139,7 +139,7 @@ namespace {
                                  | std::ranges::to<std::vector>(),
                 .return_type = recurse(*function.return_type),
             };
-            return { context.arenas.type(std::move(type)), this_type.range };
+            return { context.hir.types.push(std::move(type)), this_type.range };
         }
 
         auto operator()(ast::type::Typeof const& typeof_) -> hir::Type
@@ -147,7 +147,7 @@ namespace {
             auto       typeof_scope = scope.child();
             auto const expression   = resolve_expression(
                 context, state, typeof_scope, environment, *typeof_.inspected_expression);
-            return expression.type;
+            return { expression.type, this_type.range };
         }
 
         auto operator()(ast::type::Reference const& reference) -> hir::Type
@@ -156,7 +156,7 @@ namespace {
                 .referenced_type = recurse(*reference.referenced_type),
                 .mutability      = resolve_mutability(context, scope, reference.mutability),
             };
-            return { context.arenas.type(std::move(type)), this_type.range };
+            return { context.hir.types.push(std::move(type)), this_type.range };
         }
 
         auto operator()(ast::type::Pointer const& pointer) -> hir::Type
@@ -165,7 +165,7 @@ namespace {
                 .pointee_type = recurse(*pointer.pointee_type),
                 .mutability   = resolve_mutability(context, scope, pointer.mutability),
             };
-            return { context.arenas.type(std::move(type)), this_type.range };
+            return { context.hir.types.push(std::move(type)), this_type.range };
         }
 
         auto operator()(ast::type::Instance_of const&) -> hir::Type

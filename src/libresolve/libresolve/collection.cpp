@@ -15,7 +15,7 @@ namespace {
                     source, first.range, "First defined here", cppdiag::Severity::information),
                 kieli::text_section(source, second.range, "Later defined here"),
             }),
-            .message       = std::format("Multiple definitions for '{}'", first.identifier),
+            .message       = std::format("Multiple definitions for '{}'", first),
             .severity      = cppdiag::Severity::error,
         };
     }
@@ -26,57 +26,61 @@ namespace {
         hir::Environment_id const environment_id) -> void
     {
         kieli::Source_id const   source      = definition.source;
-        libresolve::Environment& environment = context.arenas.environments[environment_id];
+        libresolve::Environment& environment = context.info.environments[environment_id];
 
         std::visit(
             utl::Overload {
                 [&](ast::definition::Enumeration&& enumeration) {
-                    auto const      name = enumeration.name;
-                    hir::Type const type { context.arenas.type(hir::type::Error {}), name.range };
-
-                    auto const info = context.arenas.enumerations.push(
-                        std::move(enumeration), environment_id, source, name, type);
-                    type.variant.as_mutable() = hir::type::Enumeration { enumeration.name, info };
-
-                    environment.in_order.emplace_back(info);
-                    add_to_environment(context, source, environment, name, info);
+                    auto const name = enumeration.name;
+                    auto const type = context.hir.types.push(hir::type::Error {});
+                    auto const id   = context.info.enumerations.push(
+                        std::move(enumeration),
+                        environment_id,
+                        source,
+                        name,
+                        hir::Type { type, name.range });
+                    context.hir.types[type] = hir::type::Enumeration { enumeration.name, id };
+                    environment.in_order.emplace_back(id);
+                    add_to_environment(context, source, environment, name, id);
                 },
+
                 [&](ast::definition::Function&& function) {
                     auto const name = function.signature.name;
-                    auto const info = context.arenas.functions.push(
+                    auto const info = context.info.functions.push(
                         std::move(function), environment_id, source, name);
-
                     add_to_environment(context, source, environment, name, info);
                     environment.in_order.emplace_back(info);
                 },
+
                 [&](ast::definition::Typeclass&& typeclass) {
                     auto const name = typeclass.name;
-                    auto const info = context.arenas.typeclasses.push(
+                    auto const info = context.info.typeclasses.push(
                         std::move(typeclass), environment_id, source, name);
-
                     add_to_environment(context, source, environment, name, info);
                     environment.in_order.emplace_back(info);
                 },
+
                 [&](ast::definition::Alias&& alias) {
                     auto const name = alias.name;
-                    auto const info = context.arenas.aliases.push(
-                        std::move(alias), environment_id, source, name);
-
+                    auto const info
+                        = context.info.aliases.push(std::move(alias), environment_id, source, name);
                     add_to_environment(context, source, environment, name, info);
                     environment.in_order.emplace_back(info);
                 },
+
                 [&](ast::definition::Submodule&& submodule) {
                     auto const name = submodule.name;
-                    auto const info = context.arenas.modules.push(
+                    auto const info = context.info.modules.push(
                         std::move(submodule), environment_id, source, submodule.name);
-
                     add_to_environment(context, source, environment, name, info);
                     environment.in_order.emplace_back(info);
                 },
+
                 [&](ast::definition::Implementation&& implementation) {
                     (void)implementation;
                     cpputil::todo();
                 },
+
                 [&](ast::definition::Instantiation&& instantiation) {
                     (void)instantiation;
                     cpputil::todo();
@@ -131,7 +135,7 @@ auto libresolve::collect_environment(
     kieli::Source_id const         source,
     std::vector<ast::Definition>&& definitions) -> hir::Environment_id
 {
-    auto const environment = context.arenas.environments.push(Environment { .source = source });
+    auto const environment = context.info.environments.push(Environment { .source = source });
     for (ast::Definition& definition : definitions) {
         add_definition_to_environment(context, std::move(definition), environment);
     }
