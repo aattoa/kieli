@@ -3,7 +3,6 @@
 #include <libutl/disjoint_set.hpp>
 #include <libutl/flatmap.hpp>
 #include <libutl/index_vector.hpp>
-#include <libutl/pooled_string.hpp>
 #include <libutl/safe_integer.hpp>
 #include <libutl/timer.hpp>
 #include <libutl/wrapper.hpp>

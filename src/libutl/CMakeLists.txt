@@ -5,8 +5,6 @@ target_sources(libutl
     PRIVATE libutl/disjoint_set.hpp
     PRIVATE libutl/flatmap.hpp
     PRIVATE libutl/index_vector.hpp
-    PRIVATE libutl/pooled_string.cpp
-    PRIVATE libutl/pooled_string.hpp
     PRIVATE libutl/safe_integer.hpp
     PRIVATE libutl/timer.hpp
     PRIVATE libutl/utilities.cpp
