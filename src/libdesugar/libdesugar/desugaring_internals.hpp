@@ -17,7 +17,7 @@ namespace libdesugar {
         ast::Node_arena&     node_arena;
         kieli::Source_id     source;
         kieli::Identifier    self_variable_identifier
-            = kieli::Identifier { compile_info.identifier_pool.make("self") };
+            = kieli::Identifier { compile_info.string_pool.add("self") };
 
         template <ast::node Node>
         auto wrap(Node&& node) -> utl::Wrapper<Node>

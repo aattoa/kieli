@@ -18,4 +18,5 @@ target_sources(libcompiler
 
 target_link_libraries(libcompiler
     PRIVATE cpputil::io
+    PUBLIC cpputil::mem
     PUBLIC cppdiag)

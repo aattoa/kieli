@@ -5,8 +5,8 @@ libparse::Context::Context(cst::Node_arena& arena, kieli::Lex_state const state)
     : m_lex_state { state }
     , m_node_arena { arena }
     , m_special_identifiers {
-        .plus     = kieli::Identifier { state.compile_info.operator_pool.make("+") },
-        .asterisk = kieli::Identifier { state.compile_info.operator_pool.make("*") },
+        .plus     = kieli::Identifier { state.compile_info.string_pool.add("+") },
+        .asterisk = kieli::Identifier { state.compile_info.string_pool.add("*") },
     }
 {}
 

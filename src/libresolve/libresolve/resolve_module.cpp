@@ -111,7 +111,7 @@ auto libresolve::resolve_import(
     auto path = configuration.root_directory;
 
     for (kieli::Name_lower const& segment : middle_segments) {
-        path /= segment.identifier.string.view();
+        path /= segment.identifier.view();
         if (!is_directory(path)) {
             return std::unexpected(libresolve::Import_error {
                 .erroneous_segment = segment,

@@ -14,7 +14,7 @@ namespace {
         while (auto const token = context.try_extract(Token::Type::string_literal)) {
             combined_string.append(token.value().value_as<kieli::String>().value.view());
         }
-        return kieli::String { context.compile_info().string_literal_pool.make(combined_string) };
+        return kieli::String { context.compile_info().string_pool.add(combined_string) };
     }
 
     auto extract_condition(Context& context) -> utl::Wrapper<cst::Expression>

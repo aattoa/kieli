@@ -1,8 +1,8 @@
 #pragma once
 
-#include <libutl/wrapper.hpp>
-#include <libutl/pooled_string.hpp>
+#include <libutl/utilities.hpp>
 #include <libcompiler/filesystem.hpp>
+#include <cpputil/mem/stable_string_pool.hpp>
 #include <cppdiag/cppdiag.hpp>
 
 namespace kieli {
@@ -15,9 +15,7 @@ namespace kieli {
     struct Compile_info {
         std::vector<cppdiag::Diagnostic> diagnostics;
         Source_vector                    source_vector;
-        utl::String_pool                 string_literal_pool;
-        utl::String_pool                 operator_pool;
-        utl::String_pool                 identifier_pool;
+        cpputil::mem::Stable_string_pool string_pool;
     };
 
     auto emit_diagnostic(
@@ -47,22 +45,18 @@ namespace kieli {
 
     auto predefinitions_source(Compile_info&) -> Source_id;
 
-    struct Identifier {
-        utl::Pooled_string string;
-        [[nodiscard]] auto operator==(Identifier const&) const -> bool = default;
-    };
+    using Identifier = cpputil::mem::Stable_pool_string;
 
     template <bool is_upper>
     struct Basic_name;
-    using Name_upper = Basic_name<true>;
-    using Name_lower = Basic_name<false>;
 
     struct Name_dynamic {
         Identifier          identifier;
         Range               range;
         utl::Explicit<bool> is_upper;
-        [[nodiscard]] auto  as_upper() const noexcept -> Name_upper;
-        [[nodiscard]] auto  as_lower() const noexcept -> Name_lower;
+
+        [[nodiscard]] auto as_upper() const noexcept -> Basic_name<true>;
+        [[nodiscard]] auto as_lower() const noexcept -> Basic_name<false>;
 
         [[nodiscard]] auto operator==(Name_dynamic const& other) const noexcept -> bool
         {
@@ -86,6 +80,9 @@ namespace kieli {
         }
     };
 
+    using Name_upper = Basic_name<true>;
+    using Name_lower = Basic_name<false>;
+
     struct Integer {
         std::uint64_t value {};
     };
@@ -103,7 +100,7 @@ namespace kieli {
     };
 
     struct String {
-        utl::Pooled_string value;
+        cpputil::mem::Stable_pool_string value;
     };
 
     template <class T>
@@ -126,19 +123,11 @@ namespace kieli {
     } // namespace built_in_type
 } // namespace kieli
 
-template <>
-struct std::formatter<kieli::Identifier> : std::formatter<utl::Pooled_string> {
-    auto format(kieli::Identifier const identifier, auto& context) const
-    {
-        return std::formatter<utl::Pooled_string>::format(identifier.string, context);
-    }
-};
-
 template <utl::one_of<kieli::Name_dynamic, kieli::Name_lower, kieli::Name_upper> Name>
-struct std::formatter<Name> : std::formatter<utl::Pooled_string> {
+struct std::formatter<Name> : std::formatter<std::string_view> {
     auto format(Name const& name, auto& context) const
     {
-        return std::formatter<utl::Pooled_string>::format(name.identifier.string, context);
+        return std::formatter<std::string_view>::format(name.identifier.view(), context);
     }
 };
 

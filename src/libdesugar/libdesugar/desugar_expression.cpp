@@ -73,7 +73,7 @@ namespace {
                 if constexpr (precedence != lowest_operator_precedence) {
                     if (!std::ranges::contains(
                             std::get<precedence>(operator_precedence_table),
-                            operator_name.identifier.string.view())) {
+                            operator_name.identifier.view())) {
                         return left;
                     }
                 }

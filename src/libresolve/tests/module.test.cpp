@@ -6,8 +6,10 @@ UNITTEST("libresolve resolve_import")
 {
     kieli::Project_configuration const config { .root_directory = std::filesystem::current_path() };
 
-    auto name = [pool = utl::String_pool {}](std::string_view const string) mutable {
-        return kieli::Name_lower { kieli::Identifier { pool.make(string) } };
+    cpputil::mem::Stable_string_pool pool;
+
+    auto name = [&](std::string_view const string) mutable {
+        return kieli::Name_lower { kieli::Identifier { pool.add(string) } };
     };
     auto const import = [&](auto const... strings) {
         std::array const array { name(strings)... };

@@ -7,20 +7,16 @@ set(CMAKE_CXX_EXTENSIONS          OFF)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 include(FetchContent)
-FetchContent_Declare(
-    cppargs
+FetchContent_Declare(cppargs
     GIT_REPOSITORY https://github.com/aattoa/cppargs.git
     GIT_TAG        7499a98c9605256281f0d14101d2269e86541b32)
-FetchContent_Declare(
-    cppdiag
+FetchContent_Declare(cppdiag
     GIT_REPOSITORY https://github.com/aattoa/cppdiag.git
     GIT_TAG        c037929a4b8064870f3deda15e4dc1b3effa64f5)
-FetchContent_Declare(
-    cpputil
+FetchContent_Declare(cpputil
     GIT_REPOSITORY https://github.com/aattoa/cpputil.git
-    GIT_TAG        0aa6f0cfe38f7fe80b56677b292dbed736a94603)
-FetchContent_Declare(
-    cppunittest
+    GIT_TAG        5158407ff86284539cf565d2282a02ebe3cb9835)
+FetchContent_Declare(cppunittest
     GIT_REPOSITORY https://github.com/aattoa/cppunittest.git
     GIT_TAG        12e4bf4c101ae7c90be2cd68055d495d2b76a653)
 

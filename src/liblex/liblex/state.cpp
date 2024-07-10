@@ -75,21 +75,21 @@ auto liblex::try_consume(kieli::Lex_state& state, std::string_view const string)
 auto liblex::make_string_literal(kieli::Lex_state const& state, std::string_view const string)
     -> kieli::String
 {
-    return kieli::String { state.compile_info.string_literal_pool.make(string) };
+    return kieli::String { state.compile_info.string_pool.add(string) };
 }
 
 auto liblex::make_operator_identifier(kieli::Lex_state const& state, std::string_view const string)
     -> kieli::Identifier
 {
     assert(!string.empty());
-    return kieli::Identifier { state.compile_info.operator_pool.make(string) };
+    return kieli::Identifier { state.compile_info.string_pool.add(string) };
 }
 
 auto liblex::make_identifier(kieli::Lex_state const& state, std::string_view const string)
     -> kieli::Identifier
 {
     assert(!string.empty());
-    return kieli::Identifier { state.compile_info.identifier_pool.make(string) };
+    return kieli::Identifier { state.compile_info.string_pool.add(string) };
 }
 
 auto liblex::error(
