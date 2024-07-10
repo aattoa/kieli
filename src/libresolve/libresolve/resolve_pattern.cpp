@@ -83,7 +83,7 @@ namespace {
                 = resolve_mutability(context, scope, pattern.mutability);
             hir::Type const type
                 = state.fresh_general_type_variable(context.hir, pattern.name.range);
-            hir::Local_variable_tag const tag = context.tag_state.fresh_local_variable_tag();
+            hir::Local_variable_tag const tag = context.tags.fresh_local_variable_tag();
 
             scope.bind_variable(
                 pattern.name.identifier,
@@ -109,7 +109,7 @@ namespace {
         {
             hir::Pattern          pattern    = recurse(*alias.pattern);
             hir::Mutability const mutability = resolve_mutability(context, scope, alias.mutability);
-            hir::Local_variable_tag const tag = context.tag_state.fresh_local_variable_tag();
+            hir::Local_variable_tag const tag = context.tags.fresh_local_variable_tag();
 
             scope.bind_variable(
                 alias.name.identifier,

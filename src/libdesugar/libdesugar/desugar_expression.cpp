@@ -4,15 +4,14 @@
 using namespace libdesugar;
 
 namespace {
-
     // TODO: just mark the duplicate as erroneous
     [[noreturn]] auto emit_duplicate_fields_error(
-        Context&                context,
-        kieli::Name_lower const name,
-        kieli::Range const      first,
-        kieli::Range const      second) -> void
+        Context&           context,
+        kieli::Lower const name,
+        kieli::Range const first,
+        kieli::Range const second) -> void
     {
-        kieli::Source const& source = context.compile_info.source_vector[context.source];
+        kieli::Source const& source = context.compile_info.sources[context.source];
         context.compile_info.diagnostics.push_back(cppdiag::Diagnostic {
             .text_sections = utl::to_vector({
                 kieli::text_section(
@@ -42,53 +41,60 @@ namespace {
         }
     }
 
-    constexpr std::tuple operator_precedence_table {
-        std::to_array<std::string_view>({ "*", "/", "%" }),
-        std::to_array<std::string_view>({ "+", "-" }),
-        std::to_array<std::string_view>({ "?=", "!=" }),
-        std::to_array<std::string_view>({ "<", "<=", ">=", ">" }),
-        std::to_array<std::string_view>({ "&&", "||" }),
-        std::to_array<std::string_view>({ ":=", "+=", "*=", "/=", "%=" }),
-    };
-    constexpr std::size_t lowest_operator_precedence
-        = -1 + std::tuple_size_v<decltype(operator_precedence_table)>;
+    constexpr auto operators_1 = std::to_array<std::string_view>({ "*", "/", "%" });
+    constexpr auto operators_2 = std::to_array<std::string_view>({ "+", "-" });
+    constexpr auto operators_3 = std::to_array<std::string_view>({ "?=", "!=" });
+    constexpr auto operators_4 = std::to_array<std::string_view>({ "<", "<=", ">=", ">" });
+    constexpr auto operators_5 = std::to_array<std::string_view>({ "&&", "||" });
+    constexpr auto operators_6 = std::to_array<std::string_view>({ ":=", "+=", "*=", "/=", "%=" });
 
-    template <std::size_t precedence = lowest_operator_precedence>
-    auto desugar_binary_operator_chain(
-        Context&                            context,
-        utl::Wrapper<cst::Expression> const leftmost_expression,
-        std::span<cst::expression::Binary_operator_chain::Operator_and_operand const>& tail)
-        -> ast::Expression
+    constexpr auto operator_precedence_table = std::to_array<std::span<std::string_view const>>({
+        operators_1,
+        operators_2,
+        operators_3,
+        operators_4,
+        operators_5,
+        operators_6,
+    });
+
+    constexpr auto lowest_operator_precedence = operator_precedence_table.size() - 1;
+
+    auto desugar_operator_chain(
+        Context&                                               context,
+        utl::Wrapper<cst::Expression> const                    leftmost_expression,
+        std::size_t const                                      precedence,
+        std::span<cst::expression::Operator_chain::Rhs const>& tail) -> ast::Expression
     {
-        if constexpr (precedence == static_cast<std::size_t>(-1)) {
+        if (precedence == std::numeric_limits<std::size_t>::max()) {
             return context.desugar(*leftmost_expression);
         }
-        else {
-            auto const recurse = [&](utl::Wrapper<cst::Expression> const leftmost) {
-                return desugar_binary_operator_chain<precedence - 1>(context, leftmost, tail);
-            };
-            ast::Expression left = recurse(leftmost_expression);
-            while (!tail.empty()) {
-                auto const& [right_operand, operator_name] = tail.front();
-                if constexpr (precedence != lowest_operator_precedence) {
-                    if (!std::ranges::contains(
-                            std::get<precedence>(operator_precedence_table),
-                            operator_name.identifier.view())) {
-                        return left;
-                    }
+
+        auto const recurse = [&](utl::Wrapper<cst::Expression> const leftmost) {
+            return desugar_operator_chain(context, leftmost, precedence - 1, tail);
+        };
+
+        ast::Expression left = recurse(leftmost_expression);
+        while (!tail.empty()) {
+            auto const& [right_operand, operator_name] = tail.front();
+            if (precedence != lowest_operator_precedence) {
+                auto const operators = operator_precedence_table.at(precedence);
+                if (!std::ranges::contains(operators, operator_name.identifier.view())) {
+                    return left;
                 }
-                tail = tail.subspan<1>();
-                left = ast::Expression {
-                    ast::expression::Binary_operator_invocation {
-                        .left  = context.wrap(std::move(left)),
-                        .right = context.wrap(recurse(right_operand)),
-                        .op    = operator_name.identifier,
-                    },
-                    kieli::Range { left.range.start, right_operand->range.stop },
-                };
             }
-            return left;
+
+            tail = tail.subspan<1>();
+            left = ast::Expression {
+                ast::expression::Binary_operator_invocation {
+                    .left     = context.wrap(std::move(left)),
+                    .right    = context.wrap(recurse(right_operand)),
+                    .op       = operator_name.identifier,
+                    .op_range = operator_name.range,
+                },
+                kieli::Range(left.range.start, right_operand->range.stop),
+            };
         }
+        return left;
     }
 
     auto break_expression(Context& context, kieli::Range const range)
@@ -104,20 +110,20 @@ namespace {
         Context&               context;
         cst::Expression const& this_expression;
 
-        auto operator()(kieli::literal auto const& literal) -> ast::Expression::Variant
+        auto operator()(kieli::literal auto const& literal) -> ast::Expression_variant
         {
             return literal;
         }
 
         auto operator()(cst::expression::Parenthesized const& parenthesized)
-            -> ast::Expression::Variant
+            -> ast::Expression_variant
         {
             return std::visit(
                 Expression_desugaring_visitor { context, *parenthesized.expression.value },
                 parenthesized.expression.value->variant);
         }
 
-        auto operator()(cst::expression::Array_literal const& literal) -> ast::Expression::Variant
+        auto operator()(cst::expression::Array_literal const& literal) -> ast::Expression_variant
         {
             return ast::expression::Array_literal {
                 .elements = literal.elements.value.elements
@@ -126,17 +132,17 @@ namespace {
             };
         }
 
-        auto operator()(cst::expression::Self const&) -> ast::Expression::Variant
+        auto operator()(cst::expression::Self const&) -> ast::Expression_variant
         {
             return ast::expression::Self {};
         }
 
-        auto operator()(cst::expression::Variable const& variable) -> ast::Expression::Variant
+        auto operator()(cst::expression::Variable const& variable) -> ast::Expression_variant
         {
-            return ast::expression::Variable { .name = context.desugar(variable.name) };
+            return ast::expression::Variable { .path = context.desugar(variable.path) };
         }
 
-        auto operator()(cst::expression::Tuple const& tuple) -> ast::Expression::Variant
+        auto operator()(cst::expression::Tuple const& tuple) -> ast::Expression_variant
         {
             return ast::expression::Tuple {
                 .fields = tuple.fields.value.elements
@@ -145,7 +151,7 @@ namespace {
             };
         }
 
-        auto operator()(cst::expression::Conditional const& conditional) -> ast::Expression::Variant
+        auto operator()(cst::expression::Conditional const& conditional) -> ast::Expression_variant
         {
             utl::Wrapper<ast::Expression> const false_branch
                 = conditional.false_branch.has_value()
@@ -201,7 +207,7 @@ namespace {
             };
         }
 
-        auto operator()(cst::expression::Match const& match) -> ast::Expression::Variant
+        auto operator()(cst::expression::Match const& match) -> ast::Expression_variant
         {
             auto const desugar_case = [&](cst::expression::Match::Case const& match_case) {
                 return ast::expression::Match::Case {
@@ -216,7 +222,7 @@ namespace {
             };
         }
 
-        auto operator()(cst::expression::Block const& block) -> ast::Expression::Variant
+        auto operator()(cst::expression::Block const& block) -> ast::Expression_variant
         {
             std::vector<ast::Expression> side_effects;
             side_effects.reserve(block.side_effects.size());
@@ -237,7 +243,7 @@ namespace {
 
         auto desugar_while_let_loop(
             cst::expression::While_loop const&      loop,
-            cst::expression::Conditional_let const& let) -> ast::Expression::Variant
+            cst::expression::Conditional_let const& let) -> ast::Expression_variant
         {
             /*
                 while let a = b { c }
@@ -274,7 +280,7 @@ namespace {
             };
         }
 
-        auto desugar_while_loop(cst::expression::While_loop const& loop) -> ast::Expression::Variant
+        auto desugar_while_loop(cst::expression::While_loop const& loop) -> ast::Expression_variant
         {
             /*
                 while a { b }
@@ -310,7 +316,7 @@ namespace {
             };
         }
 
-        auto operator()(cst::expression::While_loop const& loop) -> ast::Expression::Variant
+        auto operator()(cst::expression::While_loop const& loop) -> ast::Expression_variant
         {
             if (auto const* const let
                 = std::get_if<cst::expression::Conditional_let>(&loop.condition->variant)) {
@@ -319,7 +325,7 @@ namespace {
             return desugar_while_loop(loop);
         }
 
-        auto operator()(cst::expression::Infinite_loop const& loop) -> ast::Expression::Variant
+        auto operator()(cst::expression::Infinite_loop const& loop) -> ast::Expression_variant
         {
             return ast::expression::Loop {
                 .body   = context.desugar(loop.body),
@@ -327,7 +333,7 @@ namespace {
             };
         }
 
-        auto operator()(cst::expression::Invocation const& invocation) -> ast::Expression::Variant
+        auto operator()(cst::expression::Invocation const& invocation) -> ast::Expression_variant
         {
             return ast::expression::Invocation {
                 .arguments = context.desugar(invocation.function_arguments.value.elements),
@@ -336,49 +342,51 @@ namespace {
         }
 
         auto operator()(cst::expression::Unit_initializer const& initializer)
-            -> ast::Expression::Variant
+            -> ast::Expression_variant
         {
-            return ast::expression::Unit_initializer { context.desugar(initializer.constructor) };
+            return ast::expression::Unit_initializer {
+                .constructor_path = context.desugar(initializer.constructor_path),
+            };
         }
 
         auto operator()(cst::expression::Tuple_initializer const& initializer)
-            -> ast::Expression::Variant
+            -> ast::Expression_variant
         {
             return ast::expression::Tuple_initializer {
-                .constructor  = context.desugar(initializer.constructor),
-                .initializers = context.desugar(initializer.initializers),
+                .constructor_path = context.desugar(initializer.constructor_path),
+                .initializers     = context.desugar(initializer.initializers),
             };
         }
 
         auto operator()(cst::expression::Struct_initializer const& initializer)
-            -> ast::Expression::Variant
+            -> ast::Expression_variant
         {
             ensure_no_duplicate_fields(context, initializer);
             return ast::expression::Struct_initializer {
-                .constructor  = context.desugar(initializer.constructor),
-                .initializers = context.desugar(initializer.initializers),
+                .constructor_path = context.desugar(initializer.constructor_path),
+                .initializers     = context.desugar(initializer.initializers),
             };
         }
 
-        auto operator()(cst::expression::Binary_operator_chain const& chain)
-            -> ast::Expression::Variant
+        auto operator()(cst::expression::Operator_chain const& chain) -> ast::Expression_variant
         {
-            std::span tail = chain.sequence_tail;
-            return desugar_binary_operator_chain(context, chain.leftmost_operand, tail).variant;
+            std::span   tail       = chain.tail;
+            std::size_t precedence = lowest_operator_precedence;
+            return desugar_operator_chain(context, chain.lhs, precedence, tail).variant;
         }
 
         auto operator()(cst::expression::Template_application const& application)
-            -> ast::Expression::Variant
+            -> ast::Expression_variant
         {
             return ast::expression::Template_application {
                 .template_arguments
                 = context.desugar(application.template_arguments.value.elements),
-                .name = context.desugar(application.name),
+                .path = context.desugar(application.path),
             };
         }
 
         auto operator()(cst::expression::Struct_field_access const& access)
-            -> ast::Expression::Variant
+            -> ast::Expression_variant
         {
             return ast::expression::Struct_field_access {
                 .base_expression = context.desugar(access.base_expression),
@@ -387,7 +395,7 @@ namespace {
         }
 
         auto operator()(cst::expression::Tuple_field_access const& access)
-            -> ast::Expression::Variant
+            -> ast::Expression_variant
         {
             return ast::expression::Tuple_field_access {
                 .base_expression   = context.desugar(access.base_expression),
@@ -397,7 +405,7 @@ namespace {
         }
 
         auto operator()(cst::expression::Array_index_access const& access)
-            -> ast::Expression::Variant
+            -> ast::Expression_variant
         {
             return ast::expression::Array_index_access {
                 .base_expression  = context.desugar(access.base_expression),
@@ -406,7 +414,7 @@ namespace {
         }
 
         auto operator()(cst::expression::Method_invocation const& invocation)
-            -> ast::Expression::Variant
+            -> ast::Expression_variant
         {
             return ast::expression::Method_invocation {
                 .function_arguments = context.desugar(invocation.function_arguments.value.elements),
@@ -416,7 +424,7 @@ namespace {
             };
         }
 
-        auto operator()(cst::expression::Type_cast const& cast) -> ast::Expression::Variant
+        auto operator()(cst::expression::Type_cast const& cast) -> ast::Expression_variant
         {
             return ast::expression::Type_cast {
                 .expression  = context.desugar(cast.base_expression),
@@ -424,7 +432,7 @@ namespace {
             };
         }
 
-        auto operator()(cst::expression::Type_ascription const& cast) -> ast::Expression::Variant
+        auto operator()(cst::expression::Type_ascription const& cast) -> ast::Expression_variant
         {
             return ast::expression::Type_ascription {
                 .expression    = context.desugar(cast.base_expression),
@@ -432,7 +440,7 @@ namespace {
             };
         }
 
-        auto operator()(cst::expression::Let_binding const& let) -> ast::Expression::Variant
+        auto operator()(cst::expression::Let_binding const& let) -> ast::Expression_variant
         {
             return ast::expression::Let_binding {
                 .pattern     = context.desugar(let.pattern),
@@ -441,7 +449,7 @@ namespace {
             };
         }
 
-        auto operator()(cst::expression::Local_type_alias const& alias) -> ast::Expression::Variant
+        auto operator()(cst::expression::Local_type_alias const& alias) -> ast::Expression_variant
         {
             return ast::expression::Local_type_alias {
                 .name = alias.name,
@@ -449,12 +457,12 @@ namespace {
             };
         }
 
-        auto operator()(cst::expression::Ret const& ret) -> ast::Expression::Variant
+        auto operator()(cst::expression::Ret const& ret) -> ast::Expression_variant
         {
             return ast::expression::Ret { ret.returned_expression.transform(context.desugar()) };
         }
 
-        auto operator()(cst::expression::Discard const& discard) -> ast::Expression::Variant
+        auto operator()(cst::expression::Discard const& discard) -> ast::Expression_variant
         {
             /*
                 discard x
@@ -479,7 +487,7 @@ namespace {
             };
         }
 
-        auto operator()(cst::expression::Break const& break_expression) -> ast::Expression::Variant
+        auto operator()(cst::expression::Break const& break_expression) -> ast::Expression_variant
         {
             return ast::expression::Break {
                 break_expression.result.has_value()
@@ -488,17 +496,17 @@ namespace {
             };
         }
 
-        auto operator()(cst::expression::Continue const&) -> ast::Expression::Variant
+        auto operator()(cst::expression::Continue const&) -> ast::Expression_variant
         {
             return ast::expression::Continue {};
         }
 
-        auto operator()(cst::expression::Sizeof const& sizeof_) -> ast::Expression::Variant
+        auto operator()(cst::expression::Sizeof const& sizeof_) -> ast::Expression_variant
         {
             return ast::expression::Sizeof { context.desugar(sizeof_.inspected_type.value) };
         }
 
-        auto operator()(cst::expression::Addressof const& addressof) -> ast::Expression::Variant
+        auto operator()(cst::expression::Addressof const& addressof) -> ast::Expression_variant
         {
             return ast::expression::Addressof {
                 .mutability
@@ -507,39 +515,39 @@ namespace {
             };
         }
 
-        auto operator()(cst::expression::Dereference const& dereference) -> ast::Expression::Variant
+        auto operator()(cst::expression::Dereference const& dereference) -> ast::Expression_variant
         {
             return ast::expression::Dereference {
                 .reference_expression = context.desugar(dereference.reference_expression),
             };
         }
 
-        auto operator()(cst::expression::Unsafe const& unsafe) -> ast::Expression::Variant
+        auto operator()(cst::expression::Unsafe const& unsafe) -> ast::Expression_variant
         {
             return ast::expression::Unsafe { .expression = context.desugar(unsafe.expression) };
         }
 
-        auto operator()(cst::expression::Move const& move) -> ast::Expression::Variant
+        auto operator()(cst::expression::Move const& move) -> ast::Expression_variant
         {
             return ast::expression::Move { context.desugar(move.place_expression) };
         }
 
-        auto operator()(cst::expression::Defer const& defer) -> ast::Expression::Variant
+        auto operator()(cst::expression::Defer const& defer) -> ast::Expression_variant
         {
             return ast::expression::Defer { context.desugar(defer.expression) };
         }
 
-        auto operator()(cst::expression::Meta const& meta) -> ast::Expression::Variant
+        auto operator()(cst::expression::Meta const& meta) -> ast::Expression_variant
         {
             return ast::expression::Meta { .expression = context.desugar(meta.expression.value) };
         }
 
-        auto operator()(cst::expression::Hole const&) -> ast::Expression::Variant
+        auto operator()(cst::expression::Hole const&) -> ast::Expression_variant
         {
             return ast::expression::Hole {};
         }
 
-        auto operator()(cst::expression::For_loop const&) -> ast::Expression::Variant
+        auto operator()(cst::expression::For_loop const&) -> ast::Expression_variant
         {
             kieli::fatal_error(
                 context.compile_info,
@@ -548,7 +556,7 @@ namespace {
                 "For loops are not supported yet");
         }
 
-        auto operator()(cst::expression::Conditional_let const&) -> ast::Expression::Variant
+        auto operator()(cst::expression::Conditional_let const&) -> ast::Expression_variant
         {
             // Should be unreachable because a conditional let expression can
             // only occur as the condition of if-let or while-let expressions.

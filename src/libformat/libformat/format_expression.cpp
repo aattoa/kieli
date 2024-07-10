@@ -81,10 +81,10 @@ namespace {
             state.format(")");
         }
 
-        auto operator()(cst::expression::Binary_operator_chain const& sequence)
+        auto operator()(cst::expression::Operator_chain const& sequence)
         {
-            state.format(*sequence.leftmost_operand);
-            for (auto const& [right_operand, operator_name] : sequence.sequence_tail) {
+            state.format(*sequence.lhs);
+            for (auto const& [right_operand, operator_name] : sequence.tail) {
                 state.format(" {} ", operator_name.identifier);
                 state.format(*right_operand);
             }
@@ -106,12 +106,12 @@ namespace {
 
         auto operator()(cst::expression::Unit_initializer const& initializer)
         {
-            state.format(initializer.constructor);
+            state.format(initializer.constructor_path);
         }
 
         auto operator()(cst::expression::Tuple_initializer const& initializer)
         {
-            state.format(initializer.constructor);
+            state.format(initializer.constructor_path);
             state.format("(");
             state.format_comma_separated(initializer.initializers.value.elements);
             state.format(")");
@@ -119,7 +119,7 @@ namespace {
 
         auto operator()(cst::expression::Struct_initializer const& initializer)
         {
-            state.format(initializer.constructor);
+            state.format(initializer.constructor_path);
             state.format(" {{ ");
             state.format_comma_separated(initializer.initializers.value.elements);
             state.format(" }}");
@@ -156,7 +156,7 @@ namespace {
 
         auto operator()(cst::expression::Variable const& variable)
         {
-            state.format(variable.name);
+            state.format(variable.path);
         }
 
         auto operator()(cst::expression::Unsafe const& unsafe)
@@ -259,7 +259,7 @@ namespace {
 
         auto operator()(cst::expression::Template_application const& application)
         {
-            state.format(application.name);
+            state.format(application.path);
             state.format(application.template_arguments);
         }
 

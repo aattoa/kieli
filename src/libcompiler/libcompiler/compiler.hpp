@@ -14,7 +14,7 @@ namespace kieli {
 
     struct Compile_info {
         std::vector<cppdiag::Diagnostic> diagnostics;
-        Source_vector                    source_vector;
+        Source_vector                    sources;
         cpputil::mem::Stable_string_pool string_pool;
     };
 
@@ -22,7 +22,7 @@ namespace kieli {
         cppdiag::Severity          severity,
         Compile_info&              info,
         Source_id                  source,
-        Range                      error_range,
+        Range                      range,
         std::string                message,
         std::optional<std::string> help_note = std::nullopt) -> void;
 
@@ -47,41 +47,20 @@ namespace kieli {
 
     using Identifier = cpputil::mem::Stable_pool_string;
 
-    template <bool is_upper>
-    struct Basic_name;
-
-    struct Name_dynamic {
-        Identifier          identifier;
-        Range               range;
-        utl::Explicit<bool> is_upper;
-
-        [[nodiscard]] auto as_upper() const noexcept -> Basic_name<true>;
-        [[nodiscard]] auto as_lower() const noexcept -> Basic_name<false>;
-
-        [[nodiscard]] auto operator==(Name_dynamic const& other) const noexcept -> bool
-        {
-            return identifier == other.identifier;
-        }
-    };
-
-    template <bool is_upper>
-    struct Basic_name {
+    struct Name {
         Identifier identifier;
         Range      range;
 
-        [[nodiscard]] auto as_dynamic() const -> Name_dynamic
-        {
-            return Name_dynamic { identifier, range, is_upper };
-        }
+        // Check whether this name starts with an upper-case letter,
+        // possibly preceded by underscores.
+        [[nodiscard]] auto is_upper() const -> bool;
 
-        [[nodiscard]] auto operator==(Basic_name const& other) const noexcept -> bool
-        {
-            return identifier == other.identifier;
-        }
+        auto operator==(Name const&) const -> bool = default;
     };
 
-    using Name_upper = Basic_name<true>;
-    using Name_lower = Basic_name<false>;
+    struct Upper : Name {};
+
+    struct Lower : Name {};
 
     struct Integer {
         std::uint64_t value {};
@@ -123,11 +102,19 @@ namespace kieli {
     } // namespace built_in_type
 } // namespace kieli
 
-template <utl::one_of<kieli::Name_dynamic, kieli::Name_lower, kieli::Name_upper> Name>
-struct std::formatter<Name> : std::formatter<std::string_view> {
-    auto format(Name const& name, auto& context) const
+template <>
+struct std::formatter<kieli::Name> : std::formatter<std::string_view> {
+    auto format(kieli::Name const& name, auto& context) const
     {
         return std::formatter<std::string_view>::format(name.identifier.view(), context);
+    }
+};
+
+template <utl::one_of<kieli::Upper, kieli::Lower> X>
+struct std::formatter<X> : std::formatter<std::string_view> {
+    auto format(X const& x, auto& context) const
+    {
+        return std::formatter<std::string_view>::format(x.identifier.view(), context);
     }
 };
 

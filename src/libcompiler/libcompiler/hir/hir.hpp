@@ -5,10 +5,10 @@
 #include <libcompiler/compiler.hpp>
 
 namespace hir {
-    struct Mutability;
-    struct Expression;
-    struct Pattern;
-    struct Type;
+    struct [[nodiscard]] Mutability;
+    struct [[nodiscard]] Expression;
+    struct [[nodiscard]] Pattern;
+    struct [[nodiscard]] Type;
 
     struct Template_parameter_tag : utl::Explicit<std::size_t> {
         using Explicit::Explicit;
@@ -81,13 +81,13 @@ namespace hir {
     };
 
     struct Class_reference {
-        Typeclass_id      id;
-        kieli::Name_upper name;
+        Typeclass_id id;
+        kieli::Upper name;
     };
 
     struct Function_argument {
-        Expression_id                    expression;
-        std::optional<kieli::Name_lower> name;
+        Expression_id               expression;
+        std::optional<kieli::Lower> name;
     };
 
     namespace pattern {
@@ -183,13 +183,13 @@ namespace hir {
         };
 
         struct Variable_reference {
-            kieli::Name_lower  name;
+            kieli::Lower       name;
             Local_variable_tag tag;
         };
 
         struct Function_reference {
-            kieli::Name_lower name;
-            Function_id       id;
+            kieli::Lower name;
+            Function_id  id;
         };
 
         struct Indirect_invocation {
@@ -198,7 +198,7 @@ namespace hir {
         };
 
         struct Direct_invocation {
-            kieli::Name_lower              function_name;
+            kieli::Lower                   function_name;
             Function_id                    function_id;
             std::vector<Function_argument> arguments;
         };
@@ -280,8 +280,8 @@ namespace hir {
         };
 
         struct Enumeration {
-            kieli::Name_upper name;
-            Enumeration_id    id;
+            kieli::Upper   name;
+            Enumeration_id id;
         };
 
         struct Reference {
@@ -348,7 +348,9 @@ namespace hir {
         using variant::variant, variant::operator=;
     };
 
-    using Template_argument = std::variant<Expression, Type, Mutability>;
+    struct Template_argument : std::variant<Expression, Type, Mutability> {
+        using variant::variant, variant::operator=;
+    };
 
     struct Wildcard {
         kieli::Range range;
@@ -357,30 +359,33 @@ namespace hir {
     struct Template_type_parameter {
         using Default = std::variant<Type, Wildcard>;
         std::vector<Class_reference> classes;
-        kieli::Name_upper            name;
+        kieli::Upper                 name;
         std::optional<Default>       default_argument;
     };
 
     struct Template_mutability_parameter {
         using Default = std::variant<Mutability, Wildcard>;
-        kieli::Name_lower      name;
+        kieli::Lower           name;
         std::optional<Default> default_argument;
     };
 
     struct Template_value_parameter {
-        Type              type;
-        kieli::Name_lower name;
+        Type         type;
+        kieli::Lower name;
+    };
+
+    struct Template_parameter_variant
+        : std::variant<
+              Template_type_parameter,
+              Template_mutability_parameter,
+              Template_value_parameter> {
+        using variant::variant, variant::operator=;
     };
 
     struct Template_parameter {
-        using Variant = std::variant<
-            Template_type_parameter,
-            Template_mutability_parameter,
-            Template_value_parameter>;
-
-        Variant                variant;
-        Template_parameter_tag tag;
-        kieli::Range           range;
+        Template_parameter_variant variant;
+        Template_parameter_tag     tag;
+        kieli::Range               range;
     };
 
     struct Function_parameter {
@@ -394,7 +399,7 @@ namespace hir {
         std::vector<Function_parameter> parameters;
         Type                            return_type;
         Type                            function_type;
-        kieli::Name_lower               name;
+        kieli::Lower                    name;
     };
 
     struct Function {
@@ -407,8 +412,8 @@ namespace hir {
     };
 
     struct Alias {
-        kieli::Name_upper name;
-        Type              type;
+        kieli::Upper name;
+        Type         type;
     };
 
     struct Typeclass {

@@ -8,7 +8,7 @@ namespace {
     auto ensure_no_duplicates(
         Context& context, std::string_view const description, std::vector<T> const& elements)
     {
-        kieli::Source const& source = context.compile_info.source_vector[context.source];
+        kieli::Source const& source = context.compile_info.sources[context.source];
 
         for (auto it = elements.begin(); it != elements.end(); ++it) {
             auto const duplicate = std::ranges::find(it + 1, elements.end(), it->name, &T::name);
@@ -43,7 +43,7 @@ namespace {
         Context&         context;
         kieli::Source_id source;
 
-        auto operator()(cst::definition::Function const& function) -> ast::Definition::Variant
+        auto operator()(cst::definition::Function const& function) -> ast::Definition_variant
         {
             return ast::definition::Function {
                 .signature = context.desugar(function.signature),
@@ -51,7 +51,7 @@ namespace {
             };
         }
 
-        auto operator()(cst::definition::Struct const& structure) -> ast::Definition::Variant
+        auto operator()(cst::definition::Struct const& structure) -> ast::Definition_variant
         {
             return ast::definition::Enumeration {
                 .constructors = utl::to_vector({ ast::definition::Constructor {
@@ -64,7 +64,7 @@ namespace {
             };
         }
 
-        auto operator()(cst::definition::Enum const& enumeration) -> ast::Definition::Variant
+        auto operator()(cst::definition::Enum const& enumeration) -> ast::Definition_variant
         {
             ensure_no_duplicates(context, "constructor", enumeration.constructors.elements);
             return ast::definition::Enumeration {
@@ -74,7 +74,7 @@ namespace {
             };
         }
 
-        auto operator()(cst::definition::Alias const& alias) -> ast::Definition::Variant
+        auto operator()(cst::definition::Alias const& alias) -> ast::Definition_variant
         {
             return ast::definition::Alias {
                 .name                = alias.name,
@@ -83,7 +83,7 @@ namespace {
             };
         }
 
-        auto operator()(cst::definition::Typeclass const& typeclass) -> ast::Definition::Variant
+        auto operator()(cst::definition::Typeclass const& typeclass) -> ast::Definition_variant
         {
             return ast::definition::Typeclass {
                 .function_signatures = context.desugar(typeclass.function_signatures),
@@ -94,7 +94,7 @@ namespace {
         }
 
         auto operator()(cst::definition::Implementation const& implementation)
-            -> ast::Definition::Variant
+            -> ast::Definition_variant
         {
             return ast::definition::Implementation {
                 .type        = context.desugar(*implementation.self_type),
@@ -105,7 +105,7 @@ namespace {
         }
 
         auto operator()(cst::definition::Instantiation const& instantiation)
-            -> ast::Definition::Variant
+            -> ast::Definition_variant
         {
             return ast::definition::Instantiation {
                 .typeclass   = context.desugar(instantiation.typeclass),
@@ -116,7 +116,7 @@ namespace {
             };
         }
 
-        auto operator()(cst::definition::Submodule const& submodule) -> ast::Definition::Variant
+        auto operator()(cst::definition::Submodule const& submodule) -> ast::Definition_variant
         {
             return ast::definition::Submodule {
                 .definitions         = context.desugar(submodule.definitions),

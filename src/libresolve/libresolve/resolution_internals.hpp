@@ -58,16 +58,12 @@ namespace libresolve {
         auto fresh_local_variable_tag() -> hir::Local_variable_tag;
     };
 
-    // TODO: refactor out
-    using Module_map = utl::Flatmap<std::filesystem::path, hir::Module_id>;
-
     struct Context {
         ast::Node_arena              ast;
         hir::Arena                   hir;
         Info_arena                   info;
+        Tag_state                    tags;
         Constants                    constants;
-        Module_map                   module_map;
-        Tag_state                    tag_state;
         kieli::Project_configuration configuration;
         kieli::Compile_info&         compile_info;
     };
@@ -101,13 +97,13 @@ namespace libresolve {
     };
 
     struct Import_error {
-        kieli::Name_lower erroneous_segment;
-        bool              expected_module {};
+        kieli::Lower erroneous_segment;
+        bool         expected_module {};
     };
 
     auto resolve_import(
         kieli::Project_configuration const& configuration,
-        std::span<kieli::Name_lower const>  path_segments) -> std::expected<Import, Import_error>;
+        std::span<kieli::Lower const>       path_segments) -> std::expected<Import, Import_error>;
 
     auto ensure_no_unsolved_variables(Context& context, Inference_state& state) -> void;
 
@@ -115,14 +111,14 @@ namespace libresolve {
         Context&            context,
         kieli::Source_id    source,
         Environment&        environment,
-        kieli::Name_lower   name,
+        kieli::Lower        name,
         Lower_info::Variant variant) -> void;
 
     auto add_to_environment(
         Context&            context,
         kieli::Source_id    source,
         Environment&        environment,
-        kieli::Name_upper   name,
+        kieli::Upper        name,
         Upper_info::Variant variant) -> void;
 
     auto collect_environment(
@@ -203,18 +199,18 @@ namespace libresolve {
         ast::Class_reference const& class_reference) -> hir::Class_reference;
 
     auto lookup_lower(
-        Context&                   context,
-        Inference_state&           state,
-        Scope&                     scope,
-        hir::Environment_id        environment,
-        ast::Qualified_name const& name) -> std::optional<Lower_info>;
+        Context&            context,
+        Inference_state&    state,
+        Scope&              scope,
+        hir::Environment_id environment,
+        ast::Path const&    path) -> std::optional<Lower_info>;
 
     auto lookup_upper(
-        Context&                   context,
-        Inference_state&           state,
-        Scope&                     scope,
-        hir::Environment_id        environment,
-        ast::Qualified_name const& name) -> std::optional<Upper_info>;
+        Context&            context,
+        Inference_state&    state,
+        Scope&              scope,
+        hir::Environment_id environment,
+        ast::Path const&    path) -> std::optional<Upper_info>;
 
     // Check whether a type variable with `tag` occurs in `type`.
     auto occurs_check(

@@ -23,7 +23,7 @@ LIBDESUGAR_DECLARE_FORMATTER(ast::Pattern);
 LIBDESUGAR_DECLARE_FORMATTER(ast::Type);
 LIBDESUGAR_DECLARE_FORMATTER(ast::Definition);
 LIBDESUGAR_DECLARE_FORMATTER(ast::Mutability);
-LIBDESUGAR_DECLARE_FORMATTER(ast::Qualified_name);
+LIBDESUGAR_DECLARE_FORMATTER(ast::Path);
 LIBDESUGAR_DECLARE_FORMATTER(ast::Class_reference);
 LIBDESUGAR_DECLARE_FORMATTER(ast::Function_argument);
 LIBDESUGAR_DECLARE_FORMATTER(ast::Function_parameter);
@@ -68,7 +68,7 @@ namespace libdesugar::dtl {
 
         auto operator()(ast::expression::Template_application const& application)
         {
-            std::format_to(out, "{}[{:n}]", application.name, application.template_arguments);
+            std::format_to(out, "{}[{:n}]", application.path, application.template_arguments);
         }
 
         auto operator()(ast::expression::Addressof const& addressof)
@@ -103,17 +103,17 @@ namespace libdesugar::dtl {
 
         auto operator()(ast::expression::Unit_initializer const& initializer)
         {
-            std::format_to(out, "{}", initializer.constructor);
+            std::format_to(out, "{}", initializer.constructor_path);
         }
 
         auto operator()(ast::expression::Tuple_initializer const& initializer)
         {
-            std::format_to(out, "{}({:n})", initializer.constructor, initializer.initializers);
+            std::format_to(out, "{}({:n})", initializer.constructor_path, initializer.initializers);
         }
 
         auto operator()(ast::expression::Struct_initializer const& initializer)
         {
-            std::format_to(out, "{} {{", initializer.constructor);
+            std::format_to(out, "{} {{", initializer.constructor_path);
             for (auto const& [name, initializer] : initializer.initializers) {
                 std::format_to(out, " {} = {}", name, initializer);
             }
@@ -237,7 +237,7 @@ namespace libdesugar::dtl {
 
         auto operator()(ast::expression::Variable const& variable)
         {
-            std::format_to(out, "{}", variable.name);
+            std::format_to(out, "{}", variable.path);
         }
     };
 
@@ -272,7 +272,7 @@ namespace libdesugar::dtl {
 
         auto operator()(ast::pattern::Constructor const& constructor)
         {
-            std::format_to(out, "{}{}", constructor.name, constructor.body);
+            std::format_to(out, "{}{}", constructor.path, constructor.body);
         }
 
         auto operator()(ast::pattern::Abbreviated_constructor const& constructor)
@@ -367,12 +367,12 @@ namespace libdesugar::dtl {
 
         auto operator()(ast::type::Template_application const& application)
         {
-            std::format_to(out, "{}[{}]", application.name, application.arguments);
+            std::format_to(out, "{}[{}]", application.path, application.arguments);
         }
 
         auto operator()(ast::type::Typename const& name)
         {
-            std::format_to(out, "{}", name.name);
+            std::format_to(out, "{}", name.path);
         }
 
         auto operator()(ast::type::Typeof const& typeof_)
@@ -485,33 +485,31 @@ LIBDESUGAR_DEFINE_FORMATTER(ast::Mutability)
     return context.out();
 }
 
-LIBDESUGAR_DEFINE_FORMATTER(ast::Qualified_name)
+LIBDESUGAR_DEFINE_FORMATTER(ast::Path)
 {
-    if (value.root_qualifier.has_value()) {
+    if (value.root.has_value()) {
         std::visit(
             utl::Overload {
-                [&](ast::Global_root_qualifier const&) {
-                    std::format_to(context.out(), "global::");
-                },
+                [&](ast::Path_root_global const&) { std::format_to(context.out(), "global::"); },
                 [&](utl::Wrapper<ast::Type> const type) {
                     std::format_to(context.out(), "{}::", type);
                 },
             },
-            value.root_qualifier.value());
+            value.root.value());
     }
-    for (ast::Qualifier const& qualifier : value.middle_qualifiers) {
-        std::format_to(context.out(), "{}", qualifier.name);
-        if (qualifier.template_arguments.has_value()) {
-            std::format_to(context.out(), "[{}]", qualifier.template_arguments.value());
+    for (ast::Path_segment const& segment : value.segments) {
+        std::format_to(context.out(), "{}", segment.name);
+        if (segment.template_arguments.has_value()) {
+            std::format_to(context.out(), "[{}]", segment.template_arguments.value());
         }
         std::format_to(context.out(), "::");
     }
-    return std::format_to(context.out(), "{}", value.primary_name);
+    return std::format_to(context.out(), "{}", value.head);
 }
 
 LIBDESUGAR_DEFINE_FORMATTER(ast::Class_reference)
 {
-    std::format_to(context.out(), "{}", value.name);
+    std::format_to(context.out(), "{}", value.path);
     if (value.template_arguments.has_value()) {
         std::format_to(context.out(), "[{}]", value.template_arguments.value());
     }
@@ -622,7 +620,7 @@ LIBDESUGAR_DEFINE_FORMATTER(ast::definition::Constructor_body)
 
 LIBDESUGAR_DEFINE_FORMATTER(ast::pattern::Constructor)
 {
-    return std::format_to(context.out(), "{}{}", value.name, value.body);
+    return std::format_to(context.out(), "{}{}", value.path, value.body);
 }
 
 LIBDESUGAR_DEFINE_FORMATTER(ast::definition::Constructor)

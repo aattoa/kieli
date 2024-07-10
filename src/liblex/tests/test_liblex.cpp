@@ -5,13 +5,13 @@
 auto liblex::test_lex(std::string&& string) -> Test_lex_result
 {
     kieli::Compile_info    info;
-    kieli::Source_id const source = info.source_vector.push(std::move(string), "[test]");
+    kieli::Source_id const source = info.sources.push(std::move(string), "[test]");
     auto                   state  = kieli::Lex_state::make(source, info);
 
     std::vector<kieli::Token> tokens;
     for (;;) {
         auto token = kieli::lex(state);
-        if (token.type == kieli::Token::Type::end_of_input) {
+        if (token.type == kieli::Token_type::end_of_input) {
             break;
         }
         tokens.push_back(std::move(token));

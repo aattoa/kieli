@@ -6,7 +6,7 @@ namespace {
     auto lex(std::string&& string) -> std::string
     {
         kieli::Compile_info    info;
-        kieli::Source_id const source = info.source_vector.push(std::move(string), "[test]");
+        kieli::Source_id const source = info.sources.push(std::move(string), "[test]");
         kieli::Lex_state       state  = kieli::Lex_state::make(source, info);
 
         std::string output;
@@ -14,7 +14,7 @@ namespace {
             auto token = kieli::lex(state);
             std::format_to(
                 std::back_inserter(output), "('{}' {})", token.preceding_trivia, token.type);
-            if (token.type == kieli::Token::Type::end_of_input) {
+            if (token.type == kieli::Token_type::end_of_input) {
                 return output;
             }
         }

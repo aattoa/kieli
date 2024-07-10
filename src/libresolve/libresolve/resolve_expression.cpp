@@ -126,9 +126,9 @@ namespace {
 
         auto operator()(ast::expression::Variable const& variable) -> hir::Expression
         {
-            if (variable.name.is_unqualified()) {
+            if (variable.path.is_simple_name()) {
                 if (Variable_bind const* const bind
-                    = scope.find_variable(variable.name.primary_name.identifier)) {
+                    = scope.find_variable(variable.path.head.identifier)) {
                     return hir::Expression {
                         hir::expression::Variable_reference {
                             .name = bind->name,
@@ -141,7 +141,7 @@ namespace {
                 }
             }
             if (auto const lookup_result
-                = lookup_lower(context, state, scope, environment, variable.name)) {
+                = lookup_lower(context, state, scope, environment, variable.path)) {
                 return std::visit(
                     utl::Overload {
                         [&](hir::Function_id const function) {

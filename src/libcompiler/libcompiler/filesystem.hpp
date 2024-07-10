@@ -42,6 +42,12 @@ namespace kieli {
         Position start; // Inclusive
         Position stop;  // Exclusive
 
+        // Deliberately non-aggregate.
+        explicit Range(Position start, Position stop) noexcept;
+
+        // Dummy range for mock purposes.
+        static auto dummy() noexcept -> Range;
+
         auto operator==(Range const&) const -> bool = default;
     };
 

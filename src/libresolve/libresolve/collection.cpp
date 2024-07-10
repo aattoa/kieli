@@ -5,9 +5,9 @@ using namespace libresolve;
 
 namespace {
     auto duplicate_definitions_error(
-        kieli::Source const&       source,
-        kieli::Name_dynamic const& first,
-        kieli::Name_dynamic const& second) -> cppdiag::Diagnostic
+        kieli::Source const& source,
+        kieli::Name const&   first,
+        kieli::Name const&   second) -> cppdiag::Diagnostic
     {
         return cppdiag::Diagnostic {
             .text_sections = utl::to_vector({
@@ -99,9 +99,7 @@ namespace {
     {
         if (auto const* const existing = map.find(name.identifier)) {
             context.compile_info.diagnostics.push_back(duplicate_definitions_error(
-                context.compile_info.source_vector[source],
-                existing->name.as_dynamic(),
-                name.as_dynamic()));
+                context.compile_info.sources[source], existing->name, name));
             throw kieli::Compile_info {};
         }
         map.add_new_unchecked(name.identifier, Info { name, source, std::move(variant) });
@@ -109,22 +107,22 @@ namespace {
 } // namespace
 
 auto libresolve::add_to_environment(
-    Context&                context,
-    kieli::Source_id const  source,
-    Environment&            environment,
-    kieli::Name_lower const name,
-    Lower_info::Variant     variant) -> void
+    Context&               context,
+    kieli::Source_id const source,
+    Environment&           environment,
+    kieli::Lower const     name,
+    Lower_info::Variant    variant) -> void
 {
     do_add_to_environment<Lower_info>(
         context, source, environment.lower_map, name, std::move(variant));
 }
 
 auto libresolve::add_to_environment(
-    Context&                context,
-    kieli::Source_id const  source,
-    Environment&            environment,
-    kieli::Name_upper const name,
-    Upper_info::Variant     variant) -> void
+    Context&               context,
+    kieli::Source_id const source,
+    Environment&           environment,
+    kieli::Upper const     name,
+    Upper_info::Variant    variant) -> void
 {
     do_add_to_environment<Upper_info>(
         context, source, environment.upper_map, name, std::move(variant));

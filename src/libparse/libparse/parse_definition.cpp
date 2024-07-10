@@ -7,14 +7,14 @@ namespace {
     auto extract_definition_sequence(Context& context)
         -> cst::Surrounded<std::vector<cst::Definition>>
     {
-        Token const open = context.require_extract(Token::Type::brace_open);
+        Token const open = context.require_extract(Token_type::brace_open);
 
         std::vector<cst::Definition> definitions;
         while (auto definition = parse_definition(context)) {
             definitions.push_back(std::move(definition.value()));
         }
 
-        Token const close = context.require_extract(Token::Type::brace_close);
+        Token const close = context.require_extract(Token_type::brace_close);
         return {
             .value       = std::move(definitions),
             .open_token  = cst::Token::from_lexical(open),
@@ -36,7 +36,7 @@ namespace {
 
         auto return_type_annotation = parse_type_annotation(context);
 
-        if (auto const where = context.try_extract(Token::Type::where)) {
+        if (auto const where = context.try_extract(Token_type::where)) {
             kieli::fatal_error(
                 context.compile_info(),
                 context.source(),
@@ -53,10 +53,10 @@ namespace {
         };
     }
 
-    auto extract_function(Context& context, Token const& fn_keyword) -> cst::Definition::Variant
+    auto extract_function(Context& context, Token const& fn_keyword) -> cst::Definition_variant
     {
         auto signature   = extract_function_signature(context, fn_keyword);
-        auto equals_sign = context.try_extract(Token::Type::equals);
+        auto equals_sign = context.try_extract(Token_type::equals);
 
         auto const function_body
             = equals_sign.has_value() ? parse_expression(context) : parse_block_expression(context);
@@ -77,7 +77,7 @@ namespace {
 
     auto parse_field(Context& context) -> std::optional<cst::definition::Field>
     {
-        return parse_lower_name(context).transform([&](kieli::Name_lower const& name) {
+        return parse_lower_name(context).transform([&](kieli::Lower const& name) {
             return cst::definition::Field {
                 .name  = name,
                 .type  = require<parse_type_annotation>(context, "a ':' followed by a type"),
@@ -110,7 +110,7 @@ namespace {
 
     auto parse_constructor(Context& context) -> std::optional<cst::definition::Constructor>
     {
-        return parse_upper_name(context).transform([&](kieli::Name_upper const& name) {
+        return parse_upper_name(context).transform([&](kieli::Upper const& name) {
             return cst::definition::Constructor {
                 .name = name,
                 .body = extract_constructor_body(context),
@@ -118,8 +118,7 @@ namespace {
         });
     }
 
-    auto extract_structure(Context& context, Token const& struct_keyword)
-        -> cst::Definition::Variant
+    auto extract_structure(Context& context, Token const& struct_keyword) -> cst::Definition_variant
     {
         auto const name = extract_upper_name(context, "a struct name");
         return cst::definition::Struct {
@@ -130,17 +129,16 @@ namespace {
         };
     }
 
-    auto extract_enumeration(Context& context, Token const& enum_keyword)
-        -> cst::Definition::Variant
+    auto extract_enumeration(Context& context, Token const& enum_keyword) -> cst::Definition_variant
     {
         static constexpr auto extract_constructors = require<parse_separated_one_or_more<
             parse_constructor,
             "an enum constructor",
-            Token::Type::pipe>>;
+            Token_type::pipe>>;
 
         auto const name                = extract_upper_name(context, "an enum name");
         auto       template_parameters = parse_template_parameters(context);
-        auto const equals_sign         = context.require_extract(Token::Type::equals);
+        auto const equals_sign         = context.require_extract(Token_type::equals);
 
         return cst::definition::Enum {
             .template_parameters = std::move(template_parameters),
@@ -161,32 +159,32 @@ namespace {
             .name                = name,
             .alias_keyword_token = cst::Token::from_lexical(alias_keyword),
         };
-        if (auto const colon_token = context.try_extract(Token::Type::colon)) {
+        if (auto const colon_token = context.try_extract(Token_type::colon)) {
             signature.classes_colon_token = cst::Token::from_lexical(colon_token.value());
             signature.classes             = extract_class_references(context);
         }
         return signature;
     }
 
-    auto extract_typeclass(Context& context, Token const& class_keyword) -> cst::Definition::Variant
+    auto extract_typeclass(Context& context, Token const& class_keyword) -> cst::Definition_variant
     {
         auto const name                = extract_upper_name(context, "a class name");
         auto       template_parameters = parse_template_parameters(context);
-        auto const open_brace          = context.require_extract(Token::Type::brace_open);
+        auto const open_brace          = context.require_extract(Token_type::brace_open);
 
         std::vector<cst::Type_signature>     types;
         std::vector<cst::Function_signature> functions;
 
         for (;;) {
             switch (context.peek().type) {
-            case Token::Type::fn:
+            case Token_type::fn:
                 functions.push_back(extract_function_signature(context, context.extract()));
                 continue;
-            case Token::Type::alias:
+            case Token_type::alias:
                 types.push_back(extract_type_signature(context, context.extract()));
                 continue;
             default:
-                Token const close_brace = context.require_extract(Token::Type::brace_close);
+                Token const close_brace = context.require_extract(Token_type::brace_close);
                 return cst::definition::Typeclass {
                     .template_parameters = std::move(template_parameters),
                     .function_signatures = std::move(functions),
@@ -200,11 +198,11 @@ namespace {
         }
     }
 
-    auto extract_alias(Context& context, Token const& alias_keyword) -> cst::Definition::Variant
+    auto extract_alias(Context& context, Token const& alias_keyword) -> cst::Definition_variant
     {
         auto const name                = extract_upper_name(context, "an alias name");
         auto       template_parameters = parse_template_parameters(context);
-        auto const equals_sign         = context.require_extract(Token::Type::equals);
+        auto const equals_sign         = context.require_extract(Token_type::equals);
 
         return cst::definition::Alias {
             .template_parameters = std::move(template_parameters),
@@ -216,12 +214,12 @@ namespace {
     }
 
     auto extract_instantiation(Context& context, Token const& inst_keyword)
-        -> cst::Definition::Variant
+        -> cst::Definition_variant
     {
         auto template_parameters = parse_template_parameters(context);
         auto typeclass_reference = require<parse_class_reference>(context, "a class name");
 
-        Token const for_keyword = context.require_extract(Token::Type::for_);
+        Token const for_keyword = context.require_extract(Token_type::for_);
         auto        self_type   = require<parse_type>(context, "the Self type");
 
         return cst::definition::Instantiation {
@@ -235,7 +233,7 @@ namespace {
     }
 
     auto extract_implementation(Context& context, Token const& impl_keyword)
-        -> cst::Definition::Variant
+        -> cst::Definition_variant
     {
         auto template_parameters = parse_template_parameters(context);
         auto self_type           = require<parse_type>(context, "the Self type");
@@ -249,8 +247,7 @@ namespace {
         };
     }
 
-    auto extract_submodule(Context& context, Token const& module_keyword)
-        -> cst::Definition::Variant
+    auto extract_submodule(Context& context, Token const& module_keyword) -> cst::Definition_variant
     {
         auto const name = extract_lower_name(context, "a namespace name");
         return cst::definition::Submodule {
@@ -262,18 +259,18 @@ namespace {
     }
 
     auto dispatch_parse_definition(Context& context, Token const& token, Stage const stage)
-        -> std::optional<cst::Definition::Variant>
+        -> std::optional<cst::Definition_variant>
     {
         // clang-format off
         switch (token.type) {
-        case Token::Type::fn:      return extract_function(context, token);
-        case Token::Type::struct_: return extract_structure(context, token);
-        case Token::Type::enum_:   return extract_enumeration(context, token);
-        case Token::Type::class_:  return extract_typeclass(context, token);
-        case Token::Type::alias:   return extract_alias(context, token);
-        case Token::Type::inst:    return extract_instantiation(context, token);
-        case Token::Type::impl:    return extract_implementation(context, token);
-        case Token::Type::module_: return extract_submodule(context, token);
+        case Token_type::fn:      return extract_function(context, token);
+        case Token_type::struct_: return extract_structure(context, token);
+        case Token_type::enum_:   return extract_enumeration(context, token);
+        case Token_type::class_:  return extract_typeclass(context, token);
+        case Token_type::alias:   return extract_alias(context, token);
+        case Token_type::inst:    return extract_instantiation(context, token);
+        case Token_type::impl:    return extract_implementation(context, token);
+        case Token_type::module_: return extract_submodule(context, token);
         default:
             context.unstage(stage);
             return std::nullopt;
@@ -287,7 +284,7 @@ auto libparse::parse_definition(Context& context) -> std::optional<cst::Definiti
     Stage const stage       = context.stage();
     Token const first_token = context.extract();
     return dispatch_parse_definition(context, first_token, stage)
-        .transform([&](cst::Definition::Variant&& variant) {
+        .transform([&](cst::Definition_variant&& variant) {
             context.commit(stage);
             return cst::Definition {
                 .variant = std::move(variant),

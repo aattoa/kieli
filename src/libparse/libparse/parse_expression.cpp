@@ -4,14 +4,14 @@
 using namespace libparse;
 
 namespace {
-    auto extract_string_literal(Context& context, Token const& token) -> cst::Expression::Variant
+    auto extract_string_literal(Context& context, Token const& token) -> cst::Expression_variant
     {
         auto const first_string = token.value_as<kieli::String>();
-        if (context.peek().type != Token::Type::string_literal) {
+        if (context.peek().type != Token_type::string_literal) {
             return first_string;
         }
         std::string combined_string { first_string.value.view() };
-        while (auto const token = context.try_extract(Token::Type::string_literal)) {
+        while (auto const token = context.try_extract(Token_type::string_literal)) {
             combined_string.append(token.value().value_as<kieli::String>().value.view());
         }
         return kieli::String { context.compile_info().string_pool.add(combined_string) };
@@ -19,9 +19,9 @@ namespace {
 
     auto extract_condition(Context& context) -> utl::Wrapper<cst::Expression>
     {
-        if (auto const let_keyword = context.try_extract(Token::Type::let)) {
+        if (auto const let_keyword = context.try_extract(Token_type::let)) {
             auto const pattern     = require<parse_pattern>(context, "a pattern");
-            auto const equals_sign = context.require_extract(Token::Type::equals);
+            auto const equals_sign = context.require_extract(Token_type::equals);
             return context.wrap(cst::Expression {
                 .variant { cst::expression::Conditional_let {
                     .pattern     = pattern,
@@ -42,7 +42,7 @@ namespace {
     }
 
     auto extract_infinite_loop(Context& context, Token const& loop_keyword)
-        -> cst::Expression::Variant
+        -> cst::Expression_variant
     {
         return cst::expression::Infinite_loop {
             .body               = extract_loop_body(context),
@@ -50,8 +50,7 @@ namespace {
         };
     }
 
-    auto extract_while_loop(Context& context, Token const& while_keyword)
-        -> cst::Expression::Variant
+    auto extract_while_loop(Context& context, Token const& while_keyword) -> cst::Expression_variant
     {
         return cst::expression::While_loop {
             .condition           = extract_condition(context),
@@ -60,10 +59,10 @@ namespace {
         };
     }
 
-    auto extract_for_loop(Context& context, Token const& for_keyword) -> cst::Expression::Variant
+    auto extract_for_loop(Context& context, Token const& for_keyword) -> cst::Expression_variant
     {
         auto const  iterator   = require<parse_pattern>(context, "a pattern");
-        Token const in_keyword = context.require_extract(Token::Type::in);
+        Token const in_keyword = context.require_extract(Token_type::in);
         return cst::expression::For_loop {
             .iterator          = iterator,
             .iterable          = require<parse_expression>(context, "an iterable expression"),
@@ -76,8 +75,8 @@ namespace {
     auto parse_struct_field_initializer(Context& context)
         -> std::optional<cst::expression::Struct_initializer::Field>
     {
-        return parse_lower_name(context).transform([&](kieli::Name_lower const name) {
-            Token const equals_sign = context.require_extract(Token::Type::equals);
+        return parse_lower_name(context).transform([&](kieli::Lower const name) {
+            Token const equals_sign = context.require_extract(Token_type::equals);
             return cst::expression::Struct_initializer::Field {
                 .name              = name,
                 .equals_sign_token = cst::Token::from_lexical(equals_sign),
@@ -86,19 +85,19 @@ namespace {
         });
     }
 
-    auto extract_qualified_lower_name_or_initializer(
-        Context& context, std::optional<cst::Root_qualifier>&& root) -> cst::Expression::Variant
+    auto extract_expression_path(Context& context, std::optional<cst::Path_root>&& root)
+        -> cst::Expression_variant
     {
-        auto name = extract_qualified_name(context, std::move(root));
-        if (!name.is_upper()) {
+        auto path = extract_path(context, std::move(root));
+        if (!path.head.is_upper()) {
             auto template_arguments = parse_template_arguments(context);
             if (template_arguments) {
                 return cst::expression::Template_application {
                     .template_arguments = std::move(template_arguments.value()),
-                    .name               = std::move(name),
+                    .path               = std::move(path),
                 };
             }
-            return cst::expression::Variable { std::move(name) };
+            return cst::expression::Variable { std::move(path) };
         }
 
         static constexpr parser auto parse_braced_initializers = parse_braced<
@@ -112,41 +111,40 @@ namespace {
 
         if (auto initializers = parse_braced_initializers(context)) {
             return cst::expression::Struct_initializer {
-                .constructor  = std::move(name),
-                .initializers = std::move(initializers.value()),
+                .constructor_path = std::move(path),
+                .initializers     = std::move(initializers.value()),
             };
         }
         if (auto initializers = parse_parenthesized_initializers(context)) {
             return cst::expression::Tuple_initializer {
-                .constructor  = std::move(name),
-                .initializers = std::move(initializers.value()),
+                .constructor_path = std::move(path),
+                .initializers     = std::move(initializers.value()),
             };
         }
-        return cst::expression::Unit_initializer { .constructor = std::move(name) };
+        return cst::expression::Unit_initializer { .constructor_path = std::move(path) };
     }
 
-    auto extract_identifier(Context& context, Stage const stage) -> cst::Expression::Variant
+    auto extract_identifier(Context& context, Stage const stage) -> cst::Expression_variant
     {
         context.unstage(stage);
-        return extract_qualified_lower_name_or_initializer(context, std::nullopt);
+        return extract_expression_path(context, std::nullopt);
     }
 
-    auto extract_global_identifier(Context& context, Token const& global)
-        -> cst::Expression::Variant
+    auto extract_global_identifier(Context& context, Token const& global) -> cst::Expression_variant
     {
-        return extract_qualified_lower_name_or_initializer(
+        return extract_expression_path(
             context,
-            cst::Root_qualifier {
-                .variant { cst::Global_root_qualifier {
+            cst::Path_root {
+                .variant = cst::Path_root_global {
                     .global_keyword = cst::Token::from_lexical(global),
-                } },
+                },
                 .double_colon_token
-                = cst::Token::from_lexical(context.require_extract(Token::Type::double_colon)),
+                    = cst::Token::from_lexical(context.require_extract(Token_type::double_colon)),
                 .range = global.range,
             });
     }
 
-    auto extract_dereference(Context& context, Token const& asterisk) -> cst::Expression::Variant
+    auto extract_dereference(Context& context, Token const& asterisk) -> cst::Expression_variant
     {
         return cst::expression::Dereference {
             .reference_expression = require<parse_expression>(context, "an expression"),
@@ -154,11 +152,11 @@ namespace {
         };
     }
 
-    auto extract_tuple(Context& context, Token const& paren_open) -> cst::Expression::Variant
+    auto extract_tuple(Context& context, Token const& paren_open) -> cst::Expression_variant
     {
         auto expressions
             = extract_comma_separated_zero_or_more<parse_expression, "an expression">(context);
-        Token const paren_close = context.require_extract(Token::Type::paren_close);
+        Token const paren_close = context.require_extract(Token_type::paren_close);
         if (expressions.elements.size() == 1) {
             return cst::expression::Parenthesized { {
                 .value       = expressions.elements.front(),
@@ -173,11 +171,11 @@ namespace {
         } };
     }
 
-    auto extract_array(Context& context, Token const& bracket_open) -> cst::Expression::Variant
+    auto extract_array(Context& context, Token const& bracket_open) -> cst::Expression_variant
     {
         auto elements
             = extract_comma_separated_zero_or_more<parse_expression, "an array element">(context);
-        if (auto const bracket_close = context.try_extract(Token::Type::bracket_close)) {
+        if (auto const bracket_close = context.try_extract(Token_type::bracket_close)) {
             return cst::expression::Array_literal { {
                 .value       = std::move(elements),
                 .open_token  = cst::Token::from_lexical(bracket_open),
@@ -197,10 +195,10 @@ namespace {
     auto extract_conditional(
         Context&               context,
         Token const&           if_or_elif_keyword,
-        Conditional_kind const conditional_kind) -> cst::Expression::Variant
+        Conditional_kind const conditional_kind) -> cst::Expression_variant
     {
-        static constexpr auto extract_branch = [](Context& context) -> utl::wrapper auto {
-            if (auto branch = parse_block_expression(context)) {
+        static constexpr auto extract_branch = [](Context& context) {
+            if (auto const branch = parse_block_expression(context)) {
                 return branch.value();
             }
             context.error_expected("a block expression");
@@ -213,7 +211,7 @@ namespace {
 
         std::optional<cst::expression::Conditional::False_branch> false_branch;
 
-        if (auto const elif_keyword = context.try_extract(Token::Type::elif)) {
+        if (auto const elif_keyword = context.try_extract(Token_type::elif)) {
             auto elif_conditional
                 = extract_conditional(context, elif_keyword.value(), Conditional_kind::elif);
 
@@ -226,7 +224,7 @@ namespace {
                 .else_or_elif_keyword_token = cst::Token::from_lexical(elif_keyword.value()),
             };
         }
-        else if (auto const else_keyword = context.try_extract(Token::Type::else_)) {
+        else if (auto const else_keyword = context.try_extract(Token_type::else_)) {
             false_branch = cst::expression::Conditional::False_branch {
                 .body                       = extract_branch(context),
                 .else_or_elif_keyword_token = cst::Token::from_lexical(else_keyword.value()),
@@ -242,11 +240,11 @@ namespace {
         };
     }
 
-    auto extract_let_binding(Context& context, Token const& let_keyword) -> cst::Expression::Variant
+    auto extract_let_binding(Context& context, Token const& let_keyword) -> cst::Expression_variant
     {
         auto const pattern     = require<parse_top_level_pattern>(context, "a pattern");
         auto const type        = parse_type_annotation(context);
-        auto const equals_sign = context.require_extract(Token::Type::equals);
+        auto const equals_sign = context.require_extract(Token_type::equals);
         return cst::expression::Let_binding {
             .pattern           = pattern,
             .type              = type,
@@ -257,10 +255,10 @@ namespace {
     }
 
     auto extract_local_type_alias(Context& context, Token const& alias_keyword)
-        -> cst::Expression::Variant
+        -> cst::Expression_variant
     {
         auto const name        = extract_upper_name(context, "an alias name");
-        auto const equals_sign = context.require_extract(Token::Type::equals);
+        auto const equals_sign = context.require_extract(Token_type::equals);
         return cst::expression::Local_type_alias {
             .name                = name,
             .type                = require<parse_type>(context, "an aliased type"),
@@ -269,7 +267,7 @@ namespace {
         };
     }
 
-    auto extract_sizeof(Context& context, Token const& sizeof_keyword) -> cst::Expression::Variant
+    auto extract_sizeof(Context& context, Token const& sizeof_keyword) -> cst::Expression_variant
     {
         return cst::expression::Sizeof {
             .inspected_type
@@ -282,9 +280,9 @@ namespace {
     {
         return parse_top_level_pattern(context).transform(
             [&](utl::Wrapper<cst::Pattern> const pattern) {
-                auto const arrow     = context.require_extract(Token::Type::right_arrow);
+                auto const arrow     = context.require_extract(Token_type::right_arrow);
                 auto const handler   = require<parse_expression>(context, "an expression");
-                auto const semicolon = context.try_extract(Token::Type::semicolon);
+                auto const semicolon = context.try_extract(Token_type::semicolon);
                 return cst::expression::Match::Case {
                     .pattern                  = pattern,
                     .handler                  = handler,
@@ -304,7 +302,7 @@ namespace {
         return !cases.empty() ? std::optional(std::move(cases)) : std::nullopt;
     }
 
-    auto extract_match(Context& context, Token const& match_keyword) -> cst::Expression::Variant
+    auto extract_match(Context& context, Token const& match_keyword) -> cst::Expression_variant
     {
         static constexpr auto extract_cases
             = require<parse_braced<parse_match_cases, "one or more match cases">>;
@@ -316,14 +314,14 @@ namespace {
         };
     }
 
-    auto extract_continue(Context&, Token const& continue_keyword) -> cst::Expression::Variant
+    auto extract_continue(Context&, Token const& continue_keyword) -> cst::Expression_variant
     {
         return cst::expression::Continue {
             .continue_keyword_token = cst::Token::from_lexical(continue_keyword),
         };
     }
 
-    auto extract_break(Context& context, Token const& break_keyword) -> cst::Expression::Variant
+    auto extract_break(Context& context, Token const& break_keyword) -> cst::Expression_variant
     {
         return cst::expression::Break {
             .result              = parse_expression(context),
@@ -331,7 +329,7 @@ namespace {
         };
     }
 
-    auto extract_ret(Context& context, Token const& ret_keyword) -> cst::Expression::Variant
+    auto extract_ret(Context& context, Token const& ret_keyword) -> cst::Expression_variant
     {
         return cst::expression::Ret {
             .returned_expression = parse_expression(context),
@@ -339,7 +337,7 @@ namespace {
         };
     }
 
-    auto extract_discard(Context& context, Token const& discard_keyword) -> cst::Expression::Variant
+    auto extract_discard(Context& context, Token const& discard_keyword) -> cst::Expression_variant
     {
         return cst::expression::Discard {
             .discarded_expression  = require<parse_expression>(context, "the discarded expression"),
@@ -347,7 +345,7 @@ namespace {
         };
     }
 
-    auto extract_addressof(Context& context, Token const& ampersand) -> cst::Expression::Variant
+    auto extract_addressof(Context& context, Token const& ampersand) -> cst::Expression_variant
     {
         return cst::expression::Addressof {
             .mutability       = parse_mutability(context),
@@ -357,7 +355,7 @@ namespace {
     }
 
     auto extract_unsafe_block(Context& context, Token const& unsafe_keyword)
-        -> cst::Expression::Variant
+        -> cst::Expression_variant
     {
         return cst::expression::Unsafe {
             .expression = require<parse_block_expression>(context, "an unsafe block expression"),
@@ -365,7 +363,7 @@ namespace {
         };
     }
 
-    auto extract_move(Context& context, Token const& mov_keyword) -> cst::Expression::Variant
+    auto extract_move(Context& context, Token const& mov_keyword) -> cst::Expression_variant
     {
         return cst::expression::Move {
             .place_expression  = require<parse_expression>(context, "a place expression"),
@@ -373,7 +371,7 @@ namespace {
         };
     }
 
-    auto extract_defer(Context& context, Token const& defer_keyword) -> cst::Expression::Variant
+    auto extract_defer(Context& context, Token const& defer_keyword) -> cst::Expression_variant
     {
         return cst::expression::Defer {
             .expression          = require<parse_expression>(context, "an expression"),
@@ -381,7 +379,7 @@ namespace {
         };
     }
 
-    auto extract_meta(Context& context, Token const& meta_keyword) -> cst::Expression::Variant
+    auto extract_meta(Context& context, Token const& meta_keyword) -> cst::Expression_variant
     {
         return cst::expression::Meta {
             .expression = require<parse_parenthesized<parse_expression, "an expression">>(
@@ -391,13 +389,13 @@ namespace {
     }
 
     auto extract_block_expression(Context& context, Token const& brace_open)
-        -> cst::Expression::Variant
+        -> cst::Expression_variant
     {
         std::vector<cst::expression::Block::Side_effect> side_effects;
         std::optional<utl::Wrapper<cst::Expression>>     result_expression;
 
         while (auto expression = parse_expression(context)) {
-            if (auto const semicolon = context.try_extract(Token::Type::semicolon)) {
+            if (auto const semicolon = context.try_extract(Token_type::semicolon)) {
                 side_effects.push_back(cst::expression::Block::Side_effect {
                     .expression               = expression.value(),
                     .trailing_semicolon_token = cst::Token::from_lexical(semicolon.value()),
@@ -409,7 +407,7 @@ namespace {
             }
         }
 
-        Token const brace_close = context.require_extract(Token::Type::brace_close);
+        Token const brace_close = context.require_extract(Token_type::brace_close);
         return cst::expression::Block {
             .side_effects      = std::move(side_effects),
             .result_expression = std::move(result_expression),
@@ -419,15 +417,15 @@ namespace {
     }
 
     auto parse_complicated_type(Context& context, Stage const stage)
-        -> std::optional<cst::Expression::Variant>
+        -> std::optional<cst::Expression_variant>
     {
         context.unstage(stage);
         return parse_type(context).transform(
-            [&](utl::Wrapper<cst::Type> const type) -> cst::Expression::Variant {
-                if (auto const double_colon = context.try_extract(Token::Type::double_colon)) {
-                    return extract_qualified_lower_name_or_initializer(
+            [&](utl::Wrapper<cst::Type> const type) -> cst::Expression_variant {
+                if (auto const double_colon = context.try_extract(Token_type::double_colon)) {
+                    return extract_expression_path(
                         context,
-                        cst::Root_qualifier {
+                        cst::Path_root {
                             .variant            = type,
                             .double_colon_token = cst::Token::from_lexical(double_colon.value()),
                             .range              = type->range,
@@ -442,41 +440,41 @@ namespace {
     }
 
     auto dispatch_parse_normal_expression(Context& context, Token const& token, Stage const stage)
-        -> std::optional<cst::Expression::Variant>
+        -> std::optional<cst::Expression_variant>
     {
         // clang-format off
         switch (token.type) {
-        case Token::Type::integer_literal:   return token.value_as<kieli::Integer>();
-        case Token::Type::floating_literal:  return token.value_as<kieli::Floating>();
-        case Token::Type::character_literal: return token.value_as<kieli::Character>();
-        case Token::Type::boolean_literal:   return token.value_as<kieli::Boolean>();
-        case Token::Type::string_literal:    return extract_string_literal(context, token);
-        case Token::Type::lower_name:        [[fallthrough]];
-        case Token::Type::upper_name:        return extract_identifier(context, stage);
-        case Token::Type::global:            return extract_global_identifier(context, token);
-        case Token::Type::lower_self:        return cst::expression::Self {};
-        case Token::Type::hole:              return cst::expression::Hole {};
-        case Token::Type::asterisk:          return extract_dereference(context, token);
-        case Token::Type::paren_open:        return extract_tuple(context, token);
-        case Token::Type::bracket_open:      return extract_array(context, token);
-        case Token::Type::if_:               return extract_conditional(context, token, Conditional_kind::if_);
-        case Token::Type::let:               return extract_let_binding(context, token);
-        case Token::Type::alias:             return extract_local_type_alias(context, token);
-        case Token::Type::loop:              return extract_infinite_loop(context, token);
-        case Token::Type::while_:            return extract_while_loop(context, token);
-        case Token::Type::for_:              return extract_for_loop(context, token);
-        case Token::Type::sizeof_:           return extract_sizeof(context, token);
-        case Token::Type::unsafe:            return extract_unsafe_block(context, token);
-        case Token::Type::match:             return extract_match(context, token);
-        case Token::Type::continue_:         return extract_continue(context, token);
-        case Token::Type::break_:            return extract_break(context, token);
-        case Token::Type::ret:               return extract_ret(context, token);
-        case Token::Type::discard:           return extract_discard(context, token);
-        case Token::Type::ampersand:         return extract_addressof(context, token);
-        case Token::Type::mov:               return extract_move(context, token);
-        case Token::Type::defer:             return extract_defer(context, token);
-        case Token::Type::meta:              return extract_meta(context, token);
-        case Token::Type::brace_open:        return extract_block_expression(context, token);
+        case Token_type::integer_literal:   return token.value_as<kieli::Integer>();
+        case Token_type::floating_literal:  return token.value_as<kieli::Floating>();
+        case Token_type::character_literal: return token.value_as<kieli::Character>();
+        case Token_type::boolean_literal:   return token.value_as<kieli::Boolean>();
+        case Token_type::string_literal:    return extract_string_literal(context, token);
+        case Token_type::lower_name:        [[fallthrough]];
+        case Token_type::upper_name:        return extract_identifier(context, stage);
+        case Token_type::global:            return extract_global_identifier(context, token);
+        case Token_type::lower_self:        return cst::expression::Self {};
+        case Token_type::hole:              return cst::expression::Hole {};
+        case Token_type::asterisk:          return extract_dereference(context, token);
+        case Token_type::paren_open:        return extract_tuple(context, token);
+        case Token_type::bracket_open:      return extract_array(context, token);
+        case Token_type::if_:               return extract_conditional(context, token, Conditional_kind::if_);
+        case Token_type::let:               return extract_let_binding(context, token);
+        case Token_type::alias:             return extract_local_type_alias(context, token);
+        case Token_type::loop:              return extract_infinite_loop(context, token);
+        case Token_type::while_:            return extract_while_loop(context, token);
+        case Token_type::for_:              return extract_for_loop(context, token);
+        case Token_type::sizeof_:           return extract_sizeof(context, token);
+        case Token_type::unsafe:            return extract_unsafe_block(context, token);
+        case Token_type::match:             return extract_match(context, token);
+        case Token_type::continue_:         return extract_continue(context, token);
+        case Token_type::break_:            return extract_break(context, token);
+        case Token_type::ret:               return extract_ret(context, token);
+        case Token_type::discard:           return extract_discard(context, token);
+        case Token_type::ampersand:         return extract_addressof(context, token);
+        case Token_type::mov:               return extract_move(context, token);
+        case Token_type::defer:             return extract_defer(context, token);
+        case Token_type::meta:              return extract_meta(context, token);
+        case Token_type::brace_open:        return extract_block_expression(context, token);
         default:                             return parse_complicated_type(context, stage);
             // clang-format on
         }
@@ -515,10 +513,10 @@ namespace {
     }
 
     auto extract_struct_field_access(
-        kieli::Name_lower const             field_name,
+        kieli::Lower const                  field_name,
         cst::Token const                    dot_token,
         utl::Wrapper<cst::Expression> const expression,
-        Context&                            context) -> cst::Expression::Variant
+        Context&                            context) -> cst::Expression_variant
     {
         auto template_arguments = parse_template_arguments(context);
         if (auto arguments = parse_function_arguments(context)) {
@@ -542,7 +540,7 @@ namespace {
     auto extract_member_access(
         cst::Token const                    dot_token,
         utl::Wrapper<cst::Expression> const base_expression,
-        Context&                            context) -> cst::Expression::Variant
+        Context&                            context) -> cst::Expression_variant
     {
         if (auto const name = parse_lower_name(context)) {
             return extract_struct_field_access(name.value(), dot_token, base_expression, context);
@@ -554,7 +552,7 @@ namespace {
                 .dot_token        = dot_token,
             };
         }
-        if (auto const literal = context.try_extract(Token::Type::integer_literal)) {
+        if (auto const literal = context.try_extract(Token_type::integer_literal)) {
             return cst::expression::Tuple_field_access {
                 .base_expression   = base_expression,
                 .field_index       = literal.value().value_as<kieli::Integer>().value,
@@ -571,7 +569,7 @@ namespace {
     {
         return parse_potential_invocation(context).transform(
             [&](utl::Wrapper<cst::Expression> expression) {
-                while (auto const dot = context.try_extract(Token::Type::dot)) {
+                while (auto const dot = context.try_extract(Token_type::dot)) {
                     expression = context.wrap(cst::Expression {
                         extract_member_access(
                             cst::Token::from_lexical(dot.value()), expression, context),
@@ -584,16 +582,16 @@ namespace {
 
     auto dispatch_parse_type_cast(
         Context& context, utl::Wrapper<cst::Expression> const base_expression)
-        -> std::optional<cst::Expression::Variant>
+        -> std::optional<cst::Expression_variant>
     {
         switch (context.peek().type) {
-        case Token::Type::colon:
+        case Token_type::colon:
             return cst::expression::Type_ascription {
                 .base_expression = base_expression,
                 .colon_token     = cst::Token::from_lexical(context.extract()),
                 .ascribed_type   = require<parse_type>(context, "the ascribed type"),
             };
-        case Token::Type::as:
+        case Token_type::as:
             return cst::expression::Type_cast {
                 .base_expression = base_expression,
                 .as_token        = cst::Token::from_lexical(context.extract()),
@@ -623,11 +621,11 @@ namespace {
         Stage const stage = context.stage();
         Token const token = context.extract();
         switch (token.type) {
-        case Token::Type::operator_name:
+        case Token_type::operator_name:
             return token.value_as<kieli::Identifier>();
-        case Token::Type::asterisk:
+        case Token_type::asterisk:
             return context.special_identifiers().asterisk;
-        case Token::Type::plus:
+        case Token_type::plus:
             return context.special_identifiers().plus;
         default:
             context.unstage(stage);
@@ -635,12 +633,11 @@ namespace {
         }
     }
 
-    auto parse_operator_name(Context& context)
-        -> std::optional<cst::expression::Binary_operator_chain::Operator_name>
+    auto parse_operator_name(Context& context) -> std::optional<cst::expression::Operator_name>
     {
         auto const anchor_range = context.peek().range;
         return parse_operator_id(context).transform([&](kieli::Identifier const identifier) {
-            return cst::expression::Binary_operator_chain::Operator_name {
+            return cst::expression::Operator_name {
                 .identifier = identifier,
                 .range      = anchor_range,
             };
@@ -650,33 +647,34 @@ namespace {
     auto parse_binary_operator_chain(Context& context)
         -> std::optional<utl::Wrapper<cst::Expression>>
     {
-        return parse_potential_type_cast(context).transform([&](utl::wrapper auto expression) {
-            std::vector<cst::expression::Binary_operator_chain::Operator_and_operand> tail;
-            while (auto const operator_name = parse_operator_name(context)) {
-                tail.push_back({
-                    .right_operand = require<parse_potential_type_cast>(context, "an operand"),
-                    .operator_name = operator_name.value(),
+        return parse_potential_type_cast(context).transform(
+            [&](utl::Wrapper<cst::Expression> const expression) {
+                std::vector<cst::expression::Operator_chain::Rhs> tail;
+                while (auto const operator_name = parse_operator_name(context)) {
+                    tail.push_back({
+                        .operand       = require<parse_potential_type_cast>(context, "an operand"),
+                        .operator_name = operator_name.value(),
+                    });
+                }
+                if (tail.empty()) {
+                    return expression;
+                }
+                return context.wrap(cst::Expression {
+                    .variant = cst::expression::Operator_chain {
+                        .tail = std::move(tail),
+                        .lhs  = expression,
+                    },
+                    .range = context.up_to_current(expression->range),
                 });
-            }
-            if (tail.empty()) {
-                return expression;
-            }
-            return context.wrap(cst::Expression {
-                .variant = cst::expression::Binary_operator_chain {
-                    .sequence_tail    = std::move(tail),
-                    .leftmost_operand = expression,
-                },
-                .range = context.up_to_current(expression->range),
             });
-        });
     }
 } // namespace
 
 auto libparse::parse_block_expression(Context& context)
     -> std::optional<utl::Wrapper<cst::Expression>>
 {
-    return context.peek().type == Token::Type::brace_open ? parse_normal_expression(context)
-                                                          : std::nullopt;
+    return context.peek().type == Token_type::brace_open ? parse_normal_expression(context)
+                                                         : std::nullopt;
 }
 
 auto libparse::parse_expression(Context& context) -> std::optional<utl::Wrapper<cst::Expression>>

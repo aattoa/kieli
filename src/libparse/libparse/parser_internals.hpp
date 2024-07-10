@@ -3,9 +3,10 @@
 #include <liblex/lex.hpp>
 #include <libcompiler/cst/cst.hpp>
 
-namespace libparse {
+using kieli::Token;
+using kieli::Token_type;
 
-    using Token = kieli::Token;
+namespace libparse {
 
     struct Stage {
         std::size_t old_token_index {};
@@ -36,10 +37,10 @@ namespace libparse {
         [[nodiscard]] auto extract() -> Token;
 
         // Consume the current token if it matches `type`.
-        [[nodiscard]] auto try_extract(Token::Type type) -> std::optional<Token>;
+        [[nodiscard]] auto try_extract(Token_type type) -> std::optional<Token>;
 
         // Consume the current token if it matches `type`, otherwise emit an error.
-        [[nodiscard]] auto require_extract(Token::Type type) -> Token;
+        [[nodiscard]] auto require_extract(Token_type type) -> Token;
 
         // Set up a token stage, which can later be unstaged or committed.
         [[nodiscard]] auto stage() const -> Stage;
@@ -75,8 +76,7 @@ namespace libparse {
         }
     };
 
-    auto extract_qualified_name(Context&, std::optional<cst::Root_qualifier>&&)
-        -> cst::Qualified_name;
+    auto extract_path(Context&, std::optional<cst::Path_root>&&) -> cst::Path;
     auto extract_class_references(Context&) -> cst::Separated_sequence<cst::Class_reference>;
 
     auto parse_block_expression(Context&) -> std::optional<utl::Wrapper<cst::Expression>>;
@@ -133,8 +133,8 @@ namespace libparse {
     template <
         parser auto     parser,
         utl::Metastring description,
-        Token::Type     open_type,
-        Token::Type     close_type>
+        Token_type      open_type,
+        Token_type      close_type>
     auto parse_surrounded(Context& context) -> std::optional<cst::Surrounded<Parser_target<parser>>>
     {
         return context.try_extract(open_type).transform([&](Token const& open) {
@@ -148,18 +148,18 @@ namespace libparse {
 
     template <parser auto parser, utl::Metastring description>
     constexpr auto parse_parenthesized
-        = parse_surrounded<parser, description, Token::Type::paren_open, Token::Type::paren_close>;
+        = parse_surrounded<parser, description, Token_type::paren_open, Token_type::paren_close>;
     template <parser auto parser, utl::Metastring description>
     constexpr auto parse_braced
-        = parse_surrounded<parser, description, Token::Type::brace_open, Token::Type::brace_close>;
+        = parse_surrounded<parser, description, Token_type::brace_open, Token_type::brace_close>;
     template <parser auto parser, utl::Metastring description>
     constexpr auto parse_bracketed = parse_surrounded<
         parser,
         description,
-        Token::Type::bracket_open,
-        Token::Type::bracket_close>;
+        Token_type::bracket_open,
+        Token_type::bracket_close>;
 
-    template <parser auto parser, utl::Metastring description, Token::Type separator_type>
+    template <parser auto parser, utl::Metastring description, Token_type separator_type>
     auto extract_separated_zero_or_more(Context& context)
         -> cst::Separated_sequence<Parser_target<parser>>
     {
@@ -174,7 +174,7 @@ namespace libparse {
         return sequence;
     }
 
-    template <parser auto parser, utl::Metastring description, Token::Type separator>
+    template <parser auto parser, utl::Metastring description, Token_type separator>
     auto parse_separated_one_or_more(Context& context)
         -> std::optional<cst::Separated_sequence<Parser_target<parser>>>
     {
@@ -187,23 +187,23 @@ namespace libparse {
 
     template <parser auto parser, utl::Metastring description>
     constexpr auto extract_comma_separated_zero_or_more
-        = extract_separated_zero_or_more<parser, description, Token::Type::comma>;
+        = extract_separated_zero_or_more<parser, description, Token_type::comma>;
     template <parser auto parser, utl::Metastring description>
     constexpr auto parse_comma_separated_one_or_more
-        = parse_separated_one_or_more<parser, description, Token::Type::comma>;
+        = parse_separated_one_or_more<parser, description, Token_type::comma>;
 
-    template <Token::Type type, class Name>
+    template <Token_type type, class Name>
     auto parse_name(Context& context) -> std::optional<Name>
     {
         return context.try_extract(type).transform([](Token const& token) {
-            return Name {
+            return Name { kieli::Name {
                 .identifier = token.value_as<kieli::Identifier>(),
                 .range      = token.range,
-            };
+            } };
         });
     }
 
-    template <Token::Type type, class Name>
+    template <Token_type type, class Name>
     auto extract_name(Context& context, std::string_view const description) -> Name
     {
         if (auto name = parse_name<type, Name>(context)) {
@@ -212,9 +212,9 @@ namespace libparse {
         context.error_expected(description);
     }
 
-    constexpr auto parse_lower_name   = parse_name<Token::Type::lower_name, kieli::Name_lower>;
-    constexpr auto parse_upper_name   = parse_name<Token::Type::upper_name, kieli::Name_upper>;
-    constexpr auto extract_lower_name = extract_name<Token::Type::lower_name, kieli::Name_lower>;
-    constexpr auto extract_upper_name = extract_name<Token::Type::upper_name, kieli::Name_upper>;
+    constexpr auto parse_lower_name   = parse_name<Token_type::lower_name, kieli::Lower>;
+    constexpr auto parse_upper_name   = parse_name<Token_type::upper_name, kieli::Upper>;
+    constexpr auto extract_lower_name = extract_name<Token_type::lower_name, kieli::Lower>;
+    constexpr auto extract_upper_name = extract_name<Token_type::upper_name, kieli::Upper>;
 
 } // namespace libparse

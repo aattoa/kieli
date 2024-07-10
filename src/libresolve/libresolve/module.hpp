@@ -26,33 +26,36 @@ namespace libresolve {
 
     struct Lower_info {
         using Variant = std::variant<hir::Function_id, hir::Module_id>;
-        kieli::Name_lower name;
-        kieli::Source_id  source;
-        Variant           variant;
+        kieli::Lower     name;
+        kieli::Source_id source;
+        Variant          variant;
     };
 
     struct Upper_info {
         using Variant = std::variant<hir::Enumeration_id, hir::Typeclass_id, hir::Alias_id>;
-        kieli::Name_upper name;
-        kieli::Source_id  source;
-        Variant           variant;
+        kieli::Upper     name;
+        kieli::Source_id source;
+        Variant          variant;
     };
 
-    using Definition_variant = std::variant<
-        hir::Function_id,
-        hir::Module_id,
-        hir::Enumeration_id,
-        hir::Typeclass_id,
-        hir::Alias_id>;
+    struct Definition_variant
+        : std::variant<
+              hir::Function_id,
+              hir::Module_id,
+              hir::Enumeration_id,
+              hir::Typeclass_id,
+              hir::Alias_id> {
+        using variant::variant, variant::operator=;
+    };
 
     struct Import {
         std::filesystem::file_time_type last_write_time;
         std::filesystem::path           module_path;
-        kieli::Name_lower               name;
+        kieli::Lower                    name;
     };
 
     struct Variable_bind {
-        kieli::Name_lower       name;
+        kieli::Lower            name;
         hir::Type_id            type;
         hir::Mutability         mutability;
         hir::Local_variable_tag tag;
@@ -60,15 +63,15 @@ namespace libresolve {
     };
 
     struct Type_bind {
-        kieli::Name_upper name;
-        hir::Type_id      type;
-        bool              unused = true;
+        kieli::Upper name;
+        hir::Type_id type;
+        bool         unused = true;
     };
 
     struct Mutability_bind {
-        kieli::Name_lower name;
-        hir::Mutability   mutability;
-        bool              unused = true;
+        kieli::Lower    name;
+        hir::Mutability mutability;
+        bool            unused = true;
     };
 
     struct Function_with_resolved_signature;
@@ -124,7 +127,7 @@ struct libresolve::Function_info {
     Variant             variant;
     hir::Environment_id environment;
     kieli::Source_id    source;
-    kieli::Name_lower   name;
+    kieli::Lower        name;
     bool                currently_resolving {};
 };
 
@@ -133,7 +136,7 @@ struct libresolve::Enumeration_info {
     Variant             variant;
     hir::Environment_id environment;
     kieli::Source_id    source;
-    kieli::Name_upper   name;
+    kieli::Upper        name;
     hir::Type           type;
     bool                currently_resolving {};
 };
@@ -143,7 +146,7 @@ struct libresolve::Typeclass_info {
     Variant             variant;
     hir::Environment_id environment;
     kieli::Source_id    source;
-    kieli::Name_upper   name;
+    kieli::Upper        name;
     bool                currently_resolving {};
 };
 
@@ -152,7 +155,7 @@ struct libresolve::Alias_info {
     Variant             variant;
     hir::Environment_id environment;
     kieli::Source_id    source;
-    kieli::Name_upper   name;
+    kieli::Upper        name;
     bool                currently_resolving {};
 };
 
@@ -161,7 +164,7 @@ struct libresolve::Module_info {
     Variant             variant;
     hir::Environment_id environment;
     kieli::Source_id    source;
-    kieli::Name_lower   name;
+    kieli::Lower        name;
 };
 
 struct libresolve::Environment {

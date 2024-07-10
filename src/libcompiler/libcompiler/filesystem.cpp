@@ -12,6 +12,16 @@ auto kieli::Position::advance_with(char const character) noexcept -> void
     }
 }
 
+kieli::Range::Range(Position const start, Position const stop) noexcept
+    : start { start }
+    , stop { stop }
+{}
+
+auto kieli::Range::dummy() noexcept -> Range
+{
+    return Range(Position {}, Position { .column = 1 });
+}
+
 auto kieli::text_range(std::string_view const string, Range const range) -> std::string_view
 {
     cpputil::always_assert(range.start <= range.stop);
@@ -34,19 +44,19 @@ auto kieli::text_range(std::string_view const string, Range const range) -> std:
     return { begin, end };
 }
 
-auto kieli::edit_text(std::string& text, Range const range, std::string_view const new_text) -> void
-{
-    auto const where = text_range(text, range);
-    auto const index = static_cast<std::size_t>(where.data() - text.data());
-    text.replace(index, where.size(), new_text);
-}
-
 auto kieli::find_source(std::filesystem::path const& path, Source_vector const& sources)
     -> std::optional<Source_id>
 {
     auto const it    = std::ranges::find(sources.underlying, path, &Source::path);
     auto const index = static_cast<std::size_t>(it - sources.underlying.begin());
     return it != sources.underlying.end() ? std::optional(Source_id(index)) : std::nullopt;
+}
+
+auto kieli::edit_text(std::string& text, Range const range, std::string_view const new_text) -> void
+{
+    auto const where  = text_range(text, range);
+    auto const offset = static_cast<std::size_t>(where.data() - text.data());
+    text.replace(offset, where.size(), new_text);
 }
 
 auto kieli::read_source(std::filesystem::path path) -> std::expected<Source, Read_failure>

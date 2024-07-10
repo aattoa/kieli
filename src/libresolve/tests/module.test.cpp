@@ -9,7 +9,7 @@ UNITTEST("libresolve resolve_import")
     cpputil::mem::Stable_string_pool pool;
 
     auto name = [&](std::string_view const string) mutable {
-        return kieli::Name_lower { kieli::Identifier { pool.add(string) } };
+        return kieli::Lower { kieli::Identifier { pool.add(string) }, kieli::Range::dummy() };
     };
     auto const import = [&](auto const... strings) {
         std::array const array { name(strings)... };

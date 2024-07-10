@@ -41,7 +41,7 @@ auto libdesugar::Context::desugar(cst::Self_parameter const& self_parameter) -> 
         .mutability
         = desugar_mutability(self_parameter.mutability, self_parameter.self_keyword_token.range),
         .is_reference = self_parameter.is_reference(),
-        .range        = self_parameter.range,
+        .range        = self_parameter.self_keyword_token.range,
     };
 }
 
@@ -54,7 +54,7 @@ auto libdesugar::Context::desugar(cst::Template_parameter const& template_parame
     -> ast::Template_parameter
 {
     return {
-        std::visit<ast::Template_parameter::Variant>(
+        std::visit<ast::Template_parameter_variant>(
             utl::Overload {
                 [&](cst::Template_type_parameter const& parameter) {
                     return ast::Template_type_parameter {
@@ -82,32 +82,31 @@ auto libdesugar::Context::desugar(cst::Template_parameter const& template_parame
     };
 }
 
-auto libdesugar::Context::desugar(cst::Qualifier const& qualifier) -> ast::Qualifier
+auto libdesugar::Context::desugar(cst::Path_segment const& segment) -> ast::Path_segment
 {
-    return ast::Qualifier {
-        .template_arguments = qualifier.template_arguments.transform(desugar()),
-        .name               = qualifier.name,
-        .range              = qualifier.range,
+    return ast::Path_segment {
+        .template_arguments = segment.template_arguments.transform(desugar()),
+        .name               = segment.name,
     };
 }
 
-auto libdesugar::Context::desugar(cst::Qualified_name const& name) -> ast::Qualified_name
+auto libdesugar::Context::desugar(cst::Path const& path) -> ast::Path
 {
-    return ast::Qualified_name {
-        .middle_qualifiers = desugar(name.middle_qualifiers.elements),
-        .root_qualifier    = name.root_qualifier.transform([&](cst::Root_qualifier const& root) {
+    return ast::Path {
+        .segments = desugar(path.segments.elements),
+        .root     = path.root.transform([&](cst::Path_root const& root) {
             return std::visit(
                 utl::Overload {
-                    [](cst::Global_root_qualifier const&) -> ast::Root_qualifier {
-                        return ast::Global_root_qualifier {};
+                    [](cst::Path_root_global const&) -> ast::Path_root {
+                        return ast::Path_root_global {};
                     },
-                    [this](utl::Wrapper<cst::Type> const type) -> ast::Root_qualifier {
+                    [this](utl::Wrapper<cst::Type> const type) -> ast::Path_root {
                         return desugar(type);
                     },
                 },
                 root.variant);
         }),
-        .primary_name = name.primary_name,
+        .head = path.head,
     };
 }
 
@@ -115,7 +114,7 @@ auto libdesugar::Context::desugar(cst::Class_reference const& reference) -> ast:
 {
     return ast::Class_reference {
         .template_arguments = reference.template_arguments.transform(desugar()),
-        .name               = desugar(reference.name),
+        .path               = desugar(reference.path),
         .range              = reference.range,
     };
 }
@@ -161,7 +160,7 @@ auto libdesugar::Context::desugar(cst::expression::Struct_initializer::Field con
 auto libdesugar::Context::desugar(cst::Mutability const& mutability) -> ast::Mutability
 {
     return ast::Mutability {
-        .variant = std::visit<ast::Mutability::Variant>(
+        .variant = std::visit<ast::Mutability_variant>(
             utl::Overload {
                 [](cst::mutability::Concrete const concrete) -> ast::mutability::Concrete {
                     return concrete;
@@ -171,8 +170,7 @@ auto libdesugar::Context::desugar(cst::Mutability const& mutability) -> ast::Mut
                 },
             },
             mutability.variant),
-        .is_explicit = true,
-        .range       = mutability.range,
+        .range = mutability.range,
     };
 }
 
@@ -217,9 +215,8 @@ auto libdesugar::Context::desugar_mutability(
         return desugar(mutability.value());
     }
     return ast::Mutability {
-        .variant     = ast::mutability::Concrete::immut,
-        .is_explicit = false,
-        .range       = range,
+        .variant = ast::mutability::Concrete::immut,
+        .range   = range,
     };
 }
 
@@ -228,7 +225,7 @@ auto libdesugar::Context::normalize_self_parameter(cst::Self_parameter const& se
 {
     ast::Type self_type {
         .variant = ast::type::Self {},
-        .range   = self_parameter.range,
+        .range   = self_parameter.self_keyword_token.range,
     };
     if (self_parameter.is_reference()) {
         self_type = ast::Type {
@@ -237,21 +234,21 @@ auto libdesugar::Context::normalize_self_parameter(cst::Self_parameter const& se
                 .mutability      = desugar_mutability(
                     self_parameter.mutability, self_parameter.self_keyword_token.range),
             },
-            self_parameter.range,
+            self_parameter.self_keyword_token.range,
         };
     }
     return ast::Function_parameter {
         .pattern = wrap(ast::Pattern {
             ast::pattern::Name {
-                .name {
+                .name { kieli::Name {
                     .identifier = self_variable_identifier,
-                    .range      = self_parameter.range,
-                },
+                    .range      = self_parameter.self_keyword_token.range,
+                } },
                 .mutability = desugar_mutability(
                     self_parameter.is_reference() ? std::nullopt : self_parameter.mutability,
-                    self_parameter.range),
+                    self_parameter.self_keyword_token.range),
             },
-            self_parameter.range,
+            self_parameter.self_keyword_token.range,
         }),
         .type    = wrap(std::move(self_type)),
     };

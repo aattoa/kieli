@@ -19,7 +19,7 @@ namespace {
 
 auto liblex::source_begin(const kieli::Lex_state& state) noexcept -> char const*
 {
-    return state.compile_info.source_vector[state.source].content.data();
+    return state.compile_info.sources[state.source].content.data();
 }
 
 auto liblex::source_end(const kieli::Lex_state& state) noexcept -> char const*

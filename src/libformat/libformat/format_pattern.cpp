@@ -79,7 +79,7 @@ namespace {
 
         auto operator()(cst::pattern::Constructor const& constructor)
         {
-            state.format(constructor.name);
+            state.format(constructor.path);
             format_constructor_body(state, constructor.body);
         }
 

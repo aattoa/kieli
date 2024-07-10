@@ -7,23 +7,23 @@ namespace {
     struct Pattern_desugaring_visitor {
         Context& context;
 
-        auto operator()(cst::pattern::Parenthesized const& parenthesized) -> ast::Pattern::Variant
+        auto operator()(cst::pattern::Parenthesized const& parenthesized) -> ast::Pattern_variant
         {
             return std::visit(
                 Pattern_desugaring_visitor { context }, parenthesized.pattern.value->variant);
         }
 
-        auto operator()(kieli::literal auto const& literal) -> ast::Pattern::Variant
+        auto operator()(kieli::literal auto const& literal) -> ast::Pattern_variant
         {
             return literal;
         }
 
-        auto operator()(cst::Wildcard const& wildcard) -> ast::Pattern::Variant
+        auto operator()(cst::Wildcard const& wildcard) -> ast::Pattern_variant
         {
             return context.desugar(wildcard);
         }
 
-        auto operator()(cst::pattern::Name const& name) -> ast::Pattern::Variant
+        auto operator()(cst::pattern::Name const& name) -> ast::Pattern_variant
         {
             return ast::pattern::Name {
                 .name       = name.name,
@@ -31,7 +31,7 @@ namespace {
             };
         }
 
-        auto operator()(cst::pattern::Tuple const& tuple) -> ast::Pattern::Variant
+        auto operator()(cst::pattern::Tuple const& tuple) -> ast::Pattern_variant
         {
             return ast::pattern::Tuple {
                 .field_patterns = tuple.patterns.value.elements
@@ -40,7 +40,7 @@ namespace {
             };
         }
 
-        auto operator()(cst::pattern::Top_level_tuple const& tuple) -> ast::Pattern::Variant
+        auto operator()(cst::pattern::Top_level_tuple const& tuple) -> ast::Pattern_variant
         {
             return ast::pattern::Tuple {
                 .field_patterns = tuple.patterns.elements
@@ -49,7 +49,7 @@ namespace {
             };
         }
 
-        auto operator()(cst::pattern::Slice const& slice) -> ast::Pattern::Variant
+        auto operator()(cst::pattern::Slice const& slice) -> ast::Pattern_variant
         {
             return ast::pattern::Slice {
                 .element_patterns = slice.patterns.value.elements
@@ -58,16 +58,16 @@ namespace {
             };
         }
 
-        auto operator()(cst::pattern::Constructor const& constructor) -> ast::Pattern::Variant
+        auto operator()(cst::pattern::Constructor const& constructor) -> ast::Pattern_variant
         {
             return ast::pattern::Constructor {
-                .name = context.desugar(constructor.name),
+                .path = context.desugar(constructor.path),
                 .body = context.desugar(constructor.body),
             };
         }
 
         auto operator()(cst::pattern::Abbreviated_constructor const& constructor)
-            -> ast::Pattern::Variant
+            -> ast::Pattern_variant
         {
             return ast::pattern::Abbreviated_constructor {
                 .name = constructor.name,
@@ -75,7 +75,7 @@ namespace {
             };
         }
 
-        auto operator()(cst::pattern::Alias const& alias) -> ast::Pattern::Variant
+        auto operator()(cst::pattern::Alias const& alias) -> ast::Pattern_variant
         {
             return ast::pattern::Alias {
                 .name       = alias.name,
@@ -84,7 +84,7 @@ namespace {
             };
         }
 
-        auto operator()(cst::pattern::Guarded const& guarded) -> ast::Pattern::Variant
+        auto operator()(cst::pattern::Guarded const& guarded) -> ast::Pattern_variant
         {
             return ast::pattern::Guarded {
                 .guarded_pattern  = context.desugar(guarded.guarded_pattern),

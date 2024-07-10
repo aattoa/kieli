@@ -22,7 +22,6 @@
 */
 
 namespace cst {
-
     struct [[nodiscard]] Expression;
     struct [[nodiscard]] Pattern;
     struct [[nodiscard]] Type;
@@ -51,8 +50,8 @@ namespace cst {
     };
 
     struct Name_lower_equals {
-        kieli::Name_lower name;
-        Token             equals_sign_token;
+        kieli::Lower name;
+        Token        equals_sign_token;
     };
 
     struct Type_annotation {
@@ -68,72 +67,72 @@ namespace cst {
         using Concrete = kieli::Mutability;
 
         struct Parameterized {
-            kieli::Name_lower name;
-            Token             question_mark_token;
+            kieli::Lower name;
+            Token        question_mark_token;
         };
     } // namespace mutability
 
+    struct Mutability_variant : std::variant<mutability::Concrete, mutability::Parameterized> {
+        using variant::variant, variant::operator=;
+    };
+
     struct Mutability {
-        using Variant = std::variant<mutability::Concrete, mutability::Parameterized>;
-        Variant      variant;
-        kieli::Range range;
-        Token        mut_or_immut_keyword_token;
+        Mutability_variant variant;
+        kieli::Range       range;
+        Token              mut_or_immut_keyword_token;
     };
 
     struct Self_parameter {
         std::optional<Mutability> mutability;
         std::optional<Token>      ampersand_token;
         Token                     self_keyword_token;
-        kieli::Range              range;
 
         [[nodiscard]] auto is_reference() const noexcept -> bool;
     };
 
-    using Template_argument = std::variant< //
-        utl::Wrapper<Type>,
-        utl::Wrapper<Expression>,
-        Mutability,
-        Wildcard>;
+    struct Template_argument
+        : std::variant<utl::Wrapper<Type>, utl::Wrapper<Expression>, Mutability, Wildcard> {
+        using variant::variant, variant::operator=;
+    };
 
     using Template_arguments = Surrounded<Separated_sequence<Template_argument>>;
 
-    struct Qualifier {
+    struct Path_segment {
         std::optional<Template_arguments> template_arguments;
-        kieli::Name_dynamic               name;
+        kieli::Name                       name;
         std::optional<Token>              trailing_double_colon_token;
-        kieli::Range                      range;
     };
 
-    struct Global_root_qualifier {
+    struct Path_root_global {
         Token global_keyword;
     };
 
-    struct Root_qualifier {
-        std::variant<Global_root_qualifier, utl::Wrapper<Type>> variant;
-        Token                                                   double_colon_token;
-        kieli::Range                                            range;
+    struct Path_root {
+        using Variant = std::variant<Path_root_global, utl::Wrapper<Type>>;
+        Variant      variant;
+        Token        double_colon_token;
+        kieli::Range range;
     };
 
-    struct Qualified_name {
-        Separated_sequence<Qualifier> middle_qualifiers;
-        std::optional<Root_qualifier> root_qualifier;
-        kieli::Name_dynamic           primary_name;
-        kieli::Range                  range;
+    struct Path {
+        Separated_sequence<Path_segment> segments;
+        std::optional<Path_root>         root;
+        kieli::Name                      head;
+        kieli::Range                     range;
 
-        [[nodiscard]] auto is_upper() const noexcept -> bool;
-        [[nodiscard]] auto is_unqualified() const noexcept -> bool;
+        [[nodiscard]] auto is_simple_name() const noexcept -> bool;
     };
 
     struct Class_reference {
         std::optional<Template_arguments> template_arguments;
-        Qualified_name                    name;
+        Path                              path;
         kieli::Range                      range;
     };
 
     template <class T>
     struct Default_argument {
-        Token                     equals_sign_token;
         std::variant<T, Wildcard> variant;
+        Token                     equals_sign_token;
     };
 
     using Type_parameter_default_argument       = Default_argument<utl::Wrapper<Type>>;
@@ -160,33 +159,36 @@ namespace cst {
     using Function_arguments = Surrounded<Separated_sequence<Function_argument>>;
 
     struct Template_type_parameter {
-        kieli::Name_upper                              name;
+        kieli::Upper                                   name;
         std::optional<Token>                           colon_token;
         Separated_sequence<Class_reference>            classes;
         std::optional<Type_parameter_default_argument> default_argument;
     };
 
     struct Template_value_parameter {
-        kieli::Name_lower                               name;
+        kieli::Lower                                    name;
         std::optional<Type_annotation>                  type_annotation;
         std::optional<Value_parameter_default_argument> default_argument;
     };
 
     struct Template_mutability_parameter {
-        kieli::Name_lower                                    name;
+        kieli::Lower                                         name;
         Token                                                colon_token;
         Token                                                mut_keyword_token;
         std::optional<Mutability_parameter_default_argument> default_argument;
     };
 
-    struct Template_parameter {
-        using Variant = std::variant<
-            Template_type_parameter,
-            Template_value_parameter,
-            Template_mutability_parameter>;
+    struct Template_parameter_variant
+        : std::variant<
+              Template_type_parameter,
+              Template_value_parameter,
+              Template_mutability_parameter> {
+        using variant::variant, variant::operator=;
+    };
 
-        Variant      variant;
-        kieli::Range range;
+    struct Template_parameter {
+        Template_parameter_variant variant;
+        kieli::Range               range;
     };
 
     using Template_parameters = Surrounded<Separated_sequence<Template_parameter>>;
@@ -203,12 +205,12 @@ namespace cst {
         struct Self {};
 
         struct Variable {
-            Qualified_name name;
+            Path path;
         };
 
         struct Template_application {
             Template_arguments template_arguments;
-            Qualified_name     name;
+            Path               path;
         };
 
         struct Tuple {
@@ -233,43 +235,43 @@ namespace cst {
         };
 
         struct Unit_initializer {
-            Qualified_name constructor;
+            Path constructor_path;
         };
 
         struct Tuple_initializer {
-            Qualified_name                                           constructor;
+            Path                                                     constructor_path;
             Surrounded<Separated_sequence<utl::Wrapper<Expression>>> initializers;
         };
 
         struct Struct_initializer {
             struct Field {
-                kieli::Name_lower        name;
+                kieli::Lower             name;
                 Token                    equals_sign_token;
                 utl::Wrapper<Expression> expression;
             };
 
-            Qualified_name                        constructor;
+            Path                                  constructor_path;
             Surrounded<Separated_sequence<Field>> initializers;
         };
 
-        struct Binary_operator_chain {
-            struct Operator_name {
-                kieli::Identifier identifier;
-                kieli::Range      range;
-            };
+        struct Operator_name {
+            kieli::Identifier identifier;
+            kieli::Range      range;
+        };
 
-            struct Operator_and_operand {
-                utl::Wrapper<Expression> right_operand;
+        struct Operator_chain {
+            struct Rhs {
+                utl::Wrapper<Expression> operand;
                 Operator_name            operator_name;
             };
 
-            std::vector<Operator_and_operand> sequence_tail;
-            utl::Wrapper<Expression>          leftmost_operand;
+            std::vector<Rhs>         tail;
+            utl::Wrapper<Expression> lhs;
         };
 
         struct Struct_field_access {
             utl::Wrapper<Expression> base_expression;
-            kieli::Name_lower        field_name;
+            kieli::Lower             field_name;
             Token                    dot_token;
         };
 
@@ -290,7 +292,7 @@ namespace cst {
             Function_arguments                function_arguments;
             std::optional<Template_arguments> template_arguments;
             utl::Wrapper<Expression>          base_expression;
-            kieli::Name_lower                 method_name;
+            kieli::Lower                      method_name;
         };
 
         struct Conditional {
@@ -347,7 +349,7 @@ namespace cst {
         };
 
         struct Local_type_alias {
-            kieli::Name_upper  name;
+            kieli::Upper       name;
             utl::Wrapper<Type> type;
             Token              alias_keyword_token;
             Token              equals_sign_token;
@@ -430,54 +432,57 @@ namespace cst {
         struct Hole {};
     } // namespace expression
 
-    struct Expression {
-        using Variant = std::variant<
-            kieli::Integer,
-            kieli::Floating,
-            kieli::Character,
-            kieli::Boolean,
-            kieli::String,
-            expression::Parenthesized,
-            expression::Array_literal,
-            expression::Self,
-            expression::Variable,
-            expression::Template_application,
-            expression::Tuple,
-            expression::Block,
-            expression::Invocation,
-            expression::Unit_initializer,
-            expression::Tuple_initializer,
-            expression::Struct_initializer,
-            expression::Binary_operator_chain,
-            expression::Struct_field_access,
-            expression::Tuple_field_access,
-            expression::Array_index_access,
-            expression::Method_invocation,
-            expression::Conditional,
-            expression::Match,
-            expression::Type_cast,
-            expression::Type_ascription,
-            expression::Let_binding,
-            expression::Conditional_let,
-            expression::Local_type_alias,
-            expression::Infinite_loop,
-            expression::While_loop,
-            expression::For_loop,
-            expression::Continue,
-            expression::Break,
-            expression::Discard,
-            expression::Ret,
-            expression::Sizeof,
-            expression::Addressof,
-            expression::Dereference,
-            expression::Unsafe,
-            expression::Move,
-            expression::Defer,
-            expression::Meta,
-            expression::Hole>;
+    struct Expression_variant
+        : std::variant<
+              kieli::Integer,
+              kieli::Floating,
+              kieli::Character,
+              kieli::Boolean,
+              kieli::String,
+              expression::Parenthesized,
+              expression::Array_literal,
+              expression::Self,
+              expression::Variable,
+              expression::Template_application,
+              expression::Tuple,
+              expression::Block,
+              expression::Invocation,
+              expression::Unit_initializer,
+              expression::Tuple_initializer,
+              expression::Struct_initializer,
+              expression::Operator_chain,
+              expression::Struct_field_access,
+              expression::Tuple_field_access,
+              expression::Array_index_access,
+              expression::Method_invocation,
+              expression::Conditional,
+              expression::Match,
+              expression::Type_cast,
+              expression::Type_ascription,
+              expression::Let_binding,
+              expression::Conditional_let,
+              expression::Local_type_alias,
+              expression::Infinite_loop,
+              expression::While_loop,
+              expression::For_loop,
+              expression::Continue,
+              expression::Break,
+              expression::Discard,
+              expression::Ret,
+              expression::Sizeof,
+              expression::Addressof,
+              expression::Dereference,
+              expression::Unsafe,
+              expression::Move,
+              expression::Defer,
+              expression::Meta,
+              expression::Hole> {
+        using variant::variant, variant::operator=;
+    };
 
-        Variant      variant;
-        kieli::Range range;
+    struct Expression {
+        Expression_variant variant;
+        kieli::Range       range;
     };
 
     namespace pattern {
@@ -486,7 +491,7 @@ namespace cst {
         };
 
         struct Name {
-            kieli::Name_lower         name;
+            kieli::Lower              name;
             std::optional<Mutability> mutability;
         };
 
@@ -496,7 +501,7 @@ namespace cst {
                 utl::Wrapper<Pattern> pattern;
             };
 
-            kieli::Name_lower            name;
+            kieli::Lower                 name;
             std::optional<Field_pattern> field_pattern;
         };
 
@@ -510,20 +515,20 @@ namespace cst {
 
         struct Unit_constructor {};
 
-        using Constructor_body = std::variant<
-            Struct_constructor, //
-            Tuple_constructor,
-            Unit_constructor>;
+        struct Constructor_body
+            : std::variant<Struct_constructor, Tuple_constructor, Unit_constructor> {
+            using variant::variant, variant::operator=;
+        };
 
         struct Constructor {
-            Qualified_name   name;
+            Path             path;
             Constructor_body body;
         };
 
         struct Abbreviated_constructor {
-            kieli::Name_upper name;
-            Constructor_body  body;
-            Token             double_colon_token;
+            kieli::Upper     name;
+            Constructor_body body;
+            Token            double_colon_token;
         };
 
         struct Tuple {
@@ -540,7 +545,7 @@ namespace cst {
 
         struct Alias {
             std::optional<Mutability> mutability;
-            kieli::Name_lower         name;
+            kieli::Lower              name;
             utl::Wrapper<Pattern>     pattern;
             Token                     as_keyword_token;
         };
@@ -552,26 +557,29 @@ namespace cst {
         };
     } // namespace pattern
 
-    struct Pattern {
-        using Variant = std::variant<
-            kieli::Integer,
-            kieli::Floating,
-            kieli::Character,
-            kieli::Boolean,
-            kieli::String,
-            Wildcard,
-            pattern::Parenthesized,
-            pattern::Name,
-            pattern::Constructor,
-            pattern::Abbreviated_constructor,
-            pattern::Tuple,
-            pattern::Top_level_tuple,
-            pattern::Slice,
-            pattern::Alias,
-            pattern::Guarded>;
+    struct Pattern_variant
+        : std::variant<
+              kieli::Integer,
+              kieli::Floating,
+              kieli::Character,
+              kieli::Boolean,
+              kieli::String,
+              Wildcard,
+              pattern::Parenthesized,
+              pattern::Name,
+              pattern::Constructor,
+              pattern::Abbreviated_constructor,
+              pattern::Tuple,
+              pattern::Top_level_tuple,
+              pattern::Slice,
+              pattern::Alias,
+              pattern::Guarded> {
+        using variant::variant, variant::operator=;
+    };
 
-        Variant      variant;
-        kieli::Range range;
+    struct Pattern {
+        Pattern_variant variant;
+        kieli::Range    range;
     };
 
     namespace type {
@@ -582,7 +590,7 @@ namespace cst {
         struct Self {};
 
         struct Typename {
-            Qualified_name name;
+            Path path;
         };
 
         struct Tuple {
@@ -631,32 +639,35 @@ namespace cst {
 
         struct Template_application {
             Template_arguments template_arguments;
-            Qualified_name     name;
+            Path               path;
         };
     } // namespace type
 
-    struct Type {
-        using Variant = std::variant<
-            type::Parenthesized,
-            kieli::built_in_type::Integer,
-            kieli::built_in_type::Floating,
-            kieli::built_in_type::Character,
-            kieli::built_in_type::Boolean,
-            kieli::built_in_type::String,
-            Wildcard,
-            type::Self,
-            type::Typename,
-            type::Tuple,
-            type::Array,
-            type::Slice,
-            type::Function,
-            type::Typeof,
-            type::Instance_of,
-            type::Reference,
-            type::Pointer,
-            type::Template_application>;
+    struct Type_variant
+        : std::variant<
+              type::Parenthesized,
+              kieli::built_in_type::Integer,
+              kieli::built_in_type::Floating,
+              kieli::built_in_type::Character,
+              kieli::built_in_type::Boolean,
+              kieli::built_in_type::String,
+              Wildcard,
+              type::Self,
+              type::Typename,
+              type::Tuple,
+              type::Array,
+              type::Slice,
+              type::Function,
+              type::Typeof,
+              type::Instance_of,
+              type::Reference,
+              type::Pointer,
+              type::Template_application> {
+        using variant::variant, variant::operator=;
+    };
 
-        Variant      variant;
+    struct Type {
+        Type_variant variant;
         kieli::Range range;
     };
 
@@ -664,14 +675,14 @@ namespace cst {
         std::optional<Template_parameters> template_parameters;
         Surrounded<Function_parameters>    function_parameters;
         std::optional<Type_annotation>     return_type;
-        kieli::Name_lower                  name;
+        kieli::Lower                       name;
         Token                              fn_keyword_token;
     };
 
     struct Type_signature {
         std::optional<Template_parameters>  template_parameters;
         Separated_sequence<Class_reference> classes;
-        kieli::Name_upper                   name;
+        kieli::Upper                        name;
         std::optional<Token>                classes_colon_token;
         Token                               alias_keyword_token;
     };
@@ -685,9 +696,9 @@ namespace cst {
         };
 
         struct Field {
-            kieli::Name_lower name;
-            Type_annotation   type;
-            kieli::Range      range;
+            kieli::Lower    name;
+            Type_annotation type;
+            kieli::Range    range;
         };
 
         struct Struct_constructor {
@@ -700,32 +711,34 @@ namespace cst {
 
         struct Unit_constructor {};
 
-        using Constructor_body
-            = std::variant<Struct_constructor, Tuple_constructor, Unit_constructor>;
+        struct Constructor_body
+            : std::variant<Struct_constructor, Tuple_constructor, Unit_constructor> {
+            using variant::variant, variant::operator=;
+        };
 
         struct Constructor {
-            kieli::Name_upper name;
-            Constructor_body  body;
+            kieli::Upper     name;
+            Constructor_body body;
         };
 
         struct Struct {
             std::optional<Template_parameters> template_parameters;
             Constructor_body                   body;
-            kieli::Name_upper                  name;
+            kieli::Upper                       name;
             Token                              struct_keyword_token;
         };
 
         struct Enum {
             std::optional<Template_parameters> template_parameters;
             Separated_sequence<Constructor>    constructors;
-            kieli::Name_upper                  name;
+            kieli::Upper                       name;
             Token                              enum_keyword_token;
             Token                              equals_sign_token;
         };
 
         struct Alias {
             std::optional<Template_parameters> template_parameters;
-            kieli::Name_upper                  name;
+            kieli::Upper                       name;
             utl::Wrapper<Type>                 type;
             Token                              alias_keyword_token;
             Token                              equals_sign_token;
@@ -735,7 +748,7 @@ namespace cst {
             std::optional<Template_parameters> template_parameters;
             std::vector<Function_signature>    function_signatures;
             std::vector<Type_signature>        type_signatures;
-            kieli::Name_upper                  name;
+            kieli::Upper                       name;
             Token                              class_keyword_token;
             Token                              open_brace_token;
             Token                              close_brace_token;
@@ -760,25 +773,28 @@ namespace cst {
         struct Submodule {
             std::optional<Template_parameters>  template_parameters;
             Surrounded<std::vector<Definition>> definitions;
-            kieli::Name_lower                   name;
+            kieli::Lower                        name;
             Token                               module_keyword_token;
         };
     } // namespace definition
 
-    struct Definition {
-        using Variant = std::variant<
-            definition::Function,
-            definition::Struct,
-            definition::Enum,
-            definition::Alias,
-            definition::Typeclass,
-            definition::Implementation,
-            definition::Instantiation,
-            definition::Submodule>;
+    struct Definition_variant
+        : std::variant<
+              definition::Function,
+              definition::Struct,
+              definition::Enum,
+              definition::Alias,
+              definition::Typeclass,
+              definition::Implementation,
+              definition::Instantiation,
+              definition::Submodule> {
+        using variant::variant, variant::operator=;
+    };
 
-        Variant          variant;
-        kieli::Source_id source;
-        kieli::Range     range;
+    struct Definition {
+        Definition_variant variant;
+        kieli::Source_id   source;
+        kieli::Range       range;
     };
 
     template <class T>
@@ -788,8 +804,8 @@ namespace cst {
 
     struct [[nodiscard]] Module {
         struct Import {
-            Separated_sequence<kieli::Name_lower> segments;
-            Token                                 import_keyword_token;
+            Separated_sequence<kieli::Lower> segments;
+            Token                            import_keyword_token;
         };
 
         std::vector<Import>     imports;
@@ -797,5 +813,4 @@ namespace cst {
         Node_arena              node_arena;
         kieli::Source_id        source;
     };
-
 } // namespace cst

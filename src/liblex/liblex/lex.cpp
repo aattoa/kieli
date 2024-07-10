@@ -5,80 +5,82 @@
 #include <liblex/lex.hpp>
 #include <liblex/state.hpp>
 
+using kieli::Token;
+using kieli::Token_type;
+using kieli::Token_variant;
+
 namespace {
 
-    using Token = kieli::Token;
-
     constexpr utl::Flatmap punctuation_token_map {
-        std::to_array<std::pair<std::string_view, Token::Type>>({
-            { ".", Token::Type::dot },
-            { ":", Token::Type::colon },
-            { "::", Token::Type::double_colon },
-            { "|", Token::Type::pipe },
-            { "=", Token::Type::equals },
-            { "&", Token::Type::ampersand },
-            { "*", Token::Type::asterisk },
-            { "+", Token::Type::plus },
-            { "?", Token::Type::question },
-            { "\\", Token::Type::lambda },
-            { "<-", Token::Type::left_arrow },
-            { "->", Token::Type::right_arrow },
-            { R"(???)", Token::Type::hole },
+        std::to_array<std::pair<std::string_view, Token_type>>({
+            { ".", Token_type::dot },
+            { ":", Token_type::colon },
+            { "::", Token_type::double_colon },
+            { "|", Token_type::pipe },
+            { "=", Token_type::equals },
+            { "&", Token_type::ampersand },
+            { "*", Token_type::asterisk },
+            { "+", Token_type::plus },
+            { "?", Token_type::question },
+            { "\\", Token_type::lambda },
+            { "<-", Token_type::left_arrow },
+            { "->", Token_type::right_arrow },
+            { R"(???)", Token_type::hole },
         })
     };
 
     constexpr utl::Flatmap keyword_token_map {
-        std::to_array<std::pair<std::string_view, Token::Type>>({
-            { "let", Token::Type::let },
-            { "mut", Token::Type::mut },
-            { "if", Token::Type::if_ },
-            { "else", Token::Type::else_ },
-            { "elif", Token::Type::elif },
-            { "for", Token::Type::for_ },
-            { "in", Token::Type::in },
-            { "while", Token::Type::while_ },
-            { "loop", Token::Type::loop },
-            { "continue", Token::Type::continue_ },
-            { "break", Token::Type::break_ },
-            { "match", Token::Type::match },
-            { "ret", Token::Type::ret },
-            { "discard", Token::Type::discard },
-            { "fn", Token::Type::fn },
-            { "as", Token::Type::as },
-            { "I8", Token::Type::i8_type },
-            { "I16", Token::Type::i16_type },
-            { "I32", Token::Type::i32_type },
-            { "I64", Token::Type::i64_type },
-            { "U8", Token::Type::u8_type },
-            { "U16", Token::Type::u16_type },
-            { "U32", Token::Type::u32_type },
-            { "U64", Token::Type::u64_type },
-            { "Float", Token::Type::floating_type },
-            { "Char", Token::Type::character_type },
-            { "Bool", Token::Type::boolean_type },
-            { "String", Token::Type::string_type },
-            { "self", Token::Type::lower_self },
-            { "Self", Token::Type::upper_self },
-            { "enum", Token::Type::enum_ },
-            { "struct", Token::Type::struct_ },
-            { "class", Token::Type::class_ },
-            { "inst", Token::Type::inst },
-            { "impl", Token::Type::impl },
-            { "alias", Token::Type::alias },
-            { "import", Token::Type::import_ },
-            { "export", Token::Type::export_ },
-            { "module", Token::Type::module_ },
-            { "sizeof", Token::Type::sizeof_ },
-            { "typeof", Token::Type::typeof_ },
-            { "unsafe", Token::Type::unsafe },
-            { "mov", Token::Type::mov },
-            { "meta", Token::Type::meta },
-            { "where", Token::Type::where },
-            { "immut", Token::Type::immut },
-            { "dyn", Token::Type::dyn },
-            { "macro", Token::Type::macro },
-            { "global", Token::Type::global },
-            { "defer", Token::Type::defer },
+        std::to_array<std::pair<std::string_view, Token_type>>({
+            { "let", Token_type::let },
+            { "mut", Token_type::mut },
+            { "if", Token_type::if_ },
+            { "else", Token_type::else_ },
+            { "elif", Token_type::elif },
+            { "for", Token_type::for_ },
+            { "in", Token_type::in },
+            { "while", Token_type::while_ },
+            { "loop", Token_type::loop },
+            { "continue", Token_type::continue_ },
+            { "break", Token_type::break_ },
+            { "match", Token_type::match },
+            { "ret", Token_type::ret },
+            { "discard", Token_type::discard },
+            { "fn", Token_type::fn },
+            { "as", Token_type::as },
+            { "I8", Token_type::i8_type },
+            { "I16", Token_type::i16_type },
+            { "I32", Token_type::i32_type },
+            { "I64", Token_type::i64_type },
+            { "U8", Token_type::u8_type },
+            { "U16", Token_type::u16_type },
+            { "U32", Token_type::u32_type },
+            { "U64", Token_type::u64_type },
+            { "Float", Token_type::floating_type },
+            { "Char", Token_type::character_type },
+            { "Bool", Token_type::boolean_type },
+            { "String", Token_type::string_type },
+            { "self", Token_type::lower_self },
+            { "Self", Token_type::upper_self },
+            { "enum", Token_type::enum_ },
+            { "struct", Token_type::struct_ },
+            { "class", Token_type::class_ },
+            { "inst", Token_type::inst },
+            { "impl", Token_type::impl },
+            { "alias", Token_type::alias },
+            { "import", Token_type::import_ },
+            { "export", Token_type::export_ },
+            { "module", Token_type::module_ },
+            { "sizeof", Token_type::sizeof_ },
+            { "typeof", Token_type::typeof_ },
+            { "unsafe", Token_type::unsafe },
+            { "mov", Token_type::mov },
+            { "meta", Token_type::meta },
+            { "where", Token_type::where },
+            { "immut", Token_type::immut },
+            { "dyn", Token_type::dyn },
+            { "macro", Token_type::macro },
+            { "global", Token_type::global },
+            { "defer", Token_type::defer },
         })
     };
 
@@ -161,7 +163,7 @@ namespace {
             , m_state { state }
         {}
 
-        auto operator()(Token::Variant&& value, Token::Type const type) const noexcept -> Token
+        auto operator()(Token_variant&& value, Token_type const type) const noexcept -> Token
         {
             return Token {
                 .variant          = std::move(value),
@@ -290,31 +292,31 @@ namespace {
     {
         std::string_view const view = liblex::extract(state, is_identifier_tail);
         cpputil::always_assert(!view.empty());
-        if (Token::Type const* const type = keyword_token_map.find(view)) {
+        if (Token_type const* const type = keyword_token_map.find(view)) {
             return token({}, *type);
         }
         if (view == "true") {
-            return token(kieli::Boolean { true }, Token::Type::boolean_literal);
+            return token(kieli::Boolean { true }, Token_type::boolean_literal);
         }
         if (view == "false") {
-            return token(kieli::Boolean { false }, Token::Type::boolean_literal);
+            return token(kieli::Boolean { false }, Token_type::boolean_literal);
         }
         if (std::ranges::all_of(view, is_one_of<"_">)) {
-            return token({}, Token::Type::underscore);
+            return token({}, Token_type::underscore);
         }
         if (is_upper(view[view.find_first_not_of('_')])) {
-            return token(liblex::make_identifier(state, view), Token::Type::upper_name);
+            return token(liblex::make_identifier(state, view), Token_type::upper_name);
         }
-        return token(liblex::make_identifier(state, view), Token::Type::lower_name);
+        return token(liblex::make_identifier(state, view), Token_type::lower_name);
     }
 
     auto extract_operator(Token_maker const& token, kieli::Lex_state& state) -> Token
     {
         std::string_view const view = liblex::extract(state, is_operator);
-        if (Token::Type const* const type = punctuation_token_map.find(view)) {
+        if (Token_type const* const type = punctuation_token_map.find(view)) {
             return token({}, *type);
         }
-        return token(liblex::make_operator_identifier(state, view), Token::Type::operator_name);
+        return token(liblex::make_operator_identifier(state, view), Token_type::operator_name);
     }
 
     auto extract_potentially_escaped_character(kieli::Lex_state& state) -> liblex::Expected<char>
@@ -337,7 +339,7 @@ namespace {
         return extract_potentially_escaped_character(state).and_then(
             [&](char const character) -> liblex::Expected<Token> {
                 if (liblex::try_consume(state, '\'')) {
-                    return token(kieli::Character { character }, Token::Type::character_literal);
+                    return token(kieli::Character { character }, Token_type::character_literal);
                 }
                 return liblex::error(state, "Expected a closing single-quote");
             });
@@ -358,7 +360,7 @@ namespace {
             switch (char const character = liblex::extract_current(state)) {
             case '"':
                 return token(
-                    liblex::make_string_literal(state, string), Token::Type::string_literal);
+                    liblex::make_string_literal(state, string), Token_type::string_literal);
             case '\\':
                 if (auto const escaped = handle_escape_sequence(state)) {
                     string.push_back(escaped.value());
@@ -438,7 +440,7 @@ namespace {
                         extraneous_suffix,
                         "Erroneous floating point literal alphabetic suffix");
                 }
-                return token(kieli::Floating { floating }, Token::Type::floating_literal);
+                return token(kieli::Floating { floating }, Token_type::floating_literal);
             });
     }
 
@@ -517,7 +519,7 @@ namespace {
                 return extract_and_apply_potential_integer_exponent(state, old_string, integer);
             })
             .transform([&](std::size_t const integer) {
-                return token(kieli::Integer { integer }, Token::Type::integer_literal);
+                return token(kieli::Integer { integer }, Token_type::integer_literal);
             });
     }
 
@@ -563,20 +565,20 @@ namespace {
 
     auto extract_token(Token_maker const& token, kieli::Lex_state& state) -> liblex::Expected<Token>
     {
-        auto const simple_token = [&](Token::Type const type) noexcept {
+        auto const simple_token = [&](Token_type const type) noexcept {
             liblex::advance(state);
-            return token(Token::Variant {}, type);
+            return token(Token_variant {}, type);
         };
         // clang-format off
         switch (char const current = liblex::current(state)) {
-        case '(':  return simple_token(Token::Type::paren_open);
-        case ')':  return simple_token(Token::Type::paren_close);
-        case '{':  return simple_token(Token::Type::brace_open);
-        case '}':  return simple_token(Token::Type::brace_close);
-        case '[':  return simple_token(Token::Type::bracket_open);
-        case ']':  return simple_token(Token::Type::bracket_close);
-        case ';':  return simple_token(Token::Type::semicolon);
-        case ',':  return simple_token(Token::Type::comma);
+        case '(':  return simple_token(Token_type::paren_open);
+        case ')':  return simple_token(Token_type::paren_close);
+        case '{':  return simple_token(Token_type::brace_open);
+        case '}':  return simple_token(Token_type::brace_close);
+        case '[':  return simple_token(Token_type::bracket_open);
+        case ']':  return simple_token(Token_type::bracket_close);
+        case ';':  return simple_token(Token_type::semicolon);
+        case ',':  return simple_token(Token_type::comma);
         case '\'': return extract_character_literal(token, state);
         case '\"': return extract_string_literal(token, state);
         // clang-format on
@@ -601,7 +603,7 @@ namespace {
 
 auto kieli::Lex_state::make(Source_id const source, Compile_info& info) -> Lex_state
 {
-    return Lex_state { info, source, Position {}, info.source_vector[source].content };
+    return Lex_state { info, source, Position {}, info.sources[source].content };
 }
 
 auto kieli::lex(Lex_state& state) -> Token
@@ -609,10 +611,10 @@ auto kieli::lex(Lex_state& state) -> Token
     Token_maker const token_maker { extract_comments_and_whitespace(state), state };
     if (state.string.empty()) {
         ++state.position.column; // According to the LSP spec, the stop position is exclusive.
-        return token_maker({}, Token::Type::end_of_input);
+        return token_maker({}, Token_type::end_of_input);
     }
     if (auto token = extract_token(token_maker, state)) {
         return token.value();
     }
-    return token_maker({}, Token::Type::error);
+    return token_maker({}, Token_type::error);
 }

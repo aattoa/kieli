@@ -77,15 +77,15 @@ namespace {
             cpputil::todo();
         }
 
-        auto operator()(ast::type::Typename const& type_name) -> hir::Type
+        auto operator()(ast::type::Typename const& type) -> hir::Type
         {
-            if (type_name.name.is_unqualified()) {
-                if (auto* const bind = scope.find_type(type_name.name.primary_name.identifier)) {
+            if (type.path.is_simple_name()) {
+                if (auto* const bind = scope.find_type(type.path.head.identifier)) {
                     return { bind->type, this_type.range };
                 }
             }
             if (auto const lookup_result
-                = lookup_upper(context, state, scope, environment, type_name.name)) {
+                = lookup_upper(context, state, scope, environment, type.path)) {
                 return std::visit(
                     utl::Overload {
                         [&](hir::Enumeration_id const enumeration) -> hir::Type {

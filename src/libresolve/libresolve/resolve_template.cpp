@@ -32,7 +32,7 @@ namespace {
         }
 
         auto operator()(ast::Template_type_parameter const& parameter)
-            -> hir::Template_parameter::Variant
+            -> hir::Template_parameter_variant
         {
             scope.bind_type(
                 parameter.name.identifier,
@@ -53,7 +53,7 @@ namespace {
         }
 
         auto operator()(ast::Template_mutability_parameter const& parameter)
-            -> hir::Template_parameter::Variant
+            -> hir::Template_parameter_variant
         {
             scope.bind_mutability(
                 parameter.name.identifier,
@@ -73,7 +73,7 @@ namespace {
         }
 
         auto operator()(ast::Template_value_parameter const& parameter)
-            -> hir::Template_parameter::Variant
+            -> hir::Template_parameter_variant
         {
             kieli::fatal_error(
                 context.compile_info,
@@ -92,18 +92,17 @@ auto libresolve::resolve_template_parameters(
     ast::Template_parameters const& parameters) -> std::vector<hir::Template_parameter>
 {
     auto const resolve_parameter = [&](ast::Template_parameter const& parameter) {
-        auto const id = context.tag_state.fresh_template_parameter_tag();
+        auto const tag = context.tags.fresh_template_parameter_tag();
         return hir::Template_parameter {
             .variant = std::visit(
-                Template_parameter_resolution_visitor { context, state, scope, environment, id },
+                Template_parameter_resolution_visitor { context, state, scope, environment, tag },
                 parameter.variant),
-            .tag   = id,
+            .tag   = tag,
             .range = parameter.range,
         };
     };
-    return parameters
-        .transform(std::views::transform(resolve_parameter) | std::ranges::to<std::vector>())
-        .value_or(std::vector<hir::Template_parameter> {});
+    auto const resolve = std::views::transform(resolve_parameter) | std::ranges::to<std::vector>();
+    return parameters.transform(resolve).value_or(std::vector<hir::Template_parameter> {});
 }
 
 auto libresolve::resolve_template_arguments(

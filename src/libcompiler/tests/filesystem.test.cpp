@@ -8,21 +8,21 @@ TEST("text_range")
 {
     // section: one line
     {
-        CHECK_EQUAL(kieli::text_range("hello", { { 0, 0 }, { 0, 0 } }), "");
-        CHECK_EQUAL(kieli::text_range("hello", { { 0, 5 }, { 0, 5 } }), "");
-        CHECK_EQUAL(kieli::text_range("hello", { { 0, 0 }, { 0, 1 } }), "h");
-        CHECK_EQUAL(kieli::text_range("hello", { { 0, 2 }, { 0, 4 } }), "ll");
-        CHECK_EQUAL(kieli::text_range("hello", { { 0, 0 }, { 0, 5 } }), "hello");
+        CHECK_EQUAL(kieli::text_range("hello", kieli::Range({ 0, 0 }, { 0, 0 })), "");
+        CHECK_EQUAL(kieli::text_range("hello", kieli::Range({ 0, 5 }, { 0, 5 })), "");
+        CHECK_EQUAL(kieli::text_range("hello", kieli::Range({ 0, 0 }, { 0, 1 })), "h");
+        CHECK_EQUAL(kieli::text_range("hello", kieli::Range({ 0, 2 }, { 0, 4 })), "ll");
+        CHECK_EQUAL(kieli::text_range("hello", kieli::Range({ 0, 0 }, { 0, 5 })), "hello");
     }
     // section: multiple lines
     {
         std::string_view const string = "abc\ndefg\nhij";
-        CHECK_EQUAL(kieli::text_range(string, { { 0, 0 }, { 0, 3 } }), "abc");
-        CHECK_EQUAL(kieli::text_range(string, { { 1, 0 }, { 1, 4 } }), "defg");
-        CHECK_EQUAL(kieli::text_range(string, { { 2, 0 }, { 2, 3 } }), "hij");
-        CHECK_EQUAL(kieli::text_range(string, { { 0, 0 }, { 2, 3 } }), string);
-        CHECK_EQUAL(kieli::text_range(string, { { 0, 0 }, { 1, 3 } }), "abc\ndef");
-        CHECK_EQUAL(kieli::text_range(string, { { 1, 2 }, { 2, 1 } }), "fg\nh");
+        CHECK_EQUAL(kieli::text_range(string, kieli::Range({ 0, 0 }, { 0, 3 })), "abc");
+        CHECK_EQUAL(kieli::text_range(string, kieli::Range({ 1, 0 }, { 1, 4 })), "defg");
+        CHECK_EQUAL(kieli::text_range(string, kieli::Range({ 2, 0 }, { 2, 3 })), "hij");
+        CHECK_EQUAL(kieli::text_range(string, kieli::Range({ 0, 0 }, { 2, 3 })), string);
+        CHECK_EQUAL(kieli::text_range(string, kieli::Range({ 0, 0 }, { 1, 3 })), "abc\ndef");
+        CHECK_EQUAL(kieli::text_range(string, kieli::Range({ 1, 2 }, { 2, 1 })), "fg\nh");
     }
 }
 
@@ -30,13 +30,13 @@ TEST("edit_text")
 {
     std::string text = "lo";
 
-    kieli::edit_text(text, { { 0, 0 }, { 0, 0 } }, "hel");
+    kieli::edit_text(text, kieli::Range({ 0, 0 }, { 0, 0 }), "hel");
     REQUIRE_EQUAL(text, "hello");
 
-    kieli::edit_text(text, { { 0, 5 }, { 0, 5 } }, ", world");
+    kieli::edit_text(text, kieli::Range({ 0, 5 }, { 0, 5 }), ", world");
     REQUIRE_EQUAL(text, "hello, world");
 
-    kieli::edit_text(text, { { 0, 5 }, { 0, 7 } }, "");
+    kieli::edit_text(text, kieli::Range({ 0, 5 }, { 0, 7 }), "");
     REQUIRE_EQUAL(text, "helloworld");
 }
 

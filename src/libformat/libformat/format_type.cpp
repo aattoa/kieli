@@ -42,12 +42,12 @@ namespace {
 
         auto operator()(cst::type::Typename const& type)
         {
-            state.format(type.name);
+            state.format(type.path);
         }
 
         auto operator()(cst::type::Template_application const& application)
         {
-            state.format(application.name);
+            state.format(application.path);
             state.format(application.template_arguments);
         }
 

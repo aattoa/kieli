@@ -12,25 +12,26 @@
 - More tests
 
 ## libresolve
-- Unique type for each function, coerce to function pointer
-
-## libcodegen
-- Output C and bytecode
+- Unique zero-sized type for each function, coerce to function pointer type
+- Scope stack, scope id
+- Generate logs for rollback
 
 ## Build process
 - Profile compilation with `-ftime-trace`
 - Try the mold linker, `-fuse-ld=mold`
 
 ## Miscellaneous
-- Parameters: in, inout, out, move, forward ?
-- libbuild
-- libconfigure
-- User generated compile-time messages
-- Use libtommath for arbitrary precision integers
-- Wrapper `unwrap` instead of `operator*` ?
+- Range should store width only?
+- Union types `Int|Float`
+- Allow omission of repeated parameter types ?
+- in, inout, out, mv, fwd ?
+- libtommath for arbitrary precision integers?
+- String interpolation
+- First class testing
+- lsp column offsets are utf8
+- Configure builds with `build.kieli`
+- Backends: bytecode, C, x86 asm
 
 ## To-remove
 - `utl::Flatmap`, when `std::flat_map` is supported by compilers
-
-## Long-term
-- Language server
+- `utl::Wrapper`, use index vectors instead

@@ -23,7 +23,7 @@ namespace libformat {
         auto format(cst::Expression const&) -> void;
         auto format(cst::Pattern const&) -> void;
         auto format(cst::Type const&) -> void;
-        auto format(cst::Qualified_name const&) -> void;
+        auto format(cst::Path const&) -> void;
         auto format(cst::Template_argument const&) -> void;
         auto format(cst::Function_argument const&) -> void;
         auto format(cst::Mutability const&) -> void;

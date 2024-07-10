@@ -24,26 +24,26 @@ auto libformat::State::format(cst::Wildcard const& wildcard) -> void
     format("{:_^{}}", "", stop.column - start.column);
 }
 
-auto libformat::State::format(cst::Qualified_name const& name) -> void
+auto libformat::State::format(cst::Path const& path) -> void
 {
-    if (name.root_qualifier.has_value()) {
+    if (path.root.has_value()) {
         std::visit(
             utl::Overload {
-                [&](cst::Global_root_qualifier) { format("global::"); },
+                [&](cst::Path_root_global) { format("global::"); },
                 [&](utl::Wrapper<cst::Type> const type) {
                     format(*type);
                     format("::");
                 },
 
             },
-            name.root_qualifier->variant);
+            path.root->variant);
     }
-    for (auto const& qualifier : name.middle_qualifiers.elements) {
-        format("{}", qualifier.name);
-        format(qualifier.template_arguments);
+    for (auto const& segment : path.segments.elements) {
+        format("{}", segment.name);
+        format(segment.template_arguments);
         format("::");
     }
-    format("{}", name.primary_name);
+    format("{}", path.head);
 }
 
 auto libformat::State::format(cst::Template_argument const& argument) -> void
@@ -90,7 +90,7 @@ auto libformat::State::format(cst::Function_arguments const& arguments) -> void
 
 auto libformat::State::format(cst::Class_reference const& reference) -> void
 {
-    format(reference.name);
+    format(reference.path);
     format(reference.template_arguments);
 }
 

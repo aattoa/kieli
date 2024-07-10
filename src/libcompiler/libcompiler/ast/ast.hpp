@@ -20,7 +20,6 @@
 */
 
 namespace ast {
-
     struct [[nodiscard]] Expression;
     struct [[nodiscard]] Type;
     struct [[nodiscard]] Pattern;
@@ -34,83 +33,87 @@ namespace ast {
         using Concrete = kieli::Mutability;
 
         struct Parameterized {
-            kieli::Name_lower name;
+            kieli::Lower name;
         };
     } // namespace mutability
 
+    struct Mutability_variant : std::variant<mutability::Concrete, mutability::Parameterized> {
+        using variant::variant, variant::operator=;
+    };
+
     struct Mutability {
-        using Variant = std::variant<mutability::Concrete, mutability::Parameterized>;
-        Variant             variant;
-        utl::Explicit<bool> is_explicit;
-        kieli::Range        range;
+        Mutability_variant variant;
+        kieli::Range       range;
     };
 
-    using Template_argument = std::variant< //
-        utl::Wrapper<Type>,
-        utl::Wrapper<Expression>,
-        Mutability,
-        Wildcard>;
+    struct Template_argument
+        : std::variant<utl::Wrapper<Type>, utl::Wrapper<Expression>, Mutability, Wildcard> {
+        using variant::variant, variant::operator=;
+    };
 
-    struct Qualifier {
+    struct Path_segment {
         std::optional<std::vector<Template_argument>> template_arguments;
-        kieli::Name_dynamic                           name;
-        kieli::Range                                  range;
+        kieli::Name                                   name;
     };
 
-    struct Global_root_qualifier {};
+    struct Path_root_global {};
 
-    using Root_qualifier = std::variant<Global_root_qualifier, utl::Wrapper<Type>>;
+    struct Path_root : std::variant<Path_root_global, utl::Wrapper<Type>> {
+        using variant::variant, variant::operator=;
+    };
 
-    struct Qualified_name {
-        std::vector<Qualifier>        middle_qualifiers;
-        std::optional<Root_qualifier> root_qualifier;
-        kieli::Name_dynamic           primary_name;
+    struct Path {
+        std::vector<Path_segment> segments;
+        std::optional<Path_root>  root;
+        kieli::Name               head;
 
-        [[nodiscard]] auto is_upper() const noexcept -> bool;
-        [[nodiscard]] auto is_unqualified() const noexcept -> bool;
+        [[nodiscard]] auto is_simple_name() const noexcept -> bool;
     };
 
     struct Class_reference {
         std::optional<std::vector<Template_argument>> template_arguments;
-        Qualified_name                                name;
+        Path                                          path;
         kieli::Range                                  range;
     };
 
     struct Template_type_parameter {
         using Default = std::variant<utl::Wrapper<Type>, Wildcard>;
-        kieli::Name_upper            name;
+        kieli::Upper                 name;
         std::vector<Class_reference> classes;
         std::optional<Default>       default_argument;
     };
 
     struct Template_value_parameter {
         using Default = std::variant<utl::Wrapper<Expression>, Wildcard>;
-        kieli::Name_lower                 name;
+        kieli::Lower                      name;
         std::optional<utl::Wrapper<Type>> type;
         std::optional<Default>            default_argument;
     };
 
     struct Template_mutability_parameter {
         using Default = std::variant<Mutability, Wildcard>;
-        kieli::Name_lower      name;
+        kieli::Lower           name;
         std::optional<Default> default_argument;
     };
 
-    struct Template_parameter {
-        using Variant = std::variant<
-            Template_type_parameter,
-            Template_value_parameter,
-            Template_mutability_parameter>;
+    struct Template_parameter_variant
+        : std::variant<
+              Template_type_parameter,
+              Template_value_parameter,
+              Template_mutability_parameter> {
+        using variant::variant, variant::operator=;
+    };
 
-        Variant      variant;
-        kieli::Range range;
+    struct Template_parameter {
+        Template_parameter_variant variant;
+        kieli::Range               range;
     };
 
     using Template_parameters = std::optional<std::vector<Template_parameter>>;
 
     struct Function_argument {
-        utl::Wrapper<Expression>         expression;
-        std::optional<kieli::Name_lower> name;
+        utl::Wrapper<Expression>    expression;
+        std::optional<kieli::Lower> name;
     };
 
     struct Function_parameter {
@@ -130,7 +133,7 @@ namespace ast {
         struct Self {};
 
         struct Variable {
-            Qualified_name name;
+            Path path;
         };
 
         struct Tuple {
@@ -159,21 +162,21 @@ namespace ast {
         };
 
         struct Unit_initializer {
-            Qualified_name constructor;
+            Path constructor_path;
         };
 
         struct Tuple_initializer {
-            Qualified_name                        constructor;
+            Path                                  constructor_path;
             std::vector<utl::Wrapper<Expression>> initializers;
         };
 
         struct Struct_initializer {
             struct Field {
-                kieli::Name_lower        name;
+                kieli::Lower             name;
                 utl::Wrapper<Expression> expression;
             };
 
-            Qualified_name     constructor;
+            Path               constructor_path;
             std::vector<Field> initializers;
         };
 
@@ -181,11 +184,12 @@ namespace ast {
             utl::Wrapper<Expression> left;
             utl::Wrapper<Expression> right;
             kieli::Identifier        op;
+            kieli::Range             op_range;
         };
 
         struct Struct_field_access {
             utl::Wrapper<Expression> base_expression;
-            kieli::Name_lower        field_name;
+            kieli::Lower             field_name;
         };
 
         struct Tuple_field_access {
@@ -203,7 +207,7 @@ namespace ast {
             std::vector<Function_argument>                function_arguments;
             std::optional<std::vector<Template_argument>> template_arguments;
             utl::Wrapper<Expression>                      base_expression;
-            kieli::Name_lower                             method_name;
+            kieli::Lower                                  method_name;
         };
 
         struct Conditional {
@@ -226,7 +230,7 @@ namespace ast {
 
         struct Template_application {
             std::vector<Template_argument> template_arguments;
-            Qualified_name                 name;
+            Path                           path;
         };
 
         struct Type_cast {
@@ -246,7 +250,7 @@ namespace ast {
         };
 
         struct Local_type_alias {
-            kieli::Name_upper  name;
+            kieli::Upper       name;
             utl::Wrapper<Type> type;
         };
 
@@ -286,59 +290,62 @@ namespace ast {
         struct Hole {};
     } // namespace expression
 
-    struct Expression {
-        using Variant = std::variant<
-            kieli::Integer,
-            kieli::Floating,
-            kieli::Character,
-            kieli::Boolean,
-            kieli::String,
-            expression::Array_literal,
-            expression::Self,
-            expression::Variable,
-            expression::Tuple,
-            expression::Loop,
-            expression::Break,
-            expression::Continue,
-            expression::Block,
-            expression::Invocation,
-            expression::Unit_initializer,
-            expression::Tuple_initializer,
-            expression::Struct_initializer,
-            expression::Binary_operator_invocation,
-            expression::Struct_field_access,
-            expression::Tuple_field_access,
-            expression::Array_index_access,
-            expression::Method_invocation,
-            expression::Conditional,
-            expression::Match,
-            expression::Template_application,
-            expression::Type_cast,
-            expression::Type_ascription,
-            expression::Let_binding,
-            expression::Local_type_alias,
-            expression::Ret,
-            expression::Sizeof,
-            expression::Addressof,
-            expression::Dereference,
-            expression::Unsafe,
-            expression::Move,
-            expression::Defer,
-            expression::Meta,
-            expression::Hole>;
+    struct Expression_variant
+        : std::variant<
+              kieli::Integer,
+              kieli::Floating,
+              kieli::Character,
+              kieli::Boolean,
+              kieli::String,
+              expression::Array_literal,
+              expression::Self,
+              expression::Variable,
+              expression::Tuple,
+              expression::Loop,
+              expression::Break,
+              expression::Continue,
+              expression::Block,
+              expression::Invocation,
+              expression::Unit_initializer,
+              expression::Tuple_initializer,
+              expression::Struct_initializer,
+              expression::Binary_operator_invocation,
+              expression::Struct_field_access,
+              expression::Tuple_field_access,
+              expression::Array_index_access,
+              expression::Method_invocation,
+              expression::Conditional,
+              expression::Match,
+              expression::Template_application,
+              expression::Type_cast,
+              expression::Type_ascription,
+              expression::Let_binding,
+              expression::Local_type_alias,
+              expression::Ret,
+              expression::Sizeof,
+              expression::Addressof,
+              expression::Dereference,
+              expression::Unsafe,
+              expression::Move,
+              expression::Defer,
+              expression::Meta,
+              expression::Hole> {
+        using variant::variant, variant::operator=;
+    };
 
-        Variant      variant;
-        kieli::Range range;
+    struct Expression {
+        Expression_variant variant;
+        kieli::Range       range;
     };
 
     namespace pattern {
         struct Name {
-            kieli::Name_lower name;
-            Mutability        mutability;
+            kieli::Lower name;
+            Mutability   mutability;
         };
 
         struct Field {
-            kieli::Name_lower                    name;
+            kieli::Lower                         name;
             std::optional<utl::Wrapper<Pattern>> pattern;
         };
 
@@ -352,19 +359,19 @@ namespace ast {
 
         struct Unit_constructor {};
 
-        using Constructor_body = std::variant<
-            Struct_constructor, //
-            Tuple_constructor,
-            Unit_constructor>;
+        struct Constructor_body
+            : std::variant<Struct_constructor, Tuple_constructor, Unit_constructor> {
+            using variant::variant, variant::operator=;
+        };
 
         struct Constructor {
-            Qualified_name   name;
+            Path             path;
             Constructor_body body;
         };
 
         struct Abbreviated_constructor {
-            kieli::Name_upper name;
-            Constructor_body  body;
+            kieli::Upper     name;
+            Constructor_body body;
         };
 
         struct Tuple {
@@ -376,7 +383,7 @@ namespace ast {
         };
 
         struct Alias {
-            kieli::Name_lower     name;
+            kieli::Lower          name;
             Mutability            mutability;
             utl::Wrapper<Pattern> pattern;
         };
@@ -387,31 +394,34 @@ namespace ast {
         };
     } // namespace pattern
 
-    struct Pattern {
-        using Variant = std::variant<
-            kieli::Integer,
-            kieli::Floating,
-            kieli::Character,
-            kieli::Boolean,
-            kieli::String,
-            Wildcard,
-            pattern::Name,
-            pattern::Constructor,
-            pattern::Abbreviated_constructor,
-            pattern::Tuple,
-            pattern::Slice,
-            pattern::Alias,
-            pattern::Guarded>;
+    struct Pattern_variant
+        : std::variant<
+              kieli::Integer,
+              kieli::Floating,
+              kieli::Character,
+              kieli::Boolean,
+              kieli::String,
+              Wildcard,
+              pattern::Name,
+              pattern::Constructor,
+              pattern::Abbreviated_constructor,
+              pattern::Tuple,
+              pattern::Slice,
+              pattern::Alias,
+              pattern::Guarded> {
+        using variant::variant, variant::operator=;
+    };
 
-        Variant      variant;
-        kieli::Range range;
+    struct Pattern {
+        Pattern_variant variant;
+        kieli::Range    range;
     };
 
     namespace type {
         struct Self {};
 
         struct Typename {
-            Qualified_name name;
+            Path path;
         };
 
         struct Tuple {
@@ -452,31 +462,34 @@ namespace ast {
 
         struct Template_application {
             std::vector<Template_argument> arguments;
-            Qualified_name                 name;
+            Path                           path;
         };
     } // namespace type
 
-    struct Type {
-        using Variant = std::variant<
-            kieli::built_in_type::Integer,
-            kieli::built_in_type::Floating,
-            kieli::built_in_type::Character,
-            kieli::built_in_type::Boolean,
-            kieli::built_in_type::String,
-            Wildcard,
-            type::Self,
-            type::Typename,
-            type::Tuple,
-            type::Array,
-            type::Slice,
-            type::Function,
-            type::Typeof,
-            type::Reference,
-            type::Pointer,
-            type::Instance_of,
-            type::Template_application>;
+    struct Type_variant
+        : std::variant<
+              kieli::built_in_type::Integer,
+              kieli::built_in_type::Floating,
+              kieli::built_in_type::Character,
+              kieli::built_in_type::Boolean,
+              kieli::built_in_type::String,
+              Wildcard,
+              type::Self,
+              type::Typename,
+              type::Tuple,
+              type::Array,
+              type::Slice,
+              type::Function,
+              type::Typeof,
+              type::Reference,
+              type::Pointer,
+              type::Instance_of,
+              type::Template_application> {
+        using variant::variant, variant::operator=;
+    };
 
-        Variant      variant;
+    struct Type {
+        Type_variant variant;
         kieli::Range range;
     };
 
@@ -491,12 +504,12 @@ namespace ast {
         std::vector<Function_parameter> function_parameters;
         std::optional<Self_parameter>   self_parameter;
         Type                            return_type;
-        kieli::Name_lower               name;
+        kieli::Lower                    name;
     };
 
     struct Type_signature {
         std::vector<Class_reference> classes;
-        kieli::Name_upper            name;
+        kieli::Upper                 name;
     };
 
     namespace definition {
@@ -506,9 +519,9 @@ namespace ast {
         };
 
         struct Field {
-            kieli::Name_lower name;
-            Type              type;
-            kieli::Range      range;
+            kieli::Lower name;
+            Type         type;
+            kieli::Range range;
         };
 
         struct Struct_constructor {
@@ -521,22 +534,24 @@ namespace ast {
 
         struct Unit_constructor {};
 
-        using Constructor_body
-            = std::variant<Struct_constructor, Tuple_constructor, Unit_constructor>;
+        struct Constructor_body
+            : std::variant<Struct_constructor, Tuple_constructor, Unit_constructor> {
+            using variant::variant, variant::operator=;
+        };
 
         struct Constructor {
-            kieli::Name_upper name;
-            Constructor_body  body;
+            kieli::Upper     name;
+            Constructor_body body;
         };
 
         struct Enumeration {
             std::vector<Constructor> constructors;
-            kieli::Name_upper        name;
+            kieli::Upper             name;
             Template_parameters      template_parameters;
         };
 
         struct Alias {
-            kieli::Name_upper   name;
+            kieli::Upper        name;
             Type                type;
             Template_parameters template_parameters;
         };
@@ -544,7 +559,7 @@ namespace ast {
         struct Typeclass {
             std::vector<Function_signature> function_signatures;
             std::vector<Type_signature>     type_signatures;
-            kieli::Name_upper               name;
+            kieli::Upper                    name;
             Template_parameters             template_parameters;
         };
 
@@ -563,24 +578,27 @@ namespace ast {
 
         struct Submodule {
             std::vector<Definition> definitions;
-            kieli::Name_lower       name;
+            kieli::Lower            name;
             Template_parameters     template_parameters;
         };
     } // namespace definition
 
-    struct Definition {
-        using Variant = std::variant<
-            definition::Function,
-            definition::Enumeration,
-            definition::Alias,
-            definition::Typeclass,
-            definition::Implementation,
-            definition::Instantiation,
-            definition::Submodule>;
+    struct Definition_variant
+        : std::variant<
+              definition::Function,
+              definition::Enumeration,
+              definition::Alias,
+              definition::Typeclass,
+              definition::Implementation,
+              definition::Instantiation,
+              definition::Submodule> {
+        using variant::variant, variant::operator=;
+    };
 
-        Variant          variant;
-        kieli::Source_id source;
-        kieli::Range     range;
+    struct Definition {
+        Definition_variant variant;
+        kieli::Source_id   source;
+        kieli::Range       range;
     };
 
     template <class T>
@@ -598,7 +616,7 @@ namespace ast {
     auto format_to(Type const&, std::string&) -> void;
     auto format_to(Definition const&, std::string&) -> void;
     auto format_to(Mutability const&, std::string&) -> void;
-    auto format_to(Qualified_name const&, std::string&) -> void;
+    auto format_to(Path const&, std::string&) -> void;
     auto format_to(Class_reference const&, std::string&) -> void;
     auto format_to(Function_parameter const&, std::string&) -> void;
     auto format_to(Function_argument const&, std::string&) -> void;
@@ -613,5 +631,4 @@ namespace ast {
         ast::format_to(x, output);
         return output;
     };
-
 } // namespace ast

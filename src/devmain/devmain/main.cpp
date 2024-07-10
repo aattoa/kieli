@@ -49,7 +49,7 @@ namespace {
     {
         auto state = kieli::Lex_state::make(source, info);
         auto token = kieli::lex(state);
-        while (token.type != kieli::Token::Type::end_of_input) {
+        while (token.type != kieli::Token_type::end_of_input) {
             std::print("{} ", token);
             token = kieli::lex(state);
         }
@@ -118,8 +118,7 @@ namespace {
             kieli::add_to_history(input.value().c_str());
 
             kieli::Compile_info    info;
-            kieli::Source_id const source
-                = info.source_vector.push(std::move(input).value(), "[repl]");
+            kieli::Source_id const source = info.sources.push(std::move(input).value(), "[repl]");
 
             try {
                 callback(source, info);

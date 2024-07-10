@@ -17,9 +17,7 @@ namespace {
     }
 
     auto binding_not_in_scope(
-        Context&                context,
-        kieli::Source_id const  source,
-        kieli::Name_lower const name) -> hir::Mutability
+        Context& context, kieli::Source_id const source, kieli::Lower const name) -> hir::Mutability
     {
         kieli::emit_diagnostic(
             cppdiag::Severity::error,

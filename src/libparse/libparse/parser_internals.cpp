@@ -12,7 +12,7 @@ libparse::Context::Context(cst::Node_arena& arena, kieli::Lex_state const state)
 
 auto libparse::Context::is_finished() -> bool
 {
-    return peek().type == Token::Type::end_of_input;
+    return peek().type == Token_type::end_of_input;
 }
 
 auto libparse::Context::peek() -> Token
@@ -31,17 +31,17 @@ auto libparse::Context::extract() -> Token
     return token;
 }
 
-auto libparse::Context::try_extract(Token::Type const type) -> std::optional<Token>
+auto libparse::Context::try_extract(Token_type const type) -> std::optional<Token>
 {
     return peek().type == type ? std::optional(extract()) : std::nullopt;
 }
 
-auto libparse::Context::require_extract(Token::Type const type) -> Token
+auto libparse::Context::require_extract(Token_type const type) -> Token
 {
     if (auto token = try_extract(type)) {
         return token.value();
     }
-    error_expected(Token::description(type));
+    error_expected(kieli::token_description(type));
 }
 
 auto libparse::Context::stage() const -> Stage
@@ -69,7 +69,7 @@ auto libparse::Context::commit(Stage const stage) -> void
 auto libparse::Context::up_to_current(kieli::Range const range) const -> kieli::Range
 {
     cpputil::always_assert(m_previous_token_range.has_value());
-    return { range.start, m_previous_token_range.value().stop };
+    return kieli::Range(range.start, m_previous_token_range.value().stop);
 }
 
 auto libparse::Context::error_expected(
@@ -81,7 +81,8 @@ auto libparse::Context::error_expected(
         compile_info(),
         source(),
         error_range,
-        std::format("Found {} where {} was expected", Token::description(peek().type), description),
+        std::format(
+            "Expected {}, but found {}", description, kieli::token_description(peek().type)),
         std::move(help_note));
 }
 

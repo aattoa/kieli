@@ -1,17 +1,22 @@
 #include <libutl/utilities.hpp>
 #include <libcompiler/compiler.hpp>
 
+auto kieli::Compilation_failure::what() const noexcept -> char const*
+{
+    return "kieli::Compilation_failure";
+}
+
 auto kieli::emit_diagnostic(
     cppdiag::Severity const    severity,
     Compile_info&              info,
     Source_id const            source,
-    Range const                error_range,
+    Range const                range,
     std::string                message,
     std::optional<std::string> help_note) -> void
 {
     info.diagnostics.push_back(cppdiag::Diagnostic {
         .text_sections = utl::to_vector({
-            text_section(info.source_vector[source], error_range, std::move(help_note)),
+            text_section(info.sources[source], range, std::move(help_note)),
         }),
         .message       = std::move(message),
         .help_note     = std::move(help_note),
@@ -74,24 +79,14 @@ auto kieli::predefinitions_source(Compile_info& info) -> Source_id
             fn id[X](x: X) = x
         }
     )";
-    return info.source_vector.push(std::string(source), "[predefined]");
+    return info.sources.push(std::string(source), "[predefined]");
 }
 
-auto kieli::Compilation_failure::what() const noexcept -> char const*
+auto kieli::Name::is_upper() const -> bool
 {
-    return "kieli::Compilation_failure";
-}
-
-auto kieli::Name_dynamic::as_upper() const noexcept -> Name_upper
-{
-    cpputil::always_assert(is_upper.get());
-    return { identifier, range };
-}
-
-auto kieli::Name_dynamic::as_lower() const noexcept -> Name_lower
-{
-    cpputil::always_assert(!is_upper.get());
-    return { identifier, range };
+    static constexpr auto is_upper = [](char const c) { return 'A' <= c && c <= 'Z'; };
+    std::size_t const     position = identifier.view().find_first_not_of('_');
+    return position == std::string_view::npos ? false : is_upper(identifier.view().at(position));
 }
 
 auto kieli::built_in_type::integer_name(Integer const integer) noexcept -> std::string_view

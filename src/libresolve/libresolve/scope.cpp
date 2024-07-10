@@ -37,7 +37,7 @@ namespace {
         for (auto const& binding : unused(bindings)) {
             info.diagnostics.push_back(cppdiag::Diagnostic {
                 .text_sections = utl::to_vector({
-                    kieli::text_section(info.source_vector[source], binding.name.range),
+                    kieli::text_section(info.sources[source], binding.name.range),
                 }),
                 .message       = std::format("Unused binding: {}", binding.name),
                 .help_note     = std::format("If this is intentional, use _{}", binding.name),

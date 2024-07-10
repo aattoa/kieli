@@ -9,14 +9,13 @@ namespace {
     auto parse_self_parameter(Context& context) -> std::optional<cst::Self_parameter>
     {
         Stage const stage           = context.stage();
-        auto const  ampersand_token = context.try_extract(Token::Type::ampersand);
+        auto const  ampersand_token = context.try_extract(Token_type::ampersand);
         auto        mutability      = parse_mutability(context);
-        if (auto self_token = context.try_extract(Token::Type::lower_self)) {
+        if (auto self_token = context.try_extract(Token_type::lower_self)) {
             return cst::Self_parameter {
                 .mutability         = mutability,
                 .ampersand_token    = ampersand_token.transform(cst::Token::from_lexical),
                 .self_keyword_token = cst::Token::from_lexical(self_token.value()),
-                .range              = self_token.value().range,
             };
         }
         context.unstage(stage);
@@ -26,16 +25,16 @@ namespace {
     template <class Default, parser auto parse_argument>
     auto parse_default_argument(Context& context) -> std::optional<Default>
     {
-        return context.try_extract(Token::Type::equals).transform([&](Token const& equals) {
-            if (auto const wildcard = context.try_extract(Token::Type::underscore)) {
+        return context.try_extract(Token_type::equals).transform([&](Token const& equals) {
+            if (auto const wildcard = context.try_extract(Token_type::underscore)) {
                 return Default {
-                    .equals_sign_token = cst::Token::from_lexical(equals),
                     .variant           = cst::Wildcard { .range = wildcard.value().range },
+                    .equals_sign_token = cst::Token::from_lexical(equals),
                 };
             }
             return Default {
-                .equals_sign_token = cst::Token::from_lexical(equals),
                 .variant           = require<parse_argument>(context, "a default argument"),
+                .equals_sign_token = cst::Token::from_lexical(equals),
             };
         });
     }
@@ -47,11 +46,11 @@ namespace {
     constexpr auto parse_mutability_parameter_default_argument
         = parse_default_argument<cst::Mutability_parameter_default_argument, parse_mutability>;
 
-    auto extract_template_value_or_mutability_parameter(
-        Context& context, kieli::Name_lower const name) -> cst::Template_parameter::Variant
+    auto extract_template_value_or_mutability_parameter(Context& context, kieli::Lower const name)
+        -> cst::Template_parameter_variant
     {
-        if (auto const colon = context.try_extract(Token::Type::colon)) {
-            if (auto const mut_keyword = context.try_extract(Token::Type::mut)) {
+        if (auto const colon = context.try_extract(Token_type::colon)) {
+            if (auto const mut_keyword = context.try_extract(Token_type::mut)) {
                 return cst::Template_mutability_parameter {
                     .name              = name,
                     .colon_token       = cst::Token::from_lexical(colon.value()),
@@ -77,10 +76,10 @@ namespace {
         };
     }
 
-    auto extract_template_type_parameter(Context& context, kieli::Name_upper const name)
-        -> cst::Template_parameter::Variant
+    auto extract_template_type_parameter(Context& context, kieli::Upper const name)
+        -> cst::Template_parameter_variant
     {
-        if (auto const colon = context.try_extract(Token::Type::colon)) {
+        if (auto const colon = context.try_extract(Token_type::colon)) {
             return cst::Template_type_parameter {
                 .name             = name,
                 .colon_token      = cst::Token::from_lexical(colon.value()),
@@ -92,7 +91,7 @@ namespace {
     }
 
     auto dispatch_parse_template_parameter(Context& context)
-        -> std::optional<cst::Template_parameter::Variant>
+        -> std::optional<cst::Template_parameter_variant>
     {
         auto const extract_lower
             = std::bind_front(extract_template_value_or_mutability_parameter, std::ref(context));
@@ -108,7 +107,7 @@ namespace {
         static constexpr parser auto parse_segments = parse_separated_one_or_more<
             parse_lower_name,
             "a module path segment",
-            Token::Type::dot>;
+            Token_type::dot>;
         return cst::Module::Import {
             .segments             = require<parse_segments>(context, "a module path"),
             .import_keyword_token = cst::Token::from_lexical(import_keyword),
@@ -119,8 +118,8 @@ namespace {
 
 auto libparse::parse_mutability(Context& context) -> std::optional<cst::Mutability>
 {
-    if (auto mut_keyword = context.try_extract(Token::Type::mut)) {
-        if (auto question_mark = context.try_extract(Token::Type::question)) {
+    if (auto mut_keyword = context.try_extract(Token_type::mut)) {
+        if (auto question_mark = context.try_extract(Token_type::question)) {
             return cst::Mutability {
                 .variant = cst::mutability::Parameterized {
                     .name = extract_lower_name(context, "a mutability parameter name"),
@@ -136,7 +135,7 @@ auto libparse::parse_mutability(Context& context) -> std::optional<cst::Mutabili
             .mut_or_immut_keyword_token = cst::Token::from_lexical(mut_keyword.value()),
         };
     }
-    if (auto immut_keyword = context.try_extract(Token::Type::immut)) {
+    if (auto immut_keyword = context.try_extract(Token_type::immut)) {
         kieli::fatal_error(
             context.compile_info(),
             context.source(),
@@ -153,17 +152,17 @@ auto libparse::parse_class_reference(Context& context) -> std::optional<cst::Cla
 
     auto const anchor_range = context.peek().range;
 
-    auto name = std::invoke([&]() -> std::optional<cst::Qualified_name> {
-        std::optional<cst::Root_qualifier> root;
-        if (context.peek().type != Token::Type::upper_name
-            && context.peek().type != Token::Type::lower_name) {
-            if (auto const global = context.try_extract(Token::Type::global)) {
-                root = cst::Root_qualifier {
-                    .variant = cst::Global_root_qualifier {
+    auto path = std::invoke([&]() -> std::optional<cst::Path> {
+        std::optional<cst::Path_root> root;
+        if (context.peek().type != Token_type::upper_name
+            && context.peek().type != Token_type::lower_name) {
+            if (auto const global = context.try_extract(Token_type::global)) {
+                root = cst::Path_root {
+                    .variant = cst::Path_root_global {
                         .global_keyword = cst::Token::from_lexical(global.value()),
                     },
                     .double_colon_token
-                    = cst::Token::from_lexical(context.require_extract(Token::Type::double_colon)),
+                    = cst::Token::from_lexical(context.require_extract(Token_type::double_colon)),
                     .range = global.value().range,
                 };
             }
@@ -172,18 +171,18 @@ auto libparse::parse_class_reference(Context& context) -> std::optional<cst::Cla
             }
         }
 
-        auto name = extract_qualified_name(context, std::move(root));
-        if (!name.primary_name.is_upper.get()) {
-            context.error_expected(name.primary_name.range, "a class name");
+        auto path = extract_path(context, std::move(root));
+        if (!path.head.is_upper()) {
+            context.error_expected(path.head.range, "a class name");
         }
-        return name;
+        return path;
     });
 
-    if (name.has_value()) {
+    if (path.has_value()) {
         auto template_arguments = parse_template_arguments(context);
         return cst::Class_reference {
             .template_arguments = std::move(template_arguments),
-            .name               = std::move(name.value()),
+            .path               = std::move(path.value()),
             .range              = context.up_to_current(anchor_range),
         };
     }
@@ -192,7 +191,7 @@ auto libparse::parse_class_reference(Context& context) -> std::optional<cst::Cla
 
 auto libparse::parse_type_annotation(Context& context) -> std::optional<cst::Type_annotation>
 {
-    return context.try_extract(Token::Type::colon).transform([&](Token const& token) {
+    return context.try_extract(Token_type::colon).transform([&](Token const& token) {
         return cst::Type_annotation {
             .type        = require<parse_type>(context, "a type"),
             .colon_token = cst::Token::from_lexical(token),
@@ -212,7 +211,7 @@ auto libparse::parse_template_parameter(Context& context) -> std::optional<cst::
 {
     auto const anchor_range = context.peek().range;
     return dispatch_parse_template_parameter(context).transform(
-        [&](cst::Template_parameter::Variant&& variant) {
+        [&](cst::Template_parameter_variant&& variant) {
             return cst::Template_parameter {
                 .variant = std::move(variant),
                 .range   = context.up_to_current(anchor_range),
@@ -222,7 +221,7 @@ auto libparse::parse_template_parameter(Context& context) -> std::optional<cst::
 
 auto libparse::parse_template_argument(Context& context) -> std::optional<cst::Template_argument>
 {
-    if (auto const wildcard = context.try_extract(Token::Type::underscore)) {
+    if (auto const wildcard = context.try_extract(Token_type::underscore)) {
         return cst::Template_argument { cst::Wildcard { .range = wildcard->range } };
     }
     if (auto const type = parse_type(context)) {
@@ -231,7 +230,7 @@ auto libparse::parse_template_argument(Context& context) -> std::optional<cst::T
     if (auto const expression = parse_expression(context)) {
         return cst::Template_argument { expression.value() };
     }
-    if (auto const immut_keyword = context.try_extract(Token::Type::immut)) {
+    if (auto const immut_keyword = context.try_extract(Token_type::immut)) {
         return cst::Template_argument { cst::Mutability {
             .variant                    = cst::mutability::Concrete::immut,
             .range                      = immut_keyword->range,
@@ -258,7 +257,7 @@ auto libparse::parse_function_parameters(Context& context)
         = extract_comma_separated_zero_or_more<parse_function_parameter, "a function parameter">;
 
     auto self_parameter         = parse_self_parameter(context);
-    auto comma_token_after_self = context.try_extract(Token::Type::comma);
+    auto comma_token_after_self = context.try_extract(Token_type::comma);
     auto normal_parameters      = extract_normals(context);
 
     if (!self_parameter.has_value() && comma_token_after_self.has_value()) {
@@ -297,7 +296,7 @@ auto libparse::parse_function_argument(Context& context) -> std::optional<cst::F
 {
     Stage const stage = context.stage();
     if (auto const name = parse_lower_name(context)) {
-        if (auto equals_sign = context.try_extract(Token::Type::equals)) {
+        if (auto equals_sign = context.try_extract(Token_type::equals)) {
             return cst::Function_argument {
                 .name { cst::Name_lower_equals {
                     .name              = name.value(),
@@ -321,45 +320,41 @@ auto libparse::parse_function_arguments(Context& context) -> std::optional<cst::
         "">(context);
 }
 
-auto libparse::extract_qualified_name(Context& context, std::optional<cst::Root_qualifier>&& root)
-    -> cst::Qualified_name
+auto libparse::extract_path(Context& context, std::optional<cst::Path_root>&& root) -> cst::Path
 {
     auto const anchor_range = context.peek().range;
 
-    cst::Separated_sequence<cst::Qualifier> middle_qualifiers;
+    cst::Separated_sequence<cst::Path_segment> segments;
     for (;;) {
         Token const token = context.extract();
-        if (token.type == Token::Type::upper_name || token.type == Token::Type::lower_name) {
-            kieli::Name_dynamic const qualifier_name {
+        if (token.type == Token_type::upper_name || token.type == Token_type::lower_name) {
+            kieli::Name const segment_name {
                 .identifier = token.value_as<kieli::Identifier>(),
                 .range      = token.range,
-                .is_upper   = token.type == Token::Type::upper_name,
             };
-            Stage const template_arguments_stage = context.stage();
-            auto        template_arguments       = parse_template_arguments(context);
+            auto const template_arguments_stage = context.stage();
+            auto       template_arguments       = parse_template_arguments(context);
 
-            if (auto const double_colon = context.try_extract(Token::Type::double_colon)) {
-                middle_qualifiers.separator_tokens.push_back(
-                    cst::Token::from_lexical(double_colon.value()));
-                middle_qualifiers.elements.push_back({
+            if (auto const double_colon = context.try_extract(Token_type::double_colon)) {
+                segments.separator_tokens.push_back(cst::Token::from_lexical(double_colon.value()));
+                segments.elements.push_back({
                     .template_arguments          = std::move(template_arguments),
-                    .name                        = qualifier_name,
+                    .name                        = segment_name,
                     .trailing_double_colon_token = cst::Token::from_lexical(double_colon.value()),
-                    .range                       = token.range,
                 });
                 continue;
             }
             // Primary name encountered
             context.unstage(template_arguments_stage);
 
-            auto const range
+            kieli::Range const range
                 = context.up_to_current(root.has_value() ? root.value().range : anchor_range);
 
-            return cst::Qualified_name {
-                .middle_qualifiers = std::move(middle_qualifiers),
-                .root_qualifier    = std::move(root),
-                .primary_name      = qualifier_name,
-                .range             = range,
+            return cst::Path {
+                .segments = std::move(segments),
+                .root     = std::move(root),
+                .head     = segment_name,
+                .range    = range,
             };
         }
         context.error_expected(token.range, "an identifier");
@@ -370,7 +365,7 @@ auto libparse::extract_class_references(Context& context)
     -> cst::Separated_sequence<cst::Class_reference>
 {
     return require<
-        parse_separated_one_or_more<parse_class_reference, "a class reference", Token::Type::plus>>(
+        parse_separated_one_or_more<parse_class_reference, "a class reference", Token_type::plus>>(
         context, "one or more '+'-separated class references");
 }
 
@@ -380,7 +375,7 @@ auto kieli::parse(Source_id const source, Compile_info& compile_info) -> cst::Mo
     libparse::Context context { node_arena, Lex_state::make(source, compile_info) };
 
     std::vector<cst::Module::Import> imports;
-    while (auto const import_token = context.try_extract(Token::Type::import_)) {
+    while (auto const import_token = context.try_extract(Token_type::import_)) {
         imports.push_back(extract_import(context, import_token.value()));
     }
 
