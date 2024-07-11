@@ -21,7 +21,7 @@ namespace {
     {
         kieli::emit_diagnostic(
             cppdiag::Severity::error,
-            context.compile_info,
+            context.db,
             source,
             name.range,
             std::format("No mutability binding '{}' in scope", name));

@@ -18,7 +18,7 @@ namespace {
         {
             kieli::emit_diagnostic(
                 cppdiag::Severity::error,
-                context.compile_info,
+                context.db,
                 context.info.environments[environment].source,
                 range,
                 std::move(message),

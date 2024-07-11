@@ -110,7 +110,7 @@ public:
     [[nodiscard]] auto source() const noexcept -> kieli::Source_id;
 
     // Emit warnings for any unused bindings.
-    auto report_unused(kieli::Compile_info& info) -> void;
+    auto report_unused(kieli::Database& db) -> void;
 };
 
 struct libresolve::Function_with_resolved_signature {

@@ -29,15 +29,15 @@ namespace {
 
     template <class Binding>
     auto do_report_unused(
-        kieli::Compile_info&                            info,
+        kieli::Database&                                db,
         kieli::Source_id const                          source,
         utl::Flatmap<kieli::Identifier, Binding> const& bindings)
     {
         auto const unused = std::views::values | std::views::filter(&Binding::unused);
         for (auto const& binding : unused(bindings)) {
-            info.diagnostics.push_back(cppdiag::Diagnostic {
+            db.diagnostics.push_back(cppdiag::Diagnostic {
                 .text_sections = utl::to_vector({
-                    kieli::text_section(info.sources[source], binding.name.range),
+                    kieli::text_section(db.sources[source], binding.name.range),
                 }),
                 .message       = std::format("Unused binding: {}", binding.name),
                 .help_note     = std::format("If this is intentional, use _{}", binding.name),
@@ -96,9 +96,9 @@ auto libresolve::Scope::source() const noexcept -> kieli::Source_id
     return m_source;
 }
 
-auto libresolve::Scope::report_unused(kieli::Compile_info& info) -> void
+auto libresolve::Scope::report_unused(kieli::Database& db) -> void
 {
-    do_report_unused(info, m_source, m_types);
-    do_report_unused(info, m_source, m_variables);
-    do_report_unused(info, m_source, m_mutabilities);
+    do_report_unused(db, m_source, m_types);
+    do_report_unused(db, m_source, m_variables);
+    do_report_unused(db, m_source, m_mutabilities);
 }

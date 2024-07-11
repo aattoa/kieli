@@ -65,8 +65,8 @@ namespace libparse {
         // Source view from `range` up to (but not including) the current token.
         [[nodiscard]] auto up_to_current(kieli::Range range) const -> kieli::Range;
 
+        [[nodiscard]] auto db() -> kieli::Database&;
         [[nodiscard]] auto special_identifiers() const -> Special_identifiers;
-        [[nodiscard]] auto compile_info() -> kieli::Compile_info&;
         [[nodiscard]] auto source() const -> kieli::Source_id;
 
         template <cst::node Node>

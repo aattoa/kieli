@@ -166,7 +166,7 @@ auto libresolve::ensure_no_unsolved_variables(Context& context, Inference_state&
         if (!data.is_solved) {
             kieli::emit_diagnostic(
                 cppdiag::Severity::error,
-                context.compile_info,
+                context.db,
                 state.source,
                 data.origin,
                 std::format("Unsolved type variable: ?{}", data.variable_id.get()));

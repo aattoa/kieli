@@ -100,7 +100,7 @@ namespace {
             }
             kieli::emit_diagnostic(
                 cppdiag::Severity::error,
-                context.compile_info,
+                context.db,
                 scope.source(),
                 this_type.range,
                 "Use of an undeclared identifier");

@@ -11,8 +11,8 @@ namespace {
         kieli::Range const first,
         kieli::Range const second) -> void
     {
-        kieli::Source const& source = context.compile_info.sources[context.source];
-        context.compile_info.diagnostics.push_back(cppdiag::Diagnostic {
+        kieli::Source const& source = context.db.sources[context.source];
+        context.db.diagnostics.push_back(cppdiag::Diagnostic {
             .text_sections = utl::to_vector({
                 kieli::text_section(
                     source, first, "First specified here", cppdiag::Severity::information),
@@ -191,7 +191,7 @@ namespace {
             if (std::holds_alternative<kieli::Boolean>(condition->variant)) {
                 kieli::emit_diagnostic(
                     cppdiag::Severity::information,
-                    context.compile_info,
+                    context.db,
                     context.source,
                     condition->range,
                     "Constant condition");
@@ -294,7 +294,7 @@ namespace {
             if (auto const* const boolean = std::get_if<kieli::Boolean>(&condition->variant)) {
                 kieli::emit_diagnostic(
                     cppdiag::Severity::information,
-                    context.compile_info,
+                    context.db,
                     context.source,
                     condition->range,
                     "Constant condition",
@@ -550,7 +550,7 @@ namespace {
         auto operator()(cst::expression::For_loop const&) -> ast::Expression_variant
         {
             kieli::fatal_error(
-                context.compile_info,
+                context.db,
                 context.source,
                 this_expression.range,
                 "For loops are not supported yet");

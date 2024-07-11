@@ -9,13 +9,13 @@ using namespace libresolve;
 
 namespace {
     [[noreturn]] auto report_import_error(
-        kieli::Compile_info& info, kieli::Source_id const source, Import_error const& error) -> void
+        kieli::Database& db, kieli::Source_id const source, Import_error const& error) -> void
     {
         auto const message = std::format(
             "No {} `{}` exists",
             error.expected_module ? "module" : "directory",
             error.erroneous_segment);
-        kieli::fatal_error(info, source, error.erroneous_segment.range, message);
+        kieli::fatal_error(db, source, error.erroneous_segment.range, message);
     }
 
     auto collect_import_info(
@@ -43,7 +43,7 @@ namespace {
             collect_import_info(context, source, environment, std::move(resolved_import.value()));
         }
         else {
-            report_import_error(context.compile_info, source, resolved_import.error());
+            report_import_error(context.db, source, resolved_import.error());
         }
     }
 
@@ -57,8 +57,7 @@ namespace {
 
     auto import_environment(Context& context, Import&& import) -> hir::Environment_id
     {
-        return make_environment(
-            context, read_import_source(std::move(import), context.compile_info.sources));
+        return make_environment(context, read_import_source(std::move(import), context.db.sources));
     }
 
     auto resolve_submodule(
@@ -76,8 +75,8 @@ namespace {
 auto libresolve::make_environment(Context& context, kieli::Source_id const source)
     -> hir::Environment_id
 {
-    auto const cst = kieli::parse(source, context.compile_info);
-    auto       ast = kieli::desugar(cst, context.compile_info);
+    auto const cst = kieli::parse(source, context.db);
+    auto       ast = kieli::desugar(cst, context.db);
     context.ast.merge_with(std::move(ast.module->node_arena));
 
     hir::Environment_id const environment

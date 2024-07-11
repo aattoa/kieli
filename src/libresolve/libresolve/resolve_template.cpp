@@ -76,7 +76,7 @@ namespace {
             -> hir::Template_parameter_variant
         {
             kieli::fatal_error(
-                context.compile_info,
+                context.db,
                 scope.source(),
                 parameter.name.range,
                 "Template value parameters are not supported yet");

@@ -38,7 +38,7 @@ namespace {
 
         if (auto const where = context.try_extract(Token_type::where)) {
             kieli::fatal_error(
-                context.compile_info(),
+                context.db(),
                 context.source(),
                 where.value().range,
                 "where clauses are not supported yet");

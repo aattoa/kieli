@@ -20,7 +20,7 @@ auto libdesugar::Context::desugar(cst::Function_parameter const& parameter)
             [&](cst::Value_parameter_default_argument const& argument) {
                 if (auto const* const wildcard = std::get_if<cst::Wildcard>(&argument.variant)) {
                     kieli::fatal_error(
-                        compile_info,
+                        db,
                         source,
                         wildcard->range,
                         "A function default argument may not be a wildcard");
@@ -269,13 +269,13 @@ auto libdesugar::wildcard_pattern(kieli::Range const range) -> ast::Pattern
     return ast::Pattern { ast::Wildcard { range }, range };
 }
 
-auto kieli::desugar(CST const& cst, Compile_info& compile_info) -> AST
+auto kieli::desugar(CST const& cst, Database& db) -> AST
 {
     auto node_arena  = ast::Node_arena::with_default_page_size();
-    auto context     = libdesugar::Context { compile_info, node_arena, cst.module->source };
+    auto context     = libdesugar::Context { db, node_arena, cst.module->source };
     auto definitions = context.desugar(cst.module->definitions);
     return AST { AST::Module {
         .definitions = std::move(definitions),
-        .node_arena  = std::move(context.node_arena),
+        .node_arena  = std::move(context.ast),
     } };
 }

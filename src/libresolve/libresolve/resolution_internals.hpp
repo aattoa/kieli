@@ -59,13 +59,13 @@ namespace libresolve {
     };
 
     struct Context {
+        kieli::Database&             db;
         ast::Node_arena              ast;
         hir::Arena                   hir;
         Info_arena                   info;
         Tag_state                    tags;
         Constants                    constants;
         kieli::Project_configuration configuration;
-        kieli::Compile_info&         compile_info;
     };
 
     struct Inference_state {

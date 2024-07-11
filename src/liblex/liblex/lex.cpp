@@ -601,9 +601,9 @@ namespace {
 
 } // namespace
 
-auto kieli::Lex_state::make(Source_id const source, Compile_info& info) -> Lex_state
+auto kieli::Lex_state::make(Source_id const source, Database& db) -> Lex_state
 {
-    return Lex_state { info, source, Position {}, info.sources[source].content };
+    return Lex_state { db, source, Position {}, db.sources[source].content };
 }
 
 auto kieli::lex(Lex_state& state) -> Token

@@ -45,9 +45,9 @@ namespace {
         return cppdiag::Severity_header::make(cppdiag::Severity::error, colors);
     }
 
-    auto debug_lex(kieli::Source_id const source, kieli::Compile_info& info) -> void
+    auto debug_lex(kieli::Source_id const source, kieli::Database& db) -> void
     {
-        auto state = kieli::Lex_state::make(source, info);
+        auto state = kieli::Lex_state::make(source, db);
         auto token = kieli::lex(state);
         while (token.type != kieli::Token_type::end_of_input) {
             std::print("{} ", token);
@@ -56,15 +56,15 @@ namespace {
         std::println("");
     }
 
-    auto debug_parse(kieli::Source_id const source, kieli::Compile_info& info) -> void
+    auto debug_parse(kieli::Source_id const source, kieli::Database& db) -> void
     {
-        auto const cst = kieli::parse(source, info);
+        auto const cst = kieli::parse(source, db);
         std::print("{}", kieli::format_module(*cst.module, kieli::Format_configuration {}));
     }
 
-    auto debug_desugar(kieli::Source_id const source, kieli::Compile_info& info) -> void
+    auto debug_desugar(kieli::Source_id const source, kieli::Database& db) -> void
     {
-        auto const ast = kieli::desugar(kieli::parse(source, info), info);
+        auto const ast = kieli::desugar(kieli::parse(source, db), db);
 
         std::string output;
         for (ast::Definition const& definition : ast.module->definitions) {
@@ -73,16 +73,16 @@ namespace {
         std::print("{}\n\n", output);
     }
 
-    auto debug_resolve(kieli::Source_id const source, kieli::Compile_info& info) -> void
+    auto debug_resolve(kieli::Source_id const source, kieli::Database& db) -> void
     {
         auto hir       = hir::Arena {};
         auto constants = libresolve::Constants::make_with(hir);
 
         libresolve::Context context {
-            .ast          = ast::Node_arena::with_default_page_size(),
-            .hir          = std::move(hir),
-            .constants    = std::move(constants),
-            .compile_info = info,
+            .db        = db,
+            .ast       = ast::Node_arena::with_default_page_size(),
+            .hir       = std::move(hir),
+            .constants = std::move(constants),
         };
 
         auto const environment = libresolve::make_environment(context, source);
@@ -91,7 +91,7 @@ namespace {
     }
 
     auto choose_debug_repl_callback(std::string_view const name)
-        -> void (*)(kieli::Source_id, kieli::Compile_info&)
+        -> void (*)(kieli::Source_id, kieli::Database&)
     {
         // clang-format off
         if (name == "lex") return debug_lex;
@@ -103,8 +103,7 @@ namespace {
     }
 
     auto run_debug_repl(
-        void (&callback)(kieli::Source_id, kieli::Compile_info&),
-        cppdiag::Colors const colors) -> void
+        void (&callback)(kieli::Source_id, kieli::Database&), cppdiag::Colors const colors) -> void
     {
         kieli::read_history_file_to_active_history();
 
@@ -118,11 +117,11 @@ namespace {
 
             kieli::add_to_history(input.value().c_str());
 
-            kieli::Compile_info    info;
-            kieli::Source_id const source = info.sources.push(std::move(input).value(), "[repl]");
+            auto       db     = kieli::Database { .current_revision = 0 };
+            auto const source = db.sources.push(std::move(input).value(), "[repl]");
 
             try {
-                callback(source, info);
+                callback(source, db);
             }
             catch (kieli::Compilation_failure const&) {
                 (void)0; // Do nothing, diagnostics are printed below
@@ -131,7 +130,7 @@ namespace {
                 std::print(stderr, "{}{}\n\n", error_header(colors), exception.what());
             }
 
-            std::print(stderr, "{}", kieli::format_diagnostics(info.diagnostics, colors));
+            std::print(stderr, "{}", kieli::format_diagnostics(db.diagnostics, colors));
         }
     }
 

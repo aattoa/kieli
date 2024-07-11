@@ -5,8 +5,8 @@ libparse::Context::Context(cst::Node_arena& arena, kieli::Lex_state const state)
     : m_lex_state { state }
     , m_node_arena { arena }
     , m_special_identifiers {
-        .plus     = kieli::Identifier { state.compile_info.string_pool.add("+") },
-        .asterisk = kieli::Identifier { state.compile_info.string_pool.add("*") },
+        .plus     = kieli::Identifier { state.db.string_pool.add("+") },
+        .asterisk = kieli::Identifier { state.db.string_pool.add("*") },
     }
 {}
 
@@ -78,7 +78,7 @@ auto libparse::Context::error_expected(
     std::optional<std::string> help_note) -> void
 {
     kieli::fatal_error(
-        compile_info(),
+        db(),
         source(),
         error_range,
         std::format(
@@ -91,9 +91,9 @@ auto libparse::Context::error_expected(std::string_view const description) -> vo
     error_expected(peek().range, description);
 }
 
-auto libparse::Context::compile_info() -> kieli::Compile_info&
+auto libparse::Context::db() -> kieli::Database&
 {
-    return m_lex_state.compile_info;
+    return m_lex_state.db;
 }
 
 auto libparse::Context::special_identifiers() const -> Special_identifiers

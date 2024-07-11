@@ -98,9 +98,9 @@ namespace {
         typename Info::Variant&&               variant) -> void
     {
         if (auto const* const existing = map.find(name.identifier)) {
-            context.compile_info.diagnostics.push_back(duplicate_definitions_error(
-                context.compile_info.sources[source], existing->name, name));
-            throw kieli::Compile_info {};
+            context.db.diagnostics.push_back(
+                duplicate_definitions_error(context.db.sources[source], existing->name, name));
+            throw kieli::Compilation_failure {};
         }
         map.add_new_unchecked(name.identifier, Info { name, source, std::move(variant) });
     }

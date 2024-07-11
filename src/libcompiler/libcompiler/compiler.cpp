@@ -8,15 +8,15 @@ auto kieli::Compilation_failure::what() const noexcept -> char const*
 
 auto kieli::emit_diagnostic(
     cppdiag::Severity const    severity,
-    Compile_info&              info,
+    Database&                  db,
     Source_id const            source,
     Range const                range,
     std::string                message,
     std::optional<std::string> help_note) -> void
 {
-    info.diagnostics.push_back(cppdiag::Diagnostic {
+    db.diagnostics.push_back(cppdiag::Diagnostic {
         .text_sections = utl::to_vector({
-            text_section(info.sources[source], range, std::move(help_note)),
+            text_section(db.sources[source], range, std::move(help_note)),
         }),
         .message       = std::move(message),
         .help_note     = std::move(help_note),
@@ -25,7 +25,7 @@ auto kieli::emit_diagnostic(
 }
 
 auto kieli::fatal_error(
-    Compile_info&              info,
+    Database&                  db,
     Source_id const            source,
     Range const                error_range,
     std::string                message,
@@ -33,7 +33,7 @@ auto kieli::fatal_error(
 {
     emit_diagnostic(
         cppdiag::Severity::error,
-        info,
+        db,
         source,
         error_range,
         std::move(message),
@@ -68,7 +68,7 @@ auto kieli::format_diagnostics(
     return output;
 }
 
-auto kieli::predefinitions_source(Compile_info& info) -> Source_id
+auto kieli::predefinitions_source(Database& db) -> Source_id
 {
     // TODO: check if predefinitions already exist
 
@@ -79,7 +79,7 @@ auto kieli::predefinitions_source(Compile_info& info) -> Source_id
             fn id[X](x: X) = x
         }
     )";
-    return info.sources.push(std::string(source), "[predefined]");
+    return db.sources.push(std::string(source), "[predefined]");
 }
 
 auto kieli::Name::is_upper() const -> bool

@@ -11,7 +11,7 @@ namespace {
     auto make_main_environment(libresolve::Context& context) -> hir::Environment_id
     {
         auto path = main_path(context.configuration);
-        if (auto const id = kieli::read_source(std::move(path), context.compile_info.sources)) {
+        if (auto const id = kieli::read_source(std::move(path), context.db.sources)) {
             return libresolve::make_environment(context, id.value());
         }
         // TODO: figure out how to properly to handle this
@@ -21,16 +21,16 @@ namespace {
 
 auto kieli::resolve_project(Project_configuration configuration) -> Resolved_project
 {
-    auto info      = Compile_info {};
+    auto db        = Database { .current_revision = 0 };
     auto hir       = hir::Arena {};
     auto constants = libresolve::Constants::make_with(hir);
 
     libresolve::Context context {
+        .db            = db,
         .ast           = ast::Node_arena::with_default_page_size(),
         .hir           = std::move(hir),
         .constants     = std::move(constants),
         .configuration = std::move(configuration),
-        .compile_info  = info,
     };
 
     auto const main = make_main_environment(context);

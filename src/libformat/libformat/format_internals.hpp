@@ -1,3 +1,5 @@
+#pragma once
+
 #include <libutl/utilities.hpp>
 #include <libformat/format.hpp>
 

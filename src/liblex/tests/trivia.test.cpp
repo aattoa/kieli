@@ -5,9 +5,9 @@
 namespace {
     auto lex(std::string&& string) -> std::string
     {
-        kieli::Compile_info    info;
-        kieli::Source_id const source = info.sources.push(std::move(string), "[test]");
-        kieli::Lex_state       state  = kieli::Lex_state::make(source, info);
+        auto       db     = kieli::Database { .current_revision = 0 };
+        auto const source = db.sources.push(std::move(string), "[test]");
+        auto       state  = kieli::Lex_state::make(source, db);
 
         std::string output;
         for (;;) {

@@ -317,7 +317,7 @@ auto libresolve::require_subtype_relationship(
     if (!unify(context, state, arguments, sub, super)) {
         auto const sub_type_string   = hir::to_string(context.hir, sub);
         auto const super_type_string = hir::to_string(context.hir, super);
-        context.compile_info.diagnostics.push_back(cppdiag::Diagnostic {
+        context.db.diagnostics.push_back(cppdiag::Diagnostic {
             .message  = std::format("Unable to unify {} ~ {}", sub_type_string, super_type_string),
             .severity = cppdiag::Severity::error,
         });

@@ -10,7 +10,7 @@ namespace {
         auto path = extract_path(context, std::move(root));
         if (!path.head.is_upper()) {
             kieli::fatal_error(
-                context.compile_info(),
+                context.db(),
                 context.source(),
                 context.up_to_current(path.head.range),
                 "Expected a type, but found a lowercase name");

@@ -19,7 +19,7 @@ namespace {
 
 auto liblex::source_begin(const kieli::Lex_state& state) noexcept -> char const*
 {
-    return state.compile_info.sources[state.source].content.data();
+    return state.db.sources[state.source].content.data();
 }
 
 auto liblex::source_end(const kieli::Lex_state& state) noexcept -> char const*
@@ -75,21 +75,21 @@ auto liblex::try_consume(kieli::Lex_state& state, std::string_view const string)
 auto liblex::make_string_literal(kieli::Lex_state const& state, std::string_view const string)
     -> kieli::String
 {
-    return kieli::String { state.compile_info.string_pool.add(string) };
+    return kieli::String { state.db.string_pool.add(string) };
 }
 
 auto liblex::make_operator_identifier(kieli::Lex_state const& state, std::string_view const string)
     -> kieli::Identifier
 {
     assert(!string.empty());
-    return kieli::Identifier { state.compile_info.string_pool.add(string) };
+    return kieli::Identifier { state.db.string_pool.add(string) };
 }
 
 auto liblex::make_identifier(kieli::Lex_state const& state, std::string_view const string)
     -> kieli::Identifier
 {
     assert(!string.empty());
-    return kieli::Identifier { state.compile_info.string_pool.add(string) };
+    return kieli::Identifier { state.db.string_pool.add(string) };
 }
 
 auto liblex::error(
@@ -100,7 +100,7 @@ auto liblex::error(
 {
     kieli::emit_diagnostic(
         cppdiag::Severity::error,
-        state.compile_info,
+        state.db,
         state.source,
         range_for(state, position),
         std::move(message),

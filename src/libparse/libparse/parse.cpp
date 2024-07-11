@@ -137,7 +137,7 @@ auto libparse::parse_mutability(Context& context) -> std::optional<cst::Mutabili
     }
     if (auto immut_keyword = context.try_extract(Token_type::immut)) {
         kieli::fatal_error(
-            context.compile_info(),
+            context.db(),
             context.source(),
             immut_keyword.value().range,
             "`immut` may not appear here",
@@ -369,10 +369,10 @@ auto libparse::extract_class_references(Context& context)
         context, "one or more '+'-separated class references");
 }
 
-auto kieli::parse(Source_id const source, Compile_info& compile_info) -> CST
+auto kieli::parse(Source_id const source, Database& db) -> CST
 {
     cst::Node_arena   node_arena = cst::Node_arena::with_default_page_size();
-    libparse::Context context { node_arena, Lex_state::make(source, compile_info) };
+    libparse::Context context { node_arena, Lex_state::make(source, db) };
 
     std::vector<cst::Import> imports;
     while (auto const import_token = context.try_extract(Token_type::import_)) {

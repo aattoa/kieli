@@ -7,10 +7,10 @@
 namespace {
     auto desugar(std::string&& string) -> std::string
     {
-        kieli::Compile_info    info;
-        kieli::Source_id const source = info.sources.push(std::move(string), "[test]");
+        kieli::Database        db { .current_revision = 0 };
+        kieli::Source_id const source = db.sources.push(std::move(string), "[test]");
         try {
-            auto const ast = kieli::desugar(kieli::parse(source, info), info);
+            auto const ast = kieli::desugar(kieli::parse(source, db), db);
 
             std::string output;
             for (ast::Definition const& definition : ast.module->definitions) {
@@ -19,7 +19,7 @@ namespace {
             return output;
         }
         catch (kieli::Compilation_failure const&) {
-            return kieli::format_diagnostics(info.diagnostics, cppdiag::Colors::none());
+            return kieli::format_diagnostics(db.diagnostics, cppdiag::Colors::none());
         }
     }
 } // namespace

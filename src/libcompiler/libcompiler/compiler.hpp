@@ -12,22 +12,27 @@ namespace kieli {
         [[nodiscard]] auto what() const noexcept -> char const* override;
     };
 
-    struct Compile_info {
+    struct Revision : utl::Explicit<std::size_t> {
+        using Explicit::Explicit, Explicit::operator=;
+    };
+
+    struct Database {
         std::vector<cppdiag::Diagnostic> diagnostics;
         Source_vector                    sources;
         cpputil::mem::Stable_string_pool string_pool;
+        Revision                         current_revision;
     };
 
     auto emit_diagnostic(
         cppdiag::Severity          severity,
-        Compile_info&              info,
+        Database&                  db,
         Source_id                  source,
         Range                      range,
         std::string                message,
         std::optional<std::string> help_note = std::nullopt) -> void;
 
     [[noreturn]] auto fatal_error(
-        Compile_info&              info,
+        Database&                  db,
         Source_id                  source,
         Range                      error_range,
         std::string                message,
@@ -43,7 +48,7 @@ namespace kieli {
         std::span<cppdiag::Diagnostic const> diagnostics,
         cppdiag::Colors                      colors = cppdiag::Colors::defaults()) -> std::string;
 
-    auto predefinitions_source(Compile_info&) -> Source_id;
+    auto predefinitions_source(Database&) -> Source_id;
 
     using Identifier = cpputil::mem::Stable_pool_string;
 

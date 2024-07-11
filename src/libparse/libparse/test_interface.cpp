@@ -7,11 +7,11 @@ namespace {
     template <libparse::parser auto parser, auto format>
     auto test_parse(std::string&& string, std::string_view const expectation) -> std::string
     {
-        kieli::Compile_info    info;
-        kieli::Source_id const source     = info.sources.push(std::move(string), "[test]");
-        cst::Node_arena        node_arena = cst::Node_arena::with_page_size(64);
+        auto       db         = kieli::Database { .current_revision = 0 };
+        auto       node_arena = cst::Node_arena::with_page_size(64);
+        auto const source     = db.sources.push(std::move(string), "[test]");
         try {
-            libparse::Context context { node_arena, kieli::Lex_state::make(source, info) };
+            libparse::Context context { node_arena, kieli::Lex_state::make(source, db) };
             auto const        result = libparse::require<parser>(context, expectation);
             if (context.is_finished()) {
                 return format(*result, kieli::Format_configuration {});
@@ -19,7 +19,7 @@ namespace {
             context.error_expected(expectation);
         }
         catch (kieli::Compilation_failure const&) {
-            return kieli::format_diagnostics(info.diagnostics, cppdiag::Colors::none());
+            return kieli::format_diagnostics(db.diagnostics, cppdiag::Colors::none());
         }
     }
 } // namespace

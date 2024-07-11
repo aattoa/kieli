@@ -13,16 +13,16 @@ namespace libdesugar {
     auto wildcard_pattern(kieli::Range range) -> ast::Pattern;
 
     struct Context {
-        kieli::Compile_info& compile_info;
-        ast::Node_arena&     node_arena;
-        kieli::Source_id     source;
-        kieli::Identifier    self_variable_identifier
-            = kieli::Identifier { compile_info.string_pool.add("self") };
+        kieli::Database&  db;
+        ast::Node_arena&  ast;
+        kieli::Source_id  source;
+        kieli::Identifier self_variable_identifier
+            = kieli::Identifier { db.string_pool.add("self") };
 
         template <ast::node Node>
         auto wrap(Node&& node) -> utl::Wrapper<Node>
         {
-            return node_arena.wrap<Node>(static_cast<Node&&>(node));
+            return ast.wrap<Node>(static_cast<Node&&>(node));
         }
 
         [[nodiscard]] auto wrap() noexcept
