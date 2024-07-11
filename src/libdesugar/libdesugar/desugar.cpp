@@ -269,13 +269,13 @@ auto libdesugar::wildcard_pattern(kieli::Range const range) -> ast::Pattern
     return ast::Pattern { ast::Wildcard { range }, range };
 }
 
-auto kieli::desugar(cst::Module const& module, Compile_info& compile_info) -> ast::Module
+auto kieli::desugar(CST const& cst, Compile_info& compile_info) -> AST
 {
-    auto                node_arena = ast::Node_arena::with_default_page_size();
-    libdesugar::Context context { compile_info, node_arena, module.source };
-    auto                definitions = context.desugar(module.definitions);
-    return ast::Module {
+    auto node_arena  = ast::Node_arena::with_default_page_size();
+    auto context     = libdesugar::Context { compile_info, node_arena, cst.module->source };
+    auto definitions = context.desugar(cst.module->definitions);
+    return AST { AST::Module {
         .definitions = std::move(definitions),
         .node_arena  = std::move(context.node_arena),
-    };
+    } };
 }

@@ -14,7 +14,8 @@ target_sources(libcompiler
     PRIVATE libcompiler/hir/hir.cpp
     PRIVATE libcompiler/hir/hir.hpp
     PRIVATE libcompiler/token/token.cpp
-    PRIVATE libcompiler/token/token.hpp)
+    PRIVATE libcompiler/token/token.hpp
+    PRIVATE libcompiler/tree_fwd.hpp)
 
 target_link_libraries(libcompiler
     PRIVATE cpputil::io

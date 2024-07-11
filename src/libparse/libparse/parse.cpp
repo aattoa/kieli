@@ -102,13 +102,13 @@ namespace {
         });
     }
 
-    auto extract_import(Context& context, Token const& import_keyword) -> cst::Module::Import
+    auto extract_import(Context& context, Token const& import_keyword) -> cst::Import
     {
         static constexpr parser auto parse_segments = parse_separated_one_or_more<
             parse_lower_name,
             "a module path segment",
             Token_type::dot>;
-        return cst::Module::Import {
+        return cst::Import {
             .segments             = require<parse_segments>(context, "a module path"),
             .import_keyword_token = cst::Token::from_lexical(import_keyword),
         };
@@ -369,12 +369,12 @@ auto libparse::extract_class_references(Context& context)
         context, "one or more '+'-separated class references");
 }
 
-auto kieli::parse(Source_id const source, Compile_info& compile_info) -> cst::Module
+auto kieli::parse(Source_id const source, Compile_info& compile_info) -> CST
 {
     cst::Node_arena   node_arena = cst::Node_arena::with_default_page_size();
     libparse::Context context { node_arena, Lex_state::make(source, compile_info) };
 
-    std::vector<cst::Module::Import> imports;
+    std::vector<cst::Import> imports;
     while (auto const import_token = context.try_extract(Token_type::import_)) {
         imports.push_back(extract_import(context, import_token.value()));
     }
@@ -387,10 +387,10 @@ auto kieli::parse(Source_id const source, Compile_info& compile_info) -> cst::Mo
         context.error_expected("a definition");
     }
 
-    return cst::Module {
+    return CST { CST::Module {
         .imports     = std::move(imports),
         .definitions = std::move(definitions),
         .node_arena  = std::move(node_arena),
         .source      = source,
-    };
+    } };
 }

@@ -4,6 +4,7 @@
 #include <libutl/wrapper.hpp>
 #include <libutl/flatmap.hpp>
 #include <libcompiler/compiler.hpp>
+#include <libcompiler/tree_fwd.hpp>
 
 /*
 
@@ -606,11 +607,6 @@ namespace ast {
 
     using Node_arena = utl::Wrapper_arena<Expression, Type, Pattern>;
 
-    struct [[nodiscard]] Module {
-        std::vector<Definition> definitions;
-        Node_arena              node_arena;
-    };
-
     auto format_to(Expression const&, std::string&) -> void;
     auto format_to(Pattern const&, std::string&) -> void;
     auto format_to(Type const&, std::string&) -> void;
@@ -632,3 +628,8 @@ namespace ast {
         return output;
     };
 } // namespace ast
+
+struct kieli::AST::Module {
+    std::vector<ast::Definition> definitions;
+    ast::Node_arena              node_arena;
+};

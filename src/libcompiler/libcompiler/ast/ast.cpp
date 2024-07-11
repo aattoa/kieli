@@ -2,6 +2,10 @@
 #include <libcompiler/ast/ast.hpp>
 #include <libcompiler/ast/formatters.hpp>
 
+kieli::AST::~AST() = default;
+
+kieli::AST::AST(Module&& module) : module(std::make_unique<Module>(std::move(module))) {}
+
 auto ast::Path::is_simple_name() const noexcept -> bool
 {
     return !root.has_value() && segments.empty();

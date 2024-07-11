@@ -1,6 +1,10 @@
 #include <libutl/utilities.hpp>
 #include <libcompiler/cst/cst.hpp>
 
+kieli::CST::~CST() = default;
+
+kieli::CST::CST(Module&& module) : module(std::make_unique<Module>(std::move(module))) {}
+
 auto cst::Token::from_lexical(kieli::Token const& lexical) -> Token
 {
     return Token {

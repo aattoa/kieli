@@ -2,6 +2,8 @@
 #include <libresolve/resolution_internals.hpp>
 #include <libparse/parse.hpp>
 #include <libdesugar/desugar.hpp>
+#include <libcompiler/cst/cst.hpp>
+#include <libcompiler/ast/ast.hpp>
 
 using namespace libresolve;
 
@@ -31,10 +33,10 @@ namespace {
     }
 
     auto collect_import(
-        Context&                   context,
-        kieli::Source_id const     source,
-        hir::Environment_id const  environment,
-        cst::Module::Import const& import) -> void
+        Context&                  context,
+        kieli::Source_id const    source,
+        hir::Environment_id const environment,
+        cst::Import const&        import) -> void
     {
         auto resolved_import = resolve_import(context.configuration, import.segments.elements);
         if (resolved_import.has_value()) {
@@ -74,13 +76,17 @@ namespace {
 auto libresolve::make_environment(Context& context, kieli::Source_id const source)
     -> hir::Environment_id
 {
-    cst::Module const cst = kieli::parse(source, context.compile_info);
-    ast::Module       ast = kieli::desugar(cst, context.compile_info);
-    context.ast.merge_with(std::move(ast.node_arena));
+    auto const cst = kieli::parse(source, context.compile_info);
+    auto       ast = kieli::desugar(cst, context.compile_info);
+    context.ast.merge_with(std::move(ast.module->node_arena));
 
-    auto const environment = collect_environment(context, source, std::move(ast.definitions));
+    hir::Environment_id const environment
+        = collect_environment(context, source, std::move(ast.module->definitions));
+
     std::ranges::for_each(
-        cst.imports, std::bind_front(collect_import, std::ref(context), source, environment));
+        cst.module->imports,
+        std::bind_front(collect_import, std::ref(context), source, environment));
+
     return environment;
 }
 

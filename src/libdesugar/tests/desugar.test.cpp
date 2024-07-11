@@ -1,6 +1,7 @@
 #include <libutl/utilities.hpp>
 #include <libparse/parse.hpp>
 #include <libdesugar/desugar.hpp>
+#include <libcompiler/ast/ast.hpp>
 #include <cppunittest/unittest.hpp>
 
 namespace {
@@ -9,9 +10,10 @@ namespace {
         kieli::Compile_info    info;
         kieli::Source_id const source = info.sources.push(std::move(string), "[test]");
         try {
-            auto const  module = kieli::desugar(kieli::parse(source, info), info);
+            auto const ast = kieli::desugar(kieli::parse(source, info), info);
+
             std::string output;
-            for (ast::Definition const& definition : module.definitions) {
+            for (ast::Definition const& definition : ast.module->definitions) {
                 ast::format_to(definition, output);
             }
             return output;

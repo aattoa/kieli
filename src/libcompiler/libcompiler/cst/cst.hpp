@@ -3,6 +3,7 @@
 #include <libutl/utilities.hpp>
 #include <libutl/wrapper.hpp>
 #include <libcompiler/compiler.hpp>
+#include <libcompiler/tree_fwd.hpp>
 #include <libcompiler/token/token.hpp>
 
 /*
@@ -802,15 +803,15 @@ namespace cst {
 
     using Node_arena = utl::Wrapper_arena<Expression, Type, Pattern>;
 
-    struct [[nodiscard]] Module {
-        struct Import {
-            Separated_sequence<kieli::Lower> segments;
-            Token                            import_keyword_token;
-        };
-
-        std::vector<Import>     imports;
-        std::vector<Definition> definitions;
-        Node_arena              node_arena;
-        kieli::Source_id        source;
+    struct Import {
+        Separated_sequence<kieli::Lower> segments;
+        Token                            import_keyword_token;
     };
 } // namespace cst
+
+struct kieli::CST::Module {
+    std::vector<cst::Import>     imports;
+    std::vector<cst::Definition> definitions;
+    cst::Node_arena              node_arena;
+    kieli::Source_id             source;
+};

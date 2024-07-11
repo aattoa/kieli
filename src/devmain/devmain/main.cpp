@@ -58,15 +58,16 @@ namespace {
 
     auto debug_parse(kieli::Source_id const source, kieli::Compile_info& info) -> void
     {
-        auto const module = kieli::parse(source, info);
-        std::print("{}", kieli::format_module(module, kieli::Format_configuration {}));
+        auto const cst = kieli::parse(source, info);
+        std::print("{}", kieli::format_module(*cst.module, kieli::Format_configuration {}));
     }
 
     auto debug_desugar(kieli::Source_id const source, kieli::Compile_info& info) -> void
     {
-        auto const  module = kieli::desugar(kieli::parse(source, info), info);
+        auto const ast = kieli::desugar(kieli::parse(source, info), info);
+
         std::string output;
-        for (ast::Definition const& definition : module.definitions) {
+        for (ast::Definition const& definition : ast.module->definitions) {
             ast::format_to(definition, output);
         }
         std::print("{}\n\n", output);

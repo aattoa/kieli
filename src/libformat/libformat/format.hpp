@@ -12,7 +12,7 @@ namespace kieli {
         Function_body function_body     = Function_body::leave_as_is;
     };
 
-    auto format_module(cst::Module const&, Format_configuration const&) -> std::string;
+    auto format_module(CST::Module const&, Format_configuration const&) -> std::string;
     auto format_definition(cst::Definition const&, Format_configuration const&) -> std::string;
     auto format_expression(cst::Expression const&, Format_configuration const&) -> std::string;
     auto format_pattern(cst::Pattern const&, Format_configuration const&) -> std::string;

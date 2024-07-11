@@ -112,7 +112,7 @@ namespace {
 } // namespace
 
 auto kieli::format_module(
-    cst::Module const& module, kieli::Format_configuration const& configuration) -> std::string
+    CST::Module const& module, kieli::Format_configuration const& configuration) -> std::string
 {
     std::string      output_string;
     libformat::State state {
