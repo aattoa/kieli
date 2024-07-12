@@ -14,7 +14,8 @@ namespace kieli {
         std::unique_ptr<Module> module;
 
         explicit CST(Module&&);
-        CST(CST&&) = default;
+        CST(CST&&) noexcept;
+        auto operator=(CST&&) noexcept -> CST&;
         ~CST();
     };
 
@@ -25,7 +26,8 @@ namespace kieli {
         std::unique_ptr<Module> module;
 
         explicit AST(Module&&);
-        AST(AST&&) = default;
+        AST(AST&&) noexcept;
+        auto operator=(AST&&) noexcept -> AST&;
         ~AST();
     };
 

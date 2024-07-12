@@ -2,9 +2,13 @@
 #include <libcompiler/ast/ast.hpp>
 #include <libcompiler/ast/formatters.hpp>
 
-kieli::AST::~AST() = default;
-
 kieli::AST::AST(Module&& module) : module(std::make_unique<Module>(std::move(module))) {}
+
+kieli::AST::AST(AST&&) noexcept = default;
+
+auto kieli::AST::operator=(AST&&) noexcept -> AST& = default;
+
+kieli::AST::~AST() = default;
 
 auto ast::Path::is_simple_name() const noexcept -> bool
 {
