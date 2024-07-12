@@ -51,6 +51,12 @@ namespace kieli {
         auto operator==(Range const&) const -> bool = default;
     };
 
+    // https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#location
+    struct Location {
+        Source_id source;
+        Range     range;
+    };
+
     // Replace `range` in `text` with `new_text`.
     auto edit_text(std::string& text, Range range, std::string_view new_text) -> void;
 
