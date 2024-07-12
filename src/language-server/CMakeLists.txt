@@ -1,4 +1,4 @@
-add_executable(language-server language-server/main.cpp)
+add_executable(language-server)
 
 target_include_directories(language-server
     PRIVATE ${PROJECT_SOURCE_DIR}/src/language-server)
@@ -13,5 +13,5 @@ target_sources(language-server
     PRIVATE language-server/rpc.hpp)
 
 target_link_libraries(language-server
-    PRIVATE libutl
+    PRIVATE libquery
     PRIVATE cpputil::json)

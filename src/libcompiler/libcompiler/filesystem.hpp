@@ -45,6 +45,9 @@ namespace kieli {
         // Deliberately non-aggregate.
         explicit Range(Position start, Position stop) noexcept;
 
+        // Create a one-character range for `position`.
+        static auto for_position(Position position) noexcept -> Range;
+
         // Dummy range for mock purposes.
         static auto dummy() noexcept -> Range;
 
@@ -67,8 +70,11 @@ namespace kieli {
     [[nodiscard]] auto find_source(std::filesystem::path const& path, Source_vector const& sources)
         -> std::optional<Source_id>;
 
-    // Describes a file read failure.
+    // Represents a file read failure.
     enum class Read_failure { does_not_exist, failed_to_open, failed_to_read };
+
+    // Describe a file read failure.
+    [[nodiscard]] auto describe_read_failure(Read_failure failure) -> std::string_view;
 
     // Attempt to create a `Source` by reading the file at `path`.
     [[nodiscard]] auto read_source(std::filesystem::path path)

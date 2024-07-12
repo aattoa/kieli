@@ -17,9 +17,21 @@ kieli::Range::Range(Position const start, Position const stop) noexcept
     , stop { stop }
 {}
 
+auto kieli::Range::for_position(Position const position) noexcept -> Range
+{
+    return Range(position, Position { .line = position.line, .column = position.column + 1 });
+}
+
 auto kieli::Range::dummy() noexcept -> Range
 {
-    return Range(Position {}, Position { .column = 1 });
+    return Range::for_position(Position {});
+}
+
+auto kieli::edit_text(std::string& text, Range const range, std::string_view const new_text) -> void
+{
+    auto const where  = text_range(text, range);
+    auto const offset = static_cast<std::size_t>(where.data() - text.data());
+    text.replace(offset, where.size(), new_text);
 }
 
 auto kieli::text_range(std::string_view const string, Range const range) -> std::string_view
@@ -52,11 +64,18 @@ auto kieli::find_source(std::filesystem::path const& path, Source_vector const& 
     return it != sources.underlying.end() ? std::optional(Source_id(index)) : std::nullopt;
 }
 
-auto kieli::edit_text(std::string& text, Range const range, std::string_view const new_text) -> void
+auto kieli::describe_read_failure(Read_failure const failure) -> std::string_view
 {
-    auto const where  = text_range(text, range);
-    auto const offset = static_cast<std::size_t>(where.data() - text.data());
-    text.replace(offset, where.size(), new_text);
+    switch (failure) {
+    case Read_failure::does_not_exist:
+        return "does not exist";
+    case Read_failure::failed_to_open:
+        return "failed to open";
+    case Read_failure::failed_to_read:
+        return "failed to read";
+    default:
+        cpputil::unreachable();
+    }
 }
 
 auto kieli::read_source(std::filesystem::path path) -> std::expected<Source, Read_failure>
