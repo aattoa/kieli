@@ -89,6 +89,11 @@ auto kieli::Name::is_upper() const -> bool
     return position == std::string_view::npos ? false : is_upper(identifier.view().at(position));
 }
 
+auto kieli::Name::operator==(Name const& other) const noexcept -> bool
+{
+    return identifier == other.identifier;
+}
+
 auto kieli::built_in_type::integer_name(Integer const integer) noexcept -> std::string_view
 {
     switch (integer) {

@@ -60,7 +60,8 @@ namespace kieli {
         // possibly preceded by underscores.
         [[nodiscard]] auto is_upper() const -> bool;
 
-        auto operator==(Name const&) const -> bool = default;
+        // Compare identifiers.
+        [[nodiscard]] auto operator==(Name const&) const noexcept -> bool;
     };
 
     struct Upper : Name {};
