@@ -6,7 +6,6 @@ target_sources(libutl
     PRIVATE libutl/flatmap.hpp
     PRIVATE libutl/index_vector.hpp
     PRIVATE libutl/safe_integer.hpp
-    PRIVATE libutl/timer.hpp
     PRIVATE libutl/utilities.cpp
     PRIVATE libutl/utilities.hpp
     PRIVATE libutl/wrapper.hpp)

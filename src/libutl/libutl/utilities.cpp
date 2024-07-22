@@ -4,7 +4,6 @@
 #include <libutl/flatmap.hpp>
 #include <libutl/index_vector.hpp>
 #include <libutl/safe_integer.hpp>
-#include <libutl/timer.hpp>
 #include <libutl/wrapper.hpp>
 
 utl::Safe_cast_argument_out_of_range::Safe_cast_argument_out_of_range()
