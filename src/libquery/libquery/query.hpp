@@ -20,7 +20,7 @@ namespace kieli::query {
 
     // Get hover information for `position` formatted as markdown.
     // https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#textDocument_hover
-    [[nodiscard]] auto hover(Database& db, Location location) -> Result<std::string>;
+    [[nodiscard]] auto hover(Database& db, Location location) -> Result<std::optional<std::string>>;
 
     // Get the definition location of the symbol at `position`.
     // https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#textDocument_definition

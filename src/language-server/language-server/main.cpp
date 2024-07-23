@@ -13,7 +13,7 @@ namespace {
     {
         kieli::Database db { .current_revision = 0 };
         while (auto content = kieli::lsp::rpc_read_message(in)) {
-            if (auto json = cpputil::json::decode(content.value())) {
+            if (auto json = cpputil::json::decode<kieli::lsp::Json_config>(content.value())) {
                 if (auto reply = kieli::lsp::handle_message(db, json.value().as_object())) {
                     kieli::lsp::rpc_write_message(out, cpputil::json::encode(reply.value()));
                 }

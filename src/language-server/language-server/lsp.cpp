@@ -17,15 +17,15 @@ namespace {
         return std::unexpected(std::format("URI with unsupported scheme: '{}'", uri));
     }
 
-    auto decode_position(Json::Object const& object) -> kieli::Position
+    auto position_from_json(Json::Object const& object) -> kieli::Position
     {
         return kieli::Position {
-            .line   = static_cast<std::uint32_t>(object.at("line").as_number()),
-            .column = static_cast<std::uint32_t>(object.at("character").as_number()),
+            .line   = object.at("line").as_number(),
+            .column = object.at("character").as_number(),
         };
     }
 
-    auto encode_position(kieli::Position const position) -> Json
+    auto position_to_json(kieli::Position const position) -> Json
     {
         return Json { Json::Object {
             { "line", Json { static_cast<Json::Number>(position.line) } },
@@ -33,10 +33,11 @@ namespace {
         } };
     }
 
-    auto decode_position_params(Database& db, Json::Object const& params) -> Result<kieli::Location>
+    auto position_params_from_json(Database& db, Json::Object const& params)
+        -> Result<kieli::Location>
     {
         auto const& uri      = params.at("textDocument").as_object().at("uri").as_string();
-        auto const& position = decode_position(params.at("position").as_object());
+        auto const& position = position_from_json(params.at("position").as_object());
 
         return uri_path(uri)
             .and_then([&](std::filesystem::path const& path) {
@@ -47,24 +48,24 @@ namespace {
             });
     }
 
-    auto encode_range(kieli::Range const range) -> Json
+    auto range_to_json(kieli::Range const range) -> Json
     {
         return Json { Json::Object {
-            { "start", encode_position(range.start) },
-            { "end", encode_position(range.stop) },
+            { "start", position_to_json(range.start) },
+            { "end", position_to_json(range.stop) },
         } };
     }
 
-    auto encode_location(Database& db, kieli::Location const location) -> Json
+    auto location_to_json(Database& db, kieli::Location const location) -> Json
     {
         auto const& path = db.sources[location.source].path;
         return Json { Json::Object {
             { "uri", Json { std::format("file://{}", path.c_str()) } },
-            { "range", encode_range(location.range) },
+            { "range", range_to_json(location.range) },
         } };
     }
 
-    auto encode_markdown_content(std::string markdown) -> Json
+    auto markdown_content_to_json(std::string markdown) -> Json
     {
         return Json { Json::Object {
             { "contents",
@@ -86,20 +87,25 @@ namespace {
         } };
     }
 
+    auto maybe_markdown_content(std::optional<std::string> markdown) -> Json
+    {
+        return std::move(markdown).transform(markdown_content_to_json).value_or(Json {});
+    }
+
     auto handle_hover(Database& db, Json::Object const& params) -> Result<Json>
     {
-        return decode_position_params(db, params)
-            .and_then([&](kieli::Location const cursor) { return kieli::query::hover(db, cursor); })
-            .transform(encode_markdown_content);
+        return position_params_from_json(db, params).and_then([&](kieli::Location const cursor) {
+            return kieli::query::hover(db, cursor).transform(maybe_markdown_content);
+        });
     }
 
     auto handle_goto_definition(Database& db, Json::Object const& params) -> Result<Json>
     {
-        return decode_position_params(db, params)
+        return position_params_from_json(db, params)
             .and_then(
                 [&](kieli::Location const cursor) { return kieli::query::definition(db, cursor); })
             .transform(
-                [&](kieli::Location const location) { return encode_location(db, location); });
+                [&](kieli::Location const location) { return location_to_json(db, location); });
     }
 
     auto handle_request(Database& db, std::string_view const method, Json const& params)
@@ -126,7 +132,7 @@ namespace {
     auto request_error(std::string message) -> Json
     {
         return Json { Json::Object {
-            { "code", Json { 0. } },
+            { "code", Json { Json::Number {} } },
             { "message", Json { std::move(message) } },
         } };
     }
@@ -146,7 +152,7 @@ auto kieli::lsp::handle_message(Database& db, Json::Object const& message) -> st
     }
 
     Json::Object reply {
-        { "jsonrpc", Json { "2.0" } },
+        { "jsonrpc", message.at("jsonrpc") },
         { "id", message.at("id") },
     };
 

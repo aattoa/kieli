@@ -35,7 +35,8 @@ auto kieli::query::ast(Database& db, CST const& cst) -> Result<AST>
     }
 }
 
-auto kieli::query::hover(Database& db, Location const location) -> Result<std::string>
+auto kieli::query::hover(Database& db, Location const location)
+    -> Result<std::optional<std::string>>
 {
     return std::format("hello, world!\n\nfile: `{}`", db.sources[location.source].path.c_str());
 }
