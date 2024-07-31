@@ -7,7 +7,6 @@ namespace {
     auto integer_type(Constants const& constants, kieli::built_in_type::Integer const integer)
         -> hir::Type_id
     {
-        // clang-format off
         switch (integer) {
         case kieli::built_in_type::Integer::i8:  return constants.i8_type;
         case kieli::built_in_type::Integer::i16: return constants.i16_type;
@@ -17,10 +16,8 @@ namespace {
         case kieli::built_in_type::Integer::u16: return constants.u16_type;
         case kieli::built_in_type::Integer::u32: return constants.u32_type;
         case kieli::built_in_type::Integer::u64: return constants.u64_type;
-        default:
-            cpputil::unreachable();
+        default:                                 cpputil::unreachable();
         }
-        // clang-format on
     }
 
     struct Type_resolution_visitor {

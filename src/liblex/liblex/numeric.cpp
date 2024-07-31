@@ -40,12 +40,9 @@ namespace {
 auto liblex::numeric_error_string(Numeric_error const error) -> std::string_view
 {
     switch (error) {
-    case liblex::Numeric_error::out_of_range:
-        return "liblex::Numeric_error::out_of_range";
-    case liblex::Numeric_error::invalid_argument:
-        return "liblex::Numeric_error::invalid_argument";
-    default:
-        cpputil::unreachable();
+    case liblex::Numeric_error::out_of_range:     return "liblex::Numeric_error::out_of_range";
+    case liblex::Numeric_error::invalid_argument: return "liblex::Numeric_error::invalid_argument";
+    default:                                      cpputil::unreachable();
     }
 }
 

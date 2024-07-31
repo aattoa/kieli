@@ -55,8 +55,7 @@ namespace {
                 }
                 return;
             }
-            default:
-                cpputil::unreachable();
+            default: cpputil::unreachable();
             }
         }
 

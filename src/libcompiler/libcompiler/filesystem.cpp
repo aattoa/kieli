@@ -67,14 +67,10 @@ auto kieli::find_source(std::filesystem::path const& path, Source_vector const& 
 auto kieli::describe_read_failure(Read_failure const failure) -> std::string_view
 {
     switch (failure) {
-    case Read_failure::does_not_exist:
-        return "does not exist";
-    case Read_failure::failed_to_open:
-        return "failed to open";
-    case Read_failure::failed_to_read:
-        return "failed to read";
-    default:
-        cpputil::unreachable();
+    case Read_failure::does_not_exist: return "does not exist";
+    case Read_failure::failed_to_open: return "failed to open";
+    case Read_failure::failed_to_read: return "failed to read";
+    default:                           cpputil::unreachable();
     }
 }
 

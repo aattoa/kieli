@@ -7,12 +7,15 @@ AlignConsecutiveAssignments:
   Enabled: true
 AlignConsecutiveDeclarations:
   Enabled: true
+AlignConsecutiveShortCaseStatements:
+  Enabled: true
 AlignEscapedNewlines: Left
 AlignOperands: AlignAfterOperator
 AllowShortFunctionsOnASingleLine: Empty
-AllowShortLambdasOnASingleLine: All
-AllowShortCompoundRequirementOnASingleLine: true
 AllowBreakBeforeNoexceptSpecifier: Always
+AllowShortCaseLabelsOnASingleLine: true
+AllowShortCompoundRequirementOnASingleLine: true
+AllowShortLambdasOnASingleLine: All
 AlwaysBreakTemplateDeclarations: Yes
 BinPackArguments:  false
 BinPackParameters: false

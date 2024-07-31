@@ -261,7 +261,6 @@ namespace {
     auto dispatch_parse_definition(Context& context, Token const& token, Stage const stage)
         -> std::optional<cst::Definition_variant>
     {
-        // clang-format off
         switch (token.type) {
         case Token_type::fn:      return extract_function(context, token);
         case Token_type::struct_: return extract_structure(context, token);
@@ -271,11 +270,8 @@ namespace {
         case Token_type::inst:    return extract_instantiation(context, token);
         case Token_type::impl:    return extract_implementation(context, token);
         case Token_type::module_: return extract_submodule(context, token);
-        default:
-            context.unstage(stage);
-            return std::nullopt;
+        default:                  context.unstage(stage); return std::nullopt;
         }
-        // clang-format on
     }
 } // namespace
 

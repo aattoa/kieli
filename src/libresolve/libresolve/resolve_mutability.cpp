@@ -7,12 +7,9 @@ namespace {
     auto resolve_concrete(Constants const& constants, ast::mutability::Concrete const concrete)
     {
         switch (concrete) {
-        case ast::mutability::Concrete::mut:
-            return constants.mutability_yes;
-        case ast::mutability::Concrete::immut:
-            return constants.mutability_no;
-        default:
-            cpputil::unreachable();
+        case ast::mutability::Concrete::mut:   return constants.mutability_yes;
+        case ast::mutability::Concrete::immut: return constants.mutability_no;
+        default:                               cpputil::unreachable();
         }
     }
 

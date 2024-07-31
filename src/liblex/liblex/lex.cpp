@@ -136,7 +136,6 @@ namespace {
 
     constexpr auto digit_predicate_for(int const base) noexcept -> auto (*)(char) -> bool
     {
-        // clang-format off
         switch (base) {
         case 2:  return or_digit_separator<is_digit2>;
         case 4:  return or_digit_separator<is_digit4>;
@@ -144,10 +143,8 @@ namespace {
         case 10: return or_digit_separator<is_digit10>;
         case 12: return or_digit_separator<is_digit12>;
         case 16: return or_digit_separator<is_digit16>;
-        default:
-            cpputil::unreachable();
+        default: cpputil::unreachable();
         }
-        // clang-format on
     }
 
     class Token_maker {
@@ -200,7 +197,6 @@ namespace {
         if (state.string.empty()) {
             return liblex::error(state, "Expected an escape sequence, but found the end of input");
         }
-        // clang-format off
         switch (liblex::extract_current(state)) {
         case 'a':  return '\a';
         case 'b':  return '\b';
@@ -212,10 +208,8 @@ namespace {
         case '\'': return '\'';
         case '\"': return '\"';
         case '\\': return '\\';
-        default:
-            return liblex::error(state, { anchor, 1 }, "Unrecognized escape sequence");
+        default:   return liblex::error(state, { anchor, 1 }, "Unrecognized escape sequence");
         }
-        // clang-format on
     }
 
     auto skip_string_literal_within_comment(kieli::Lex_state& state) -> liblex::Expected<void>
@@ -230,13 +224,9 @@ namespace {
                     state, { anchor, 1 }, "Unterminating string literal within comment block");
             }
             switch (liblex::extract_current(state)) {
-            case '"':
-                return {};
-            case '\\':
-                (void)handle_escape_sequence(state);
-                [[fallthrough]];
-            default:
-                continue;
+            case '"':  return {};
+            case '\\': (void)handle_escape_sequence(state); [[fallthrough]];
+            default:   continue;
             }
         }
     }
@@ -369,8 +359,7 @@ namespace {
                 else {
                     return std::unexpected { escaped.error() };
                 }
-            default:
-                string.push_back(character);
+            default: string.push_back(character);
             }
         }
     }
@@ -569,7 +558,6 @@ namespace {
             liblex::advance(state);
             return token(Token_variant {}, type);
         };
-        // clang-format off
         switch (char const current = liblex::current(state)) {
         case '(':  return simple_token(Token_type::paren_open);
         case ')':  return simple_token(Token_type::paren_close);
@@ -581,7 +569,6 @@ namespace {
         case ',':  return simple_token(Token_type::comma);
         case '\'': return extract_character_literal(token, state);
         case '\"': return extract_string_literal(token, state);
-        // clang-format on
         default:
             if (is_identifier_head(current)) {
                 return extract_identifier(token, state);

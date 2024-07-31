@@ -99,30 +99,29 @@ static constexpr auto type_strings_array = std::to_array<std::string_view>({
 
 auto kieli::token_description(Token_type const type) -> std::string_view
 {
-    // clang-format off
     switch (type) {
-    case Token_type::error:         return "a lexical error";
-    case Token_type::dot:           return "a '.'";
-    case Token_type::comma:         return "a ','";
-    case Token_type::colon:         return "a ':'";
-    case Token_type::semicolon:     return "a ';'";
-    case Token_type::double_colon:  return "a '::'";
-    case Token_type::ampersand:     return "a '&'";
-    case Token_type::asterisk:      return "a '*'";
-    case Token_type::plus:          return "a '+'";
-    case Token_type::question:      return "a '?'";
-    case Token_type::equals:        return "a '='";
-    case Token_type::pipe:          return "a '|'";
-    case Token_type::lambda:        return "a '\\'";
-    case Token_type::left_arrow:    return "a '<-'";
-    case Token_type::right_arrow:   return "a '->'";
-    case Token_type::hole:          return "a hole";
-    case Token_type::paren_open:    return "a '('";
-    case Token_type::paren_close:   return "a ')'";
-    case Token_type::brace_open:    return "a '{'";
-    case Token_type::brace_close:   return "a '}'";
-    case Token_type::bracket_open:  return "a '['";
-    case Token_type::bracket_close: return "a ']'";
+    case Token_type::error:             return "a lexical error";
+    case Token_type::dot:               return "a '.'";
+    case Token_type::comma:             return "a ','";
+    case Token_type::colon:             return "a ':'";
+    case Token_type::semicolon:         return "a ';'";
+    case Token_type::double_colon:      return "a '::'";
+    case Token_type::ampersand:         return "a '&'";
+    case Token_type::asterisk:          return "a '*'";
+    case Token_type::plus:              return "a '+'";
+    case Token_type::question:          return "a '?'";
+    case Token_type::equals:            return "a '='";
+    case Token_type::pipe:              return "a '|'";
+    case Token_type::lambda:            return "a '\\'";
+    case Token_type::left_arrow:        return "a '<-'";
+    case Token_type::right_arrow:       return "a '->'";
+    case Token_type::hole:              return "a hole";
+    case Token_type::paren_open:        return "a '('";
+    case Token_type::paren_close:       return "a ')'";
+    case Token_type::brace_open:        return "a '{'";
+    case Token_type::brace_close:       return "a '}'";
+    case Token_type::bracket_open:      return "a '['";
+    case Token_type::bracket_close:     return "a ']'";
     case Token_type::let:
     case Token_type::mut:
     case Token_type::immut:
@@ -181,12 +180,10 @@ auto kieli::token_description(Token_type const type) -> std::string_view
     case Token_type::u8_type:
     case Token_type::u16_type:
     case Token_type::u32_type:
-    case Token_type::u64_type:     return "a primitive typename";
-    case Token_type::end_of_input: return "the end of input";
-    default:
-        cpputil::unreachable();
+    case Token_type::u64_type:          return "a primitive typename";
+    case Token_type::end_of_input:      return "the end of input";
+    default:                            cpputil::unreachable();
     }
-    // clang-format on
 }
 
 auto kieli::token_type_string(kieli::Token_type const type) -> std::string_view

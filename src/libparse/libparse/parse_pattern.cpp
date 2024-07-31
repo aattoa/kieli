@@ -43,8 +43,7 @@ namespace {
         // TODO: cleanup
         switch (context.peek().type) {
         case Token_type::upper_name:
-        case Token_type::lower_name:
-            return extract_path(context, std::nullopt);
+        case Token_type::lower_name: return extract_path(context, std::nullopt);
         case Token_type::global:
         {
             auto const global       = context.extract();
@@ -153,7 +152,6 @@ namespace {
     auto dispatch_parse_pattern(Context& context, Token const& token, Stage const stage)
         -> std::optional<cst::Pattern_variant>
     {
-        // clang-format off
         switch (token.type) {
         case Token_type::underscore:        return cst::Wildcard { token.range };
         case Token_type::integer_literal:   return token.value_as<kieli::Integer>();
@@ -167,11 +165,8 @@ namespace {
         case Token_type::mut:               return extract_name(context, stage);
         case Token_type::upper_name:        return extract_constructor_path(context, stage);
         case Token_type::double_colon:      return extract_abbreviated_constructor(context, token);
-        default:
-            context.unstage(stage);
-            return std::nullopt;
+        default:                            context.unstage(stage); return std::nullopt;
         }
-        // clang-format on
     }
 
     auto parse_potentially_aliased_pattern(Context& context) -> std::optional<cst::Pattern_variant>

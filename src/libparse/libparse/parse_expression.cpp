@@ -442,7 +442,6 @@ namespace {
     auto dispatch_parse_normal_expression(Context& context, Token const& token, Stage const stage)
         -> std::optional<cst::Expression_variant>
     {
-        // clang-format off
         switch (token.type) {
         case Token_type::integer_literal:   return token.value_as<kieli::Integer>();
         case Token_type::floating_literal:  return token.value_as<kieli::Floating>();
@@ -475,8 +474,7 @@ namespace {
         case Token_type::defer:             return extract_defer(context, token);
         case Token_type::meta:              return extract_meta(context, token);
         case Token_type::brace_open:        return extract_block_expression(context, token);
-        default:                             return parse_complicated_type(context, stage);
-            // clang-format on
+        default:                            return parse_complicated_type(context, stage);
         }
     }
 
@@ -597,8 +595,7 @@ namespace {
                 .as_token        = cst::Token::from_lexical(context.extract()),
                 .target_type     = require<parse_type>(context, "the target type"),
             };
-        default:
-            return std::nullopt;
+        default: return std::nullopt;
         }
     }
 
@@ -621,15 +618,10 @@ namespace {
         Stage const stage = context.stage();
         Token const token = context.extract();
         switch (token.type) {
-        case Token_type::operator_name:
-            return token.value_as<kieli::Identifier>();
-        case Token_type::asterisk:
-            return context.special_identifiers().asterisk;
-        case Token_type::plus:
-            return context.special_identifiers().plus;
-        default:
-            context.unstage(stage);
-            return std::nullopt;
+        case Token_type::operator_name: return token.value_as<kieli::Identifier>();
+        case Token_type::asterisk:      return context.special_identifiers().asterisk;
+        case Token_type::plus:          return context.special_identifiers().plus;
+        default:                        context.unstage(stage); return std::nullopt;
         }
     }
 

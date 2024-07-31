@@ -142,7 +142,6 @@ namespace {
     auto dispatch_parse_type(Context& context, Token const& token, Stage const stage)
         -> std::optional<cst::Type_variant>
     {
-        // clang-format off
         switch (token.type) {
         case Token_type::i8_type:        return kieli::built_in_type::Integer::i8;
         case Token_type::i16_type:       return kieli::built_in_type::Integer::i16;
@@ -168,11 +167,8 @@ namespace {
         case Token_type::upper_name:     [[fallthrough]];
         case Token_type::lower_name:     return extract_typename(context, stage);
         case Token_type::global:         return extract_global_typename(context, token);
-        default:
-            context.unstage(stage);
-            return std::nullopt;
+        default:                         context.unstage(stage); return std::nullopt;
         }
-        // clang-format on
     }
 
     auto try_extract_path(Context& context, utl::Wrapper<cst::Type> const type)
