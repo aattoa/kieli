@@ -91,18 +91,18 @@ namespace {
 
     template <class Info>
     auto do_add_to_environment(
-        Context&                               context,
-        kieli::Source_id const                 source,
-        utl::Flatmap<kieli::Identifier, Info>& map,
-        auto const                             name,
-        typename Info::Variant&&               variant) -> void
+        Context&                 context,
+        kieli::Source_id const   source,
+        auto&                    map,
+        auto const               name,
+        typename Info::Variant&& variant) -> void
     {
-        if (auto const* const existing = map.find(name.identifier)) {
+        if (auto const it = std::ranges::find(map, name.identifier, utl::first); it != map.end()) {
             context.db.diagnostics.push_back(
-                duplicate_definitions_error(context.db.sources[source], existing->name, name));
+                duplicate_definitions_error(context.db.sources[source], it->second.name, name));
             throw kieli::Compilation_failure {};
         }
-        map.add_new_unchecked(name.identifier, Info { name, source, std::move(variant) });
+        map.emplace_back(name.identifier, Info { name, source, std::move(variant) });
     }
 } // namespace
 

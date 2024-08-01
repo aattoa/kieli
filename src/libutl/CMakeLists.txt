@@ -3,7 +3,6 @@ kieli_library(libutl)
 target_sources(libutl
     PRIVATE libutl/disjoint_set.cpp
     PRIVATE libutl/disjoint_set.hpp
-    PRIVATE libutl/flatmap.hpp
     PRIVATE libutl/index_vector.hpp
     PRIVATE libutl/safe_integer.hpp
     PRIVATE libutl/utilities.cpp

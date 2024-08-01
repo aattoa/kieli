@@ -1,7 +1,6 @@
 #include <libutl/utilities.hpp>
 
 #include <libutl/disjoint_set.hpp>
-#include <libutl/flatmap.hpp>
 #include <libutl/index_vector.hpp>
 #include <libutl/safe_integer.hpp>
 #include <libutl/wrapper.hpp>

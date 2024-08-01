@@ -1,5 +1,4 @@
 #include <libutl/utilities.hpp>
-#include <libutl/flatmap.hpp>
 #include <liblex/lex.hpp>
 #include <libparse/parse.hpp>
 #include <libdesugar/desugar.hpp>

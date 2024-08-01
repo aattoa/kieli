@@ -1,27 +1,27 @@
 #include <libutl/utilities.hpp>
 #include <libresolve/module.hpp>
 
-namespace {
-    constexpr auto first = [](auto& pair) noexcept -> auto& { return std::get<0>(pair); };
+using namespace libresolve;
 
+namespace {
     template <class Binding>
     auto do_bind(
-        utl::Flatmap<kieli::Identifier, Binding>& bindings,
-        kieli::Identifier const                   identifier,
-        Binding                                   binding) -> void
+        Identifier_map<Binding>& bindings,
+        kieli::Identifier const  identifier,
+        Binding                  binding) -> void
     {
         // Easy way to implement variable shadowing
-        auto const it = std::ranges::find(bindings, identifier, first);
-        bindings.container().emplace(it, identifier, std::move(binding));
+        auto const it = std::ranges::find(bindings, identifier, utl::first);
+        bindings.emplace(it, identifier, std::move(binding));
     }
 
-    template <auto libresolve::Scope::* bindings>
-    auto do_find(libresolve::Scope* scope, kieli::Identifier const identifier)
-        -> decltype((scope->*bindings).find(identifier))
+    template <class T, Identifier_map<T> Scope::*bindings>
+    auto do_find(Scope* scope, kieli::Identifier const identifier) -> T*
     {
         for (; scope; scope = scope->parent()) {
-            if (auto* const binding = (scope->*bindings).find(identifier)) {
-                return binding;
+            auto const it = std::ranges::find(scope->*bindings, identifier, utl::first);
+            if (it != (scope->*bindings).end()) {
+                return std::addressof(it->second);
             }
         }
         return nullptr;
@@ -29,9 +29,9 @@ namespace {
 
     template <class Binding>
     auto do_report_unused(
-        kieli::Database&                                db,
-        kieli::Source_id const                          source,
-        utl::Flatmap<kieli::Identifier, Binding> const& bindings)
+        kieli::Database&               db,
+        kieli::Source_id const         source,
+        Identifier_map<Binding> const& bindings) -> void
     {
         auto const unused = std::views::values | std::views::filter(&Binding::unused);
         for (auto const& binding : unused(bindings)) {
@@ -66,17 +66,17 @@ auto libresolve::Scope::bind_type(kieli::Identifier const identifier, Type_bind 
 
 auto libresolve::Scope::find_mutability(kieli::Identifier const identifier) -> Mutability_bind*
 {
-    return do_find<&Scope::m_mutabilities>(this, identifier);
+    return do_find<Mutability_bind, &Scope::m_mutabilities>(this, identifier);
 }
 
 auto libresolve::Scope::find_variable(kieli::Identifier const identifier) -> Variable_bind*
 {
-    return do_find<&Scope::m_variables>(this, identifier);
+    return do_find<Variable_bind, &Scope::m_variables>(this, identifier);
 }
 
 auto libresolve::Scope::find_type(kieli::Identifier const identifier) -> Type_bind*
 {
-    return do_find<&Scope::m_types>(this, identifier);
+    return do_find<Type_bind, &Scope::m_types>(this, identifier);
 }
 
 auto libresolve::Scope::child() noexcept -> Scope

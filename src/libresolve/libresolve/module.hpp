@@ -1,7 +1,6 @@
 #pragma once
 
 #include <libutl/utilities.hpp>
-#include <libutl/flatmap.hpp>
 #include <libcompiler/compiler.hpp>
 #include <libcompiler/ast/ast.hpp>
 #include <libcompiler/hir/hir.hpp>
@@ -75,14 +74,17 @@ namespace libresolve {
     };
 
     struct Function_with_resolved_signature;
+
+    template <class T>
+    using Identifier_map = std::vector<std::pair<kieli::Identifier, T>>;
 } // namespace libresolve
 
 class libresolve::Scope {
-    utl::Flatmap<kieli::Identifier, Variable_bind>   m_variables;
-    utl::Flatmap<kieli::Identifier, Type_bind>       m_types;
-    utl::Flatmap<kieli::Identifier, Mutability_bind> m_mutabilities;
-    kieli::Source_id                                 m_source;
-    Scope*                                           m_parent {};
+    Identifier_map<Variable_bind>   m_variables;
+    Identifier_map<Type_bind>       m_types;
+    Identifier_map<Mutability_bind> m_mutabilities;
+    kieli::Source_id                m_source;
+    Scope*                          m_parent {};
 public:
     explicit Scope(kieli::Source_id const source) : m_source { source } {}
 
@@ -168,9 +170,9 @@ struct libresolve::Module_info {
 };
 
 struct libresolve::Environment {
-    utl::Flatmap<kieli::Identifier, Upper_info> upper_map;
-    utl::Flatmap<kieli::Identifier, Lower_info> lower_map;
-    std::vector<Definition_variant>             in_order;
-    std::optional<hir::Environment_id>          parent;
-    kieli::Source_id                            source;
+    Identifier_map<Upper_info>         upper_map;
+    Identifier_map<Lower_info>         lower_map;
+    std::vector<Definition_variant>    in_order;
+    std::optional<hir::Environment_id> parent;
+    kieli::Source_id                   source;
 };

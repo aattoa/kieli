@@ -33,5 +33,4 @@
 - Backends: bytecode, C, x86 asm
 
 ## To-remove
-- `utl::Flatmap`, when `std::flat_map` is supported by compilers
 - `utl::Wrapper`, use index vectors instead

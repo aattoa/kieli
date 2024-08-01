@@ -1,5 +1,4 @@
 #include <libutl/utilities.hpp>
-#include <libutl/flatmap.hpp>
 #include <libresolve/resolution_internals.hpp>
 
 using namespace libresolve;

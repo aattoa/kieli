@@ -2,7 +2,6 @@
 
 #include <libutl/utilities.hpp>
 #include <libutl/wrapper.hpp>
-#include <libutl/flatmap.hpp>
 #include <libcompiler/compiler.hpp>
 #include <libcompiler/tree_fwd.hpp>
 

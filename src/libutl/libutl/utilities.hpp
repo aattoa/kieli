@@ -94,6 +94,16 @@ namespace utl {
         using Fs::operator()...;
     };
 
+    static constexpr auto first = [](auto&& pair) noexcept -> decltype(auto) {
+        auto& [first, _] = pair;
+        return std::forward_like<decltype(pair)>(first);
+    };
+
+    static constexpr auto second = [](auto&& pair) noexcept -> decltype(auto) {
+        auto& [_, second] = pair;
+        return std::forward_like<decltype(pair)>(second);
+    };
+
     template <class E>
         requires std::is_enum_v<E> && requires { E::_enumerator_count; }
     constexpr std::size_t enumerator_count = static_cast<std::size_t>(E::_enumerator_count);
