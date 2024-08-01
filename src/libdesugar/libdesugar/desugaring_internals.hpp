@@ -43,7 +43,7 @@ namespace libdesugar {
         auto desugar(cst::Template_parameter const&) -> ast::Template_parameter;
         auto desugar(cst::Path_segment const&) -> ast::Path_segment;
         auto desugar(cst::Path const&) -> ast::Path;
-        auto desugar(cst::Class_reference const&) -> ast::Class_reference;
+        auto desugar(cst::Concept_reference const&) -> ast::Concept_reference;
         auto desugar(cst::Function_signature const&) -> ast::Function_signature;
         auto desugar(cst::Type_signature const&) -> ast::Type_signature;
         auto desugar(cst::expression::Struct_initializer::Field const&)

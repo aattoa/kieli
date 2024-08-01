@@ -59,7 +59,7 @@ namespace {
         { "Self", Token_type::upper_self },
         { "enum", Token_type::enum_ },
         { "struct", Token_type::struct_ },
-        { "class", Token_type::class_ },
+        { "concept", Token_type::concept_ },
         { "impl", Token_type::impl },
         { "alias", Token_type::alias },
         { "import", Token_type::import_ },

@@ -30,11 +30,6 @@ namespace libresolve {
         static auto make_with(hir::Arena& arena) -> Constants;
     };
 
-    struct Obligation {
-        hir::Type         instance;
-        hir::Typeclass_id typeclass;
-    };
-
     struct Type_variable_data {
         hir::Type_variable_kind kind {};
         hir::Type_variable_id   variable_id;
@@ -141,7 +136,7 @@ namespace libresolve {
 
     auto resolve_enumeration(Context& context, Enumeration_info& info) -> hir::Enumeration&;
 
-    auto resolve_typeclass(Context& context, Typeclass_info& info) -> hir::Typeclass&;
+    auto resolve_concept(Context& context, Concept_info& info) -> hir::Concept&;
 
     auto resolve_alias(Context& context, Alias_info& info) -> hir::Alias&;
 
@@ -191,12 +186,12 @@ namespace libresolve {
         hir::Environment_id environment,
         ast::Type const&    type) -> hir::Type;
 
-    auto resolve_class_reference(
-        Context&                    context,
-        Inference_state&            state,
-        Scope&                      scope,
-        hir::Environment_id         environment,
-        ast::Class_reference const& class_reference) -> hir::Class_reference;
+    auto resolve_concept_reference(
+        Context&                      context,
+        Inference_state&              state,
+        Scope&                        scope,
+        hir::Environment_id           environment,
+        ast::Concept_reference const& concept_reference) -> hir::Concept_reference;
 
     auto lookup_lower(
         Context&            context,

@@ -27,7 +27,7 @@ DEFINE_AST_FORMAT_TO(Type);
 DEFINE_AST_FORMAT_TO(Definition);
 DEFINE_AST_FORMAT_TO(Mutability);
 DEFINE_AST_FORMAT_TO(Path);
-DEFINE_AST_FORMAT_TO(Class_reference);
+DEFINE_AST_FORMAT_TO(Concept_reference);
 DEFINE_AST_FORMAT_TO(Function_parameter);
 DEFINE_AST_FORMAT_TO(Function_argument);
 DEFINE_AST_FORMAT_TO(Template_parameter);

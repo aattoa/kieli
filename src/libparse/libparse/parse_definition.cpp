@@ -160,15 +160,15 @@ namespace {
             .alias_keyword_token = cst::Token::from_lexical(alias_keyword),
         };
         if (auto const colon_token = context.try_extract(Token_type::colon)) {
-            signature.classes_colon_token = cst::Token::from_lexical(colon_token.value());
-            signature.classes             = extract_class_references(context);
+            signature.concepts_colon_token = cst::Token::from_lexical(colon_token.value());
+            signature.concepts             = extract_concept_references(context);
         }
         return signature;
     }
 
-    auto extract_typeclass(Context& context, Token const& class_keyword) -> cst::Definition_variant
+    auto extract_concept(Context& context, Token const& concept_keyword) -> cst::Definition_variant
     {
-        auto const name                = extract_upper_name(context, "a class name");
+        auto const name                = extract_upper_name(context, "a concept name");
         auto       template_parameters = parse_template_parameters(context);
         auto const open_brace          = context.require_extract(Token_type::brace_open);
 
@@ -185,14 +185,14 @@ namespace {
                 continue;
             default:
                 Token const close_brace = context.require_extract(Token_type::brace_close);
-                return cst::definition::Typeclass {
-                    .template_parameters = std::move(template_parameters),
-                    .function_signatures = std::move(functions),
-                    .type_signatures     = std::move(types),
-                    .name                = name,
-                    .class_keyword_token = cst::Token::from_lexical(class_keyword),
-                    .open_brace_token    = cst::Token::from_lexical(open_brace),
-                    .close_brace_token   = cst::Token::from_lexical(close_brace),
+                return cst::definition::Concept {
+                    .template_parameters   = std::move(template_parameters),
+                    .function_signatures   = std::move(functions),
+                    .type_signatures       = std::move(types),
+                    .name                  = name,
+                    .concept_keyword_token = cst::Token::from_lexical(concept_keyword),
+                    .open_brace_token      = cst::Token::from_lexical(open_brace),
+                    .close_brace_token     = cst::Token::from_lexical(close_brace),
                 };
             }
         }
@@ -243,14 +243,14 @@ namespace {
         -> std::optional<cst::Definition_variant>
     {
         switch (token.type) {
-        case Token_type::fn:      return extract_function(context, token);
-        case Token_type::struct_: return extract_structure(context, token);
-        case Token_type::enum_:   return extract_enumeration(context, token);
-        case Token_type::class_:  return extract_typeclass(context, token);
-        case Token_type::alias:   return extract_alias(context, token);
-        case Token_type::impl:    return extract_implementation(context, token);
-        case Token_type::module_: return extract_submodule(context, token);
-        default:                  context.unstage(stage); return std::nullopt;
+        case Token_type::fn:       return extract_function(context, token);
+        case Token_type::struct_:  return extract_structure(context, token);
+        case Token_type::enum_:    return extract_enumeration(context, token);
+        case Token_type::concept_: return extract_concept(context, token);
+        case Token_type::alias:    return extract_alias(context, token);
+        case Token_type::impl:     return extract_implementation(context, token);
+        case Token_type::module_:  return extract_submodule(context, token);
+        default:                   context.unstage(stage); return std::nullopt;
         }
     }
 } // namespace

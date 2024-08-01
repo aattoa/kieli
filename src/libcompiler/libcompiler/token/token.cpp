@@ -49,7 +49,7 @@ static constexpr auto type_strings_array = std::to_array<std::string_view>({
     "as",
     "enum",
     "struct",
-    "class",
+    "concept",
     "impl",
     "alias",
     "import",
@@ -140,7 +140,7 @@ auto kieli::token_description(Token_type const type) -> std::string_view
     case Token_type::as:
     case Token_type::enum_:
     case Token_type::struct_:
-    case Token_type::class_:
+    case Token_type::concept_:
     case Token_type::impl:
     case Token_type::alias:
     case Token_type::import_:

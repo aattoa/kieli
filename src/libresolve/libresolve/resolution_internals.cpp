@@ -175,17 +175,17 @@ auto libresolve::ensure_no_unsolved_variables(Context& context, Inference_state&
     }
 }
 
-auto libresolve::resolve_class_reference(
-    Context&                    context,
-    Inference_state&            state,
-    Scope&                      scope,
-    hir::Environment_id const   environment,
-    ast::Class_reference const& class_reference) -> hir::Class_reference
+auto libresolve::resolve_concept_reference(
+    Context&                      context,
+    Inference_state&              state,
+    Scope&                        scope,
+    hir::Environment_id const     environment,
+    ast::Concept_reference const& concept_reference) -> hir::Concept_reference
 {
     (void)context;
     (void)state;
     (void)scope;
     (void)environment;
-    (void)class_reference;
+    (void)concept_reference;
     cpputil::todo();
 }

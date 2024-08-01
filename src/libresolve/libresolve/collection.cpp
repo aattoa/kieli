@@ -52,10 +52,10 @@ namespace {
                     environment.in_order.emplace_back(info);
                 },
 
-                [&](ast::definition::Typeclass&& typeclass) {
-                    auto const name = typeclass.name;
-                    auto const info = context.info.typeclasses.push(
-                        std::move(typeclass), environment_id, source, name);
+                [&](ast::definition::Concept&& concept_) {
+                    auto const name = concept_.name;
+                    auto const info = context.info.concepts.push(
+                        std::move(concept_), environment_id, source, name);
                     add_to_environment(context, source, environment, name, info);
                     environment.in_order.emplace_back(info);
                 },

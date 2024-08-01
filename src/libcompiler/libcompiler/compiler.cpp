@@ -68,20 +68,6 @@ auto kieli::format_diagnostics(
     return output;
 }
 
-auto kieli::predefinitions_source(Database& db) -> Source_id
-{
-    // TODO: check if predefinitions already exist
-
-    static constexpr std::string_view source = R"(
-        mod std {
-            class Copy { fn copy(&self): Self }
-            class Drop { fn drop(&self): () }
-            fn id[X](x: X) = x
-        }
-    )";
-    return db.sources.push(std::string(source), "[predefined]");
-}
-
 auto kieli::Name::is_upper() const -> bool
 {
     static constexpr auto is_upper = [](char const c) { return 'A' <= c && c <= 'Z'; };

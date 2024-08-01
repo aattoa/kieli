@@ -124,7 +124,7 @@ namespace cst {
         [[nodiscard]] auto is_simple_name() const noexcept -> bool;
     };
 
-    struct Class_reference {
+    struct Concept_reference {
         std::optional<Template_arguments> template_arguments;
         Path                              path;
         kieli::Range                      range;
@@ -162,7 +162,7 @@ namespace cst {
     struct Template_type_parameter {
         kieli::Upper                                   name;
         std::optional<Token>                           colon_token;
-        Separated_sequence<Class_reference>            classes;
+        Separated_sequence<Concept_reference>          concepts;
         std::optional<Type_parameter_default_argument> default_argument;
     };
 
@@ -634,8 +634,8 @@ namespace cst {
         };
 
         struct Implementation {
-            Separated_sequence<Class_reference> classes;
-            Token                               impl_keyword_token;
+            Separated_sequence<Concept_reference> concepts;
+            Token                                 impl_keyword_token;
         };
 
         struct Template_application {
@@ -681,11 +681,11 @@ namespace cst {
     };
 
     struct Type_signature {
-        std::optional<Template_parameters>  template_parameters;
-        Separated_sequence<Class_reference> classes;
-        kieli::Upper                        name;
-        std::optional<Token>                classes_colon_token;
-        Token                               alias_keyword_token;
+        std::optional<Template_parameters>    template_parameters;
+        Separated_sequence<Concept_reference> concepts;
+        kieli::Upper                          name;
+        std::optional<Token>                  concepts_colon_token;
+        Token                                 alias_keyword_token;
     };
 
     namespace definition {
@@ -745,12 +745,12 @@ namespace cst {
             Token                              equals_sign_token;
         };
 
-        struct Typeclass {
+        struct Concept {
             std::optional<Template_parameters> template_parameters;
             std::vector<Function_signature>    function_signatures;
             std::vector<Type_signature>        type_signatures;
             kieli::Upper                       name;
-            Token                              class_keyword_token;
+            Token                              concept_keyword_token;
             Token                              open_brace_token;
             Token                              close_brace_token;
         };
@@ -776,7 +776,7 @@ namespace cst {
               definition::Struct,
               definition::Enum,
               definition::Alias,
-              definition::Typeclass,
+              definition::Concept,
               definition::Implementation,
               definition::Submodule> {
         using variant::variant, variant::operator=;

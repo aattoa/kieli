@@ -59,7 +59,7 @@ auto libdesugar::Context::desugar(cst::Template_parameter const& template_parame
                 [&](cst::Template_type_parameter const& parameter) {
                     return ast::Template_type_parameter {
                         .name             = parameter.name,
-                        .classes          = desugar(parameter.classes),
+                        .concepts         = desugar(parameter.concepts),
                         .default_argument = parameter.default_argument.transform(desugar()),
                     };
                 },
@@ -110,9 +110,9 @@ auto libdesugar::Context::desugar(cst::Path const& path) -> ast::Path
     };
 }
 
-auto libdesugar::Context::desugar(cst::Class_reference const& reference) -> ast::Class_reference
+auto libdesugar::Context::desugar(cst::Concept_reference const& reference) -> ast::Concept_reference
 {
-    return ast::Class_reference {
+    return ast::Concept_reference {
         .template_arguments = reference.template_arguments.transform(desugar()),
         .path               = desugar(reference.path),
         .range              = reference.range,
@@ -146,8 +146,8 @@ auto libdesugar::Context::desugar(cst::Function_signature const& signature)
 auto libdesugar::Context::desugar(cst::Type_signature const& signature) -> ast::Type_signature
 {
     return ast::Type_signature {
-        .classes = desugar(signature.classes.elements),
-        .name    = signature.name,
+        .concepts = desugar(signature.concepts.elements),
+        .name     = signature.name,
     };
 }
 

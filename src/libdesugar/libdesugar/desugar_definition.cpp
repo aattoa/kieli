@@ -83,13 +83,13 @@ namespace {
             };
         }
 
-        auto operator()(cst::definition::Typeclass const& typeclass) -> ast::Definition_variant
+        auto operator()(cst::definition::Concept const& concept_) -> ast::Definition_variant
         {
-            return ast::definition::Typeclass {
-                .function_signatures = context.desugar(typeclass.function_signatures),
-                .type_signatures     = context.desugar(typeclass.type_signatures),
-                .name                = typeclass.name,
-                .template_parameters = typeclass.template_parameters.transform(context.desugar()),
+            return ast::definition::Concept {
+                .function_signatures = context.desugar(concept_.function_signatures),
+                .type_signatures     = context.desugar(concept_.type_signatures),
+                .name                = concept_.name,
+                .template_parameters = concept_.template_parameters.transform(context.desugar()),
             };
         }
 

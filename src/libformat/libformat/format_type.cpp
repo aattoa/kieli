@@ -113,7 +113,7 @@ namespace {
         auto operator()(cst::type::Implementation const& implementation)
         {
             state.format("impl ");
-            state.format_separated(implementation.classes.elements, " + ");
+            state.format_separated(implementation.concepts.elements, " + ");
         }
     };
 } // namespace

@@ -133,14 +133,14 @@ auto libresolve::resolve_enumeration(Context& context, Enumeration_info& info) -
     return std::get<hir::Enumeration>(info.variant);
 }
 
-auto libresolve::resolve_typeclass(Context& context, Typeclass_info& info) -> hir::Typeclass&
+auto libresolve::resolve_concept(Context& context, Concept_info& info) -> hir::Concept&
 {
-    if (auto* const typeclass = std::get_if<ast::definition::Typeclass>(&info.variant)) {
+    if (auto* const concept_ = std::get_if<ast::definition::Concept>(&info.variant)) {
         (void)context;
-        (void)typeclass;
+        (void)concept_;
         cpputil::todo();
     }
-    return std::get<hir::Typeclass>(info.variant);
+    return std::get<hir::Concept>(info.variant);
 }
 
 auto libresolve::resolve_alias(Context& context, Alias_info& info) -> hir::Alias&
@@ -180,8 +180,8 @@ auto libresolve::resolve_definition(Context& context, Definition_variant const& 
             [&](hir::Enumeration_id const enumeration) {
                 (void)resolve_enumeration(context, context.info.enumerations[enumeration]);
             },
-            [&](hir::Typeclass_id const typeclass) {
-                (void)resolve_typeclass(context, context.info.typeclasses[typeclass]);
+            [&](hir::Concept_id const concept_) {
+                (void)resolve_concept(context, context.info.concepts[concept_]);
             },
             [&](hir::Alias_id const alias) {
                 (void)resolve_alias(context, context.info.aliases[alias]);

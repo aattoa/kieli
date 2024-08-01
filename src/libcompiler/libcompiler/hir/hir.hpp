@@ -62,7 +62,7 @@ namespace hir {
         using Vector_index::Vector_index;
     };
 
-    struct Typeclass_id : utl::Vector_index<Typeclass_id> {
+    struct Concept_id : utl::Vector_index<Concept_id> {
         using Vector_index::Vector_index;
     };
 
@@ -80,8 +80,8 @@ namespace hir {
         kieli::Range range;
     };
 
-    struct Class_reference {
-        Typeclass_id id;
+    struct Concept_reference {
+        Concept_id   id;
         kieli::Upper name;
     };
 
@@ -358,9 +358,9 @@ namespace hir {
 
     struct Template_type_parameter {
         using Default = std::variant<Type, Wildcard>;
-        std::vector<Class_reference> classes;
-        kieli::Upper                 name;
-        std::optional<Default>       default_argument;
+        std::vector<Concept_reference> concepts;
+        kieli::Upper                   name;
+        std::optional<Default>         default_argument;
     };
 
     struct Template_mutability_parameter {
@@ -416,7 +416,7 @@ namespace hir {
         Type         type;
     };
 
-    struct Typeclass {
+    struct Concept {
         // TODO
     };
 

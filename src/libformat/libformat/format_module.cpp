@@ -69,7 +69,7 @@ namespace {
             cpputil::todo();
         }
 
-        auto operator()(cst::definition::Typeclass const&) -> void
+        auto operator()(cst::definition::Concept const&) -> void
         {
             cpputil::todo();
         }

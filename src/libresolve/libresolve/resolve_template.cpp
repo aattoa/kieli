@@ -40,12 +40,13 @@ namespace {
                     parameter.name,
                     context.hir.types.push(hir::type::Parameterized { parameter_id }),
                 });
-            auto const resolve_class = [&](ast::Class_reference const& class_reference) {
-                return resolve_class_reference(context, state, scope, environment, class_reference);
+            auto const resolve_concept = [&](ast::Concept_reference const& concept_reference) {
+                return resolve_concept_reference(
+                    context, state, scope, environment, concept_reference);
             };
             return hir::Template_type_parameter {
-                .classes = std::views::transform(parameter.classes, resolve_class)
-                         | std::ranges::to<std::vector>(),
+                .concepts = parameter.concepts | std::views::transform(resolve_concept)
+                          | std::ranges::to<std::vector>(),
                 .name             = parameter.name,
                 .default_argument = parameter.default_argument.transform(
                     resolve_default_argument<hir::Template_type_parameter::Default>()),

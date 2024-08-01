@@ -48,8 +48,6 @@ namespace kieli {
         std::span<cppdiag::Diagnostic const> diagnostics,
         cppdiag::Colors                      colors = cppdiag::Colors::defaults()) -> std::string;
 
-    auto predefinitions_source(Database&) -> Source_id;
-
     using Identifier = cpputil::mem::Stable_pool_string;
 
     struct Name {

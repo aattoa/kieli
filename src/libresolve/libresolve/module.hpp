@@ -8,7 +8,7 @@
 namespace libresolve {
     struct Function_info;
     struct Enumeration_info;
-    struct Typeclass_info;
+    struct Concept_info;
     struct Alias_info;
     struct Module_info;
     struct Environment;
@@ -19,7 +19,7 @@ namespace libresolve {
         utl::Index_vector<hir::Environment_id, Environment>      environments;
         utl::Index_vector<hir::Function_id, Function_info>       functions;
         utl::Index_vector<hir::Enumeration_id, Enumeration_info> enumerations;
-        utl::Index_vector<hir::Typeclass_id, Typeclass_info>     typeclasses;
+        utl::Index_vector<hir::Concept_id, Concept_info>         concepts;
         utl::Index_vector<hir::Alias_id, Alias_info>             aliases;
     };
 
@@ -31,7 +31,7 @@ namespace libresolve {
     };
 
     struct Upper_info {
-        using Variant = std::variant<hir::Enumeration_id, hir::Typeclass_id, hir::Alias_id>;
+        using Variant = std::variant<hir::Enumeration_id, hir::Concept_id, hir::Alias_id>;
         kieli::Upper     name;
         kieli::Source_id source;
         Variant          variant;
@@ -42,7 +42,7 @@ namespace libresolve {
               hir::Function_id,
               hir::Module_id,
               hir::Enumeration_id,
-              hir::Typeclass_id,
+              hir::Concept_id,
               hir::Alias_id> {
         using variant::variant, variant::operator=;
     };
@@ -143,8 +143,8 @@ struct libresolve::Enumeration_info {
     bool                currently_resolving {};
 };
 
-struct libresolve::Typeclass_info {
-    using Variant = std::variant<ast::definition::Typeclass, hir::Typeclass>;
+struct libresolve::Concept_info {
+    using Variant = std::variant<ast::definition::Concept, hir::Concept>;
     Variant             variant;
     hir::Environment_id environment;
     kieli::Source_id    source;

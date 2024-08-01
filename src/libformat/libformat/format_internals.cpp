@@ -88,7 +88,7 @@ auto libformat::State::format(cst::Function_arguments const& arguments) -> void
     format(")");
 }
 
-auto libformat::State::format(cst::Class_reference const& reference) -> void
+auto libformat::State::format(cst::Concept_reference const& reference) -> void
 {
     format(reference.path);
     format(reference.template_arguments);

@@ -110,7 +110,7 @@ namespace {
 
         auto operator()(cst::type::Implementation const& implementation) -> ast::Type_variant
         {
-            return ast::type::Implementation { context.desugar(implementation.classes.elements) };
+            return ast::type::Implementation { context.desugar(implementation.concepts.elements) };
         }
 
         auto operator()(cst::type::Template_application const& application) -> ast::Type_variant

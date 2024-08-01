@@ -70,7 +70,7 @@ namespace ast {
         [[nodiscard]] auto is_simple_name() const noexcept -> bool;
     };
 
-    struct Class_reference {
+    struct Concept_reference {
         std::optional<std::vector<Template_argument>> template_arguments;
         Path                                          path;
         kieli::Range                                  range;
@@ -78,9 +78,9 @@ namespace ast {
 
     struct Template_type_parameter {
         using Default = std::variant<utl::Wrapper<Type>, Wildcard>;
-        kieli::Upper                 name;
-        std::vector<Class_reference> classes;
-        std::optional<Default>       default_argument;
+        kieli::Upper                   name;
+        std::vector<Concept_reference> concepts;
+        std::optional<Default>         default_argument;
     };
 
     struct Template_value_parameter {
@@ -457,7 +457,7 @@ namespace ast {
         };
 
         struct Implementation {
-            std::vector<Class_reference> classes;
+            std::vector<Concept_reference> concepts;
         };
 
         struct Template_application {
@@ -508,8 +508,8 @@ namespace ast {
     };
 
     struct Type_signature {
-        std::vector<Class_reference> classes;
-        kieli::Upper                 name;
+        std::vector<Concept_reference> concepts;
+        kieli::Upper                   name;
     };
 
     namespace definition {
@@ -556,7 +556,7 @@ namespace ast {
             Template_parameters template_parameters;
         };
 
-        struct Typeclass {
+        struct Concept {
             std::vector<Function_signature> function_signatures;
             std::vector<Type_signature>     type_signatures;
             kieli::Upper                    name;
@@ -581,7 +581,7 @@ namespace ast {
               definition::Function,
               definition::Enumeration,
               definition::Alias,
-              definition::Typeclass,
+              definition::Concept,
               definition::Implementation,
               definition::Submodule> {
         using variant::variant, variant::operator=;
@@ -604,7 +604,7 @@ namespace ast {
     auto format_to(Definition const&, std::string&) -> void;
     auto format_to(Mutability const&, std::string&) -> void;
     auto format_to(Path const&, std::string&) -> void;
-    auto format_to(Class_reference const&, std::string&) -> void;
+    auto format_to(Concept_reference const&, std::string&) -> void;
     auto format_to(Function_parameter const&, std::string&) -> void;
     auto format_to(Function_argument const&, std::string&) -> void;
     auto format_to(Template_parameter const&, std::string&) -> void;

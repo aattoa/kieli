@@ -91,7 +91,7 @@ namespace {
                         [&](hir::Alias_id const alias) -> hir::Type {
                             return resolve_alias(context, context.info.aliases[alias]).type;
                         },
-                        [](hir::Typeclass_id) -> hir::Type { cpputil::todo(); },
+                        [](hir::Concept_id) -> hir::Type { cpputil::todo(); },
                     },
                     lookup_result.value().variant);
             }

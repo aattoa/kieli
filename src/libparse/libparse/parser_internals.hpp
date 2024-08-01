@@ -77,7 +77,7 @@ namespace libparse {
     };
 
     auto extract_path(Context&, std::optional<cst::Path_root>&&) -> cst::Path;
-    auto extract_class_references(Context&) -> cst::Separated_sequence<cst::Class_reference>;
+    auto extract_concept_references(Context&) -> cst::Separated_sequence<cst::Concept_reference>;
 
     auto parse_block_expression(Context&) -> std::optional<utl::Wrapper<cst::Expression>>;
     auto parse_expression(Context&) -> std::optional<utl::Wrapper<cst::Expression>>;
@@ -95,7 +95,7 @@ namespace libparse {
     auto parse_function_arguments(Context&) -> std::optional<cst::Function_arguments>;
     auto parse_function_argument(Context&) -> std::optional<cst::Function_argument>;
 
-    auto parse_class_reference(Context&) -> std::optional<cst::Class_reference>;
+    auto parse_concept_reference(Context&) -> std::optional<cst::Concept_reference>;
     auto parse_type_annotation(Context&) -> std::optional<cst::Type_annotation>;
     auto parse_definition(Context&) -> std::optional<cst::Definition>;
     auto parse_mutability(Context&) -> std::optional<cst::Mutability>;

@@ -24,7 +24,7 @@ LIBDESUGAR_DECLARE_FORMATTER(ast::Type);
 LIBDESUGAR_DECLARE_FORMATTER(ast::Definition);
 LIBDESUGAR_DECLARE_FORMATTER(ast::Mutability);
 LIBDESUGAR_DECLARE_FORMATTER(ast::Path);
-LIBDESUGAR_DECLARE_FORMATTER(ast::Class_reference);
+LIBDESUGAR_DECLARE_FORMATTER(ast::Concept_reference);
 LIBDESUGAR_DECLARE_FORMATTER(ast::Function_argument);
 LIBDESUGAR_DECLARE_FORMATTER(ast::Function_parameter);
 LIBDESUGAR_DECLARE_FORMATTER(ast::Template_argument);
@@ -347,7 +347,7 @@ namespace libdesugar::dtl {
 
         auto operator()(ast::type::Implementation const& implementation)
         {
-            std::format_to(out, "impl {}", utl::fmt::join(implementation.classes, " + "));
+            std::format_to(out, "impl {}", utl::fmt::join(implementation.concepts, " + "));
         }
 
         auto operator()(ast::type::Pointer const& pointer)
@@ -418,7 +418,7 @@ namespace libdesugar::dtl {
                 out, "alias {}{} = {}", alias.name, alias.template_parameters, alias.type);
         }
 
-        auto operator()(ast::definition::Typeclass const&)
+        auto operator()(ast::definition::Concept const&)
         {
             cpputil::todo();
         }
@@ -502,7 +502,7 @@ LIBDESUGAR_DEFINE_FORMATTER(ast::Path)
     return std::format_to(context.out(), "{}", value.head);
 }
 
-LIBDESUGAR_DEFINE_FORMATTER(ast::Class_reference)
+LIBDESUGAR_DEFINE_FORMATTER(ast::Concept_reference)
 {
     std::format_to(context.out(), "{}", value.path);
     if (value.template_arguments.has_value()) {
@@ -542,8 +542,9 @@ LIBDESUGAR_DEFINE_FORMATTER(ast::Template_parameter)
         utl::Overload {
             [&](ast::Template_type_parameter const& parameter) {
                 std::format_to(context.out(), "{}", parameter.name);
-                if (!parameter.classes.empty()) {
-                    std::format_to(context.out(), ": {}", utl::fmt::join(parameter.classes, " + "));
+                if (!parameter.concepts.empty()) {
+                    std::format_to(
+                        context.out(), ": {}", utl::fmt::join(parameter.concepts, " + "));
                 }
                 if (parameter.default_argument.has_value()) {
                     std::format_to(context.out(), " = {}", parameter.default_argument.value());

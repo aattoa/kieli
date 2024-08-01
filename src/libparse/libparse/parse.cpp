@@ -83,7 +83,7 @@ namespace {
             return cst::Template_type_parameter {
                 .name             = name,
                 .colon_token      = cst::Token::from_lexical(colon.value()),
-                .classes          = extract_class_references(context),
+                .concepts         = extract_concept_references(context),
                 .default_argument = parse_type_parameter_default_argument(context),
             };
         }
@@ -146,7 +146,7 @@ auto libparse::parse_mutability(Context& context) -> std::optional<cst::Mutabili
     return std::nullopt;
 }
 
-auto libparse::parse_class_reference(Context& context) -> std::optional<cst::Class_reference>
+auto libparse::parse_concept_reference(Context& context) -> std::optional<cst::Concept_reference>
 {
     // TODO: cleanup
 
@@ -173,14 +173,14 @@ auto libparse::parse_class_reference(Context& context) -> std::optional<cst::Cla
 
         auto path = extract_path(context, std::move(root));
         if (!path.head.is_upper()) {
-            context.error_expected(path.head.range, "a class name");
+            context.error_expected(path.head.range, "a concept name");
         }
         return path;
     });
 
     if (path.has_value()) {
         auto template_arguments = parse_template_arguments(context);
-        return cst::Class_reference {
+        return cst::Concept_reference {
             .template_arguments = std::move(template_arguments),
             .path               = std::move(path.value()),
             .range              = context.up_to_current(anchor_range),
@@ -361,12 +361,12 @@ auto libparse::extract_path(Context& context, std::optional<cst::Path_root>&& ro
     }
 }
 
-auto libparse::extract_class_references(Context& context)
-    -> cst::Separated_sequence<cst::Class_reference>
+auto libparse::extract_concept_references(Context& context)
+    -> cst::Separated_sequence<cst::Concept_reference>
 {
     return require<
-        parse_separated_one_or_more<parse_class_reference, "a class reference", Token_type::plus>>(
-        context, "one or more '+'-separated class references");
+        parse_separated_one_or_more<parse_concept_reference, "a concept name", Token_type::plus>>(
+        context, "one or more '+'-separated concept names");
 }
 
 auto kieli::parse(Source_id const source, Database& db) -> CST
