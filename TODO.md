@@ -21,6 +21,8 @@
 - Try the mold linker, `-fuse-ld=mold`
 
 ## Miscellaneous
+- git submodules
+- Definition source hash
 - Range should store width only?
 - Union types `Int|Float`
 - Allow omission of repeated parameter types ?
@@ -31,6 +33,10 @@
 - lsp column offsets are utf8
 - Configure builds with `build.kieli`
 - Backends: bytecode, C, x86 asm
+
+## Look into for potential inspiration
+- Swift actors
+- Go generics
 
 ## To-remove
 - `utl::Wrapper`, use index vectors instead

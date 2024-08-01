@@ -113,11 +113,11 @@ namespace {
         };
     }
 
-    auto extract_instance_of(Context& context, Token const& inst_keyword) -> cst::Type_variant
+    auto extract_implementation(Context& context, Token const& impl_keyword) -> cst::Type_variant
     {
-        return cst::type::Instance_of {
+        return cst::type::Implementation {
             .classes            = extract_class_references(context),
-            .inst_keyword_token = cst::Token::from_lexical(inst_keyword),
+            .impl_keyword_token = cst::Token::from_lexical(impl_keyword),
         };
     }
 
@@ -161,7 +161,7 @@ namespace {
         case Token_type::bracket_open:   return extract_array_or_slice(context, token);
         case Token_type::fn:             return extract_function(context, token);
         case Token_type::typeof_:        return extract_typeof(context, token);
-        case Token_type::inst:           return extract_instance_of(context, token);
+        case Token_type::impl:           return extract_implementation(context, token);
         case Token_type::ampersand:      return extract_reference(context, token);
         case Token_type::asterisk:       return extract_pointer(context, token);
         case Token_type::upper_name:     [[fallthrough]];

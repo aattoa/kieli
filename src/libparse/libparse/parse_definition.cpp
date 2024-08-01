@@ -213,25 +213,6 @@ namespace {
         };
     }
 
-    auto extract_instantiation(Context& context, Token const& inst_keyword)
-        -> cst::Definition_variant
-    {
-        auto template_parameters = parse_template_parameters(context);
-        auto typeclass_reference = require<parse_class_reference>(context, "a class name");
-
-        Token const for_keyword = context.require_extract(Token_type::for_);
-        auto        self_type   = require<parse_type>(context, "the Self type");
-
-        return cst::definition::Instantiation {
-            .template_parameters = std::move(template_parameters),
-            .typeclass           = std::move(typeclass_reference),
-            .definitions         = extract_definition_sequence(context),
-            .self_type           = std::move(self_type),
-            .inst_keyword_token  = cst::Token::from_lexical(inst_keyword),
-            .for_keyword_token   = cst::Token::from_lexical(for_keyword),
-        };
-    }
-
     auto extract_implementation(Context& context, Token const& impl_keyword)
         -> cst::Definition_variant
     {
@@ -267,7 +248,6 @@ namespace {
         case Token_type::enum_:   return extract_enumeration(context, token);
         case Token_type::class_:  return extract_typeclass(context, token);
         case Token_type::alias:   return extract_alias(context, token);
-        case Token_type::inst:    return extract_instantiation(context, token);
         case Token_type::impl:    return extract_implementation(context, token);
         case Token_type::module_: return extract_submodule(context, token);
         default:                  context.unstage(stage); return std::nullopt;

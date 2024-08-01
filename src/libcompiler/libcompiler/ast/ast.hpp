@@ -456,7 +456,7 @@ namespace ast {
             Mutability         mutability;
         };
 
-        struct Instance_of {
+        struct Implementation {
             std::vector<Class_reference> classes;
         };
 
@@ -483,7 +483,7 @@ namespace ast {
               type::Typeof,
               type::Reference,
               type::Pointer,
-              type::Instance_of,
+              type::Implementation,
               type::Template_application> {
         using variant::variant, variant::operator=;
     };
@@ -569,13 +569,6 @@ namespace ast {
             Template_parameters     template_parameters;
         };
 
-        struct Instantiation {
-            Class_reference         typeclass;
-            Type                    self_type;
-            std::vector<Definition> definitions;
-            Template_parameters     template_parameters;
-        };
-
         struct Submodule {
             std::vector<Definition> definitions;
             kieli::Lower            name;
@@ -590,7 +583,6 @@ namespace ast {
               definition::Alias,
               definition::Typeclass,
               definition::Implementation,
-              definition::Instantiation,
               definition::Submodule> {
         using variant::variant, variant::operator=;
     };

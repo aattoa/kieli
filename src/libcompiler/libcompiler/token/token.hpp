@@ -55,7 +55,6 @@ namespace kieli {
         enum_,
         struct_,
         class_,
-        inst,
         impl,
         alias,
         import_,

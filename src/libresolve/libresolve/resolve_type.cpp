@@ -165,7 +165,7 @@ namespace {
             return { context.hir.types.push(std::move(type)), this_type.range };
         }
 
-        auto operator()(ast::type::Instance_of const&) -> hir::Type
+        auto operator()(ast::type::Implementation const&) -> hir::Type
         {
             cpputil::todo();
         }

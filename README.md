@@ -32,7 +32,7 @@ cmake -B build
 cmake --build build --parallel 8
 ```
 
-These build steps are tested with CMake `3.29.6`, Ninja `1.12.1`, and clang `19.0.0git`.
+These build steps are tested with CMake `3.30.1`, Ninja `1.12.1`, and clang `18.1.8`.
 
 ## Tests
 

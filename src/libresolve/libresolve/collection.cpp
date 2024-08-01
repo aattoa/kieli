@@ -80,11 +80,6 @@ namespace {
                     (void)implementation;
                     cpputil::todo();
                 },
-
-                [&](ast::definition::Instantiation&& instantiation) {
-                    (void)instantiation;
-                    cpputil::todo();
-                },
             },
             std::move(definition.variant));
     }

@@ -107,12 +107,12 @@ auto libresolve::resolve_import(
     std::span<kieli::Lower const> const path_segments) -> std::expected<Import, Import_error>
 {
     cpputil::always_assert(!path_segments.empty());
-    auto const middle_segments = path_segments.subspan(0, path_segments.size() - 1);
-    auto const module_segment  = path_segments.back();
+    auto const segments = path_segments.subspan(0, path_segments.size() - 1);
+    auto const name     = path_segments.back();
 
     auto path = configuration.root_directory;
 
-    for (kieli::Lower const& segment : middle_segments) {
+    for (kieli::Lower const& segment : segments) {
         path /= segment.identifier.view();
         if (!is_directory(path)) {
             return std::unexpected(Import_error {
@@ -122,11 +122,11 @@ auto libresolve::resolve_import(
         }
     }
 
-    path /= std::format("{}{}", module_segment, configuration.file_extension);
+    path /= std::format("{}{}", name, configuration.file_extension);
 
     if (!is_regular_file(path)) {
         return std::unexpected(Import_error {
-            .erroneous_segment = module_segment,
+            .erroneous_segment = name,
             .expected_module   = true,
         });
     }
@@ -134,6 +134,6 @@ auto libresolve::resolve_import(
     return Import {
         .last_write_time = last_write_time(path),
         .module_path     = std::move(path),
-        .name            = module_segment,
+        .name            = name,
     };
 };

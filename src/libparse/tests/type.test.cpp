@@ -94,11 +94,11 @@ TEST("typeof")
     CHECK_SIMPLE_PARSE("typeof(\"hello\")");
 }
 
-TEST("inst")
+TEST("impl")
 {
-    CHECK_SIMPLE_PARSE("inst Num");
-    CHECK_SIMPLE_PARSE("inst Convertible_to[I32]");
-    CHECK_SIMPLE_PARSE("inst Num + Convertible_to[I32]");
+    CHECK_SIMPLE_PARSE("impl Num");
+    CHECK_SIMPLE_PARSE("impl Convertible_to[I32]");
+    CHECK_SIMPLE_PARSE("impl Num + Convertible_to[I32]");
 }
 
 TEST("reference")

@@ -104,18 +104,6 @@ namespace {
             };
         }
 
-        auto operator()(cst::definition::Instantiation const& instantiation)
-            -> ast::Definition_variant
-        {
-            return ast::definition::Instantiation {
-                .typeclass   = context.desugar(instantiation.typeclass),
-                .self_type   = context.desugar(*instantiation.self_type),
-                .definitions = context.desugar(instantiation.definitions),
-                .template_parameters
-                = instantiation.template_parameters.transform(context.desugar()),
-            };
-        }
-
         auto operator()(cst::definition::Submodule const& submodule) -> ast::Definition_variant
         {
             return ast::definition::Submodule {

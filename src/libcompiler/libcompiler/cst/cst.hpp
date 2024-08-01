@@ -633,9 +633,9 @@ namespace cst {
             Token                     asterisk_token;
         };
 
-        struct Instance_of {
+        struct Implementation {
             Separated_sequence<Class_reference> classes;
-            Token                               inst_keyword_token;
+            Token                               impl_keyword_token;
         };
 
         struct Template_application {
@@ -660,7 +660,7 @@ namespace cst {
               type::Slice,
               type::Function,
               type::Typeof,
-              type::Instance_of,
+              type::Implementation,
               type::Reference,
               type::Pointer,
               type::Template_application> {
@@ -762,15 +762,6 @@ namespace cst {
             Token                               impl_keyword_token;
         };
 
-        struct Instantiation {
-            std::optional<Template_parameters>  template_parameters;
-            Class_reference                     typeclass;
-            Surrounded<std::vector<Definition>> definitions;
-            utl::Wrapper<Type>                  self_type;
-            Token                               inst_keyword_token;
-            Token                               for_keyword_token;
-        };
-
         struct Submodule {
             std::optional<Template_parameters>  template_parameters;
             Surrounded<std::vector<Definition>> definitions;
@@ -787,7 +778,6 @@ namespace cst {
               definition::Alias,
               definition::Typeclass,
               definition::Implementation,
-              definition::Instantiation,
               definition::Submodule> {
         using variant::variant, variant::operator=;
     };

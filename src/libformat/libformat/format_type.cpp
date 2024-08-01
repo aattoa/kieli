@@ -110,10 +110,10 @@ namespace {
             state.format(")");
         }
 
-        auto operator()(cst::type::Instance_of const& instance)
+        auto operator()(cst::type::Implementation const& implementation)
         {
-            state.format("inst ");
-            state.format_separated(instance.classes.elements, " + ");
+            state.format("impl ");
+            state.format_separated(implementation.classes.elements, " + ");
         }
     };
 } // namespace

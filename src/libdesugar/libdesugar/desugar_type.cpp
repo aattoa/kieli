@@ -108,9 +108,9 @@ namespace {
             };
         }
 
-        auto operator()(cst::type::Instance_of const& instance_of) -> ast::Type_variant
+        auto operator()(cst::type::Implementation const& implementation) -> ast::Type_variant
         {
-            return ast::type::Instance_of { context.desugar(instance_of.classes.elements) };
+            return ast::type::Implementation { context.desugar(implementation.classes.elements) };
         }
 
         auto operator()(cst::type::Template_application const& application) -> ast::Type_variant

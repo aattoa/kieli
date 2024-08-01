@@ -60,7 +60,6 @@ namespace {
         { "enum", Token_type::enum_ },
         { "struct", Token_type::struct_ },
         { "class", Token_type::class_ },
-        { "inst", Token_type::inst },
         { "impl", Token_type::impl },
         { "alias", Token_type::alias },
         { "import", Token_type::import_ },

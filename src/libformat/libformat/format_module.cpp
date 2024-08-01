@@ -79,11 +79,6 @@ namespace {
             cpputil::todo();
         }
 
-        auto operator()(cst::definition::Instantiation const&) -> void
-        {
-            cpputil::todo();
-        }
-
         auto operator()(cst::definition::Alias const&) -> void
         {
             cpputil::todo();

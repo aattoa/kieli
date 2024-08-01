@@ -345,9 +345,9 @@ namespace libdesugar::dtl {
             std::format_to(out, "[{}; {}]", array.element_type, array.length);
         }
 
-        auto operator()(ast::type::Instance_of const& instance_of)
+        auto operator()(ast::type::Implementation const& implementation)
         {
-            std::format_to(out, "inst {}", utl::fmt::join(instance_of.classes, " + "));
+            std::format_to(out, "impl {}", utl::fmt::join(implementation.classes, " + "));
         }
 
         auto operator()(ast::type::Pointer const& pointer)
@@ -424,11 +424,6 @@ namespace libdesugar::dtl {
         }
 
         auto operator()(ast::definition::Implementation const&)
-        {
-            cpputil::todo();
-        }
-
-        auto operator()(ast::definition::Instantiation const&)
         {
             cpputil::todo();
         }
