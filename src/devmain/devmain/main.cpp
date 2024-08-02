@@ -66,8 +66,8 @@ namespace {
         auto const ast = kieli::desugar(kieli::parse(source, db), db);
 
         std::string output;
-        for (ast::Definition const& definition : ast.module->definitions) {
-            ast::format_to(definition, output);
+        for (kieli::ast::Definition const& definition : ast.module->definitions) {
+            kieli::ast::format_to(definition, output);
         }
         std::print("{}\n\n", output);
     }
@@ -79,7 +79,7 @@ namespace {
 
         libresolve::Context context {
             .db        = db,
-            .ast       = ast::Node_arena::with_default_page_size(),
+            .ast       = kieli::ast::Node_arena::with_default_page_size(),
             .hir       = std::move(hir),
             .constants = std::move(constants),
         };

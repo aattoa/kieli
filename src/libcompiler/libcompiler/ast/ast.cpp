@@ -10,15 +10,15 @@ auto kieli::AST::operator=(AST&&) noexcept -> AST& = default;
 
 kieli::AST::~AST() = default;
 
-auto ast::Path::is_simple_name() const noexcept -> bool
+auto kieli::ast::Path::is_simple_name() const noexcept -> bool
 {
     return !root.has_value() && segments.empty();
 }
 
-#define DEFINE_AST_FORMAT_TO(...)                                               \
-    auto ast::format_to(__VA_ARGS__ const& object, std::string& output) -> void \
-    {                                                                           \
-        std::format_to(std::back_inserter(output), "{}", object);               \
+#define DEFINE_AST_FORMAT_TO(...)                                                      \
+    auto kieli::ast::format_to(__VA_ARGS__ const& object, std::string& output) -> void \
+    {                                                                                  \
+        std::format_to(std::back_inserter(output), "{}", object);                      \
     }
 
 DEFINE_AST_FORMAT_TO(Expression);

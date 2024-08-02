@@ -19,7 +19,7 @@
 
 */
 
-namespace ast {
+namespace kieli::ast {
     struct [[nodiscard]] Expression;
     struct [[nodiscard]] Type;
     struct [[nodiscard]] Pattern;
@@ -618,7 +618,7 @@ namespace ast {
         ast::format_to(x, output);
         return output;
     };
-} // namespace ast
+} // namespace kieli::ast
 
 struct kieli::AST::Module {
     std::vector<ast::Definition> definitions;

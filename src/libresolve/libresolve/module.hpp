@@ -6,6 +6,8 @@
 #include <libcompiler/hir/hir.hpp>
 
 namespace libresolve {
+    namespace ast = kieli::ast;
+
     struct Function_info;
     struct Enumeration_info;
     struct Concept_info;

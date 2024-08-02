@@ -13,8 +13,8 @@ namespace {
             auto const ast = kieli::desugar(kieli::parse(source, db), db);
 
             std::string output;
-            for (ast::Definition const& definition : ast.module->definitions) {
-                ast::format_to(definition, output);
+            for (kieli::ast::Definition const& definition : ast.module->definitions) {
+                kieli::ast::format_to(definition, output);
             }
             return output;
         }

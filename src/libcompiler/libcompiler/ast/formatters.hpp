@@ -17,27 +17,29 @@
     auto std::formatter<__VA_ARGS__>::format( \
         __VA_ARGS__ const& value, auto& context) -> decltype(context.out())
 
-LIBDESUGAR_DECLARE_FORMATTER(ast::Wildcard);
-LIBDESUGAR_DECLARE_FORMATTER(ast::Expression);
-LIBDESUGAR_DECLARE_FORMATTER(ast::Pattern);
-LIBDESUGAR_DECLARE_FORMATTER(ast::Type);
-LIBDESUGAR_DECLARE_FORMATTER(ast::Definition);
-LIBDESUGAR_DECLARE_FORMATTER(ast::Mutability);
-LIBDESUGAR_DECLARE_FORMATTER(ast::Path);
-LIBDESUGAR_DECLARE_FORMATTER(ast::Concept_reference);
-LIBDESUGAR_DECLARE_FORMATTER(ast::Function_argument);
-LIBDESUGAR_DECLARE_FORMATTER(ast::Function_parameter);
-LIBDESUGAR_DECLARE_FORMATTER(ast::Template_argument);
-LIBDESUGAR_DECLARE_FORMATTER(ast::Template_parameter);
-LIBDESUGAR_DECLARE_FORMATTER(ast::pattern::Field);
-LIBDESUGAR_DECLARE_FORMATTER(ast::pattern::Constructor_body);
-LIBDESUGAR_DECLARE_FORMATTER(ast::pattern::Constructor);
-LIBDESUGAR_DECLARE_FORMATTER(ast::definition::Field);
-LIBDESUGAR_DECLARE_FORMATTER(ast::definition::Constructor_body);
-LIBDESUGAR_DECLARE_FORMATTER(ast::definition::Constructor);
-LIBDESUGAR_DECLARE_FORMATTER(ast::Template_parameters);
+LIBDESUGAR_DECLARE_FORMATTER(kieli::ast::Wildcard);
+LIBDESUGAR_DECLARE_FORMATTER(kieli::ast::Expression);
+LIBDESUGAR_DECLARE_FORMATTER(kieli::ast::Pattern);
+LIBDESUGAR_DECLARE_FORMATTER(kieli::ast::Type);
+LIBDESUGAR_DECLARE_FORMATTER(kieli::ast::Definition);
+LIBDESUGAR_DECLARE_FORMATTER(kieli::ast::Mutability);
+LIBDESUGAR_DECLARE_FORMATTER(kieli::ast::Path);
+LIBDESUGAR_DECLARE_FORMATTER(kieli::ast::Concept_reference);
+LIBDESUGAR_DECLARE_FORMATTER(kieli::ast::Function_argument);
+LIBDESUGAR_DECLARE_FORMATTER(kieli::ast::Function_parameter);
+LIBDESUGAR_DECLARE_FORMATTER(kieli::ast::Template_argument);
+LIBDESUGAR_DECLARE_FORMATTER(kieli::ast::Template_parameter);
+LIBDESUGAR_DECLARE_FORMATTER(kieli::ast::pattern::Field);
+LIBDESUGAR_DECLARE_FORMATTER(kieli::ast::pattern::Constructor_body);
+LIBDESUGAR_DECLARE_FORMATTER(kieli::ast::pattern::Constructor);
+LIBDESUGAR_DECLARE_FORMATTER(kieli::ast::definition::Field);
+LIBDESUGAR_DECLARE_FORMATTER(kieli::ast::definition::Constructor_body);
+LIBDESUGAR_DECLARE_FORMATTER(kieli::ast::definition::Constructor);
+LIBDESUGAR_DECLARE_FORMATTER(kieli::ast::Template_parameters);
 
 namespace libdesugar::dtl {
+    namespace ast = kieli::ast;
+
     template <class Out>
     struct Expression_format_visitor {
         Out out;
@@ -435,44 +437,44 @@ namespace libdesugar::dtl {
     };
 } // namespace libdesugar::dtl
 
-LIBDESUGAR_DEFINE_FORMATTER(ast::Expression)
+LIBDESUGAR_DEFINE_FORMATTER(kieli::ast::Expression)
 {
     std::visit(libdesugar::dtl::Expression_format_visitor { context.out() }, value.variant);
     return context.out();
 }
 
-LIBDESUGAR_DEFINE_FORMATTER(ast::Pattern)
+LIBDESUGAR_DEFINE_FORMATTER(kieli::ast::Pattern)
 {
     std::visit(libdesugar::dtl::Pattern_format_visitor { context.out() }, value.variant);
     return context.out();
 }
 
-LIBDESUGAR_DEFINE_FORMATTER(ast::Type)
+LIBDESUGAR_DEFINE_FORMATTER(kieli::ast::Type)
 {
     std::visit(libdesugar::dtl::Type_format_visitor { context.out() }, value.variant);
     return context.out();
 }
 
-LIBDESUGAR_DEFINE_FORMATTER(ast::Definition)
+LIBDESUGAR_DEFINE_FORMATTER(kieli::ast::Definition)
 {
     std::visit(libdesugar::dtl::Definition_format_visitor { context.out() }, value.variant);
     return context.out();
 }
 
-LIBDESUGAR_DEFINE_FORMATTER(ast::Wildcard)
+LIBDESUGAR_DEFINE_FORMATTER(kieli::ast::Wildcard)
 {
     (void)value;
     return std::format_to(context.out(), "_");
 }
 
-LIBDESUGAR_DEFINE_FORMATTER(ast::Mutability)
+LIBDESUGAR_DEFINE_FORMATTER(kieli::ast::Mutability)
 {
     std::visit(
         utl::Overload {
-            [&](ast::mutability::Concrete const concrete) {
+            [&](kieli::ast::mutability::Concrete const concrete) {
                 std::format_to(context.out(), "{}", concrete);
             },
-            [&](ast::mutability::Parameterized const& parameterized) {
+            [&](kieli::ast::mutability::Parameterized const& parameterized) {
                 std::format_to(context.out(), "mut?{}", parameterized.name);
             },
         },
@@ -480,19 +482,21 @@ LIBDESUGAR_DEFINE_FORMATTER(ast::Mutability)
     return context.out();
 }
 
-LIBDESUGAR_DEFINE_FORMATTER(ast::Path)
+LIBDESUGAR_DEFINE_FORMATTER(kieli::ast::Path)
 {
     if (value.root.has_value()) {
         std::visit(
             utl::Overload {
-                [&](ast::Path_root_global const&) { std::format_to(context.out(), "global::"); },
-                [&](utl::Wrapper<ast::Type> const type) {
+                [&](kieli::ast::Path_root_global const&) {
+                    std::format_to(context.out(), "global::");
+                },
+                [&](utl::Wrapper<kieli::ast::Type> const type) {
                     std::format_to(context.out(), "{}::", type);
                 },
             },
             value.root.value());
     }
-    for (ast::Path_segment const& segment : value.segments) {
+    for (kieli::ast::Path_segment const& segment : value.segments) {
         std::format_to(context.out(), "{}", segment.name);
         if (segment.template_arguments.has_value()) {
             std::format_to(context.out(), "[{}]", segment.template_arguments.value());
@@ -502,7 +506,7 @@ LIBDESUGAR_DEFINE_FORMATTER(ast::Path)
     return std::format_to(context.out(), "{}", value.head);
 }
 
-LIBDESUGAR_DEFINE_FORMATTER(ast::Concept_reference)
+LIBDESUGAR_DEFINE_FORMATTER(kieli::ast::Concept_reference)
 {
     std::format_to(context.out(), "{}", value.path);
     if (value.template_arguments.has_value()) {
@@ -511,7 +515,7 @@ LIBDESUGAR_DEFINE_FORMATTER(ast::Concept_reference)
     return context.out();
 }
 
-LIBDESUGAR_DEFINE_FORMATTER(ast::Function_argument)
+LIBDESUGAR_DEFINE_FORMATTER(kieli::ast::Function_argument)
 {
     if (value.name.has_value()) {
         std::format_to(context.out(), "{} = ", value.name.value());
@@ -519,7 +523,7 @@ LIBDESUGAR_DEFINE_FORMATTER(ast::Function_argument)
     return std::format_to(context.out(), "{}", value.expression);
 }
 
-LIBDESUGAR_DEFINE_FORMATTER(ast::Function_parameter)
+LIBDESUGAR_DEFINE_FORMATTER(kieli::ast::Function_parameter)
 {
     std::format_to(context.out(), "{}", value.pattern);
     if (value.type.has_value()) {
@@ -531,16 +535,16 @@ LIBDESUGAR_DEFINE_FORMATTER(ast::Function_parameter)
     return context.out();
 }
 
-LIBDESUGAR_DEFINE_FORMATTER(ast::Template_argument)
+LIBDESUGAR_DEFINE_FORMATTER(kieli::ast::Template_argument)
 {
     return std::format_to(context.out(), "{}", value);
 }
 
-LIBDESUGAR_DEFINE_FORMATTER(ast::Template_parameter)
+LIBDESUGAR_DEFINE_FORMATTER(kieli::ast::Template_parameter)
 {
     std::visit(
         utl::Overload {
-            [&](ast::Template_type_parameter const& parameter) {
+            [&](kieli::ast::Template_type_parameter const& parameter) {
                 std::format_to(context.out(), "{}", parameter.name);
                 if (!parameter.concepts.empty()) {
                     std::format_to(
@@ -550,7 +554,7 @@ LIBDESUGAR_DEFINE_FORMATTER(ast::Template_parameter)
                     std::format_to(context.out(), " = {}", parameter.default_argument.value());
                 }
             },
-            [&](ast::Template_value_parameter const& parameter) {
+            [&](kieli::ast::Template_value_parameter const& parameter) {
                 std::format_to(context.out(), "{}", parameter.name);
                 if (parameter.type.has_value()) {
                     std::format_to(context.out(), ": {}", parameter.type.value());
@@ -559,7 +563,7 @@ LIBDESUGAR_DEFINE_FORMATTER(ast::Template_parameter)
                     std::format_to(context.out(), " = {}", parameter.default_argument.value());
                 }
             },
-            [&](ast::Template_mutability_parameter const& parameter) {
+            [&](kieli::ast::Template_mutability_parameter const& parameter) {
                 std::format_to(context.out(), "{}: mut", parameter.name);
                 if (parameter.default_argument.has_value()) {
                     std::format_to(context.out(), " = {}", parameter.default_argument.value());
@@ -570,7 +574,7 @@ LIBDESUGAR_DEFINE_FORMATTER(ast::Template_parameter)
     return context.out();
 }
 
-LIBDESUGAR_DEFINE_FORMATTER(ast::pattern::Field)
+LIBDESUGAR_DEFINE_FORMATTER(kieli::ast::pattern::Field)
 {
     std::format_to(context.out(), "{}", value.name);
     if (value.pattern.has_value()) {
@@ -579,52 +583,52 @@ LIBDESUGAR_DEFINE_FORMATTER(ast::pattern::Field)
     return context.out();
 }
 
-LIBDESUGAR_DEFINE_FORMATTER(ast::definition::Field)
+LIBDESUGAR_DEFINE_FORMATTER(kieli::ast::definition::Field)
 {
     return std::format_to(context.out(), "{}: {}", value.name, value.type);
 }
 
-LIBDESUGAR_DEFINE_FORMATTER(ast::pattern::Constructor_body)
+LIBDESUGAR_DEFINE_FORMATTER(kieli::ast::pattern::Constructor_body)
 {
     return std::visit(
         utl::Overload {
-            [&](ast::pattern::Struct_constructor const& constructor) {
+            [&](kieli::ast::pattern::Struct_constructor const& constructor) {
                 return std::format_to(context.out(), "{{ {} }}", constructor.fields);
             },
-            [&](ast::pattern::Tuple_constructor const& constructor) {
+            [&](kieli::ast::pattern::Tuple_constructor const& constructor) {
                 return std::format_to(context.out(), "({})", constructor.pattern);
             },
-            [&](ast::pattern::Unit_constructor const&) { return context.out(); },
+            [&](kieli::ast::pattern::Unit_constructor const&) { return context.out(); },
         },
         value);
 }
 
-LIBDESUGAR_DEFINE_FORMATTER(ast::definition::Constructor_body)
+LIBDESUGAR_DEFINE_FORMATTER(kieli::ast::definition::Constructor_body)
 {
     return std::visit(
         utl::Overload {
-            [&](ast::definition::Struct_constructor const& constructor) {
+            [&](kieli::ast::definition::Struct_constructor const& constructor) {
                 return std::format_to(context.out(), " {{ {:n} }}", constructor.fields);
             },
-            [&](ast::definition::Tuple_constructor const& constructor) {
+            [&](kieli::ast::definition::Tuple_constructor const& constructor) {
                 return std::format_to(context.out(), "({:n})", constructor.types);
             },
-            [&](ast::definition::Unit_constructor const&) { return context.out(); },
+            [&](kieli::ast::definition::Unit_constructor const&) { return context.out(); },
         },
         value);
 }
 
-LIBDESUGAR_DEFINE_FORMATTER(ast::pattern::Constructor)
+LIBDESUGAR_DEFINE_FORMATTER(kieli::ast::pattern::Constructor)
 {
     return std::format_to(context.out(), "{}{}", value.path, value.body);
 }
 
-LIBDESUGAR_DEFINE_FORMATTER(ast::definition::Constructor)
+LIBDESUGAR_DEFINE_FORMATTER(kieli::ast::definition::Constructor)
 {
     return std::format_to(context.out(), "{}{}", value.name, value.body);
 }
 
-LIBDESUGAR_DEFINE_FORMATTER(ast::Template_parameters)
+LIBDESUGAR_DEFINE_FORMATTER(kieli::ast::Template_parameters)
 {
     return value.has_value() ? std::format_to(context.out(), "[{:n}]", value.value())
                              : context.out();
