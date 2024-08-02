@@ -7,6 +7,7 @@
 
 namespace libresolve {
     namespace ast = kieli::ast;
+    namespace hir = kieli::hir;
 
     struct Function_info;
     struct Enumeration_info;

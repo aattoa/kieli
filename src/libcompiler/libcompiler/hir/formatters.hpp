@@ -3,7 +3,7 @@
 #include <libutl/utilities.hpp>
 #include <libcompiler/hir/hir.hpp>
 
-namespace hir::dtl {
+namespace kieli::hir::dtl {
     template <class T>
     struct With_arena {
         std::reference_wrapper<Arena const> arena;
@@ -25,51 +25,51 @@ namespace hir::dtl {
             return { arena, std::cref(other) };
         }
     };
-} // namespace hir::dtl
+} // namespace kieli::hir::dtl
 
-#define LIBRESOLVE_DECLARE_FORMATTER(...)                                    \
-    template <>                                                              \
-    struct std::formatter<hir::dtl::With_arena<__VA_ARGS__>> {               \
-        static constexpr auto parse(auto& context)                           \
-        {                                                                    \
-            return context.begin();                                          \
-        }                                                                    \
-        static auto format(hir::dtl::With_arena<__VA_ARGS__>, auto& context) \
-            -> decltype(context.out());                                      \
+#define LIBRESOLVE_DECLARE_FORMATTER(...)                                           \
+    template <>                                                                     \
+    struct std::formatter<kieli::hir::dtl::With_arena<__VA_ARGS__>> {               \
+        static constexpr auto parse(auto& context)                                  \
+        {                                                                           \
+            return context.begin();                                                 \
+        }                                                                           \
+        static auto format(kieli::hir::dtl::With_arena<__VA_ARGS__>, auto& context) \
+            -> decltype(context.out());                                             \
     }
 
-#define LIBRESOLVE_DEFINE_FORMATTER(...)                            \
-    auto std::formatter<hir::dtl::With_arena<__VA_ARGS__>>::format( \
-        hir::dtl::With_arena<__VA_ARGS__> const value, auto& context) -> decltype(context.out())
+#define LIBRESOLVE_DEFINE_FORMATTER(...)                                   \
+    auto std::formatter<kieli::hir::dtl::With_arena<__VA_ARGS__>>::format( \
+        kieli::hir::dtl::With_arena<__VA_ARGS__> value, auto& context) -> decltype(context.out())
 
-LIBRESOLVE_DECLARE_FORMATTER(hir::Pattern_variant);
-LIBRESOLVE_DECLARE_FORMATTER(hir::Pattern_id);
-LIBRESOLVE_DECLARE_FORMATTER(hir::Pattern);
+LIBRESOLVE_DECLARE_FORMATTER(kieli::hir::Pattern_variant);
+LIBRESOLVE_DECLARE_FORMATTER(kieli::hir::Pattern_id);
+LIBRESOLVE_DECLARE_FORMATTER(kieli::hir::Pattern);
 
-LIBRESOLVE_DECLARE_FORMATTER(hir::Expression_variant);
-LIBRESOLVE_DECLARE_FORMATTER(hir::Expression_id);
-LIBRESOLVE_DECLARE_FORMATTER(hir::Expression);
+LIBRESOLVE_DECLARE_FORMATTER(kieli::hir::Expression_variant);
+LIBRESOLVE_DECLARE_FORMATTER(kieli::hir::Expression_id);
+LIBRESOLVE_DECLARE_FORMATTER(kieli::hir::Expression);
 
-LIBRESOLVE_DECLARE_FORMATTER(hir::Type_variant);
-LIBRESOLVE_DECLARE_FORMATTER(hir::Type_id);
-LIBRESOLVE_DECLARE_FORMATTER(hir::Type);
+LIBRESOLVE_DECLARE_FORMATTER(kieli::hir::Type_variant);
+LIBRESOLVE_DECLARE_FORMATTER(kieli::hir::Type_id);
+LIBRESOLVE_DECLARE_FORMATTER(kieli::hir::Type);
 
-LIBRESOLVE_DECLARE_FORMATTER(hir::Mutability_variant);
-LIBRESOLVE_DECLARE_FORMATTER(hir::Mutability_id);
-LIBRESOLVE_DECLARE_FORMATTER(hir::Mutability);
+LIBRESOLVE_DECLARE_FORMATTER(kieli::hir::Mutability_variant);
+LIBRESOLVE_DECLARE_FORMATTER(kieli::hir::Mutability_id);
+LIBRESOLVE_DECLARE_FORMATTER(kieli::hir::Mutability);
 
-LIBRESOLVE_DECLARE_FORMATTER(hir::Function_parameter);
-LIBRESOLVE_DECLARE_FORMATTER(hir::Function_argument);
+LIBRESOLVE_DECLARE_FORMATTER(kieli::hir::Function_parameter);
+LIBRESOLVE_DECLARE_FORMATTER(kieli::hir::Function_argument);
 
 template <class T>
-    requires std::formattable<hir::dtl::With_arena<T>, char>
-struct std::formatter<hir::dtl::With_arena<std::vector<T>>> {
+    requires std::formattable<kieli::hir::dtl::With_arena<T>, char>
+struct std::formatter<kieli::hir::dtl::With_arena<std::vector<T>>> {
     static constexpr auto parse(auto& context)
     {
         return context.begin();
     }
 
-    static auto format(hir::dtl::With_arena<std::vector<T>> const value, auto& context)
+    static auto format(kieli::hir::dtl::With_arena<std::vector<T>> const value, auto& context)
         -> decltype(context.out())
     {
         auto const wrap = [&](auto const& x) { return value.wrap(x); };
@@ -78,8 +78,7 @@ struct std::formatter<hir::dtl::With_arena<std::vector<T>>> {
     }
 };
 
-namespace hir::dtl {
-
+namespace kieli::hir::dtl {
     template <class Out>
     struct Expression_format_visitor {
         Out          out;
@@ -336,94 +335,94 @@ namespace hir::dtl {
             std::format_to(out, "ERROR-TYPE");
         }
     };
-} // namespace hir::dtl
+} // namespace kieli::hir::dtl
 
-LIBRESOLVE_DEFINE_FORMATTER(hir::Expression_variant)
+LIBRESOLVE_DEFINE_FORMATTER(kieli::hir::Expression_variant)
 {
-    hir::dtl::Expression_format_visitor visitor { context.out(), value.arena.get() };
+    kieli::hir::dtl::Expression_format_visitor visitor { context.out(), value.arena.get() };
     std::visit(visitor, value.get());
     return context.out();
 }
 
-LIBRESOLVE_DEFINE_FORMATTER(hir::Expression_id)
+LIBRESOLVE_DEFINE_FORMATTER(kieli::hir::Expression_id)
 {
     return std::format_to(
         context.out(), "{}", value.wrap(value.arena.get().expressions[value.get()]));
 }
 
-LIBRESOLVE_DEFINE_FORMATTER(hir::Expression)
+LIBRESOLVE_DEFINE_FORMATTER(kieli::hir::Expression)
 {
     return std::format_to(
         context.out(), "({}: {})", value.wrap(value->variant), value.wrap(value->type));
 }
 
-LIBRESOLVE_DEFINE_FORMATTER(hir::Pattern_variant)
+LIBRESOLVE_DEFINE_FORMATTER(kieli::hir::Pattern_variant)
 {
-    hir::dtl::Pattern_format_visitor visitor { context.out(), value.arena.get() };
+    kieli::hir::dtl::Pattern_format_visitor visitor { context.out(), value.arena.get() };
     std::visit(visitor, value.get());
     return context.out();
 }
 
-LIBRESOLVE_DEFINE_FORMATTER(hir::Pattern_id)
+LIBRESOLVE_DEFINE_FORMATTER(kieli::hir::Pattern_id)
 {
     return std::format_to(context.out(), "{}", value.wrap(value.arena.get().patterns[value.get()]));
 }
 
-LIBRESOLVE_DEFINE_FORMATTER(hir::Pattern)
+LIBRESOLVE_DEFINE_FORMATTER(kieli::hir::Pattern)
 {
     return std::format_to(
         context.out(), "({}: {})", value.wrap(value->variant), value.wrap(value->type));
 }
 
-LIBRESOLVE_DEFINE_FORMATTER(hir::Type_variant)
+LIBRESOLVE_DEFINE_FORMATTER(kieli::hir::Type_variant)
 {
-    hir::dtl::Type_format_visitor visitor { context.out(), value.arena.get() };
+    kieli::hir::dtl::Type_format_visitor visitor { context.out(), value.arena.get() };
     std::visit(visitor, value.get());
     return context.out();
 }
 
-LIBRESOLVE_DEFINE_FORMATTER(hir::Type_id)
+LIBRESOLVE_DEFINE_FORMATTER(kieli::hir::Type_id)
 {
     return std::format_to(context.out(), "{}", value.wrap(value.arena.get().types[value.get()]));
 }
 
-LIBRESOLVE_DEFINE_FORMATTER(hir::Type)
+LIBRESOLVE_DEFINE_FORMATTER(kieli::hir::Type)
 {
     return std::format_to(context.out(), "{}", value.wrap(value->id));
 }
 
-LIBRESOLVE_DEFINE_FORMATTER(hir::Mutability_variant)
+LIBRESOLVE_DEFINE_FORMATTER(kieli::hir::Mutability_variant)
 {
     return std::visit(
         utl::Overload {
-            [&](hir::mutability::Concrete const concrete) {
+            [&](kieli::hir::mutability::Concrete const concrete) {
                 return std::format_to(context.out(), "{}", concrete);
             },
-            [&](hir::mutability::Parameterized const& parameterized) {
+            [&](kieli::hir::mutability::Parameterized const& parameterized) {
                 return std::format_to(context.out(), "mut?{}", parameterized.tag.get());
             },
-            [&](hir::mutability::Error const&) {
+            [&](kieli::hir::mutability::Error const&) {
                 return std::format_to(context.out(), "mut?ERROR");
             },
-            [&](hir::mutability::Variable const& variable) {
+            [&](kieli::hir::mutability::Variable const& variable) {
                 return std::format_to(context.out(), "?mut{}", variable.id.get());
             },
         },
         value.get());
 }
 
-LIBRESOLVE_DEFINE_FORMATTER(hir::Mutability_id)
+LIBRESOLVE_DEFINE_FORMATTER(kieli::hir::Mutability_id)
 {
     return std::format_to(
         context.out(), "{}", value.wrap(value.arena.get().mutabilities[value.get()]));
 }
 
-LIBRESOLVE_DEFINE_FORMATTER(hir::Mutability)
+LIBRESOLVE_DEFINE_FORMATTER(kieli::hir::Mutability)
 {
     return std::format_to(context.out(), "{}", value.wrap(value->id));
 }
 
-LIBRESOLVE_DEFINE_FORMATTER(hir::Function_parameter)
+LIBRESOLVE_DEFINE_FORMATTER(kieli::hir::Function_parameter)
 {
     std::format_to(context.out(), "{}: {}", value.wrap(value->pattern), value.wrap(value->type));
     if (value->default_argument.has_value()) {
@@ -432,7 +431,7 @@ LIBRESOLVE_DEFINE_FORMATTER(hir::Function_parameter)
     return context.out();
 }
 
-LIBRESOLVE_DEFINE_FORMATTER(hir::Function_argument)
+LIBRESOLVE_DEFINE_FORMATTER(kieli::hir::Function_argument)
 {
     if (value->name.has_value()) {
         std::format_to(context.out(), "{} = ", value->name.value());

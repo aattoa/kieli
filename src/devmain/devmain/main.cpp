@@ -74,7 +74,7 @@ namespace {
 
     auto debug_resolve(kieli::Source_id const source, kieli::Database& db) -> void
     {
-        auto hir       = hir::Arena {};
+        auto hir       = kieli::hir::Arena {};
         auto constants = libresolve::Constants::make_with(hir);
 
         libresolve::Context context {

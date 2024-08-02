@@ -1,6 +1,8 @@
 #include <libutl/utilities.hpp>
 #include <libresolve/resolution_internals.hpp>
 
+using namespace libresolve;
+
 namespace {
     struct Occurs_check_visitor {
         hir::Arena const&     arena;
@@ -8,7 +10,7 @@ namespace {
 
         [[nodiscard]] auto recurse(hir::Type_id const type_id) const -> bool
         {
-            return libresolve::occurs_check(arena, id, arena.types[type_id]);
+            return occurs_check(arena, id, arena.types[type_id]);
         }
 
         [[nodiscard]] auto recurse(hir::Type const type) const -> bool

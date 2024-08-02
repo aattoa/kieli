@@ -4,7 +4,7 @@
 #include <libutl/index_vector.hpp>
 #include <libcompiler/compiler.hpp>
 
-namespace hir {
+namespace kieli::hir {
     struct [[nodiscard]] Mutability;
     struct [[nodiscard]] Expression;
     struct [[nodiscard]] Pattern;
@@ -448,4 +448,4 @@ namespace hir {
         hir::format(arena, x, output);
         return output;
     };
-} // namespace hir
+} // namespace kieli::hir
