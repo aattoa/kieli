@@ -1,9 +1,10 @@
 #include <libutl/utilities.hpp>
 #include <libformat/format_internals.hpp>
 
+using namespace libformat;
+
 namespace {
-    auto format_constructor_body(
-        libformat::State& state, cst::pattern::Constructor_body const& body)
+    auto format_constructor_body(State& state, cst::pattern::Constructor_body const& body)
     {
         std::visit(
             utl::Overload {
@@ -23,7 +24,7 @@ namespace {
     }
 
     struct Pattern_format_visitor {
-        libformat::State& state;
+        State& state;
 
         auto operator()(kieli::literal auto const& literal)
         {

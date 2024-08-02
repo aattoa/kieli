@@ -4,6 +4,8 @@
 #include <libformat/format.hpp>
 
 namespace libformat {
+    namespace cst = kieli::cst;
+
     struct [[nodiscard]] Newline;
     struct [[nodiscard]] Indentation;
 

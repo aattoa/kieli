@@ -1,9 +1,11 @@
 #include <libutl/utilities.hpp>
 #include <libformat/format_internals.hpp>
 
+using namespace libformat;
+
 namespace {
     struct Expression_format_visitor {
-        libformat::State& state;
+        State& state;
 
         auto format_indented_block_body(cst::expression::Block const& block)
         {

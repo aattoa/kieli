@@ -22,7 +22,7 @@
 
 */
 
-namespace cst {
+namespace kieli::cst {
     struct [[nodiscard]] Expression;
     struct [[nodiscard]] Pattern;
     struct [[nodiscard]] Type;
@@ -797,7 +797,7 @@ namespace cst {
         Separated_sequence<kieli::Lower> segments;
         Token                            import_keyword_token;
     };
-} // namespace cst
+} // namespace kieli::cst
 
 struct kieli::CST::Module {
     std::vector<cst::Import>     imports;

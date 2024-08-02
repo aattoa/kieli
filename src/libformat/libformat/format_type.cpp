@@ -1,9 +1,11 @@
 #include <libutl/utilities.hpp>
 #include <libformat/format_internals.hpp>
 
+using namespace libformat;
+
 namespace {
     struct Type_format_visitor {
-        libformat::State& state;
+        State& state;
 
         auto operator()(kieli::built_in_type::Integer const integer)
         {

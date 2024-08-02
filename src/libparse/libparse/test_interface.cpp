@@ -8,7 +8,7 @@ namespace {
     auto test_parse(std::string&& string, std::string_view const expectation) -> std::string
     {
         auto       db         = kieli::Database { .current_revision = 0 };
-        auto       node_arena = cst::Node_arena::with_page_size(64);
+        auto       node_arena = kieli::cst::Node_arena::with_page_size(64);
         auto const source     = db.sources.push(std::move(string), "[test]");
         try {
             libparse::Context context { node_arena, kieli::Lex_state::make(source, db) };

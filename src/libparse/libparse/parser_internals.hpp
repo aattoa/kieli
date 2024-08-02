@@ -8,6 +8,8 @@ using kieli::Token_type;
 
 namespace libparse {
 
+    namespace cst = kieli::cst;
+
     struct Stage {
         std::size_t old_token_index {};
     };

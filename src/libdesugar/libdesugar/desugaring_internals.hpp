@@ -8,6 +8,8 @@
 
 namespace libdesugar {
 
+    namespace cst = kieli::cst;
+
     auto unit_type(kieli::Range range) -> ast::Type;
     auto unit_value(kieli::Range range) -> ast::Expression;
     auto wildcard_pattern(kieli::Range range) -> ast::Pattern;

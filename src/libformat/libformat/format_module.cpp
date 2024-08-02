@@ -2,10 +2,12 @@
 #include <libformat/format_internals.hpp>
 #include <libformat/format.hpp>
 
+using namespace libformat;
+
 namespace {
 
     struct Definition_format_visitor {
-        libformat::State& state;
+        State& state;
 
         auto operator()(cst::definition::Function const& function) const -> void
         {
@@ -93,8 +95,9 @@ namespace {
     auto format_node_impl(auto const& node, kieli::Format_configuration const& configuration)
         -> std::string
     {
-        std::string      output_string;
-        libformat::State state {
+        std::string output_string;
+
+        State state {
             .configuration       = configuration,
             .string              = output_string,
             .current_indentation = 0,
@@ -108,8 +111,9 @@ namespace {
 auto kieli::format_module(
     CST::Module const& module, kieli::Format_configuration const& configuration) -> std::string
 {
-    std::string      output_string;
-    libformat::State state {
+    std::string output_string;
+
+    State state {
         .configuration       = configuration,
         .string              = output_string,
         .current_indentation = 0,

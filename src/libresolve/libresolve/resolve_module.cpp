@@ -36,7 +36,7 @@ namespace {
         Context&                  context,
         kieli::Source_id const    source,
         hir::Environment_id const environment,
-        cst::Import const&        import) -> void
+        kieli::cst::Import const& import) -> void
     {
         auto resolved_import = resolve_import(context.configuration, import.segments.elements);
         if (resolved_import.has_value()) {

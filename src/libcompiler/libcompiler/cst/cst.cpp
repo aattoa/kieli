@@ -9,7 +9,7 @@ auto kieli::CST::operator=(CST&&) noexcept -> CST& = default;
 
 kieli::CST::~CST() = default;
 
-auto cst::Token::from_lexical(kieli::Token const& lexical) -> Token
+auto kieli::cst::Token::from_lexical(kieli::Token const& lexical) -> Token
 {
     return Token {
         .range            = lexical.range,
@@ -17,12 +17,12 @@ auto cst::Token::from_lexical(kieli::Token const& lexical) -> Token
     };
 }
 
-auto cst::Self_parameter::is_reference() const noexcept -> bool
+auto kieli::cst::Self_parameter::is_reference() const noexcept -> bool
 {
     return ampersand_token.has_value();
 }
 
-auto cst::Path::is_simple_name() const noexcept -> bool
+auto kieli::cst::Path::is_simple_name() const noexcept -> bool
 {
     return !root.has_value() && segments.elements.empty();
 }
