@@ -1,7 +1,8 @@
 #include <libutl/utilities.hpp>
 #include <language-server/lsp.hpp>
 #include <libquery/query.hpp>
-#include <cpputil/json/format.hpp>
+#include <libformat/format.hpp>
+#include <cpputil/json/encode.hpp>
 
 using kieli::Database;
 using kieli::lsp::Json;
@@ -15,6 +16,14 @@ namespace {
             return uri;
         }
         return std::unexpected(std::format("URI with unsupported scheme: '{}'", uri));
+    }
+
+    auto document_source_id(Database& db, Json::Object const& document) -> Result<kieli::Source_id>
+    {
+        auto const query = [&](std::filesystem::path const& path) {
+            return kieli::query::source(db, path); //
+        };
+        return uri_path(document.at("uri").as_string()).and_then(query);
     }
 
     auto position_from_json(Json::Object const& object) -> kieli::Position
@@ -36,16 +45,12 @@ namespace {
     auto position_params_from_json(Database& db, Json::Object const& params)
         -> Result<kieli::Location>
     {
-        auto const& uri      = params.at("textDocument").as_object().at("uri").as_string();
-        auto const& position = position_from_json(params.at("position").as_object());
+        auto const position = position_from_json(params.at("position").as_object());
+        auto       id       = document_source_id(db, params.at("textDocument").as_object());
 
-        return uri_path(uri)
-            .and_then([&](std::filesystem::path const& path) {
-                return kieli::query::source(db, path); //
-            })
-            .transform([&](kieli::Source_id const source) {
-                return kieli::Location { source, kieli::Range::for_position(position) };
-            });
+        return std::move(id).transform([&](kieli::Source_id const source) {
+            return kieli::Location { source, kieli::Range::for_position(position) };
+        });
     }
 
     auto range_to_json(kieli::Range const range) -> Json
@@ -76,6 +81,22 @@ namespace {
         } };
     }
 
+    auto maybe_markdown_content(std::optional<std::string> markdown) -> Json
+    {
+        return std::move(markdown).transform(markdown_content_to_json).value_or(Json {});
+    }
+
+    auto document_format_edit(std::string new_text) -> Json
+    {
+        return Json { Json::Array {
+            Json { Json::Object {
+                // TODO: send proper whole-document range
+                { "range", range_to_json(kieli::Range { {}, { 999999999 } }) },
+                { "newText", Json { std::move(new_text) } },
+            } },
+        } };
+    }
+
     auto handle_initialize(Database&, Json const& /*params*/) -> Result<Json>
     {
         return Json { Json::Object {
@@ -83,13 +104,9 @@ namespace {
               Json { Json::Object {
                   { "hoverProvider", Json { true } },
                   { "definitionProvider", Json { true } },
+                  { "documentFormattingProvider", Json { true } },
               } } },
         } };
-    }
-
-    auto maybe_markdown_content(std::optional<std::string> markdown) -> Json
-    {
-        return std::move(markdown).transform(markdown_content_to_json).value_or(Json {});
     }
 
     auto handle_hover(Database& db, Json::Object const& params) -> Result<Json>
@@ -108,6 +125,18 @@ namespace {
                 [&](kieli::Location const location) { return location_to_json(db, location); });
     }
 
+    auto handle_formatting(Database& db, Json::Object const& params) -> Result<Json>
+    {
+        return document_source_id(db, params.at("textDocument").as_object())
+            .and_then([&](kieli::Source_id const source) {
+                return kieli::query::cst(db, source); //
+            })
+            .transform([&](kieli::CST const& cst) {
+                return kieli::format_module(*cst.module, kieli::Format_configuration {});
+            })
+            .transform(document_format_edit);
+    }
+
     auto handle_request(Database& db, std::string_view const method, Json const& params)
         -> Result<Json>
     {
@@ -119,6 +148,9 @@ namespace {
         }
         if (method == "textDocument/definition") {
             return handle_goto_definition(db, params.as_object());
+        }
+        if (method == "textDocument/formatting") {
+            return handle_formatting(db, params.as_object());
         }
         return std::unexpected(std::format("Unsupported method: {}", method));
     }
@@ -143,7 +175,7 @@ auto kieli::lsp::handle_message(Database& db, Json::Object const& message) -> st
     auto const& method = message.at("method").as_string();
     auto const& params = message.contains("params") ? message.at("params") : Json {};
 
-    std::println(stderr, "handle_message: method = {}, params = {}", method, params);
+    std::println(stderr, "method = {}, params = {}", method, cpputil::json::encode(params));
 
     // Absence of message id means the client expects no reply.
     if (!message.contains("id")) {
