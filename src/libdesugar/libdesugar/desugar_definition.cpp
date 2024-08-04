@@ -85,9 +85,24 @@ namespace {
 
         auto operator()(cst::definition::Concept const& concept_) -> ast::Definition_variant
         {
+            std::vector<ast::Function_signature> functions;
+            std::vector<ast::Type_signature>     types;
+
+            for (auto const& requirement : concept_.requirements) {
+                auto const visitor = utl::Overload {
+                    [&](cst::Function_signature const& signature) {
+                        functions.push_back(context.desugar(signature));
+                    },
+                    [&](cst::Type_signature const& signature) {
+                        types.push_back(context.desugar(signature));
+                    },
+                };
+                std::visit(visitor, requirement);
+            }
+
             return ast::definition::Concept {
-                .function_signatures = context.desugar(concept_.function_signatures),
-                .type_signatures     = context.desugar(concept_.type_signatures),
+                .function_signatures = std::move(functions),
+                .type_signatures     = std::move(types),
                 .name                = concept_.name,
                 .template_parameters = concept_.template_parameters.transform(context.desugar()),
             };

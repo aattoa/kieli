@@ -688,6 +688,8 @@ namespace kieli::cst {
         Token                                 alias_keyword_token;
     };
 
+    using Concept_requirement = std::variant<Function_signature, Type_signature>;
+
     namespace definition {
         struct Function {
             Function_signature       signature;
@@ -747,8 +749,7 @@ namespace kieli::cst {
 
         struct Concept {
             std::optional<Template_parameters> template_parameters;
-            std::vector<Function_signature>    function_signatures;
-            std::vector<Type_signature>        type_signatures;
+            std::vector<Concept_requirement>   requirements;
             kieli::Upper                       name;
             Token                              concept_keyword_token;
             Token                              open_brace_token;

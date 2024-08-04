@@ -172,23 +172,21 @@ namespace {
         auto       template_parameters = parse_template_parameters(context);
         auto const open_brace          = context.require_extract(Token_type::brace_open);
 
-        std::vector<cst::Type_signature>     types;
-        std::vector<cst::Function_signature> functions;
+        std::vector<cst::Concept_requirement> requirements;
 
         for (;;) {
             switch (context.peek().type) {
             case Token_type::fn:
-                functions.push_back(extract_function_signature(context, context.extract()));
+                requirements.emplace_back(extract_function_signature(context, context.extract()));
                 continue;
             case Token_type::alias:
-                types.push_back(extract_type_signature(context, context.extract()));
+                requirements.emplace_back(extract_type_signature(context, context.extract()));
                 continue;
             default:
                 Token const close_brace = context.require_extract(Token_type::brace_close);
                 return cst::definition::Concept {
                     .template_parameters   = std::move(template_parameters),
-                    .function_signatures   = std::move(functions),
-                    .type_signatures       = std::move(types),
+                    .requirements          = std::move(requirements),
                     .name                  = name,
                     .concept_keyword_token = cst::Token::from_lexical(concept_keyword),
                     .open_brace_token      = cst::Token::from_lexical(open_brace),
