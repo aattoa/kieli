@@ -85,10 +85,10 @@ namespace {
 
         auto operator()(cst::expression::Operator_chain const& sequence)
         {
-            state.format(*sequence.lhs);
-            for (auto const& [right_operand, operator_name] : sequence.tail) {
-                state.format(" {} ", operator_name.identifier);
-                state.format(*right_operand);
+            state.format(sequence.lhs);
+            for (auto const& [rhs, op] : sequence.tail) {
+                state.format(" {} ", op.identifier);
+                state.format(rhs);
             }
         }
 
@@ -190,10 +190,7 @@ namespace {
         {
             state.format("let ");
             state.format(let.pattern);
-            if (let.type.has_value()) {
-                state.format(": ");
-                state.format(let.type->type);
-            }
+            state.format(let.type);
             state.format(" = ");
             state.format(let.initializer);
         }
@@ -228,7 +225,7 @@ namespace {
         auto operator()(cst::expression::Addressof const& reference)
         {
             state.format("&");
-            state.format_mutability_with_trailing_whitespace(reference.mutability);
+            state.format_mutability_with_whitespace(reference.mutability);
             state.format(reference.place_expression);
         }
 
@@ -331,7 +328,7 @@ namespace {
         {
             if (break_.result.has_value()) {
                 state.format("break ");
-                state.format(*break_.result.value());
+                state.format(break_.result.value());
             }
             else {
                 state.format("break");

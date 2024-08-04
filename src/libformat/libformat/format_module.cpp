@@ -4,55 +4,59 @@
 
 using namespace libformat;
 
-namespace {
+// TODO: collapse string literals, expand integer literals, insert digit separators
 
+namespace {
     struct Definition_format_visitor {
         State& state;
 
         auto operator()(cst::definition::Function const& function) const -> void
         {
             state.format("fn {}", function.signature.name);
-            if (function.signature.template_parameters.has_value()) {
-                state.format("[TODO]");
-            }
-            state.format("(TODO)");
-            switch (state.configuration.function_body) {
-            case kieli::Format_configuration::Function_body::leave_as_is:
+            state.format(function.signature.template_parameters);
+            state.format(function.signature.function_parameters.value);
+            state.format(function.signature.return_type);
+            switch (state.config.function_body) {
+            case kieli::Format_function_body::leave_as_is:
             {
                 if (function.optional_equals_sign_token.has_value()) {
                     state.format(" = ");
-                    state.format(*function.body);
+                    state.format(function.body);
+                }
+                else {
+                    state.format(" ");
+                    state.format(function.body);
                 }
                 return;
             }
-            case kieli::Format_configuration::Function_body::normalize_to_equals_sign:
+            case kieli::Format_function_body::normalize_to_equals_sign:
             {
                 if (auto const* const block
                     = std::get_if<cst::expression::Block>(&function.body->variant)) {
                     if (block->result_expression.has_value() && block->side_effects.empty()) {
                         state.format(" = ");
-                        state.format(**block->result_expression);
+                        state.format(block->result_expression.value());
                     }
                     else {
                         state.format(" ");
-                        state.format(*function.body);
+                        state.format(function.body);
                     }
                 }
                 else {
                     state.format(" = ");
-                    state.format(*function.body);
+                    state.format(function.body);
                 }
                 return;
             }
-            case kieli::Format_configuration::Function_body::normalize_to_block:
+            case kieli::Format_function_body::normalize_to_block:
             {
                 if (std::holds_alternative<cst::expression::Block>(function.body->variant)) {
                     state.format(" ");
-                    state.format(*function.body);
+                    state.format(function.body);
                 }
                 else {
                     state.format(" {{ ");
-                    state.format(*function.body);
+                    state.format(function.body);
                     state.format(" }}");
                 }
                 return;
@@ -91,62 +95,56 @@ namespace {
             cpputil::todo();
         }
     };
-
-    auto format_node_impl(auto const& node, kieli::Format_configuration const& configuration)
-        -> std::string
-    {
-        std::string output_string;
-
-        State state {
-            .configuration       = configuration,
-            .string              = output_string,
-            .current_indentation = 0,
-        };
-        state.format(node);
-        return output_string;
-    }
-
 } // namespace
 
-auto kieli::format_module(
-    CST::Module const& module, kieli::Format_configuration const& configuration) -> std::string
+auto kieli::format_module(CST::Module const& module, kieli::Format_configuration const& config)
+    -> std::string
 {
-    std::string output_string;
+    State state { .config = config };
 
-    State state {
-        .configuration       = configuration,
-        .string              = output_string,
-        .current_indentation = 0,
-    };
-    for (cst::Definition const& definition : module.definitions) {
-        std::visit(Definition_format_visitor { state }, definition.variant);
+    if (!module.definitions.empty()) {
+        auto const format = [&state](cst::Definition const& definition) {
+            std::visit(Definition_format_visitor { state }, definition.variant);
+        };
+        format(module.definitions.front());
+        auto const newlines = std::views::repeat('\n', config.space_between_definitions + 1);
+        for (auto it = module.definitions.begin() + 1; it != module.definitions.end(); ++it) {
+            state.output.append_range(newlines);
+            format(*it);
+        }
     }
-    output_string.push_back('\n');
-    return output_string;
+
+    state.output.push_back('\n');
+    return std::move(state.output);
 }
 
-auto kieli::format_definition(
-    cst::Definition const& definition, Format_configuration const& configuration) -> std::string
-{
-    (void)definition;
-    (void)configuration;
-    cpputil::todo();
-}
-
-auto kieli::format_expression(
-    cst::Expression const& expression, Format_configuration const& configuration) -> std::string
-{
-    return format_node_impl(expression, configuration);
-}
-
-auto kieli::format_pattern(cst::Pattern const& pattern, Format_configuration const& configuration)
+auto kieli::format_definition(cst::Definition const& definition, Format_configuration const& config)
     -> std::string
 {
-    return format_node_impl(pattern, configuration);
+    State state { .config = config };
+    std::visit(Definition_format_visitor { state }, definition.variant);
+    return std::move(state.output);
 }
 
-auto kieli::format_type(cst::Type const& type, Format_configuration const& configuration)
+auto kieli::format_expression(cst::Expression const& expression, Format_configuration const& config)
     -> std::string
 {
-    return format_node_impl(type, configuration);
+    State state { .config = config };
+    state.format(expression);
+    return std::move(state.output);
+}
+
+auto kieli::format_pattern(cst::Pattern const& pattern, Format_configuration const& config)
+    -> std::string
+{
+    State state { .config = config };
+    state.format(pattern);
+    return std::move(state.output);
+}
+
+auto kieli::format_type(cst::Type const& type, Format_configuration const& config) -> std::string
+{
+    State state { .config = config };
+    state.format(type);
+    return std::move(state.output);
 }

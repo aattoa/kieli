@@ -3,13 +3,14 @@
 #include <libutl/utilities.hpp>
 #include <libcompiler/cst/cst.hpp>
 
-// TODO: collapse string literals, expand integer literals, insert digit separators
-
 namespace kieli {
+
+    enum class Format_function_body { leave_as_is, normalize_to_block, normalize_to_equals_sign };
+
     struct Format_configuration {
-        enum class Function_body { leave_as_is, normalize_to_block, normalize_to_equals_sign };
-        std::size_t   block_indentation = 4;
-        Function_body function_body     = Function_body::leave_as_is;
+        std::size_t          block_indentation         = 4;
+        std::size_t          space_between_definitions = 1;
+        Format_function_body function_body             = Format_function_body::leave_as_is;
     };
 
     auto format_module(CST::Module const&, Format_configuration const&) -> std::string;
@@ -17,4 +18,5 @@ namespace kieli {
     auto format_expression(cst::Expression const&, Format_configuration const&) -> std::string;
     auto format_pattern(cst::Pattern const&, Format_configuration const&) -> std::string;
     auto format_type(cst::Type const&, Format_configuration const&) -> std::string;
+
 } // namespace kieli

@@ -123,6 +123,13 @@ namespace utl {
         return static_cast<std::size_t>(e);
     }
 
+    auto times(std::size_t const count, auto&& callback) -> void
+    {
+        for (std::size_t i = 0; i != count; ++i) {
+            std::invoke(callback);
+        }
+    }
+
     // Value wrapper that is used to disable default constructors
     template <class T>
     class [[nodiscard]] Explicit {

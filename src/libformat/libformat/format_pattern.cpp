@@ -59,7 +59,7 @@ namespace {
 
         auto operator()(cst::pattern::Name const& name)
         {
-            state.format_mutability_with_trailing_whitespace(name.mutability);
+            state.format_mutability_with_whitespace(name.mutability);
             state.format("{}", name.name);
         }
 
@@ -67,7 +67,7 @@ namespace {
         {
             state.format(alias.pattern);
             state.format(" as ");
-            state.format_mutability_with_trailing_whitespace(alias.mutability);
+            state.format_mutability_with_whitespace(alias.mutability);
             state.format("{}", alias.name);
         }
 

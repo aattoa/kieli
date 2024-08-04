@@ -70,14 +70,14 @@ namespace {
         auto operator()(cst::type::Reference const& reference)
         {
             state.format("&");
-            state.format_mutability_with_trailing_whitespace(reference.mutability);
+            state.format_mutability_with_whitespace(reference.mutability);
             state.format(reference.referenced_type);
         }
 
         auto operator()(cst::type::Pointer const& pointer)
         {
             state.format("*");
-            state.format_mutability_with_trailing_whitespace(pointer.mutability);
+            state.format_mutability_with_whitespace(pointer.mutability);
             state.format(pointer.pointee_type);
         }
 
@@ -85,8 +85,8 @@ namespace {
         {
             state.format("fn(");
             state.format_comma_separated(function.parameter_types.value.elements);
-            state.format("): ");
-            state.format(function.return_type.type);
+            state.format(")");
+            state.format(function.return_type);
         }
 
         auto operator()(cst::type::Array const& array)
