@@ -34,6 +34,7 @@ namespace libformat {
         auto format(cst::Concept_reference const&) -> void;
         auto format(cst::pattern::Field const&) -> void;
         auto format(cst::expression::Struct_initializer::Field const&) -> void;
+        auto format(cst::definition::Field const&) -> void;
         auto format(cst::Self_parameter const&) -> void;
         auto format(cst::Template_arguments const&) -> void;
         auto format(cst::Template_parameter const&) -> void;

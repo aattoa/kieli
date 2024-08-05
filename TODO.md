@@ -5,11 +5,16 @@
 - Delay numeric literal parsing to libparse?
 
 ## libparse
+- `struct Parse_state`
+- `auto parse(Parse_state& state) -> std::expected<Definition, EOF or error>`
+- Accept trailing commas
+- Fix immut template default argument
 - Test definition parsing
 - Error node, error recovery
 
 ## libdesugar
 - More tests
+- Interface should expose (cst_def -> ast_def)
 
 ## libresolve
 - Unique zero-sized type for each function, coerce to function pointer type
@@ -21,6 +26,8 @@
 - Try the mold linker, `-fuse-ld=mold`
 
 ## Miscellaneous
+- Attributes/annotations
+- Inline concepts
 - git submodules
 - Definition source hash
 - Range should store width only?

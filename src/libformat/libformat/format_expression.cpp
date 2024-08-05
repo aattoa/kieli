@@ -141,7 +141,6 @@ namespace {
             state.format(match.matched_expression);
             state.format(" {{");
             {
-                // TODO: align arrows
                 auto const _ = state.indent();
                 for (auto const& match_case : match.cases.value) {
                     state.format("{}", state.newline());

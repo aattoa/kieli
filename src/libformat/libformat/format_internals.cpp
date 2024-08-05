@@ -84,6 +84,12 @@ auto libformat::State::format(cst::expression::Struct_initializer::Field const& 
     format(initializer.expression);
 }
 
+auto libformat::State::format(cst::definition::Field const& field) -> void
+{
+    format("{}", field.name);
+    format(field.type);
+}
+
 auto libformat::State::format_mutability_with_whitespace(
     std::optional<cst::Mutability> const& mutability) -> void
 {
