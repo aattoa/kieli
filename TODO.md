@@ -8,7 +8,6 @@
 - `struct Parse_state`
 - `auto parse(Parse_state& state) -> std::expected<Definition, EOF or error>`
 - Accept trailing commas
-- Fix immut template default argument
 - Test definition parsing
 - Error node, error recovery
 

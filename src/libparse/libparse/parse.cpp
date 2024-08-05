@@ -136,12 +136,11 @@ auto libparse::parse_mutability(Context& context) -> std::optional<cst::Mutabili
         };
     }
     if (auto immut_keyword = context.try_extract(Token_type::immut)) {
-        kieli::fatal_error(
-            context.db(),
-            context.source(),
-            immut_keyword.value().range,
-            "`immut` may not appear here",
-            "Immutability is the default, so it does not need to be specified");
+        return cst::Mutability {
+            .variant                    = cst::mutability::Concrete::immut,
+            .range                      = immut_keyword.value().range,
+            .mut_or_immut_keyword_token = cst::Token::from_lexical(immut_keyword.value()),
+        };
     }
     return std::nullopt;
 }
