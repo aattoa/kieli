@@ -1,9 +1,9 @@
 #include <libutl/utilities.hpp>
 #include <libparse/parser_internals.hpp>
 
-libparse::Context::Context(cst::Node_arena& arena, kieli::Lex_state const state)
+libparse::Context::Context(cst::Arena& arena, kieli::Lex_state const state)
     : m_lex_state { state }
-    , m_node_arena { arena }
+    , m_arena { arena }
     , m_special_identifiers {
         .plus     = kieli::Identifier { state.db.string_pool.add("+") },
         .asterisk = kieli::Identifier { state.db.string_pool.add("*") },
@@ -94,6 +94,11 @@ auto libparse::Context::error_expected(std::string_view const description) -> vo
 auto libparse::Context::db() -> kieli::Database&
 {
     return m_lex_state.db;
+}
+
+auto libparse::Context::cst() const -> cst::Arena&
+{
+    return m_arena;
 }
 
 auto libparse::Context::special_identifiers() const -> Special_identifiers

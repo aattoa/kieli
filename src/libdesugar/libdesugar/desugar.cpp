@@ -2,6 +2,36 @@
 #include <libdesugar/desugar.hpp>
 #include <libdesugar/desugaring_internals.hpp>
 
+auto libdesugar::Context::deref_desugar(cst::Expression_id const id) -> ast::Expression
+{
+    return desugar(cst.expressions[id]);
+}
+
+auto libdesugar::Context::deref_desugar(cst::Pattern_id const id) -> ast::Pattern
+{
+    return desugar(cst.patterns[id]);
+}
+
+auto libdesugar::Context::deref_desugar(cst::Type_id const id) -> ast::Type
+{
+    return desugar(cst.types[id]);
+}
+
+auto libdesugar::Context::desugar(cst::Expression_id const id) -> utl::Wrapper<ast::Expression>
+{
+    return wrap(deref_desugar(id));
+}
+
+auto libdesugar::Context::desugar(cst::Pattern_id const id) -> utl::Wrapper<ast::Pattern>
+{
+    return wrap(deref_desugar(id));
+}
+
+auto libdesugar::Context::desugar(cst::Type_id const id) -> utl::Wrapper<ast::Type>
+{
+    return wrap(deref_desugar(id));
+}
+
 auto libdesugar::Context::desugar(cst::Function_argument const& argument) -> ast::Function_argument
 {
     return ast::Function_argument {
@@ -23,9 +53,9 @@ auto libdesugar::Context::desugar(cst::Function_parameter const& parameter)
                         db,
                         source,
                         wildcard->range,
-                        "A function default argument may not be a wildcard");
+                        "A default function argument may not be a wildcard");
                 }
-                return desugar(std::get<utl::Wrapper<cst::Expression>>(argument.variant));
+                return desugar(std::get<cst::Expression_id>(argument.variant));
             }),
     };
 }
@@ -100,8 +130,8 @@ auto libdesugar::Context::desugar(cst::Path const& path) -> ast::Path
                     [](cst::Path_root_global const&) -> ast::Path_root {
                         return ast::Path_root_global {};
                     },
-                    [this](utl::Wrapper<cst::Type> const type) -> ast::Path_root {
-                        return desugar(type);
+                    [&](cst::Type_id const type) -> ast::Path_root {
+                        return desugar(type); //
                     },
                 },
                 root.variant);
@@ -131,7 +161,7 @@ auto libdesugar::Context::desugar(cst::Function_signature const& signature)
         signature.function_parameters.value.normal_parameters.elements, desugar()));
 
     ast::Type return_type = signature.return_type.has_value()
-                              ? desugar(*signature.return_type.value().type)
+                              ? desugar(cst.types[signature.return_type.value().type])
                               : unit_type(signature.name.range);
 
     return ast::Function_signature {
@@ -205,7 +235,7 @@ auto libdesugar::Context::desugar(cst::pattern::Constructor_body const& body)
 
 auto libdesugar::Context::desugar(cst::Type_annotation const& annotation) -> ast::Type
 {
-    return desugar(*annotation.type);
+    return desugar(cst.types[annotation.type]);
 }
 
 auto libdesugar::Context::desugar_mutability(
@@ -271,11 +301,8 @@ auto libdesugar::wildcard_pattern(kieli::Range const range) -> ast::Pattern
 
 auto kieli::desugar(CST const& cst, Database& db) -> AST
 {
-    auto node_arena  = ast::Node_arena::with_default_page_size();
-    auto context     = libdesugar::Context { db, node_arena, cst.module->source };
+    auto node_arena = ast::Node_arena::with_default_page_size();
+    auto context    = libdesugar::Context { db, cst.module->arena, node_arena, cst.module->source };
     auto definitions = context.desugar(cst.module->definitions);
-    return AST { AST::Module {
-        .definitions = std::move(definitions),
-        .node_arena  = std::move(context.ast),
-    } };
+    return AST { AST::Module { std::move(definitions), std::move(node_arena) } };
 }

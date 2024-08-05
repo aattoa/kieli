@@ -61,15 +61,15 @@ namespace {
 
     auto desugar_operator_chain(
         Context&                                               context,
-        utl::Wrapper<cst::Expression> const                    leftmost_expression,
+        cst::Expression_id const                               leftmost_expression,
         std::size_t const                                      precedence,
         std::span<cst::expression::Operator_chain::Rhs const>& tail) -> ast::Expression
     {
         if (precedence == std::numeric_limits<std::size_t>::max()) {
-            return context.desugar(*leftmost_expression);
+            return context.deref_desugar(leftmost_expression);
         }
 
-        auto const recurse = [&](utl::Wrapper<cst::Expression> const leftmost) {
+        auto const recurse = [&](cst::Expression_id const leftmost) {
             return desugar_operator_chain(context, leftmost, precedence - 1, tail);
         };
 
@@ -91,7 +91,7 @@ namespace {
                     .op       = operator_name.identifier,
                     .op_range = operator_name.range,
                 },
-                kieli::Range(left.range.start, right_operand->range.stop),
+                kieli::Range(left.range.start, context.cst.expressions[right_operand].range.stop),
             };
         }
         return left;
@@ -118,9 +118,10 @@ namespace {
         auto operator()(cst::expression::Parenthesized const& parenthesized)
             -> ast::Expression_variant
         {
+            cst::Expression const& expression
+                = context.cst.expressions[parenthesized.expression.value];
             return std::visit(
-                Expression_desugaring_visitor { context, *parenthesized.expression.value },
-                parenthesized.expression.value->variant);
+                Expression_desugaring_visitor { context, expression }, expression.variant);
         }
 
         auto operator()(cst::expression::Array_literal const& literal) -> ast::Expression_variant
@@ -158,8 +159,8 @@ namespace {
                     ? context.desugar(conditional.false_branch->body)
                     : context.wrap(unit_value(this_expression.range));
 
-            if (auto const* const let
-                = std::get_if<cst::expression::Conditional_let>(&conditional.condition->variant)) {
+            if (auto const* const let = std::get_if<cst::expression::Conditional_let>(
+                    &context.cst.expressions[conditional.condition].variant)) {
                 /*
                     if let a = b { c } else { d }
 
@@ -178,7 +179,8 @@ namespace {
                             .expression = context.desugar(conditional.true_branch),
                         },
                         ast::expression::Match::Case {
-                            .pattern    = context.wrap(wildcard_pattern(let->pattern->range)),
+                            .pattern = context.wrap(
+                                wildcard_pattern(context.cst.patterns[let->pattern].range)),
                             .expression = false_branch,
                         },
                     }),
@@ -227,7 +229,7 @@ namespace {
             std::vector<ast::Expression> side_effects;
             side_effects.reserve(block.side_effects.size());
             for (auto const& side_effect : block.side_effects) {
-                side_effects.push_back(context.desugar(*side_effect.expression));
+                side_effects.push_back(context.deref_desugar(side_effect.expression));
             }
             if (block.result_expression.has_value()) {
                 return ast::expression::Block {
@@ -273,7 +275,7 @@ namespace {
                         }),
                         .expression = context.desugar(let.initializer),
                     },
-                    loop.body->range,
+                    context.cst.expressions[loop.body].range,
                 }),
 
                 .source = ast::Loop_source::while_loop,
@@ -310,7 +312,7 @@ namespace {
                         .source                    = ast::Conditional_source::while_loop_body,
                         .has_explicit_false_branch = true,
                     },
-                    .range = loop.body->range,
+                    .range = context.cst.expressions[loop.body].range,
                 }),
                 .source = ast::Loop_source::while_loop,
             };
@@ -318,8 +320,8 @@ namespace {
 
         auto operator()(cst::expression::While_loop const& loop) -> ast::Expression_variant
         {
-            if (auto const* const let
-                = std::get_if<cst::expression::Conditional_let>(&loop.condition->variant)) {
+            if (auto const* const let = std::get_if<cst::expression::Conditional_let>(
+                    &context.cst.expressions[loop.condition].variant)) {
                 return desugar_while_let_loop(loop, *let);
             }
             return desugar_while_loop(loop);

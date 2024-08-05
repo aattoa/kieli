@@ -5,7 +5,6 @@
 using namespace libparse;
 
 namespace {
-
     auto parse_self_parameter(Context& context) -> std::optional<cst::Self_parameter>
     {
         Stage const stage           = context.stage();
@@ -113,7 +112,6 @@ namespace {
             .import_keyword_token = cst::Token::from_lexical(import_keyword),
         };
     }
-
 } // namespace
 
 auto libparse::parse_mutability(Context& context) -> std::optional<cst::Mutability>
@@ -269,7 +267,7 @@ auto libparse::parse_function_parameters(Context& context)
     if (self_parameter.has_value() && !comma_token_after_self.has_value()
         && !normal_parameters.elements.empty()) {
         context.error_expected(
-            normal_parameters.elements.front().pattern->range,
+            context.cst().patterns[normal_parameters.elements.front().pattern].range,
             "a comma separating the self parameter from the other function parameters");
     }
 
@@ -282,7 +280,7 @@ auto libparse::parse_function_parameters(Context& context)
 
 auto libparse::parse_function_parameter(Context& context) -> std::optional<cst::Function_parameter>
 {
-    return parse_pattern(context).transform([&](utl::Wrapper<cst::Pattern> const pattern) {
+    return parse_pattern(context).transform([&](cst::Pattern_id const pattern) {
         return cst::Function_parameter {
             .pattern          = pattern,
             .type             = parse_type_annotation(context),
@@ -306,7 +304,7 @@ auto libparse::parse_function_argument(Context& context) -> std::optional<cst::F
         }
         context.unstage(stage);
     }
-    return parse_expression(context).transform([](utl::Wrapper<cst::Expression> const expression) {
+    return parse_expression(context).transform([](cst::Expression_id const expression) {
         return cst::Function_argument { .expression = expression };
     });
 }
@@ -370,8 +368,8 @@ auto libparse::extract_concept_references(Context& context)
 
 auto kieli::parse(Source_id const source, Database& db) -> CST
 {
-    cst::Node_arena   node_arena = cst::Node_arena::with_default_page_size();
-    libparse::Context context { node_arena, Lex_state::make(source, db) };
+    auto arena   = cst::Arena {};
+    auto context = libparse::Context { arena, Lex_state::make(source, db) };
 
     std::vector<cst::Import> imports;
     while (auto const import_token = context.try_extract(Token_type::import_)) {
@@ -389,7 +387,7 @@ auto kieli::parse(Source_id const source, Database& db) -> CST
     return CST { CST::Module {
         .imports     = std::move(imports),
         .definitions = std::move(definitions),
-        .node_arena  = std::move(node_arena),
+        .arena       = std::move(arena),
         .source      = source,
     } };
 }

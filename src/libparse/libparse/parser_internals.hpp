@@ -24,10 +24,10 @@ namespace libparse {
         std::optional<kieli::Range> m_previous_token_range;
         std::vector<Token>          m_cached_tokens;
         std::size_t                 m_token_index {};
-        cst::Node_arena&            m_node_arena;
+        cst::Arena&                 m_arena;
         Special_identifiers         m_special_identifiers;
     public:
-        explicit Context(cst::Node_arena&, kieli::Lex_state);
+        explicit Context(cst::Arena&, kieli::Lex_state);
 
         // Check whether the current token is the end-of-input token.
         [[nodiscard]] auto is_finished() -> bool;
@@ -68,24 +68,19 @@ namespace libparse {
         [[nodiscard]] auto up_to_current(kieli::Range range) const -> kieli::Range;
 
         [[nodiscard]] auto db() -> kieli::Database&;
+        [[nodiscard]] auto cst() const -> cst::Arena&;
         [[nodiscard]] auto special_identifiers() const -> Special_identifiers;
         [[nodiscard]] auto source() const -> kieli::Source_id;
-
-        template <cst::node Node>
-        auto wrap(Node&& node) -> utl::Wrapper<Node>
-        {
-            return m_node_arena.wrap<Node>(static_cast<Node&&>(node));
-        }
     };
 
     auto extract_path(Context&, std::optional<cst::Path_root>&&) -> cst::Path;
     auto extract_concept_references(Context&) -> cst::Separated_sequence<cst::Concept_reference>;
 
-    auto parse_block_expression(Context&) -> std::optional<utl::Wrapper<cst::Expression>>;
-    auto parse_expression(Context&) -> std::optional<utl::Wrapper<cst::Expression>>;
+    auto parse_block_expression(Context&) -> std::optional<cst::Expression_id>;
+    auto parse_expression(Context&) -> std::optional<cst::Expression_id>;
 
-    auto parse_top_level_pattern(Context&) -> std::optional<utl::Wrapper<cst::Pattern>>;
-    auto parse_pattern(Context&) -> std::optional<utl::Wrapper<cst::Pattern>>;
+    auto parse_top_level_pattern(Context&) -> std::optional<cst::Pattern_id>;
+    auto parse_pattern(Context&) -> std::optional<cst::Pattern_id>;
 
     auto parse_template_parameters(Context&) -> std::optional<cst::Template_parameters>;
     auto parse_template_parameter(Context&) -> std::optional<cst::Template_parameter>;
@@ -101,7 +96,7 @@ namespace libparse {
     auto parse_type_annotation(Context&) -> std::optional<cst::Type_annotation>;
     auto parse_definition(Context&) -> std::optional<cst::Definition>;
     auto parse_mutability(Context&) -> std::optional<cst::Mutability>;
-    auto parse_type(Context&) -> std::optional<utl::Wrapper<cst::Type>>;
+    auto parse_type(Context&) -> std::optional<cst::Type_id>;
 
     template <class Function>
     concept parser = requires(Function const function, Context context) {

@@ -6,103 +6,106 @@
 namespace libformat {
     namespace cst = kieli::cst;
 
-    struct [[nodiscard]] Newline;
-    struct [[nodiscard]] Indentation;
+    struct State;
+
+    struct [[nodiscard]] Newline {
+        std::size_t indentation {};
+        std::size_t count {};
+    };
+
+    struct [[nodiscard]] Indentation {
+        State& state;
+        ~Indentation();
+    };
 
     struct State {
         std::string                 output;
         kieli::Format_configuration config;
         std::size_t                 indentation {};
+        cst::Arena const&           arena;
 
-        auto newline(std::size_t count = 1) noexcept -> Newline;
+        auto newline(std::size_t count = 1) const noexcept -> Newline;
         auto indent() noexcept -> Indentation;
-
-        template <class... Args>
-        auto format(std::format_string<Args...> const fmt, Args&&... args) -> void
-        {
-            std::format_to(std::back_inserter(output), fmt, std::forward<Args>(args)...);
-        }
-
-        auto format(cst::Definition const&) -> void;
-        auto format(cst::Expression const&) -> void;
-        auto format(cst::Pattern const&) -> void;
-        auto format(cst::Type const&) -> void;
-        auto format(cst::Type_annotation const&) -> void;
-        auto format(cst::Wildcard const&) -> void;
-        auto format(cst::Path const&) -> void;
-        auto format(cst::Mutability const&) -> void;
-        auto format(cst::Concept_reference const&) -> void;
-        auto format(cst::pattern::Field const&) -> void;
-        auto format(cst::expression::Struct_initializer::Field const&) -> void;
-        auto format(cst::definition::Field const&) -> void;
-        auto format(cst::Self_parameter const&) -> void;
-        auto format(cst::Template_arguments const&) -> void;
-        auto format(cst::Template_parameter const&) -> void;
-        auto format(cst::Template_parameters const&) -> void;
-        auto format(cst::Function_argument const&) -> void;
-        auto format(cst::Function_arguments const&) -> void;
-        auto format(cst::Function_parameter const&) -> void;
-        auto format(cst::Function_parameters const&) -> void;
-
-        auto format_mutability_with_whitespace(std::optional<cst::Mutability> const&) -> void;
-
-        template <class T>
-        auto format(utl::Wrapper<T> const wrapper) -> void
-        {
-            format(*wrapper);
-        }
-
-        template <class... Ts>
-        auto format(std::variant<Ts...> const& variant) -> void
-        {
-            std::visit([this](auto const& alternative) { this->format(alternative); }, variant);
-        }
-
-        template <class T>
-        auto format(std::optional<T> const& optional) -> void
-        {
-            if (optional.has_value()) {
-                format(optional.value());
-            }
-        }
-
-        template <class T>
-        auto format(cst::Default_argument<T> const& argument) -> void
-        {
-            format(" = ");
-            format(argument.variant);
-        }
-
-        template <class T>
-        auto format_separated(std::vector<T> const& vector, std::string_view const delimiter)
-            -> void
-        {
-            if (vector.empty()) {
-                return;
-            }
-            format(vector.front());
-            std::for_each(vector.begin() + 1, vector.end(), [&](T const& element) {
-                output.append(delimiter);
-                format(element);
-            });
-        }
-
-        template <class T>
-        auto format_comma_separated(std::vector<T> const& vector) -> void
-        {
-            format_separated(vector, ", ");
-        }
     };
 
-    struct Newline {
-        std::size_t indentation {};
-        std::size_t count {};
+    template <class T>
+    concept formattable = requires(State& state, T const& object) {
+        { format(state, object) } -> std::same_as<void>;
     };
 
-    struct Indentation {
-        State& state;
-        ~Indentation();
-    };
+    auto format(State&, cst::Definition const&) -> void;
+    auto format(State&, cst::Expression const&) -> void;
+    auto format(State&, cst::Expression_id) -> void;
+    auto format(State&, cst::Pattern const&) -> void;
+    auto format(State&, cst::Pattern_id) -> void;
+    auto format(State&, cst::Type const&) -> void;
+    auto format(State&, cst::Type_id) -> void;
+    auto format(State&, cst::Type_annotation const&) -> void;
+    auto format(State&, cst::Wildcard const&) -> void;
+    auto format(State&, cst::Path const&) -> void;
+    auto format(State&, cst::Mutability const&) -> void;
+    auto format(State&, cst::Concept_reference const&) -> void;
+    auto format(State&, cst::pattern::Field const&) -> void;
+    auto format(State&, cst::expression::Struct_initializer::Field const&) -> void;
+    auto format(State&, cst::definition::Field const&) -> void;
+    auto format(State&, cst::Self_parameter const&) -> void;
+    auto format(State&, cst::Template_arguments const&) -> void;
+    auto format(State&, cst::Template_parameter const&) -> void;
+    auto format(State&, cst::Template_parameters const&) -> void;
+    auto format(State&, cst::Function_argument const&) -> void;
+    auto format(State&, cst::Function_arguments const&) -> void;
+    auto format(State&, cst::Function_parameter const&) -> void;
+    auto format(State&, cst::Function_parameters const&) -> void;
+
+    template <class... Args>
+    auto format(State& state, std::format_string<Args...> const fmt, Args&&... args) -> void
+    {
+        std::format_to(std::back_inserter(state.output), fmt, std::forward<Args>(args)...);
+    }
+
+    auto format_mutability_with_whitespace(
+        State& state, std::optional<cst::Mutability> const& mutability) -> void;
+
+    template <formattable... Ts>
+    auto format(State& state, std::variant<Ts...> const& variant) -> void
+    {
+        std::visit([&](auto const& alternative) { format(state, alternative); }, variant);
+    }
+
+    template <formattable T>
+    auto format(State& state, std::optional<T> const& optional) -> void
+    {
+        if (optional.has_value()) {
+            format(state, optional.value());
+        }
+    }
+
+    template <formattable T>
+    auto format(State& state, cst::Default_argument<T> const& argument) -> void
+    {
+        format(state, " = ");
+        format(state, argument.variant);
+    }
+
+    template <formattable T>
+    auto format_separated(
+        State& state, std::vector<T> const& vector, std::string_view const delimiter) -> void
+    {
+        if (vector.empty()) {
+            return;
+        }
+        format(state, vector.front());
+        std::for_each(vector.begin() + 1, vector.end(), [&](T const& element) {
+            state.output.append(delimiter);
+            format(state, element);
+        });
+    }
+
+    template <formattable T>
+    auto format_comma_separated(State& state, std::vector<T> const& vector) -> void
+    {
+        format_separated(state, vector, ", ");
+    }
 } // namespace libformat
 
 template <>

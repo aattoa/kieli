@@ -10,7 +10,8 @@ namespace {
         auto operator()(cst::pattern::Parenthesized const& parenthesized) -> ast::Pattern_variant
         {
             return std::visit(
-                Pattern_desugaring_visitor { context }, parenthesized.pattern.value->variant);
+                Pattern_desugaring_visitor { context },
+                context.cst.patterns[parenthesized.pattern.value].variant);
         }
 
         auto operator()(kieli::literal auto const& literal) -> ast::Pattern_variant
@@ -88,7 +89,7 @@ namespace {
         {
             return ast::pattern::Guarded {
                 .guarded_pattern  = context.desugar(guarded.guarded_pattern),
-                .guard_expression = context.desugar(*guarded.guard_expression),
+                .guard_expression = context.deref_desugar(guarded.guard_expression),
             };
         }
     };
@@ -96,8 +97,5 @@ namespace {
 
 auto libdesugar::Context::desugar(cst::Pattern const& pattern) -> ast::Pattern
 {
-    return {
-        std::visit(Pattern_desugaring_visitor { *this }, pattern.variant),
-        pattern.range,
-    };
+    return { std::visit(Pattern_desugaring_visitor { *this }, pattern.variant), pattern.range };
 }

@@ -9,32 +9,32 @@ namespace {
 
         auto format_indented_block_body(cst::expression::Block const& block)
         {
-            state.format("{{");
+            format(state, "{{");
             {
                 auto const _ = state.indent();
                 for (auto const& side_effect : block.side_effects) {
-                    state.format("{}", state.newline());
-                    state.format(side_effect.expression);
-                    state.format(";");
+                    format(state, "{}", state.newline());
+                    format(state, side_effect.expression);
+                    format(state, ";");
                 }
                 if (block.result_expression.has_value()) {
-                    state.format("{}", state.newline());
-                    state.format(block.result_expression.value());
+                    format(state, "{}", state.newline());
+                    format(state, block.result_expression.value());
                 }
             }
-            state.format("{}}}", state.newline());
+            format(state, "{}}}", state.newline());
         }
 
         auto format_regular_block(cst::expression::Block const& block)
         {
             if (block.side_effects.empty()) {
                 if (block.result_expression.has_value()) {
-                    state.format("{{ ");
-                    state.format(block.result_expression.value());
-                    state.format(" }}");
+                    format(state, "{{ ");
+                    format(state, block.result_expression.value());
+                    format(state, " }}");
                 }
                 else {
-                    state.format("{{}}");
+                    format(state, "{{}}");
                 }
             }
             else {
@@ -42,10 +42,10 @@ namespace {
             }
         }
 
-        static auto as_block(utl::Wrapper<cst::Expression> const expression)
-            -> cst::expression::Block const&
+        auto as_block(cst::Expression_id const id) -> cst::expression::Block const&
         {
-            auto const* const block = std::get_if<cst::expression::Block>(&expression->variant);
+            auto const&       expression = state.arena.expressions[id];
+            auto const* const block      = std::get_if<cst::expression::Block>(&expression.variant);
             cpputil::always_assert(block != nullptr);
             return *block;
         }
@@ -54,13 +54,13 @@ namespace {
         auto operator()(Literal const& literal)
         {
             if constexpr (std::is_same_v<Literal, kieli::String>) {
-                state.format("\"{}\"", literal.value);
+                format(state, "\"{}\"", literal.value);
             }
             else if constexpr (std::is_same_v<Literal, kieli::Character>) {
-                state.format("'{}'", literal.value);
+                format(state, "'{}'", literal.value);
             }
             else {
-                state.format("{}", literal.value);
+                format(state, "{}", literal.value);
             }
         }
 
@@ -71,293 +71,293 @@ namespace {
 
         auto operator()(cst::expression::Parenthesized const& parenthesized)
         {
-            state.format("(");
-            state.format(parenthesized.expression.value);
-            state.format(")");
+            format(state, "(");
+            format(state, parenthesized.expression.value);
+            format(state, ")");
         }
 
         auto operator()(cst::expression::Tuple const& tuple)
         {
-            state.format("(");
-            state.format_comma_separated(tuple.fields.value.elements);
-            state.format(")");
+            format(state, "(");
+            format_comma_separated(state, tuple.fields.value.elements);
+            format(state, ")");
         }
 
         auto operator()(cst::expression::Operator_chain const& sequence)
         {
-            state.format(sequence.lhs);
+            format(state, sequence.lhs);
             for (auto const& [rhs, op] : sequence.tail) {
-                state.format(" {} ", op.identifier);
-                state.format(rhs);
+                format(state, " {} ", op.identifier);
+                format(state, rhs);
             }
         }
 
         auto operator()(cst::expression::Conditional_let const& let)
         {
-            state.format("let ");
-            state.format(let.pattern);
-            state.format(" = ");
-            state.format(let.initializer);
+            format(state, "let ");
+            format(state, let.pattern);
+            format(state, " = ");
+            format(state, let.initializer);
         }
 
         auto operator()(cst::expression::Invocation const& invocation)
         {
-            state.format(invocation.function_expression);
-            state.format(invocation.function_arguments);
+            format(state, invocation.function_expression);
+            format(state, invocation.function_arguments);
         }
 
         auto operator()(cst::expression::Unit_initializer const& initializer)
         {
-            state.format(initializer.constructor_path);
+            format(state, initializer.constructor_path);
         }
 
         auto operator()(cst::expression::Tuple_initializer const& initializer)
         {
-            state.format(initializer.constructor_path);
-            state.format("(");
-            state.format_comma_separated(initializer.initializers.value.elements);
-            state.format(")");
+            format(state, initializer.constructor_path);
+            format(state, "(");
+            format_comma_separated(state, initializer.initializers.value.elements);
+            format(state, ")");
         }
 
         auto operator()(cst::expression::Struct_initializer const& initializer)
         {
-            state.format(initializer.constructor_path);
-            state.format(" {{ ");
-            state.format_comma_separated(initializer.initializers.value.elements);
-            state.format(" }}");
+            format(state, initializer.constructor_path);
+            format(state, " {{ ");
+            format_comma_separated(state, initializer.initializers.value.elements);
+            format(state, " }}");
         }
 
         auto operator()(cst::expression::Method_invocation const& invocation)
         {
-            state.format(invocation.base_expression);
-            state.format(".{}", invocation.method_name);
-            state.format(invocation.template_arguments);
-            state.format(invocation.function_arguments);
+            format(state, invocation.base_expression);
+            format(state, ".{}", invocation.method_name);
+            format(state, invocation.template_arguments);
+            format(state, invocation.function_arguments);
         }
 
         auto operator()(cst::expression::Match const& match)
         {
-            state.format("match ");
-            state.format(match.matched_expression);
-            state.format(" {{");
+            format(state, "match ");
+            format(state, match.matched_expression);
+            format(state, " {{");
             {
                 auto const _ = state.indent();
                 for (auto const& match_case : match.cases.value) {
-                    state.format("{}", state.newline());
-                    state.format(match_case.pattern);
-                    state.format(" -> ");
-                    state.format(match_case.handler);
+                    format(state, "{}", state.newline());
+                    format(state, match_case.pattern);
+                    format(state, " -> ");
+                    format(state, match_case.handler);
                     if (match_case.optional_semicolon_token.has_value()) {
-                        state.format(";");
+                        format(state, ";");
                     }
                 }
             }
-            state.format("{}}}", state.newline());
+            format(state, "{}}}", state.newline());
         }
 
         auto operator()(cst::expression::Variable const& variable)
         {
-            state.format(variable.path);
+            format(state, variable.path);
         }
 
         auto operator()(cst::expression::Unsafe const& unsafe)
         {
-            state.format("unsafe ");
-            state.format(unsafe.expression);
+            format(state, "unsafe ");
+            format(state, unsafe.expression);
         }
 
         auto operator()(cst::expression::Sizeof const& sizeof_)
         {
-            state.format("sizeof(");
-            state.format(sizeof_.inspected_type.value);
-            state.format(")");
+            format(state, "sizeof(");
+            format(state, sizeof_.inspected_type.value);
+            format(state, ")");
         }
 
         auto operator()(cst::expression::Move const& move)
         {
-            state.format("mov ");
-            state.format(move.place_expression);
+            format(state, "mov ");
+            format(state, move.place_expression);
         }
 
         auto operator()(cst::expression::Local_type_alias const& alias)
         {
-            state.format("alias {} = ", alias.name);
-            state.format(alias.type);
+            format(state, "alias {} = ", alias.name);
+            format(state, alias.type);
         }
 
         auto operator()(cst::expression::Let_binding const& let)
         {
-            state.format("let ");
-            state.format(let.pattern);
-            state.format(let.type);
-            state.format(" = ");
-            state.format(let.initializer);
+            format(state, "let ");
+            format(state, let.pattern);
+            format(state, let.type);
+            format(state, " = ");
+            format(state, let.initializer);
         }
 
         auto operator()(cst::expression::Array_literal const& array)
         {
-            state.format("[");
-            state.format_comma_separated(array.elements.value.elements);
-            state.format("]");
+            format(state, "[");
+            format_comma_separated(state, array.elements.value.elements);
+            format(state, "]");
         }
 
         auto operator()(cst::expression::Tuple_field_access const& access)
         {
-            state.format(access.base_expression);
-            state.format(".{}", access.field_index);
+            format(state, access.base_expression);
+            format(state, ".{}", access.field_index);
         }
 
         auto operator()(cst::expression::Struct_field_access const& access)
         {
-            state.format(access.base_expression);
-            state.format(".{}", access.field_name);
+            format(state, access.base_expression);
+            format(state, ".{}", access.field_name);
         }
 
         auto operator()(cst::expression::Array_index_access const& access)
         {
-            state.format(access.base_expression);
-            state.format(".[");
-            state.format(access.index_expression.value);
-            state.format("]");
+            format(state, access.base_expression);
+            format(state, ".[");
+            format(state, access.index_expression.value);
+            format(state, "]");
         }
 
         auto operator()(cst::expression::Addressof const& reference)
         {
-            state.format("&");
-            state.format_mutability_with_whitespace(reference.mutability);
-            state.format(reference.place_expression);
+            format(state, "&");
+            format_mutability_with_whitespace(state, reference.mutability);
+            format(state, reference.place_expression);
         }
 
         auto operator()(cst::expression::Dereference const& dereference)
         {
-            state.format("*");
-            state.format(dereference.reference_expression);
+            format(state, "*");
+            format(state, dereference.reference_expression);
         }
 
         auto operator()(cst::expression::Meta const& meta)
         {
-            state.format("meta(");
-            state.format(meta.expression.value);
-            state.format(")");
+            format(state, "meta(");
+            format(state, meta.expression.value);
+            format(state, ")");
         }
 
         auto operator()(cst::expression::Type_cast const& cast)
         {
-            state.format(cast.base_expression);
-            state.format(" as ");
-            state.format(cast.target_type);
+            format(state, cast.base_expression);
+            format(state, " as ");
+            format(state, cast.target_type);
         }
 
         auto operator()(cst::expression::Type_ascription const& ascription)
         {
-            state.format(ascription.base_expression);
-            state.format(": ");
-            state.format(ascription.ascribed_type);
+            format(state, ascription.base_expression);
+            format(state, ": ");
+            format(state, ascription.ascribed_type);
         }
 
         auto operator()(cst::expression::Template_application const& application)
         {
-            state.format(application.path);
-            state.format(application.template_arguments);
+            format(state, application.path);
+            format(state, application.template_arguments);
         }
 
         auto operator()(cst::expression::Discard const& discard)
         {
-            state.format("discard ");
-            state.format(discard.discarded_expression);
+            format(state, "discard ");
+            format(state, discard.discarded_expression);
         }
 
         auto operator()(cst::expression::For_loop const& loop)
         {
-            state.format("for ");
-            state.format(loop.iterator);
-            state.format(" in ");
-            state.format(loop.iterable);
-            state.format(" ");
+            format(state, "for ");
+            format(state, loop.iterator);
+            format(state, " in ");
+            format(state, loop.iterable);
+            format(state, " ");
             format_regular_block(as_block(loop.body));
         }
 
         auto operator()(cst::expression::While_loop const& loop)
         {
-            state.format("while ");
-            state.format(loop.condition);
-            state.format(" ");
+            format(state, "while ");
+            format(state, loop.condition);
+            format(state, " ");
             format_regular_block(as_block(loop.body));
         }
 
         auto operator()(cst::expression::Infinite_loop const& loop)
         {
-            state.format("loop ");
+            format(state, "loop ");
             format_regular_block(as_block(loop.body));
         }
 
         auto operator()(cst::expression::Ret const& ret)
         {
             if (ret.returned_expression.has_value()) {
-                state.format("ret ");
-                state.format(ret.returned_expression.value());
+                format(state, "ret ");
+                format(state, ret.returned_expression.value());
             }
             else {
-                state.format("ret");
+                format(state, "ret");
             }
         }
 
         auto operator()(cst::expression::Conditional const& conditional)
         {
-            state.format("{} ", conditional.is_elif.get() ? "elif" : "if");
-            state.format(conditional.condition);
-            state.format(" ");
+            format(state, "{} ", conditional.is_elif.get() ? "elif" : "if");
+            format(state, conditional.condition);
+            format(state, " ");
             format_indented_block_body(as_block(conditional.true_branch));
             if (!conditional.false_branch.has_value()) {
                 return;
             }
             if (auto const* const else_conditional = std::get_if<cst::expression::Conditional>(
-                    &conditional.false_branch->body->variant)) {
+                    &state.arena.expressions[conditional.false_branch.value().body].variant)) {
                 if (else_conditional->is_elif.get()) {
-                    state.format("{}", state.newline());
-                    state.format(conditional.false_branch->body);
+                    format(state, "{}", state.newline());
+                    format(state, conditional.false_branch.value().body);
                     return;
                 }
             }
-            state.format("{}else ", state.newline());
-            format_indented_block_body(as_block(conditional.false_branch->body));
+            format(state, "{}else ", state.newline());
+            format_indented_block_body(as_block(conditional.false_branch.value().body));
         }
 
         auto operator()(cst::expression::Break const& break_)
         {
             if (break_.result.has_value()) {
-                state.format("break ");
-                state.format(break_.result.value());
+                format(state, "break ");
+                format(state, break_.result.value());
             }
             else {
-                state.format("break");
+                format(state, "break");
             }
         }
 
         auto operator()(cst::expression::Defer const& defer)
         {
-            state.format("defer ");
-            state.format(defer.expression);
+            format(state, "defer ");
+            format(state, defer.expression);
         }
 
         auto operator()(cst::expression::Continue const&)
         {
-            state.format("continue");
+            format(state, "continue");
         }
 
         auto operator()(cst::expression::Hole const&)
         {
-            state.format(R"(???)");
+            format(state, R"(???)");
         }
 
         auto operator()(cst::expression::Self const&)
         {
-            state.format("self");
+            format(state, "self");
         }
     };
 } // namespace
 
-auto libformat::State::format(cst::Expression const& expression) -> void
+auto libformat::format(State& state, cst::Expression const& expression) -> void
 {
-    std::visit(Expression_format_visitor { *this }, expression.variant);
+    std::visit(Expression_format_visitor { state }, expression.variant);
 }

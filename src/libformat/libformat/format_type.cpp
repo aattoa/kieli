@@ -9,118 +9,118 @@ namespace {
 
         auto operator()(kieli::built_in_type::Integer const integer)
         {
-            state.format("{}", kieli::built_in_type::integer_name(integer));
+            format(state, "{}", kieli::built_in_type::integer_name(integer));
         }
 
         auto operator()(kieli::built_in_type::Floating const&)
         {
-            state.format("Float");
+            format(state, "Float");
         }
 
         auto operator()(kieli::built_in_type::Character const&)
         {
-            state.format("Char");
+            format(state, "Char");
         }
 
         auto operator()(kieli::built_in_type::Boolean const&)
         {
-            state.format("Bool");
+            format(state, "Bool");
         }
 
         auto operator()(kieli::built_in_type::String const&)
         {
-            state.format("String");
+            format(state, "String");
         }
 
         auto operator()(cst::Wildcard const& wildcard)
         {
-            state.format(wildcard);
+            format(state, wildcard);
         }
 
         auto operator()(cst::type::Self const&)
         {
-            state.format("Self");
+            format(state, "Self");
         }
 
         auto operator()(cst::type::Typename const& type)
         {
-            state.format(type.path);
+            format(state, type.path);
         }
 
         auto operator()(cst::type::Template_application const& application)
         {
-            state.format(application.path);
-            state.format(application.template_arguments);
+            format(state, application.path);
+            format(state, application.template_arguments);
         }
 
         auto operator()(cst::type::Parenthesized const& parenthesized)
         {
-            state.format("(");
-            state.format(parenthesized.type.value);
-            state.format(")");
+            format(state, "(");
+            format(state, parenthesized.type.value);
+            format(state, ")");
         }
 
         auto operator()(cst::type::Tuple const& tuple)
         {
-            state.format("(");
-            state.format_comma_separated(tuple.field_types.value.elements);
-            state.format(")");
+            format(state, "(");
+            format_comma_separated(state, tuple.field_types.value.elements);
+            format(state, ")");
         }
 
         auto operator()(cst::type::Reference const& reference)
         {
-            state.format("&");
-            state.format_mutability_with_whitespace(reference.mutability);
-            state.format(reference.referenced_type);
+            format(state, "&");
+            format_mutability_with_whitespace(state, reference.mutability);
+            format(state, reference.referenced_type);
         }
 
         auto operator()(cst::type::Pointer const& pointer)
         {
-            state.format("*");
-            state.format_mutability_with_whitespace(pointer.mutability);
-            state.format(pointer.pointee_type);
+            format(state, "*");
+            format_mutability_with_whitespace(state, pointer.mutability);
+            format(state, pointer.pointee_type);
         }
 
         auto operator()(cst::type::Function const& function)
         {
-            state.format("fn(");
-            state.format_comma_separated(function.parameter_types.value.elements);
-            state.format(")");
-            state.format(function.return_type);
+            format(state, "fn(");
+            format_comma_separated(state, function.parameter_types.value.elements);
+            format(state, ")");
+            format(state, function.return_type);
         }
 
         auto operator()(cst::type::Array const& array)
         {
-            state.format("[");
-            state.format(array.element_type);
-            state.format("; ");
-            state.format(array.length);
-            state.format("]");
+            format(state, "[");
+            format(state, array.element_type);
+            format(state, "; ");
+            format(state, array.length);
+            format(state, "]");
         }
 
         auto operator()(cst::type::Slice const& slice)
         {
-            state.format("[");
-            state.format(slice.element_type.value);
-            state.format("]");
+            format(state, "[");
+            format(state, slice.element_type.value);
+            format(state, "]");
         }
 
         auto operator()(cst::type::Typeof const& typeof_)
         {
-            state.format("typeof(");
-            state.format(typeof_.inspected_expression.value);
-            state.format(")");
+            format(state, "typeof(");
+            format(state, typeof_.inspected_expression.value);
+            format(state, ")");
         }
 
         auto operator()(cst::type::Implementation const& implementation)
         {
-            state.format("impl ");
-            state.format_separated(implementation.concepts.elements, " + ");
+            format(state, "impl ");
+            format_separated(state, implementation.concepts.elements, " + ");
         }
     };
 } // namespace
 
-auto libformat::State::format(cst::Type const& type) -> void
+auto libformat::format(State& state, cst::Type const& type) -> void
 {
-    std::visit(Type_format_visitor { *this }, type.variant);
+    std::visit(Type_format_visitor { state }, type.variant);
 }

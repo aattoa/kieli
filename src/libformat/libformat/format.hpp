@@ -13,10 +13,14 @@ namespace kieli {
         Format_function_body function_body             = Format_function_body::leave_as_is;
     };
 
-    auto format_module(CST::Module const&, Format_configuration const&) -> std::string;
-    auto format_definition(cst::Definition const&, Format_configuration const&) -> std::string;
-    auto format_expression(cst::Expression const&, Format_configuration const&) -> std::string;
-    auto format_pattern(cst::Pattern const&, Format_configuration const&) -> std::string;
-    auto format_type(cst::Type const&, Format_configuration const&) -> std::string;
+    // TODO: cst fwd
+
+    auto format_module(CST::Module const& module, Format_configuration const& config)
+        -> std::string;
+
+    auto format_definition(
+        cst::Arena const&           arena,
+        cst::Definition const&      definition,
+        Format_configuration const& config) -> std::string;
 
 } // namespace kieli

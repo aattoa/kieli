@@ -7,7 +7,6 @@
 #include <libcompiler/ast/ast.hpp>
 
 namespace libdesugar {
-
     namespace cst = kieli::cst;
     namespace ast = kieli::ast;
 
@@ -17,6 +16,7 @@ namespace libdesugar {
 
     struct Context {
         kieli::Database&  db;
+        cst::Arena const& cst;
         ast::Node_arena&  ast;
         kieli::Source_id  source;
         kieli::Identifier self_variable_identifier
@@ -63,19 +63,27 @@ namespace libdesugar {
 
         auto desugar(cst::Type_annotation const&) -> ast::Type;
 
-        auto desugar(utl::wrapper auto const node)
-        {
-            return wrap(desugar(*node));
-        }
-
         auto desugar() noexcept
         {
             return [this](auto const& node) { return this->desugar(node); };
         }
 
-        auto wrap_desugar()
+        auto wrap_desugar() noexcept
         {
-            return [this](auto const& node) { return wrap(this->desugar(node)); };
+            return [this](auto const& node) { return this->wrap(this->desugar(node)); };
+        }
+
+        auto deref_desugar(cst::Expression_id) -> ast::Expression;
+        auto deref_desugar(cst::Pattern_id) -> ast::Pattern;
+        auto deref_desugar(cst::Type_id) -> ast::Type;
+
+        auto desugar(cst::Expression_id) -> utl::Wrapper<ast::Expression>;
+        auto desugar(cst::Pattern_id) -> utl::Wrapper<ast::Pattern>;
+        auto desugar(cst::Type_id) -> utl::Wrapper<ast::Type>;
+
+        auto deref_desugar() noexcept
+        {
+            return [this](auto const& node) { return this->deref_desugar(node); };
         }
 
         template <class T>
@@ -110,11 +118,6 @@ namespace libdesugar {
         {
             return std::visit<ast::Template_mutability_parameter::Default>(
                 desugar(), default_argument.variant);
-        }
-
-        auto deref_desugar()
-        {
-            return [this](utl::wrapper auto const node) { return this->desugar(*node); };
         }
 
         auto desugar_mutability(cst::Mutability const&, kieli::Range) = delete;

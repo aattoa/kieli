@@ -171,25 +171,22 @@ namespace {
         }
     }
 
-    auto try_extract_path(Context& context, utl::Wrapper<cst::Type> const type)
-        -> utl::Wrapper<cst::Type>
+    auto try_extract_path(Context& context, cst::Type_id const type) -> cst::Type_id
     {
         Stage const stage = context.stage();
 
         if (auto const double_colon = context.try_extract(Token_type::double_colon)) {
-            auto path = extract_path(
-                context,
-                cst::Path_root {
-                    .variant            = type,
-                    .double_colon_token = cst::Token::from_lexical(double_colon.value()),
-                    .range              = type->range,
-                });
+            cst::Path_root root {
+                .variant            = type,
+                .double_colon_token = cst::Token::from_lexical(double_colon.value()),
+                .range              = context.cst().types[type].range,
+            };
+            cst::Path path = extract_path(context, std::move(root));
 
             if (path.head.is_upper()) {
-                return context.wrap(cst::Type {
+                return context.cst().types.push(
                     std::invoke([&]() -> cst::Type_variant {
-                        auto template_arguments = parse_template_arguments(context);
-                        if (template_arguments.has_value()) {
+                        if (auto template_arguments = parse_template_arguments(context)) {
                             return cst::type::Template_application {
                                 .template_arguments = std::move(template_arguments.value()),
                                 .path               = std::move(path),
@@ -197,8 +194,7 @@ namespace {
                         }
                         return cst::type::Typename { std::move(path) };
                     }),
-                    context.up_to_current(type->range),
-                });
+                    context.up_to_current(context.cst().types[type].range));
             }
             // Not a type path, retreat
             context.unstage(stage);
@@ -207,13 +203,13 @@ namespace {
     }
 } // namespace
 
-auto libparse::parse_type(Context& context) -> std::optional<utl::Wrapper<cst::Type>>
+auto libparse::parse_type(Context& context) -> std::optional<cst::Type_id>
 {
     Stage const stage       = context.stage();
     Token const first_token = context.extract();
     return dispatch_parse_type(context, first_token, stage)
-        .transform([&](cst::Type_variant&& variant) -> utl::Wrapper<cst::Type> {
-            auto const range = context.up_to_current(first_token.range);
-            return try_extract_path(context, context.wrap(cst::Type { std::move(variant), range }));
+        .transform([&](cst::Type_variant&& variant) -> cst::Type_id {
+            kieli::Range const range = context.up_to_current(first_token.range);
+            return try_extract_path(context, context.cst().types.push(std::move(variant), range));
         });
 }

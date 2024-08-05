@@ -47,7 +47,7 @@ namespace {
         {
             return ast::definition::Function {
                 .signature = context.desugar(function.signature),
-                .body      = normalize_function_body(context, context.desugar(*function.body)),
+                .body      = normalize_function_body(context, context.deref_desugar(function.body)),
             };
         }
 
@@ -78,7 +78,7 @@ namespace {
         {
             return ast::definition::Alias {
                 .name                = alias.name,
-                .type                = context.desugar(*alias.type),
+                .type                = context.deref_desugar(alias.type),
                 .template_parameters = alias.template_parameters.transform(context.desugar()),
             };
         }
@@ -112,7 +112,7 @@ namespace {
             -> ast::Definition_variant
         {
             return ast::definition::Implementation {
-                .type        = context.desugar(*implementation.self_type),
+                .type        = context.deref_desugar(implementation.self_type),
                 .definitions = context.desugar(implementation.definitions),
                 .template_parameters
                 = implementation.template_parameters.transform(context.desugar()),

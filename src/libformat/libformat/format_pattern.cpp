@@ -9,14 +9,14 @@ namespace {
         std::visit(
             utl::Overload {
                 [&](cst::pattern::Struct_constructor const& constructor) {
-                    state.format(" {{ ");
-                    state.format_comma_separated(constructor.fields.value.elements);
-                    state.format(" }}");
+                    format(state, " {{ ");
+                    format_comma_separated(state, constructor.fields.value.elements);
+                    format(state, " }}");
                 },
                 [&](cst::pattern::Tuple_constructor const& constructor) {
-                    state.format("(");
-                    state.format(constructor.pattern.value);
-                    state.format(")");
+                    format(state, "(");
+                    format(state, constructor.pattern.value);
+                    format(state, ")");
                 },
                 [](cst::pattern::Unit_constructor const&) {},
             },
@@ -28,76 +28,76 @@ namespace {
 
         auto operator()(kieli::literal auto const& literal)
         {
-            state.format("{}", literal);
+            format(state, "{}", literal);
         }
 
         auto operator()(cst::pattern::Parenthesized const& parenthesized)
         {
-            state.format("(");
-            state.format(parenthesized.pattern.value);
-            state.format(")");
+            format(state, "(");
+            format(state, parenthesized.pattern.value);
+            format(state, ")");
         }
 
         auto operator()(cst::pattern::Tuple const& tuple)
         {
-            state.format("(");
-            state.format_comma_separated(tuple.patterns.value.elements);
-            state.format(")");
+            format(state, "(");
+            format_comma_separated(state, tuple.patterns.value.elements);
+            format(state, ")");
         }
 
         auto operator()(cst::pattern::Slice const& slice)
         {
-            state.format("[");
-            state.format_comma_separated(slice.patterns.value.elements);
-            state.format("]");
+            format(state, "[");
+            format_comma_separated(state, slice.patterns.value.elements);
+            format(state, "]");
         }
 
         auto operator()(cst::Wildcard const& wildcard)
         {
-            state.format(wildcard);
+            format(state, wildcard);
         }
 
         auto operator()(cst::pattern::Name const& name)
         {
-            state.format_mutability_with_whitespace(name.mutability);
-            state.format("{}", name.name);
+            format_mutability_with_whitespace(state, name.mutability);
+            format(state, "{}", name.name);
         }
 
         auto operator()(cst::pattern::Alias const& alias)
         {
-            state.format(alias.pattern);
-            state.format(" as ");
-            state.format_mutability_with_whitespace(alias.mutability);
-            state.format("{}", alias.name);
+            format(state, alias.pattern);
+            format(state, " as ");
+            format_mutability_with_whitespace(state, alias.mutability);
+            format(state, "{}", alias.name);
         }
 
         auto operator()(cst::pattern::Guarded const& guarded)
         {
-            state.format(guarded.guarded_pattern);
-            state.format(" if ");
-            state.format(guarded.guard_expression);
+            format(state, guarded.guarded_pattern);
+            format(state, " if ");
+            format(state, guarded.guard_expression);
         }
 
         auto operator()(cst::pattern::Constructor const& constructor)
         {
-            state.format(constructor.path);
+            format(state, constructor.path);
             format_constructor_body(state, constructor.body);
         }
 
         auto operator()(cst::pattern::Abbreviated_constructor const& constructor)
         {
-            state.format("::{}", constructor.name);
+            format(state, "::{}", constructor.name);
             format_constructor_body(state, constructor.body);
         }
 
         auto operator()(cst::pattern::Top_level_tuple const& tuple)
         {
-            state.format_comma_separated(tuple.patterns.elements);
+            format_comma_separated(state, tuple.patterns.elements);
         }
     };
 } // namespace
 
-auto libformat::State::format(cst::Pattern const& pattern) -> void
+auto libformat::format(State& state, cst::Pattern const& pattern) -> void
 {
-    std::visit(Pattern_format_visitor { *this }, pattern.variant);
+    std::visit(Pattern_format_visitor { state }, pattern.variant);
 }
