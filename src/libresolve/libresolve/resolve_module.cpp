@@ -8,45 +8,6 @@
 using namespace libresolve;
 
 namespace {
-    [[noreturn]] auto report_import_error(
-        kieli::Database& db, kieli::Source_id const source, Import_error const& error) -> void
-    {
-        auto const message = std::format(
-            "No {} `{}` exists",
-            error.expected_module ? "module" : "directory",
-            error.erroneous_segment);
-        kieli::fatal_error(db, source, error.erroneous_segment.range, message);
-    }
-
-    auto collect_import_info(
-        Context&                  context,
-        kieli::Source_id const    source,
-        hir::Environment_id const environment,
-        Import&&                  import) -> void
-    {
-        add_to_environment(
-            context,
-            source,
-            context.info.environments[environment],
-            import.name,
-            context.info.modules.push(std::move(import), environment, source, import.name));
-    }
-
-    auto collect_import(
-        Context&                  context,
-        kieli::Source_id const    source,
-        hir::Environment_id const environment,
-        kieli::cst::Import const& import) -> void
-    {
-        auto resolved_import = resolve_import(context.configuration, import.segments.elements);
-        if (resolved_import.has_value()) {
-            collect_import_info(context, source, environment, std::move(resolved_import.value()));
-        }
-        else {
-            report_import_error(context.db, source, resolved_import.error());
-        }
-    }
-
     auto read_import_source(Import&& import, kieli::Source_vector& sources) -> kieli::Source_id
     {
         // TODO
@@ -75,18 +36,9 @@ namespace {
 auto libresolve::make_environment(Context& context, kieli::Source_id const source)
     -> hir::Environment_id
 {
-    auto const cst = kieli::parse(source, context.db);
-    auto       ast = kieli::desugar(cst, context.db);
-    context.ast.merge_with(std::move(ast.module->node_arena));
-
-    hir::Environment_id const environment
-        = collect_environment(context, source, std::move(ast.module->definitions));
-
-    std::ranges::for_each(
-        cst.module->imports,
-        std::bind_front(collect_import, std::ref(context), source, environment));
-
-    return environment;
+    (void)context;
+    (void)source;
+    cpputil::todo();
 }
 
 auto libresolve::resolve_module(Context& context, Module_info& module_info) -> hir::Environment_id

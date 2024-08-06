@@ -27,7 +27,6 @@ auto kieli::resolve_project(Project_configuration configuration) -> Resolved_pro
 
     libresolve::Context context {
         .db            = db,
-        .ast           = ast::Node_arena::with_default_page_size(),
         .hir           = std::move(hir),
         .constants     = std::move(constants),
         .configuration = std::move(configuration),

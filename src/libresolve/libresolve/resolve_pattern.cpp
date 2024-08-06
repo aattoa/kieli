@@ -107,7 +107,7 @@ namespace {
 
         auto operator()(ast::pattern::Alias const& alias) -> hir::Pattern
         {
-            hir::Pattern          pattern    = recurse(*alias.pattern);
+            hir::Pattern          pattern    = recurse(context.ast.patterns[alias.pattern]);
             hir::Mutability const mutability = resolve_mutability(context, scope, alias.mutability);
             hir::Local_variable_tag const tag = context.tags.fresh_local_variable_tag();
 
@@ -182,7 +182,7 @@ namespace {
 
         auto operator()(ast::pattern::Guarded const& guarded) -> hir::Pattern
         {
-            hir::Pattern    guarded_pattern = recurse(*guarded.guarded_pattern);
+            hir::Pattern guarded_pattern = recurse(context.ast.patterns[guarded.guarded_pattern]);
             hir::Expression guard_expression
                 = resolve_expression(context, state, scope, environment, guarded.guard_expression);
 

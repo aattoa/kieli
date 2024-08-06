@@ -17,23 +17,10 @@ namespace libdesugar {
     struct Context {
         kieli::Database&  db;
         cst::Arena const& cst;
-        ast::Node_arena&  ast;
+        ast::Arena&       ast;
         kieli::Source_id  source;
         kieli::Identifier self_variable_identifier
             = kieli::Identifier { db.string_pool.add("self") };
-
-        template <ast::node Node>
-        auto wrap(Node&& node) -> utl::Wrapper<Node>
-        {
-            return ast.wrap<Node>(static_cast<Node&&>(node));
-        }
-
-        [[nodiscard]] auto wrap() noexcept
-        {
-            return [this]<ast::node Node>(Node&& node) -> utl::Wrapper<Node> {
-                return wrap(static_cast<Node&&>(node));
-            };
-        }
 
         auto desugar(cst::Expression const&) -> ast::Expression;
         auto desugar(cst::Type const&) -> ast::Type;
@@ -61,25 +48,30 @@ namespace libdesugar {
         static auto desugar(cst::Self_parameter const&) -> ast::Self_parameter;
         static auto desugar(cst::Mutability const&) -> ast::Mutability;
 
-        auto desugar(cst::Type_annotation const&) -> ast::Type;
+        // auto desugar(cst::Type_annotation const&) -> ast::Type;
+        auto desugar(cst::Type_annotation const&) -> ast::Type_id;
 
         auto desugar() noexcept
         {
             return [this](auto const& node) { return this->desugar(node); };
         }
 
-        auto wrap_desugar() noexcept
-        {
-            return [this](auto const& node) { return this->wrap(this->desugar(node)); };
-        }
+        auto desugar(cst::Expression_id) -> ast::Expression_id;
+        auto desugar(cst::Pattern_id) -> ast::Pattern_id;
+        auto desugar(cst::Type_id) -> ast::Type_id;
+
+        auto wrap_desugar(cst::Expression const&) -> ast::Expression_id;
+        auto wrap_desugar(cst::Pattern const&) -> ast::Pattern_id;
+        auto wrap_desugar(cst::Type const&) -> ast::Type_id;
 
         auto deref_desugar(cst::Expression_id) -> ast::Expression;
         auto deref_desugar(cst::Pattern_id) -> ast::Pattern;
         auto deref_desugar(cst::Type_id) -> ast::Type;
 
-        auto desugar(cst::Expression_id) -> utl::Wrapper<ast::Expression>;
-        auto desugar(cst::Pattern_id) -> utl::Wrapper<ast::Pattern>;
-        auto desugar(cst::Type_id) -> utl::Wrapper<ast::Type>;
+        auto wrap_desugar() noexcept
+        {
+            return [this](auto const& node) { return this->wrap_desugar(node); };
+        }
 
         auto deref_desugar() noexcept
         {
@@ -89,7 +81,7 @@ namespace libdesugar {
         template <class T>
         auto desugar(std::vector<T> const& vector)
         {
-            return vector | std::views::transform(desugar()) | std::ranges::to<std::vector>();
+            return std::ranges::to<std::vector>(std::views::transform(vector, desugar()));
         }
 
         template <class T>

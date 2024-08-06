@@ -26,3 +26,15 @@ auto kieli::cst::Path::is_simple_name() const noexcept -> bool
 {
     return !root.has_value() && segments.elements.empty();
 }
+
+auto kieli::CST::get() const -> Module const&
+{
+    cpputil::always_assert(module != nullptr);
+    return *module;
+}
+
+auto kieli::CST::get() -> Module& // NOLINT(readability-make-member-function-const)
+{
+    cpputil::always_assert(module != nullptr);
+    return *module;
+}

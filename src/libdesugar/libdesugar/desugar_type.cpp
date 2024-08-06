@@ -81,7 +81,7 @@ namespace {
                 .parameter_types = function.parameter_types.value.elements
                                  | std::views::transform(context.deref_desugar())
                                  | std::ranges::to<std::vector>(),
-                .return_type = context.wrap(context.desugar(function.return_type)),
+                .return_type = context.desugar(function.return_type),
             };
         }
 

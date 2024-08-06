@@ -55,7 +55,7 @@ namespace libresolve {
 
     struct Context {
         kieli::Database&             db;
-        ast::Node_arena              ast;
+        ast::Arena                   ast;
         hir::Arena                   hir;
         Info_arena                   info;
         Tag_state                    tags;

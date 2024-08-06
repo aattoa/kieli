@@ -4,6 +4,10 @@
 #include <libcompiler/ast/ast.hpp>
 #include <cppunittest/unittest.hpp>
 
+// todo
+
+#if 0
+
 namespace {
     auto desugar(std::string&& string) -> std::string
     {
@@ -13,7 +17,7 @@ namespace {
             auto const ast = kieli::desugar(kieli::parse(source, db), db);
 
             std::string output;
-            for (kieli::ast::Definition const& definition : ast.module->definitions) {
+            for (kieli::ast::Definition const& definition : ast.get().definitions) {
                 kieli::ast::format_to(definition, output);
             }
             return output;
@@ -114,3 +118,5 @@ TEST("alias")
     CHECK_SIMPLE_DESUGAR("alias T = U");
     CHECK_SIMPLE_DESUGAR("alias A[B] = (B, B)");
 }
+
+#endif

@@ -20,8 +20,9 @@ namespace {
                         [&](ast::Wildcard const& wildcard) {
                             return hir::Wildcard { .range = wildcard.range };
                         },
-                        [&](utl::Wrapper<ast::Type> const type) {
-                            return resolve_type(context, state, scope, environment, *type);
+                        [&](ast::Type_id const type) {
+                            return resolve_type(
+                                context, state, scope, environment, context.ast.types[type]);
                         },
                         [&](ast::Mutability const& mutability) {
                             return resolve_mutability(context, scope, mutability);
@@ -45,8 +46,8 @@ namespace {
                     context, state, scope, environment, concept_reference);
             };
             return hir::Template_type_parameter {
-                .concepts = parameter.concepts | std::views::transform(resolve_concept)
-                          | std::ranges::to<std::vector>(),
+                .concepts = std::ranges::to<std::vector>(
+                    std::views::transform(parameter.concepts, resolve_concept)),
                 .name             = parameter.name,
                 .default_argument = parameter.default_argument.transform(
                     resolve_default_argument<hir::Template_type_parameter::Default>()),

@@ -1,7 +1,7 @@
 #pragma once
 
 #include <libutl/utilities.hpp>
-#include <libutl/wrapper.hpp>
+#include <libutl/index_vector.hpp>
 #include <libcompiler/compiler.hpp>
 #include <libcompiler/tree_fwd.hpp>
 
@@ -20,6 +20,18 @@
 */
 
 namespace kieli::ast {
+    struct Expression_id : utl::Vector_index<Expression_id> {
+        using Vector_index::Vector_index;
+    };
+
+    struct Pattern_id : utl::Vector_index<Pattern_id> {
+        using Vector_index::Vector_index;
+    };
+
+    struct Type_id : utl::Vector_index<Type_id> {
+        using Vector_index::Vector_index;
+    };
+
     struct [[nodiscard]] Expression;
     struct [[nodiscard]] Type;
     struct [[nodiscard]] Pattern;
@@ -46,8 +58,7 @@ namespace kieli::ast {
         kieli::Range       range;
     };
 
-    struct Template_argument
-        : std::variant<utl::Wrapper<Type>, utl::Wrapper<Expression>, Mutability, Wildcard> {
+    struct Template_argument : std::variant<Type_id, Expression_id, Mutability, Wildcard> {
         using variant::variant, variant::operator=;
     };
 
@@ -58,7 +69,7 @@ namespace kieli::ast {
 
     struct Path_root_global {};
 
-    struct Path_root : std::variant<Path_root_global, utl::Wrapper<Type>> {
+    struct Path_root : std::variant<Path_root_global, Type_id> {
         using variant::variant, variant::operator=;
     };
 
@@ -77,17 +88,17 @@ namespace kieli::ast {
     };
 
     struct Template_type_parameter {
-        using Default = std::variant<utl::Wrapper<Type>, Wildcard>;
+        using Default = std::variant<Type_id, Wildcard>;
         kieli::Upper                   name;
         std::vector<Concept_reference> concepts;
         std::optional<Default>         default_argument;
     };
 
     struct Template_value_parameter {
-        using Default = std::variant<utl::Wrapper<Expression>, Wildcard>;
-        kieli::Lower                      name;
-        std::optional<utl::Wrapper<Type>> type;
-        std::optional<Default>            default_argument;
+        using Default = std::variant<Expression_id, Wildcard>;
+        kieli::Lower           name;
+        std::optional<Type_id> type;
+        std::optional<Default> default_argument;
     };
 
     struct Template_mutability_parameter {
@@ -112,14 +123,14 @@ namespace kieli::ast {
     using Template_parameters = std::optional<std::vector<Template_parameter>>;
 
     struct Function_argument {
-        utl::Wrapper<Expression>    expression;
+        Expression_id               expression;
         std::optional<kieli::Lower> name;
     };
 
     struct Function_parameter {
-        utl::Wrapper<Pattern>                   pattern;
-        std::optional<utl::Wrapper<Type>>       type;
-        std::optional<utl::Wrapper<Expression>> default_argument;
+        Pattern_id                   pattern;
+        std::optional<Type_id>       type;
+        std::optional<Expression_id> default_argument;
     };
 
     enum class Loop_source { plain_loop, while_loop, for_loop };
@@ -141,24 +152,24 @@ namespace kieli::ast {
         };
 
         struct Loop {
-            utl::Wrapper<Expression>   body;
+            Expression_id              body;
             utl::Explicit<Loop_source> source;
         };
 
         struct Continue {};
 
         struct Break {
-            utl::Wrapper<Expression> result;
+            Expression_id result;
         };
 
         struct Block {
-            std::vector<Expression>  side_effects;
-            utl::Wrapper<Expression> result;
+            std::vector<Expression> side_effects;
+            Expression_id           result;
         };
 
         struct Invocation {
             std::vector<Function_argument> arguments;
-            utl::Wrapper<Expression>       invocable;
+            Expression_id                  invocable;
         };
 
         struct Unit_initializer {
@@ -166,14 +177,14 @@ namespace kieli::ast {
         };
 
         struct Tuple_initializer {
-            Path                                  constructor_path;
-            std::vector<utl::Wrapper<Expression>> initializers;
+            Path                       constructor_path;
+            std::vector<Expression_id> initializers;
         };
 
         struct Struct_initializer {
             struct Field {
-                kieli::Lower             name;
-                utl::Wrapper<Expression> expression;
+                kieli::Lower  name;
+                Expression_id expression;
             };
 
             Path               constructor_path;
@@ -181,51 +192,51 @@ namespace kieli::ast {
         };
 
         struct Binary_operator_invocation {
-            utl::Wrapper<Expression> left;
-            utl::Wrapper<Expression> right;
-            kieli::Identifier        op;
-            kieli::Range             op_range;
+            Expression_id     left;
+            Expression_id     right;
+            kieli::Identifier op;
+            kieli::Range      op_range;
         };
 
         struct Struct_field_access {
-            utl::Wrapper<Expression> base_expression;
-            kieli::Lower             field_name;
+            Expression_id base_expression;
+            kieli::Lower  field_name;
         };
 
         struct Tuple_field_access {
-            utl::Wrapper<Expression>   base_expression;
+            Expression_id              base_expression;
             utl::Explicit<std::size_t> field_index;
             kieli::Range               field_index_range;
         };
 
         struct Array_index_access {
-            utl::Wrapper<Expression> base_expression;
-            utl::Wrapper<Expression> index_expression;
+            Expression_id base_expression;
+            Expression_id index_expression;
         };
 
         struct Method_invocation {
             std::vector<Function_argument>                function_arguments;
             std::optional<std::vector<Template_argument>> template_arguments;
-            utl::Wrapper<Expression>                      base_expression;
+            Expression_id                                 base_expression;
             kieli::Lower                                  method_name;
         };
 
         struct Conditional {
-            utl::Wrapper<Expression>          condition;
-            utl::Wrapper<Expression>          true_branch;
-            utl::Wrapper<Expression>          false_branch;
+            Expression_id                     condition;
+            Expression_id                     true_branch;
+            Expression_id                     false_branch;
             utl::Explicit<Conditional_source> source;
             utl::Explicit<bool>               has_explicit_false_branch;
         };
 
         struct Match {
             struct Case {
-                utl::Wrapper<Pattern>    pattern;
-                utl::Wrapper<Expression> expression;
+                Pattern_id    pattern;
+                Expression_id expression;
             };
 
-            std::vector<Case>        cases;
-            utl::Wrapper<Expression> expression;
+            std::vector<Case> cases;
+            Expression_id     expression;
         };
 
         struct Template_application {
@@ -234,57 +245,57 @@ namespace kieli::ast {
         };
 
         struct Type_cast {
-            utl::Wrapper<Expression> expression;
-            utl::Wrapper<Type>       target_type;
+            Expression_id expression;
+            Type_id       target_type;
         };
 
         struct Type_ascription {
-            utl::Wrapper<Expression> expression;
-            utl::Wrapper<Type>       ascribed_type;
+            Expression_id expression;
+            Type_id       ascribed_type;
         };
 
         struct Let_binding {
-            utl::Wrapper<Pattern>             pattern;
-            utl::Wrapper<Expression>          initializer;
-            std::optional<utl::Wrapper<Type>> type;
+            Pattern_id             pattern;
+            Expression_id          initializer;
+            std::optional<Type_id> type;
         };
 
         struct Local_type_alias {
-            kieli::Upper       name;
-            utl::Wrapper<Type> type;
+            kieli::Upper name;
+            Type_id      type;
         };
 
         struct Ret {
-            std::optional<utl::Wrapper<Expression>> expression;
+            std::optional<Expression_id> expression;
         };
 
         struct Sizeof {
-            utl::Wrapper<Type> inspected_type;
+            Type_id inspected_type;
         };
 
         struct Addressof {
-            Mutability               mutability;
-            utl::Wrapper<Expression> place_expression;
+            Mutability    mutability;
+            Expression_id place_expression;
         };
 
         struct Dereference {
-            utl::Wrapper<Expression> reference_expression;
+            Expression_id reference_expression;
         };
 
         struct Unsafe {
-            utl::Wrapper<Expression> expression;
+            Expression_id expression;
         };
 
         struct Move {
-            utl::Wrapper<Expression> place_expression;
+            Expression_id place_expression;
         };
 
         struct Defer {
-            utl::Wrapper<Expression> expression;
+            Expression_id expression;
         };
 
         struct Meta {
-            utl::Wrapper<Expression> expression;
+            Expression_id expression;
         };
 
         struct Hole {};
@@ -345,8 +356,8 @@ namespace kieli::ast {
         };
 
         struct Field {
-            kieli::Lower                         name;
-            std::optional<utl::Wrapper<Pattern>> pattern;
+            kieli::Lower              name;
+            std::optional<Pattern_id> pattern;
         };
 
         struct Struct_constructor {
@@ -354,7 +365,7 @@ namespace kieli::ast {
         };
 
         struct Tuple_constructor {
-            utl::Wrapper<Pattern> pattern;
+            Pattern_id pattern;
         };
 
         struct Unit_constructor {};
@@ -383,14 +394,14 @@ namespace kieli::ast {
         };
 
         struct Alias {
-            kieli::Lower          name;
-            Mutability            mutability;
-            utl::Wrapper<Pattern> pattern;
+            kieli::Lower name;
+            Mutability   mutability;
+            Pattern_id   pattern;
         };
 
         struct Guarded {
-            utl::Wrapper<Pattern> guarded_pattern;
-            Expression            guard_expression;
+            Pattern_id guarded_pattern;
+            Expression guard_expression;
         };
     } // namespace pattern
 
@@ -429,31 +440,31 @@ namespace kieli::ast {
         };
 
         struct Array {
-            utl::Wrapper<Type>       element_type;
-            utl::Wrapper<Expression> length;
+            Type_id       element_type;
+            Expression_id length;
         };
 
         struct Slice {
-            utl::Wrapper<Type> element_type;
+            Type_id element_type;
         };
 
         struct Function {
-            std::vector<Type>  parameter_types;
-            utl::Wrapper<Type> return_type;
+            std::vector<Type> parameter_types;
+            Type_id           return_type;
         };
 
         struct Typeof {
-            utl::Wrapper<Expression> inspected_expression;
+            Expression_id inspected_expression;
         };
 
         struct Reference {
-            utl::Wrapper<Type> referenced_type;
-            Mutability         mutability;
+            Type_id    referenced_type;
+            Mutability mutability;
         };
 
         struct Pointer {
-            utl::Wrapper<Type> pointee_type;
-            Mutability         mutability;
+            Type_id    pointee_type;
+            Mutability mutability;
         };
 
         struct Implementation {
@@ -529,7 +540,7 @@ namespace kieli::ast {
         };
 
         struct Tuple_constructor {
-            std::vector<utl::Wrapper<Type>> types;
+            std::vector<Type_id> types;
         };
 
         struct Unit_constructor {};
@@ -593,34 +604,14 @@ namespace kieli::ast {
         kieli::Range       range;
     };
 
-    template <class T>
-    concept node = utl::one_of<T, Expression, Type, Pattern>;
-
-    using Node_arena = utl::Wrapper_arena<Expression, Type, Pattern>;
-
-    auto format_to(Expression const&, std::string&) -> void;
-    auto format_to(Pattern const&, std::string&) -> void;
-    auto format_to(Type const&, std::string&) -> void;
-    auto format_to(Definition const&, std::string&) -> void;
-    auto format_to(Mutability const&, std::string&) -> void;
-    auto format_to(Path const&, std::string&) -> void;
-    auto format_to(Concept_reference const&, std::string&) -> void;
-    auto format_to(Function_parameter const&, std::string&) -> void;
-    auto format_to(Function_argument const&, std::string&) -> void;
-    auto format_to(Template_parameter const&, std::string&) -> void;
-    auto format_to(Template_argument const&, std::string&) -> void;
-    auto format_to(Template_parameters const&, std::string&) -> void;
-
-    auto to_string(auto const& x) -> std::string
-        requires requires(std::string out) { ast::format_to(x, out); }
-    {
-        std::string output;
-        ast::format_to(x, output);
-        return output;
+    struct Arena {
+        utl::Index_vector<Expression_id, Expression> expressions;
+        utl::Index_vector<Pattern_id, Pattern>       patterns;
+        utl::Index_vector<Type_id, Type>             types;
     };
 } // namespace kieli::ast
 
 struct kieli::AST::Module {
     std::vector<ast::Definition> definitions;
-    ast::Node_arena              node_arena;
+    ast::Arena                   arena;
 };

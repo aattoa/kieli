@@ -17,6 +17,9 @@ namespace kieli {
         CST(CST&&) noexcept;
         auto operator=(CST&&) noexcept -> CST&;
         ~CST();
+
+        [[nodiscard]] auto get() const -> Module const&;
+        [[nodiscard]] auto get() -> Module&;
     };
 
     // Abstract syntax tree
@@ -29,6 +32,9 @@ namespace kieli {
         AST(AST&&) noexcept;
         auto operator=(AST&&) noexcept -> AST&;
         ~AST();
+
+        [[nodiscard]] auto get() const -> Module const&;
+        [[nodiscard]] auto get() -> Module&;
     };
 
 } // namespace kieli

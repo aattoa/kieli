@@ -68,42 +68,37 @@ namespace {
         if (precedence == std::numeric_limits<std::size_t>::max()) {
             return context.deref_desugar(leftmost_expression);
         }
-
         auto const recurse = [&](cst::Expression_id const leftmost) {
             return desugar_operator_chain(context, leftmost, precedence - 1, tail);
         };
 
         ast::Expression left = recurse(leftmost_expression);
         while (!tail.empty()) {
-            auto const& [right_operand, operator_name] = tail.front();
+            auto const& [rhs, op] = tail.front();
             if (precedence != lowest_operator_precedence) {
                 auto const operators = operator_precedence_table.at(precedence);
-                if (!std::ranges::contains(operators, operator_name.identifier.view())) {
+                if (!std::ranges::contains(operators, op.identifier.view())) {
                     return left;
                 }
             }
-
             tail = tail.subspan<1>();
             left = ast::Expression {
                 ast::expression::Binary_operator_invocation {
-                    .left     = context.wrap(std::move(left)),
-                    .right    = context.wrap(recurse(right_operand)),
-                    .op       = operator_name.identifier,
-                    .op_range = operator_name.range,
+                    .left     = context.ast.expressions.push(std::move(left)),
+                    .right    = context.ast.expressions.push(recurse(rhs)),
+                    .op       = op.identifier,
+                    .op_range = op.range,
                 },
-                kieli::Range(left.range.start, context.cst.expressions[right_operand].range.stop),
+                kieli::Range(left.range.start, context.cst.expressions[rhs].range.stop),
             };
         }
         return left;
     }
 
-    auto break_expression(Context& context, kieli::Range const range)
-        -> utl::Wrapper<ast::Expression>
+    auto break_expression(Context& context, kieli::Range const range) -> ast::Expression_id
     {
-        return context.wrap(ast::Expression {
-            .variant = ast::expression::Break { context.wrap(unit_value(range)) },
-            .range   = range,
-        });
+        return context.ast.expressions.push(
+            ast::expression::Break { context.ast.expressions.push(unit_value(range)) }, range);
     }
 
     struct Expression_desugaring_visitor {
@@ -154,10 +149,10 @@ namespace {
 
         auto operator()(cst::expression::Conditional const& conditional) -> ast::Expression_variant
         {
-            utl::Wrapper<ast::Expression> const false_branch
+            ast::Expression_id const false_branch
                 = conditional.false_branch.has_value()
                     ? context.desugar(conditional.false_branch->body)
-                    : context.wrap(unit_value(this_expression.range));
+                    : context.ast.expressions.push(unit_value(this_expression.range));
 
             if (auto const* const let = std::get_if<cst::expression::Conditional_let>(
                     &context.cst.expressions[conditional.condition].variant)) {
@@ -179,7 +174,7 @@ namespace {
                             .expression = context.desugar(conditional.true_branch),
                         },
                         ast::expression::Match::Case {
-                            .pattern = context.wrap(
+                            .pattern = context.ast.patterns.push(
                                 wildcard_pattern(context.cst.patterns[let->pattern].range)),
                             .expression = false_branch,
                         },
@@ -189,18 +184,18 @@ namespace {
                 };
             }
 
-            utl::Wrapper<ast::Expression> const condition = context.desugar(conditional.condition);
-            if (std::holds_alternative<kieli::Boolean>(condition->variant)) {
+            ast::Expression condition = context.deref_desugar(conditional.condition);
+            if (std::holds_alternative<kieli::Boolean>(condition.variant)) {
                 kieli::emit_diagnostic(
                     cppdiag::Severity::information,
                     context.db,
                     context.source,
-                    condition->range,
+                    condition.range,
                     "Constant condition");
             }
 
             return ast::expression::Conditional {
-                .condition    = condition,
+                .condition    = context.ast.expressions.push(std::move(condition)),
                 .true_branch  = context.desugar(conditional.true_branch),
                 .false_branch = false_branch,
                 .source       = conditional.is_elif.get() ? ast::Conditional_source::elif
@@ -218,8 +213,8 @@ namespace {
                 };
             };
             return ast::expression::Match {
-                .cases = std::views::transform(match.cases.value, desugar_case)
-                       | std::ranges::to<std::vector>(),
+                .cases = std::ranges::to<std::vector>(
+                    std::views::transform(match.cases.value, desugar_case)),
                 .expression = context.desugar(match.matched_expression),
             };
         }
@@ -239,7 +234,7 @@ namespace {
             }
             return ast::expression::Block {
                 .side_effects = std::move(side_effects),
-                .result       = context.wrap(unit_value(block.close_brace_token.range)),
+                .result = context.ast.expressions.push(unit_value(block.close_brace_token.range)),
             };
         }
 
@@ -259,25 +254,22 @@ namespace {
                     }
                 }
             */
-
-            return ast::expression::Loop {
-                .body = context.wrap(ast::Expression {
-                    ast::expression::Match {
-                        .cases      = utl::to_vector({
-                            ast::expression::Match::Case {
-                                context.desugar(let.pattern),
-                                context.desugar(loop.body),
-                            },
-                            ast::expression::Match::Case {
-                                context.wrap(wildcard_pattern(this_expression.range)),
-                                break_expression(context, this_expression.range),
-                            },
-                        }),
-                        .expression = context.desugar(let.initializer),
+            ast::expression::Match match {
+                .cases      = utl::to_vector({
+                    ast::expression::Match::Case {
+                        context.desugar(let.pattern),
+                        context.desugar(loop.body),
                     },
-                    context.cst.expressions[loop.body].range,
+                    ast::expression::Match::Case {
+                        context.ast.patterns.push(wildcard_pattern(this_expression.range)),
+                        break_expression(context, this_expression.range),
+                    },
                 }),
-
+                .expression = context.desugar(let.initializer),
+            };
+            return ast::expression::Loop {
+                .body = context.ast.expressions.push(
+                    std::move(match), context.cst.expressions[loop.body].range),
                 .source = ast::Loop_source::while_loop,
             };
         }
@@ -291,29 +283,27 @@ namespace {
 
                 loop { if a { b } else { break } }
             */
-
-            auto const condition = context.desugar(loop.condition);
-            if (auto const* const boolean = std::get_if<kieli::Boolean>(&condition->variant)) {
+            ast::Expression condition = context.deref_desugar(loop.condition);
+            if (auto const* const boolean = std::get_if<kieli::Boolean>(&condition.variant)) {
                 kieli::emit_diagnostic(
                     cppdiag::Severity::information,
                     context.db,
                     context.source,
-                    condition->range,
+                    condition.range,
                     "Constant condition",
                     boolean->value ? "Consider using `loop` instead of `while true`"
                                    : "The loop body will never be executed");
             }
+            ast::expression::Conditional conditional {
+                .condition                 = context.ast.expressions.push(std::move(condition)),
+                .true_branch               = context.desugar(loop.body),
+                .false_branch              = break_expression(context, this_expression.range),
+                .source                    = ast::Conditional_source::while_loop_body,
+                .has_explicit_false_branch = true,
+            };
             return ast::expression::Loop {
-                .body = context.wrap(ast::Expression {
-                    .variant = ast::expression::Conditional {
-                        .condition    = condition,
-                        .true_branch  = context.desugar(loop.body),
-                        .false_branch = break_expression(context, this_expression.range),
-                        .source                    = ast::Conditional_source::while_loop_body,
-                        .has_explicit_false_branch = true,
-                    },
-                    .range = context.cst.expressions[loop.body].range,
-                }),
+                .body = context.ast.expressions.push(
+                    std::move(conditional), context.cst.expressions[loop.body].range),
                 .source = ast::Loop_source::while_loop,
             };
         }
@@ -447,7 +437,7 @@ namespace {
             return ast::expression::Let_binding {
                 .pattern     = context.desugar(let.pattern),
                 .initializer = context.desugar(let.initializer),
-                .type        = let.type.transform(context.wrap_desugar()),
+                .type        = let.type.transform(context.desugar()),
             };
         }
 
@@ -473,19 +463,16 @@ namespace {
 
                 { let _ = x; () }
             */
-
+            ast::expression::Let_binding let {
+                .pattern     = context.ast.patterns.push(wildcard_pattern(this_expression.range)),
+                .initializer = context.desugar(discard.discarded_expression),
+                .type        = std::nullopt,
+            };
             return ast::expression::Block {
                 .side_effects = utl::to_vector({
-                    ast::Expression {
-                        ast::expression::Let_binding {
-                            .pattern     = context.wrap(wildcard_pattern(this_expression.range)),
-                            .initializer = context.desugar(discard.discarded_expression),
-                            .type        = std::nullopt,
-                        },
-                        this_expression.range,
-                    },
+                    ast::Expression { std::move(let), this_expression.range },
                 }),
-                .result       = context.wrap(unit_value(this_expression.range)),
+                .result       = context.ast.expressions.push(unit_value(this_expression.range)),
             };
         }
 
@@ -494,7 +481,7 @@ namespace {
             return ast::expression::Break {
                 break_expression.result.has_value()
                     ? context.desugar(break_expression.result.value())
-                    : context.wrap(unit_value(this_expression.range)),
+                    : context.ast.expressions.push(unit_value(this_expression.range)),
             };
         }
 
@@ -520,13 +507,13 @@ namespace {
         auto operator()(cst::expression::Dereference const& dereference) -> ast::Expression_variant
         {
             return ast::expression::Dereference {
-                .reference_expression = context.desugar(dereference.reference_expression),
+                context.desugar(dereference.reference_expression),
             };
         }
 
         auto operator()(cst::expression::Unsafe const& unsafe) -> ast::Expression_variant
         {
-            return ast::expression::Unsafe { .expression = context.desugar(unsafe.expression) };
+            return ast::expression::Unsafe { context.desugar(unsafe.expression) };
         }
 
         auto operator()(cst::expression::Move const& move) -> ast::Expression_variant
@@ -541,7 +528,7 @@ namespace {
 
         auto operator()(cst::expression::Meta const& meta) -> ast::Expression_variant
         {
-            return ast::expression::Meta { .expression = context.desugar(meta.expression.value) };
+            return ast::expression::Meta { context.desugar(meta.expression.value) };
         }
 
         auto operator()(cst::expression::Hole const&) -> ast::Expression_variant

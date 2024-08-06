@@ -13,18 +13,18 @@ namespace {
     {
         cpputil::always_assert(parameter.type.has_value()); // TODO
 
-        hir::Pattern pattern
-            = resolve_pattern(context, state, scope, environment, *parameter.pattern);
-        hir::Type const type
-            = resolve_type(context, state, scope, environment, *parameter.type.value());
+        hir::Pattern pattern = resolve_pattern(
+            context, state, scope, environment, context.ast.patterns[parameter.pattern]);
+        hir::Type const type = resolve_type(
+            context, state, scope, environment, context.ast.types[parameter.type.value()]);
 
         require_subtype_relationship(
             context, state, context.hir.types[pattern.type], context.hir.types[type.id]);
 
         auto default_argument = parameter.default_argument.transform(
-            [&](utl::Wrapper<ast::Expression> const argument) {
-                hir::Expression expression
-                    = resolve_expression(context, state, scope, environment, *argument);
+            [&](ast::Expression_id const argument) {
+                hir::Expression expression = resolve_expression(
+                    context, state, scope, environment, context.ast.expressions[argument]);
                 require_subtype_relationship(
                     context, state, context.hir.types[expression.type], context.hir.types[type.id]);
                 return expression;

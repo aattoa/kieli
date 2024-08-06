@@ -58,18 +58,13 @@ namespace {
     auto debug_parse(kieli::Source_id const source, kieli::Database& db) -> void
     {
         auto const cst = kieli::parse(source, db);
-        std::print("{}", kieli::format_module(*cst.module, kieli::Format_configuration {}));
+        std::print("{}", kieli::format_module(cst.get(), kieli::Format_configuration {}));
     }
 
     auto debug_desugar(kieli::Source_id const source, kieli::Database& db) -> void
     {
         auto const ast = kieli::desugar(kieli::parse(source, db), db);
-
-        std::string output;
-        for (kieli::ast::Definition const& definition : ast.module->definitions) {
-            kieli::ast::format_to(definition, output);
-        }
-        std::print("{}\n\n", output);
+        (void)ast; // TODO
     }
 
     auto debug_resolve(kieli::Source_id const source, kieli::Database& db) -> void
@@ -79,7 +74,6 @@ namespace {
 
         libresolve::Context context {
             .db        = db,
-            .ast       = kieli::ast::Node_arena::with_default_page_size(),
             .hir       = std::move(hir),
             .constants = std::move(constants),
         };

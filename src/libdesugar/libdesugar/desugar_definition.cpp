@@ -32,11 +32,11 @@ namespace {
         if (std::holds_alternative<ast::expression::Block>(expression.variant)) {
             return expression;
         }
-        auto const range = expression.range;
-        return ast::Expression {
-            .variant = ast::expression::Block { .result = context.wrap(std::move(expression)) },
-            .range   = range,
+        auto range = expression.range;
+        auto block = ast::expression::Block {
+            .result = context.ast.expressions.push(std::move(expression)),
         };
+        return ast::Expression { std::move(block), range };
     }
 
     struct Definition_desugaring_visitor {
@@ -134,7 +134,7 @@ auto libdesugar::Context::desugar(cst::definition::Field const& field) -> ast::d
 {
     return ast::definition::Field {
         .name  = field.name,
-        .type  = desugar(field.type),
+        .type  = deref_desugar(field.type.type),
         .range = field.range,
     };
 };

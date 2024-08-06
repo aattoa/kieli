@@ -116,16 +116,16 @@ namespace {
         auto operator()(ast::type::Array const& array) -> hir::Type
         {
             hir::type::Array type {
-                .element_type = recurse(*array.element_type),
-                .length       = context.hir.expressions.push(
-                    resolve_expression(context, state, scope, environment, *array.length)),
+                .element_type = recurse(context.ast.types[array.element_type]),
+                .length       = context.hir.expressions.push(resolve_expression(
+                    context, state, scope, environment, context.ast.expressions[array.length])),
             };
             return { context.hir.types.push(std::move(type)), this_type.range };
         }
 
         auto operator()(ast::type::Slice const& slice) -> hir::Type
         {
-            hir::type::Slice type { .element_type = recurse(*slice.element_type) };
+            hir::type::Slice type { recurse(context.ast.types[slice.element_type]) };
             return { context.hir.types.push(std::move(type)), this_type.range };
         }
 
@@ -134,23 +134,27 @@ namespace {
             hir::type::Function type {
                 .parameter_types = std::views::transform(function.parameter_types, recurse())
                                  | std::ranges::to<std::vector>(),
-                .return_type = recurse(*function.return_type),
+                .return_type = recurse(context.ast.types[function.return_type]),
             };
             return { context.hir.types.push(std::move(type)), this_type.range };
         }
 
         auto operator()(ast::type::Typeof const& typeof_) -> hir::Type
         {
-            auto       typeof_scope = scope.child();
+            Scope      typeof_scope = scope.child();
             auto const expression   = resolve_expression(
-                context, state, typeof_scope, environment, *typeof_.inspected_expression);
+                context,
+                state,
+                typeof_scope,
+                environment,
+                context.ast.expressions[typeof_.inspected_expression]);
             return { expression.type, this_type.range };
         }
 
         auto operator()(ast::type::Reference const& reference) -> hir::Type
         {
             hir::type::Reference type {
-                .referenced_type = recurse(*reference.referenced_type),
+                .referenced_type = recurse(context.ast.types[reference.referenced_type]),
                 .mutability      = resolve_mutability(context, scope, reference.mutability),
             };
             return { context.hir.types.push(std::move(type)), this_type.range };
@@ -159,7 +163,7 @@ namespace {
         auto operator()(ast::type::Pointer const& pointer) -> hir::Type
         {
             hir::type::Pointer type {
-                .pointee_type = recurse(*pointer.pointee_type),
+                .pointee_type = recurse(context.ast.types[pointer.pointee_type]),
                 .mutability   = resolve_mutability(context, scope, pointer.mutability),
             };
             return { context.hir.types.push(std::move(type)), this_type.range };

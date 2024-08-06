@@ -20,23 +20,27 @@
 - Scope stack, scope id
 - Generate logs for rollback
 
+## Language server
+- request.cpp, notification.cpp
+- shutdown, exit
+
 ## Build process
 - Profile compilation with `-ftime-trace`
 - Try the mold linker, `-fuse-ld=mold`
+- git submodules?
 
 ## Miscellaneous
 - Attributes/annotations
+- First class testing
 - Inline concepts
-- git submodules
 - Definition source hash
 - Range should store width only?
 - Union types `Int|Float`
-- Allow omission of repeated parameter types ?
-- in, inout, out, mv, fwd ?
+- Allow omission of repeated parameter types?
+- in, inout, out, mv, fwd?
 - libtommath for arbitrary precision integers?
 - String interpolation
-- First class testing
-- lsp column offsets are utf8
+- lsp character offsets are utf8
 - Configure builds with `build.kieli`
 - Backends: bytecode, C, x86 asm
 

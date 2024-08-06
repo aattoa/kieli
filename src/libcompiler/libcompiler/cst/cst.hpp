@@ -800,9 +800,6 @@ namespace kieli::cst {
         kieli::Range       range;
     };
 
-    template <class T>
-    concept node = utl::one_of<T, Expression, Type, Pattern>;
-
     struct Arena {
         utl::Index_vector<Expression_id, Expression> expressions;
         utl::Index_vector<Pattern_id, Pattern>       patterns;
