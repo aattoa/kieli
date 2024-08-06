@@ -88,6 +88,18 @@ namespace {
         } };
     }
 
+    auto format_options_from_json(Json::Object const& object) -> kieli::Format_configuration
+    {
+        kieli::Format_configuration config;
+        if (auto const it = object.find("tabSize"); it != object.end()) {
+            config.tab_size = it->second.as_number();
+        }
+        if (auto const it = object.find("insertSpaces"); it != object.end()) {
+            config.use_spaces = it->second.as_boolean();
+        }
+        return config;
+    }
+
     auto markdown_content_to_json(std::string markdown) -> Json
     {
         return Json { Json::Object {
@@ -138,7 +150,8 @@ namespace {
                 return kieli::query::cst(db, source); //
             })
             .transform([&](kieli::CST const& cst) {
-                return kieli::format_module(*cst.module, kieli::Format_configuration {});
+                auto const config = format_options_from_json(params.at("options").as_object());
+                return kieli::format_module(cst.get(), config);
             })
             .transform(document_format_edit);
     }
