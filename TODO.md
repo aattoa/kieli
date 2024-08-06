@@ -47,6 +47,3 @@
 ## Look into for potential inspiration
 - Swift actors
 - Go generics
-
-## To-remove
-- `utl::Wrapper`, use index vectors instead
