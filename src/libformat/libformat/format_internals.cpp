@@ -1,20 +1,25 @@
 #include <libutl/utilities.hpp>
 #include <libformat/format_internals.hpp>
 
-auto libformat::State::newline(std::size_t count) const noexcept -> Newline
+auto libformat::State::newline(std::size_t const lines) const noexcept -> Newline
 {
-    return { .indentation = indentation, .count = count };
+    return {
+        .indentation = indentation,
+        .lines       = lines,
+        .tab_size    = config.tab_size,
+        .use_spaces  = config.use_spaces,
+    };
 }
 
 auto libformat::State::indent() noexcept -> Indentation
 {
-    indentation += config.block_indentation;
+    ++indentation;
     return { .state = *this };
 }
 
 libformat::Indentation::~Indentation()
 {
-    state.indentation -= state.config.block_indentation;
+    --state.indentation;
 }
 
 auto libformat::format(State& state, cst::Expression_id const id) -> void
@@ -58,7 +63,7 @@ auto libformat::format(State& state, cst::Path const& path) -> void
                     format(state, "::");
                 },
             },
-            path.root->variant);
+            path.root.value().variant);
     }
     for (auto const& segment : path.segments.elements) {
         format(state, "{}", segment.name);

@@ -10,7 +10,9 @@ namespace libformat {
 
     struct [[nodiscard]] Newline {
         std::size_t indentation {};
-        std::size_t count {};
+        std::size_t lines {};
+        std::size_t tab_size {};
+        bool        use_spaces {};
     };
 
     struct [[nodiscard]] Indentation {
@@ -24,7 +26,7 @@ namespace libformat {
         std::size_t                 indentation {};
         cst::Arena const&           arena;
 
-        auto newline(std::size_t count = 1) const noexcept -> Newline;
+        auto newline(std::size_t lines = 1) const noexcept -> Newline;
         auto indent() noexcept -> Indentation;
     };
 
@@ -115,11 +117,18 @@ struct std::formatter<libformat::Newline> {
         return context.begin();
     }
 
-    static auto format(libformat::Newline const newline, auto& context)
+    static auto format(libformat::Newline const& newline, auto& context)
     {
         auto out = context.out();
-        utl::times(newline.count, [&] { *out++ = '\n'; });
-        utl::times(newline.indentation, [&] { *out++ = ' '; });
+        utl::times(newline.lines, [&] { *out++ = '\n'; });
+
+        if (newline.use_spaces) {
+            utl::times(newline.indentation * newline.tab_size, [&] { *out++ = ' '; });
+        }
+        else {
+            utl::times(newline.indentation, [&] { *out++ = '\t'; });
+        }
+
         return out;
     }
 };

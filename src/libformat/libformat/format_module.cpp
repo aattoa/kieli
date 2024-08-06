@@ -14,7 +14,7 @@ namespace {
         }
         format(state, definitions.front());
         for (auto it = definitions.begin() + 1; it != definitions.end(); ++it) {
-            format(state, "{}", state.newline(state.config.space_between_definitions + 1));
+            format(state, "{}", state.newline(state.config.empty_lines_between_definitions + 1));
             format(state, *it);
         }
     }

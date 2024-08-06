@@ -8,9 +8,10 @@ namespace kieli {
     enum class Format_function_body { leave_as_is, normalize_to_block, normalize_to_equals_sign };
 
     struct Format_configuration {
-        std::size_t          block_indentation         = 4;
-        std::size_t          space_between_definitions = 1;
-        Format_function_body function_body             = Format_function_body::leave_as_is;
+        std::size_t          tab_size                        = 4;
+        bool                 use_spaces                      = true;
+        std::size_t          empty_lines_between_definitions = 1;
+        Format_function_body function_body                   = Format_function_body::leave_as_is;
     };
 
     // TODO: cst fwd
