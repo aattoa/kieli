@@ -4,19 +4,19 @@
 using namespace libresolve;
 
 namespace {
-    auto integer_type(Constants const& constants, kieli::built_in_type::Integer const integer)
+    auto integer_type(Constants const& constants, kieli::type::Integer const integer)
         -> hir::Type_id
     {
         switch (integer) {
-        case kieli::built_in_type::Integer::i8:  return constants.i8_type;
-        case kieli::built_in_type::Integer::i16: return constants.i16_type;
-        case kieli::built_in_type::Integer::i32: return constants.i32_type;
-        case kieli::built_in_type::Integer::i64: return constants.i64_type;
-        case kieli::built_in_type::Integer::u8:  return constants.u8_type;
-        case kieli::built_in_type::Integer::u16: return constants.u16_type;
-        case kieli::built_in_type::Integer::u32: return constants.u32_type;
-        case kieli::built_in_type::Integer::u64: return constants.u64_type;
-        default:                                 cpputil::unreachable();
+        case kieli::type::Integer::i8:  return constants.i8_type;
+        case kieli::type::Integer::i16: return constants.i16_type;
+        case kieli::type::Integer::i32: return constants.i32_type;
+        case kieli::type::Integer::i64: return constants.i64_type;
+        case kieli::type::Integer::u8:  return constants.u8_type;
+        case kieli::type::Integer::u16: return constants.u16_type;
+        case kieli::type::Integer::u32: return constants.u32_type;
+        case kieli::type::Integer::u64: return constants.u64_type;
+        default:                        cpputil::unreachable();
         }
     }
 
@@ -39,27 +39,27 @@ namespace {
             return recurse()(expression);
         }
 
-        auto operator()(kieli::built_in_type::Integer const& integer) -> hir::Type
+        auto operator()(kieli::type::Integer const& integer) -> hir::Type
         {
             return { integer_type(context.constants, integer), this_type.range };
         }
 
-        auto operator()(kieli::built_in_type::Floating const&) -> hir::Type
+        auto operator()(kieli::type::Floating const&) -> hir::Type
         {
             return { context.constants.floating_type, this_type.range };
         }
 
-        auto operator()(kieli::built_in_type::Character const&) -> hir::Type
+        auto operator()(kieli::type::Character const&) -> hir::Type
         {
             return { context.constants.character_type, this_type.range };
         }
 
-        auto operator()(kieli::built_in_type::Boolean const&) -> hir::Type
+        auto operator()(kieli::type::Boolean const&) -> hir::Type
         {
             return { context.constants.boolean_type, this_type.range };
         }
 
-        auto operator()(kieli::built_in_type::String const&) -> hir::Type
+        auto operator()(kieli::type::String const&) -> hir::Type
         {
             return { context.constants.string_type, this_type.range };
         }
@@ -95,20 +95,19 @@ namespace {
                     },
                     lookup_result.value().variant);
             }
-            kieli::emit_diagnostic(
-                cppdiag::Severity::error,
-                context.db,
-                scope.source(),
-                this_type.range,
-                "Use of an undeclared identifier");
+            kieli::document(context.db, scope.document_id())
+                .diagnostics.push_back(kieli::Diagnostic {
+                    .message  = "Use of an undeclared identifier",
+                    .range    = this_type.range,
+                    .severity = kieli::Severity::error,
+                });
             return { context.constants.error_type, this_type.range };
         }
 
         auto operator()(ast::type::Tuple const& tuple) -> hir::Type
         {
             hir::type::Tuple type {
-                .types = std::views::transform(tuple.field_types, recurse())
-                       | std::ranges::to<std::vector>(),
+                std::ranges::to<std::vector>(std::views::transform(tuple.field_types, recurse())),
             };
             return { context.hir.types.push(std::move(type)), this_type.range };
         }

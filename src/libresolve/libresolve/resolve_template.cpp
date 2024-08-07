@@ -79,7 +79,7 @@ namespace {
         {
             kieli::fatal_error(
                 context.db,
-                scope.source(),
+                scope.document_id(),
                 parameter.name.range,
                 "Template value parameters are not supported yet");
         }

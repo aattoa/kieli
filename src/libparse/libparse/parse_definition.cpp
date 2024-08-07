@@ -39,7 +39,7 @@ namespace {
         if (auto const where = context.try_extract(Token_type::where)) {
             kieli::fatal_error(
                 context.db(),
-                context.source(),
+                context.document_id(),
                 where.value().range,
                 "where clauses are not supported yet");
         }
@@ -262,7 +262,7 @@ auto libparse::parse_definition(Context& context) -> std::optional<cst::Definiti
             context.commit(stage);
             return cst::Definition {
                 .variant = std::move(variant),
-                .source  = context.source(),
+                .source  = context.document_id(),
                 .range   = context.up_to_current(first_token.range),
             };
         });

@@ -10,9 +10,9 @@ namespace {
 
     auto make_main_environment(libresolve::Context& context) -> kieli::hir::Environment_id
     {
-        auto path = main_path(context.configuration);
-        if (auto const id = kieli::read_source(std::move(path), context.db.sources)) {
-            return libresolve::make_environment(context, id.value());
+        std::filesystem::path path = main_path(context.configuration);
+        if (auto const document_id = kieli::read_document(context.db, std::move(path))) {
+            return libresolve::make_environment(context, document_id.value());
         }
         // TODO: figure out how to properly to handle this
         throw std::runtime_error(std::format("Project main file not found: '{}'", path.c_str()));
@@ -21,7 +21,7 @@ namespace {
 
 auto kieli::resolve_project(Project_configuration configuration) -> Resolved_project
 {
-    auto db        = Database { .current_revision = 0 };
+    auto db        = Database {};
     auto hir       = hir::Arena {};
     auto constants = libresolve::Constants::make_with(hir);
 

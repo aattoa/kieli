@@ -13,15 +13,15 @@ namespace {
         }
     }
 
-    auto binding_not_in_scope(
-        Context& context, kieli::Source_id const source, kieli::Lower const name) -> hir::Mutability
+    auto error(Context& context, kieli::Document_id const document_id, kieli::Lower const name)
+        -> hir::Mutability
     {
-        kieli::emit_diagnostic(
-            cppdiag::Severity::error,
-            context.db,
-            source,
-            name.range,
-            std::format("No mutability binding '{}' in scope", name));
+        kieli::document(context.db, document_id)
+            .diagnostics.push_back(kieli::Diagnostic {
+                .message  = std::format("No mutability binding '{}' in scope", name),
+                .range    = name.range,
+                .severity = kieli::Severity::error,
+            });
         return hir::Mutability { context.constants.mutability_error, name.range };
     }
 } // namespace
@@ -40,7 +40,7 @@ auto libresolve::resolve_mutability(
             [&](ast::mutability::Parameterized const& parameterized) {
                 auto const* const bound = scope.find_mutability(parameterized.name.identifier);
                 return bound ? bound->mutability
-                             : binding_not_in_scope(context, scope.source(), parameterized.name);
+                             : error(context, scope.document_id(), parameterized.name);
             },
         },
         mutability.variant);

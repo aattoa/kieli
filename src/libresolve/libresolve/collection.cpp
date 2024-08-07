@@ -5,18 +5,21 @@ using namespace libresolve;
 
 namespace {
     auto duplicate_definitions_error(
-        kieli::Source const& source,
-        kieli::Name const&   first,
-        kieli::Name const&   second) -> cppdiag::Diagnostic
+        kieli::Document_id const document_id,
+        kieli::Identifier const  identifier,
+        kieli::Range const&      first,
+        kieli::Range const&      second) -> kieli::Diagnostic
     {
-        return cppdiag::Diagnostic {
-            .text_sections = utl::to_vector({
-                kieli::text_section(
-                    source, first.range, "First defined here", cppdiag::Severity::information),
-                kieli::text_section(source, second.range, "Later defined here"),
+        return kieli::Diagnostic {
+            .message      = std::format("Multiple definitions for '{}'", identifier),
+            .range        = second,
+            .severity     = kieli::Severity::error,
+            .related_info = utl::to_vector({
+                kieli::Diagnostic_related_info {
+                    .message = "First defined here",
+                    .location { .document_id = document_id, .range = first },
+                },
             }),
-            .message       = std::format("Multiple definitions for '{}'", first),
-            .severity      = cppdiag::Severity::error,
         };
     }
 
@@ -25,7 +28,7 @@ namespace {
         ast::Definition&&         definition,
         hir::Environment_id const environment_id) -> void
     {
-        kieli::Source_id const   source      = definition.source;
+        kieli::Document_id const source      = definition.document_id;
         libresolve::Environment& environment = context.info.environments[environment_id];
 
         std::visit(
@@ -87,50 +90,51 @@ namespace {
     template <class Info>
     auto do_add_to_environment(
         Context&                 context,
-        kieli::Source_id const   source,
+        kieli::Document_id const document_id,
         auto&                    map,
         auto const               name,
         typename Info::Variant&& variant) -> void
     {
         if (auto const it = std::ranges::find(map, name.identifier, utl::first); it != map.end()) {
-            context.db.diagnostics.push_back(
-                duplicate_definitions_error(context.db.sources[source], it->second.name, name));
-            throw kieli::Compilation_failure {};
+            kieli::Diagnostic diagnostic = duplicate_definitions_error(
+                document_id, name.identifier, it->second.name.range, name.range);
+            kieli::fatal_error(context.db, document_id, std::move(diagnostic));
         }
-        map.emplace_back(name.identifier, Info { name, source, std::move(variant) });
+        map.emplace_back(name.identifier, Info { name, document_id, std::move(variant) });
     }
 } // namespace
 
 auto libresolve::add_to_environment(
-    Context&               context,
-    kieli::Source_id const source,
-    Environment&           environment,
-    kieli::Lower const     name,
-    Lower_info::Variant    variant) -> void
+    Context&                 context,
+    kieli::Document_id const document_id,
+    Environment&             environment,
+    kieli::Lower const       name,
+    Lower_info::Variant      variant) -> void
 {
     do_add_to_environment<Lower_info>(
-        context, source, environment.lower_map, name, std::move(variant));
+        context, document_id, environment.lower_map, name, std::move(variant));
 }
 
 auto libresolve::add_to_environment(
-    Context&               context,
-    kieli::Source_id const source,
-    Environment&           environment,
-    kieli::Upper const     name,
-    Upper_info::Variant    variant) -> void
+    Context&                 context,
+    kieli::Document_id const document_id,
+    Environment&             environment,
+    kieli::Upper const       name,
+    Upper_info::Variant      variant) -> void
 {
     do_add_to_environment<Upper_info>(
-        context, source, environment.upper_map, name, std::move(variant));
+        context, document_id, environment.upper_map, name, std::move(variant));
 }
 
 auto libresolve::collect_environment(
     Context&                       context,
-    kieli::Source_id const         source,
+    kieli::Document_id const       document_id,
     std::vector<ast::Definition>&& definitions) -> hir::Environment_id
 {
-    auto const environment = context.info.environments.push(Environment { .source = source });
+    auto const environment_id
+        = context.info.environments.push(Environment { .document_id = document_id });
     for (ast::Definition& definition : definitions) {
-        add_definition_to_environment(context, std::move(definition), environment);
+        add_definition_to_environment(context, std::move(definition), environment_id);
     }
-    return environment;
+    return environment_id;
 }

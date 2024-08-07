@@ -1,6 +1,7 @@
 # Kieli TODO
 
 ## liblex
+- Single-character operator tokens, glue in the parser
 - Integer types should be simple identifiers
 - Delay numeric literal parsing to libparse?
 
@@ -30,6 +31,7 @@
 - git submodules?
 
 ## Miscellaneous
+- Divergence type
 - Attributes/annotations
 - First class testing
 - Inline concepts
@@ -47,3 +49,6 @@
 ## Look into for potential inspiration
 - Swift actors
 - Go generics
+
+## To remove
+- `kieli::Compilation_failure`

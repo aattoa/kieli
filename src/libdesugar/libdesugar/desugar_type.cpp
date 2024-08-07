@@ -13,27 +13,27 @@ namespace {
             return std::visit(*this, context.cst.types[parenthesized.type.value].variant);
         }
 
-        auto operator()(kieli::built_in_type::Integer const& integer) -> ast::Type_variant
+        auto operator()(kieli::type::Integer const& integer) -> ast::Type_variant
         {
             return integer;
         }
 
-        auto operator()(kieli::built_in_type::String const& string) -> ast::Type_variant
+        auto operator()(kieli::type::String const& string) -> ast::Type_variant
         {
             return string;
         }
 
-        auto operator()(kieli::built_in_type::Floating const& floating) -> ast::Type_variant
+        auto operator()(kieli::type::Floating const& floating) -> ast::Type_variant
         {
             return floating;
         }
 
-        auto operator()(kieli::built_in_type::Character const& character) -> ast::Type_variant
+        auto operator()(kieli::type::Character const& character) -> ast::Type_variant
         {
             return character;
         }
 
-        auto operator()(kieli::built_in_type::Boolean const& boolean) -> ast::Type_variant
+        auto operator()(kieli::type::Boolean const& boolean) -> ast::Type_variant
         {
             return boolean;
         }

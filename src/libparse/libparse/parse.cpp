@@ -366,10 +366,10 @@ auto libparse::extract_concept_references(Context& context)
         context, "one or more '+'-separated concept names");
 }
 
-auto kieli::parse(Source_id const source, Database& db) -> CST
+auto kieli::parse(Database& db, Document_id const document_id) -> CST
 {
     auto arena   = cst::Arena {};
-    auto context = libparse::Context { arena, Lex_state::make(source, db) };
+    auto context = libparse::Context { arena, lex_state(db, document_id) };
 
     std::vector<cst::Import> imports;
     while (auto const import_token = context.try_extract(Token_type::import_)) {
@@ -388,6 +388,6 @@ auto kieli::parse(Source_id const source, Database& db) -> CST
         .imports     = std::move(imports),
         .definitions = std::move(definitions),
         .arena       = std::move(arena),
-        .source      = source,
+        .source      = document_id,
     } };
 }

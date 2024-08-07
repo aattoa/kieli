@@ -5,5 +5,5 @@
 #include <libcompiler/tree_fwd.hpp>
 
 namespace kieli {
-    auto desugar(CST const& cst, Database& db) -> AST;
+    auto desugar(Database& db, CST const& cst) -> AST;
 }

@@ -15,11 +15,11 @@ namespace libdesugar {
     auto wildcard_pattern(kieli::Range range) -> ast::Pattern;
 
     struct Context {
-        kieli::Database&  db;
-        cst::Arena const& cst;
-        ast::Arena&       ast;
-        kieli::Source_id  source;
-        kieli::Identifier self_variable_identifier
+        kieli::Database&   db;
+        cst::Arena const&  cst;
+        ast::Arena&        ast;
+        kieli::Document_id source;
+        kieli::Identifier  self_variable_identifier
             = kieli::Identifier { db.string_pool.add("self") };
 
         auto desugar(cst::Expression const&) -> ast::Expression;

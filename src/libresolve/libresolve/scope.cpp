@@ -27,23 +27,25 @@ namespace {
         return nullptr;
     }
 
-    template <class Binding>
-    auto do_report_unused(
-        kieli::Database&               db,
-        kieli::Source_id const         source,
-        Identifier_map<Binding> const& bindings) -> void
+    auto warn_unused(kieli::Name const& name) -> kieli::Diagnostic
     {
-        auto const unused = std::views::values | std::views::filter(&Binding::unused);
-        for (auto const& binding : unused(bindings)) {
-            db.diagnostics.push_back(cppdiag::Diagnostic {
-                .text_sections = utl::to_vector({
-                    kieli::text_section(db.sources[source], binding.name.range),
-                }),
-                .message       = std::format("Unused binding: {}", binding.name),
-                .help_note     = std::format("If this is intentional, use _{}", binding.name),
-                .severity      = cppdiag::Severity::warning,
-            });
-        }
+        return kieli::Diagnostic {
+            .message   = std::format("Unused binding: {}", name),
+            .help_note = std::format("If this is intentional, use _{}", name),
+            .range     = name.range,
+            .severity  = kieli::Severity::warning,
+        };
+    }
+
+    template <class Binding>
+    auto do_report_unused_bindings(
+        kieli::Document& document, Identifier_map<Binding> const& bindings) -> void
+    {
+        auto diagnostics = std::views::values(bindings) //
+                         | std::views::filter(&Binding::unused)
+                         | std::views::transform(&Binding::name)
+                         | std::views::transform(warn_unused);
+        document.diagnostics.append_range(std::move(diagnostics));
     }
 } // namespace
 
@@ -81,7 +83,7 @@ auto libresolve::Scope::find_type(kieli::Identifier const identifier) -> Type_bi
 
 auto libresolve::Scope::child() noexcept -> Scope
 {
-    Scope scope { m_source };
+    Scope scope { m_document_id };
     scope.m_parent = this;
     return scope;
 }
@@ -91,14 +93,15 @@ auto libresolve::Scope::parent() const noexcept -> Scope*
     return m_parent;
 }
 
-auto libresolve::Scope::source() const noexcept -> kieli::Source_id
+auto libresolve::Scope::document_id() const noexcept -> kieli::Document_id
 {
-    return m_source;
+    return m_document_id;
 }
 
 auto libresolve::Scope::report_unused(kieli::Database& db) -> void
 {
-    do_report_unused(db, m_source, m_types);
-    do_report_unused(db, m_source, m_variables);
-    do_report_unused(db, m_source, m_mutabilities);
+    auto& document = kieli::document(db, document_id());
+    do_report_unused_bindings(document, m_types);
+    do_report_unused_bindings(document, m_variables);
+    do_report_unused_bindings(document, m_mutabilities);
 }

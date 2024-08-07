@@ -77,13 +77,14 @@ auto libparse::Context::error_expected(
     std::string_view const     description,
     std::optional<std::string> help_note) -> void
 {
-    kieli::fatal_error(
-        db(),
-        source(),
-        error_range,
-        std::format(
+    kieli::Diagnostic diagnostic {
+        .message = std::format(
             "Expected {}, but found {}", description, kieli::token_description(peek().type)),
-        std::move(help_note));
+        .help_note = std::move(help_note),
+        .range     = error_range,
+        .severity  = kieli::Severity::error,
+    };
+    kieli::fatal_error(db(), document_id(), std::move(diagnostic));
 }
 
 auto libparse::Context::error_expected(std::string_view const description) -> void
@@ -106,7 +107,7 @@ auto libparse::Context::special_identifiers() const -> Special_identifiers
     return m_special_identifiers;
 }
 
-auto libparse::Context::source() const -> kieli::Source_id
+auto libparse::Context::document_id() const -> kieli::Document_id
 {
-    return m_lex_state.source;
+    return m_lex_state.document_id;
 }

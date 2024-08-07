@@ -18,21 +18,23 @@ namespace {
         return std::unexpected(std::format("URI with unsupported scheme: '{}'", uri));
     }
 
-    auto document_source_id(Database& db, Json::Object const& document) -> Result<kieli::Source_id>
+    auto document_id_from_json(Database& db, Json::Object const& document)
+        -> Result<kieli::Document_id>
     {
         auto const query = [&](std::filesystem::path const& path) {
-            return kieli::query::source(db, path); //
+            return kieli::query::document_id(db, path); //
         };
         return uri_path(document.at("uri").as_string()).and_then(query);
     }
 
-    auto source_from_json(Json::Object const& object) -> Result<kieli::Source>
+    auto document_from_json(Database& db, Json::Object const& object) -> Result<kieli::Document_id>
     {
         return uri_path(object.at("uri").as_string()).transform([&](std::filesystem::path path) {
-            return kieli::Source {
-                .content = object.at("text").as_string(),
-                .path    = std::move(path),
-            };
+            return kieli::add_document(
+                db,
+                std::move(path),
+                object.at("text").as_string(),
+                kieli::Document_ownership::client);
         });
     }
 
@@ -56,10 +58,10 @@ namespace {
         -> Result<kieli::Location>
     {
         auto const position = position_from_json(params.at("position").as_object());
-        auto       id       = document_source_id(db, params.at("textDocument").as_object());
+        auto       id       = document_id_from_json(db, params.at("textDocument").as_object());
 
-        return std::move(id).transform([&](kieli::Source_id const source) {
-            return kieli::Location { source, kieli::Range::for_position(position) };
+        return std::move(id).transform([&](kieli::Document_id const document_id) {
+            return kieli::Location { document_id, kieli::Range::for_position(position) };
         });
     }
 
@@ -81,9 +83,8 @@ namespace {
 
     auto location_to_json(Database& db, kieli::Location const location) -> Json
     {
-        auto const& path = db.sources[location.source].path;
         return Json { Json::Object {
-            { "uri", Json { std::format("file://{}", path.c_str()) } },
+            { "uri", Json { std::format("file://{}", db.paths[location.document_id].c_str()) } },
             { "range", range_to_json(location.range) },
         } };
     }
@@ -145,9 +146,9 @@ namespace {
 
     auto handle_formatting(Database& db, Json::Object const& params) -> Result<Json>
     {
-        return document_source_id(db, params.at("textDocument").as_object())
-            .and_then([&](kieli::Source_id const source) {
-                return kieli::query::cst(db, source); //
+        return document_id_from_json(db, params.at("textDocument").as_object())
+            .and_then([&](kieli::Document_id const document_id) {
+                return kieli::query::cst(db, document_id);
             })
             .transform([&](kieli::CST const& cst) {
                 auto const config = format_options_from_json(params.at("options").as_object());
@@ -178,9 +179,8 @@ namespace {
 
     auto handle_open(Database& db, Json::Object const& params) -> Result<void>
     {
-        // TODO: check if already open
-        return source_from_json(params.at("textDocument").as_object())
-            .transform([&](kieli::Source source) { (void)db.sources.push(std::move(source)); });
+        return document_from_json(db, params.at("textDocument").as_object())
+            .transform([&](kieli::Document_id) {});
     }
 
     auto handle_close(Database&, Json::Object const&) -> Result<void>
@@ -189,25 +189,24 @@ namespace {
     }
 
     // https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#textDocumentContentChangeEvent
-    auto apply_content_change(
-        Database& db, kieli::Source_id const source_id, Json::Object const& change) -> void
+    auto apply_content_change(std::string& text, Json::Object const& change) -> void
     {
-        auto const& text = change.at("text").as_string();
-        if (change.contains("range")) {
-            auto const range = range_from_json(change.at("range").as_object());
-            kieli::edit_text(db.sources[source_id].content, range, text);
+        std::string const& new_text = change.at("text").as_string();
+        if (auto const it = change.find("range"); it != change.end()) {
+            kieli::edit_text(text, range_from_json(it->second.as_object()), new_text);
         }
         else {
-            db.sources[source_id].content = text;
+            text = new_text;
         }
     }
 
     auto handle_change(Database& db, Json::Object const& params) -> Result<void>
     {
-        return document_source_id(db, params.at("textDocument").as_object())
-            .transform([&](kieli::Source_id const source) {
-                for (auto const& change : params.at("contentChanges").as_array()) {
-                    apply_content_change(db, source, change.as_object());
+        return document_id_from_json(db, params.at("textDocument").as_object())
+            .transform([&](kieli::Document_id const document_id) {
+                std::string& text = kieli::document(db, document_id).text;
+                for (Json const& change : params.at("contentChanges").as_array()) {
+                    apply_content_change(text, change.as_object());
                 }
             });
     }
@@ -258,8 +257,6 @@ auto kieli::lsp::handle_message(Database& db, Json::Object const& message) -> st
 {
     auto const& method = message.at("method").as_string();
     auto const& params = message.contains("params") ? message.at("params") : Json {};
-
-    std::println(stderr, "method = {}, params = {}", method, cpputil::json::encode(params));
 
     // Absence of message id means the client expects no reply.
     if (!message.contains("id")) {

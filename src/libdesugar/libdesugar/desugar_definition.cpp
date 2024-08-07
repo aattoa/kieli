@@ -4,24 +4,41 @@
 using namespace libdesugar;
 
 namespace {
+    auto duplicate_fields_error(
+        Context&                context,
+        std::string_view const  description,
+        kieli::Identifier const identifier,
+        kieli::Range const      first,
+        kieli::Range const      second) -> kieli::Diagnostic
+    {
+        return kieli::Diagnostic {
+            .message      = std::format("Multiple definitions for {} {}", description, identifier),
+            .range        = second,
+            .severity     = kieli::Severity::error,
+            .related_info = utl::to_vector({
+                kieli::Diagnostic_related_info {
+                    .message = "First defined here here",
+                    .location { .document_id = context.source, .range = first },
+                },
+            }),
+        };
+    }
+
     template <class T>
     auto ensure_no_duplicates(
         Context& context, std::string_view const description, std::vector<T> const& elements)
     {
-        kieli::Source const& source = context.db.sources[context.source];
-
         for (auto it = elements.begin(); it != elements.end(); ++it) {
             auto const duplicate = std::ranges::find(it + 1, elements.end(), it->name, &T::name);
             if (duplicate != elements.end()) {
-                context.db.diagnostics.push_back(cppdiag::Diagnostic {
-                    .text_sections = utl::to_vector({
-                        kieli::text_section(
-                            source, it->name.range, "First defined here", cppdiag::Severity::hint),
-                        kieli::text_section(source, duplicate->name.range, "Later defined here"),
-                    }),
-                    .message = std::format("Multiple definitions for {} {}", description, it->name),
-                    .severity = cppdiag::Severity::error,
-                });
+                // TODO: just mark the duplicate as erroneous
+                kieli::Diagnostic diagnostic = duplicate_fields_error(
+                    context,
+                    description,
+                    it->name.identifier,
+                    it->name.range,
+                    duplicate->name.range);
+                kieli::fatal_error(context.db, context.source, std::move(diagnostic));
             }
         }
     }
@@ -40,8 +57,8 @@ namespace {
     }
 
     struct Definition_desugaring_visitor {
-        Context&         context;
-        kieli::Source_id source;
+        Context&           context;
+        kieli::Document_id source;
 
         auto operator()(cst::definition::Function const& function) -> ast::Definition_variant
         {

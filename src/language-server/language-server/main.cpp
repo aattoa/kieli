@@ -11,11 +11,14 @@
 namespace {
     auto run(std::istream& in, std::ostream& out) -> void
     {
-        kieli::Database db { .current_revision = 0 };
+        kieli::Database db;
         while (auto content = kieli::lsp::rpc_read_message(in)) {
+            std::println(stderr, "received message: {}", content.value());
             if (auto json = cpputil::json::decode<kieli::lsp::Json_config>(content.value())) {
-                if (auto reply = kieli::lsp::handle_message(db, json.value().as_object())) {
-                    kieli::lsp::rpc_write_message(out, cpputil::json::encode(reply.value()));
+                if (auto result = kieli::lsp::handle_message(db, json.value().as_object())) {
+                    std::string const reply = cpputil::json::encode(result.value());
+                    std::println(stderr, "replying with: {}", reply);
+                    kieli::lsp::rpc_write_message(out, reply);
                 }
             }
             else {

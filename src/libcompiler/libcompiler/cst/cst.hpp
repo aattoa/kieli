@@ -658,11 +658,11 @@ namespace kieli::cst {
     struct Type_variant
         : std::variant<
               type::Parenthesized,
-              kieli::built_in_type::Integer,
-              kieli::built_in_type::Floating,
-              kieli::built_in_type::Character,
-              kieli::built_in_type::Boolean,
-              kieli::built_in_type::String,
+              kieli::type::Integer,
+              kieli::type::Floating,
+              kieli::type::Character,
+              kieli::type::Boolean,
+              kieli::type::String,
               Wildcard,
               type::Self,
               type::Typename,
@@ -796,7 +796,7 @@ namespace kieli::cst {
 
     struct Definition {
         Definition_variant variant;
-        kieli::Source_id   source;
+        kieli::Document_id source;
         kieli::Range       range;
     };
 
@@ -816,5 +816,5 @@ struct kieli::CST::Module {
     std::vector<cst::Import>     imports;
     std::vector<cst::Definition> definitions;
     cst::Arena                   arena;
-    kieli::Source_id             source;
+    kieli::Document_id           source;
 };

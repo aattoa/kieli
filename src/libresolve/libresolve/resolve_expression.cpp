@@ -16,13 +16,13 @@ namespace {
             std::string                message,
             std::optional<std::string> help_note = std::nullopt)
         {
-            kieli::emit_diagnostic(
-                cppdiag::Severity::error,
-                context.db,
-                context.info.environments[environment].source,
-                range,
-                std::move(message),
-                std::move(help_note));
+            kieli::document(context.db, context.info.environments[environment].document_id)
+                .diagnostics.push_back(kieli::Diagnostic {
+                    .message   = std::move(message),
+                    .help_note = std::move(help_note),
+                    .range     = range,
+                    .severity  = kieli::Severity::error,
+                });
             return error_expression(context.constants, this_expression.range);
         }
 

@@ -31,18 +31,18 @@ namespace liblex {
     auto consume(kieli::Lex_state& state, std::predicate<char> auto const& predicate) noexcept
         -> void
     {
-        while (!state.string.empty() && predicate(state.string.front())) {
-            state.position.advance_with(state.string.front());
-            state.string.remove_prefix(1);
+        while (!state.text.empty() && predicate(state.text.front())) {
+            state.position.advance_with(state.text.front());
+            state.text.remove_prefix(1);
         }
     }
 
     [[nodiscard]] auto extract(kieli::Lex_state& state, std::predicate<char> auto const& predicate)
         noexcept -> std::string_view
     {
-        std::string_view const string = state.string;
+        std::string_view const string = state.text;
         consume(state, predicate);
-        return string.substr(0, string.size() - state.string.size());
+        return string.substr(0, string.size() - state.text.size());
     }
 
     auto make_string_literal(kieli::Lex_state const&, std::string_view) -> kieli::String;

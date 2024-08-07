@@ -11,7 +11,7 @@ namespace {
         if (!path.head.is_upper()) {
             kieli::fatal_error(
                 context.db(),
-                context.source(),
+                context.document_id(),
                 context.up_to_current(path.head.range),
                 "Expected a type, but found a lowercase name");
         }
@@ -143,18 +143,18 @@ namespace {
         -> std::optional<cst::Type_variant>
     {
         switch (token.type) {
-        case Token_type::i8_type:        return kieli::built_in_type::Integer::i8;
-        case Token_type::i16_type:       return kieli::built_in_type::Integer::i16;
-        case Token_type::i32_type:       return kieli::built_in_type::Integer::i32;
-        case Token_type::i64_type:       return kieli::built_in_type::Integer::i64;
-        case Token_type::u8_type:        return kieli::built_in_type::Integer::u8;
-        case Token_type::u16_type:       return kieli::built_in_type::Integer::u16;
-        case Token_type::u32_type:       return kieli::built_in_type::Integer::u32;
-        case Token_type::u64_type:       return kieli::built_in_type::Integer::u64;
-        case Token_type::floating_type:  return kieli::built_in_type::Floating {};
-        case Token_type::character_type: return kieli::built_in_type::Character {};
-        case Token_type::boolean_type:   return kieli::built_in_type::Boolean {};
-        case Token_type::string_type:    return kieli::built_in_type::String {};
+        case Token_type::i8_type:        return kieli::type::Integer::i8;
+        case Token_type::i16_type:       return kieli::type::Integer::i16;
+        case Token_type::i32_type:       return kieli::type::Integer::i32;
+        case Token_type::i64_type:       return kieli::type::Integer::i64;
+        case Token_type::u8_type:        return kieli::type::Integer::u8;
+        case Token_type::u16_type:       return kieli::type::Integer::u16;
+        case Token_type::u32_type:       return kieli::type::Integer::u32;
+        case Token_type::u64_type:       return kieli::type::Integer::u64;
+        case Token_type::floating_type:  return kieli::type::Floating {};
+        case Token_type::character_type: return kieli::type::Character {};
+        case Token_type::boolean_type:   return kieli::type::Boolean {};
+        case Token_type::string_type:    return kieli::type::String {};
         case Token_type::underscore:     return cst::Wildcard { token.range };
         case Token_type::upper_self:     return cst::type::Self {};
         case Token_type::paren_open:     return extract_tuple(context, token);

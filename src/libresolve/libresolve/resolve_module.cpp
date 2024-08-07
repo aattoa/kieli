@@ -8,22 +8,22 @@
 using namespace libresolve;
 
 namespace {
-    auto read_import_source(Import&& import, kieli::Source_vector& sources) -> kieli::Source_id
+    auto read_import_source(kieli::Database& db, Import&& import) -> kieli::Document_id
     {
         // TODO
         cpputil::always_assert(exists(import.module_path));
         cpputil::always_assert(last_write_time(import.module_path) == import.last_write_time);
-        return kieli::read_source(std::move(import.module_path), sources).value();
+        return kieli::read_document(db, std::move(import.module_path)).value();
     }
 
     auto import_environment(Context& context, Import&& import) -> hir::Environment_id
     {
-        return make_environment(context, read_import_source(std::move(import), context.db.sources));
+        return make_environment(context, read_import_source(context.db, std::move(import)));
     }
 
     auto resolve_submodule(
         Context&                     context,
-        kieli::Source_id const       source,
+        kieli::Document_id const     source,
         ast::definition::Submodule&& submodule) -> hir::Environment_id
     {
         if (submodule.template_parameters.has_value()) {
@@ -33,7 +33,7 @@ namespace {
     }
 } // namespace
 
-auto libresolve::make_environment(Context& context, kieli::Source_id const source)
+auto libresolve::make_environment(Context& context, kieli::Document_id const source)
     -> hir::Environment_id
 {
     (void)context;
@@ -44,8 +44,8 @@ auto libresolve::make_environment(Context& context, kieli::Source_id const sourc
 auto libresolve::resolve_module(Context& context, Module_info& module_info) -> hir::Environment_id
 {
     if (auto* const submodule = std::get_if<ast::definition::Submodule>(&module_info.variant)) {
-        auto const source      = context.info.environments[module_info.environment].source;
-        auto const environment = resolve_submodule(context, source, std::move(*submodule));
+        auto const document_id = context.info.environments[module_info.environment].document_id;
+        auto const environment = resolve_submodule(context, document_id, std::move(*submodule));
         module_info.variant    = hir::Module { environment };
     }
     else if (auto* const import = std::get_if<Import>(&module_info.variant)) {

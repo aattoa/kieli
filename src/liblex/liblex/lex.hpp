@@ -8,13 +8,13 @@ namespace kieli {
 
     struct Lex_state {
         Database&        db;
-        Source_id        source;
+        Document_id      document_id;
         Position         position;
-        std::string_view string;
-
-        static auto make(Source_id source, Database& db) -> Lex_state;
+        std::string_view text;
     };
 
-    auto lex(Lex_state&) -> Token;
+    [[nodiscard]] auto lex(Lex_state&) -> Token;
+
+    [[nodiscard]] auto lex_state(Database& db, Document_id document_id) -> Lex_state;
 
 } // namespace kieli

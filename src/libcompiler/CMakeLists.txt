@@ -7,8 +7,6 @@ target_sources(libcompiler
     PRIVATE libcompiler/compiler.hpp
     PRIVATE libcompiler/cst/cst.cpp
     PRIVATE libcompiler/cst/cst.hpp
-    PRIVATE libcompiler/filesystem.cpp
-    PRIVATE libcompiler/filesystem.hpp
     PRIVATE libcompiler/hir/formatters.hpp
     PRIVATE libcompiler/hir/hir.cpp
     PRIVATE libcompiler/hir/hir.hpp

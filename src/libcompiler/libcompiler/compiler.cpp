@@ -1,69 +1,166 @@
 #include <libutl/utilities.hpp>
 #include <libcompiler/compiler.hpp>
+#include <cpputil/io.hpp>
 
 auto kieli::Compilation_failure::what() const noexcept -> char const*
 {
     return "kieli::Compilation_failure";
 }
 
-auto kieli::emit_diagnostic(
-    cppdiag::Severity const    severity,
-    Database&                  db,
-    Source_id const            source,
-    Range const                range,
-    std::string                message,
-    std::optional<std::string> help_note) -> void
+auto kieli::Position::advance_with(char const character) noexcept -> void
 {
-    db.diagnostics.push_back(cppdiag::Diagnostic {
-        .text_sections = utl::to_vector({
-            text_section(db.sources[source], range, std::move(help_note)),
-        }),
-        .message       = std::move(message),
-        .help_note     = std::move(help_note),
-        .severity      = severity,
+    if (character == '\n') {
+        ++line, column = 0;
+    }
+    else {
+        ++column;
+    }
+}
+
+kieli::Range::Range(Position const start, Position const stop) noexcept
+    : start { start }
+    , stop { stop }
+{}
+
+auto kieli::Range::for_position(Position const position) noexcept -> Range
+{
+    return Range(position, Position { .line = position.line, .column = position.column + 1 });
+}
+
+auto kieli::Range::dummy() noexcept -> Range
+{
+    return Range::for_position(Position {});
+}
+
+auto kieli::document(Database& db, Document_id const id) -> Document&
+{
+    return db.documents.at(db.paths[id]);
+}
+
+auto kieli::add_document(
+    Database&                db,
+    std::filesystem::path    path,
+    std::string              text,
+    Document_ownership const ownership) -> Document_id
+{
+    cpputil::always_assert(find_document(db, path) == std::nullopt);
+    db.documents.insert({ path, Document { .text = std::move(text), .ownership = ownership } });
+    return db.paths.push(std::move(path));
+}
+
+auto kieli::find_document(Database const& db, std::filesystem::path const& path)
+    -> std::optional<Document_id>
+{
+    auto const it    = std::ranges::find(db.paths.underlying, path);
+    auto const index = static_cast<std::size_t>(it - db.paths.underlying.begin());
+    return it != db.paths.underlying.end() ? std::optional(Document_id(index)) : std::nullopt;
+}
+
+auto kieli::read_file(std::filesystem::path const& path) -> std::expected<std::string, Read_failure>
+{
+    if (auto file = cpputil::io::File::open_read(path.c_str())) {
+        if (auto text = cpputil::io::read(file.get())) {
+            return std::move(text).value();
+        }
+        return std::unexpected(Read_failure::failed_to_read);
+    }
+    if (std::filesystem::exists(path)) {
+        return std::unexpected(Read_failure::failed_to_open);
+    }
+    return std::unexpected(Read_failure::does_not_exist);
+}
+
+auto kieli::read_document(Database& db, std::filesystem::path path)
+    -> std::expected<Document_id, Read_failure>
+{
+    return read_file(path).transform([&](std::string text) {
+        return add_document(db, std::move(path), std::move(text)); //
     });
 }
 
-auto kieli::fatal_error(
-    Database&                  db,
-    Source_id const            source,
-    Range const                error_range,
-    std::string                message,
-    std::optional<std::string> help_note) -> void
+auto kieli::describe_read_failure(Read_failure const failure) -> std::string_view
 {
-    emit_diagnostic(
-        cppdiag::Severity::error,
-        db,
-        source,
-        error_range,
-        std::move(message),
-        std::move(help_note));
+    switch (failure) {
+    case Read_failure::does_not_exist: return "does not exist";
+    case Read_failure::failed_to_open: return "failed to open";
+    case Read_failure::failed_to_read: return "failed to read";
+    default:                           cpputil::unreachable();
+    }
+}
+
+auto kieli::text_range(std::string_view const string, Range const range) -> std::string_view
+{
+    cpputil::always_assert(range.start <= range.stop);
+
+    auto begin = string.begin();
+    for (std::size_t i = 0; i != range.start.line; ++i) {
+        begin = std::find(begin, string.end(), '\n');
+        cpputil::always_assert(begin != string.end());
+        ++begin; // Skip the line feed
+    }
+    begin += range.start.column;
+
+    auto end = begin;
+    auto pos = range.start;
+    while (pos != range.stop) {
+        cpputil::always_assert(end != string.end());
+        pos.advance_with(*end++);
+    }
+
+    return { begin, end };
+}
+
+auto kieli::edit_text(std::string& text, Range const range, std::string_view const new_text) -> void
+{
+    auto const where  = text_range(text, range);
+    auto const offset = static_cast<std::size_t>(where.data() - text.data());
+    text.replace(offset, where.size(), new_text);
+}
+
+auto kieli::fatal_error(Database& db, Document_id const document_id, Diagnostic diagnostic) -> void
+{
+    document(db, document_id).diagnostics.push_back(std::move(diagnostic));
     throw Compilation_failure {};
 }
 
-auto kieli::text_section(
-    Source const&                          source,
-    Range const                            range,
-    std::optional<std::string>             note,
-    std::optional<cppdiag::Severity> const note_severity) -> cppdiag::Text_section
+auto kieli::fatal_error(
+    Database& db, Document_id const document_id, Range const range, std::string message) -> void
 {
-    return cppdiag::Text_section {
-        .source_string  = source.content,
-        .source_name    = source.path.string(),
-        .start_position = { range.start.line, range.start.column },
-        .stop_position  = { range.stop.line, range.stop.column },
-        .note           = std::move(note),
-        .note_severity  = note_severity,
+    Diagnostic diagnostic {
+        .message  = std::move(message),
+        .range    = range,
+        .severity = Severity::error,
     };
+    fatal_error(db, document_id, std::move(diagnostic));
 }
 
 auto kieli::format_diagnostics(
-    std::span<cppdiag::Diagnostic const> diagnostics, cppdiag::Colors const colors) -> std::string
+    std::filesystem::path const& path,
+    Document const&              document,
+    cppdiag::Colors const        colors) -> std::string
 {
+    // TODO: remove cppdiag
+
+    auto const to_cppdiag = [&](kieli::Diagnostic const& diagnostic) {
+        auto const pos = [](Position const position) {
+            return cppdiag::Position { .line = position.line, .column = position.column };
+        };
+        return cppdiag::Diagnostic {
+            .text_sections = utl::to_vector({ cppdiag::Text_section {
+                .source_string  = document.text,
+                .source_name    = path.string(),
+                .start_position = pos(diagnostic.range.start),
+                .stop_position  = pos(diagnostic.range.stop),
+            } }),
+            .message       = diagnostic.message,
+            .help_note     = diagnostic.help_note,
+            .severity      = static_cast<cppdiag::Severity>(diagnostic.severity),
+        };
+    };
+
     std::string output;
-    for (cppdiag::Diagnostic const& diagnostic : diagnostics) {
-        cppdiag::format_diagnostic(output, diagnostic, colors);
-        output.push_back('\n');
+    for (Diagnostic const& diagnostic : document.diagnostics) {
+        cppdiag::format_diagnostic(output, to_cppdiag(diagnostic), colors);
     }
     return output;
 }
@@ -80,7 +177,7 @@ auto kieli::Name::operator==(Name const& other) const noexcept -> bool
     return identifier == other.identifier;
 }
 
-auto kieli::built_in_type::integer_name(Integer const integer) noexcept -> std::string_view
+auto kieli::type::integer_name(Integer const integer) noexcept -> std::string_view
 {
     switch (integer) {
     case Integer::i8:  return "I8";

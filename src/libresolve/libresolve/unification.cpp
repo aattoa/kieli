@@ -196,18 +196,17 @@ namespace {
         }
 
         template <utl::one_of<
-            kieli::built_in_type::Floating,
-            kieli::built_in_type::Character,
-            kieli::built_in_type::Boolean,
-            kieli::built_in_type::String> T>
+            kieli::type::Floating,
+            kieli::type::Character,
+            kieli::type::Boolean,
+            kieli::type::String> T>
         auto operator()(T, T) const -> bool
         {
             return true;
         }
 
-        auto operator()(
-            kieli::built_in_type::Integer const sub,
-            kieli::built_in_type::Integer const super) const -> bool
+        auto operator()(kieli::type::Integer const sub, kieli::type::Integer const super) const
+            -> bool
         {
             return sub == super;
         }
@@ -314,11 +313,19 @@ auto libresolve::require_subtype_relationship(
         .goal = Unification_goal::subtype,
     };
     if (!unify(context, state, arguments, sub, super)) {
+        cpputil::todo();
+
+#if 0
         auto const sub_type_string   = hir::to_string(context.hir, sub);
         auto const super_type_string = hir::to_string(context.hir, super);
-        context.db.diagnostics.push_back(cppdiag::Diagnostic {
+
+        kieli::Diagnostic diagnostic {
             .message  = std::format("Unable to unify {} ~ {}", sub_type_string, super_type_string),
-            .severity = cppdiag::Severity::error,
-        });
+            .range    =,
+            .severity = kieli::Severity::error,
+        };
+
+        kieli::document(context.db, state.document_id).diagnostics.push_back(std::move(diagnostic));
+#endif
     }
 }

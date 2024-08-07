@@ -4,24 +4,23 @@
 using namespace libdesugar;
 
 namespace {
-    // TODO: just mark the duplicate as erroneous
-    [[noreturn]] auto emit_duplicate_fields_error(
-        Context&           context,
-        kieli::Lower const name,
-        kieli::Range const first,
-        kieli::Range const second) -> void
+    auto duplicate_fields_error(
+        Context&                context,
+        kieli::Identifier const identifier,
+        kieli::Range const      first,
+        kieli::Range const      second) -> kieli::Diagnostic
     {
-        kieli::Source const& source = context.db.sources[context.source];
-        context.db.diagnostics.push_back(cppdiag::Diagnostic {
-            .text_sections = utl::to_vector({
-                kieli::text_section(
-                    source, first, "First specified here", cppdiag::Severity::information),
-                kieli::text_section(source, second, "Later specified here"),
+        return kieli::Diagnostic {
+            .message  = std::format("More than one initializer for struct member {}", identifier),
+            .range    = second,
+            .severity = kieli::Severity::error,
+            .related_info = utl::to_vector({
+                kieli::Diagnostic_related_info {
+                    .message = "First specified here",
+                    .location { .document_id = context.source, .range = first },
+                },
             }),
-            .message       = std::format("More than one initializer for struct member {}", name),
-            .severity      = cppdiag::Severity::error,
-        });
-        throw kieli::Compilation_failure {};
+        };
     }
 
     auto ensure_no_duplicate_fields(
@@ -35,8 +34,10 @@ namespace {
                     it->name,
                     &cst::expression::Struct_initializer::Field::name);
                 duplicate != initializers.end()) {
-                emit_duplicate_fields_error(
-                    context, it->name, it->name.range, duplicate->name.range);
+                // TODO: just mark the duplicate as erroneous
+                kieli::Diagnostic diagnostic = duplicate_fields_error(
+                    context, it->name.identifier, it->name.range, duplicate->name.range);
+                kieli::fatal_error(context.db, context.source, std::move(diagnostic));
             }
         }
     }
@@ -185,13 +186,14 @@ namespace {
             }
 
             ast::Expression condition = context.deref_desugar(conditional.condition);
+
             if (std::holds_alternative<kieli::Boolean>(condition.variant)) {
-                kieli::emit_diagnostic(
-                    cppdiag::Severity::information,
-                    context.db,
-                    context.source,
-                    condition.range,
-                    "Constant condition");
+                kieli::document(context.db, context.source)
+                    .diagnostics.push_back(kieli::Diagnostic {
+                        .message  = "Constant condition",
+                        .range    = condition.range,
+                        .severity = kieli::Severity::information,
+                    });
             }
 
             return ast::expression::Conditional {
@@ -285,14 +287,14 @@ namespace {
             */
             ast::Expression condition = context.deref_desugar(loop.condition);
             if (auto const* const boolean = std::get_if<kieli::Boolean>(&condition.variant)) {
-                kieli::emit_diagnostic(
-                    cppdiag::Severity::information,
-                    context.db,
-                    context.source,
-                    condition.range,
-                    "Constant condition",
-                    boolean->value ? "Consider using `loop` instead of `while true`"
-                                   : "The loop body will never be executed");
+                kieli::document(context.db, context.source)
+                    .diagnostics.push_back(kieli::Diagnostic {
+                        .message   = "Constant condition",
+                        .help_note = boolean->value ? "Use `loop` instead of `while true`"
+                                                    : "The loop body will never be executed",
+                        .range     = condition.range,
+                        .severity  = kieli::Severity::information,
+                    });
             }
             ast::expression::Conditional conditional {
                 .condition                 = context.ast.expressions.push(std::move(condition)),

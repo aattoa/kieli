@@ -419,17 +419,16 @@ namespace {
         return parse_type(context).transform(
             [&](cst::Type_id const type) -> cst::Expression_variant {
                 if (auto const double_colon = context.try_extract(Token_type::double_colon)) {
-                    return extract_expression_path(
-                        context,
-                        cst::Path_root {
-                            .variant            = type,
-                            .double_colon_token = cst::Token::from_lexical(double_colon.value()),
-                            .range              = context.cst().types[type].range,
-                        });
+                    cst::Path_root root {
+                        .variant            = type,
+                        .double_colon_token = cst::Token::from_lexical(double_colon.value()),
+                        .range              = context.cst().types[type].range,
+                    };
+                    return extract_expression_path(context, std::move(root));
                 }
                 kieli::fatal_error(
                     context.db(),
-                    context.source(),
+                    context.document_id(),
                     context.cst().types[type].range,
                     "Expected an expression, but found a type");
             });

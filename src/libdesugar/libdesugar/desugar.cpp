@@ -310,7 +310,7 @@ auto libdesugar::wildcard_pattern(kieli::Range const range) -> ast::Pattern
     return ast::Pattern { ast::Wildcard { range }, range };
 }
 
-auto kieli::desugar(CST const& cst, Database& db) -> AST
+auto kieli::desugar(Database& db, CST const& cst) -> AST
 {
     auto ast         = ast::Arena {};
     auto context     = libdesugar::Context { db, cst.get().arena, ast, cst.get().source };

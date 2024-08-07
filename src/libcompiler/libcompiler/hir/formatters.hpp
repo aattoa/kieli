@@ -254,27 +254,27 @@ namespace kieli::hir::dtl {
             return With_arena { std::cref(arena), std::cref(x) };
         }
 
-        auto operator()(kieli::built_in_type::Integer const integer) const
+        auto operator()(kieli::type::Integer const integer) const
         {
-            std::format_to(out, "{}", kieli::built_in_type::integer_name(integer));
+            std::format_to(out, "{}", kieli::type::integer_name(integer));
         }
 
-        auto operator()(kieli::built_in_type::Floating const&) const
+        auto operator()(kieli::type::Floating const&) const
         {
             std::format_to(out, "Float");
         }
 
-        auto operator()(kieli::built_in_type::Character const&) const
+        auto operator()(kieli::type::Character const&) const
         {
             std::format_to(out, "Char");
         }
 
-        auto operator()(kieli::built_in_type::Boolean const&) const
+        auto operator()(kieli::type::Boolean const&) const
         {
             std::format_to(out, "Bool");
         }
 
-        auto operator()(kieli::built_in_type::String const&) const
+        auto operator()(kieli::type::String const&) const
         {
             std::format_to(out, "String");
         }

@@ -5,18 +5,18 @@
 auto libresolve::Constants::make_with(hir::Arena& arenas) -> Constants
 {
     return Constants {
-        .i8_type          = arenas.types.push(kieli::built_in_type::Integer::i8),
-        .i16_type         = arenas.types.push(kieli::built_in_type::Integer::i16),
-        .i32_type         = arenas.types.push(kieli::built_in_type::Integer::i32),
-        .i64_type         = arenas.types.push(kieli::built_in_type::Integer::i64),
-        .u8_type          = arenas.types.push(kieli::built_in_type::Integer::u8),
-        .u16_type         = arenas.types.push(kieli::built_in_type::Integer::u16),
-        .u32_type         = arenas.types.push(kieli::built_in_type::Integer::u32),
-        .u64_type         = arenas.types.push(kieli::built_in_type::Integer::u64),
-        .boolean_type     = arenas.types.push(kieli::built_in_type::Boolean {}),
-        .floating_type    = arenas.types.push(kieli::built_in_type::Floating {}),
-        .string_type      = arenas.types.push(kieli::built_in_type::String {}),
-        .character_type   = arenas.types.push(kieli::built_in_type::Character {}),
+        .i8_type          = arenas.types.push(kieli::type::Integer::i8),
+        .i16_type         = arenas.types.push(kieli::type::Integer::i16),
+        .i32_type         = arenas.types.push(kieli::type::Integer::i32),
+        .i64_type         = arenas.types.push(kieli::type::Integer::i64),
+        .u8_type          = arenas.types.push(kieli::type::Integer::u8),
+        .u16_type         = arenas.types.push(kieli::type::Integer::u16),
+        .u32_type         = arenas.types.push(kieli::type::Integer::u32),
+        .u64_type         = arenas.types.push(kieli::type::Integer::u64),
+        .boolean_type     = arenas.types.push(kieli::type::Boolean {}),
+        .floating_type    = arenas.types.push(kieli::type::Floating {}),
+        .string_type      = arenas.types.push(kieli::type::String {}),
+        .character_type   = arenas.types.push(kieli::type::Character {}),
         .unit_type        = arenas.types.push(hir::type::Tuple {}),
         .error_type       = arenas.types.push(hir::type::Error {}),
         .mutability_yes   = arenas.mutabilities.push(hir::mutability::Concrete::mut),
@@ -164,12 +164,13 @@ auto libresolve::ensure_no_unsolved_variables(Context& context, Inference_state&
     for (Type_variable_data& data : state.type_variables.underlying) {
         state.flatten(context, context.hir.types[data.type_id]);
         if (!data.is_solved) {
-            kieli::emit_diagnostic(
-                cppdiag::Severity::error,
-                context.db,
-                state.source,
-                data.origin,
-                std::format("Unsolved type variable: ?{}", data.variable_id.get()));
+            kieli::Diagnostic diagnostic {
+                .message  = std::format("Unsolved type variable: ?{}", data.variable_id.get()),
+                .range    = data.origin,
+                .severity = kieli::Severity::error,
+            };
+            kieli::document(context.db, state.document_id)
+                .diagnostics.push_back(std::move(diagnostic));
             state.set_solution(context, data, hir::type::Error {});
         }
     }

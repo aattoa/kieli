@@ -1,52 +1,140 @@
 #pragma once
 
 #include <libutl/utilities.hpp>
-#include <libcompiler/filesystem.hpp>
+#include <libutl/index_vector.hpp>
 #include <cpputil/mem/stable_string_pool.hpp>
-#include <cppdiag/cppdiag.hpp>
+#include <cppdiag/cppdiag.hpp> // TODO: remove
 
 namespace kieli {
-    // Thrown when an unrecoverable error is encountered
-    // TODO: Remove this!
+
+    // Thrown when an unrecoverable error is encountered. To be removed.
     struct Compilation_failure : std::exception {
         [[nodiscard]] auto what() const noexcept -> char const* override;
     };
 
-    struct Revision : utl::Explicit<std::size_t> {
-        using Explicit::Explicit, Explicit::operator=;
+    // Identifies a `Document`.
+    struct Document_id : utl::Vector_index<Document_id> {
+        using Vector_index::Vector_index;
     };
 
+    // https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#position
+    struct Position {
+        std::uint32_t line {};
+        std::uint32_t column {};
+
+        // Advance this position with `character`.
+        auto advance_with(char character) noexcept -> void;
+
+        [[nodiscard]] auto operator==(Position const&) const -> bool                  = default;
+        [[nodiscard]] auto operator<=>(Position const&) const -> std::strong_ordering = default;
+    };
+
+    // https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#range
+    struct Range {
+        Position start; // Inclusive
+        Position stop;  // Exclusive
+
+        // Deliberately non-aggregate.
+        explicit Range(Position start, Position stop) noexcept;
+
+        // Create a one-character range for `position`.
+        static auto for_position(Position position) noexcept -> Range;
+
+        // Dummy range for mock purposes.
+        static auto dummy() noexcept -> Range;
+
+        [[nodiscard]] auto operator==(Range const&) const -> bool = default;
+    };
+
+    // https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#location
+    struct Location {
+        Document_id document_id;
+        Range       range;
+    };
+
+    // https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#diagnosticSeverity
+    enum class Severity { error, warning, hint, information };
+
+    // https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#diagnosticRelatedInformation
+    struct Diagnostic_related_info {
+        std::string message;
+        Location    location;
+    };
+
+    // https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#diagnostic
+    struct Diagnostic {
+        std::string                          message;
+        std::optional<std::string>           help_note;
+        Range                                range;
+        Severity                             severity {};
+        std::vector<Diagnostic_related_info> related_info;
+    };
+
+    enum class Document_ownership { server, client };
+
+    // In-memory representation of a text document.
+    struct Document {
+        std::string             text;
+        std::vector<Diagnostic> diagnostics;
+        std::size_t             revision {};
+        Document_ownership      ownership {};
+    };
+
+    // Compilation database.
     struct Database {
-        std::vector<cppdiag::Diagnostic> diagnostics;
-        Source_vector                    sources;
-        cpputil::mem::Stable_string_pool string_pool;
-        Revision                         current_revision;
+        std::unordered_map<std::filesystem::path, Document>   documents;
+        utl::Index_vector<Document_id, std::filesystem::path> paths;
+        cpputil::mem::Stable_string_pool                      string_pool;
     };
 
-    auto emit_diagnostic(
-        cppdiag::Severity          severity,
-        Database&                  db,
-        Source_id                  source,
-        Range                      range,
-        std::string                message,
-        std::optional<std::string> help_note = std::nullopt) -> void;
+    // Represents a file read failure.
+    enum class Read_failure { does_not_exist, failed_to_open, failed_to_read };
 
+    // Access the document stored in `db` identified by `id`.
+    auto document(Database& db, Document_id id) -> Document&;
+
+    // Add a new `Document` with the given `path` and `text` to `db`.
+    // Precondition: `db` must not contain a `Document` with `path`.
+    [[nodiscard]] auto add_document(
+        Database&             db,
+        std::filesystem::path path,
+        std::string           text,
+        Document_ownership    ownership = Document_ownership::server) -> Document_id;
+
+    // If `db` contains a `Document` with `path`, return its `Document_id`.
+    [[nodiscard]] auto find_document(Database const& db, std::filesystem::path const& path)
+        -> std::optional<Document_id>;
+
+    // Attempt to read the file at `path`.
+    [[nodiscard]] auto read_file(std::filesystem::path const& path)
+        -> std::expected<std::string, Read_failure>;
+
+    // Attempt to create a new `Document` by reading the file at `path`.
+    // Precondition: `db` must not contain a `Document` with `path`.
+    [[nodiscard]] auto read_document(Database& db, std::filesystem::path path)
+        -> std::expected<Document_id, Read_failure>;
+
+    // Describe a file read failure.
+    [[nodiscard]] auto describe_read_failure(Read_failure failure) -> std::string_view;
+
+    // Find the substring of `string` corresponding to `range`.
+    [[nodiscard]] auto text_range(std::string_view string, Range range) -> std::string_view;
+
+    // Replace `range` in `text` with `new_text`.
+    auto edit_text(std::string& text, Range range, std::string_view new_text) -> void;
+
+    // Emit `diagnostic` and terminate compilation by throwing `Compilation_failure`. To be removed.
+    [[noreturn]] auto fatal_error(Database& db, Document_id document_id, Diagnostic diagnostic)
+        -> void;
+
+    // Emit a diagnostic and terminate compilation by throwing `Compilation_failure`. To be removed.
     [[noreturn]] auto fatal_error(
-        Database&                  db,
-        Source_id                  source,
-        Range                      error_range,
-        std::string                message,
-        std::optional<std::string> help_note = std::nullopt) -> void;
+        Database& db, Document_id document_id, Range range, std::string message) -> void;
 
-    auto text_section(
-        Source const&                    source,
-        Range                            range,
-        std::optional<std::string>       note          = std::nullopt,
-        std::optional<cppdiag::Severity> note_severity = std::nullopt) -> cppdiag::Text_section;
-
-    auto format_diagnostics(
-        std::span<cppdiag::Diagnostic const> diagnostics,
-        cppdiag::Colors                      colors = cppdiag::Colors::defaults()) -> std::string;
+    [[nodiscard]] auto format_diagnostics(
+        std::filesystem::path const& path,
+        Document const&              document,
+        cppdiag::Colors              colors = cppdiag::Colors::none()) -> std::string;
 
     using Identifier = cpputil::mem::Stable_pool_string;
 
@@ -91,7 +179,7 @@ namespace kieli {
 
     enum class Mutability { mut, immut };
 
-    namespace built_in_type {
+    namespace type {
         enum class Integer { i8, i16, i32, i64, u8, u16, u32, u64, _enumerator_count };
 
         struct Floating {};
@@ -103,7 +191,8 @@ namespace kieli {
         struct String {};
 
         auto integer_name(Integer) noexcept -> std::string_view;
-    } // namespace built_in_type
+    } // namespace type
+
 } // namespace kieli
 
 template <>
@@ -161,5 +250,31 @@ struct std::formatter<kieli::Mutability> {
     static auto format(kieli::Mutability const mut, auto& context)
     {
         return std::format_to(context.out(), "{}", mut == kieli::Mutability::mut ? "mut" : "immut");
+    }
+};
+
+template <>
+struct std::formatter<kieli::Position> {
+    static constexpr auto parse(auto& context)
+    {
+        return context.begin();
+    }
+
+    static auto format(kieli::Position const position, auto& context)
+    {
+        return std::format_to(context.out(), "{}:{}", position.line, position.column);
+    }
+};
+
+template <>
+struct std::formatter<kieli::Range> {
+    static constexpr auto parse(auto& context)
+    {
+        return context.begin();
+    }
+
+    static auto format(kieli::Range const& range, auto& context)
+    {
+        return std::format_to(context.out(), "({}-{})", range.start, range.stop);
     }
 };

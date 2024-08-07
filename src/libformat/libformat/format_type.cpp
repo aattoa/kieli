@@ -7,27 +7,27 @@ namespace {
     struct Type_format_visitor {
         State& state;
 
-        auto operator()(kieli::built_in_type::Integer const integer)
+        auto operator()(kieli::type::Integer const integer)
         {
-            format(state, "{}", kieli::built_in_type::integer_name(integer));
+            format(state, "{}", kieli::type::integer_name(integer));
         }
 
-        auto operator()(kieli::built_in_type::Floating const&)
+        auto operator()(kieli::type::Floating const&)
         {
             format(state, "Float");
         }
 
-        auto operator()(kieli::built_in_type::Character const&)
+        auto operator()(kieli::type::Character const&)
         {
             format(state, "Char");
         }
 
-        auto operator()(kieli::built_in_type::Boolean const&)
+        auto operator()(kieli::type::Boolean const&)
         {
             format(state, "Bool");
         }
 
-        auto operator()(kieli::built_in_type::String const&)
+        auto operator()(kieli::type::String const&)
         {
             format(state, "String");
         }

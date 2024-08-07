@@ -154,7 +154,7 @@ namespace {
         kieli::Lex_state& m_state;
     public:
         explicit Token_maker(std::string_view const trivia, kieli::Lex_state& state) noexcept
-            : m_old_string { state.string }
+            : m_old_string { state.text }
             , m_trivia { trivia }
             , m_old_position { state.position }
             , m_state { state }
@@ -193,8 +193,8 @@ namespace {
 
     auto handle_escape_sequence(kieli::Lex_state& state) -> liblex::Expected<char>
     {
-        char const* const anchor = state.string.data();
-        if (state.string.empty()) {
+        char const* const anchor = state.text.data();
+        if (state.text.empty()) {
             return liblex::error(state, "Expected an escape sequence, but found the end of input");
         }
         switch (liblex::extract_current(state)) {
@@ -214,12 +214,12 @@ namespace {
 
     auto skip_string_literal_within_comment(kieli::Lex_state& state) -> liblex::Expected<void>
     {
-        char const* const anchor = state.string.data();
+        char const* const anchor = state.text.data();
         if (!liblex::try_consume(state, '"')) {
             return {};
         }
         for (;;) {
-            if (state.string.empty()) {
+            if (state.text.empty()) {
                 return liblex::error(
                     state, { anchor, 1 }, "Unterminating string literal within comment block");
             }
@@ -245,7 +245,7 @@ namespace {
                 cpputil::always_assert(!utl::would_increment_overflow(depth));
                 ++depth;
             }
-            else if (state.string.empty()) {
+            else if (state.text.empty()) {
                 return liblex::error(
                     state,
                     comment_begin.substr(0, 2),
@@ -261,10 +261,10 @@ namespace {
 
     auto extract_comments_and_whitespace(kieli::Lex_state& state) -> std::string_view
     {
-        std::string_view const old_string = state.string;
+        std::string_view const old_string = state.text;
         for (;;) {
             liblex::consume(state, is_space);
-            std::string_view const comment_begin = state.string;
+            std::string_view const comment_begin = state.text;
             if (liblex::try_consume(state, "//")) {
                 liblex::consume(state, [](char const c) { return c != '\n'; });
             }
@@ -275,7 +275,7 @@ namespace {
                 break;
             }
         }
-        return view_difference(old_string, state.string);
+        return view_difference(old_string, state.text);
     }
 
     auto extract_identifier(Token_maker const& token, kieli::Lex_state& state) -> Token
@@ -323,7 +323,7 @@ namespace {
     {
         cpputil::always_assert(liblex::current(state) == '\'');
         liblex::advance(state);
-        if (state.string.empty()) {
+        if (state.text.empty()) {
             return liblex::error(state, "Unterminating character literal");
         }
         return extract_potentially_escaped_character(state).and_then(
@@ -338,13 +338,13 @@ namespace {
     auto extract_string_literal(Token_maker const& token, kieli::Lex_state& state)
         -> liblex::Expected<Token>
     {
-        char const* const anchor = state.string.data();
+        char const* const anchor = state.text.data();
         cpputil::always_assert(liblex::current(state) == '"');
         liblex::advance(state);
 
         std::string string;
         for (;;) {
-            if (state.string.empty()) {
+            if (state.text.empty()) {
                 return liblex::error(state, { anchor, 1 }, "Unterminating string literal");
             }
             switch (char const character = liblex::extract_current(state)) {
@@ -388,7 +388,7 @@ namespace {
                 state, suffix, "Erroneous floating point literal alphabetic suffix");
         }
         (void)liblex::try_consume(state, '-');
-        if (state.string.empty() || !is_digit10(liblex::current(state))) {
+        if (state.text.empty() || !is_digit10(liblex::current(state))) {
             return liblex::error(state, "Expected an exponent");
         }
         return ensure_no_trailing_separator(
@@ -409,7 +409,7 @@ namespace {
         std::string_view const old_string,
         kieli::Lex_state&      state) -> liblex::Expected<Token>
     {
-        if (state.string.empty() || !or_digit_separator<is_digit10>(liblex::current(state))) {
+        if (state.text.empty() || !or_digit_separator<is_digit10>(liblex::current(state))) {
             return liblex::error(state, "Expected one or more digits after the decimal separator");
         }
         return ensure_no_trailing_separator(
@@ -419,7 +419,7 @@ namespace {
                 return consume_and_validate_floating_point_alphabetic_suffix(state);
             })
             .and_then([&] {
-                return parse_floating_value(state, view_difference(old_string, state.string));
+                return parse_floating_value(state, view_difference(old_string, state.text));
             })
             .and_then([&](double const floating) -> liblex::Expected<Token> {
                 std::string_view const extraneous_suffix = liblex::extract(state, is_alpha);
@@ -462,7 +462,7 @@ namespace {
                 cpputil::always_assert(error == liblex::Numeric_error::out_of_range);
                 return liblex::error(
                            state,
-                           view_difference(old_string, state.string),
+                           view_difference(old_string, state.text),
                            "Integer literal is too large after applying scientific exponent")
                     .error();
             });
@@ -484,7 +484,7 @@ namespace {
             liblex::consume(state, is_digit10);
             return liblex::error(state, "An integer literal may not have a negative exponent");
         }
-        if (state.string.empty() || !is_digit10(liblex::current(state))) {
+        if (state.text.empty() || !is_digit10(liblex::current(state))) {
             return liblex::error(state, "Expected an exponent");
         }
         return extract_integer_exponent(state).and_then([&](std::size_t const exponent) {
@@ -515,7 +515,7 @@ namespace {
     auto extract_numeric(Token_maker const& token, kieli::Lex_state& state)
         -> liblex::Expected<Token>
     {
-        std::string_view const old_string = state.string;
+        std::string_view const old_string = state.text;
         std::optional const    base       = try_extract_numeric_base(state);
         auto const             predicate  = digit_predicate_for(base.value_or(10));
         std::string_view const digits     = liblex::extract(state, predicate);
@@ -588,15 +588,10 @@ namespace {
 
 } // namespace
 
-auto kieli::Lex_state::make(Source_id const source, Database& db) -> Lex_state
-{
-    return Lex_state { db, source, Position {}, db.sources[source].content };
-}
-
 auto kieli::lex(Lex_state& state) -> Token
 {
     Token_maker const token_maker { extract_comments_and_whitespace(state), state };
-    if (state.string.empty()) {
+    if (state.text.empty()) {
         ++state.position.column; // According to the LSP spec, the stop position is exclusive.
         return token_maker({}, Token_type::end_of_input);
     }
@@ -604,4 +599,13 @@ auto kieli::lex(Lex_state& state) -> Token
         return token.value();
     }
     return token_maker({}, Token_type::error);
+}
+
+auto kieli::lex_state(Database& db, Document_id const document_id) -> Lex_state
+{
+    return Lex_state {
+        .db          = db,
+        .document_id = document_id,
+        .text        = kieli::document(db, document_id).text,
+    };
 }

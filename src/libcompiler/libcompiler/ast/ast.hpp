@@ -479,11 +479,11 @@ namespace kieli::ast {
 
     struct Type_variant
         : std::variant<
-              kieli::built_in_type::Integer,
-              kieli::built_in_type::Floating,
-              kieli::built_in_type::Character,
-              kieli::built_in_type::Boolean,
-              kieli::built_in_type::String,
+              kieli::type::Integer,
+              kieli::type::Floating,
+              kieli::type::Character,
+              kieli::type::Boolean,
+              kieli::type::String,
               Wildcard,
               type::Self,
               type::Typename,
@@ -600,7 +600,7 @@ namespace kieli::ast {
 
     struct Definition {
         Definition_variant variant;
-        kieli::Source_id   source;
+        kieli::Document_id document_id;
         kieli::Range       range;
     };
 

@@ -1,8 +1,8 @@
 #include <libutl/utilities.hpp>
 #include <cppunittest/unittest.hpp>
-#include <libcompiler/filesystem.hpp>
+#include <libcompiler/compiler.hpp>
 
-#define TEST(name) UNITTEST("libcompiler: filesystem: " name)
+#define TEST(name) UNITTEST("libcompiler: document: " name)
 
 TEST("text_range")
 {
@@ -49,15 +49,15 @@ TEST("Position::advance_with")
     REQUIRE_EQUAL(position, kieli::Position { 1, 0 });
 }
 
-TEST("find_source")
+TEST("find_document")
 {
-    kieli::Source_vector vector;
+    kieli::Database db;
 
-    auto const a = vector.push("content A", "path A");
-    auto const b = vector.push("content B", "path B");
-    auto const c = vector.push("content C", "path C");
+    auto const a = kieli::add_document(db, "path A", "content A");
+    auto const b = kieli::add_document(db, "path B", "content B");
+    auto const c = kieli::add_document(db, "path C", "content C");
 
-    CHECK(kieli::find_source("path A", vector) == a);
-    CHECK(kieli::find_source("path B", vector) == b);
-    CHECK(kieli::find_source("path C", vector) == c);
+    CHECK(kieli::find_document(db, "path A") == a);
+    CHECK(kieli::find_document(db, "path B") == b);
+    CHECK(kieli::find_document(db, "path C") == c);
 }

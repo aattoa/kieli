@@ -9,11 +9,12 @@ namespace kieli::query {
     template <class T>
     using Result = std::expected<T, std::string>;
 
-    // Get the `Source_id` corresponding to `path`.
-    [[nodiscard]] auto source(Database& db, std::filesystem::path const& path) -> Result<Source_id>;
+    // Get the `Document_id` corresponding to `path`.
+    [[nodiscard]] auto document_id(Database& db, std::filesystem::path const& path)
+        -> Result<Document_id>;
 
     // Get the concrete syntax tree corresponding to `source`.
-    [[nodiscard]] auto cst(Database& db, Source_id source) -> Result<CST>;
+    [[nodiscard]] auto cst(Database& db, Document_id source) -> Result<CST>;
 
     // Get the abstract syntax tree corresponding to `cst`.
     [[nodiscard]] auto ast(Database& db, CST const& cst) -> Result<AST>;

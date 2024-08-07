@@ -42,11 +42,11 @@ namespace {
         Scope&                         scope,
         hir::Environment_id const      environment,
         ast::Function_signature const& signature,
-        kieli::Source_id const         source) -> hir::Function_signature
+        kieli::Document_id const       document_id) -> hir::Function_signature
     {
         cpputil::always_assert(!signature.self_parameter.has_value()); // TODO
 
-        Inference_state state { .source = source };
+        Inference_state state { .document_id = document_id };
 
         auto template_parameters = resolve_template_parameters(
             context, state, scope, environment, signature.template_parameters);
@@ -88,7 +88,7 @@ auto libresolve::resolve_function_body(Context& context, Function_info& info) ->
 {
     resolve_function_signature(context, info);
     if (auto* const function = std::get_if<Function_with_resolved_signature>(&info.variant)) {
-        Inference_state state { .source = info.source };
+        Inference_state state { .document_id = info.document_id };
         hir::Expression body = resolve_expression(
             context, state, function->signature_scope, info.environment, function->unresolved_body);
         require_subtype_relationship(
@@ -109,11 +109,11 @@ auto libresolve::resolve_function_signature(Context& context, Function_info& inf
     -> hir::Function_signature&
 {
     if (auto* const function = std::get_if<ast::definition::Function>(&info.variant)) {
-        Scope scope { info.source };
+        Scope scope { info.document_id };
         info.variant = Function_with_resolved_signature {
             .unresolved_body = std::move(function->body),
-            .signature
-            = resolve_signature(context, scope, info.environment, function->signature, info.source),
+            .signature       = resolve_signature(
+                context, scope, info.environment, function->signature, info.document_id),
             .signature_scope = std::move(scope),
         };
     }

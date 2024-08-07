@@ -28,16 +28,16 @@ namespace libresolve {
 
     struct Lower_info {
         using Variant = std::variant<hir::Function_id, hir::Module_id>;
-        kieli::Lower     name;
-        kieli::Source_id source;
-        Variant          variant;
+        kieli::Lower       name;
+        kieli::Document_id document_id;
+        Variant            variant;
     };
 
     struct Upper_info {
         using Variant = std::variant<hir::Enumeration_id, hir::Concept_id, hir::Alias_id>;
-        kieli::Upper     name;
-        kieli::Source_id source;
-        Variant          variant;
+        kieli::Upper       name;
+        kieli::Document_id document_id;
+        Variant            variant;
     };
 
     struct Definition_variant
@@ -86,10 +86,10 @@ class libresolve::Scope {
     Identifier_map<Variable_bind>   m_variables;
     Identifier_map<Type_bind>       m_types;
     Identifier_map<Mutability_bind> m_mutabilities;
-    kieli::Source_id                m_source;
+    kieli::Document_id              m_document_id;
     Scope*                          m_parent {};
 public:
-    explicit Scope(kieli::Source_id const source) : m_source { source } {}
+    explicit Scope(kieli::Document_id const document_id) : m_document_id { document_id } {}
 
     Scope(Scope&&)                    = default;
     auto operator=(Scope&&) -> Scope& = default;
@@ -111,8 +111,8 @@ public:
     // Retrieve the parent pointer. Returns `nullptr` if there is no parent.
     [[nodiscard]] auto parent() const noexcept -> Scope*;
 
-    // Retrieve the source id.
-    [[nodiscard]] auto source() const noexcept -> kieli::Source_id;
+    // Retrieve the `Document_id`.
+    [[nodiscard]] auto document_id() const noexcept -> kieli::Document_id;
 
     // Emit warnings for any unused bindings.
     auto report_unused(kieli::Database& db) -> void;
@@ -131,7 +131,7 @@ struct libresolve::Function_info {
         hir::Function>;
     Variant             variant;
     hir::Environment_id environment;
-    kieli::Source_id    source;
+    kieli::Document_id  document_id;
     kieli::Lower        name;
     bool                currently_resolving {};
 };
@@ -140,7 +140,7 @@ struct libresolve::Enumeration_info {
     using Variant = std::variant<ast::definition::Enumeration, hir::Enumeration>;
     Variant             variant;
     hir::Environment_id environment;
-    kieli::Source_id    source;
+    kieli::Document_id  document_id;
     kieli::Upper        name;
     hir::Type           type;
     bool                currently_resolving {};
@@ -150,7 +150,7 @@ struct libresolve::Concept_info {
     using Variant = std::variant<ast::definition::Concept, hir::Concept>;
     Variant             variant;
     hir::Environment_id environment;
-    kieli::Source_id    source;
+    kieli::Document_id  document_id;
     kieli::Upper        name;
     bool                currently_resolving {};
 };
@@ -159,7 +159,7 @@ struct libresolve::Alias_info {
     using Variant = std::variant<ast::definition::Alias, hir::Alias>;
     Variant             variant;
     hir::Environment_id environment;
-    kieli::Source_id    source;
+    kieli::Document_id  document_id;
     kieli::Upper        name;
     bool                currently_resolving {};
 };
@@ -168,7 +168,7 @@ struct libresolve::Module_info {
     using Variant = std::variant<ast::definition::Submodule, Import, hir::Module>;
     Variant             variant;
     hir::Environment_id environment;
-    kieli::Source_id    source;
+    kieli::Document_id  document_id;
     kieli::Lower        name;
 };
 
@@ -177,5 +177,5 @@ struct libresolve::Environment {
     Identifier_map<Lower_info>         lower_map;
     std::vector<Definition_variant>    in_order;
     std::optional<hir::Environment_id> parent;
-    kieli::Source_id                   source;
+    kieli::Document_id                 document_id;
 };

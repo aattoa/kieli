@@ -70,7 +70,7 @@ namespace libparse {
         [[nodiscard]] auto db() -> kieli::Database&;
         [[nodiscard]] auto cst() const -> cst::Arena&;
         [[nodiscard]] auto special_identifiers() const -> Special_identifiers;
-        [[nodiscard]] auto source() const -> kieli::Source_id;
+        [[nodiscard]] auto document_id() const -> kieli::Document_id;
     };
 
     auto extract_path(Context&, std::optional<cst::Path_root>&&) -> cst::Path;

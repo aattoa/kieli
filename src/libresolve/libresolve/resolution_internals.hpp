@@ -72,7 +72,7 @@ namespace libresolve {
         Mutability_variables mutability_variables;
         utl::Disjoint_set    type_variable_disjoint_set;
         utl::Disjoint_set    mutability_variable_disjoint_set;
-        kieli::Source_id     source;
+        kieli::Document_id   document_id;
 
         auto flatten(Context& context, hir::Type_variant& type) -> void;
 
@@ -104,24 +104,24 @@ namespace libresolve {
 
     auto add_to_environment(
         Context&            context,
-        kieli::Source_id    source,
+        kieli::Document_id  document_id,
         Environment&        environment,
         kieli::Lower        name,
         Lower_info::Variant variant) -> void;
 
     auto add_to_environment(
         Context&            context,
-        kieli::Source_id    source,
+        kieli::Document_id  document_id,
         Environment&        environment,
         kieli::Upper        name,
         Upper_info::Variant variant) -> void;
 
     auto collect_environment(
         Context&                       context,
-        kieli::Source_id               source,
+        kieli::Document_id             document_id,
         std::vector<ast::Definition>&& definitions) -> hir::Environment_id;
 
-    auto make_environment(Context& context, kieli::Source_id source) -> hir::Environment_id;
+    auto make_environment(Context& context, kieli::Document_id document_id) -> hir::Environment_id;
 
     auto resolve_module(Context& context, Module_info& module_info) -> hir::Environment_id;
 

@@ -307,11 +307,11 @@ namespace kieli::hir {
 
     struct Type_variant
         : std::variant<
-              kieli::built_in_type::Integer,
-              kieli::built_in_type::Floating,
-              kieli::built_in_type::Character,
-              kieli::built_in_type::Boolean,
-              kieli::built_in_type::String,
+              kieli::type::Integer,
+              kieli::type::Floating,
+              kieli::type::Character,
+              kieli::type::Boolean,
+              kieli::type::String,
               type::Array,
               type::Slice,
               type::Reference,
