@@ -19,12 +19,13 @@ namespace kieli::query {
     // Get the abstract syntax tree corresponding to `cst`.
     [[nodiscard]] auto ast(Database& db, CST const& cst) -> Result<AST>;
 
-    // Get hover information for `position` formatted as markdown.
+    // Get hover information at `location` formatted as markdown.
     // https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#textDocument_hover
-    [[nodiscard]] auto hover(Database& db, Location location) -> Result<std::optional<std::string>>;
+    [[nodiscard]] auto hover(Database& db, Character_location location)
+        -> Result<std::optional<std::string>>;
 
-    // Get the definition location of the symbol at `position`.
+    // Get the location of the definition of the symbol at `location`.
     // https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#textDocument_definition
-    [[nodiscard]] auto definition(Database& db, Location location) -> Result<Location>;
+    [[nodiscard]] auto definition(Database& db, Character_location location) -> Result<Location>;
 
 } // namespace kieli::query

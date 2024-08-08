@@ -6,6 +6,8 @@ target_include_directories(language-server
 kieli_use_libutl(language-server)
 
 target_sources(language-server
+    PRIVATE language-server/json.cpp
+    PRIVATE language-server/json.hpp
     PRIVATE language-server/lsp.cpp
     PRIVATE language-server/lsp.hpp
     PRIVATE language-server/main.cpp

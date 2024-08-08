@@ -58,4 +58,11 @@ namespace utl {
         auto operator==(Index_vector const& other) const -> bool = default;
     };
 
+    struct Hash_vector_index : std::hash<std::size_t> {
+        auto operator()(vector_index auto const& index) const noexcept -> std::size_t
+        {
+            return std::hash<std::size_t>::operator()(index.get());
+        }
+    };
+
 } // namespace utl

@@ -36,16 +36,20 @@ auto kieli::query::ast(Database& db, CST const& cst) -> Result<AST>
     }
 }
 
-auto kieli::query::hover(Database& db, Location const location)
+auto kieli::query::hover(Database& db, Character_location const location)
     -> Result<std::optional<std::string>>
 {
-    return std::format("hello, world!\n\nfile: `{}`", db.paths[location.document_id].c_str());
+    return std::format(
+        "Hello, world!\n\nFile: `{}`\nPosition: {}",
+        db.paths[location.document_id].c_str(),
+        location.position);
 }
 
-auto kieli::query::definition(Database& db, Location location) -> Result<Location>
+auto kieli::query::definition(Database& /*db*/, Character_location location) -> Result<Location>
 {
-    (void)db;
-    ++location.range.start.column;
-    ++location.range.stop.column;
-    return location;
+    ++location.position.column;
+    return Location {
+        .document_id = location.document_id,
+        .range       = Range::for_position(location.position),
+    };
 }

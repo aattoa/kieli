@@ -34,7 +34,7 @@ auto kieli::Range::dummy() noexcept -> Range
 
 auto kieli::document(Database& db, Document_id const id) -> Document&
 {
-    return db.documents.at(db.paths[id]);
+    return db.documents.at(id);
 }
 
 auto kieli::add_document(
@@ -44,8 +44,9 @@ auto kieli::add_document(
     Document_ownership const ownership) -> Document_id
 {
     cpputil::always_assert(find_document(db, path) == std::nullopt);
-    db.documents.insert({ path, Document { .text = std::move(text), .ownership = ownership } });
-    return db.paths.push(std::move(path));
+    Document_id const document_id = db.paths.push(std::move(path));
+    db.documents.insert({ document_id, { .text = std::move(text), .ownership = ownership } });
+    return document_id;
 }
 
 auto kieli::find_document(Database const& db, std::filesystem::path const& path)

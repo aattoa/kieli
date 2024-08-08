@@ -52,6 +52,12 @@ namespace kieli {
         Range       range;
     };
 
+    // https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#textDocumentPositionParams
+    struct Character_location {
+        Document_id document_id;
+        Position    position;
+    };
+
     // https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#diagnosticSeverity
     enum class Severity { error, warning, hint, information };
 
@@ -70,6 +76,7 @@ namespace kieli {
         std::vector<Diagnostic_related_info> related_info;
     };
 
+    // If a document is owned by a client, the server will not attempt to read it from disk.
     enum class Document_ownership { server, client };
 
     // In-memory representation of a text document.
@@ -80,11 +87,15 @@ namespace kieli {
         Document_ownership      ownership {};
     };
 
+    using Document_map   = std::unordered_map<Document_id, Document, utl::Hash_vector_index>;
+    using Document_paths = utl::Index_vector<Document_id, std::filesystem::path>;
+    using String_pool    = cpputil::mem::Stable_string_pool;
+
     // Compilation database.
     struct Database {
-        std::unordered_map<std::filesystem::path, Document>   documents;
-        utl::Index_vector<Document_id, std::filesystem::path> paths;
-        cpputil::mem::Stable_string_pool                      string_pool;
+        Document_map   documents;
+        Document_paths paths;
+        String_pool    string_pool;
     };
 
     // Represents a file read failure.
@@ -195,19 +206,11 @@ namespace kieli {
 
 } // namespace kieli
 
-template <>
-struct std::formatter<kieli::Name> : std::formatter<std::string_view> {
-    auto format(kieli::Name const& name, auto& context) const
+template <utl::one_of<kieli::Name, kieli::Upper, kieli::Lower> Name>
+struct std::formatter<Name> : std::formatter<std::string_view> {
+    auto format(Name const& name, auto& context) const
     {
         return std::formatter<std::string_view>::format(name.identifier.view(), context);
-    }
-};
-
-template <utl::one_of<kieli::Upper, kieli::Lower> X>
-struct std::formatter<X> : std::formatter<std::string_view> {
-    auto format(X const& x, auto& context) const
-    {
-        return std::formatter<std::string_view>::format(x.identifier.view(), context);
     }
 };
 
@@ -241,15 +244,11 @@ struct std::formatter<Literal> {
 };
 
 template <>
-struct std::formatter<kieli::Mutability> {
-    static constexpr auto parse(auto& context)
+struct std::formatter<kieli::Mutability> : std::formatter<std::string_view> {
+    auto format(kieli::Mutability const mut, auto& context) const
     {
-        return context.begin();
-    }
-
-    static auto format(kieli::Mutability const mut, auto& context)
-    {
-        return std::format_to(context.out(), "{}", mut == kieli::Mutability::mut ? "mut" : "immut");
+        std::string_view const string = mut == kieli::Mutability::mut ? "mut" : "immut";
+        return std::formatter<std::string_view>::format(string, context);
     }
 };
 

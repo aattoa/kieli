@@ -20,10 +20,13 @@
 - Unique zero-sized type for each function, coerce to function pointer type
 - Scope stack, scope id
 - Generate logs for rollback
+- Drop annotation in `impl` blocks
+- Move counts as drop
 
 ## Language server
-- request.cpp, notification.cpp
-- shutdown, exit
+- handle command line properly
+- `enum class State`: ready to initialize, running, ready to exit, exit
+- `while (state != exit)`, run communication loop
 
 ## Build process
 - Profile compilation with `-ftime-trace`
