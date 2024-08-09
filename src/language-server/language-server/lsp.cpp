@@ -1,9 +1,11 @@
 #include <libutl/utilities.hpp>
-#include <language-server/lsp.hpp>
-#include <language-server/json.hpp>
-#include <libquery/query.hpp>
-#include <libformat/format.hpp>
+#include <cpputil/json/decode.hpp>
 #include <cpputil/json/encode.hpp>
+#include <cpputil/json/format.hpp>
+#include <language-server/json.hpp>
+#include <language-server/server.hpp>
+#include <libformat/format.hpp>
+#include <libquery/query.hpp>
 
 using kieli::Database;
 using kieli::query::Result;
@@ -51,7 +53,7 @@ namespace {
     auto handle_formatting(Database& db, Json::Object const& params) -> Result<Json>
     {
         auto const document_id
-            = document_id_from_json(db, at<Json::Object>(params, "textDocument"));
+            = document_id_from_json(db, as<Json::Object>(at(params, "textDocument")));
 
         return kieli::query::cst(db, document_id)
             .transform([&](kieli::CST const& cst) {
@@ -61,7 +63,7 @@ namespace {
             .transform(document_format_edit);
     }
 
-    auto handle_initialize(Database&, Json const&) -> Result<Json>
+    auto handle_initialize() -> Json
     {
         // https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#textDocumentSyncKind
         static constexpr Json::Number incremental_sync = 2;
@@ -83,7 +85,7 @@ namespace {
 
     auto handle_open(Database& db, Json::Object const& params) -> Result<void>
     {
-        auto document = document_item_from_json(at<Json::Object>(params, "textDocument"));
+        auto document = document_item_from_json(as<Json::Object>(at(params, "textDocument")));
         if (document.language == "kieli") {
             (void)kieli::add_document(
                 db,
@@ -98,7 +100,7 @@ namespace {
     auto handle_close(Database& db, Json::Object const& params) -> Result<void>
     {
         auto const document_id
-            = document_id_from_json(db, at<Json::Object>(params, "textDocument"));
+            = document_id_from_json(db, as<Json::Object>(at(params, "textDocument")));
 
         if (db.documents.erase(document_id) == 1) {
             return {};
@@ -121,7 +123,7 @@ namespace {
     auto handle_change(Database& db, Json::Object const& params) -> Result<void>
     {
         auto const document_id
-            = document_id_from_json(db, at<Json::Object>(params, "textDocument"));
+            = document_id_from_json(db, as<Json::Object>(at(params, "textDocument")));
 
         std::string& text = kieli::document(db, document_id).text;
         for (Json const& change : params.at("contentChanges").as_array()) {
@@ -130,72 +132,158 @@ namespace {
         return {};
     }
 
-    auto handle_request(Database& db, std::string_view const method, Json const& params)
-        -> Result<Json>
+    auto handle_shutdown(Server& server) -> Json
     {
-        if (method == "initialize") {
-            return handle_initialize(db, params);
+        if (!std::exchange(server.is_initialized, false)) {
+            std::println(stderr, "Received shutdown request while uninitialized");
         }
-        if (method == "textDocument/hover") {
-            return handle_hover(db, params.as_object());
-        }
-        if (method == "textDocument/definition") {
-            return handle_goto_definition(db, params.as_object());
-        }
-        if (method == "textDocument/formatting") {
-            return handle_formatting(db, params.as_object());
-        }
-        return std::unexpected(std::format("Unsupported method: {}", method));
+        server.db = Database {}; // Reset the compilation database.
+        return Json {};
     }
 
-    auto handle_notification(Database& db, std::string_view const method, Json const& params)
+    auto handle_request(Server& server, std::string_view const method, Json const& params)
+        -> Result<Json>
+    {
+        if (method == "textDocument/hover") {
+            return handle_hover(server.db, params.as_object());
+        }
+        if (method == "textDocument/definition") {
+            return handle_goto_definition(server.db, params.as_object());
+        }
+        if (method == "textDocument/formatting") {
+            return handle_formatting(server.db, params.as_object());
+        }
+        if (method == "shutdown") {
+            return handle_shutdown(server);
+        }
+        return std::unexpected(std::format("Unsupported request method: {}", method));
+    }
+
+    auto handle_notification(Server& server, std::string_view const method, Json const& params)
         -> Result<void>
     {
         if (method == "textDocument/didOpen") {
-            return handle_open(db, params.as_object());
+            return handle_open(server.db, params.as_object());
         }
         if (method == "textDocument/didClose") {
-            return handle_close(db, params.as_object());
+            return handle_close(server.db, params.as_object());
         }
         if (method == "textDocument/didChange") {
-            return handle_change(db, params.as_object());
+            return handle_change(server.db, params.as_object());
         }
-        return std::unexpected(std::format("Unsupported method: {}", method));
+        if (method == "initialized") {
+            return {};
+        }
+        return std::unexpected(std::format("Unsupported notification method: {}", method));
     }
 
-    auto request_error(std::string message) -> Json
+    auto dispatch_handle_request(
+        Server& server, std::string_view const method, Json const& params, Json const& id) -> Json
     {
-        return Json { Json::Object {
-            { "code", Json { Json::Number {} } },
-            { "message", Json { std::move(message) } },
-        } };
+        if (method == "initialize") {
+            if (std::exchange(server.is_initialized, true)) {
+                std::println(stderr, "Received duplicate initialize request");
+            }
+            return success_response(handle_initialize(), id);
+        }
+        else if (!server.is_initialized) {
+            return error_response(Error_code::server_not_initialized, "Server not initialized", id);
+        }
+        else if (auto result = handle_request(server, method, params)) {
+            return success_response(std::move(result).value(), id);
+        }
+        else {
+            return error_response(Error_code::request_failed, std::move(result).error(), id);
+        }
+    }
+
+    auto dispatch_handle_notification(
+        Server& server, std::string_view const method, Json const& params) -> void
+    {
+        if (method == "exit") {
+            // https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#exit
+            server.exit_code = server.is_initialized ? 1 : 0;
+        }
+        else if (!server.is_initialized) {
+            std::println(stderr, "Server is uninitialized, dropping notification");
+        }
+        else {
+            auto const result = handle_notification(server, method, params);
+            if (!result.has_value()) {
+                std::println(stderr, "Error while handling notification: {}", result.error());
+            }
+        }
+    }
+
+    auto message_params(Json::Object const& message) -> Json const&
+    {
+        if (auto const it = message.find("params"); it != message.end()) {
+            return it->second;
+        }
+        static Json const null;
+        return null;
+    }
+
+    auto parse_error_response(cpputil::json::Parse_error const error) -> Json
+    {
+        auto message = std::format("Failed to parse JSON: {}", error);
+        return error_response(Error_code::parse_error, std::move(message), Json {});
+    }
+
+    auto invalid_request_error_response(Bad_client_json const& bad_json, Json id) -> Json
+    {
+        auto message = std::format("Invalid request object: {}", bad_json.message);
+        return error_response(Error_code::invalid_request, std::move(message), std::move(id));
+    }
+
+    auto invalid_params_error_response(Bad_client_json const& bad_json, Json id) -> Json
+    {
+        auto message = std::format("Invalid method parameters: {}", bad_json.message);
+        return error_response(Error_code::invalid_params, std::move(message), std::move(id));
+    }
+
+    auto dispatch_handle_client_message(Server& server, Json const& message) -> std::optional<Json>
+    {
+        std::optional<Json> id;
+        try {
+            auto const& object = as<Json::Object>(message);
+            id                 = maybe_at(object, "id");
+            auto const& method = as<Json::String>(at(object, "method"));
+            auto const& params = message_params(object);
+
+            // If there is an id, the message is a request and the client expects a reply.
+            // Otherwise, the message is a notification and the client expects no reply.
+
+            try {
+                if (id.has_value()) {
+                    return dispatch_handle_request(server, method, params, id.value());
+                }
+                else {
+                    dispatch_handle_notification(server, method, params);
+                    return std::nullopt;
+                }
+            }
+            catch (Bad_client_json const& bad_json) {
+                return invalid_params_error_response(bad_json, std::move(id).value_or(Json {}));
+            }
+        }
+        catch (Bad_client_json const& bad_json) {
+            return invalid_request_error_response(bad_json, std::move(id).value_or(Json {}));
+        }
     }
 } // namespace
 
-auto kieli::lsp::handle_message(Database& db, Json::Object const& message) -> std::optional<Json>
+auto kieli::lsp::handle_client_message(Server& server, std::string_view const message)
+    -> std::optional<std::string>
 {
-    auto const& method = message.at("method").as_string();
-    auto const& params = message.contains("params") ? message.at("params") : Json {};
+    std::optional<Json> reply;
 
-    // Absence of message id means the client expects no reply.
-    if (!message.contains("id")) {
-        if (auto const result = handle_notification(db, method, params); !result) {
-            std::println(stderr, "Notification failed with error: {}", result.error());
-        }
-        return std::nullopt;
-    }
-
-    Json::Object reply {
-        { "jsonrpc", message.at("jsonrpc") },
-        { "id", message.at("id") },
-    };
-
-    if (auto result = handle_request(db, method, params)) {
-        reply["result"] = std::move(result.value());
+    if (auto json = cpputil::json::decode<Json_config>(message)) {
+        reply = dispatch_handle_client_message(server, json.value());
     }
     else {
-        reply["error"] = request_error(std::move(result.error()));
+        reply = parse_error_response(json.error());
     }
 
-    return Json { std::move(reply) };
+    return reply.transform(cpputil::json::encode<Json_config>);
 }

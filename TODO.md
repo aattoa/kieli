@@ -25,8 +25,7 @@
 
 ## Language server
 - handle command line properly
-- `enum class State`: ready to initialize, running, ready to exit, exit
-- `while (state != exit)`, run communication loop
+- Batch messages
 
 ## Build process
 - Profile compilation with `-ftime-trace`

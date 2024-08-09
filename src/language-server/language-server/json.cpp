@@ -22,6 +22,28 @@ auto kieli::lsp::Bad_client_json::what() const noexcept -> char const*
     return message.c_str();
 }
 
+auto kieli::lsp::error_response(Error_code const code, Json::String message, Json id) -> Json
+{
+    auto error = Json { Json::Object {
+        { "code", Json { std::to_underlying(code) } },
+        { "message", Json { std::move(message) } },
+    } };
+    return Json { Json::Object {
+        { "jsonrpc", Json { "2.0" } },
+        { "error", std::move(error) },
+        { "id", std::move(id) },
+    } };
+}
+
+auto kieli::lsp::success_response(Json result, Json id) -> Json
+{
+    return Json { Json::Object {
+        { "jsonrpc", Json { "2.0" } },
+        { "result", std::move(result) },
+        { "id", std::move(id) },
+    } };
+}
+
 auto kieli::lsp::path_from_json(Json::String const& uri) -> std::filesystem::path
 {
     if (uri.starts_with("file://")) {
@@ -38,8 +60,8 @@ auto kieli::lsp::path_to_json(std::filesystem::path const& path) -> Json
 auto kieli::lsp::position_from_json(Json::Object const& object) -> Position
 {
     return Position {
-        .line   = at<Json::Number>(object, "line"),
-        .column = at<Json::Number>(object, "character"),
+        .line   = as_unsigned(at(object, "line")),
+        .column = as_unsigned(at(object, "character")),
     };
 }
 
@@ -54,8 +76,8 @@ auto kieli::lsp::position_to_json(Position const position) -> Json
 auto kieli::lsp::range_from_json(Json::Object const& object) -> Range
 {
     return Range {
-        position_from_json(at<Json::Object>(object, "start")),
-        position_from_json(at<Json::Object>(object, "end")),
+        position_from_json(as<Json::Object>(at(object, "start"))),
+        position_from_json(as<Json::Object>(at(object, "end"))),
     };
 }
 
@@ -70,7 +92,7 @@ auto kieli::lsp::range_to_json(Range const range) -> Json
 auto kieli::lsp::document_id_from_json(Database const& db, Json::Object const& object)
     -> Document_id
 {
-    return document_id_from_path(db, path_from_json(at<Json::String>(object, "uri")));
+    return document_id_from_path(db, path_from_json(as<Json::String>(at(object, "uri"))));
 }
 
 auto kieli::lsp::document_id_to_json(Database const& db, Document_id const document_id) -> Json
@@ -82,7 +104,7 @@ auto kieli::lsp::location_from_json(Database const& db, Json::Object const& obje
 {
     return Location {
         .document_id = document_id_from_json(db, object),
-        .range       = range_from_json(at<Json::Object>(object, "range")),
+        .range       = range_from_json(as<Json::Object>(at(object, "range"))),
     };
 }
 
@@ -98,8 +120,8 @@ auto kieli::lsp::character_location_from_json(Database const& db, Json::Object c
     -> Character_location
 {
     return Character_location {
-        .document_id = document_id_from_json(db, at<Json::Object>(object, "textDocument")),
-        .position    = position_from_json(at<Json::Object>(object, "position")),
+        .document_id = document_id_from_json(db, as<Json::Object>(at(object, "textDocument"))),
+        .position    = position_from_json(as<Json::Object>(at(object, "position"))),
     };
 }
 
@@ -115,18 +137,18 @@ auto kieli::lsp::character_location_to_json(Database const& db, Character_locati
 auto kieli::lsp::document_item_from_json(Json::Object const& object) -> Document_item
 {
     return Document_item {
-        .path     = path_from_json(at<Json::String>(object, "uri")),
-        .text     = at<Json::String>(object, "text"),
-        .language = at<Json::String>(object, "languageId"),
-        .version  = at<Json::Number>(object, "version"),
+        .path     = path_from_json(as<Json::String>(at(object, "uri"))),
+        .text     = as<Json::String>(at(object, "text")),
+        .language = as<Json::String>(at(object, "languageId")),
+        .version  = as_unsigned(at(object, "version")),
     };
 }
 
 auto kieli::lsp::format_options_from_json(Json::Object const& object) -> Format_options
 {
     return Format_options {
-        .tab_size      = at<Json::Number>(object, "tabSize"),
-        .insert_spaces = at<Json::Boolean>(object, "insertSpaces"),
+        .tab_size      = as_unsigned(at(object, "tabSize")),
+        .insert_spaces = as<Json::Boolean>(at(object, "insertSpaces")),
     };
 }
 
@@ -139,4 +161,28 @@ auto kieli::lsp::markdown_content_to_json(std::string markdown) -> Json
               { "value", Json { std::move(markdown) } },
           } } },
     } };
+}
+
+auto kieli::lsp::as_unsigned(Json const& json) -> std::uint32_t
+{
+    if (auto const number = as<Json::Number>(json); number >= 0) {
+        return static_cast<std::uint32_t>(number);
+    }
+    throw Bad_client_json(std::format("Unexpected negative integer"));
+}
+
+auto kieli::lsp::at(Json::Object const& object, char const* const key) -> Json const&
+{
+    cpputil::always_assert(key != nullptr);
+    if (auto const it = object.find(key); it != object.end()) {
+        return it->second;
+    }
+    throw Bad_client_json(std::format("Key not present: '{}'", key));
+}
+
+auto kieli::lsp::maybe_at(Json::Object const& object, char const* const key) -> std::optional<Json>
+{
+    cpputil::always_assert(key != nullptr);
+    auto const it = object.find(key);
+    return it != object.end() ? std::optional(it->second) : std::nullopt;
 }

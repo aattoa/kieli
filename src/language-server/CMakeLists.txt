@@ -9,10 +9,10 @@ target_sources(language-server
     PRIVATE language-server/json.cpp
     PRIVATE language-server/json.hpp
     PRIVATE language-server/lsp.cpp
-    PRIVATE language-server/lsp.hpp
     PRIVATE language-server/main.cpp
     PRIVATE language-server/rpc.cpp
-    PRIVATE language-server/rpc.hpp)
+    PRIVATE language-server/rpc.hpp
+    PRIVATE language-server/server.hpp)
 
 target_link_libraries(language-server
     PRIVATE libquery

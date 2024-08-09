@@ -1,8 +1,32 @@
 #pragma once
 
-#include <language-server/lsp.hpp>
+#include <libutl/utilities.hpp>
+#include <libcompiler/compiler.hpp>
+#include <cpputil/json.hpp>
 
 namespace kieli::lsp {
+
+    struct Json_config {
+        using Value   = cpputil::json::Basic_value<Json_config>;
+        using Object  = std::unordered_map<std::string, Value>;
+        using Array   = std::vector<Value>;
+        using String  = std::string;
+        using Number  = std::int32_t;
+        using Boolean = bool;
+    };
+
+    // The JSON type used for JSON-RPC communication.
+    using Json = Json_config::Value;
+
+    // https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#errorCodes
+    enum class Error_code : Json::Number {
+        server_not_initialized = -32002,
+        invalid_request        = -32600,
+        method_not_found       = -32601,
+        invalid_params         = -32602,
+        parse_error            = -32700,
+        request_failed         = -32803,
+    };
 
     // https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#formattingOptions
     struct Format_options {
@@ -19,12 +43,14 @@ namespace kieli::lsp {
     };
 
     // Thrown when the JSON sent by the client is syntactically correct but invalid in some way.
-    // The communication loop will catch this and respond with an error.
     struct Bad_client_json : std::exception {
         std::string message;
         Bad_client_json(std::string message) noexcept;
         [[nodiscard]] auto what() const noexcept -> char const* override;
     };
+
+    auto error_response(Error_code code, Json::String message, Json id) -> Json;
+    auto success_response(Json result, Json id) -> Json;
 
     auto path_from_json(Json::String const& uri) -> std::filesystem::path;
     auto path_to_json(std::filesystem::path const& path) -> Json;
@@ -49,19 +75,23 @@ namespace kieli::lsp {
     auto format_options_from_json(Json::Object const& object) -> Format_options;
     auto markdown_content_to_json(std::string markdown) -> Json;
 
+    // Throws `Bad_client_json` if `json` is not `T`.
     template <class T>
-    auto at(Json::Object const& object, char const* const key) -> T const&
+    auto as(Json const& json) -> T const&
     {
-        try {
-            cpputil::always_assert(key != nullptr);
-            return std::get<T>(object.at(key).variant);
+        if (std::holds_alternative<T>(json.variant)) {
+            return std::get<T>(json.variant);
         }
-        catch (std::out_of_range const&) {
-            throw Bad_client_json(std::format("Key not present: '{}'", key));
-        }
-        catch (std::bad_variant_access const&) {
-            throw Bad_client_json(std::format("Key with unexpected type: '{}'", key));
-        }
+        throw Bad_client_json("Value has unexpected type");
     }
+
+    // Throws `Bad_client_json` if `json` is not a non-negative integer.
+    auto as_unsigned(Json const& json) -> std::uint32_t;
+
+    // Throws `Bad_client_json` if `object` does not contain `key`.
+    auto at(Json::Object const& object, char const* key) -> Json const&;
+
+    // If `object` contains `key`, returns the value. Otherwise, returns nullopt.
+    auto maybe_at(Json::Object const& object, char const* key) -> std::optional<Json>;
 
 } // namespace kieli::lsp
