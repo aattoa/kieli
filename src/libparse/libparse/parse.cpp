@@ -368,6 +368,8 @@ auto libparse::extract_concept_references(Context& context)
 
 auto kieli::parse(Database& db, Document_id const document_id) -> CST
 {
+    document(db, document_id).diagnostics.clear();
+
     auto arena   = cst::Arena {};
     auto context = libparse::Context { arena, lex_state(db, document_id) };
 

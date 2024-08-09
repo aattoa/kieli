@@ -24,8 +24,10 @@
 - Move counts as drop
 
 ## Language server
-- handle command line properly
+- Handle command line properly
 - Batch messages
+- Gather code actions per line
+- Split executable into communication thread and analysis thread, actor mailboxes
 
 ## Build process
 - Profile compilation with `-ftime-trace`

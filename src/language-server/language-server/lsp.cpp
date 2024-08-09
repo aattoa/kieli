@@ -63,6 +63,21 @@ namespace {
             .transform(document_format_edit);
     }
 
+    auto handle_pull_diagnostics(Database& db, Json::Object const& params) -> Result<Json>
+    {
+        auto const document_id
+            = document_id_from_json(db, as<Json::Object>(at(params, "textDocument")));
+
+        auto items = kieli::document(db, document_id).diagnostics
+                   | std::views::transform(std::bind_front(diagnostic_to_json, std::cref(db)))
+                   | std::ranges::to<Json::Array>();
+
+        return Json { Json::Object {
+            { "kind", Json { "full" } },
+            { "items", Json { std::move(items) } },
+        } };
+    }
+
     auto handle_initialize() -> Json
     {
         // https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#textDocumentSyncKind
@@ -79,8 +94,43 @@ namespace {
                         { "openClose", Json { true } },
                         { "change", Json { incremental_sync } },
                     } } },
+                  { "diagnosticProvider",
+                    Json { Json::Object {
+                        { "interFileDependencies", Json { true } },
+                        { "workspaceDiagnostics", Json { false } },
+                    } } },
               } } },
         } };
+    }
+
+    auto handle_shutdown(Server& server) -> Json
+    {
+        if (!std::exchange(server.is_initialized, false)) {
+            std::println(stderr, "Received shutdown request while uninitialized");
+        }
+        server.db = Database {}; // Reset the compilation database.
+        return Json {};
+    }
+
+    auto handle_request(Server& server, std::string_view const method, Json const& params)
+        -> Result<Json>
+    {
+        if (method == "textDocument/hover") {
+            return handle_hover(server.db, params.as_object());
+        }
+        if (method == "textDocument/definition") {
+            return handle_goto_definition(server.db, params.as_object());
+        }
+        if (method == "textDocument/formatting") {
+            return handle_formatting(server.db, params.as_object());
+        }
+        if (method == "textDocument/diagnostic") {
+            return handle_pull_diagnostics(server.db, params.as_object());
+        }
+        if (method == "shutdown") {
+            return handle_shutdown(server);
+        }
+        return std::unexpected(std::format("Unsupported request method: {}", method));
     }
 
     auto handle_open(Database& db, Json::Object const& params) -> Result<void>
@@ -130,33 +180,6 @@ namespace {
             apply_content_change(text, change.as_object());
         }
         return {};
-    }
-
-    auto handle_shutdown(Server& server) -> Json
-    {
-        if (!std::exchange(server.is_initialized, false)) {
-            std::println(stderr, "Received shutdown request while uninitialized");
-        }
-        server.db = Database {}; // Reset the compilation database.
-        return Json {};
-    }
-
-    auto handle_request(Server& server, std::string_view const method, Json const& params)
-        -> Result<Json>
-    {
-        if (method == "textDocument/hover") {
-            return handle_hover(server.db, params.as_object());
-        }
-        if (method == "textDocument/definition") {
-            return handle_goto_definition(server.db, params.as_object());
-        }
-        if (method == "textDocument/formatting") {
-            return handle_formatting(server.db, params.as_object());
-        }
-        if (method == "shutdown") {
-            return handle_shutdown(server);
-        }
-        return std::unexpected(std::format("Unsupported request method: {}", method));
     }
 
     auto handle_notification(Server& server, std::string_view const method, Json const& params)
@@ -226,19 +249,19 @@ namespace {
 
     auto parse_error_response(cpputil::json::Parse_error const error) -> Json
     {
-        auto message = std::format("Failed to parse JSON: {}", error);
+        std::string message = std::format("Failed to parse JSON: {}", error);
         return error_response(Error_code::parse_error, std::move(message), Json {});
     }
 
     auto invalid_request_error_response(Bad_client_json const& bad_json, Json id) -> Json
     {
-        auto message = std::format("Invalid request object: {}", bad_json.message);
+        std::string message = std::format("Invalid request object: {}", bad_json.message);
         return error_response(Error_code::invalid_request, std::move(message), std::move(id));
     }
 
     auto invalid_params_error_response(Bad_client_json const& bad_json, Json id) -> Json
     {
-        auto message = std::format("Invalid method parameters: {}", bad_json.message);
+        std::string message = std::format("Invalid method parameters: {}", bad_json.message);
         return error_response(Error_code::invalid_params, std::move(message), std::move(id));
     }
 
