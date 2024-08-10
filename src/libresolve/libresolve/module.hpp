@@ -50,12 +50,6 @@ namespace libresolve {
         using variant::variant, variant::operator=;
     };
 
-    struct Import {
-        std::filesystem::file_time_type last_write_time;
-        std::filesystem::path           module_path;
-        kieli::Lower                    name;
-    };
-
     struct Variable_bind {
         kieli::Lower            name;
         hir::Type_id            type;
@@ -165,7 +159,8 @@ struct libresolve::Alias_info {
 };
 
 struct libresolve::Module_info {
-    using Variant = std::variant<ast::definition::Submodule, Import, hir::Module>;
+    // TODO: import
+    using Variant = std::variant<ast::definition::Submodule, hir::Module>;
     Variant             variant;
     hir::Environment_id environment;
     kieli::Document_id  document_id;

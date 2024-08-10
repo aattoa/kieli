@@ -91,15 +91,6 @@ namespace libresolve {
             hir::Mutability_variant   solution) -> void;
     };
 
-    struct Import_error {
-        kieli::Lower erroneous_segment;
-        bool         expected_module {};
-    };
-
-    auto resolve_import(
-        kieli::Project_configuration const& configuration,
-        std::span<kieli::Lower const>       path_segments) -> std::expected<Import, Import_error>;
-
     auto ensure_no_unsolved_variables(Context& context, Inference_state& state) -> void;
 
     auto add_to_environment(
