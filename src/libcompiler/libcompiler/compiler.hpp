@@ -70,7 +70,6 @@ namespace kieli {
     // https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#diagnostic
     struct Diagnostic {
         std::string                          message;
-        std::optional<std::string>           help_note;
         Range                                range;
         Severity                             severity {};
         std::vector<Diagnostic_related_info> related_info;

@@ -249,8 +249,7 @@ namespace {
                 return liblex::error(
                     state,
                     comment_begin.substr(0, 2),
-                    "Unterminating comment block",
-                    "Comments starting with `/*` must be terminated with `*/`");
+                    "Unterminating comment block; missing `*/` terminator");
             }
             else {
                 liblex::advance(state);

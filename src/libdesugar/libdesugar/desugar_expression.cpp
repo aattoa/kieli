@@ -23,6 +23,16 @@ namespace {
         };
     }
 
+    auto constant_loop_condition_diagnostic(kieli::Range const range, bool const condition)
+        -> kieli::Diagnostic
+    {
+        return kieli::Diagnostic {
+            .message  = condition ? "Use `loop` instead of `while true`" : "Loop will never run",
+            .range    = range,
+            .severity = condition ? kieli::Severity::information : kieli::Severity::warning,
+        };
+    }
+
     auto ensure_no_duplicate_fields(
         Context& context, cst::expression::Struct_initializer const& initializer) -> void
     {
@@ -288,13 +298,8 @@ namespace {
             ast::Expression condition = context.deref_desugar(loop.condition);
             if (auto const* const boolean = std::get_if<kieli::Boolean>(&condition.variant)) {
                 kieli::document(context.db, context.source)
-                    .diagnostics.push_back(kieli::Diagnostic {
-                        .message   = "Constant condition",
-                        .help_note = boolean->value ? "Use `loop` instead of `while true`"
-                                                    : "The loop body will never be executed",
-                        .range     = condition.range,
-                        .severity  = kieli::Severity::information,
-                    });
+                    .diagnostics.push_back(
+                        constant_loop_condition_diagnostic(condition.range, boolean->value));
             }
             ast::expression::Conditional conditional {
                 .condition                 = context.ast.expressions.push(std::move(condition)),

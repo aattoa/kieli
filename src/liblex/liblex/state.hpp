@@ -18,10 +18,9 @@ namespace liblex {
     [[nodiscard]] auto try_consume(kieli::Lex_state&, std::string_view) noexcept -> bool;
 
     [[nodiscard]] auto error(
-        kieli::Lex_state const&    state,
-        std::string_view           position,
-        std::string                message,
-        std::optional<std::string> help_note = std::nullopt) -> std::unexpected<Error>;
+        kieli::Lex_state const& state,
+        std::string_view        position,
+        std::string             message) -> std::unexpected<Error>;
 
     [[nodiscard]] auto error(kieli::Lex_state const& state, std::string message)
         -> std::unexpected<Error>;

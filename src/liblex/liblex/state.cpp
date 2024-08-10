@@ -93,16 +93,14 @@ auto liblex::make_identifier(kieli::Lex_state const& state, std::string_view con
 }
 
 auto liblex::error(
-    kieli::Lex_state const&    state,
-    std::string_view const     position,
-    std::string                message,
-    std::optional<std::string> help_note) -> std::unexpected<Error>
+    kieli::Lex_state const& state,
+    std::string_view const  position,
+    std::string             message) -> std::unexpected<Error>
 {
     kieli::Diagnostic diagnostic {
-        .message   = std::move(message),
-        .help_note = std::move(help_note),
-        .range     = range_for(state, position),
-        .severity  = kieli::Severity::error,
+        .message  = std::move(message),
+        .range    = range_for(state, position),
+        .severity = kieli::Severity::error,
     };
     kieli::document(state.db, state.document_id).diagnostics.push_back(std::move(diagnostic));
     return std::unexpected(Error {});

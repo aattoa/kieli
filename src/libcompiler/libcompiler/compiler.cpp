@@ -154,7 +154,6 @@ auto kieli::format_diagnostics(
                 .stop_position  = pos(diagnostic.range.stop),
             } }),
             .message       = diagnostic.message,
-            .help_note     = diagnostic.help_note,
             .severity      = static_cast<cppdiag::Severity>(diagnostic.severity),
         };
     };

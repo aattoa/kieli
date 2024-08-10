@@ -11,17 +11,13 @@ namespace {
         hir::Environment_id    environment;
         ast::Expression const& this_expression;
 
-        auto error(
-            kieli::Range const         range,
-            std::string                message,
-            std::optional<std::string> help_note = std::nullopt)
+        auto error(kieli::Range const range, std::string message) -> hir::Expression
         {
             kieli::document(context.db, context.info.environments[environment].document_id)
                 .diagnostics.push_back(kieli::Diagnostic {
-                    .message   = std::move(message),
-                    .help_note = std::move(help_note),
-                    .range     = range,
-                    .severity  = kieli::Severity::error,
+                    .message  = std::move(message),
+                    .range    = range,
+                    .severity = kieli::Severity::error,
                 });
             return error_expression(context.constants, this_expression.range);
         }

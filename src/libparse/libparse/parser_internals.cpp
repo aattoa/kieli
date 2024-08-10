@@ -73,16 +73,13 @@ auto libparse::Context::up_to_current(kieli::Range const range) const -> kieli::
 }
 
 auto libparse::Context::error_expected(
-    kieli::Range const         error_range,
-    std::string_view const     description,
-    std::optional<std::string> help_note) -> void
+    kieli::Range const error_range, std::string_view const description) -> void
 {
     kieli::Diagnostic diagnostic {
         .message = std::format(
             "Expected {}, but found {}", description, kieli::token_description(peek().type)),
-        .help_note = std::move(help_note),
-        .range     = error_range,
-        .severity  = kieli::Severity::error,
+        .range    = error_range,
+        .severity = kieli::Severity::error,
     };
     kieli::fatal_error(db(), document_id(), std::move(diagnostic));
 }

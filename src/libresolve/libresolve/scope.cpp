@@ -30,10 +30,9 @@ namespace {
     auto warn_unused(kieli::Name const& name) -> kieli::Diagnostic
     {
         return kieli::Diagnostic {
-            .message   = std::format("Unused binding: {}", name),
-            .help_note = std::format("If this is intentional, use _{}", name),
-            .range     = name.range,
-            .severity  = kieli::Severity::warning,
+            .message  = std::format("Unused name: {}. If this is intentional, use _{}", name, name),
+            .range    = name.range,
+            .severity = kieli::Severity::warning,
         };
     }
 

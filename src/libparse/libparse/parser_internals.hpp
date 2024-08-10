@@ -48,17 +48,14 @@ namespace libparse {
         [[nodiscard]] auto stage() const -> Stage;
 
         // Reset a token stage.
-        auto unstage(Stage) -> void;
+        auto unstage(Stage stage) -> void;
 
         // Commit to a parse; irreversibly consume every token extracted in `stage`.
         auto commit(Stage stage) -> void;
 
         // Emit an error that describes an expectation failure:
         // Encountered `error_range` where `description` was expected.
-        [[noreturn]] auto error_expected(
-            kieli::Range               error_range,
-            std::string_view           description,
-            std::optional<std::string> help_note = std::nullopt) -> void;
+        [[noreturn]] auto error_expected(kieli::Range range, std::string_view description) -> void;
 
         // Emit an error that describes an expectation failure:
         // Encountered the current token where `description` was expected.
