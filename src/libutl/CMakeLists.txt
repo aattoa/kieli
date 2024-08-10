@@ -4,6 +4,7 @@ target_sources(libutl
     PRIVATE libutl/disjoint_set.cpp
     PRIVATE libutl/disjoint_set.hpp
     PRIVATE libutl/index_vector.hpp
+    PRIVATE libutl/mailbox.hpp
     PRIVATE libutl/safe_integer.hpp
     PRIVATE libutl/utilities.cpp
     PRIVATE libutl/utilities.hpp)
