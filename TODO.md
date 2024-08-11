@@ -14,7 +14,6 @@
 
 ## libdesugar
 - More tests
-- Interface should expose (cst_def -> ast_def)
 
 ## libresolve
 - Unique zero-sized type for each function, coerce to function pointer type
@@ -22,6 +21,12 @@
 - Generate logs for rollback
 - Drop annotation in `impl` blocks
 - Move counts as drop
+
+## libcompiler
+- `struct Document_store`
+- `enum class Phase { lex, parse, etc. }`
+- `enum class liblex::diagnostic`
+- `auto diag_code(Phase, std::size_t code) -> std::string`
 
 ## Language server
 - Handle command line properly

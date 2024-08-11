@@ -66,7 +66,7 @@ auto libdesugar::Context::desugar(cst::Function_parameter const& parameter)
                 if (auto const* const wildcard = std::get_if<cst::Wildcard>(&argument.variant)) {
                     kieli::fatal_error(
                         db,
-                        source,
+                        document_id,
                         wildcard->range,
                         "A default function argument may not be a wildcard");
                 }
@@ -308,12 +308,4 @@ auto libdesugar::unit_value(kieli::Range const range) -> ast::Expression
 auto libdesugar::wildcard_pattern(kieli::Range const range) -> ast::Pattern
 {
     return ast::Pattern { ast::Wildcard { range }, range };
-}
-
-auto kieli::desugar(Database& db, CST const& cst) -> AST
-{
-    auto ast         = ast::Arena {};
-    auto context     = libdesugar::Context { db, cst.get().arena, ast, cst.get().source };
-    auto definitions = context.desugar(cst.get().definitions);
-    return AST { AST::Module { std::move(definitions), std::move(ast) } };
 }

@@ -1,5 +1,6 @@
 #include <libutl/utilities.hpp>
 #include <libdesugar/desugaring_internals.hpp>
+#include <libdesugar/desugar.hpp>
 
 using namespace libdesugar;
 
@@ -18,7 +19,7 @@ namespace {
             .related_info = utl::to_vector({
                 kieli::Diagnostic_related_info {
                     .message = "First defined here here",
-                    .location { .document_id = context.source, .range = first },
+                    .location { .document_id = context.document_id, .range = first },
                 },
             }),
         };
@@ -38,7 +39,7 @@ namespace {
                     it->name.identifier,
                     it->name.range,
                     duplicate->name.range);
-                kieli::fatal_error(context.db, context.source, std::move(diagnostic));
+                kieli::fatal_error(context.db, context.document_id, std::move(diagnostic));
             }
         }
     }
@@ -191,4 +192,15 @@ auto libdesugar::Context::desugar(cst::Definition const& definition) -> ast::Def
         definition.source,
         definition.range,
     };
+}
+
+auto kieli::desugar(
+    Database&              db,
+    Document_id const      document_id,
+    ast::Arena&            ast,
+    cst::Arena const&      cst,
+    cst::Definition const& definition) -> ast::Definition
+{
+    libdesugar::Context context { db, cst, ast, document_id };
+    return context.desugar(definition);
 }

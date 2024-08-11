@@ -1,7 +1,6 @@
 #pragma once
 
 #include <libutl/utilities.hpp>
-#include <libutl/safe_integer.hpp>
 #include <libcompiler/compiler.hpp>
 #include <libcompiler/cst/cst.hpp>
 #include <libcompiler/ast/ast.hpp>
@@ -18,9 +17,9 @@ namespace libdesugar {
         kieli::Database&   db;
         cst::Arena const&  cst;
         ast::Arena&        ast;
-        kieli::Document_id source;
+        kieli::Document_id document_id;
         kieli::Identifier  self_variable_identifier
-            = kieli::Identifier { db.string_pool.add("self") };
+            = kieli::Identifier { db.string_pool.add("self") }; // todo: special identifiers
 
         auto desugar(cst::Expression const&) -> ast::Expression;
         auto desugar(cst::Type const&) -> ast::Type;
@@ -33,6 +32,7 @@ namespace libdesugar {
         auto desugar(cst::Template_parameter const&) -> ast::Template_parameter;
         auto desugar(cst::Path_segment const&) -> ast::Path_segment;
         auto desugar(cst::Path const&) -> ast::Path;
+        auto desugar(cst::Type_annotation const&) -> ast::Type_id;
         auto desugar(cst::Concept_reference const&) -> ast::Concept_reference;
         auto desugar(cst::Function_signature const&) -> ast::Function_signature;
         auto desugar(cst::Type_signature const&) -> ast::Type_signature;
@@ -47,9 +47,6 @@ namespace libdesugar {
         static auto desugar(cst::Wildcard const&) -> ast::Wildcard;
         static auto desugar(cst::Self_parameter const&) -> ast::Self_parameter;
         static auto desugar(cst::Mutability const&) -> ast::Mutability;
-
-        // auto desugar(cst::Type_annotation const&) -> ast::Type;
-        auto desugar(cst::Type_annotation const&) -> ast::Type_id;
 
         auto desugar() noexcept
         {

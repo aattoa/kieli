@@ -63,8 +63,11 @@ namespace {
 
     auto debug_desugar(kieli::Database& db, kieli::Document_id const document_id) -> void
     {
-        auto const ast = kieli::desugar(db, kieli::parse(db, document_id));
-        (void)ast; // TODO
+        auto const cst = kieli::parse(db, document_id);
+        for (kieli::cst::Definition const& definition : cst.get().definitions) {
+            kieli::ast::Arena ast;
+            (void)kieli::desugar(db, document_id, ast, cst.get().arena, definition); // todo
+        }
     }
 
     auto debug_resolve(kieli::Database& db, kieli::Document_id const document_id) -> void

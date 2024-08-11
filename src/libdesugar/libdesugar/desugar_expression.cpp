@@ -17,7 +17,7 @@ namespace {
             .related_info = utl::to_vector({
                 kieli::Diagnostic_related_info {
                     .message = "First specified here",
-                    .location { .document_id = context.source, .range = first },
+                    .location { .document_id = context.document_id, .range = first },
                 },
             }),
         };
@@ -47,7 +47,7 @@ namespace {
                 // TODO: just mark the duplicate as erroneous
                 kieli::Diagnostic diagnostic = duplicate_fields_error(
                     context, it->name.identifier, it->name.range, duplicate->name.range);
-                kieli::fatal_error(context.db, context.source, std::move(diagnostic));
+                kieli::fatal_error(context.db, context.document_id, std::move(diagnostic));
             }
         }
     }
@@ -198,7 +198,7 @@ namespace {
             ast::Expression condition = context.deref_desugar(conditional.condition);
 
             if (std::holds_alternative<kieli::Boolean>(condition.variant)) {
-                kieli::document(context.db, context.source)
+                kieli::document(context.db, context.document_id)
                     .diagnostics.push_back(kieli::Diagnostic {
                         .message  = "Constant condition",
                         .range    = condition.range,
@@ -297,7 +297,7 @@ namespace {
             */
             ast::Expression condition = context.deref_desugar(loop.condition);
             if (auto const* const boolean = std::get_if<kieli::Boolean>(&condition.variant)) {
-                kieli::document(context.db, context.source)
+                kieli::document(context.db, context.document_id)
                     .diagnostics.push_back(
                         constant_loop_condition_diagnostic(condition.range, boolean->value));
             }
@@ -547,7 +547,7 @@ namespace {
         {
             kieli::fatal_error(
                 context.db,
-                context.source,
+                context.document_id,
                 this_expression.range,
                 "For loops are not supported yet");
         }

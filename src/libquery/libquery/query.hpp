@@ -16,9 +16,6 @@ namespace kieli::query {
     // Get the concrete syntax tree corresponding to `source`.
     [[nodiscard]] auto cst(Database& db, Document_id source) -> Result<CST>;
 
-    // Get the abstract syntax tree corresponding to `cst`.
-    [[nodiscard]] auto ast(Database& db, CST const& cst) -> Result<AST>;
-
     // Get hover information at `location` formatted as markdown.
     // https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#textDocument_hover
     [[nodiscard]] auto hover(Database& db, Character_location location)

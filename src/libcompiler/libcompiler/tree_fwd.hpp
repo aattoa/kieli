@@ -22,19 +22,4 @@ namespace kieli {
         [[nodiscard]] auto get() -> Module&;
     };
 
-    // Abstract syntax tree
-    struct AST {
-        // Defined in `ast.hpp`
-        struct Module;
-        std::unique_ptr<Module> module;
-
-        explicit AST(Module&&);
-        AST(AST&&) noexcept;
-        auto operator=(AST&&) noexcept -> AST&;
-        ~AST();
-
-        [[nodiscard]] auto get() const -> Module const&;
-        [[nodiscard]] auto get() -> Module&;
-    };
-
 } // namespace kieli

@@ -25,17 +25,6 @@ auto kieli::query::cst(Database& db, Document_id const source) -> Result<CST>
     }
 }
 
-auto kieli::query::ast(Database& db, CST const& cst) -> Result<AST>
-{
-    // TODO: get rid of Compilation_failure
-    try {
-        return desugar(db, cst);
-    }
-    catch (Compilation_failure const&) {
-        return std::unexpected("ast query failed"s);
-    }
-}
-
 auto kieli::query::hover(Database& db, Character_location const location)
     -> Result<std::optional<std::string>>
 {

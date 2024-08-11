@@ -610,8 +610,3 @@ namespace kieli::ast {
         utl::Index_vector<Type_id, Type>             types;
     };
 } // namespace kieli::ast
-
-struct kieli::AST::Module {
-    std::vector<ast::Definition> definitions;
-    ast::Arena                   arena;
-};
