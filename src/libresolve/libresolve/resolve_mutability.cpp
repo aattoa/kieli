@@ -16,12 +16,12 @@ namespace {
     auto error(Context& context, kieli::Document_id const document_id, kieli::Lower const name)
         -> hir::Mutability
     {
-        kieli::document(context.db, document_id)
-            .diagnostics.push_back(kieli::Diagnostic {
-                .message  = std::format("No mutability binding '{}' in scope", name),
-                .range    = name.range,
-                .severity = kieli::Severity::error,
-            });
+        kieli::Diagnostic diagnostic {
+            .message  = std::format("No mutability binding '{}' in scope", name),
+            .range    = name.range,
+            .severity = kieli::Severity::error,
+        };
+        kieli::add_diagnostic(context.db, document_id, std::move(diagnostic));
         return hir::Mutability { context.constants.mutability_error, name.range };
     }
 } // namespace

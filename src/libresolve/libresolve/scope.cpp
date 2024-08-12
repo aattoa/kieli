@@ -99,7 +99,7 @@ auto libresolve::Scope::document_id() const noexcept -> kieli::Document_id
 
 auto libresolve::Scope::report_unused(kieli::Database& db) -> void
 {
-    auto& document = kieli::document(db, document_id());
+    kieli::Document& document = db.documents.at(document_id());
     do_report_unused_bindings(document, m_types);
     do_report_unused_bindings(document, m_variables);
     do_report_unused_bindings(document, m_mutabilities);

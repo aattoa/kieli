@@ -12,7 +12,7 @@ namespace kieli {
         [[nodiscard]] auto what() const noexcept -> char const* override;
     };
 
-    // Identifies a `Document`.
+    // Identifies a document.
     struct Document_id : utl::Vector_index<Document_id> {
         using Vector_index::Vector_index;
     };
@@ -80,10 +80,11 @@ namespace kieli {
 
     // In-memory representation of a text document.
     struct Document {
-        std::string             text;
-        std::vector<Diagnostic> diagnostics;
-        std::size_t             revision {};
-        Document_ownership      ownership {};
+        std::string                     text;
+        std::vector<Diagnostic>         diagnostics;
+        std::filesystem::file_time_type time;
+        Document_ownership              ownership {};
+        std::size_t                     revision {};
     };
 
     using Document_map   = std::unordered_map<Document_id, Document, utl::Hash_vector_index>;
@@ -100,27 +101,32 @@ namespace kieli {
     // Represents a file read failure.
     enum class Read_failure { does_not_exist, failed_to_open, failed_to_read };
 
-    // Access the document stored in `db` identified by `id`.
-    auto document(Database& db, Document_id id) -> Document&;
+    // Retrieve the `Document_id` corresponding to `path`.
+    [[nodiscard]] auto document_id(Database& db, std::filesystem::path path) -> Document_id;
 
-    // Add a new `Document` with the given `path` and `text` to `db`.
-    // Precondition: `db` must not contain a `Document` with `path`.
-    [[nodiscard]] auto add_document(
-        Database&             db,
-        std::filesystem::path path,
-        std::string           text,
-        Document_ownership    ownership = Document_ownership::server) -> Document_id;
+    // If `db` contains a document with `path`, return its `Document_id`.
+    [[nodiscard]] auto find_existing_document_id(
+        Database const& db, std::filesystem::path const& path) -> std::optional<Document_id>;
 
-    // If `db` contains a `Document` with `path`, return its `Document_id`.
-    [[nodiscard]] auto find_document(Database const& db, std::filesystem::path const& path)
-        -> std::optional<Document_id>;
+    // Map `path` to `document`.
+    [[nodiscard]] auto set_document(Database& db, std::filesystem::path path, Document document)
+        -> Document_id;
+
+    // Map `path` to a client-owned document with `text`.
+    [[nodiscard]] auto client_open_document(
+        Database& db, std::filesystem::path path, std::string text) -> Document_id;
+
+    // If `db` contains a document with `path` and it is owned by a client, deallocate it.
+    auto client_close_document(Database& db, std::filesystem::path const& path) -> void;
+
+    // Creates a temporary document with `text`.
+    [[nodiscard]] auto test_document(Database& db, std::string text) -> Document_id;
 
     // Attempt to read the file at `path`.
     [[nodiscard]] auto read_file(std::filesystem::path const& path)
         -> std::expected<std::string, Read_failure>;
 
-    // Attempt to create a new `Document` by reading the file at `path`.
-    // Precondition: `db` must not contain a `Document` with `path`.
+    // Attempt to create a new document with server ownership by reading the file at `path`.
     [[nodiscard]] auto read_document(Database& db, std::filesystem::path path)
         -> std::expected<Document_id, Read_failure>;
 
@@ -128,32 +134,37 @@ namespace kieli {
     [[nodiscard]] auto describe_read_failure(Read_failure failure) -> std::string_view;
 
     // Find the substring of `string` corresponding to `range`.
-    [[nodiscard]] auto text_range(std::string_view string, Range range) -> std::string_view;
+    [[nodiscard]] auto text_range(std::string_view text, Range range) -> std::string_view;
 
     // Replace `range` in `text` with `new_text`.
     auto edit_text(std::string& text, Range range, std::string_view new_text) -> void;
 
-    // Emit `diagnostic` and terminate compilation by throwing `Compilation_failure`. To be removed.
+    // Add `diagnostic` to the document identified by `document_id`.
+    auto add_diagnostic(Database& db, Document_id document_id, Diagnostic diagnostic) -> void;
+
+    // Format the diagnostics belonging to the document identified by `document_id`.
+    [[nodiscard]] auto format_document_diagnostics(
+        Database const& db,
+        Document_id     document_id,
+        cppdiag::Colors colors = cppdiag::Colors::none()) -> std::string;
+
+    // Emit `diagnostic` and terminate compilation by throwing `Compilation_failure`.
     [[noreturn]] auto fatal_error(Database& db, Document_id document_id, Diagnostic diagnostic)
         -> void;
 
-    // Emit a diagnostic and terminate compilation by throwing `Compilation_failure`. To be removed.
+    // Emit a diagnostic with `message` and terminate compilation by throwing `Compilation_failure`.
     [[noreturn]] auto fatal_error(
         Database& db, Document_id document_id, Range range, std::string message) -> void;
 
-    [[nodiscard]] auto format_diagnostics(
-        std::filesystem::path const& path,
-        Document const&              document,
-        cppdiag::Colors              colors = cppdiag::Colors::none()) -> std::string;
-
+    // Pooled string that is cheap to copy and compare.
     using Identifier = cpputil::mem::Stable_pool_string;
 
+    // Identifier with a range.
     struct Name {
         Identifier identifier;
         Range      range;
 
-        // Check whether this name starts with an upper-case letter,
-        // possibly preceded by underscores.
+        // Check whether this name starts with a capital letter, possibly preceded by underscores.
         [[nodiscard]] auto is_upper() const -> bool;
 
         // Compare identifiers.

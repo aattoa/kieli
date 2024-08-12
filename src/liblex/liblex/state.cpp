@@ -19,7 +19,7 @@ namespace {
 
 auto liblex::source_begin(const kieli::Lex_state& state) noexcept -> char const*
 {
-    return kieli::document(state.db, state.document_id).text.data();
+    return state.db.documents.at(state.document_id).text.data();
 }
 
 auto liblex::source_end(const kieli::Lex_state& state) noexcept -> char const*
@@ -102,7 +102,7 @@ auto liblex::error(
         .range    = range_for(state, position),
         .severity = kieli::Severity::error,
     };
-    kieli::document(state.db, state.document_id).diagnostics.push_back(std::move(diagnostic));
+    kieli::add_diagnostic(state.db, state.document_id, std::move(diagnostic));
     return std::unexpected(Error {});
 }
 

@@ -49,15 +49,19 @@ TEST("Position::advance_with")
     REQUIRE_EQUAL(position, kieli::Position { 1, 0 });
 }
 
-TEST("find_document")
+TEST("find_existing_document_id")
 {
     kieli::Database db;
 
-    auto const a = kieli::add_document(db, "path A", "content A");
-    auto const b = kieli::add_document(db, "path B", "content B");
-    auto const c = kieli::add_document(db, "path C", "content C");
+    auto const a = kieli::client_open_document(db, "path A", "content A");
+    auto const b = kieli::client_open_document(db, "path B", "content B");
+    auto const c = kieli::client_open_document(db, "path C", "content C");
 
-    CHECK(kieli::find_document(db, "path A") == a);
-    CHECK(kieli::find_document(db, "path B") == b);
-    CHECK(kieli::find_document(db, "path C") == c);
+    CHECK(kieli::find_existing_document_id(db, "path A") == a);
+    CHECK(kieli::find_existing_document_id(db, "path B") == b);
+    CHECK(kieli::find_existing_document_id(db, "path C") == c);
+
+    CHECK_EQUAL(db.documents.at(a).text, "content A");
+    CHECK_EQUAL(db.documents.at(b).text, "content B");
+    CHECK_EQUAL(db.documents.at(c).text, "content C");
 }

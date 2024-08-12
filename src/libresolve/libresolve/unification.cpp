@@ -324,8 +324,7 @@ auto libresolve::require_subtype_relationship(
             .range    =,
             .severity = kieli::Severity::error,
         };
-
-        kieli::document(context.db, state.document_id).diagnostics.push_back(std::move(diagnostic));
+        kieli::add_diagnostic(context.db, state.document_id, std::move(diagnostic));
 #endif
     }
 }

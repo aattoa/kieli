@@ -2,11 +2,10 @@
 #include <liblex/lex.hpp>
 #include "test_liblex.hpp"
 
-auto liblex::test_lex(std::string&& string) -> Test_lex_result
+auto liblex::test_lex(std::string&& text) -> Test_lex_result
 {
     auto       db          = kieli::Database {};
-    auto const path        = std::filesystem::path("[test]");
-    auto const document_id = kieli::add_document(db, path, std::move(string));
+    auto const document_id = kieli::test_document(db, std::move(text));
     auto       state       = kieli::lex_state(db, document_id);
 
     std::vector<kieli::Token> tokens;
@@ -20,6 +19,6 @@ auto liblex::test_lex(std::string&& string) -> Test_lex_result
 
     return Test_lex_result {
         .formatted_tokens    = std::format("{}", utl::fmt::join(tokens, ", ")),
-        .diagnostic_messages = kieli::format_diagnostics(path, kieli::document(db, document_id)),
+        .diagnostic_messages = kieli::format_document_diagnostics(db, document_id),
     };
 }

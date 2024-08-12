@@ -23,7 +23,7 @@
 - Move counts as drop
 
 ## libcompiler
-- `struct Document_store`
+- Document paths should always be absolute
 - `enum class Phase { lex, parse, etc. }`
 - `enum class liblex::diagnostic`
 - `auto diag_code(Phase, std::size_t code) -> std::string`

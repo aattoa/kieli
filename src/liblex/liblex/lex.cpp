@@ -605,6 +605,6 @@ auto kieli::lex_state(Database& db, Document_id const document_id) -> Lex_state
     return Lex_state {
         .db          = db,
         .document_id = document_id,
-        .text        = kieli::document(db, document_id).text,
+        .text        = db.documents.at(document_id).text,
     };
 }

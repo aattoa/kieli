@@ -3,10 +3,10 @@
 #include <cppunittest/unittest.hpp>
 
 namespace {
-    auto lex(std::string&& string) -> std::string
+    auto lex(std::string&& text) -> std::string
     {
         auto       db          = kieli::Database {};
-        auto const document_id = kieli::add_document(db, "[test]", std::move(string));
+        auto const document_id = kieli::test_document(db, std::move(text));
         auto       state       = kieli::lex_state(db, document_id);
 
         std::string output;

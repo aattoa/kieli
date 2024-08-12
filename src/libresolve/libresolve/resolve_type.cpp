@@ -95,12 +95,12 @@ namespace {
                     },
                     lookup_result.value().variant);
             }
-            kieli::document(context.db, scope.document_id())
-                .diagnostics.push_back(kieli::Diagnostic {
-                    .message  = "Use of an undeclared identifier",
-                    .range    = this_type.range,
-                    .severity = kieli::Severity::error,
-                });
+            kieli::Diagnostic diagnostic {
+                .message  = "Use of an undeclared identifier",
+                .range    = this_type.range,
+                .severity = kieli::Severity::error,
+            };
+            kieli::add_diagnostic(context.db, scope.document_id(), std::move(diagnostic));
             return { context.constants.error_type, this_type.range };
         }
 
@@ -187,6 +187,6 @@ auto libresolve::resolve_type(
     hir::Environment_id environment,
     ast::Type const&    type) -> hir::Type
 {
-    return std::visit(
-        Type_resolution_visitor { context, state, scope, environment, type }, type.variant);
+    Type_resolution_visitor visitor { context, state, scope, environment, type };
+    return std::visit(visitor, type.variant);
 }

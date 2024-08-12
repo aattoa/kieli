@@ -198,12 +198,12 @@ namespace {
             ast::Expression condition = context.deref_desugar(conditional.condition);
 
             if (std::holds_alternative<kieli::Boolean>(condition.variant)) {
-                kieli::document(context.db, context.document_id)
-                    .diagnostics.push_back(kieli::Diagnostic {
-                        .message  = "Constant condition",
-                        .range    = condition.range,
-                        .severity = kieli::Severity::information,
-                    });
+                kieli::Diagnostic diagnostic {
+                    .message  = "Constant condition",
+                    .range    = condition.range,
+                    .severity = kieli::Severity::information,
+                };
+                kieli::add_diagnostic(context.db, context.document_id, std::move(diagnostic));
             }
 
             return ast::expression::Conditional {
@@ -297,9 +297,10 @@ namespace {
             */
             ast::Expression condition = context.deref_desugar(loop.condition);
             if (auto const* const boolean = std::get_if<kieli::Boolean>(&condition.variant)) {
-                kieli::document(context.db, context.document_id)
-                    .diagnostics.push_back(
-                        constant_loop_condition_diagnostic(condition.range, boolean->value));
+                kieli::add_diagnostic(
+                    context.db,
+                    context.document_id,
+                    constant_loop_condition_diagnostic(condition.range, boolean->value));
             }
             ast::expression::Conditional conditional {
                 .condition                 = context.ast.expressions.push(std::move(condition)),

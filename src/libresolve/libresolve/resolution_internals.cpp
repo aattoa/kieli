@@ -169,8 +169,7 @@ auto libresolve::ensure_no_unsolved_variables(Context& context, Inference_state&
                 .range    = data.origin,
                 .severity = kieli::Severity::error,
             };
-            kieli::document(context.db, state.document_id)
-                .diagnostics.push_back(std::move(diagnostic));
+            kieli::add_diagnostic(context.db, state.document_id, std::move(diagnostic));
             state.set_solution(context, data, hir::type::Error {});
         }
     }

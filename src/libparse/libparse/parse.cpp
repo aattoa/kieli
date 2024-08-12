@@ -7,9 +7,9 @@ using namespace libparse;
 namespace {
     auto parse_self_parameter(Context& context) -> std::optional<cst::Self_parameter>
     {
-        Stage const stage           = context.stage();
-        auto const  ampersand_token = context.try_extract(Token_type::ampersand);
-        auto        mutability      = parse_mutability(context);
+        auto const stage           = context.stage();
+        auto const ampersand_token = context.try_extract(Token_type::ampersand);
+        auto       mutability      = parse_mutability(context);
         if (auto self_token = context.try_extract(Token_type::lower_self)) {
             return cst::Self_parameter {
                 .mutability         = mutability,
@@ -368,7 +368,7 @@ auto libparse::extract_concept_references(Context& context)
 
 auto kieli::parse(Database& db, Document_id const document_id) -> CST
 {
-    document(db, document_id).diagnostics.clear();
+    db.documents.at(document_id).diagnostics.clear();
 
     auto arena   = cst::Arena {};
     auto context = libparse::Context { arena, lex_state(db, document_id) };

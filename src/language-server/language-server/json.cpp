@@ -5,7 +5,7 @@ namespace {
     auto document_id_from_path(kieli::Database const& db, std::filesystem::path const& path)
         -> kieli::Document_id
     {
-        if (auto const document_id = kieli::find_document(db, path)) {
+        if (auto const document_id = kieli::find_existing_document_id(db, path)) {
             return document_id.value();
         }
         throw kieli::lsp::Bad_client_json(

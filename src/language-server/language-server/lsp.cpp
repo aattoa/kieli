@@ -68,7 +68,7 @@ namespace {
         auto const document_id
             = document_id_from_json(db, as<Json::Object>(at(params, "textDocument")));
 
-        auto items = kieli::document(db, document_id).diagnostics
+        auto items = db.documents.at(document_id).diagnostics
                    | std::views::transform(std::bind_front(diagnostic_to_json, std::cref(db)))
                    | std::ranges::to<Json::Array>();
 
@@ -137,11 +137,8 @@ namespace {
     {
         auto document = document_item_from_json(as<Json::Object>(at(params, "textDocument")));
         if (document.language == "kieli") {
-            (void)kieli::add_document(
-                db,
-                std::move(document.path),
-                std::move(document.text),
-                kieli::Document_ownership::client);
+            (void)kieli::client_open_document(
+                db, std::move(document.path), std::move(document.text));
             return {};
         }
         return std::unexpected(std::format("Unsupported language: '{}'", document.language));
@@ -175,7 +172,7 @@ namespace {
         auto const document_id
             = document_id_from_json(db, as<Json::Object>(at(params, "textDocument")));
 
-        std::string& text = kieli::document(db, document_id).text;
+        std::string& text = db.documents.at(document_id).text;
         for (Json const& change : params.at("contentChanges").as_array()) {
             apply_content_change(text, change.as_object());
         }

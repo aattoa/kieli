@@ -6,7 +6,7 @@
 auto kieli::query::document_id(Database& db, std::filesystem::path const& path)
     -> Result<Document_id>
 {
-    if (auto const document_id = find_document(db, path)) {
+    if (auto const document_id = find_existing_document_id(db, path)) {
         return document_id.value();
     }
     return read_document(db, path).transform_error([&](Read_failure const failure) {
