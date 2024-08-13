@@ -1,4 +1,3 @@
-#include <libutl/safe_integer.hpp>
 #include <libutl/utilities.hpp>
 #include <libresolve/resolution_internals.hpp>
 
@@ -27,13 +26,11 @@ auto libresolve::Constants::make_with(hir::Arena& arenas) -> Constants
 
 auto libresolve::Tag_state::fresh_template_parameter_tag() -> hir::Template_parameter_tag
 {
-    cpputil::always_assert(!utl::would_increment_overflow(m_current_template_parameter_tag));
     return hir::Template_parameter_tag { ++m_current_template_parameter_tag };
 }
 
 auto libresolve::Tag_state::fresh_local_variable_tag() -> hir::Local_variable_tag
 {
-    cpputil::always_assert(!utl::would_increment_overflow(m_current_local_variable_tag));
     return hir::Local_variable_tag { ++m_current_local_variable_tag };
 }
 

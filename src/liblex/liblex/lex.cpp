@@ -1,5 +1,4 @@
 #include <libutl/utilities.hpp>
-#include <libutl/safe_integer.hpp>
 #include <liblex/numeric.hpp>
 #include <liblex/lex.hpp>
 #include <liblex/state.hpp>
@@ -242,7 +241,6 @@ namespace {
                 --depth;
             }
             else if (liblex::try_consume(state, "/*")) {
-                cpputil::always_assert(!utl::would_increment_overflow(depth));
                 ++depth;
             }
             else if (state.text.empty()) {

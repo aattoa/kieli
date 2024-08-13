@@ -1,5 +1,4 @@
 #include <libutl/utilities.hpp>
-#include <libutl/safe_integer.hpp>
 #include <liblex/numeric.hpp>
 #include <charconv>
 
@@ -50,7 +49,7 @@ auto liblex::apply_scientific_exponent(std::size_t integer, std::size_t const ex
     -> std::expected<std::size_t, Numeric_error>
 {
     for (std::size_t i = 0; i != exponent; ++i) {
-        if (utl::would_multiplication_overflow(integer, 10UZ)) {
+        if ((integer * 10) < integer) {
             return std::unexpected { Numeric_error::out_of_range };
         }
         integer *= 10;
