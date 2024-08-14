@@ -299,6 +299,8 @@ namespace kieli::ast {
         };
 
         struct Hole {};
+
+        struct Error {};
     } // namespace expression
 
     struct Expression_variant
@@ -340,7 +342,8 @@ namespace kieli::ast {
               expression::Move,
               expression::Defer,
               expression::Meta,
-              expression::Hole> {
+              expression::Hole,
+              expression::Error> {
         using variant::variant, variant::operator=;
     };
 

@@ -4,25 +4,6 @@
 using namespace libdesugar;
 
 namespace {
-    auto duplicate_fields_error(
-        Context&                context,
-        kieli::Identifier const identifier,
-        kieli::Range const      first,
-        kieli::Range const      second) -> kieli::Diagnostic
-    {
-        return kieli::Diagnostic {
-            .message  = std::format("More than one initializer for struct member {}", identifier),
-            .range    = second,
-            .severity = kieli::Severity::error,
-            .related_info = utl::to_vector({
-                kieli::Diagnostic_related_info {
-                    .message = "First specified here",
-                    .location { .document_id = context.document_id, .range = first },
-                },
-            }),
-        };
-    }
-
     auto constant_loop_condition_diagnostic(kieli::Range const range, bool const condition)
         -> kieli::Diagnostic
     {
@@ -33,23 +14,40 @@ namespace {
         };
     }
 
-    auto ensure_no_duplicate_fields(
-        Context& context, cst::expression::Struct_initializer const& initializer) -> void
+    auto duplicate_fields_error(
+        Context&                context,
+        kieli::Identifier const identifier,
+        kieli::Range const      first,
+        kieli::Range const      second) -> kieli::Diagnostic
+    {
+        return kieli::Diagnostic {
+            .message      = std::format("Duplicate initializer for struct member {}", identifier),
+            .range        = second,
+            .severity     = kieli::Severity::error,
+            .related_info = utl::to_vector({
+                kieli::Diagnostic_related_info {
+                    .message = "First specified here",
+                    .location { .document_id = context.document_id, .range = first },
+                },
+            }),
+        };
+    }
+
+    auto check_has_duplicate_fields(
+        Context& context, cst::expression::Struct_initializer const& initializer) -> bool
     {
         auto const& initializers = initializer.initializers.value.elements;
         for (auto it = initializers.begin(); it != initializers.end(); ++it) {
-            if (auto duplicate = std::ranges::find(
-                    it + 1,
-                    initializers.end(),
-                    it->name,
-                    &cst::expression::Struct_initializer::Field::name);
-                duplicate != initializers.end()) {
-                // TODO: just mark the duplicate as erroneous
+            auto const name      = &cst::expression::Struct_initializer::Field::name;
+            auto const duplicate = std::ranges::find(it + 1, initializers.end(), it->name, name);
+            if (duplicate != initializers.end()) {
                 kieli::Diagnostic diagnostic = duplicate_fields_error(
                     context, it->name.identifier, it->name.range, duplicate->name.range);
-                kieli::fatal_error(context.db, context.document_id, std::move(diagnostic));
+                kieli::add_diagnostic(context.db, context.document_id, std::move(diagnostic));
+                return true;
             }
         }
+        return false;
     }
 
     constexpr auto operators_1 = std::to_array<std::string_view>({ "*", "/", "%" });
@@ -361,7 +359,9 @@ namespace {
         auto operator()(cst::expression::Struct_initializer const& initializer)
             -> ast::Expression_variant
         {
-            ensure_no_duplicate_fields(context, initializer);
+            if (check_has_duplicate_fields(context, initializer)) {
+                return ast::expression::Error {};
+            }
             return ast::expression::Struct_initializer {
                 .constructor_path = context.desugar(initializer.constructor_path),
                 .initializers     = context.desugar(initializer.initializers),
@@ -546,11 +546,13 @@ namespace {
 
         auto operator()(cst::expression::For_loop const&) -> ast::Expression_variant
         {
-            kieli::fatal_error(
-                context.db,
-                context.document_id,
-                this_expression.range,
-                "For loops are not supported yet");
+            kieli::Diagnostic diagnostic {
+                .message  = "For loops are not supported yet",
+                .range    = this_expression.range,
+                .severity = kieli::Severity::error,
+            };
+            kieli::add_diagnostic(context.db, context.document_id, std::move(diagnostic));
+            return ast::expression::Error {};
         }
 
         auto operator()(cst::expression::Conditional_let const&) -> ast::Expression_variant
@@ -564,8 +566,6 @@ namespace {
 
 auto libdesugar::Context::desugar(cst::Expression const& expression) -> ast::Expression
 {
-    return {
-        std::visit(Expression_desugaring_visitor { *this, expression }, expression.variant),
-        expression.range,
-    };
+    Expression_desugaring_visitor visitor { *this, expression };
+    return { std::visit(visitor, expression.variant), expression.range };
 }

@@ -58,20 +58,22 @@ auto libdesugar::Context::desugar(cst::Function_argument const& argument) -> ast
 auto libdesugar::Context::desugar(cst::Function_parameter const& parameter)
     -> ast::Function_parameter
 {
+    auto const desugar_argument = [&](cst::Value_parameter_default_argument const& argument) {
+        if (auto const* const wildcard = std::get_if<cst::Wildcard>(&argument.variant)) {
+            kieli::Diagnostic diagnostic {
+                .message  = "A default function argument may not be a wildcard",
+                .range    = wildcard->range,
+                .severity = kieli::Severity::error,
+            };
+            kieli::add_diagnostic(db, document_id, std::move(diagnostic));
+            return ast.expressions.push(ast::expression::Error {}, wildcard->range);
+        }
+        return desugar(std::get<cst::Expression_id>(argument.variant));
+    };
     return ast::Function_parameter {
         .pattern          = desugar(parameter.pattern),
         .type             = parameter.type.transform(desugar()),
-        .default_argument = parameter.default_argument.transform(
-            [&](cst::Value_parameter_default_argument const& argument) {
-                if (auto const* const wildcard = std::get_if<cst::Wildcard>(&argument.variant)) {
-                    kieli::fatal_error(
-                        db,
-                        document_id,
-                        wildcard->range,
-                        "A default function argument may not be a wildcard");
-                }
-                return desugar(std::get<cst::Expression_id>(argument.variant));
-            }),
+        .default_argument = parameter.default_argument.transform(desugar_argument),
     };
 }
 

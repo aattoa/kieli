@@ -502,6 +502,11 @@ namespace {
                 this_expression.range,
             };
         }
+
+        auto operator()(ast::expression::Error const&) -> hir::Expression
+        {
+            return error_expression(context.constants, this_expression.range);
+        }
     };
 } // namespace
 

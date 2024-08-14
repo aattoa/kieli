@@ -27,19 +27,20 @@ namespace {
 
     template <class T>
     auto ensure_no_duplicates(
-        Context& context, std::string_view const description, std::vector<T> const& elements)
+        Context&               context,
+        std::string_view const description,
+        std::vector<T> const&  elements) -> void
     {
         for (auto it = elements.begin(); it != elements.end(); ++it) {
             auto const duplicate = std::ranges::find(it + 1, elements.end(), it->name, &T::name);
             if (duplicate != elements.end()) {
-                // TODO: just mark the duplicate as erroneous
                 kieli::Diagnostic diagnostic = duplicate_fields_error(
                     context,
                     description,
                     it->name.identifier,
                     it->name.range,
                     duplicate->name.range);
-                kieli::fatal_error(context.db, context.document_id, std::move(diagnostic));
+                kieli::add_diagnostic(context.db, context.document_id, std::move(diagnostic));
             }
         }
     }
@@ -72,11 +73,10 @@ namespace {
         auto operator()(cst::definition::Struct const& structure) -> ast::Definition_variant
         {
             return ast::definition::Enumeration {
-                .constructors = utl::to_vector({ ast::definition::Constructor {
+                .constructors { utl::to_vector({ ast::definition::Constructor {
                     .name = structure.name,
                     .body = context.desugar(structure.body),
-                } }),
-
+                } }) },
                 .name                = structure.name,
                 .template_parameters = structure.template_parameters.transform(context.desugar()),
             };
@@ -160,20 +160,19 @@ auto libdesugar::Context::desugar(cst::definition::Field const& field) -> ast::d
 auto libdesugar::Context::desugar(cst::definition::Constructor_body const& body)
     -> ast::definition::Constructor_body
 {
-    return std::visit<ast::definition::Constructor_body>(
-        utl::Overload {
-            [&](cst::definition::Struct_constructor const& constructor) {
-                ensure_no_duplicates(*this, "field", constructor.fields.value.elements);
-                return ast::definition::Struct_constructor { desugar(constructor.fields) };
-            },
-            [&](cst::definition::Tuple_constructor const& constructor) {
-                return ast::definition::Tuple_constructor { desugar(constructor.types) };
-            },
-            [&](cst::definition::Unit_constructor const&) {
-                return ast::definition::Unit_constructor {};
-            },
+    auto const visitor = utl::Overload {
+        [&](cst::definition::Struct_constructor const& constructor) {
+            ensure_no_duplicates(*this, "field", constructor.fields.value.elements);
+            return ast::definition::Struct_constructor { desugar(constructor.fields) };
         },
-        body);
+        [&](cst::definition::Tuple_constructor const& constructor) {
+            return ast::definition::Tuple_constructor { desugar(constructor.types) };
+        },
+        [&](cst::definition::Unit_constructor const&) {
+            return ast::definition::Unit_constructor {};
+        },
+    };
+    return std::visit<ast::definition::Constructor_body>(visitor, body);
 }
 
 auto libdesugar::Context::desugar(cst::definition::Constructor const& constructor)
@@ -187,7 +186,7 @@ auto libdesugar::Context::desugar(cst::definition::Constructor const& constructo
 
 auto libdesugar::Context::desugar(cst::Definition const& definition) -> ast::Definition
 {
-    return {
+    return ast::Definition {
         std::visit(Definition_desugaring_visitor { *this, definition.source }, definition.variant),
         definition.source,
         definition.range,
