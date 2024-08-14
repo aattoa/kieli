@@ -19,6 +19,7 @@ namespace {
         { "*", Token_type::asterisk },
         { "+", Token_type::plus },
         { "?", Token_type::question },
+        { "!", Token_type::exclamation },
         { "\\", Token_type::lambda },
         { "<-", Token_type::left_arrow },
         { "->", Token_type::right_arrow },

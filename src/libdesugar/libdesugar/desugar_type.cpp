@@ -48,6 +48,11 @@ namespace {
             return ast::type::Self {};
         }
 
+        auto operator()(cst::type::Never const&) -> ast::Type_variant
+        {
+            return ast::type::Never {};
+        }
+
         auto operator()(cst::type::Typename const& type) -> ast::Type_variant
         {
             return ast::type::Typename { .path = context.desugar(type.path) };

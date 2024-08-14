@@ -74,6 +74,11 @@ namespace {
             cpputil::todo();
         }
 
+        auto operator()(ast::type::Never const&) -> hir::Type
+        {
+            cpputil::todo();
+        }
+
         auto operator()(ast::type::Typename const& type) -> hir::Type
         {
             if (type.path.is_simple_name()) {

@@ -21,6 +21,7 @@ namespace kieli {
         asterisk,    // *
         plus,        // +
         question,    // ?
+        exclamation, // !
         equals,      // =
         pipe,        // |
         lambda,      // backslash

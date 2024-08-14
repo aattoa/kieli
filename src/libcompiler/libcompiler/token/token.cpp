@@ -16,6 +16,7 @@ static constexpr auto type_strings_array = std::to_array<std::string_view>({
     "*",
     "+",
     "?",
+    "!",
     "=",
     "|",
     "\\",

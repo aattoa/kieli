@@ -599,7 +599,13 @@ namespace kieli::cst {
             Surrounded<Type_id> type;
         };
 
-        struct Self {};
+        struct Self {
+            Token self_keyword_token;
+        };
+
+        struct Never {
+            Token exclamation_token;
+        };
 
         struct Typename {
             Path path;
@@ -665,6 +671,7 @@ namespace kieli::cst {
               kieli::type::String,
               Wildcard,
               type::Self,
+              type::Never,
               type::Typename,
               type::Tuple,
               type::Array,

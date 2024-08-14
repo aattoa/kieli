@@ -156,7 +156,8 @@ namespace {
         case Token_type::boolean_type:   return kieli::type::Boolean {};
         case Token_type::string_type:    return kieli::type::String {};
         case Token_type::underscore:     return cst::Wildcard { token.range };
-        case Token_type::upper_self:     return cst::type::Self {};
+        case Token_type::upper_self:     return cst::type::Self { cst::Token::from_lexical(token) };
+        case Token_type::exclamation:    return cst::type::Never { cst::Token::from_lexical(token) };
         case Token_type::paren_open:     return extract_tuple(context, token);
         case Token_type::bracket_open:   return extract_array_or_slice(context, token);
         case Token_type::fn:             return extract_function(context, token);

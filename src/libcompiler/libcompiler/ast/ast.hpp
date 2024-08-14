@@ -431,6 +431,8 @@ namespace kieli::ast {
     namespace type {
         struct Self {};
 
+        struct Never {};
+
         struct Typename {
             Path path;
         };
@@ -486,6 +488,7 @@ namespace kieli::ast {
               kieli::type::String,
               Wildcard,
               type::Self,
+              type::Never,
               type::Typename,
               type::Tuple,
               type::Array,

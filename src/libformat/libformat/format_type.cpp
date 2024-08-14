@@ -42,6 +42,11 @@ namespace {
             format(state, "Self");
         }
 
+        auto operator()(cst::type::Never const&)
+        {
+            format(state, "!");
+        }
+
         auto operator()(cst::type::Typename const& type)
         {
             format(state, type.path);
