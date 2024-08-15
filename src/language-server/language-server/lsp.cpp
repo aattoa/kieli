@@ -262,7 +262,8 @@ namespace {
         return error_response(Error_code::invalid_params, std::move(message), std::move(id));
     }
 
-    auto dispatch_handle_client_message(Server& server, Json const& message) -> std::optional<Json>
+    auto dispatch_handle_client_message_object(Server& server, Json const& message)
+        -> std::optional<Json>
     {
         std::optional<Json> id;
         try {
@@ -272,7 +273,7 @@ namespace {
             auto const& params = message_params(object);
 
             // If there is an id, the message is a request and the client expects a reply.
-            // Otherwise, the message is a notification and the client expects no reply.
+            // Otherwise, the message is a notification and the client does not expect a reply.
 
             try {
                 if (id.has_value()) {
@@ -289,6 +290,31 @@ namespace {
         }
         catch (Bad_client_json const& bad_json) {
             return invalid_request_error_response(bad_json, std::move(id).value_or(Json {}));
+        }
+    }
+
+    auto dispatch_handle_client_message_batch(Server& server, Json::Array const& messages)
+        -> std::optional<Json>
+    {
+        Json::Array replies;
+        for (Json const& message : messages) {
+            if (auto reply = dispatch_handle_client_message_object(server, message)) {
+                replies.push_back(std::move(reply).value());
+            }
+        }
+        if (replies.empty()) {
+            return std::nullopt;
+        }
+        return Json { std::move(replies) };
+    }
+
+    auto dispatch_handle_client_message(Server& server, Json const& message) -> std::optional<Json>
+    {
+        if (message.is_array()) {
+            return dispatch_handle_client_message_batch(server, message.as_array());
+        }
+        else {
+            return dispatch_handle_client_message_object(server, message);
         }
     }
 } // namespace

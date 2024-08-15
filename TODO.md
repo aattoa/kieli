@@ -14,13 +14,13 @@
 
 ## libdesugar
 - More tests
+- Shunting yard?
 
 ## libresolve
 - Unique zero-sized type for each function, coerce to function pointer type
 - Scope stack, scope id
 - Generate logs for rollback
-- Drop annotation in `impl` blocks
-- Move counts as drop
+- Attribute `linear` means type has to be explicitly dropped with a function marked `drop`
 
 ## libcompiler
 - Document paths should always be absolute
@@ -29,6 +29,7 @@
 - `auto diag_code(Phase, std::size_t code) -> std::string`
 
 ## Language server
+- Semantic tokens
 - Handle command line properly
 - Batch messages
 - Gather code actions per line
@@ -40,7 +41,6 @@
 - git submodules?
 
 ## Miscellaneous
-- Divergence type
 - Attributes/annotations
 - First class testing
 - Inline concepts
