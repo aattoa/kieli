@@ -43,9 +43,9 @@ namespace libdesugar {
         auto desugar(cst::definition::Field const&) -> ast::definition::Field;
         auto desugar(cst::definition::Constructor_body const&) -> ast::definition::Constructor_body;
         auto desugar(cst::definition::Constructor const&) -> ast::definition::Constructor;
+        auto desugar(cst::Wildcard const&) -> ast::Wildcard;
+        auto desugar(cst::Self_parameter const&) -> ast::Self_parameter;
 
-        static auto desugar(cst::Wildcard const&) -> ast::Wildcard;
-        static auto desugar(cst::Self_parameter const&) -> ast::Self_parameter;
         static auto desugar(cst::Mutability const&) -> ast::Mutability;
 
         auto desugar() noexcept

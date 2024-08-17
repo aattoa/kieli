@@ -64,6 +64,9 @@ namespace libparse {
         // Source view from `range` up to (but not including) the current token.
         [[nodiscard]] auto up_to_current(kieli::Range range) const -> kieli::Range;
 
+        // Add a token to the CST arena, and return its id.
+        [[nodiscard]] auto token(Token const& token) -> cst::Token_id;
+
         [[nodiscard]] auto db() -> kieli::Database&;
         [[nodiscard]] auto cst() const -> cst::Arena&;
         [[nodiscard]] auto special_identifiers() const -> Special_identifiers;
@@ -134,8 +137,8 @@ namespace libparse {
         return context.try_extract(open_type).transform([&](Token const& open) {
             return cst::Surrounded<Parser_target<parser>> {
                 .value       = require<parser>(context, description.view()),
-                .open_token  = cst::Token::from_lexical(open),
-                .close_token = cst::Token::from_lexical(context.require_extract(close_type)),
+                .open_token  = context.token(open),
+                .close_token = context.token(context.require_extract(close_type)),
             };
         });
     }
@@ -161,7 +164,7 @@ namespace libparse {
         if (auto first_element = parser(context)) {
             sequence.elements.push_back(std::move(first_element.value()));
             while (auto separator = context.try_extract(separator_type)) {
-                sequence.separator_tokens.push_back(cst::Token::from_lexical(separator.value()));
+                sequence.separator_tokens.push_back(context.token(separator.value()));
                 sequence.elements.push_back(require<parser>(context, description.view()));
             }
         }
@@ -186,7 +189,7 @@ namespace libparse {
     constexpr auto parse_comma_separated_one_or_more
         = parse_separated_one_or_more<parser, description, Token_type::comma>;
 
-    template <Token_type type, class Name>
+    template <Token_type type, std::derived_from<kieli::Name> Name>
     auto parse_name(Context& context) -> std::optional<Name>
     {
         return context.try_extract(type).transform([](Token const& token) {
@@ -197,7 +200,7 @@ namespace libparse {
         });
     }
 
-    template <Token_type type, class Name>
+    template <Token_type type, std::derived_from<kieli::Name> Name>
     auto extract_name(Context& context, std::string_view const description) -> Name
     {
         if (auto name = parse_name<type, Name>(context)) {

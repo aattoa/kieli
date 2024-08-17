@@ -39,7 +39,7 @@ auto libformat::format(State& state, cst::Type_id const id) -> void
 
 auto libformat::format(State& state, cst::Wildcard const& wildcard) -> void
 {
-    auto const [start, stop] = wildcard.range;
+    auto const [start, stop] = state.arena.tokens[wildcard.underscore_token].range;
     cpputil::always_assert(start.column < stop.column);
     format(state, "{:_^{}}", "", stop.column - start.column);
 }

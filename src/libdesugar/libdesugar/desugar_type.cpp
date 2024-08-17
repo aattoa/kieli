@@ -97,19 +97,19 @@ namespace {
 
         auto operator()(cst::type::Reference const& reference) -> ast::Type_variant
         {
+            auto const ampersand_range = context.cst.tokens[reference.ampersand_token].range;
             return ast::type::Reference {
                 .referenced_type = context.desugar(reference.referenced_type),
-                .mutability
-                = context.desugar_mutability(reference.mutability, reference.ampersand_token.range),
+                .mutability = context.desugar_mutability(reference.mutability, ampersand_range),
             };
         }
 
         auto operator()(cst::type::Pointer const& pointer) -> ast::Type_variant
         {
+            auto const asterisk_range = context.cst.tokens[pointer.asterisk_token].range;
             return ast::type::Pointer {
                 .pointee_type = context.desugar(pointer.pointee_type),
-                .mutability
-                = context.desugar_mutability(pointer.mutability, pointer.asterisk_token.range),
+                .mutability   = context.desugar_mutability(pointer.mutability, asterisk_range),
             };
         }
 

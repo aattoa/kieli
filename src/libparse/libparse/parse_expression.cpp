@@ -26,8 +26,8 @@ namespace {
                 cst::expression::Conditional_let {
                     .pattern     = pattern,
                     .initializer = require<parse_expression>(context, "the initializer expression"),
-                    .let_keyword_token = cst::Token::from_lexical(let_keyword.value()),
-                    .equals_sign_token = cst::Token::from_lexical(equals_sign),
+                    .let_keyword_token = context.token(let_keyword.value()),
+                    .equals_sign_token = context.token(equals_sign),
                 },
                 context.up_to_current(let_keyword.value().range));
         }
@@ -45,7 +45,7 @@ namespace {
     {
         return cst::expression::Infinite_loop {
             .body               = extract_loop_body(context),
-            .loop_keyword_token = cst::Token::from_lexical(loop_keyword),
+            .loop_keyword_token = context.token(loop_keyword),
         };
     }
 
@@ -54,7 +54,7 @@ namespace {
         return cst::expression::While_loop {
             .condition           = extract_condition(context),
             .body                = extract_loop_body(context),
-            .while_keyword_token = cst::Token::from_lexical(while_keyword),
+            .while_keyword_token = context.token(while_keyword),
         };
     }
 
@@ -66,8 +66,8 @@ namespace {
             .iterator          = iterator,
             .iterable          = require<parse_expression>(context, "an iterable expression"),
             .body              = extract_loop_body(context),
-            .for_keyword_token = cst::Token::from_lexical(for_keyword),
-            .in_keyword_token  = cst::Token::from_lexical(in_keyword),
+            .for_keyword_token = context.token(for_keyword),
+            .in_keyword_token  = context.token(in_keyword),
         };
     }
 
@@ -78,7 +78,7 @@ namespace {
             Token const equals_sign = context.require_extract(Token_type::equals);
             return cst::expression::Struct_initializer::Field {
                 .name              = name,
-                .equals_sign_token = cst::Token::from_lexical(equals_sign),
+                .equals_sign_token = context.token(equals_sign),
                 .expression = require<parse_expression>(context, "an initializer expression"),
             };
         });
@@ -135,10 +135,10 @@ namespace {
             context,
             cst::Path_root {
                 .variant = cst::Path_root_global {
-                    .global_keyword = cst::Token::from_lexical(global),
+                    .global_keyword = context.token(global),
                 },
                 .double_colon_token
-                    = cst::Token::from_lexical(context.require_extract(Token_type::double_colon)),
+                    = context.token(context.require_extract(Token_type::double_colon)),
                 .range = global.range,
             });
     }
@@ -147,7 +147,7 @@ namespace {
     {
         return cst::expression::Dereference {
             .reference_expression = require<parse_expression>(context, "an expression"),
-            .asterisk_token       = cst::Token::from_lexical(asterisk),
+            .asterisk_token       = context.token(asterisk),
         };
     }
 
@@ -159,14 +159,14 @@ namespace {
         if (expressions.elements.size() == 1) {
             return cst::expression::Parenthesized { {
                 .value       = expressions.elements.front(),
-                .open_token  = cst::Token::from_lexical(paren_open),
-                .close_token = cst::Token::from_lexical(paren_close),
+                .open_token  = context.token(paren_open),
+                .close_token = context.token(paren_close),
             } };
         }
         return cst::expression::Tuple { {
             .value       = std::move(expressions),
-            .open_token  = cst::Token::from_lexical(paren_open),
-            .close_token = cst::Token::from_lexical(paren_close),
+            .open_token  = context.token(paren_open),
+            .close_token = context.token(paren_close),
         } };
     }
 
@@ -177,8 +177,8 @@ namespace {
         if (auto const bracket_close = context.try_extract(Token_type::bracket_close)) {
             return cst::expression::Array_literal { {
                 .value       = std::move(elements),
-                .open_token  = cst::Token::from_lexical(bracket_open),
-                .close_token = cst::Token::from_lexical(bracket_close.value()),
+                .open_token  = context.token(bracket_open),
+                .close_token = context.token(bracket_close.value()),
             } };
         }
         if (elements.elements.empty()) {
@@ -218,13 +218,13 @@ namespace {
                 .body = context.cst().expressions.push(
                     std::move(elif_conditional), context.up_to_current(elif_keyword.value().range)),
 
-                .else_or_elif_keyword_token = cst::Token::from_lexical(elif_keyword.value()),
+                .else_or_elif_keyword_token = context.token(elif_keyword.value()),
             };
         }
         else if (auto const else_keyword = context.try_extract(Token_type::else_)) {
             false_branch = cst::expression::Conditional::False_branch {
                 .body                       = extract_branch(context),
-                .else_or_elif_keyword_token = cst::Token::from_lexical(else_keyword.value()),
+                .else_or_elif_keyword_token = context.token(else_keyword.value()),
             };
         }
 
@@ -232,7 +232,7 @@ namespace {
             .condition                = primary_condition,
             .true_branch              = true_branch,
             .false_branch             = false_branch,
-            .if_or_elif_keyword_token = cst::Token::from_lexical(if_or_elif_keyword),
+            .if_or_elif_keyword_token = context.token(if_or_elif_keyword),
             .is_elif                  = conditional_kind == Conditional_kind::elif,
         };
     }
@@ -246,8 +246,8 @@ namespace {
             .pattern           = pattern,
             .type              = type,
             .initializer       = require<parse_expression>(context, "the initializer expression"),
-            .let_keyword_token = cst::Token::from_lexical(let_keyword),
-            .equals_sign_token = cst::Token::from_lexical(equals_sign),
+            .let_keyword_token = context.token(let_keyword),
+            .equals_sign_token = context.token(equals_sign),
         };
     }
 
@@ -259,8 +259,8 @@ namespace {
         return cst::expression::Local_type_alias {
             .name                = name,
             .type                = require<parse_type>(context, "an aliased type"),
-            .alias_keyword_token = cst::Token::from_lexical(alias_keyword),
-            .equals_sign_token   = cst::Token::from_lexical(equals_sign),
+            .alias_keyword_token = context.token(alias_keyword),
+            .equals_sign_token   = context.token(equals_sign),
         };
     }
 
@@ -269,7 +269,7 @@ namespace {
         return cst::expression::Sizeof {
             .inspected_type
             = require<parse_parenthesized<parse_type, "a type">>(context, "a parenthesized type"),
-            .sizeof_keyword_token = cst::Token::from_lexical(sizeof_keyword),
+            .sizeof_keyword_token = context.token(sizeof_keyword),
         };
     }
 
@@ -282,8 +282,9 @@ namespace {
             return cst::expression::Match::Case {
                 .pattern                  = pattern,
                 .handler                  = handler,
-                .arrow_token              = cst::Token::from_lexical(arrow),
-                .optional_semicolon_token = semicolon.transform(cst::Token::from_lexical),
+                .arrow_token              = context.token(arrow),
+                .optional_semicolon_token = semicolon.transform( //
+                    std::bind_front(&Context::token, std::ref(context))),
             };
         });
     }
@@ -306,22 +307,21 @@ namespace {
         return cst::expression::Match {
             .cases               = extract_cases(context, "a '{' followed by match cases"),
             .matched_expression  = expression,
-            .match_keyword_token = cst::Token::from_lexical(match_keyword),
+            .match_keyword_token = context.token(match_keyword),
         };
     }
 
-    auto extract_continue(Context&, Token const& continue_keyword) -> cst::Expression_variant
+    auto extract_continue(Context& context, Token const& continue_keyword)
+        -> cst::Expression_variant
     {
-        return cst::expression::Continue {
-            .continue_keyword_token = cst::Token::from_lexical(continue_keyword),
-        };
+        return cst::expression::Continue { context.token(continue_keyword) };
     }
 
     auto extract_break(Context& context, Token const& break_keyword) -> cst::Expression_variant
     {
         return cst::expression::Break {
             .result              = parse_expression(context),
-            .break_keyword_token = cst::Token::from_lexical(break_keyword),
+            .break_keyword_token = context.token(break_keyword),
         };
     }
 
@@ -329,7 +329,7 @@ namespace {
     {
         return cst::expression::Ret {
             .returned_expression = parse_expression(context),
-            .ret_keyword_token   = cst::Token::from_lexical(ret_keyword),
+            .ret_keyword_token   = context.token(ret_keyword),
         };
     }
 
@@ -337,7 +337,7 @@ namespace {
     {
         return cst::expression::Discard {
             .discarded_expression  = require<parse_expression>(context, "the discarded expression"),
-            .discard_keyword_token = cst::Token::from_lexical(discard_keyword),
+            .discard_keyword_token = context.token(discard_keyword),
         };
     }
 
@@ -346,7 +346,7 @@ namespace {
         return cst::expression::Addressof {
             .mutability       = parse_mutability(context),
             .place_expression = require<parse_expression>(context, "the referenced expression"),
-            .ampersand_token  = cst::Token::from_lexical(ampersand),
+            .ampersand_token  = context.token(ampersand),
         };
     }
 
@@ -355,7 +355,7 @@ namespace {
     {
         return cst::expression::Unsafe {
             .expression = require<parse_block_expression>(context, "an unsafe block expression"),
-            .unsafe_keyword_token = cst::Token::from_lexical(unsafe_keyword),
+            .unsafe_keyword_token = context.token(unsafe_keyword),
         };
     }
 
@@ -363,7 +363,7 @@ namespace {
     {
         return cst::expression::Move {
             .place_expression  = require<parse_expression>(context, "a place expression"),
-            .mov_keyword_token = cst::Token::from_lexical(mov_keyword),
+            .mov_keyword_token = context.token(mov_keyword),
         };
     }
 
@@ -371,7 +371,7 @@ namespace {
     {
         return cst::expression::Defer {
             .expression          = require<parse_expression>(context, "an expression"),
-            .defer_keyword_token = cst::Token::from_lexical(defer_keyword),
+            .defer_keyword_token = context.token(defer_keyword),
         };
     }
 
@@ -380,7 +380,7 @@ namespace {
         return cst::expression::Meta {
             .expression = require<parse_parenthesized<parse_expression, "an expression">>(
                 context, "a parenthesized expression"),
-            .meta_keyword_token = cst::Token::from_lexical(meta_keyword),
+            .meta_keyword_token = context.token(meta_keyword),
         };
     }
 
@@ -394,7 +394,7 @@ namespace {
             if (auto const semicolon = context.try_extract(Token_type::semicolon)) {
                 side_effects.push_back(cst::expression::Block::Side_effect {
                     .expression               = expression.value(),
-                    .trailing_semicolon_token = cst::Token::from_lexical(semicolon.value()),
+                    .trailing_semicolon_token = context.token(semicolon.value()),
                 });
             }
             else {
@@ -407,8 +407,8 @@ namespace {
         return cst::expression::Block {
             .side_effects      = std::move(side_effects),
             .result_expression = std::move(result_expression),
-            .open_brace_token  = cst::Token::from_lexical(brace_open),
-            .close_brace_token = cst::Token::from_lexical(brace_close),
+            .open_brace_token  = context.token(brace_open),
+            .close_brace_token = context.token(brace_close),
         };
     }
 
@@ -421,7 +421,7 @@ namespace {
                 if (auto const double_colon = context.try_extract(Token_type::double_colon)) {
                     cst::Path_root root {
                         .variant            = type,
-                        .double_colon_token = cst::Token::from_lexical(double_colon.value()),
+                        .double_colon_token = context.token(double_colon.value()),
                         .range              = context.cst().types[type].range,
                     };
                     return extract_expression_path(context, std::move(root));
@@ -502,7 +502,7 @@ namespace {
 
     auto extract_struct_field_access(
         kieli::Lower const       field_name,
-        cst::Token const         dot_token,
+        cst::Token_id const      dot_token,
         cst::Expression_id const expression,
         Context&                 context) -> cst::Expression_variant
     {
@@ -526,7 +526,7 @@ namespace {
     }
 
     auto extract_member_access(
-        cst::Token const         dot_token,
+        cst::Token_id const      dot_token,
         cst::Expression_id const base_expression,
         Context&                 context) -> cst::Expression_variant
     {
@@ -544,7 +544,7 @@ namespace {
             return cst::expression::Tuple_field_access {
                 .base_expression   = base_expression,
                 .field_index       = literal.value().value_as<kieli::Integer>().value,
-                .field_index_token = cst::Token::from_lexical(literal.value()),
+                .field_index_token = context.token(literal.value()),
                 .dot_token         = dot_token,
             };
         }
@@ -557,8 +557,7 @@ namespace {
         return parse_potential_invocation(context).transform([&](cst::Expression_id expression) {
             while (auto const dot = context.try_extract(Token_type::dot)) {
                 expression = context.cst().expressions.push(
-                    extract_member_access(
-                        cst::Token::from_lexical(dot.value()), expression, context),
+                    extract_member_access(context.token(dot.value()), expression, context),
                     context.up_to_current(context.cst().expressions[expression].range));
             }
             return expression;
@@ -572,13 +571,13 @@ namespace {
         case Token_type::colon:
             return cst::expression::Type_ascription {
                 .base_expression = base_expression,
-                .colon_token     = cst::Token::from_lexical(context.extract()),
+                .colon_token     = context.token(context.extract()),
                 .ascribed_type   = require<parse_type>(context, "the ascribed type"),
             };
         case Token_type::as:
             return cst::expression::Type_cast {
                 .base_expression = base_expression,
-                .as_token        = cst::Token::from_lexical(context.extract()),
+                .as_token        = context.token(context.extract()),
                 .target_type     = require<parse_type>(context, "the target type"),
             };
         default: return std::nullopt;

@@ -13,8 +13,9 @@ namespace {
         if (auto self_token = context.try_extract(Token_type::lower_self)) {
             return cst::Self_parameter {
                 .mutability         = mutability,
-                .ampersand_token    = ampersand_token.transform(cst::Token::from_lexical),
-                .self_keyword_token = cst::Token::from_lexical(self_token.value()),
+                .ampersand_token    = ampersand_token.transform( //
+                    std::bind_front(&Context::token, std::ref(context))),
+                .self_keyword_token = context.token(self_token.value()),
             };
         }
         context.unstage(stage);
@@ -25,15 +26,15 @@ namespace {
     auto parse_default_argument(Context& context) -> std::optional<Default>
     {
         return context.try_extract(Token_type::equals).transform([&](Token const& equals) {
-            if (auto const wildcard = context.try_extract(Token_type::underscore)) {
+            if (auto const underscore = context.try_extract(Token_type::underscore)) {
                 return Default {
-                    .variant           = cst::Wildcard { .range = wildcard.value().range },
-                    .equals_sign_token = cst::Token::from_lexical(equals),
+                    .variant           = cst::Wildcard { context.token(underscore.value()) },
+                    .equals_sign_token = context.token(equals),
                 };
             }
             return Default {
                 .variant           = require<parse_argument>(context, "a default argument"),
-                .equals_sign_token = cst::Token::from_lexical(equals),
+                .equals_sign_token = context.token(equals),
             };
         });
     }
@@ -52,8 +53,8 @@ namespace {
             if (auto const mut_keyword = context.try_extract(Token_type::mut)) {
                 return cst::Template_mutability_parameter {
                     .name              = name,
-                    .colon_token       = cst::Token::from_lexical(colon.value()),
-                    .mut_keyword_token = cst::Token::from_lexical(mut_keyword.value()),
+                    .colon_token       = context.token(colon.value()),
+                    .mut_keyword_token = context.token(mut_keyword.value()),
                     .default_argument  = parse_mutability_parameter_default_argument(context),
                 };
             }
@@ -62,7 +63,7 @@ namespace {
                     .name = name,
                     .type_annotation { cst::Type_annotation {
                         .type        = type.value(),
-                        .colon_token = cst::Token::from_lexical(colon.value()),
+                        .colon_token = context.token(colon.value()),
                     } },
                     .default_argument = parse_value_parameter_default_argument(context),
                 };
@@ -81,7 +82,7 @@ namespace {
         if (auto const colon = context.try_extract(Token_type::colon)) {
             return cst::Template_type_parameter {
                 .name             = name,
-                .colon_token      = cst::Token::from_lexical(colon.value()),
+                .colon_token      = context.token(colon.value()),
                 .concepts         = extract_concept_references(context),
                 .default_argument = parse_type_parameter_default_argument(context),
             };
@@ -109,7 +110,7 @@ namespace {
             Token_type::dot>;
         return cst::Import {
             .segments             = require<parse_segments>(context, "a module path"),
-            .import_keyword_token = cst::Token::from_lexical(import_keyword),
+            .import_keyword_token = context.token(import_keyword),
         };
     }
 } // namespace
@@ -121,23 +122,23 @@ auto libparse::parse_mutability(Context& context) -> std::optional<cst::Mutabili
             return cst::Mutability {
                 .variant = cst::mutability::Parameterized {
                     .name = extract_lower_name(context, "a mutability parameter name"),
-                    .question_mark_token = cst::Token::from_lexical(question_mark.value()),
+                    .question_mark_token = context.token(question_mark.value()),
                 },
                 .range = context.up_to_current(mut_keyword.value().range),
-                .mut_or_immut_keyword_token = cst::Token::from_lexical(mut_keyword.value()),
+                .mut_or_immut_keyword_token = context.token(mut_keyword.value()),
             };
         }
         return cst::Mutability {
             .variant                    = cst::mutability::Concrete::mut,
             .range                      = mut_keyword.value().range,
-            .mut_or_immut_keyword_token = cst::Token::from_lexical(mut_keyword.value()),
+            .mut_or_immut_keyword_token = context.token(mut_keyword.value()),
         };
     }
     if (auto immut_keyword = context.try_extract(Token_type::immut)) {
         return cst::Mutability {
             .variant                    = cst::mutability::Concrete::immut,
             .range                      = immut_keyword.value().range,
-            .mut_or_immut_keyword_token = cst::Token::from_lexical(immut_keyword.value()),
+            .mut_or_immut_keyword_token = context.token(immut_keyword.value()),
         };
     }
     return std::nullopt;
@@ -156,10 +157,10 @@ auto libparse::parse_concept_reference(Context& context) -> std::optional<cst::C
             if (auto const global = context.try_extract(Token_type::global)) {
                 root = cst::Path_root {
                     .variant = cst::Path_root_global {
-                        .global_keyword = cst::Token::from_lexical(global.value()),
+                        .global_keyword = context.token(global.value()),
                     },
                     .double_colon_token
-                    = cst::Token::from_lexical(context.require_extract(Token_type::double_colon)),
+                    = context.token(context.require_extract(Token_type::double_colon)),
                     .range = global.value().range,
                 };
             }
@@ -191,7 +192,7 @@ auto libparse::parse_type_annotation(Context& context) -> std::optional<cst::Typ
     return context.try_extract(Token_type::colon).transform([&](Token const& token) {
         return cst::Type_annotation {
             .type        = require<parse_type>(context, "a type"),
-            .colon_token = cst::Token::from_lexical(token),
+            .colon_token = context.token(token),
         };
     });
 }
@@ -218,8 +219,8 @@ auto libparse::parse_template_parameter(Context& context) -> std::optional<cst::
 
 auto libparse::parse_template_argument(Context& context) -> std::optional<cst::Template_argument>
 {
-    if (auto const wildcard = context.try_extract(Token_type::underscore)) {
-        return cst::Template_argument { cst::Wildcard { .range = wildcard->range } };
+    if (auto const underscore = context.try_extract(Token_type::underscore)) {
+        return cst::Template_argument { cst::Wildcard { context.token(underscore.value()) } };
     }
     if (auto const type = parse_type(context)) {
         return cst::Template_argument { type.value() };
@@ -231,7 +232,7 @@ auto libparse::parse_template_argument(Context& context) -> std::optional<cst::T
         return cst::Template_argument { cst::Mutability {
             .variant                    = cst::mutability::Concrete::immut,
             .range                      = immut_keyword->range,
-            .mut_or_immut_keyword_token = cst::Token::from_lexical(immut_keyword.value()),
+            .mut_or_immut_keyword_token = context.token(immut_keyword.value()),
         } };
     }
     return parse_mutability(context).transform([](cst::Mutability&& mutability) {
@@ -274,7 +275,8 @@ auto libparse::parse_function_parameters(Context& context)
     return cst::Function_parameters {
         .normal_parameters      = std::move(normal_parameters),
         .self_parameter         = std::move(self_parameter),
-        .comma_token_after_self = comma_token_after_self.transform(cst::Token::from_lexical),
+        .comma_token_after_self = comma_token_after_self.transform( //
+            std::bind_front(&Context::token, std::ref(context))),
     };
 }
 
@@ -297,7 +299,7 @@ auto libparse::parse_function_argument(Context& context) -> std::optional<cst::F
             return cst::Function_argument {
                 .name { cst::Name_lower_equals {
                     .name              = name.value(),
-                    .equals_sign_token = cst::Token::from_lexical(equals_sign.value()),
+                    .equals_sign_token = context.token(equals_sign.value()),
                 } },
                 .expression = require<parse_expression>(context, "expression"),
             };
@@ -333,11 +335,11 @@ auto libparse::extract_path(Context& context, std::optional<cst::Path_root>&& ro
             auto       template_arguments       = parse_template_arguments(context);
 
             if (auto const double_colon = context.try_extract(Token_type::double_colon)) {
-                segments.separator_tokens.push_back(cst::Token::from_lexical(double_colon.value()));
+                segments.separator_tokens.push_back(context.token(double_colon.value()));
                 segments.elements.push_back({
                     .template_arguments          = std::move(template_arguments),
                     .name                        = segment_name,
-                    .trailing_double_colon_token = cst::Token::from_lexical(double_colon.value()),
+                    .trailing_double_colon_token = context.token(double_colon.value()),
                 });
                 continue;
             }
@@ -390,6 +392,6 @@ auto kieli::parse(Database& db, Document_id const document_id) -> CST
         .imports     = std::move(imports),
         .definitions = std::move(definitions),
         .arena       = std::move(arena),
-        .source      = document_id,
+        .document_id = document_id,
     } };
 }

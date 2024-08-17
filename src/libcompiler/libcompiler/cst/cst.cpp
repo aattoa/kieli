@@ -9,14 +9,6 @@ auto kieli::CST::operator=(CST&&) noexcept -> CST& = default;
 
 kieli::CST::~CST() = default;
 
-auto kieli::cst::Token::from_lexical(kieli::Token const& lexical) -> Token
-{
-    return Token {
-        .range            = lexical.range,
-        .preceding_trivia = lexical.preceding_trivia,
-    };
-}
-
 auto kieli::cst::Self_parameter::is_reference() const noexcept -> bool
 {
     return ampersand_token.has_value();

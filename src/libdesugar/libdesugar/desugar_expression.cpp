@@ -236,15 +236,21 @@ namespace {
             for (auto const& side_effect : block.side_effects) {
                 side_effects.push_back(context.deref_desugar(side_effect.expression));
             }
-            if (block.result_expression.has_value()) {
-                return ast::expression::Block {
-                    .side_effects = std::move(side_effects),
-                    .result       = context.desugar(block.result_expression.value()),
-                };
-            }
+
+            cst::Token_id const unit_token = //
+                block.side_effects.empty()   //
+                    ? block.close_brace_token
+                    : block.side_effects.back().trailing_semicolon_token;
+
+            ast::Expression_id const result = //
+                block.result_expression.has_value()
+                    ? context.desugar(block.result_expression.value())
+                    : context.ast.expressions.push(
+                          unit_value(context.cst.tokens[unit_token].range));
+
             return ast::expression::Block {
                 .side_effects = std::move(side_effects),
-                .result = context.ast.expressions.push(unit_value(block.close_brace_token.range)),
+                .result       = result,
             };
         }
 
@@ -400,7 +406,7 @@ namespace {
             return ast::expression::Tuple_field_access {
                 .base_expression   = context.desugar(access.base_expression),
                 .field_index       = access.field_index,
-                .field_index_range = access.field_index_token.range,
+                .field_index_range = context.cst.tokens[access.field_index_token].range,
             };
         }
 
@@ -505,9 +511,9 @@ namespace {
 
         auto operator()(cst::expression::Addressof const& addressof) -> ast::Expression_variant
         {
+            auto const ampersand_range = context.cst.tokens[addressof.ampersand_token].range;
             return ast::expression::Addressof {
-                .mutability
-                = context.desugar_mutability(addressof.mutability, addressof.ampersand_token.range),
+                .mutability = context.desugar_mutability(addressof.mutability, ampersand_range),
                 .place_expression = context.desugar(addressof.place_expression),
             };
         }

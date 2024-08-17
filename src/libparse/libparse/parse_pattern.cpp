@@ -11,14 +11,14 @@ namespace {
         if (patterns.elements.size() == 1) {
             return cst::pattern::Parenthesized { {
                 .value       = std::move(patterns.elements.front()),
-                .open_token  = cst::Token::from_lexical(paren_open),
-                .close_token = cst::Token::from_lexical(paren_close),
+                .open_token  = context.token(paren_open),
+                .close_token = context.token(paren_close),
             } };
         }
         return cst::pattern::Tuple { {
             .value       = std::move(patterns),
-            .open_token  = cst::Token::from_lexical(paren_open),
-            .close_token = cst::Token::from_lexical(paren_close),
+            .open_token  = context.token(paren_open),
+            .close_token = context.token(paren_close),
         } };
     };
 
@@ -29,8 +29,8 @@ namespace {
         if (auto const bracket_close = context.try_extract(Token_type::bracket_close)) {
             return cst::pattern::Slice { {
                 .value       = std::move(patterns),
-                .open_token  = cst::Token::from_lexical(bracket_open),
-                .close_token = cst::Token::from_lexical(bracket_close.value()),
+                .open_token  = context.token(bracket_open),
+                .close_token = context.token(bracket_close.value()),
             } };
         }
         context.error_expected(
@@ -50,8 +50,8 @@ namespace {
             return extract_path(
                 context,
                 cst::Path_root {
-                    .variant = cst::Path_root_global { cst::Token::from_lexical(global) },
-                    .double_colon_token = cst::Token::from_lexical(double_colon),
+                    .variant            = cst::Path_root_global { context.token(global) },
+                    .double_colon_token = context.token(double_colon),
                     .range              = global.range,
                 });
         }
@@ -62,7 +62,7 @@ namespace {
                     context,
                     cst::Path_root {
                         .variant            = type,
-                        .double_colon_token = cst::Token::from_lexical(double_colon),
+                        .double_colon_token = context.token(double_colon),
                         .range              = context.cst().types[type].range,
                     });
             });
@@ -77,7 +77,7 @@ namespace {
                 .field_pattern
                 = context.try_extract(Token_type::equals).transform([&](Token const& equals_sign) {
                       return cst::pattern::Field::Field_pattern {
-                          .equals_sign_token = cst::Token::from_lexical(equals_sign),
+                          .equals_sign_token = context.token(equals_sign),
                           .pattern           = require<parse_pattern>(context, "a field pattern"),
                       };
                   }),
@@ -144,7 +144,7 @@ namespace {
         return cst::pattern::Abbreviated_constructor {
             .name               = extract_upper_name(context, "a constructor name"),
             .body               = extract_constructor_body(context),
-            .double_colon_token = cst::Token::from_lexical(double_colon),
+            .double_colon_token = context.token(double_colon),
         };
     }
 
@@ -152,7 +152,7 @@ namespace {
         -> std::optional<cst::Pattern_variant>
     {
         switch (token.type) {
-        case Token_type::underscore:        return cst::Wildcard { token.range };
+        case Token_type::underscore:        return cst::Wildcard { context.token(token) };
         case Token_type::integer_literal:   return token.value_as<kieli::Integer>();
         case Token_type::floating_literal:  return token.value_as<kieli::Floating>();
         case Token_type::character_literal: return token.value_as<kieli::Character>();
@@ -181,7 +181,7 @@ namespace {
                         .pattern    = context.cst().patterns.push(
                             std::move(variant),
                             kieli::Range(first_token.range.start, as_keyword.value().range.stop)),
-                        .as_keyword_token = cst::Token::from_lexical(as_keyword.value()),
+                        .as_keyword_token = context.token(as_keyword.value()),
                     };
                 }
                 return variant;
@@ -200,7 +200,7 @@ namespace {
                             std::move(variant),
                             kieli::Range(anchor_range.start, if_keyword.value().range.stop)),
                         .guard_expression = std::move(guard),
-                        .if_keyword_token = cst::Token::from_lexical(if_keyword.value()),
+                        .if_keyword_token = context.token(if_keyword.value()),
                     };
                 }
                 return variant;

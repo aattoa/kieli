@@ -17,8 +17,8 @@ namespace {
         Token const close = context.require_extract(Token_type::brace_close);
         return {
             .value       = std::move(definitions),
-            .open_token  = cst::Token::from_lexical(open),
-            .close_token = cst::Token::from_lexical(close),
+            .open_token  = context.token(open),
+            .close_token = context.token(close),
         };
     }
 
@@ -34,22 +34,12 @@ namespace {
             context.error_expected("a '(' followed by a function parameter list");
         }
 
-        auto return_type_annotation = parse_type_annotation(context);
-
-        if (auto const where = context.try_extract(Token_type::where)) {
-            kieli::fatal_error(
-                context.db(),
-                context.document_id(),
-                where.value().range,
-                "where clauses are not supported yet");
-        }
-
         return cst::Function_signature {
             .template_parameters = std::move(template_parameters),
             .function_parameters = std::move(function_parameters.value()),
-            .return_type         = std::move(return_type_annotation),
+            .return_type         = parse_type_annotation(context),
             .name                = name,
-            .fn_keyword_token    = cst::Token::from_lexical(fn_keyword),
+            .fn_keyword_token    = context.token(fn_keyword),
         };
     }
 
@@ -70,8 +60,9 @@ namespace {
         return cst::definition::Function {
             .signature                  = std::move(signature),
             .body                       = function_body.value(),
-            .optional_equals_sign_token = equals_sign.transform(cst::Token::from_lexical),
-            .fn_keyword_token           = cst::Token::from_lexical(fn_keyword),
+            .optional_equals_sign_token = equals_sign.transform( //
+                std::bind_front(&Context::token, std::ref(context))),
+            .fn_keyword_token           = context.token(fn_keyword),
         };
     }
 
@@ -125,7 +116,7 @@ namespace {
             .template_parameters  = parse_template_parameters(context),
             .body                 = extract_constructor_body(context),
             .name                 = name,
-            .struct_keyword_token = cst::Token::from_lexical(struct_keyword),
+            .struct_keyword_token = context.token(struct_keyword),
         };
     }
 
@@ -144,8 +135,8 @@ namespace {
             .template_parameters = std::move(template_parameters),
             .constructors        = extract_constructors(context, "one or more enum constructors"),
             .name                = name,
-            .enum_keyword_token  = cst::Token::from_lexical(enum_keyword),
-            .equals_sign_token   = cst::Token::from_lexical(equals_sign),
+            .enum_keyword_token  = context.token(enum_keyword),
+            .equals_sign_token   = context.token(equals_sign),
         };
     }
 
@@ -157,10 +148,10 @@ namespace {
         cst::Type_signature signature {
             .template_parameters = std::move(template_parameters),
             .name                = name,
-            .alias_keyword_token = cst::Token::from_lexical(alias_keyword),
+            .alias_keyword_token = context.token(alias_keyword),
         };
         if (auto const colon_token = context.try_extract(Token_type::colon)) {
-            signature.concepts_colon_token = cst::Token::from_lexical(colon_token.value());
+            signature.concepts_colon_token = context.token(colon_token.value());
             signature.concepts             = extract_concept_references(context);
         }
         return signature;
@@ -188,9 +179,9 @@ namespace {
                     .template_parameters   = std::move(template_parameters),
                     .requirements          = std::move(requirements),
                     .name                  = name,
-                    .concept_keyword_token = cst::Token::from_lexical(concept_keyword),
-                    .open_brace_token      = cst::Token::from_lexical(open_brace),
-                    .close_brace_token     = cst::Token::from_lexical(close_brace),
+                    .concept_keyword_token = context.token(concept_keyword),
+                    .open_brace_token      = context.token(open_brace),
+                    .close_brace_token     = context.token(close_brace),
                 };
             }
         }
@@ -206,8 +197,8 @@ namespace {
             .template_parameters = std::move(template_parameters),
             .name                = name,
             .type                = require<parse_type>(context, "the aliased type"),
-            .alias_keyword_token = cst::Token::from_lexical(alias_keyword),
-            .equals_sign_token   = cst::Token::from_lexical(equals_sign),
+            .alias_keyword_token = context.token(alias_keyword),
+            .equals_sign_token   = context.token(equals_sign),
         };
     }
 
@@ -222,7 +213,7 @@ namespace {
             .template_parameters = std::move(template_parameters),
             .definitions         = std::move(definitions),
             .self_type           = self_type,
-            .impl_keyword_token  = cst::Token::from_lexical(impl_keyword),
+            .impl_keyword_token  = context.token(impl_keyword),
         };
     }
 
@@ -233,7 +224,7 @@ namespace {
             .template_parameters  = parse_template_parameters(context),
             .definitions          = extract_definition_sequence(context),
             .name                 = name,
-            .module_keyword_token = cst::Token::from_lexical(module_keyword),
+            .module_keyword_token = context.token(module_keyword),
         };
     }
 

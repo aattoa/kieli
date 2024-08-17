@@ -58,18 +58,11 @@ auto libparse::Context::unstage(Stage const stage) -> void
 auto libparse::Context::commit(Stage const stage) -> void
 {
     if (stage.old_token_index == 0) {
-        m_cached_tokens.erase(
-            m_cached_tokens.begin(),
-            m_cached_tokens.begin()
-                + utl::safe_cast<decltype(m_cached_tokens)::difference_type>(m_token_index));
+        auto const offset
+            = utl::safe_cast<decltype(m_cached_tokens)::difference_type>(m_token_index);
+        m_cached_tokens.erase(m_cached_tokens.begin(), m_cached_tokens.begin() + offset);
         m_token_index = 0;
     }
-}
-
-auto libparse::Context::up_to_current(kieli::Range const range) const -> kieli::Range
-{
-    cpputil::always_assert(m_previous_token_range.has_value());
-    return kieli::Range(range.start, m_previous_token_range.value().stop);
 }
 
 auto libparse::Context::error_expected(
@@ -87,6 +80,17 @@ auto libparse::Context::error_expected(
 auto libparse::Context::error_expected(std::string_view const description) -> void
 {
     error_expected(peek().range, description);
+}
+
+auto libparse::Context::up_to_current(kieli::Range const range) const -> kieli::Range
+{
+    cpputil::always_assert(m_previous_token_range.has_value());
+    return kieli::Range(range.start, m_previous_token_range.value().stop);
+}
+
+auto libparse::Context::token(Token const& token) -> cst::Token_id
+{
+    return m_arena.tokens.push(token.range, token.preceding_trivia);
 }
 
 auto libparse::Context::db() -> kieli::Database&

@@ -60,13 +60,14 @@ auto libdesugar::Context::desugar(cst::Function_parameter const& parameter)
 {
     auto const desugar_argument = [&](cst::Value_parameter_default_argument const& argument) {
         if (auto const* const wildcard = std::get_if<cst::Wildcard>(&argument.variant)) {
+            auto const        range = cst.tokens[wildcard->underscore_token].range;
             kieli::Diagnostic diagnostic {
                 .message  = "A default function argument may not be a wildcard",
-                .range    = wildcard->range,
+                .range    = range,
                 .severity = kieli::Severity::error,
             };
             kieli::add_diagnostic(db, document_id, std::move(diagnostic));
-            return ast.expressions.push(ast::expression::Error {}, wildcard->range);
+            return ast.expressions.push(ast::expression::Error {}, range);
         }
         return desugar(std::get<cst::Expression_id>(argument.variant));
     };
@@ -79,16 +80,16 @@ auto libdesugar::Context::desugar(cst::Function_parameter const& parameter)
 
 auto libdesugar::Context::desugar(cst::Wildcard const& wildcard) -> ast::Wildcard
 {
-    return ast::Wildcard { .range = wildcard.range };
+    return ast::Wildcard { .range = cst.tokens[wildcard.underscore_token].range };
 }
 
 auto libdesugar::Context::desugar(cst::Self_parameter const& self_parameter) -> ast::Self_parameter
 {
+    auto const self_range = cst.tokens[self_parameter.self_keyword_token].range;
     return ast::Self_parameter {
-        .mutability
-        = desugar_mutability(self_parameter.mutability, self_parameter.self_keyword_token.range),
+        .mutability   = desugar_mutability(self_parameter.mutability, self_range),
         .is_reference = self_parameter.is_reference(),
-        .range        = self_parameter.self_keyword_token.range,
+        .range        = self_range,
     };
 }
 
@@ -206,18 +207,17 @@ auto libdesugar::Context::desugar(cst::expression::Struct_initializer::Field con
 
 auto libdesugar::Context::desugar(cst::Mutability const& mutability) -> ast::Mutability
 {
+    auto const visitor = utl::Overload {
+        [](cst::mutability::Concrete const concrete) -> ast::mutability::Concrete {
+            return concrete;
+        },
+        [](cst::mutability::Parameterized const parameterized) {
+            return ast::mutability::Parameterized { parameterized.name };
+        },
+    };
     return ast::Mutability {
-        .variant = std::visit<ast::Mutability_variant>(
-            utl::Overload {
-                [](cst::mutability::Concrete const concrete) -> ast::mutability::Concrete {
-                    return concrete;
-                },
-                [](cst::mutability::Parameterized const parameterized) {
-                    return ast::mutability::Parameterized { parameterized.name };
-                },
-            },
-            mutability.variant),
-        .range = mutability.range,
+        .variant = std::visit<ast::Mutability_variant>(visitor, mutability.variant),
+        .range   = mutability.range,
     };
 }
 
@@ -267,33 +267,30 @@ auto libdesugar::Context::desugar_mutability(
 auto libdesugar::Context::normalize_self_parameter(cst::Self_parameter const& self_parameter)
     -> ast::Function_parameter
 {
-    ast::Type self_type {
-        .variant = ast::type::Self {},
-        .range   = self_parameter.self_keyword_token.range,
-    };
+    auto const self_range = cst.tokens[self_parameter.self_keyword_token].range;
+    ast::Type  self_type { .variant = ast::type::Self {}, .range = self_range };
+
     if (self_parameter.is_reference()) {
         self_type = ast::Type {
-            ast::type::Reference {
+            .variant = ast::type::Reference {
                 .referenced_type = ast.types.push(std::move(self_type)),
-                .mutability      = desugar_mutability(
-                    self_parameter.mutability, self_parameter.self_keyword_token.range),
+                .mutability      = desugar_mutability(self_parameter.mutability, self_range),
             },
-            self_parameter.self_keyword_token.range,
+            .range = self_range,
         };
     }
+    ast::pattern::Name pattern {
+        .name { kieli::Name {
+            .identifier = self_variable_identifier,
+            .range      = self_range,
+        } },
+        .mutability = desugar_mutability(
+            self_parameter.is_reference() ? std::nullopt : self_parameter.mutability, self_range),
+    };
+
     return ast::Function_parameter {
-        .pattern = ast.patterns.push(
-            ast::pattern::Name {
-                kieli::Lower { kieli::Name {
-                    .identifier = self_variable_identifier,
-                    .range      = self_parameter.self_keyword_token.range,
-                } },
-                desugar_mutability(
-                    self_parameter.is_reference() ? std::nullopt : self_parameter.mutability,
-                    self_parameter.self_keyword_token.range),
-            },
-            self_parameter.self_keyword_token.range),
-        .type = ast.types.push(std::move(self_type)),
+        .pattern = ast.patterns.push(std::move(pattern), self_range),
+        .type    = ast.types.push(std::move(self_type)),
     };
 }
 
