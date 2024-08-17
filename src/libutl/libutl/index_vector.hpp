@@ -11,17 +11,21 @@ namespace utl {
         requires std::is_constructible_v<Index, std::size_t>;
     };
 
-    // Wraps a `std::size_t`. Specializations model `vector_index`.
-    template <class Uniqueness_tag>
+    // Wraps `Integral`. Specializations model `vector_index`.
+    template <class Uniqueness_tag, std::integral Integral = std::size_t>
     class Vector_index {
-        std::size_t m_value;
+        Integral m_value;
     public:
-        explicit constexpr Vector_index(std::size_t const value) noexcept : m_value { value } {}
+        explicit constexpr Vector_index(std::size_t const value)
+            noexcept(losslessly_convertible_to<std::size_t, Integral>)
+            : m_value(safe_cast<Integral>(value))
+        {}
 
-        [[nodiscard]] constexpr auto get(this Vector_index const self) noexcept -> std::size_t
+        [[nodiscard]] constexpr auto get(this Vector_index const self)
+            noexcept(losslessly_convertible_to<Integral, std::size_t>) -> std::size_t
         {
-            return self.m_value;
-        };
+            return safe_cast<std::size_t>(self.m_value);
+        }
 
         auto operator==(Vector_index const& other) const -> bool = default;
         auto operator<=>(Vector_index const& other) const        = default;
