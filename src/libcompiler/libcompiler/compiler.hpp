@@ -116,8 +116,8 @@ namespace kieli {
     [[nodiscard]] auto client_open_document(
         Database& db, std::filesystem::path path, std::string text) -> Document_id;
 
-    // If `db` contains a document with `path` and it is owned by a client, deallocate it.
-    auto client_close_document(Database& db, std::filesystem::path const& path) -> void;
+    // If the document identified by `document_id` is open and owned by a client, deallocate it.
+    auto client_close_document(Database& db, Document_id document_id) -> void;
 
     // Creates a temporary document with `text`.
     [[nodiscard]] auto test_document(Database& db, std::string text) -> Document_id;

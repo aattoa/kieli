@@ -12,6 +12,7 @@ target_sources(language-server
     PRIVATE language-server/main.cpp
     PRIVATE language-server/rpc.cpp
     PRIVATE language-server/rpc.hpp
+    PRIVATE language-server/server.cpp
     PRIVATE language-server/server.hpp)
 
 target_link_libraries(language-server

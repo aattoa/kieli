@@ -2,7 +2,6 @@
 
 #include <libutl/utilities.hpp>
 #include <cpputil/json.hpp>
-
 #include <iosfwd>
 
 namespace kieli::lsp {

@@ -63,13 +63,11 @@ auto kieli::client_open_document(Database& db, std::filesystem::path path, std::
     return set_document(db, std::move(path), std::move(document));
 }
 
-auto kieli::client_close_document(Database& db, std::filesystem::path const& path) -> void
+auto kieli::client_close_document(Database& db, Document_id const id) -> void
 {
-    if (auto const id = find_existing_document_id(db, path)) {
-        if (auto const it = db.documents.find(id.value()); it != db.documents.end()) {
-            if (it->second.ownership == Document_ownership::client) {
-                db.documents.erase(it);
-            }
+    if (auto const it = db.documents.find(id); it != db.documents.end()) {
+        if (it->second.ownership == Document_ownership::client) {
+            db.documents.erase(it);
         }
     }
 }

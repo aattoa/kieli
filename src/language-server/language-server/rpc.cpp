@@ -1,8 +1,6 @@
 #include <libutl/utilities.hpp>
 #include <language-server/rpc.hpp>
 
-#include <iostream>
-
 auto kieli::lsp::rpc_write_message(std::ostream& out, std::string_view const message) -> void
 {
     std::format_to(

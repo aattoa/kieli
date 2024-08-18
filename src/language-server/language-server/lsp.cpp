@@ -148,11 +148,8 @@ namespace {
     {
         auto const document_id
             = document_id_from_json(db, as<Json::Object>(at(params, "textDocument")));
-
-        if (db.documents.erase(document_id) == 1) {
-            return {};
-        }
-        return std::unexpected("Attempted to close an unopened document");
+        kieli::client_close_document(db, document_id);
+        return {};
     }
 
     // https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#textDocumentContentChangeEvent
@@ -250,20 +247,19 @@ namespace {
         return error_response(Error_code::parse_error, std::move(message), Json {});
     }
 
-    auto invalid_request_error_response(Bad_client_json const& bad_json, Json id) -> Json
+    auto invalid_request_error_response(std::string_view const description, Json id) -> Json
     {
-        std::string message = std::format("Invalid request object: {}", bad_json.message);
+        std::string message = std::format("Invalid request object: {}", description);
         return error_response(Error_code::invalid_request, std::move(message), std::move(id));
     }
 
-    auto invalid_params_error_response(Bad_client_json const& bad_json, Json id) -> Json
+    auto invalid_params_error_response(std::string_view const description, Json id) -> Json
     {
-        std::string message = std::format("Invalid method parameters: {}", bad_json.message);
+        std::string message = std::format("Invalid method parameters: {}", description);
         return error_response(Error_code::invalid_params, std::move(message), std::move(id));
     }
 
-    auto dispatch_handle_client_message_object(Server& server, Json const& message)
-        -> std::optional<Json>
+    auto dispatch_handle_message_object(Server& server, Json const& message) -> std::optional<Json>
     {
         std::optional<Json> id;
         try {
@@ -285,36 +281,42 @@ namespace {
                 }
             }
             catch (Bad_client_json const& bad_json) {
-                return invalid_params_error_response(bad_json, std::move(id).value_or(Json {}));
+                return invalid_params_error_response(
+                    bad_json.message, std::move(id).value_or(Json {}));
             }
         }
         catch (Bad_client_json const& bad_json) {
-            return invalid_request_error_response(bad_json, std::move(id).value_or(Json {}));
+            return invalid_request_error_response(
+                bad_json.message, std::move(id).value_or(Json {}));
         }
     }
 
-    auto dispatch_handle_client_message_batch(Server& server, Json::Array const& messages)
+    // https://www.jsonrpc.org/specification#batch
+    auto dispatch_handle_message_batch(Server& server, Json::Array const& messages)
         -> std::optional<Json>
     {
+        if (messages.empty()) {
+            return invalid_request_error_response("Empty batch message", Json {});
+        }
         Json::Array replies;
         for (Json const& message : messages) {
-            if (auto reply = dispatch_handle_client_message_object(server, message)) {
+            if (auto reply = dispatch_handle_message_object(server, message)) {
                 replies.push_back(std::move(reply).value());
             }
         }
         if (replies.empty()) {
-            return std::nullopt;
+            return std::nullopt; // The batch contained notifications only, do not reply.
         }
         return Json { std::move(replies) };
     }
 
-    auto dispatch_handle_client_message(Server& server, Json const& message) -> std::optional<Json>
+    auto dispatch_handle_message(Server& server, Json const& message) -> std::optional<Json>
     {
         if (message.is_array()) {
-            return dispatch_handle_client_message_batch(server, message.as_array());
+            return dispatch_handle_message_batch(server, message.as_array());
         }
         else {
-            return dispatch_handle_client_message_object(server, message);
+            return dispatch_handle_message_object(server, message);
         }
     }
 } // namespace
@@ -325,7 +327,7 @@ auto kieli::lsp::handle_client_message(Server& server, std::string_view const me
     std::optional<Json> reply;
 
     if (auto json = cpputil::json::decode<Json_config>(message)) {
-        reply = dispatch_handle_client_message(server, json.value());
+        reply = dispatch_handle_message(server, json.value());
     }
     else {
         reply = parse_error_response(json.error());

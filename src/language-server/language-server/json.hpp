@@ -7,17 +7,20 @@
 namespace kieli::lsp {
 
     struct Json_config {
-        using Value   = cpputil::json::Basic_value<Json_config>;
-        using Object  = std::unordered_map<std::string, Value>;
-        using Array   = std::vector<Value>;
+        using Object  = std::unordered_map<std::string, cpputil::json::Basic_value<Json_config>>;
+        using Array   = std::vector<cpputil::json::Basic_value<Json_config>>;
         using String  = std::string;
         using Number  = std::int32_t;
         using Boolean = bool;
     };
 
     // The JSON type used for JSON-RPC communication.
-    using Json = Json_config::Value;
+    using Json = cpputil::json::Basic_value<Json_config>;
 
+    // Codes defined by JSON-RPC:
+    // https://www.jsonrpc.org/specification#error_object
+    //
+    // Codes defined by LSP:
     // https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#errorCodes
     enum class Error_code : Json::Number {
         server_not_initialized = -32002,
