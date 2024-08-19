@@ -81,9 +81,9 @@ namespace {
             .constants = std::move(constants),
         };
 
-        auto const environment = libresolve::make_environment(context, document_id);
-        libresolve::resolve_definitions_in_order(context, environment);
-        libresolve::resolve_function_bodies(context, environment);
+        (void)context;
+        (void)document_id;
+        cpputil::todo();
     }
 
     auto choose_debug_repl_callback(std::string_view const name)

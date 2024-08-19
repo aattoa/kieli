@@ -168,26 +168,25 @@ auto libresolve::resolve_function_bodies(Context& context, hir::Environment_id c
 
 auto libresolve::resolve_definition(Context& context, Definition_variant const& definition) -> void
 {
-    std::visit(
-        utl::Overload {
-            [&](hir::Module_id const module) {
-                resolve_definitions_in_order(
-                    context, resolve_module(context, context.info.modules[module]));
-            },
-            [&](hir::Function_id const function) {
-                (void)resolve_function_signature(context, context.info.functions[function]);
-            },
-            [&](hir::Enumeration_id const enumeration) {
-                (void)resolve_enumeration(context, context.info.enumerations[enumeration]);
-            },
-            [&](hir::Concept_id const concept_) {
-                (void)resolve_concept(context, context.info.concepts[concept_]);
-            },
-            [&](hir::Alias_id const alias) {
-                (void)resolve_alias(context, context.info.aliases[alias]);
-            },
+    auto const visitor = utl::Overload {
+        [&](hir::Module_id const module) {
+            (void)module;
+            cpputil::todo();
         },
-        definition);
+        [&](hir::Function_id const function) {
+            (void)resolve_function_signature(context, context.info.functions[function]);
+        },
+        [&](hir::Enumeration_id const enumeration) {
+            (void)resolve_enumeration(context, context.info.enumerations[enumeration]);
+        },
+        [&](hir::Concept_id const concept_) {
+            (void)resolve_concept(context, context.info.concepts[concept_]);
+        },
+        [&](hir::Alias_id const alias) {
+            (void)resolve_alias(context, context.info.aliases[alias]);
+        },
+    };
+    std::visit(visitor, definition);
 }
 
 auto libresolve::resolve_definitions_in_order(

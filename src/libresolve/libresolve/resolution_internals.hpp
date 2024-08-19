@@ -3,7 +3,6 @@
 #include <libutl/utilities.hpp>
 #include <libutl/index_vector.hpp>
 #include <libutl/disjoint_set.hpp>
-#include <libresolve/resolve.hpp>
 #include <libresolve/module.hpp>
 
 namespace libresolve {
@@ -54,13 +53,12 @@ namespace libresolve {
     };
 
     struct Context {
-        kieli::Database&             db;
-        ast::Arena                   ast;
-        hir::Arena                   hir;
-        Info_arena                   info;
-        Tag_state                    tags;
-        Constants                    constants;
-        kieli::Project_configuration configuration;
+        kieli::Database& db;
+        ast::Arena       ast;
+        hir::Arena       hir;
+        Info_arena       info;
+        Tag_state        tags;
+        Constants        constants;
     };
 
     struct Inference_state {
@@ -92,29 +90,6 @@ namespace libresolve {
     };
 
     auto ensure_no_unsolved_variables(Context& context, Inference_state& state) -> void;
-
-    auto add_to_environment(
-        Context&            context,
-        kieli::Document_id  document_id,
-        Environment&        environment,
-        kieli::Lower        name,
-        Lower_info::Variant variant) -> void;
-
-    auto add_to_environment(
-        Context&            context,
-        kieli::Document_id  document_id,
-        Environment&        environment,
-        kieli::Upper        name,
-        Upper_info::Variant variant) -> void;
-
-    auto collect_environment(
-        Context&                       context,
-        kieli::Document_id             document_id,
-        std::vector<ast::Definition>&& definitions) -> hir::Environment_id;
-
-    auto make_environment(Context& context, kieli::Document_id document_id) -> hir::Environment_id;
-
-    auto resolve_module(Context& context, Module_info& module_info) -> hir::Environment_id;
 
     // Recursively resolve every definition in `environment`. Will not resolve function bodies.
     auto resolve_definitions_in_order(Context& context, hir::Environment_id environment) -> void;
