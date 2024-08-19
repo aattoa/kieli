@@ -31,7 +31,6 @@
 ## Language server
 - Semantic tokens
 - Handle command line properly
-- Batch messages
 - Gather code actions per line
 - Split executable into communication thread and analysis thread, actor mailboxes
 

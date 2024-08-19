@@ -29,7 +29,6 @@ namespace {
 } // namespace
 
 #define TEST(name) UNITTEST("libdesugar: " name)
-
 #define CHECK_SIMPLE_DESUGAR(string) CHECK_EQUAL(desugar(string), (string))
 
 // TODO: struct initializer expressions

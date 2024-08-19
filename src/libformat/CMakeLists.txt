@@ -1,4 +1,4 @@
-kieli_library(libformat)
+add_library(libformat STATIC)
 
 target_sources(libformat
     PRIVATE libformat/format.hpp
@@ -9,5 +9,12 @@ target_sources(libformat
     PRIVATE libformat/format_pattern.cpp
     PRIVATE libformat/format_type.cpp)
 
+target_include_directories(libformat
+    PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+
+target_precompile_headers(libformat
+    REUSE_FROM libutl)
+
 target_link_libraries(libformat
-    PUBLIC libparse)
+    PUBLIC libutl
+    PUBLIC libcompiler)

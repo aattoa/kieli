@@ -1,4 +1,4 @@
-kieli_library(libparse)
+add_library(libparse STATIC)
 
 target_sources(libparse
     PRIVATE libparse/parse.cpp
@@ -8,11 +8,16 @@ target_sources(libparse
     PRIVATE libparse/parse_pattern.cpp
     PRIVATE libparse/parse_type.cpp
     PRIVATE libparse/parser_internals.cpp
-    PRIVATE libparse/parser_internals.hpp
-    PRIVATE libparse/test_interface.cpp
-    PRIVATE libparse/test_interface.hpp)
+    PRIVATE libparse/parser_internals.hpp)
+
+target_include_directories(libparse
+    PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+
+target_precompile_headers(libparse
+    REUSE_FROM libutl)
 
 target_link_libraries(libparse
+    PUBLIC libutl
     PUBLIC liblex
     PUBLIC libformat
     PUBLIC libcompiler)

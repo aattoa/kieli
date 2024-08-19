@@ -1,10 +1,5 @@
 add_executable(language-server)
 
-target_include_directories(language-server
-    PRIVATE ${PROJECT_SOURCE_DIR}/src/language-server)
-
-kieli_use_libutl(language-server)
-
 target_sources(language-server
     PRIVATE language-server/json.cpp
     PRIVATE language-server/json.hpp
@@ -15,6 +10,13 @@ target_sources(language-server
     PRIVATE language-server/server.cpp
     PRIVATE language-server/server.hpp)
 
+target_include_directories(language-server
+    PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+
+target_precompile_headers(language-server
+    REUSE_FROM libutl)
+
 target_link_libraries(language-server
+    PUBLIC  libutl
     PRIVATE libquery
     PRIVATE cpputil::json)

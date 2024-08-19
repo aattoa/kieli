@@ -1,4 +1,4 @@
-kieli_library(libcompiler)
+add_library(libcompiler STATIC)
 
 target_sources(libcompiler
     PRIVATE libcompiler/ast/ast.cpp
@@ -14,7 +14,14 @@ target_sources(libcompiler
     PRIVATE libcompiler/token/token.hpp
     PRIVATE libcompiler/tree_fwd.hpp)
 
+target_include_directories(libcompiler
+    PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+
+target_precompile_headers(libcompiler
+    REUSE_FROM libutl)
+
 target_link_libraries(libcompiler
-    PRIVATE cpputil::io
-    PUBLIC cpputil::mem
-    PUBLIC cppdiag)
+    PUBLIC  libutl
+    PUBLIC  cppdiag
+    PUBLIC  cpputil::mem
+    PRIVATE cpputil::io)

@@ -1,7 +1,7 @@
 #include <libutl/utilities.hpp>
-#include <libparse/test_interface.hpp>
 #include <libparse/parser_internals.hpp>
 #include <libformat/format_internals.hpp> // TODO: fix this
+#include "test_interface.hpp"
 
 namespace {
     template <libparse::parser auto parser>

@@ -1,4 +1,4 @@
-kieli_library(libresolve)
+add_library(libresolve STATIC)
 
 target_sources(libresolve
     PRIVATE libresolve/collection.cpp
@@ -19,7 +19,14 @@ target_sources(libresolve
     PRIVATE libresolve/scope.cpp
     PRIVATE libresolve/unification.cpp)
 
+target_include_directories(libresolve
+    PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+
+target_precompile_headers(libresolve
+    REUSE_FROM libutl)
+
 target_link_libraries(libresolve
+    PUBLIC libutl
     PUBLIC libparse
     PUBLIC libdesugar
     PUBLIC libcompiler)

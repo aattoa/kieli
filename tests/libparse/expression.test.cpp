@@ -1,13 +1,10 @@
 #include <cppunittest/unittest.hpp>
-#include <libparse/test_interface.hpp>
 #include <libutl/utilities.hpp>
+#include "test_interface.hpp"
 
-namespace {
-    constexpr auto parse = libparse::test_parse_expression;
-}
+static constexpr auto parse = libparse::test_parse_expression;
 
 #define TEST(name) UNITTEST("parse expression: " name)
-
 #define CHECK_SIMPLE_PARSE(string) CHECK_EQUAL(parse(string), (string))
 
 TEST("literals")
