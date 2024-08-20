@@ -86,20 +86,7 @@ namespace {
                     return { bind->type, this_type.range };
                 }
             }
-            if (auto const lookup_result
-                = lookup_upper(context, state, scope, environment, type.path)) {
-                return std::visit(
-                    utl::Overload {
-                        [&](hir::Enumeration_id const enumeration) -> hir::Type {
-                            return context.info.enumerations[enumeration].type;
-                        },
-                        [&](hir::Alias_id const alias) -> hir::Type {
-                            return resolve_alias(context, context.info.aliases[alias]).type;
-                        },
-                        [](hir::Concept_id) -> hir::Type { cpputil::todo(); },
-                    },
-                    lookup_result.value().variant);
-            }
+            // TODO: lookup
             kieli::Diagnostic diagnostic {
                 .message  = "Use of an undeclared identifier",
                 .range    = this_type.range,

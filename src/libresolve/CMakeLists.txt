@@ -1,7 +1,6 @@
 add_library(libresolve STATIC)
 
 target_sources(libresolve
-    PRIVATE libresolve/lookup.cpp
     PRIVATE libresolve/module.hpp
     PRIVATE libresolve/occurs_check.cpp
     PRIVATE libresolve/resolution_internals.cpp

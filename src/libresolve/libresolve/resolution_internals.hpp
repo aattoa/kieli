@@ -91,15 +91,6 @@ namespace libresolve {
 
     auto ensure_no_unsolved_variables(Context& context, Inference_state& state) -> void;
 
-    // Recursively resolve every definition in `environment`. Will not resolve function bodies.
-    auto resolve_definitions_in_order(Context& context, hir::Environment_id environment) -> void;
-
-    // Recursively resolve a definition. Will not resolve function bodies.
-    auto resolve_definition(Context& context, Definition_variant const& definition) -> void;
-
-    // Recursively resolve every function body in `environment`.
-    auto resolve_function_bodies(Context& context, hir::Environment_id environment) -> void;
-
     auto resolve_enumeration(Context& context, Enumeration_info& info) -> hir::Enumeration&;
 
     auto resolve_concept(Context& context, Concept_info& info) -> hir::Concept&;
@@ -158,20 +149,6 @@ namespace libresolve {
         Scope&                        scope,
         hir::Environment_id           environment,
         ast::Concept_reference const& concept_reference) -> hir::Concept_reference;
-
-    auto lookup_lower(
-        Context&            context,
-        Inference_state&    state,
-        Scope&              scope,
-        hir::Environment_id environment,
-        ast::Path const&    path) -> std::optional<Lower_info>;
-
-    auto lookup_upper(
-        Context&            context,
-        Inference_state&    state,
-        Scope&              scope,
-        hir::Environment_id environment,
-        ast::Path const&    path) -> std::optional<Upper_info>;
 
     // Check whether a type variable with `tag` occurs in `type`.
     auto occurs_check(

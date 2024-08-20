@@ -139,31 +139,7 @@ namespace {
                     };
                 }
             }
-            if (auto const lookup_result
-                = lookup_lower(context, state, scope, environment, variable.path)) {
-                return std::visit(
-                    utl::Overload {
-                        [&](hir::Function_id const function) {
-                            auto& info      = context.info.functions[function];
-                            auto& signature = resolve_function_signature(context, info);
-
-                            return hir::Expression {
-                                hir::expression::Function_reference { info.name, function },
-                                signature.function_type.id,
-                                hir::Expression_kind::value,
-                                this_expression.range,
-                            };
-                        },
-                        [&](hir::Module_id const module) {
-                            return error(
-                                this_expression.range,
-                                std::format(
-                                    "Expected an expression, but found a reference to module '{}'",
-                                    context.info.modules[module].name));
-                        },
-                    },
-                    lookup_result.value().variant);
-            }
+            // TODO: lookup
             return error(this_expression.range, "Use of an undeclared identifier");
         }
 

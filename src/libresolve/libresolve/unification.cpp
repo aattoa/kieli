@@ -314,17 +314,5 @@ auto libresolve::require_subtype_relationship(
     };
     if (!unify(context, state, arguments, sub, super)) {
         cpputil::todo();
-
-#if 0
-        auto const sub_type_string   = hir::to_string(context.hir, sub);
-        auto const super_type_string = hir::to_string(context.hir, super);
-
-        kieli::Diagnostic diagnostic {
-            .message  = std::format("Unable to unify {} ~ {}", sub_type_string, super_type_string),
-            .range    =,
-            .severity = kieli::Severity::error,
-        };
-        kieli::add_diagnostic(context.db, state.document_id, std::move(diagnostic));
-#endif
     }
 }
