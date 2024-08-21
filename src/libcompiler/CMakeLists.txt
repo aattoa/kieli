@@ -3,6 +3,8 @@ add_library(libcompiler STATIC)
 target_sources(libcompiler
     PRIVATE libcompiler/ast/ast.cpp
     PRIVATE libcompiler/ast/ast.hpp
+    PRIVATE libcompiler/ast/display.cpp
+    PRIVATE libcompiler/ast/display.hpp
     PRIVATE libcompiler/compiler.cpp
     PRIVATE libcompiler/compiler.hpp
     PRIVATE libcompiler/cst/cst.cpp

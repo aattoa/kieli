@@ -4,6 +4,7 @@
 #include <libdesugar/desugar.hpp>
 #include <libresolve/resolution_internals.hpp>
 #include <libformat/format.hpp>
+#include <libcompiler/ast/display.hpp>
 #include <cpputil/input.hpp>
 #include <cppargs.hpp>
 #include <devmain/history.hpp>
@@ -63,10 +64,12 @@ namespace {
 
     auto debug_desugar(kieli::Database& db, kieli::Document_id const document_id) -> void
     {
-        auto const cst = kieli::parse(db, document_id);
-        for (kieli::cst::Definition const& definition : cst.get().definitions) {
-            kieli::ast::Arena ast;
-            (void)kieli::desugar(db, document_id, ast, cst.get().arena, definition); // todo
+        auto const cst_module = kieli::parse(db, document_id);
+        for (kieli::cst::Definition const& cst_definition : cst_module.get().definitions) {
+            kieli::ast::Arena            ast_arena;
+            kieli::ast::Definition const ast_definition = kieli::desugar(
+                db, document_id, ast_arena, cst_module.get().arena, cst_definition);
+            std::println("{}", kieli::ast::display(ast_arena, ast_definition));
         }
     }
 
