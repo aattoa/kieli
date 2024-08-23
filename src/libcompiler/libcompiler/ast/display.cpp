@@ -11,46 +11,64 @@ namespace {
         Arena const& arena;
     };
 
-    struct Node {
-        Display_state& state;
-        std::size_t    previous_indent {};
+    enum class Last { no, yes };
 
-        explicit Node(Display_state& state, bool const last)
-            : state(state)
-            , previous_indent(state.indent.size())
-        {
-            state.output.append(state.indent);
-            if (last) {
-                state.output.append(state.unicode ? "└─ " : "+- ");
-                state.indent.append("   ");
-            }
-            else {
-                state.output.append(state.unicode ? "├─ " : "|- ");
-                state.indent.append(state.unicode ? "│  " : "|  ");
-            }
-        }
-
-        ~Node()
-        {
-            state.indent.resize(previous_indent);
-        }
+    template <class Node>
+    concept displayable = requires(Display_state& state, Node const& node) {
+        { do_display(state, node) } -> std::same_as<void>;
     };
-
-    auto node(Display_state& state) -> Node
-    {
-        return Node(state, false);
-    }
-
-    auto last_node(Display_state& state) -> Node
-    {
-        return Node(state, true);
-    }
 
     template <class... Args>
     auto write_line(Display_state& state, std::format_string<Args...> const fmt, Args&&... args)
     {
         std::format_to(std::back_inserter(state.output), fmt, std::forward<Args>(args)...);
         state.output.push_back('\n');
+    }
+
+    auto write_node(Display_state& state, Last const last, std::invocable auto const& callback)
+        -> void
+    {
+        std::size_t const previous_indent = state.indent.size();
+        state.output.append(state.indent);
+        if (last == Last::yes) {
+            state.output.append(state.unicode ? "└─ " : "+- ");
+            state.indent.append("   ");
+        }
+        else {
+            state.output.append(state.unicode ? "├─ " : "|- ");
+            state.indent.append(state.unicode ? "│  " : "|  ");
+        }
+        std::invoke(callback);
+        state.indent.resize(previous_indent);
+    }
+
+    auto display_node(
+        Display_state&          state,
+        Last const              last,
+        std::string_view const  description,
+        displayable auto const& node) -> void
+    {
+        write_node(state, last, [&] {
+            write_line(state, "{}", description);
+            write_node(state, Last::yes, [&] { do_display(state, node); });
+        });
+    }
+
+    template <displayable T>
+    auto display_vector_node(
+        Display_state&         state,
+        Last const             last,
+        std::string_view const description,
+        std::vector<T> const&  vector) -> void
+    {
+        write_node(state, last, [&] {
+            write_line(state, "{}", description);
+            for (std::size_t i = 0; i != vector.size(); ++i) {
+                write_node(state, i == vector.size() - 1 ? Last::yes : Last::no, [&] {
+                    do_display(state, vector[i]);
+                });
+            }
+        });
     }
 
     auto do_display(Display_state& state, Definition const& definition) -> void;
@@ -73,26 +91,25 @@ namespace {
         do_display(state, state.arena.types[id]);
     }
 
-    template <class T>
-    auto do_display(Display_state& state, std::vector<T> const& vector) -> void
+    auto do_display(Display_state& state, kieli::Name const& name) -> void
     {
-        for (std::size_t i = 0; i != vector.size(); ++i) {
-            auto const _ = (i != vector.size() - 1) ? node(state) : last_node(state);
-            do_display(state, vector[i]);
-        }
+        write_line(state, "\"{}\"", name);
     }
 
     auto do_display(Display_state& state, Template_parameter const& parameter) -> void
     {
         auto const visitor = utl::Overload {
             [&](Template_type_parameter const& parameter) {
-                write_line(state, "type parameter {}", parameter.name);
+                write_line(state, "type parameter");
+                display_node(state, Last::yes, "name", parameter.name);
             },
             [&](Template_value_parameter const& parameter) {
-                write_line(state, "value parameter {}", parameter.name);
+                write_line(state, "value parameter");
+                display_node(state, Last::yes, "name", parameter.name);
             },
             [&](Template_mutability_parameter const& parameter) {
-                write_line(state, "mutability parameter {}", parameter.name);
+                write_line(state, "mutability parameter");
+                display_node(state, Last::yes, "name", parameter.name);
             },
         };
         std::visit(visitor, parameter.variant); // TODO
@@ -100,54 +117,29 @@ namespace {
 
     auto do_display(Display_state& state, Path const& path) -> void
     {
+        write_line(state, "path");
         if (path.root.has_value()) {
             cpputil::todo();
         }
-        for (Path_segment const& segment : path.segments) {
-            (void)segment;
+        for (Path_segment const& _ : path.segments) {
             cpputil::todo();
         }
-        auto const _ = last_node(state);
-        write_line(state, "head");
-        {
-            auto const _ = last_node(state);
-            write_line(state, "{}", path.head);
-        }
-    }
-
-    auto display_name_node(Display_state& state, kieli::Name const& name) -> void
-    {
-        auto const _ = node(state);
-        write_line(state, "name");
-        {
-            auto const _ = last_node(state);
-            write_line(state, "{}", name);
-        }
+        display_node(state, Last::yes, "head", path.head);
     }
 
     auto display_template_parameters_node(
-        Display_state& state, Template_parameters const& parameters) -> void
+        Display_state& state, Last const last, Template_parameters const& parameters) -> void
     {
-        if (!parameters.has_value()) {
-            return;
+        if (parameters.has_value()) {
+            display_vector_node(state, last, "template parameters", parameters.value());
         }
-        auto const _ = node(state);
-        write_line(state, "template parameters");
-        do_display(state, parameters.value());
     }
 
     auto do_display(Display_state& state, definition::Field const& field) -> void
     {
         write_line(state, "field");
-        display_name_node(state, field.name);
-        {
-            auto const _ = last_node(state);
-            write_line(state, "type");
-            {
-                auto const _ = last_node(state);
-                do_display(state, field.type);
-            }
-        }
+        display_node(state, Last::no, "name", field.name);
+        display_node(state, Last::yes, "type", field.type);
     }
 
     auto do_display(Display_state& state, definition::Constructor_body const& body) -> void
@@ -155,15 +147,11 @@ namespace {
         auto const visitor = utl::Overload {
             [&](definition::Struct_constructor const& constructor) {
                 write_line(state, "struct constructor");
-                auto const _ = last_node(state);
-                write_line(state, "fields");
-                do_display(state, constructor.fields);
+                display_vector_node(state, Last::yes, "fields", constructor.fields);
             },
             [&](definition::Tuple_constructor const& constructor) {
                 write_line(state, "tuple constructor");
-                auto const _ = last_node(state);
-                write_line(state, "types");
-                do_display(state, constructor.types);
+                display_vector_node(state, Last::yes, "types", constructor.types);
             },
             [&](definition::Unit_constructor const&) { write_line(state, "unit constructor"); },
         };
@@ -173,15 +161,8 @@ namespace {
     auto do_display(Display_state& state, definition::Constructor const& constructor) -> void
     {
         write_line(state, "constructor");
-        display_name_node(state, constructor.name);
-        {
-            auto const _ = last_node(state);
-            write_line(state, "body");
-            {
-                auto const _ = last_node(state);
-                do_display(state, constructor.body);
-            }
-        }
+        display_node(state, Last::no, "name", constructor.name);
+        display_node(state, Last::yes, "body", constructor.body);
     }
 
     auto do_display(Display_state& state, Concept_reference const& reference) -> void
@@ -190,65 +171,35 @@ namespace {
         if (reference.template_arguments.has_value()) {
             cpputil::todo();
         }
-        auto const _ = last_node(state);
-        write_line(state, "path");
-        do_display(state, reference.path);
+        display_node(state, Last::yes, "reference path", reference.path);
     }
 
     auto do_display(Display_state& state, Function_parameter const& parameter) -> void
     {
         write_line(state, "function parameter");
         if (parameter.type.has_value()) {
-            auto const _ = node(state);
-            write_line(state, "type");
-            {
-                auto const _ = last_node(state);
-                do_display(state, parameter.type.value());
-            }
+            display_node(state, Last::no, "type", parameter.type.value());
         }
         if (parameter.default_argument.has_value()) {
-            auto const _ = node(state);
-            write_line(state, "default argument");
-            {
-                auto const _ = last_node(state);
-                do_display(state, parameter.default_argument.value());
-            }
+            display_node(state, Last::no, "default argument", parameter.default_argument.value());
         }
-        auto const _ = last_node(state);
-        write_line(state, "pattern");
-        {
-            auto const _ = last_node(state);
-            do_display(state, parameter.pattern);
-        }
+        display_node(state, Last::yes, "pattern", parameter.pattern);
     }
 
     auto do_display(Display_state& state, Function_signature const& signature) -> void
     {
         write_line(state, "function signature");
-        display_name_node(state, signature.name);
-        display_template_parameters_node(state, signature.template_parameters);
-        {
-            auto const _ = node(state);
-            write_line(state, "return type");
-            {
-                auto const _ = last_node(state);
-                do_display(state, signature.return_type);
-            }
-        }
-        {
-            auto const _ = last_node(state);
-            write_line(state, "function parameters");
-            do_display(state, signature.function_parameters);
-        }
+        display_node(state, Last::no, "name", signature.name);
+        display_template_parameters_node(state, Last::no, signature.template_parameters);
+        display_node(state, Last::no, "return type", signature.return_type);
+        display_vector_node(state, Last::yes, "function parameters", signature.function_parameters);
     }
 
     auto do_display(Display_state& state, Type_signature const& signature) -> void
     {
         write_line(state, "type signature");
-        display_name_node(state, signature.name);
-        auto const _ = last_node(state);
-        write_line(state, "concepts");
-        do_display(state, signature.concepts);
+        display_node(state, Last::no, "name", signature.name);
+        display_vector_node(state, Last::yes, "concepts", signature.concepts);
     }
 
     struct Definition_display_visitor {
@@ -257,91 +208,49 @@ namespace {
         auto operator()(definition::Function const& function)
         {
             write_line(state, "function");
-            {
-                auto const _ = node(state);
-                do_display(state, function.signature);
-            }
-            {
-                auto const _ = last_node(state);
-                write_line(state, "body");
-                {
-                    auto const _ = last_node(state);
-                    do_display(state, function.body);
-                }
-            }
+            display_node(state, Last::no, "signature", function.signature);
+            display_node(state, Last::yes, "body", function.body);
         }
 
         auto operator()(definition::Enumeration const& enumeration)
         {
             write_line(state, "enumeration");
-            display_name_node(state, enumeration.name);
-            display_template_parameters_node(state, enumeration.template_parameters);
-            {
-                auto const _ = last_node(state);
-                write_line(state, "constructors");
-                do_display(state, enumeration.constructors);
-            }
+            display_node(state, Last::no, "name", enumeration.name);
+            display_template_parameters_node(state, Last::no, enumeration.template_parameters);
+            display_vector_node(state, Last::yes, "constructors", enumeration.constructors);
         }
 
         auto operator()(definition::Alias const& alias)
         {
             write_line(state, "type alias");
-            display_name_node(state, alias.name);
-            display_template_parameters_node(state, alias.template_parameters);
-            auto const _ = last_node(state);
-            write_line(state, "aliased type");
-            {
-                auto const _ = last_node(state);
-                do_display(state, alias.type);
-            }
+            display_node(state, Last::no, "name", alias.name);
+            display_template_parameters_node(state, Last::no, alias.template_parameters);
+            display_node(state, Last::yes, "aliased type", alias.type);
         }
 
         auto operator()(definition::Concept const& concept_)
         {
             write_line(state, "concept");
-            display_name_node(state, concept_.name);
-            display_template_parameters_node(state, concept_.template_parameters);
-            {
-                auto const _ = node(state);
-                write_line(state, "function signatures");
-                do_display(state, concept_.function_signatures);
-            }
-            {
-                auto const _ = last_node(state);
-                write_line(state, "type signatures");
-                do_display(state, concept_.type_signatures);
-            }
+            display_node(state, Last::no, "name", concept_.name);
+            display_template_parameters_node(state, Last::no, concept_.template_parameters);
+            display_vector_node(state, Last::no, "functions", concept_.function_signatures);
+            display_vector_node(state, Last::yes, "types", concept_.type_signatures);
         }
 
         auto operator()(definition::Implementation const& implementation)
         {
             write_line(state, "implementation");
-            display_template_parameters_node(state, implementation.template_parameters);
-            {
-                auto const _ = node(state);
-                write_line(state, "type");
-                {
-                    auto const _ = last_node(state);
-                    do_display(state, implementation.type);
-                }
-            }
-            {
-                auto const _ = last_node(state);
-                write_line(state, "definitions");
-                do_display(state, implementation.definitions);
-            }
+            display_template_parameters_node(state, Last::no, implementation.template_parameters);
+            display_node(state, Last::no, "type", implementation.type);
+            display_vector_node(state, Last::yes, "definitions", implementation.definitions);
         }
 
         auto operator()(definition::Submodule const& submodule)
         {
             write_line(state, "submodule");
-            display_name_node(state, submodule.name);
-            display_template_parameters_node(state, submodule.template_parameters);
-            {
-                auto const _ = last_node(state);
-                write_line(state, "definitions");
-                do_display(state, submodule.definitions);
-            }
+            display_node(state, Last::no, "name", submodule.name);
+            display_template_parameters_node(state, Last::no, submodule.template_parameters);
+            display_vector_node(state, Last::yes, "definitions", submodule.definitions);
         }
     };
 
@@ -393,7 +302,7 @@ namespace {
 
         auto operator()(Wildcard const&)
         {
-            write_line(state, "_");
+            write_line(state, "Wildcard");
         }
 
         auto operator()(type::Self const&)
