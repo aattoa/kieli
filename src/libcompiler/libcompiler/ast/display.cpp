@@ -96,6 +96,19 @@ namespace {
         write_line(state, "\"{}\"", name);
     }
 
+    auto do_display(Display_state& state, Mutability const& mutability) -> void
+    {
+        auto const visitor = utl::Overload {
+            [&](mutability::Concrete const& concrete) {
+                write_line(state, "concrete {}", concrete);
+            },
+            [&](mutability::Parameterized const& parameterized) {
+                write_line(state, "parameterized {}", parameterized.name);
+            },
+        };
+        std::visit(visitor, mutability.variant);
+    }
+
     auto do_display(Display_state& state, Template_parameter const& parameter) -> void
     {
         auto const visitor = utl::Overload {
@@ -113,6 +126,11 @@ namespace {
             },
         };
         std::visit(visitor, parameter.variant); // TODO
+    }
+
+    auto do_display(Display_state& state, Template_argument const& argument) -> void
+    {
+        std::visit([&](auto const& alternative) { do_display(state, alternative); }, argument);
     }
 
     auto do_display(Display_state& state, Path const& path) -> void
@@ -169,7 +187,8 @@ namespace {
     {
         write_line(state, "concept reference");
         if (reference.template_arguments.has_value()) {
-            cpputil::todo();
+            display_vector_node(
+                state, Last::no, "template arguments", reference.template_arguments.value());
         }
         display_node(state, Last::yes, "reference path", reference.path);
     }
@@ -277,42 +296,107 @@ namespace {
 
         auto operator()(kieli::type::Integer const& integer)
         {
-            write_line(state, "{}", kieli::type::integer_name(integer));
+            write_line(state, "built-in {}", kieli::type::integer_name(integer));
         }
 
         auto operator()(kieli::type::Floating const&)
         {
-            write_line(state, "Float");
+            write_line(state, "built-in floating point");
         }
 
         auto operator()(kieli::type::Character const&)
         {
-            write_line(state, "Char");
+            write_line(state, "built-in character");
         }
 
         auto operator()(kieli::type::Boolean const&)
         {
-            write_line(state, "Bool");
+            write_line(state, "built-in boolean");
         }
 
         auto operator()(kieli::type::String const&)
         {
-            write_line(state, "String");
+            write_line(state, "built-in string");
+        }
+
+        auto operator()(type::Never const&)
+        {
+            write_line(state, "built-in never");
         }
 
         auto operator()(Wildcard const&)
         {
-            write_line(state, "Wildcard");
+            write_line(state, "built-in wildcard");
         }
 
         auto operator()(type::Self const&)
         {
-            write_line(state, "Self");
+            write_line(state, "implementation self");
         }
 
-        auto operator()(auto const&)
+        auto operator()(type::Typename const& typename_)
         {
-            cpputil::todo();
+            write_line(state, "type name");
+            display_node(state, Last::yes, "type path", typename_.path);
+        }
+
+        auto operator()(type::Tuple const& tuple)
+        {
+            write_line(state, "tuple");
+            display_vector_node(state, Last::yes, "field types", tuple.field_types);
+        }
+
+        auto operator()(type::Array const& array)
+        {
+            write_line(state, "tuple");
+            display_node(state, Last::no, "length", array.length);
+            display_node(state, Last::yes, "element type", array.element_type);
+        }
+
+        auto operator()(type::Slice const& slice)
+        {
+            write_line(state, "slice");
+            display_node(state, Last::yes, "element type", slice.element_type);
+        }
+
+        auto operator()(type::Function const& function)
+        {
+            write_line(state, "function");
+            display_vector_node(state, Last::no, "parameter types", function.parameter_types);
+            display_node(state, Last::yes, "return type", function.return_type);
+        }
+
+        auto operator()(type::Typeof const& typeof_)
+        {
+            write_line(state, "typeof");
+            display_node(state, Last::yes, "inspected expression", typeof_.inspected_expression);
+        }
+
+        auto operator()(type::Reference const& reference)
+        {
+            write_line(state, "reference");
+            display_node(state, Last::no, "reference mutability", reference.mutability);
+            display_node(state, Last::yes, "referenced type", reference.referenced_type);
+        }
+
+        auto operator()(type::Pointer const& pointer)
+        {
+            write_line(state, "pointer");
+            display_node(state, Last::no, "pointer mutability", pointer.mutability);
+            display_node(state, Last::yes, "pointee type", pointer.pointee_type);
+        }
+
+        auto operator()(type::Implementation const& implementation)
+        {
+            write_line(state, "implementation");
+            display_vector_node(state, Last::yes, "concepts", implementation.concepts);
+        }
+
+        auto operator()(type::Template_application const& application)
+        {
+            write_line(state, "template application");
+            display_node(state, Last::no, "template path", application.path);
+            display_vector_node(state, Last::yes, "template arguments", application.arguments);
         }
     };
 
