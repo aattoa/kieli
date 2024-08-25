@@ -160,6 +160,15 @@ namespace {
         display_node(state, Last::yes, "type", field.type);
     }
 
+    auto do_display(Display_state& state, pattern::Field const& field) -> void
+    {
+        write_line(state, "field");
+        if (field.pattern.has_value()) {
+            display_node(state, Last::no, "pattern", field.pattern.value());
+        }
+        display_node(state, Last::yes, "name", field.name);
+    }
+
     auto do_display(Display_state& state, definition::Constructor_body const& body) -> void
     {
         auto const visitor = utl::Overload {
@@ -172,6 +181,22 @@ namespace {
                 display_vector_node(state, Last::yes, "types", constructor.types);
             },
             [&](definition::Unit_constructor const&) { write_line(state, "unit constructor"); },
+        };
+        std::visit(visitor, body);
+    }
+
+    auto do_display(Display_state& state, pattern::Constructor_body const& body) -> void
+    {
+        auto const visitor = utl::Overload {
+            [&](pattern::Struct_constructor const& constructor) {
+                write_line(state, "struct constructor");
+                display_vector_node(state, Last::yes, "fields", constructor.fields);
+            },
+            [&](pattern::Tuple_constructor const& constructor) {
+                write_line(state, "tuple constructor");
+                display_node(state, Last::yes, "pattern", constructor.pattern);
+            },
+            [&](pattern::Unit_constructor const&) { write_line(state, "unit constructor"); },
         };
         std::visit(visitor, body);
     }
@@ -273,8 +298,44 @@ namespace {
         }
     };
 
+    auto display_literal(Display_state& state, kieli::Integer const& integer) -> void
+    {
+        write_line(state, "integer literal {}", integer.value);
+    }
+
+    auto display_literal(Display_state& state, kieli::Floating const& floating) -> void
+    {
+        write_line(state, "floating point literal {}", floating.value);
+    }
+
+    auto display_literal(Display_state& state, kieli::Character const& character) -> void
+    {
+        if (std::isprint(static_cast<unsigned char>(character.value))) {
+            write_line(state, "character literal '{}'", character.value);
+        }
+        else {
+            write_line(state, "character literal {:#x}", static_cast<int>(character.value));
+        }
+    }
+
+    auto display_literal(Display_state& state, kieli::Boolean const& boolean) -> void
+    {
+        write_line(state, "boolean literal {}", boolean.value);
+    }
+
+    auto display_literal(Display_state& state, kieli::String const& string) -> void
+    {
+        // todo: nonprintables
+        write_line(state, "string literal \"{}\"", string.value);
+    }
+
     struct Expression_display_visitor {
         Display_state& state;
+
+        auto operator()(kieli::literal auto const& literal)
+        {
+            display_literal(state, literal);
+        }
 
         auto operator()(auto const&)
         {
@@ -285,9 +346,62 @@ namespace {
     struct Pattern_display_visitor {
         Display_state& state;
 
-        auto operator()(auto const&)
+        auto operator()(kieli::literal auto const& literal)
         {
-            write_line(state, "pattern todo");
+            display_literal(state, literal);
+        }
+
+        auto operator()(Wildcard const&)
+        {
+            write_line(state, "wildcard");
+        }
+
+        auto operator()(pattern::Name const& name)
+        {
+            write_line(state, "name");
+            display_node(state, Last::no, "name", name.name);
+            display_node(state, Last::yes, "mutability", name.mutability);
+        }
+
+        auto operator()(pattern::Constructor const& constructor)
+        {
+            write_line(state, "constructor");
+            display_node(state, Last::no, "constructor path", constructor.path);
+            display_node(state, Last::yes, "body", constructor.body);
+        }
+
+        auto operator()(pattern::Abbreviated_constructor const& constructor)
+        {
+            write_line(state, "abbreviated constructor");
+            display_node(state, Last::no, "name", constructor.name);
+            display_node(state, Last::yes, "body", constructor.body);
+        }
+
+        auto operator()(pattern::Tuple const& tuple)
+        {
+            write_line(state, "tuple");
+            display_vector_node(state, Last::yes, "field patterns", tuple.field_patterns);
+        }
+
+        auto operator()(pattern::Slice const& slice)
+        {
+            write_line(state, "slice");
+            display_vector_node(state, Last::yes, "element patterns", slice.element_patterns);
+        }
+
+        auto operator()(pattern::Alias const& alias)
+        {
+            write_line(state, "alias");
+            display_node(state, Last::no, "name", alias.name);
+            display_node(state, Last::no, "pattern", alias.pattern);
+            display_node(state, Last::yes, "mutability", alias.mutability);
+        }
+
+        auto operator()(pattern::Guarded const& guarded)
+        {
+            write_line(state, "guarded");
+            display_node(state, Last::no, "guarded pattern", guarded.guarded_pattern);
+            display_node(state, Last::yes, "guard expression", guarded.guard_expression);
         }
     };
 
