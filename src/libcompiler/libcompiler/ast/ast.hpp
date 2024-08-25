@@ -136,6 +136,9 @@ namespace kieli::ast {
     enum class Loop_source { plain_loop, while_loop, for_loop };
     enum class Conditional_source { if_, elif, while_loop_body };
 
+    auto describe_loop_source(Loop_source source) -> std::string_view;
+    auto describe_conditional_source(Conditional_source source) -> std::string_view;
+
     namespace expression {
         struct Array_literal {
             std::vector<Expression> elements;

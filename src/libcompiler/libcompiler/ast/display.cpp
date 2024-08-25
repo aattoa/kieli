@@ -153,11 +153,29 @@ namespace {
         }
     }
 
+    auto do_display(Display_state& state, Loop_source const source) -> void
+    {
+        write_line(state, "loop source: {}", describe_loop_source(source));
+    }
+
+    auto do_display(Display_state& state, Conditional_source const source) -> void
+    {
+        write_line(state, "conditional source: {}", describe_conditional_source(source));
+    }
+
     auto do_display(Display_state& state, definition::Field const& field) -> void
     {
         write_line(state, "field");
         display_node(state, Last::no, "name", field.name);
         display_node(state, Last::yes, "type", field.type);
+    }
+
+    auto do_display(Display_state& state, expression::Struct_initializer::Field const& field)
+        -> void
+    {
+        write_line(state, "struct field initializer");
+        display_node(state, Last::no, "name", field.name);
+        display_node(state, Last::yes, "expression", field.expression);
     }
 
     auto do_display(Display_state& state, pattern::Field const& field) -> void
@@ -218,6 +236,15 @@ namespace {
         display_node(state, Last::yes, "reference path", reference.path);
     }
 
+    auto do_display(Display_state& state, Function_argument const& argument) -> void
+    {
+        write_line(state, "function argument");
+        if (argument.name.has_value()) {
+            display_node(state, Last::no, "name", argument.name.value());
+        }
+        display_node(state, Last::yes, "expression", argument.expression);
+    }
+
     auto do_display(Display_state& state, Function_parameter const& parameter) -> void
     {
         write_line(state, "function parameter");
@@ -244,6 +271,18 @@ namespace {
         write_line(state, "type signature");
         display_node(state, Last::no, "name", signature.name);
         display_vector_node(state, Last::yes, "concepts", signature.concepts);
+    }
+
+    auto do_display(Display_state& state, expression::Match::Case const& match_case) -> void
+    {
+        write_line(state, "match case");
+        display_node(state, Last::no, "pattern", match_case.pattern);
+        display_node(state, Last::yes, "handler", match_case.expression);
+    }
+
+    auto do_display(Display_state& state, kieli::Identifier const identifier) -> void
+    {
+        write_line(state, "identifier {}", identifier);
     }
 
     struct Definition_display_visitor {
@@ -337,9 +376,240 @@ namespace {
             display_literal(state, literal);
         }
 
-        auto operator()(auto const&)
+        auto operator()(expression::Array_literal const& array)
         {
-            write_line(state, "expression todo");
+            write_line(state, "array literal");
+            display_vector_node(state, Last::yes, "elements", array.elements);
+        }
+
+        auto operator()(expression::Self const&)
+        {
+            write_line(state, "self reference");
+        }
+
+        auto operator()(expression::Variable const& variable)
+        {
+            write_line(state, "variable");
+            display_node(state, Last::yes, "path", variable.path);
+        }
+
+        auto operator()(expression::Tuple const& tuple)
+        {
+            write_line(state, "tuple");
+            display_vector_node(state, Last::yes, "fields", tuple.fields);
+        }
+
+        auto operator()(expression::Loop const& loop)
+        {
+            write_line(state, "loop");
+            display_node(state, Last::no, "body", loop.body);
+            display_node(state, Last::yes, "source", loop.source.get());
+        }
+
+        auto operator()(expression::Break const& break_)
+        {
+            write_line(state, "break");
+            display_node(state, Last::yes, "result", break_.result);
+        }
+
+        auto operator()(expression::Continue const&)
+        {
+            write_line(state, "continue");
+        }
+
+        auto operator()(expression::Block const& block)
+        {
+            write_line(state, "block");
+            display_vector_node(state, Last::no, "side effects", block.side_effects);
+            display_node(state, Last::yes, "result", block.result);
+        }
+
+        auto operator()(expression::Invocation const& invocation)
+        {
+            write_line(state, "invocation");
+            display_node(state, Last::no, "invocable", invocation.invocable);
+            display_vector_node(state, Last::yes, "arguments", invocation.arguments);
+        }
+
+        auto operator()(expression::Unit_initializer const& initializer)
+        {
+            write_line(state, "unit initializer");
+            display_node(state, Last::yes, "constructor path", initializer.constructor_path);
+        }
+
+        auto operator()(expression::Tuple_initializer const& initializer)
+        {
+            write_line(state, "tuple initializer");
+            display_node(state, Last::no, "constructor path", initializer.constructor_path);
+            display_vector_node(state, Last::yes, "field initializers", initializer.initializers);
+        }
+
+        auto operator()(expression::Struct_initializer const& initializer)
+        {
+            write_line(state, "struct initializer");
+            display_node(state, Last::no, "constructor path", initializer.constructor_path);
+            display_vector_node(state, Last::yes, "field initializers", initializer.initializers);
+        }
+
+        auto operator()(expression::Binary_operator_invocation const& application)
+        {
+            write_line(state, "binary operator application");
+            display_node(state, Last::no, "left operand", application.left);
+            display_node(state, Last::no, "right operand", application.right);
+            display_node(state, Last::yes, "operator", application.op);
+        }
+
+        auto operator()(expression::Struct_field_access const& access)
+        {
+            write_line(state, "struct index access");
+            display_node(state, Last::no, "base expression", access.base_expression);
+            display_node(state, Last::yes, "field name", access.field_name);
+        }
+
+        auto operator()(expression::Tuple_field_access const& access)
+        {
+            write_line(state, "tuple index access");
+            display_node(state, Last::no, "base expression", access.base_expression);
+            write_node(state, Last::yes, [&] {
+                write_line(state, "field index {}", access.field_index.get());
+            });
+        }
+
+        auto operator()(expression::Array_index_access const& access)
+        {
+            write_line(state, "array index access");
+            display_node(state, Last::no, "base expression", access.base_expression);
+            display_node(state, Last::yes, "index expression", access.index_expression);
+        }
+
+        auto operator()(expression::Method_invocation const& invocation)
+        {
+            write_line(state, "method invocation");
+            display_node(state, Last::no, "method name", invocation.method_name);
+            display_node(state, Last::no, "base expression", invocation.base_expression);
+            if (invocation.template_arguments.has_value()) {
+                display_vector_node(
+                    state, Last::no, "template arguments", invocation.template_arguments.value());
+            }
+            display_vector_node(
+                state, Last::yes, "method arguments", invocation.function_arguments);
+        }
+
+        auto operator()(expression::Conditional const& conditional)
+        {
+            write_line(state, "conditional");
+            display_node(state, Last::no, "condition", conditional.condition);
+            display_node(state, Last::no, "true branch", conditional.true_branch);
+            display_node(state, Last::no, "false branch", conditional.false_branch);
+            display_node(state, Last::yes, "source", conditional.source.get());
+        }
+
+        auto operator()(expression::Match const& match)
+        {
+            write_line(state, "match");
+            display_node(state, Last::no, "expression", match.expression);
+            display_vector_node(state, Last::yes, "cases", match.cases);
+        }
+
+        auto operator()(expression::Template_application const& application)
+        {
+            write_line(state, "template application");
+            display_node(state, Last::no, "path", application.path);
+            display_vector_node(
+                state, Last::yes, "template arguments", application.template_arguments);
+        }
+
+        auto operator()(expression::Type_cast const& cast)
+        {
+            write_line(state, "type cast");
+            display_node(state, Last::no, "expression", cast.expression);
+            display_node(state, Last::yes, "target type", cast.target_type);
+        }
+
+        auto operator()(expression::Type_ascription const& ascription)
+        {
+            write_line(state, "type ascription");
+            display_node(state, Last::no, "expression", ascription.expression);
+            display_node(state, Last::yes, "ascribed type", ascription.ascribed_type);
+        }
+
+        auto operator()(expression::Let_binding const& let)
+        {
+            write_line(state, "let binding");
+            if (let.type.has_value()) {
+                display_node(state, Last::no, "type", let.type.value());
+            }
+            display_node(state, Last::no, "pattern", let.pattern);
+            display_node(state, Last::yes, "initializer", let.initializer);
+        }
+
+        auto operator()(expression::Local_type_alias const& alias)
+        {
+            write_line(state, "local type alias");
+            display_node(state, Last::no, "name", alias.name);
+            display_node(state, Last::yes, "aliased type", alias.type);
+        }
+
+        auto operator()(expression::Ret const& ret)
+        {
+            write_line(state, "ret");
+            if (ret.expression.has_value()) {
+                display_node(state, Last::yes, "returned expression", ret.expression.value());
+            }
+        }
+
+        auto operator()(expression::Sizeof const& sizeof_)
+        {
+            write_line(state, "sizeof");
+            display_node(state, Last::yes, "inspected type", sizeof_.inspected_type);
+        }
+
+        auto operator()(expression::Addressof const& addressof)
+        {
+            write_line(state, "addressof");
+            display_node(state, Last::no, "reference mutability", addressof.mutability);
+            display_node(state, Last::yes, "place expression", addressof.place_expression);
+        }
+
+        auto operator()(expression::Dereference const& dereference)
+        {
+            write_line(state, "dereference");
+            display_node(
+                state, Last::yes, "reference expression", dereference.reference_expression);
+        }
+
+        auto operator()(expression::Unsafe const& unsafe)
+        {
+            write_line(state, "unsafe");
+            display_node(state, Last::yes, "expression", unsafe.expression);
+        }
+
+        auto operator()(expression::Move const& move)
+        {
+            write_line(state, "move");
+            display_node(state, Last::yes, "place expression", move.place_expression);
+        }
+
+        auto operator()(expression::Defer const& defer)
+        {
+            write_line(state, "defer");
+            display_node(state, Last::yes, "effect", defer.expression);
+        }
+
+        auto operator()(expression::Meta const& meta)
+        {
+            write_line(state, "meta");
+            display_node(state, Last::yes, "expression", meta.expression);
+        }
+
+        auto operator()(expression::Hole const&)
+        {
+            write_line(state, "hole");
+        }
+
+        auto operator()(expression::Error const&)
+        {
+            write_line(state, "error");
         }
     };
 
