@@ -5,23 +5,6 @@
 using namespace libparse;
 
 namespace {
-    auto parse_self_parameter(Context& context) -> std::optional<cst::Self_parameter>
-    {
-        auto const stage           = context.stage();
-        auto const ampersand_token = context.try_extract(Token_type::ampersand);
-        auto       mutability      = parse_mutability(context);
-        if (auto self_token = context.try_extract(Token_type::lower_self)) {
-            return cst::Self_parameter {
-                .mutability         = mutability,
-                .ampersand_token    = ampersand_token.transform( //
-                    std::bind_front(&Context::token, std::ref(context))),
-                .self_keyword_token = context.token(self_token.value()),
-            };
-        }
-        context.unstage(stage);
-        return std::nullopt;
-    }
-
     template <class Default, parser auto parse_argument>
     auto parse_default_argument(Context& context) -> std::optional<Default>
     {
@@ -237,42 +220,17 @@ auto libparse::parse_template_argument(Context& context) -> std::optional<cst::T
 
 auto libparse::parse_template_arguments(Context& context) -> std::optional<cst::Template_arguments>
 {
-    return parse_bracketed<
-        pretend_parse<
-            extract_comma_separated_zero_or_more<parse_template_argument, "a template argument">>,
-        "">(context);
+    static constexpr auto extract
+        = extract_comma_separated_zero_or_more<parse_template_argument, "a template argument">;
+    return parse_bracketed<pretend_parse<extract>, "">(context);
 }
 
 auto libparse::parse_function_parameters(Context& context)
     -> std::optional<cst::Function_parameters>
 {
-    static constexpr auto extract_normals
+    static constexpr auto extract
         = extract_comma_separated_zero_or_more<parse_function_parameter, "a function parameter">;
-
-    auto self_parameter         = parse_self_parameter(context);
-    auto comma_token_after_self = context.try_extract(Token_type::comma);
-    auto normal_parameters      = extract_normals(context);
-
-    if (!self_parameter.has_value() && comma_token_after_self.has_value()) {
-        context.error_expected(
-            comma_token_after_self.value().range, "a function parameter before the comma");
-    }
-    if (comma_token_after_self.has_value() && normal_parameters.elements.empty()) {
-        context.error_expected("a function parameter");
-    }
-    if (self_parameter.has_value() && !comma_token_after_self.has_value()
-        && !normal_parameters.elements.empty()) {
-        context.error_expected(
-            context.cst().patterns[normal_parameters.elements.front().pattern].range,
-            "a comma separating the self parameter from the other function parameters");
-    }
-
-    return cst::Function_parameters {
-        .normal_parameters      = std::move(normal_parameters),
-        .self_parameter         = std::move(self_parameter),
-        .comma_token_after_self = comma_token_after_self.transform( //
-            std::bind_front(&Context::token, std::ref(context))),
-    };
+    return parse_parenthesized<pretend_parse<extract>, "">(context);
 }
 
 auto libparse::parse_function_parameter(Context& context) -> std::optional<cst::Function_parameter>
@@ -308,10 +266,9 @@ auto libparse::parse_function_argument(Context& context) -> std::optional<cst::F
 
 auto libparse::parse_function_arguments(Context& context) -> std::optional<cst::Function_arguments>
 {
-    return parse_parenthesized<
-        pretend_parse<
-            extract_comma_separated_zero_or_more<parse_function_argument, "a function argument">>,
-        "">(context);
+    static constexpr auto extract
+        = extract_comma_separated_zero_or_more<parse_function_argument, "a function argument">;
+    return parse_parenthesized<pretend_parse<extract>, "">(context);
 }
 
 auto libparse::extract_path(Context& context, std::optional<cst::Path_root>&& root) -> cst::Path

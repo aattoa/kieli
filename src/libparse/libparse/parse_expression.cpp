@@ -443,7 +443,6 @@ namespace {
         case Token_type::lower_name:        [[fallthrough]];
         case Token_type::upper_name:        return extract_identifier(context, stage);
         case Token_type::global:            return extract_global_identifier(context, token);
-        case Token_type::lower_self:        return cst::expression::Self {};
         case Token_type::hole:              return cst::expression::Hole {};
         case Token_type::asterisk:          return extract_dereference(context, token);
         case Token_type::paren_open:        return extract_tuple(context, token);

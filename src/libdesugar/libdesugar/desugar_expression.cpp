@@ -137,11 +137,6 @@ namespace {
             };
         }
 
-        auto operator()(cst::expression::Self const&) -> ast::Expression_variant
-        {
-            return ast::expression::Self {};
-        }
-
         auto operator()(cst::expression::Variable const& variable) -> ast::Expression_variant
         {
             return ast::expression::Variable { .path = context.desugar(variable.path) };

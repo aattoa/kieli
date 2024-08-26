@@ -19,8 +19,6 @@ namespace libdesugar {
         cst::Arena const&  cst;
         ast::Arena&        ast;
         kieli::Document_id document_id;
-        kieli::Identifier  self_variable_identifier
-            = kieli::Identifier { db.string_pool.add("self") }; // todo: special identifiers
 
         auto desugar(cst::Expression const&) -> ast::Expression;
         auto desugar(cst::Type const&) -> ast::Type;
@@ -44,7 +42,6 @@ namespace libdesugar {
         auto desugar(cst::definition::Constructor_body const&) -> ast::definition::Constructor_body;
         auto desugar(cst::definition::Constructor const&) -> ast::definition::Constructor;
         auto desugar(cst::Wildcard const&) -> ast::Wildcard;
-        auto desugar(cst::Self_parameter const&) -> ast::Self_parameter;
 
         static auto desugar(cst::Mutability const&) -> ast::Mutability;
 
@@ -113,7 +110,5 @@ namespace libdesugar {
 
         static auto desugar_mutability(std::optional<cst::Mutability> const&, kieli::Range)
             -> ast::Mutability;
-
-        auto normalize_self_parameter(cst::Self_parameter const&) -> ast::Function_parameter;
     };
 } // namespace libdesugar

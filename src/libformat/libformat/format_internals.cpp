@@ -124,15 +124,6 @@ auto libformat::format_mutability_with_whitespace(
     format(state, " ");
 }
 
-auto libformat::format(State& state, cst::Self_parameter const& parameter) -> void
-{
-    if (parameter.is_reference()) {
-        format(state, "&");
-    }
-    format_mutability_with_whitespace(state, parameter.mutability);
-    format(state, "self");
-}
-
 auto libformat::format(State& state, cst::Template_arguments const& arguments) -> void
 {
     format(state, "[");
@@ -197,10 +188,6 @@ auto libformat::format(State& state, cst::Function_parameter const& parameter) -
 auto libformat::format(State& state, cst::Function_parameters const& parameters) -> void
 {
     format(state, "(");
-    format(state, parameters.self_parameter);
-    if (parameters.comma_token_after_self.has_value()) {
-        format(state, ", ");
-    }
-    format_comma_separated(state, parameters.normal_parameters.elements);
+    format_comma_separated(state, parameters.value.elements);
     format(state, ")");
 }

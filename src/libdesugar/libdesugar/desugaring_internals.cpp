@@ -83,16 +83,6 @@ auto libdesugar::Context::desugar(cst::Wildcard const& wildcard) -> ast::Wildcar
     return ast::Wildcard { .range = cst.tokens[wildcard.underscore_token].range };
 }
 
-auto libdesugar::Context::desugar(cst::Self_parameter const& self_parameter) -> ast::Self_parameter
-{
-    auto const self_range = cst.tokens[self_parameter.self_keyword_token].range;
-    return ast::Self_parameter {
-        .mutability   = desugar_mutability(self_parameter.mutability, self_range),
-        .is_reference = self_parameter.is_reference(),
-        .range        = self_range,
-    };
-}
-
 auto libdesugar::Context::desugar(cst::Template_argument const& argument) -> ast::Template_argument
 {
     return std::visit<ast::Template_argument>(desugar(), argument);
@@ -165,24 +155,15 @@ auto libdesugar::Context::desugar(cst::Concept_reference const& reference) -> as
 auto libdesugar::Context::desugar(cst::Function_signature const& signature)
     -> ast::Function_signature
 {
-    std::vector<ast::Function_parameter> parameters;
-    if (signature.function_parameters.value.self_parameter.has_value()) {
-        parameters.push_back(
-            normalize_self_parameter(signature.function_parameters.value.self_parameter.value()));
-    }
-    parameters.append_range(std::views::transform(
-        signature.function_parameters.value.normal_parameters.elements, desugar()));
-
-    ast::Type return_type = signature.return_type.has_value()
-                              ? desugar(cst.types[signature.return_type.value().type])
-                              : unit_type(signature.name.range);
-
+    ast::Type return_type =               //
+        signature.return_type.has_value() //
+            ? desugar(cst.types[signature.return_type.value().type])
+            : unit_type(signature.name.range);
     return ast::Function_signature {
         .template_parameters = signature.template_parameters.transform(desugar()),
-        .function_parameters = std::move(parameters),
-        .self_parameter = signature.function_parameters.value.self_parameter.transform(desugar()),
-        .return_type    = std::move(return_type),
-        .name           = signature.name,
+        .function_parameters = desugar(signature.function_parameters),
+        .return_type         = std::move(return_type),
+        .name                = signature.name,
     };
 }
 
@@ -252,36 +233,6 @@ auto libdesugar::Context::desugar_mutability(
         return desugar(mutability.value());
     }
     return ast::Mutability { kieli::Mutability::immut, range };
-}
-
-auto libdesugar::Context::normalize_self_parameter(cst::Self_parameter const& self_parameter)
-    -> ast::Function_parameter
-{
-    auto const self_range = cst.tokens[self_parameter.self_keyword_token].range;
-    ast::Type  self_type { .variant = ast::type::Self {}, .range = self_range };
-
-    if (self_parameter.is_reference()) {
-        self_type = ast::Type {
-            .variant = ast::type::Reference {
-                .referenced_type = ast.types.push(std::move(self_type)),
-                .mutability      = desugar_mutability(self_parameter.mutability, self_range),
-            },
-            .range = self_range,
-        };
-    }
-    ast::pattern::Name pattern {
-        .name { kieli::Name {
-            .identifier = self_variable_identifier,
-            .range      = self_range,
-        } },
-        .mutability = desugar_mutability(
-            self_parameter.is_reference() ? std::nullopt : self_parameter.mutability, self_range),
-    };
-
-    return ast::Function_parameter {
-        .pattern = ast.patterns.push(std::move(pattern), self_range),
-        .type    = ast.types.push(std::move(self_type)),
-    };
 }
 
 auto libdesugar::unit_type(kieli::Range const range) -> ast::Type

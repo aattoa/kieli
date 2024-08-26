@@ -118,11 +118,6 @@ namespace {
             };
         }
 
-        auto operator()(ast::expression::Self const&) -> hir::Expression
-        {
-            cpputil::todo();
-        }
-
         auto operator()(ast::expression::Variable const& variable) -> hir::Expression
         {
             if (variable.path.is_simple_name()) {

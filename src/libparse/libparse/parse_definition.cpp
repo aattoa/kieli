@@ -27,8 +27,7 @@ namespace {
     {
         auto const name                = extract_lower_name(context, "a function name");
         auto       template_parameters = parse_template_parameters(context);
-        auto       function_parameters
-            = parse_parenthesized<parse_function_parameters, "a function parameter list">(context);
+        auto       function_parameters = parse_function_parameters(context);
 
         if (!function_parameters.has_value()) {
             context.error_expected("a '(' followed by a function parameter list");

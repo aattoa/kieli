@@ -349,11 +349,6 @@ namespace {
         {
             format(state, R"(???)");
         }
-
-        auto operator()(cst::expression::Self const&)
-        {
-            format(state, "self");
-        }
     };
 } // namespace
 

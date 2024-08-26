@@ -90,8 +90,6 @@ static constexpr auto type_strings_array = std::to_array<std::string_view>({
     "U16",
     "U32",
     "U64",
-
-    "self",
     "Self",
 
     "end of input",
@@ -157,8 +155,7 @@ auto kieli::token_description(Token_type const type) -> std::string_view
     case Token_type::macro:
     case Token_type::global:
     case Token_type::defer:
-    case Token_type::lower_self:
-    case Token_type::upper_self:        return "a keyword";
+    case Token_type::self:              return "a keyword";
     case Token_type::underscore:        return "a wildcard pattern";
     case Token_type::lower_name:        return "an uncapitalized identifier";
     case Token_type::upper_name:        return "a capitalized identifier";

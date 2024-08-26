@@ -23,7 +23,7 @@ namespace {
     {
         format(state, "fn {}", signature.name);
         format(state, signature.template_parameters);
-        format(state, signature.function_parameters.value);
+        format(state, signature.function_parameters);
         format(state, signature.return_type);
     }
 

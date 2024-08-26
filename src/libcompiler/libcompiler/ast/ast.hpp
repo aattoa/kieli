@@ -150,8 +150,6 @@ namespace kieli::ast {
             std::vector<Expression> elements;
         };
 
-        struct Self {};
-
         struct Variable {
             Path path;
         };
@@ -310,7 +308,6 @@ namespace kieli::ast {
               Boolean,
               String,
               expression::Array_literal,
-              expression::Self,
               expression::Variable,
               expression::Tuple,
               expression::Loop,
@@ -509,16 +506,9 @@ namespace kieli::ast {
         Range        range;
     };
 
-    struct Self_parameter {
-        Mutability          mutability;
-        utl::Explicit<bool> is_reference;
-        Range               range;
-    };
-
     struct Function_signature {
         Template_parameters             template_parameters;
         std::vector<Function_parameter> function_parameters;
-        std::optional<Self_parameter>   self_parameter;
         Type                            return_type;
         Lower                           name;
     };

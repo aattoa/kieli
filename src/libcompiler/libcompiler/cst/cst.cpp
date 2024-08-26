@@ -9,11 +9,6 @@ auto kieli::CST::operator=(CST&&) noexcept -> CST& = default;
 
 kieli::CST::~CST() = default;
 
-auto kieli::cst::Self_parameter::is_reference() const noexcept -> bool
-{
-    return ampersand_token.has_value();
-}
-
 auto kieli::cst::Path::is_simple_name() const noexcept -> bool
 {
     return !root.has_value() && segments.elements.empty();

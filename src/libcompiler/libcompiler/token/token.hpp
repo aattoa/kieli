@@ -5,8 +5,14 @@
 
 namespace kieli {
 
-    using Token_variant
-        = std::variant<std::monostate, Integer, Floating, Character, Boolean, String, Identifier>;
+    using Token_variant = std::variant<
+        std::monostate, //
+        Integer,
+        Floating,
+        Character,
+        Boolean,
+        String,
+        Identifier>;
 
     enum class Token_type {
         error,
@@ -95,9 +101,7 @@ namespace kieli {
         u16_type,
         u32_type,
         u64_type,
-
-        lower_self, // self
-        upper_self, // Self
+        self,
 
         end_of_input,
 

@@ -44,8 +44,6 @@ namespace {
         ast::Function_signature const& signature,
         kieli::Document_id const       document_id) -> hir::Function_signature
     {
-        cpputil::always_assert(!signature.self_parameter.has_value()); // TODO
-
         Inference_state state { .document_id = document_id };
 
         auto template_parameters = resolve_template_parameters(

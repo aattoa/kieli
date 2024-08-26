@@ -92,14 +92,6 @@ namespace kieli::cst {
         Token_id           mut_or_immut_keyword_token;
     };
 
-    struct Self_parameter {
-        std::optional<Mutability> mutability;
-        std::optional<Token_id>   ampersand_token;
-        Token_id                  self_keyword_token;
-
-        [[nodiscard]] auto is_reference() const noexcept -> bool;
-    };
-
     struct Template_argument : std::variant<Type_id, Expression_id, Mutability, Wildcard> {
         using variant::variant;
     };
@@ -154,18 +146,13 @@ namespace kieli::cst {
         std::optional<Value_parameter_default_argument> default_argument;
     };
 
-    struct Function_parameters {
-        Separated_sequence<Function_parameter> normal_parameters;
-        std::optional<Self_parameter>          self_parameter;
-        std::optional<Token_id>                comma_token_after_self;
-    };
-
     struct Function_argument {
         std::optional<Name_lower_equals> name;
         Expression_id                    expression;
     };
 
-    using Function_arguments = Surrounded<Separated_sequence<Function_argument>>;
+    using Function_parameters = Surrounded<Separated_sequence<Function_parameter>>;
+    using Function_arguments  = Surrounded<Separated_sequence<Function_argument>>;
 
     struct Template_type_parameter {
         Upper                                          name;
@@ -223,8 +210,6 @@ namespace kieli::cst {
         struct Array_literal {
             Surrounded<Separated_sequence<Expression_id>> elements;
         };
-
-        struct Self {};
 
         struct Variable {
             Path path;
@@ -450,7 +435,6 @@ namespace kieli::cst {
               String,
               expression::Parenthesized,
               expression::Array_literal,
-              expression::Self,
               expression::Variable,
               expression::Template_application,
               expression::Tuple,
@@ -689,7 +673,7 @@ namespace kieli::cst {
 
     struct Function_signature {
         std::optional<Template_parameters> template_parameters;
-        Surrounded<Function_parameters>    function_parameters;
+        Function_parameters                function_parameters;
         std::optional<Type_annotation>     return_type;
         Lower                              name;
         Token_id                           fn_keyword_token;

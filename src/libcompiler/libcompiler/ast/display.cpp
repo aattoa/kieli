@@ -398,11 +398,6 @@ namespace {
             display_vector_node(state, Last::yes, "elements", array.elements);
         }
 
-        auto operator()(expression::Self const&)
-        {
-            write_line(state, "self reference");
-        }
-
         auto operator()(expression::Variable const& variable)
         {
             write_line(state, "variable");
