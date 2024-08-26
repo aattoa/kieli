@@ -206,7 +206,7 @@ namespace {
             };
         }
 
-        auto operator()(ast::expression::Invocation const&) -> hir::Expression
+        auto operator()(ast::expression::Function_call const&) -> hir::Expression
         {
             cpputil::todo();
         }
@@ -226,7 +226,7 @@ namespace {
             cpputil::todo();
         }
 
-        auto operator()(ast::expression::Binary_operator_invocation const&) -> hir::Expression
+        auto operator()(ast::expression::Binary_operator_application const&) -> hir::Expression
         {
             cpputil::todo();
         }
@@ -246,7 +246,7 @@ namespace {
             cpputil::todo();
         }
 
-        auto operator()(ast::expression::Method_invocation const&) -> hir::Expression
+        auto operator()(ast::expression::Method_call const&) -> hir::Expression
         {
             cpputil::todo();
         }
@@ -263,7 +263,7 @@ namespace {
             hir::Type const result_type
                 = state.fresh_general_type_variable(context.hir, this_expression.range);
 
-            auto const resolve_case = [&](ast::expression::Match::Case const& match_case) {
+            auto const resolve_case = [&](ast::Match_case const& match_case) {
                 hir::Pattern pattern = resolve_pattern(
                     context, state, scope, environment, context.ast.patterns[match_case.pattern]);
                 require_subtype_relationship(
@@ -278,7 +278,7 @@ namespace {
                     state,
                     context.hir.types[expression.type],
                     context.hir.types[result_type.id]);
-                return hir::expression::Match::Case {
+                return hir::Match_case {
                     .pattern    = context.hir.patterns.push(std::move(pattern)),
                     .expression = context.hir.expressions.push(std::move(expression)),
                 };
@@ -320,30 +320,19 @@ namespace {
         {
             hir::Pattern pattern = resolve_pattern(
                 context, state, scope, environment, context.ast.patterns[let.pattern]);
-
-            std::optional<hir::Type> type;
-            if (let.type.has_value()) {
-                type = resolve_type(
-                    context, state, scope, environment, context.ast.types[let.type.value()]);
-                require_subtype_relationship(
-                    context,
-                    state,
-                    context.hir.types[pattern.type],
-                    context.hir.types[type.value().id]);
-            }
-            type = type.value_or(hir::pattern_type(pattern));
-
+            hir::Type type
+                = resolve_type(context, state, scope, environment, context.ast.types[let.type]);
             hir::Expression initializer = recurse(context.ast.expressions[let.initializer]);
+
             require_subtype_relationship(
-                context,
-                state,
-                context.hir.types[initializer.type],
-                context.hir.types[type.value().id]);
+                context, state, context.hir.types[pattern.type], context.hir.types[type.id]);
+            require_subtype_relationship(
+                context, state, context.hir.types[initializer.type], context.hir.types[type.id]);
 
             return {
                 hir::expression::Let_binding {
                     .pattern     = context.hir.patterns.push(std::move(pattern)),
-                    .type        = type.value(),
+                    .type        = type,
                     .initializer = context.hir.expressions.push(std::move(initializer)),
                 },
                 context.constants.unit_type,
@@ -446,7 +435,7 @@ namespace {
             return {
                 hir::expression::Defer {
                     context.hir.expressions.push(
-                        recurse(context.ast.expressions[defer.expression])),
+                        recurse(context.ast.expressions[defer.effect_expression])),
                 },
                 context.constants.unit_type,
                 hir::Expression_kind::value,

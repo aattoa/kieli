@@ -130,8 +130,5 @@ namespace {
 
 auto libdesugar::Context::desugar(cst::Type const& type) -> ast::Type
 {
-    return {
-        std::visit(Type_desugaring_visitor { *this, type }, type.variant),
-        type.range,
-    };
+    return { std::visit(Type_desugaring_visitor { *this, type }, type.variant), type.range };
 }

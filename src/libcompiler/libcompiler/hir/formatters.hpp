@@ -154,14 +154,14 @@ namespace kieli::hir::dtl {
             std::format_to(out, "{}", reference.name);
         }
 
-        auto operator()(hir::expression::Indirect_invocation const& invocation) const
+        auto operator()(hir::expression::Indirect_function_call const& call) const
         {
-            std::format_to(out, "{}({})", wrap(invocation.function), wrap(invocation.arguments));
+            std::format_to(out, "{}({})", wrap(call.invocable), wrap(call.arguments));
         }
 
-        auto operator()(hir::expression::Direct_invocation const& invocation) const
+        auto operator()(hir::expression::Direct_function_call const& call) const
         {
-            std::format_to(out, "{}({})", invocation.function_name, wrap(invocation.arguments));
+            std::format_to(out, "{}({})", call.function_name, wrap(call.arguments));
         }
 
         auto operator()(hir::expression::Sizeof const& sizeof_) const
@@ -182,7 +182,7 @@ namespace kieli::hir::dtl {
 
         auto operator()(hir::expression::Defer const& defer) const
         {
-            std::format_to(out, "defer {}", wrap(defer.expression));
+            std::format_to(out, "defer {}", wrap(defer.effect_expression));
         }
 
         auto operator()(hir::expression::Hole const&) const

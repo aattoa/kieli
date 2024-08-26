@@ -38,8 +38,8 @@ namespace {
     {
         auto const& initializers = initializer.initializers.value.elements;
         for (auto it = initializers.begin(); it != initializers.end(); ++it) {
-            auto const name      = &cst::expression::Struct_initializer::Field::name;
-            auto const duplicate = std::ranges::find(it + 1, initializers.end(), it->name, name);
+            auto const duplicate = std::ranges::find(
+                it + 1, initializers.end(), it->name, &cst::Struct_field_initializer::name);
             if (duplicate != initializers.end()) {
                 kieli::Diagnostic diagnostic = duplicate_fields_error(
                     context, it->name.identifier, it->name.range, duplicate->name.range);
@@ -92,7 +92,7 @@ namespace {
             }
             tail = tail.subspan<1>();
             left = ast::Expression {
-                ast::expression::Binary_operator_invocation {
+                ast::expression::Binary_operator_application {
                     .left     = context.ast.expressions.push(std::move(left)),
                     .right    = context.ast.expressions.push(recurse(rhs)),
                     .op       = op.identifier,
@@ -178,11 +178,11 @@ namespace {
 
                 return ast::expression::Match {
                     .cases = utl::to_vector({
-                        ast::expression::Match::Case {
+                        ast::Match_case {
                             .pattern    = context.desugar(let->pattern),
                             .expression = context.desugar(conditional.true_branch),
                         },
-                        ast::expression::Match::Case {
+                        ast::Match_case {
                             .pattern = context.ast.patterns.push(
                                 wildcard_pattern(context.cst.patterns[let->pattern].range)),
                             .expression = false_branch,
@@ -216,8 +216,8 @@ namespace {
 
         auto operator()(cst::expression::Match const& match) -> ast::Expression_variant
         {
-            auto const desugar_case = [&](cst::expression::Match::Case const& match_case) {
-                return ast::expression::Match::Case {
+            auto const desugar_case = [&](cst::Match_case const& match_case) {
+                return ast::Match_case {
                     .pattern    = context.desugar(match_case.pattern),
                     .expression = context.desugar(match_case.handler),
                 };
@@ -272,11 +272,11 @@ namespace {
             */
             ast::expression::Match match {
                 .cases      = utl::to_vector({
-                    ast::expression::Match::Case {
+                    ast::Match_case {
                         context.desugar(let.pattern),
                         context.desugar(loop.body),
                     },
-                    ast::expression::Match::Case {
+                    ast::Match_case {
                         context.ast.patterns.push(wildcard_pattern(this_expression.range)),
                         break_expression(context, this_expression.range),
                     },
@@ -329,7 +329,7 @@ namespace {
             return desugar_while_loop(loop);
         }
 
-        auto operator()(cst::expression::Infinite_loop const& loop) -> ast::Expression_variant
+        auto operator()(cst::expression::Plain_loop const& loop) -> ast::Expression_variant
         {
             return ast::expression::Loop {
                 .body   = context.desugar(loop.body),
@@ -337,11 +337,11 @@ namespace {
             };
         }
 
-        auto operator()(cst::expression::Invocation const& invocation) -> ast::Expression_variant
+        auto operator()(cst::expression::Function_call const& call) -> ast::Expression_variant
         {
-            return ast::expression::Invocation {
-                .arguments = context.desugar(invocation.function_arguments.value.elements),
-                .invocable = context.desugar(invocation.function_expression),
+            return ast::expression::Function_call {
+                .arguments = context.desugar(call.arguments.value.elements),
+                .invocable = context.desugar(call.invocable),
             };
         }
 
@@ -419,14 +419,13 @@ namespace {
             };
         }
 
-        auto operator()(cst::expression::Method_invocation const& invocation)
-            -> ast::Expression_variant
+        auto operator()(cst::expression::Method_call const& call) -> ast::Expression_variant
         {
-            return ast::expression::Method_invocation {
-                .function_arguments = context.desugar(invocation.function_arguments.value.elements),
-                .template_arguments = invocation.template_arguments.transform(context.desugar()),
-                .base_expression    = context.desugar(invocation.base_expression),
-                .method_name        = invocation.method_name,
+            return ast::expression::Method_call {
+                .function_arguments = context.desugar(call.function_arguments.value.elements),
+                .template_arguments = call.template_arguments.transform(context.desugar()),
+                .base_expression    = context.desugar(call.base_expression),
+                .method_name        = call.method_name,
             };
         }
 
@@ -451,7 +450,9 @@ namespace {
             return ast::expression::Let_binding {
                 .pattern     = context.desugar(let.pattern),
                 .initializer = context.desugar(let.initializer),
-                .type        = let.type.transform(context.desugar()),
+                .type        = let.type.has_value()
+                                 ? context.desugar(let.type.value())
+                                 : context.ast.types.push(wildcard_type(this_expression.range)),
             };
         }
 
@@ -465,7 +466,11 @@ namespace {
 
         auto operator()(cst::expression::Ret const& ret) -> ast::Expression_variant
         {
-            return ast::expression::Ret { ret.returned_expression.transform(context.desugar()) };
+            return ast::expression::Ret {
+                ret.returned_expression.has_value()
+                    ? context.desugar(ret.returned_expression.value())
+                    : context.ast.expressions.push(unit_value(this_expression.range)),
+            };
         }
 
         auto operator()(cst::expression::Discard const& discard) -> ast::Expression_variant
@@ -475,12 +480,12 @@ namespace {
 
                 is transformed into
 
-                { let _ = x; () }
+                { let _: _ = x; () }
             */
             ast::expression::Let_binding let {
                 .pattern     = context.ast.patterns.push(wildcard_pattern(this_expression.range)),
                 .initializer = context.desugar(discard.discarded_expression),
-                .type        = std::nullopt,
+                .type        = context.ast.types.push(wildcard_type(this_expression.range)),
             };
             return ast::expression::Block {
                 .side_effects = utl::to_vector({
@@ -521,7 +526,7 @@ namespace {
         auto operator()(cst::expression::Dereference const& dereference) -> ast::Expression_variant
         {
             return ast::expression::Dereference {
-                context.desugar(dereference.reference_expression),
+                .reference_expression = context.desugar(dereference.reference_expression),
             };
         }
 
@@ -537,7 +542,7 @@ namespace {
 
         auto operator()(cst::expression::Defer const& defer) -> ast::Expression_variant
         {
-            return ast::expression::Defer { context.desugar(defer.expression) };
+            return ast::expression::Defer { context.desugar(defer.effect_expression) };
         }
 
         auto operator()(cst::expression::Meta const& meta) -> ast::Expression_variant

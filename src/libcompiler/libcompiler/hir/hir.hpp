@@ -85,6 +85,11 @@ namespace kieli::hir {
         kieli::Upper name;
     };
 
+    struct Match_case {
+        Pattern_id    pattern;
+        Expression_id expression;
+    };
+
     struct Function_argument {
         Expression_id               expression;
         std::optional<kieli::Lower> name;
@@ -173,13 +178,8 @@ namespace kieli::hir {
         };
 
         struct Match {
-            struct Case {
-                Pattern_id    pattern;
-                Expression_id expression;
-            };
-
-            std::vector<Case> cases;
-            Expression_id     expression;
+            std::vector<Match_case> cases;
+            Expression_id           expression;
         };
 
         struct Variable_reference {
@@ -192,12 +192,12 @@ namespace kieli::hir {
             Function_id  id;
         };
 
-        struct Indirect_invocation {
-            Expression_id                  function;
+        struct Indirect_function_call {
+            Expression_id                  invocable;
             std::vector<Function_argument> arguments;
         };
 
-        struct Direct_invocation {
+        struct Direct_function_call {
             kieli::Lower                   function_name;
             Function_id                    function_id;
             std::vector<Function_argument> arguments;
@@ -217,7 +217,7 @@ namespace kieli::hir {
         };
 
         struct Defer {
-            Expression_id expression;
+            Expression_id effect_expression;
         };
 
         struct Hole {};
@@ -242,8 +242,8 @@ namespace kieli::hir {
               expression::Match,
               expression::Variable_reference,
               expression::Function_reference,
-              expression::Indirect_invocation,
-              expression::Direct_invocation,
+              expression::Indirect_function_call,
+              expression::Direct_function_call,
               expression::Sizeof,
               expression::Addressof,
               expression::Dereference,

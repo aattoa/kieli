@@ -77,11 +77,11 @@ auto libformat::format(State& state, cst::Mutability const& mutability) -> void
 {
     return std::visit(
         utl::Overload {
-            [&](cst::mutability::Parameterized const& parameterized) {
-                format(state, "mut?{}", parameterized.name);
-            },
-            [&](cst::mutability::Concrete const concrete) {
+            [&](kieli::Mutability const concrete) {
                 format(state, "{}", concrete); //
+            },
+            [&](kieli::cst::Parameterized_mutability const& parameterized) {
+                format(state, "mut?{}", parameterized.name);
             },
         },
         mutability.variant);
@@ -102,8 +102,7 @@ auto libformat::format(State& state, cst::pattern::Field const& field) -> void
     }
 }
 
-auto libformat::format(State& state, cst::expression::Struct_initializer::Field const& initializer)
-    -> void
+auto libformat::format(State& state, cst::Struct_field_initializer const& initializer) -> void
 {
     format(state, "{} = ", initializer.name);
     format(state, initializer.expression);

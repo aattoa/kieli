@@ -95,7 +95,7 @@ TEST("block")
         "}");
 }
 
-TEST("invocation")
+TEST("function call")
 {
     CHECK_SIMPLE_PARSE("f()");
     CHECK_SIMPLE_PARSE("f(x, y)");
@@ -105,7 +105,7 @@ TEST("invocation")
     CHECK_SIMPLE_PARSE("(a.b)(x, y)");
 }
 
-TEST("method invocation")
+TEST("method call")
 {
     CHECK_SIMPLE_PARSE("a.b()");
     CHECK_SIMPLE_PARSE("a.b(x, y)");
@@ -121,7 +121,7 @@ TEST("struct initializer")
     // CHECK_SIMPLE_PARSE("typeof(x)::T {}"); // TODO
 }
 
-TEST("binary operator invocation")
+TEST("binary operator application")
 {
     CHECK_SIMPLE_PARSE("a * b");
     CHECK_SIMPLE_PARSE("a <$> b");
@@ -243,7 +243,7 @@ TEST("type alias")
     CHECK_SIMPLE_PARSE("alias T = I32");
 }
 
-TEST("infinite loop")
+TEST("plain loop")
 {
     CHECK_SIMPLE_PARSE("loop {}");
 }

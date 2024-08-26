@@ -40,10 +40,9 @@ namespace {
             context, "the loop body, which must be a block expression");
     }
 
-    auto extract_infinite_loop(Context& context, Token const& loop_keyword)
-        -> cst::Expression_variant
+    auto extract_plain_loop(Context& context, Token const& loop_keyword) -> cst::Expression_variant
     {
-        return cst::expression::Infinite_loop {
+        return cst::expression::Plain_loop {
             .body               = extract_loop_body(context),
             .loop_keyword_token = context.token(loop_keyword),
         };
@@ -72,11 +71,11 @@ namespace {
     }
 
     auto parse_struct_field_initializer(Context& context)
-        -> std::optional<cst::expression::Struct_initializer::Field>
+        -> std::optional<cst::Struct_field_initializer>
     {
         return parse_lower_name(context).transform([&](kieli::Lower const name) {
             Token const equals_sign = context.require_extract(Token_type::equals);
-            return cst::expression::Struct_initializer::Field {
+            return cst::Struct_field_initializer {
                 .name              = name,
                 .equals_sign_token = context.token(equals_sign),
                 .expression = require<parse_expression>(context, "an initializer expression"),
@@ -208,21 +207,20 @@ namespace {
         auto const primary_condition = extract_condition(context);
         auto const true_branch       = extract_branch(context);
 
-        std::optional<cst::expression::Conditional::False_branch> false_branch;
+        std::optional<cst::expression::False_branch> false_branch;
 
         if (auto const elif_keyword = context.try_extract(Token_type::elif)) {
             auto elif_conditional
                 = extract_conditional(context, elif_keyword.value(), Conditional_kind::elif);
 
-            false_branch = cst::expression::Conditional::False_branch {
+            false_branch = cst::expression::False_branch {
                 .body = context.cst().expressions.push(
                     std::move(elif_conditional), context.up_to_current(elif_keyword.value().range)),
-
                 .else_or_elif_keyword_token = context.token(elif_keyword.value()),
             };
         }
         else if (auto const else_keyword = context.try_extract(Token_type::else_)) {
-            false_branch = cst::expression::Conditional::False_branch {
+            false_branch = cst::expression::False_branch {
                 .body                       = extract_branch(context),
                 .else_or_elif_keyword_token = context.token(else_keyword.value()),
             };
@@ -273,13 +271,13 @@ namespace {
         };
     }
 
-    auto parse_match_case(Context& context) -> std::optional<cst::expression::Match::Case>
+    auto parse_match_case(Context& context) -> std::optional<cst::Match_case>
     {
         return parse_top_level_pattern(context).transform([&](cst::Pattern_id const pattern) {
             auto const arrow     = context.require_extract(Token_type::right_arrow);
             auto const handler   = require<parse_expression>(context, "an expression");
             auto const semicolon = context.try_extract(Token_type::semicolon);
-            return cst::expression::Match::Case {
+            return cst::Match_case {
                 .pattern                  = pattern,
                 .handler                  = handler,
                 .arrow_token              = context.token(arrow),
@@ -289,10 +287,9 @@ namespace {
         });
     }
 
-    auto parse_match_cases(Context& context)
-        -> std::optional<std::vector<cst::expression::Match::Case>>
+    auto parse_match_cases(Context& context) -> std::optional<std::vector<cst::Match_case>>
     {
-        std::vector<cst::expression::Match::Case> cases;
+        std::vector<cst::Match_case> cases;
         while (auto match_case = parse_match_case(context)) {
             cases.push_back(std::move(match_case.value()));
         }
@@ -370,7 +367,7 @@ namespace {
     auto extract_defer(Context& context, Token const& defer_keyword) -> cst::Expression_variant
     {
         return cst::expression::Defer {
-            .expression          = require<parse_expression>(context, "an expression"),
+            .effect_expression   = require<parse_expression>(context, "an expression"),
             .defer_keyword_token = context.token(defer_keyword),
         };
     }
@@ -454,7 +451,7 @@ namespace {
         case Token_type::if_:               return extract_conditional(context, token, Conditional_kind::if_);
         case Token_type::let:               return extract_let_binding(context, token);
         case Token_type::alias:             return extract_local_type_alias(context, token);
-        case Token_type::loop:              return extract_infinite_loop(context, token);
+        case Token_type::loop:              return extract_plain_loop(context, token);
         case Token_type::while_:            return extract_while_loop(context, token);
         case Token_type::for_:              return extract_for_loop(context, token);
         case Token_type::sizeof_:           return extract_sizeof(context, token);
@@ -485,14 +482,14 @@ namespace {
         return std::nullopt;
     }
 
-    auto parse_potential_invocation(Context& context) -> std::optional<cst::Expression_id>
+    auto parse_potential_function_call(Context& context) -> std::optional<cst::Expression_id>
     {
         return parse_normal_expression(context).transform([&](cst::Expression_id expression) {
             while (auto arguments = parse_function_arguments(context)) {
                 expression = context.cst().expressions.push(
-                    cst::expression::Invocation {
-                        .function_arguments  = std::move(arguments.value()),
-                        .function_expression = expression,
+                    cst::expression::Function_call {
+                        .arguments = std::move(arguments.value()),
+                        .invocable = expression,
                     },
                     context.up_to_current(context.cst().expressions[expression].range));
             }
@@ -508,7 +505,7 @@ namespace {
     {
         auto template_arguments = parse_template_arguments(context);
         if (auto arguments = parse_function_arguments(context)) {
-            return cst::expression::Method_invocation {
+            return cst::expression::Method_call {
                 .function_arguments = std::move(arguments.value()),
                 .template_arguments = std::move(template_arguments),
                 .base_expression    = expression,
@@ -554,7 +551,7 @@ namespace {
 
     auto parse_potential_member_access(Context& context) -> std::optional<cst::Expression_id>
     {
-        return parse_potential_invocation(context).transform([&](cst::Expression_id expression) {
+        return parse_potential_function_call(context).transform([&](cst::Expression_id expression) {
             while (auto const dot = context.try_extract(Token_type::dot)) {
                 expression = context.cst().expressions.push(
                     extract_member_access(context.token(dot.value()), expression, context),

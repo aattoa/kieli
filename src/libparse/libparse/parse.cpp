@@ -49,31 +49,26 @@ namespace {
     auto extract_template_value_or_mutability_parameter(Context& context, kieli::Lower const name)
         -> cst::Template_parameter_variant
     {
-        if (auto const colon = context.try_extract(Token_type::colon)) {
-            if (auto const mut_keyword = context.try_extract(Token_type::mut)) {
-                return cst::Template_mutability_parameter {
-                    .name              = name,
-                    .colon_token       = context.token(colon.value()),
-                    .mut_keyword_token = context.token(mut_keyword.value()),
-                    .default_argument  = parse_mutability_parameter_default_argument(context),
-                };
-            }
-            if (auto const type = parse_type(context)) {
-                return cst::Template_value_parameter {
-                    .name = name,
-                    .type_annotation { cst::Type_annotation {
-                        .type        = type.value(),
-                        .colon_token = context.token(colon.value()),
-                    } },
-                    .default_argument = parse_value_parameter_default_argument(context),
-                };
-            }
-            context.error_expected("'mut' or a type");
+        Token const colon = context.require_extract(Token_type::colon);
+        if (auto const mut_keyword = context.try_extract(Token_type::mut)) {
+            return cst::Template_mutability_parameter {
+                .name              = name,
+                .colon_token       = context.token(colon),
+                .mut_keyword_token = context.token(mut_keyword.value()),
+                .default_argument  = parse_mutability_parameter_default_argument(context),
+            };
         }
-        return cst::Template_value_parameter {
-            .name             = name,
-            .default_argument = parse_value_parameter_default_argument(context),
-        };
+        if (auto const type = parse_type(context)) {
+            return cst::Template_value_parameter {
+                .name = name,
+                .type_annotation { cst::Type_annotation {
+                    .type        = type.value(),
+                    .colon_token = context.token(colon),
+                } },
+                .default_argument = parse_value_parameter_default_argument(context),
+            };
+        }
+        context.error_expected("'mut' or a type");
     }
 
     auto extract_template_type_parameter(Context& context, kieli::Upper const name)
@@ -120,7 +115,7 @@ auto libparse::parse_mutability(Context& context) -> std::optional<cst::Mutabili
     if (auto mut_keyword = context.try_extract(Token_type::mut)) {
         if (auto question_mark = context.try_extract(Token_type::question)) {
             return cst::Mutability {
-                .variant = cst::mutability::Parameterized {
+                .variant = cst::Parameterized_mutability {
                     .name = extract_lower_name(context, "a mutability parameter name"),
                     .question_mark_token = context.token(question_mark.value()),
                 },
@@ -129,14 +124,14 @@ auto libparse::parse_mutability(Context& context) -> std::optional<cst::Mutabili
             };
         }
         return cst::Mutability {
-            .variant                    = cst::mutability::Concrete::mut,
+            .variant                    = kieli::Mutability::mut,
             .range                      = mut_keyword.value().range,
             .mut_or_immut_keyword_token = context.token(mut_keyword.value()),
         };
     }
     if (auto immut_keyword = context.try_extract(Token_type::immut)) {
         return cst::Mutability {
-            .variant                    = cst::mutability::Concrete::immut,
+            .variant                    = kieli::Mutability::immut,
             .range                      = immut_keyword.value().range,
             .mut_or_immut_keyword_token = context.token(immut_keyword.value()),
         };
@@ -230,7 +225,7 @@ auto libparse::parse_template_argument(Context& context) -> std::optional<cst::T
     }
     if (auto const immut_keyword = context.try_extract(Token_type::immut)) {
         return cst::Template_argument { cst::Mutability {
-            .variant                    = cst::mutability::Concrete::immut,
+            .variant                    = kieli::Mutability::immut,
             .range                      = immut_keyword->range,
             .mut_or_immut_keyword_token = context.token(immut_keyword.value()),
         } };

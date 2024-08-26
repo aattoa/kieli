@@ -4,12 +4,12 @@
 using namespace libresolve;
 
 namespace {
-    auto resolve_concrete(Constants const& constants, ast::mutability::Concrete const concrete)
+    auto resolve_concrete(Constants const& constants, kieli::Mutability const mutability)
     {
-        switch (concrete) {
-        case ast::mutability::Concrete::mut:   return constants.mutability_yes;
-        case ast::mutability::Concrete::immut: return constants.mutability_no;
-        default:                               cpputil::unreachable();
+        switch (mutability) {
+        case kieli::Mutability::mut:   return constants.mutability_yes;
+        case kieli::Mutability::immut: return constants.mutability_no;
+        default:                       cpputil::unreachable();
         }
     }
 
@@ -31,13 +31,13 @@ auto libresolve::resolve_mutability(
 {
     return std::visit(
         utl::Overload {
-            [&](ast::mutability::Concrete const& concrete) {
+            [&](kieli::Mutability const& concrete) {
                 return hir::Mutability {
                     .id    = resolve_concrete(context.constants, concrete),
                     .range = mutability.range,
                 };
             },
-            [&](ast::mutability::Parameterized const& parameterized) {
+            [&](ast::Parameterized_mutability const& parameterized) {
                 auto const* const bound = scope.find_mutability(parameterized.name.identifier);
                 return bound ? bound->mutability
                              : error(context, scope.document_id(), parameterized.name);

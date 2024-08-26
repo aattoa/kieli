@@ -100,10 +100,10 @@ namespace {
             format(state, let.initializer);
         }
 
-        auto operator()(cst::expression::Invocation const& invocation)
+        auto operator()(cst::expression::Function_call const& call)
         {
-            format(state, invocation.function_expression);
-            format(state, invocation.function_arguments);
+            format(state, call.invocable);
+            format(state, call.arguments);
         }
 
         auto operator()(cst::expression::Unit_initializer const& initializer)
@@ -127,12 +127,12 @@ namespace {
             format(state, " }}");
         }
 
-        auto operator()(cst::expression::Method_invocation const& invocation)
+        auto operator()(cst::expression::Method_call const& call)
         {
-            format(state, invocation.base_expression);
-            format(state, ".{}", invocation.method_name);
-            format(state, invocation.template_arguments);
-            format(state, invocation.function_arguments);
+            format(state, call.base_expression);
+            format(state, ".{}", call.method_name);
+            format(state, call.template_arguments);
+            format(state, call.function_arguments);
         }
 
         auto operator()(cst::expression::Match const& match)
@@ -285,7 +285,7 @@ namespace {
             format_regular_block(as_block(loop.body));
         }
 
-        auto operator()(cst::expression::Infinite_loop const& loop)
+        auto operator()(cst::expression::Plain_loop const& loop)
         {
             format(state, "loop ");
             format_regular_block(as_block(loop.body));
@@ -337,7 +337,7 @@ namespace {
         auto operator()(cst::expression::Defer const& defer)
         {
             format(state, "defer ");
-            format(state, defer.expression);
+            format(state, defer.effect_expression);
         }
 
         auto operator()(cst::expression::Continue const&)

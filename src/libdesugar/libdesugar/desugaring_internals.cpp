@@ -114,7 +114,7 @@ auto libdesugar::Context::desugar(cst::Template_parameter const& template_parame
                 [&](cst::Template_value_parameter const& parameter) {
                     return ast::Template_value_parameter {
                         .name             = parameter.name,
-                        .type             = parameter.type_annotation.transform(desugar()),
+                        .type             = desugar(parameter.type_annotation),
                         .default_argument = parameter.default_argument.transform(desugar()),
                     };
                 },
@@ -140,19 +140,14 @@ auto libdesugar::Context::desugar(cst::Path_segment const& segment) -> ast::Path
 
 auto libdesugar::Context::desugar(cst::Path const& path) -> ast::Path
 {
+    auto const root_visitor = utl::Overload {
+        [](cst::Path_root_global const&) { return ast::Path_root_global {}; },
+        [&](cst::Type_id const type) { return desugar(type); },
+    };
     return ast::Path {
         .segments = desugar(path.segments.elements),
         .root     = path.root.transform([&](cst::Path_root const& root) {
-            return std::visit(
-                utl::Overload {
-                    [](cst::Path_root_global const&) -> ast::Path_root {
-                        return ast::Path_root_global {};
-                    },
-                    [&](cst::Type_id const type) -> ast::Path_root {
-                        return desugar(type); //
-                    },
-                },
-                root.variant);
+            return std::visit<ast::Path_root>(root_visitor, root.variant);
         }),
         .head = path.head,
     };
@@ -199,8 +194,8 @@ auto libdesugar::Context::desugar(cst::Type_signature const& signature) -> ast::
     };
 }
 
-auto libdesugar::Context::desugar(cst::expression::Struct_initializer::Field const& field)
-    -> ast::expression::Struct_initializer::Field
+auto libdesugar::Context::desugar(cst::Struct_field_initializer const& field)
+    -> ast::Struct_field_initializer
 {
     return { .name = field.name, .expression = desugar(field.expression) };
 }
@@ -208,11 +203,9 @@ auto libdesugar::Context::desugar(cst::expression::Struct_initializer::Field con
 auto libdesugar::Context::desugar(cst::Mutability const& mutability) -> ast::Mutability
 {
     auto const visitor = utl::Overload {
-        [](cst::mutability::Concrete const concrete) -> ast::mutability::Concrete {
-            return concrete;
-        },
-        [](cst::mutability::Parameterized const parameterized) {
-            return ast::mutability::Parameterized { parameterized.name };
+        [](kieli::Mutability const concrete) { return concrete; },
+        [](cst::Parameterized_mutability const& parameterized) {
+            return ast::Parameterized_mutability { parameterized.name };
         },
     };
     return ast::Mutability {
@@ -235,19 +228,16 @@ auto libdesugar::Context::desugar(cst::pattern::Field const& field) -> ast::patt
 auto libdesugar::Context::desugar(cst::pattern::Constructor_body const& body)
     -> ast::pattern::Constructor_body
 {
-    return std::visit<ast::pattern::Constructor_body>(
-        utl::Overload {
-            [&](cst::pattern::Struct_constructor const& constructor) {
-                return ast::pattern::Struct_constructor { .fields = desugar(constructor.fields) };
-            },
-            [&](cst::pattern::Tuple_constructor const& constructor) {
-                return ast::pattern::Tuple_constructor { .pattern = desugar(constructor.pattern) };
-            },
-            [&](cst::pattern::Unit_constructor const&) {
-                return ast::pattern::Unit_constructor {};
-            },
+    auto const visitor = utl::Overload {
+        [&](cst::pattern::Struct_constructor const& constructor) {
+            return ast::pattern::Struct_constructor { .fields = desugar(constructor.fields) };
         },
-        body);
+        [&](cst::pattern::Tuple_constructor const& constructor) {
+            return ast::pattern::Tuple_constructor { .pattern = desugar(constructor.pattern) };
+        },
+        [&](cst::pattern::Unit_constructor const&) { return ast::pattern::Unit_constructor {}; },
+    };
+    return std::visit<ast::pattern::Constructor_body>(visitor, body);
 };
 
 auto libdesugar::Context::desugar(cst::Type_annotation const& annotation) -> ast::Type_id
@@ -261,7 +251,7 @@ auto libdesugar::Context::desugar_mutability(
     if (mutability.has_value()) {
         return desugar(mutability.value());
     }
-    return ast::Mutability { ast::mutability::Concrete::immut, range };
+    return ast::Mutability { kieli::Mutability::immut, range };
 }
 
 auto libdesugar::Context::normalize_self_parameter(cst::Self_parameter const& self_parameter)
@@ -297,6 +287,11 @@ auto libdesugar::Context::normalize_self_parameter(cst::Self_parameter const& se
 auto libdesugar::unit_type(kieli::Range const range) -> ast::Type
 {
     return ast::Type { ast::type::Tuple {}, range };
+}
+
+auto libdesugar::wildcard_type(kieli::Range const range) -> ast::Type
+{
+    return ast::Type { ast::Wildcard { range }, range };
 }
 
 auto libdesugar::unit_value(kieli::Range const range) -> ast::Expression

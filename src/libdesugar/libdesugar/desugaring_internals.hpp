@@ -10,6 +10,7 @@ namespace libdesugar {
     namespace ast = kieli::ast;
 
     auto unit_type(kieli::Range range) -> ast::Type;
+    auto wildcard_type(kieli::Range range) -> ast::Type;
     auto unit_value(kieli::Range range) -> ast::Expression;
     auto wildcard_pattern(kieli::Range range) -> ast::Pattern;
 
@@ -36,8 +37,7 @@ namespace libdesugar {
         auto desugar(cst::Concept_reference const&) -> ast::Concept_reference;
         auto desugar(cst::Function_signature const&) -> ast::Function_signature;
         auto desugar(cst::Type_signature const&) -> ast::Type_signature;
-        auto desugar(cst::expression::Struct_initializer::Field const&)
-            -> ast::expression::Struct_initializer::Field;
+        auto desugar(cst::Struct_field_initializer const&) -> ast::Struct_field_initializer;
         auto desugar(cst::pattern::Field const&) -> ast::pattern::Field;
         auto desugar(cst::pattern::Constructor_body const&) -> ast::pattern::Constructor_body;
         auto desugar(cst::definition::Field const&) -> ast::definition::Field;

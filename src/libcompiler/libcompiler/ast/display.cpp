@@ -99,10 +99,10 @@ namespace {
     auto do_display(Display_state& state, Mutability const& mutability) -> void
     {
         auto const visitor = utl::Overload {
-            [&](mutability::Concrete const& concrete) {
+            [&](kieli::Mutability const& concrete) { //
                 write_line(state, "concrete {}", concrete);
             },
-            [&](mutability::Parameterized const& parameterized) {
+            [&](Parameterized_mutability const& parameterized) {
                 write_line(state, "parameterized {}", parameterized.name);
             },
         };
@@ -133,15 +133,32 @@ namespace {
         std::visit([&](auto const& alternative) { do_display(state, alternative); }, argument);
     }
 
+    auto do_display(Display_state& state, Path_segment const& segment) -> void
+    {
+        write_line(state, "path segment");
+        if (segment.template_arguments.has_value()) {
+            display_vector_node(
+                state, Last::no, "template arguments", segment.template_arguments.value());
+        }
+        display_node(state, Last::yes, "name", segment.name);
+    }
+
+    auto do_display(Display_state& state, Path_root const& root) -> void
+    {
+        auto const visitor = utl::Overload {
+            [&](Path_root_global const&) { write_line(state, "global"); },
+            [&](Type_id const type) { do_display(state, type); },
+        };
+        std::visit(visitor, root);
+    }
+
     auto do_display(Display_state& state, Path const& path) -> void
     {
         write_line(state, "path");
         if (path.root.has_value()) {
-            cpputil::todo();
+            display_node(state, Last::no, "root", path.root.value());
         }
-        for (Path_segment const& _ : path.segments) {
-            cpputil::todo();
-        }
+        display_vector_node(state, Last::no, "segments", path.segments);
         display_node(state, Last::yes, "head", path.head);
     }
 
@@ -170,8 +187,7 @@ namespace {
         display_node(state, Last::yes, "type", field.type);
     }
 
-    auto do_display(Display_state& state, expression::Struct_initializer::Field const& field)
-        -> void
+    auto do_display(Display_state& state, Struct_field_initializer const& field) -> void
     {
         write_line(state, "struct field initializer");
         display_node(state, Last::no, "name", field.name);
@@ -273,7 +289,7 @@ namespace {
         display_vector_node(state, Last::yes, "concepts", signature.concepts);
     }
 
-    auto do_display(Display_state& state, expression::Match::Case const& match_case) -> void
+    auto do_display(Display_state& state, Match_case const& match_case) -> void
     {
         write_line(state, "match case");
         display_node(state, Last::no, "pattern", match_case.pattern);
@@ -424,11 +440,11 @@ namespace {
             display_node(state, Last::yes, "result", block.result);
         }
 
-        auto operator()(expression::Invocation const& invocation)
+        auto operator()(expression::Function_call const& call)
         {
-            write_line(state, "invocation");
-            display_node(state, Last::no, "invocable", invocation.invocable);
-            display_vector_node(state, Last::yes, "arguments", invocation.arguments);
+            write_line(state, "function call");
+            display_node(state, Last::no, "invocable", call.invocable);
+            display_vector_node(state, Last::yes, "arguments", call.arguments);
         }
 
         auto operator()(expression::Unit_initializer const& initializer)
@@ -451,7 +467,7 @@ namespace {
             display_vector_node(state, Last::yes, "field initializers", initializer.initializers);
         }
 
-        auto operator()(expression::Binary_operator_invocation const& application)
+        auto operator()(expression::Binary_operator_application const& application)
         {
             write_line(state, "binary operator application");
             display_node(state, Last::no, "left operand", application.left);
@@ -482,17 +498,16 @@ namespace {
             display_node(state, Last::yes, "index expression", access.index_expression);
         }
 
-        auto operator()(expression::Method_invocation const& invocation)
+        auto operator()(expression::Method_call const& call)
         {
-            write_line(state, "method invocation");
-            display_node(state, Last::no, "method name", invocation.method_name);
-            display_node(state, Last::no, "base expression", invocation.base_expression);
-            if (invocation.template_arguments.has_value()) {
+            write_line(state, "method call");
+            display_node(state, Last::no, "method name", call.method_name);
+            display_node(state, Last::no, "base expression", call.base_expression);
+            if (call.template_arguments.has_value()) {
                 display_vector_node(
-                    state, Last::no, "template arguments", invocation.template_arguments.value());
+                    state, Last::no, "template arguments", call.template_arguments.value());
             }
-            display_vector_node(
-                state, Last::yes, "method arguments", invocation.function_arguments);
+            display_vector_node(state, Last::yes, "method arguments", call.function_arguments);
         }
 
         auto operator()(expression::Conditional const& conditional)
@@ -536,9 +551,7 @@ namespace {
         auto operator()(expression::Let_binding const& let)
         {
             write_line(state, "let binding");
-            if (let.type.has_value()) {
-                display_node(state, Last::no, "type", let.type.value());
-            }
+            display_node(state, Last::no, "type", let.type);
             display_node(state, Last::no, "pattern", let.pattern);
             display_node(state, Last::yes, "initializer", let.initializer);
         }
@@ -553,9 +566,7 @@ namespace {
         auto operator()(expression::Ret const& ret)
         {
             write_line(state, "ret");
-            if (ret.expression.has_value()) {
-                display_node(state, Last::yes, "returned expression", ret.expression.value());
-            }
+            display_node(state, Last::yes, "returned expression", ret.returned_expression);
         }
 
         auto operator()(expression::Sizeof const& sizeof_)
@@ -593,7 +604,7 @@ namespace {
         auto operator()(expression::Defer const& defer)
         {
             write_line(state, "defer");
-            display_node(state, Last::yes, "effect", defer.expression);
+            display_node(state, Last::yes, "effect", defer.effect_expression);
         }
 
         auto operator()(expression::Meta const& meta)
