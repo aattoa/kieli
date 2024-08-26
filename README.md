@@ -4,6 +4,8 @@ A general-purpose programming language.
 
 This is a work in progress, and can not be used for anything yet.
 
+Some subdirectories under `src/` have individual READMEs.
+
 ## Dependencies
 
 - [github.com/aattoa/cppargs](https://github.com/aattoa/cppargs)
@@ -21,7 +23,7 @@ Prerequisites:
 - A build system, such as GNU Make or Ninja
 - A C++23 compiler toolchain
 
-At the time of writing, LLVM (18 and later) is the only toolchain that supports C++23 well enough to build Kieli.
+NOTE: At the time of writing, LLVM (18 and later) is the only toolchain that supports C++23 well enough to build Kieli.
 
 Run the following commands to clone and build Kieli:
 
@@ -31,8 +33,6 @@ cd kieli
 cmake -B build
 cmake --build build --parallel 8
 ```
-
-These build steps are tested with CMake `3.30.1`, Ninja `1.12.1`, and clang `18.1.8`.
 
 ## Tests
 
