@@ -55,7 +55,7 @@ namespace {
         { "Char", Token_type::character_type },
         { "Bool", Token_type::boolean_type },
         { "String", Token_type::string_type },
-        { "Self", Token_type::self },
+        { "Self", Token_type::self_type },
         { "enum", Token_type::enum_ },
         { "struct", Token_type::struct_ },
         { "concept", Token_type::concept_ },

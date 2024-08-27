@@ -156,7 +156,7 @@ namespace {
         case Token_type::boolean_type:   return kieli::type::Boolean {};
         case Token_type::string_type:    return kieli::type::String {};
         case Token_type::underscore:     return cst::Wildcard { context.token(token) };
-        case Token_type::self:           return cst::type::Self { context.token(token) };
+        case Token_type::self_type:      return cst::type::Self { context.token(token) };
         case Token_type::exclamation:    return cst::type::Never { context.token(token) };
         case Token_type::paren_open:     return extract_tuple(context, token);
         case Token_type::bracket_open:   return extract_array_or_slice(context, token);

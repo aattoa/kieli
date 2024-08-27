@@ -15,7 +15,7 @@ namespace {
     auto lex_failure(std::string&& string) -> std::string
     {
         auto result = liblex::test_lex(std::move(string));
-        REQUIRE_EQUAL(result.formatted_tokens, "lexical error");
+        REQUIRE_EQUAL(result.formatted_tokens, "error");
         return result.diagnostic_messages;
     }
 } // namespace
@@ -90,7 +90,7 @@ TEST("floating point literal digit separators")
         auto const result = liblex::test_lex("1'.3");
         CHECK(result.diagnostic_messages.contains(
             "Expected one or more digits after the digit separator"));
-        CHECK_EQUAL(result.formatted_tokens, "lexical error, ., (int: 3)");
+        CHECK_EQUAL(result.formatted_tokens, "error, ., (int: 3)");
     }
     // SECTION("digit separator trailing decimal separator")
     {

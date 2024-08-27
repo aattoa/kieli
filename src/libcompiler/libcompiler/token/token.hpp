@@ -4,7 +4,6 @@
 #include <libcompiler/compiler.hpp>
 
 namespace kieli {
-
     using Token_variant = std::variant<
         std::monostate, //
         Integer,
@@ -15,97 +14,9 @@ namespace kieli {
         Identifier>;
 
     enum class Token_type {
-        error,
-
-        dot,          // .
-        comma,        // ,
-        colon,        // :
-        semicolon,    // ;
-        double_colon, // ::
-
-        ampersand,   // &
-        asterisk,    // *
-        plus,        // +
-        question,    // ?
-        exclamation, // !
-        equals,      // =
-        pipe,        // |
-        lambda,      // backslash
-        left_arrow,  // <-
-        right_arrow, // ->
-        hole,        // ???
-
-        paren_open,    // (
-        paren_close,   // )
-        brace_open,    // {
-        brace_close,   // }
-        bracket_open,  // [
-        bracket_close, // ]
-
-        let,
-        mut,
-        immut,
-        if_,
-        else_,
-        elif,
-        for_,
-        in,
-        while_,
-        loop,
-        continue_,
-        break_,
-        match,
-        ret,
-        discard,
-        fn,
-        as,
-        enum_,
-        struct_,
-        concept_,
-        impl,
-        alias,
-        import_,
-        export_,
-        module_,
-        sizeof_,
-        typeof_,
-        unsafe,
-        mov,
-        meta,
-        where,
-        dyn,
-        macro,
-        global,
-        defer,
-
-        underscore,
-        lower_name,
-        upper_name,
-        operator_name,
-
-        integer_literal,
-        floating_literal,
-        string_literal,
-        character_literal,
-        boolean_literal,
-
-        string_type,
-        floating_type,
-        character_type,
-        boolean_type,
-        i8_type,
-        i16_type,
-        i32_type,
-        i64_type,
-        u8_type,
-        u16_type,
-        u32_type,
-        u64_type,
-        self,
-
-        end_of_input,
-
-        _enumerator_count
+#define KIELI_X_TOKEN_DO(identifier, spelling, description) identifier,
+#include <libcompiler/token/token-x-macro-table.hpp>
+#undef KIELI_X_TOKEN_DO
     };
 
     struct [[nodiscard]] Token {
@@ -123,8 +34,8 @@ namespace kieli {
         }
     };
 
-    [[nodiscard]] auto token_description(Token_type) -> std::string_view;
-    [[nodiscard]] auto token_type_string(Token_type) -> std::string_view;
+    [[nodiscard]] auto token_description(Token_type type) -> std::string_view;
+    [[nodiscard]] auto token_type_string(Token_type type) -> std::string_view;
 } // namespace kieli
 
 template <>

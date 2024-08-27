@@ -32,9 +32,9 @@ TEST("whitespace trivia")
         "('  \t  ' lower)"
         "('  \n  ' lower)"
         "('\n\n ' lower)"
-        "(' ' end of input)");
+        "(' ' eof)");
 
-    CHECK_EQUAL(lex(" \t \n "), "(' \t \n ' end of input)");
+    CHECK_EQUAL(lex(" \t \n "), "(' \t \n ' eof)");
 }
 
 TEST("line comment trivia")
@@ -43,7 +43,7 @@ TEST("line comment trivia")
         lex(" a // b \n c // d"),
         "(' ' lower)"
         "(' // b \n ' lower)"
-        "(' // d' end of input)");
+        "(' // d' eof)");
 }
 
 TEST("block commen trivia")
@@ -53,7 +53,7 @@ TEST("block commen trivia")
         "('' .)"
         "(' /* , /*::*/! */ ' in)"
         "(' /**/ ' op)"
-        "(' //' end of input)");
+        "(' //' eof)");
 
     CHECK_EQUAL(
         lex(R"(/* "" */ . /* "*/" */ . "/* /*" . /* /* "*/"*/ */ .)"),
@@ -62,5 +62,5 @@ TEST("block commen trivia")
         "(' ' str)"
         "(' ' .)"
         "(' /* /* \"*/\"*/ */ ' .)"
-        "('' end of input)");
+        "('' eof)");
 }
