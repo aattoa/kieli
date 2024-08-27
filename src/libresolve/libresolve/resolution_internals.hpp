@@ -161,7 +161,13 @@ namespace libresolve {
         hir::Type_variant const& sub,
         hir::Type_variant const& super) -> void;
 
+    // Get the HIR representation of the error type with `range`.
+    auto error_type(Constants const& constants, kieli::Range range) -> hir::Type;
+
+    // Get the HIR representation of an error expression with `range`.
     auto error_expression(Constants const& constants, kieli::Range range) -> hir::Expression;
+
+    // Get the HIR representation of a unit tuple expression with `range`.
     auto unit_expression(Constants const& constants, kieli::Range range) -> hir::Expression;
 
 } // namespace libresolve

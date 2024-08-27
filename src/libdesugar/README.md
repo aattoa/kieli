@@ -13,58 +13,66 @@ Some errors are also caught at this stage, such as duplicate struct fields.
 
 ## Structure to single-constructor enumeration
 
-    struct Tag → enum Tag = Tag
-    struct Point { x: I32, y: I32 } → enum Point = Point { x: I32, y: I32 }
+`struct Tag` → `enum Tag = Tag`
+
+`struct Point { x: I32, y: I32 }` → `enum Point = Point { x: I32, y: I32 }`
 
 ## While loop to plain loop
 
-    while a { b } → loop { if a { b } else { break () } }
+`while a { b }` → `loop { if a { b } else { break () } }`
 
 ## While-let loop to plain loop
 
-    while let a = b { c } → loop { match b { a -> c; _ -> break () } }
+`while let a = b { c }` → `loop { match b { a -> c; _ -> break () } }`
 
 ## If-let to match
 
-    if let a = b { c } else { d } → match b { a -> c; _ -> d }
+`if let a = b { c } else { d }` → `match b { a -> c; _ -> d }`
 
 ## Discard to let block
 
-    discard x → { let _: _ = x; () }
+`discard x` → `{ let _: _ = x; () }`
 
-## Operator precedence resolution
+## Resolve operator precedence
 
-    a + b * c → (a + (b * c))
+`a + b * c` → `(a + (b * c))`
+
+## Normalize function bodies to block form
+
+`fn f(): I32 = 0` → `fn f(): I32 { 0 }`
+
+## Fill in omitted function parameter types
+
+`(a, b, c: T)` → `(a: T, b: T, c: T)`
+
+`(a, b: AB, c, d: CD)` → `(a: AB, b: AB, c: CD, d: CD)`
 
 ## Implicit immutability
 
-    let x: I32 = 0 → let immut x: I32 = 0
-    let y: &I32 = &x → let immut y: &immut I32 = &immut x
+`let x: I32 = 0` → `let immut x: I32 = 0`
+
+`let y: &I32 = &x` → `let immut y: &immut I32 = &immut x`
 
 ## Implicit wildcard let type annotation
 
-    let x = 0 → let x: _ = 0
+`let x = 0` → `let x: _ = 0`
 
 ## Implicit unit else
 
-    if x { y } → if x { y } else { () }
+`if x { y }` → `if x { y } else { () }`
 
 ## Implicit unit block result
 
-    { x; } → { x; () }
+`{ x; }` → `{ x; () }`
 
 ## Implicit unit break
 
-    break → break ()
+`break` → `break ()`
 
 ## Implicit unit return
 
-    ret → ret ()
+`ret` → `ret ()`
 
 ## Implicit unit return type
 
-    fn f() {} → fn f(): () {}
-
-## Function body normalization
-
-    fn f(): I32 = 10 → fn f(): I32 { 10 }
+`fn f() {}` → `fn f(): () {}`

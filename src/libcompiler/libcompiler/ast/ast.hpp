@@ -125,7 +125,7 @@ namespace kieli::ast {
 
     struct Function_parameter {
         Pattern_id                   pattern;
-        std::optional<Type_id>       type;
+        Type_id                      type;
         std::optional<Expression_id> default_argument;
     };
 
@@ -474,6 +474,8 @@ namespace kieli::ast {
             std::vector<Template_argument> arguments;
             Path                           path;
         };
+
+        struct Error {};
     } // namespace type
 
     struct Type_variant
@@ -489,7 +491,8 @@ namespace kieli::ast {
               type::Reference,
               type::Pointer,
               type::Implementation,
-              type::Template_application> {
+              type::Template_application,
+              type::Error> {
         using variant::variant;
     };
 

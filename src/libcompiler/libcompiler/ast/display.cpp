@@ -264,9 +264,7 @@ namespace {
     auto do_display(Display_state& state, Function_parameter const& parameter) -> void
     {
         write_line(state, "function parameter");
-        if (parameter.type.has_value()) {
-            display_node(state, Last::no, "type", parameter.type.value());
-        }
+        display_node(state, Last::no, "type", parameter.type);
         if (parameter.default_argument.has_value()) {
             display_node(state, Last::no, "default argument", parameter.default_argument.value());
         }
@@ -757,6 +755,11 @@ namespace {
             write_line(state, "template application");
             display_node(state, Last::no, "template path", application.path);
             display_vector_node(state, Last::yes, "template arguments", application.arguments);
+        }
+
+        auto operator()(type::Error const&)
+        {
+            write_line(state, "error");
         }
     };
 

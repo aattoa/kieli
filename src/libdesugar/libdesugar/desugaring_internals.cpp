@@ -55,29 +55,6 @@ auto libdesugar::Context::desugar(cst::Function_argument const& argument) -> ast
     };
 }
 
-auto libdesugar::Context::desugar(cst::Function_parameter const& parameter)
-    -> ast::Function_parameter
-{
-    auto const desugar_argument = [&](cst::Value_parameter_default_argument const& argument) {
-        if (auto const* const wildcard = std::get_if<cst::Wildcard>(&argument.variant)) {
-            auto const        range = cst.tokens[wildcard->underscore_token].range;
-            kieli::Diagnostic diagnostic {
-                .message  = "A default function argument may not be a wildcard",
-                .range    = range,
-                .severity = kieli::Severity::error,
-            };
-            kieli::add_diagnostic(db, document_id, std::move(diagnostic));
-            return ast.expressions.push(ast::expression::Error {}, range);
-        }
-        return desugar(std::get<cst::Expression_id>(argument.variant));
-    };
-    return ast::Function_parameter {
-        .pattern          = desugar(parameter.pattern),
-        .type             = parameter.type.transform(desugar()),
-        .default_argument = parameter.default_argument.transform(desugar_argument),
-    };
-}
-
 auto libdesugar::Context::desugar(cst::Wildcard const& wildcard) -> ast::Wildcard
 {
     return ast::Wildcard { .range = cst.tokens[wildcard.underscore_token].range };
@@ -91,31 +68,30 @@ auto libdesugar::Context::desugar(cst::Template_argument const& argument) -> ast
 auto libdesugar::Context::desugar(cst::Template_parameter const& template_parameter)
     -> ast::Template_parameter
 {
+    auto const visitor = utl::Overload {
+        [&](cst::Template_type_parameter const& parameter) {
+            return ast::Template_type_parameter {
+                .name             = parameter.name,
+                .concepts         = desugar(parameter.concepts),
+                .default_argument = parameter.default_argument.transform(desugar()),
+            };
+        },
+        [&](cst::Template_value_parameter const& parameter) {
+            return ast::Template_value_parameter {
+                .name             = parameter.name,
+                .type             = desugar(parameter.type_annotation),
+                .default_argument = parameter.default_argument.transform(desugar()),
+            };
+        },
+        [&](cst::Template_mutability_parameter const& parameter) {
+            return ast::Template_mutability_parameter {
+                .name             = parameter.name,
+                .default_argument = parameter.default_argument.transform(desugar()),
+            };
+        },
+    };
     return {
-        std::visit<ast::Template_parameter_variant>(
-            utl::Overload {
-                [&](cst::Template_type_parameter const& parameter) {
-                    return ast::Template_type_parameter {
-                        .name             = parameter.name,
-                        .concepts         = desugar(parameter.concepts),
-                        .default_argument = parameter.default_argument.transform(desugar()),
-                    };
-                },
-                [&](cst::Template_value_parameter const& parameter) {
-                    return ast::Template_value_parameter {
-                        .name             = parameter.name,
-                        .type             = desugar(parameter.type_annotation),
-                        .default_argument = parameter.default_argument.transform(desugar()),
-                    };
-                },
-                [&](cst::Template_mutability_parameter const& parameter) {
-                    return ast::Template_mutability_parameter {
-                        .name             = parameter.name,
-                        .default_argument = parameter.default_argument.transform(desugar()),
-                    };
-                },
-            },
-            template_parameter.variant),
+        std::visit<ast::Template_parameter_variant>(visitor, template_parameter.variant),
         template_parameter.range,
     };
 }
@@ -152,13 +128,63 @@ auto libdesugar::Context::desugar(cst::Concept_reference const& reference) -> as
     };
 }
 
+auto libdesugar::Context::desugar(cst::Function_parameters const& cst_parameters)
+    -> std::vector<ast::Function_parameter>
+{
+    std::vector<ast::Function_parameter> ast_parameters;
+    ast_parameters.reserve(cst_parameters.value.elements.size());
+
+    auto const desugar_argument = [&](cst::Value_parameter_default_argument const& argument) {
+        if (auto const* const wildcard = std::get_if<cst::Wildcard>(&argument.variant)) {
+            auto const        range = cst.tokens[wildcard->underscore_token].range;
+            kieli::Diagnostic diagnostic {
+                .message  = "A default function argument may not be a wildcard",
+                .range    = range,
+                .severity = kieli::Severity::error,
+            };
+            kieli::add_diagnostic(db, document_id, std::move(diagnostic));
+            return ast.expressions.push(ast::expression::Error {}, range);
+        }
+        return desugar(std::get<cst::Expression_id>(argument.variant));
+    };
+
+    auto const desugar_type = [&](cst::Function_parameter const& parameter) {
+        if (parameter.type.has_value()) {
+            return desugar(parameter.type.value());
+        }
+        if (!ast_parameters.empty()) {
+            return ast_parameters.front().type;
+        }
+        auto const range = cst.patterns[parameter.pattern].range;
+
+        kieli::Diagnostic diagnostic {
+            .message  = "The type of the final parameter must not be omitted",
+            .range    = range,
+            .severity = kieli::Severity::error,
+        };
+        kieli::add_diagnostic(db, document_id, std::move(diagnostic));
+        return ast.types.push(ast::type::Error {}, range);
+    };
+
+    for (auto const& parameter : std::views::reverse(cst_parameters.value.elements)) {
+        ast_parameters.emplace(
+            ast_parameters.begin(),
+            desugar(parameter.pattern),
+            desugar_type(parameter),
+            parameter.default_argument.transform(desugar_argument));
+    }
+
+    return ast_parameters;
+}
+
 auto libdesugar::Context::desugar(cst::Function_signature const& signature)
     -> ast::Function_signature
 {
-    ast::Type return_type =               //
-        signature.return_type.has_value() //
-            ? desugar(cst.types[signature.return_type.value().type])
-            : unit_type(signature.name.range);
+    // If there is no explicit return type, insert the unit type.
+    ast::Type return_type = signature.return_type.has_value()
+                              ? desugar(cst.types[signature.return_type.value().type])
+                              : unit_type(signature.name.range);
+
     return ast::Function_signature {
         .template_parameters = signature.template_parameters.transform(desugar()),
         .function_parameters = desugar(signature.function_parameters),

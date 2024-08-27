@@ -34,6 +34,11 @@ auto libresolve::Tag_state::fresh_local_variable_tag() -> hir::Local_variable_ta
     return hir::Local_variable_tag { ++m_current_local_variable_tag };
 }
 
+auto libresolve::error_type(Constants const& constants, kieli::Range const range) -> hir::Type
+{
+    return hir::Type { constants.error_type, range };
+}
+
 auto libresolve::error_expression(Constants const& constants, kieli::Range const range)
     -> hir::Expression
 {

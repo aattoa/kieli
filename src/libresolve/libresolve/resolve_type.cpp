@@ -123,6 +123,11 @@ namespace {
         {
             cpputil::todo();
         }
+
+        auto operator()(ast::type::Error const&) -> hir::Type
+        {
+            return error_type(context.constants, this_type.range);
+        }
     };
 } // namespace
 

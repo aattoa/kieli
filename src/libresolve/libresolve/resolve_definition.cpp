@@ -11,12 +11,10 @@ namespace {
         hir::Environment_id const      environment,
         ast::Function_parameter const& parameter) -> hir::Function_parameter
     {
-        cpputil::always_assert(parameter.type.has_value()); // TODO
-
         hir::Pattern pattern = resolve_pattern(
             context, state, scope, environment, context.ast.patterns[parameter.pattern]);
-        hir::Type const type = resolve_type(
-            context, state, scope, environment, context.ast.types[parameter.type.value()]);
+        hir::Type const type
+            = resolve_type(context, state, scope, environment, context.ast.types[parameter.type]);
 
         require_subtype_relationship(
             context, state, context.hir.types[pattern.type], context.hir.types[type.id]);

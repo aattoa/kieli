@@ -46,7 +46,6 @@
 - Definition source hash
 - Range should store width only?
 - Union types `Int|Float`
-- Allow omission of repeated parameter types?
 - in, inout, out, mv, fwd?
 - libtommath for arbitrary precision integers?
 - String interpolation

@@ -26,7 +26,7 @@ namespace libdesugar {
         auto desugar(cst::Definition const&) -> ast::Definition;
 
         auto desugar(cst::Function_argument const&) -> ast::Function_argument;
-        auto desugar(cst::Function_parameter const&) -> ast::Function_parameter;
+        auto desugar(cst::Function_parameters const&) -> std::vector<ast::Function_parameter>;
         auto desugar(cst::Template_argument const&) -> ast::Template_argument;
         auto desugar(cst::Template_parameter const&) -> ast::Template_parameter;
         auto desugar(cst::Path_segment const&) -> ast::Path_segment;
