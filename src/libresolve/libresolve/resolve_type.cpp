@@ -4,22 +4,6 @@
 using namespace libresolve;
 
 namespace {
-    auto integer_type(Constants const& constants, kieli::type::Integer const integer)
-        -> hir::Type_id
-    {
-        switch (integer) {
-        case kieli::type::Integer::i8:  return constants.i8_type;
-        case kieli::type::Integer::i16: return constants.i16_type;
-        case kieli::type::Integer::i32: return constants.i32_type;
-        case kieli::type::Integer::i64: return constants.i64_type;
-        case kieli::type::Integer::u8:  return constants.u8_type;
-        case kieli::type::Integer::u16: return constants.u16_type;
-        case kieli::type::Integer::u32: return constants.u32_type;
-        case kieli::type::Integer::u64: return constants.u64_type;
-        default:                        cpputil::unreachable();
-        }
-    }
-
     struct Type_resolution_visitor {
         Context&            context;
         Inference_state&    state;
@@ -39,39 +23,9 @@ namespace {
             return recurse()(expression);
         }
 
-        auto operator()(kieli::type::Integer const& integer) -> hir::Type
-        {
-            return { integer_type(context.constants, integer), this_type.range };
-        }
-
-        auto operator()(kieli::type::Floating const&) -> hir::Type
-        {
-            return { context.constants.floating_type, this_type.range };
-        }
-
-        auto operator()(kieli::type::Character const&) -> hir::Type
-        {
-            return { context.constants.character_type, this_type.range };
-        }
-
-        auto operator()(kieli::type::Boolean const&) -> hir::Type
-        {
-            return { context.constants.boolean_type, this_type.range };
-        }
-
-        auto operator()(kieli::type::String const&) -> hir::Type
-        {
-            return { context.constants.string_type, this_type.range };
-        }
-
         auto operator()(ast::Wildcard const&) -> hir::Type
         {
             return state.fresh_general_type_variable(context.hir, this_type.range);
-        }
-
-        auto operator()(ast::type::Self const&) -> hir::Type
-        {
-            cpputil::todo();
         }
 
         auto operator()(ast::type::Never const&) -> hir::Type

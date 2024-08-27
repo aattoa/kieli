@@ -13,39 +13,9 @@ namespace {
             return std::visit(*this, context.cst.types[parenthesized.type.value].variant);
         }
 
-        auto operator()(kieli::type::Integer const& integer) -> ast::Type_variant
-        {
-            return integer;
-        }
-
-        auto operator()(kieli::type::String const& string) -> ast::Type_variant
-        {
-            return string;
-        }
-
-        auto operator()(kieli::type::Floating const& floating) -> ast::Type_variant
-        {
-            return floating;
-        }
-
-        auto operator()(kieli::type::Character const& character) -> ast::Type_variant
-        {
-            return character;
-        }
-
-        auto operator()(kieli::type::Boolean const& boolean) -> ast::Type_variant
-        {
-            return boolean;
-        }
-
         auto operator()(cst::Wildcard const& wildcard) -> ast::Type_variant
         {
             return context.desugar(wildcard);
-        }
-
-        auto operator()(cst::type::Self const&) -> ast::Type_variant
-        {
-            return ast::type::Self {};
         }
 
         auto operator()(cst::type::Never const&) -> ast::Type_variant

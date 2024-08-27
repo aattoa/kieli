@@ -684,31 +684,6 @@ namespace {
     struct Type_display_visitor {
         Display_state& state;
 
-        auto operator()(kieli::type::Integer const& integer)
-        {
-            write_line(state, "built-in {}", kieli::type::integer_name(integer));
-        }
-
-        auto operator()(kieli::type::Floating const&)
-        {
-            write_line(state, "built-in floating point");
-        }
-
-        auto operator()(kieli::type::Character const&)
-        {
-            write_line(state, "built-in character");
-        }
-
-        auto operator()(kieli::type::Boolean const&)
-        {
-            write_line(state, "built-in boolean");
-        }
-
-        auto operator()(kieli::type::String const&)
-        {
-            write_line(state, "built-in string");
-        }
-
         auto operator()(type::Never const&)
         {
             write_line(state, "built-in never");
@@ -717,11 +692,6 @@ namespace {
         auto operator()(Wildcard const&)
         {
             write_line(state, "built-in wildcard");
-        }
-
-        auto operator()(type::Self const&)
-        {
-            write_line(state, "implementation self");
         }
 
         auto operator()(type::Typename const& typename_)

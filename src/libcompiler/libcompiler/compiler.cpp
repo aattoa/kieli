@@ -210,18 +210,3 @@ auto kieli::Name::operator==(Name const& other) const noexcept -> bool
 {
     return identifier == other.identifier;
 }
-
-auto kieli::type::integer_name(Integer const integer) noexcept -> std::string_view
-{
-    switch (integer) {
-    case Integer::i8:  return "I8";
-    case Integer::i16: return "I16";
-    case Integer::i32: return "I32";
-    case Integer::i64: return "I64";
-    case Integer::u8:  return "U8";
-    case Integer::u16: return "U16";
-    case Integer::u32: return "U32";
-    case Integer::u64: return "U64";
-    default:           cpputil::unreachable();
-    }
-}

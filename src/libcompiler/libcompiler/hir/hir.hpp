@@ -261,6 +261,16 @@ namespace kieli::hir {
     };
 
     namespace type {
+        enum class Integer { i8, i16, i32, i64, u8, u16, u32, u64 };
+
+        struct Floating {};
+
+        struct Boolean {};
+
+        struct Character {};
+
+        struct String {};
+
         struct Array {
             Type          element_type;
             Expression_id length;
@@ -307,11 +317,11 @@ namespace kieli::hir {
 
     struct Type_variant
         : std::variant<
-              kieli::type::Integer,
-              kieli::type::Floating,
-              kieli::type::Character,
-              kieli::type::Boolean,
-              kieli::type::String,
+              type::Integer,
+              type::Floating,
+              type::Character,
+              type::Boolean,
+              type::String,
               type::Array,
               type::Slice,
               type::Reference,
@@ -431,7 +441,13 @@ namespace kieli::hir {
         utl::Index_vector<Mutability_id, Mutability_variant> mutabilities;
     };
 
+    // Get the name of a built-in integer type.
+    auto integer_name(type::Integer type) -> std::string_view;
+
+    // Get the type of an expression.
     auto expression_type(Expression const& expression) -> hir::Type;
+
+    // Get the type of a pattern.
     auto pattern_type(Pattern const& pattern) -> hir::Type;
 
     auto format(Arena const&, Pattern const&, std::string&) -> void;

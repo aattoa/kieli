@@ -143,32 +143,19 @@ namespace {
         -> std::optional<cst::Type_variant>
     {
         switch (token.type) {
-        case Token_type::i8_type:        return kieli::type::Integer::i8;
-        case Token_type::i16_type:       return kieli::type::Integer::i16;
-        case Token_type::i32_type:       return kieli::type::Integer::i32;
-        case Token_type::i64_type:       return kieli::type::Integer::i64;
-        case Token_type::u8_type:        return kieli::type::Integer::u8;
-        case Token_type::u16_type:       return kieli::type::Integer::u16;
-        case Token_type::u32_type:       return kieli::type::Integer::u32;
-        case Token_type::u64_type:       return kieli::type::Integer::u64;
-        case Token_type::floating_type:  return kieli::type::Floating {};
-        case Token_type::character_type: return kieli::type::Character {};
-        case Token_type::boolean_type:   return kieli::type::Boolean {};
-        case Token_type::string_type:    return kieli::type::String {};
-        case Token_type::underscore:     return cst::Wildcard { context.token(token) };
-        case Token_type::self_type:      return cst::type::Self { context.token(token) };
-        case Token_type::exclamation:    return cst::type::Never { context.token(token) };
-        case Token_type::paren_open:     return extract_tuple(context, token);
-        case Token_type::bracket_open:   return extract_array_or_slice(context, token);
-        case Token_type::fn:             return extract_function(context, token);
-        case Token_type::typeof_:        return extract_typeof(context, token);
-        case Token_type::impl:           return extract_implementation(context, token);
-        case Token_type::ampersand:      return extract_reference(context, token);
-        case Token_type::asterisk:       return extract_pointer(context, token);
-        case Token_type::upper_name:     [[fallthrough]];
-        case Token_type::lower_name:     return extract_typename(context, stage);
-        case Token_type::global:         return extract_global_typename(context, token);
-        default:                         context.unstage(stage); return std::nullopt;
+        case Token_type::underscore:   return cst::Wildcard { context.token(token) };
+        case Token_type::exclamation:  return cst::type::Never { context.token(token) };
+        case Token_type::paren_open:   return extract_tuple(context, token);
+        case Token_type::bracket_open: return extract_array_or_slice(context, token);
+        case Token_type::fn:           return extract_function(context, token);
+        case Token_type::typeof_:      return extract_typeof(context, token);
+        case Token_type::impl:         return extract_implementation(context, token);
+        case Token_type::ampersand:    return extract_reference(context, token);
+        case Token_type::asterisk:     return extract_pointer(context, token);
+        case Token_type::upper_name:   [[fallthrough]];
+        case Token_type::lower_name:   return extract_typename(context, stage);
+        case Token_type::global:       return extract_global_typename(context, token);
+        default:                       context.unstage(stage); return std::nullopt;
         }
     }
 

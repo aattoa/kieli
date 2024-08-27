@@ -196,17 +196,16 @@ namespace {
         }
 
         template <utl::one_of<
-            kieli::type::Floating,
-            kieli::type::Character,
-            kieli::type::Boolean,
-            kieli::type::String> T>
+            hir::type::Floating,
+            hir::type::Character,
+            hir::type::Boolean,
+            hir::type::String> T>
         auto operator()(T, T) const -> bool
         {
             return true;
         }
 
-        auto operator()(kieli::type::Integer const sub, kieli::type::Integer const super) const
-            -> bool
+        auto operator()(hir::type::Integer const sub, hir::type::Integer const super) const -> bool
         {
             return sub == super;
         }

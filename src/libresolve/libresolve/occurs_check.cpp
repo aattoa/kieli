@@ -66,11 +66,11 @@ namespace {
         }
 
         auto operator()(utl::one_of<
-                        kieli::type::Integer,
-                        kieli::type::Floating,
-                        kieli::type::Character,
-                        kieli::type::Boolean,
-                        kieli::type::String,
+                        hir::type::Integer,
+                        hir::type::Floating,
+                        hir::type::Character,
+                        hir::type::Boolean,
+                        hir::type::String,
                         hir::type::Parameterized,
                         hir::type::Error> auto const&) const -> bool
         {

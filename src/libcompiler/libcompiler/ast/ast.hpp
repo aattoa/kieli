@@ -428,8 +428,6 @@ namespace kieli::ast {
     };
 
     namespace type {
-        struct Self {};
-
         struct Never {};
 
         struct Typename {
@@ -480,13 +478,7 @@ namespace kieli::ast {
 
     struct Type_variant
         : std::variant<
-              kieli::type::Integer,
-              kieli::type::Floating,
-              kieli::type::Character,
-              kieli::type::Boolean,
-              kieli::type::String,
               Wildcard,
-              type::Self,
               type::Never,
               type::Typename,
               type::Tuple,

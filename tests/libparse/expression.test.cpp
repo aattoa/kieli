@@ -36,11 +36,6 @@ TEST("array literal")
     CHECK_SIMPLE_PARSE("[5, 3]");
 }
 
-TEST("self")
-{
-    CHECK_SIMPLE_PARSE("self");
-}
-
 TEST("variable")
 {
     CHECK_SIMPLE_PARSE("x");

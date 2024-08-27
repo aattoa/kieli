@@ -7,39 +7,9 @@ namespace {
     struct Type_format_visitor {
         State& state;
 
-        auto operator()(kieli::type::Integer const integer)
-        {
-            format(state, "{}", kieli::type::integer_name(integer));
-        }
-
-        auto operator()(kieli::type::Floating const&)
-        {
-            format(state, "Float");
-        }
-
-        auto operator()(kieli::type::Character const&)
-        {
-            format(state, "Char");
-        }
-
-        auto operator()(kieli::type::Boolean const&)
-        {
-            format(state, "Bool");
-        }
-
-        auto operator()(kieli::type::String const&)
-        {
-            format(state, "String");
-        }
-
         auto operator()(cst::Wildcard const& wildcard)
         {
             format(state, wildcard);
-        }
-
-        auto operator()(cst::type::Self const&)
-        {
-            format(state, "Self");
         }
 
         auto operator()(cst::type::Never const&)

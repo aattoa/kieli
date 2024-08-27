@@ -36,11 +36,6 @@ TEST("wildcard")
     CHECK_SIMPLE_PARSE("____");
 }
 
-TEST("self")
-{
-    CHECK_SIMPLE_PARSE("Self");
-}
-
 TEST("typename")
 {
     CHECK_SIMPLE_PARSE("T");
@@ -101,19 +96,15 @@ TEST("impl")
 TEST("reference")
 {
     CHECK_SIMPLE_PARSE("&T");
-    CHECK_SIMPLE_PARSE("&Self");
     CHECK_SIMPLE_PARSE("&std::Vector");
     CHECK_SIMPLE_PARSE("&mut T");
-    CHECK_SIMPLE_PARSE("&mut Self");
     CHECK_SIMPLE_PARSE("&mut std::Vector");
 }
 
 TEST("pointer")
 {
     CHECK_SIMPLE_PARSE("*T");
-    CHECK_SIMPLE_PARSE("*Self");
     CHECK_SIMPLE_PARSE("*std::Vector");
     CHECK_SIMPLE_PARSE("*mut T");
-    CHECK_SIMPLE_PARSE("*mut Self");
     CHECK_SIMPLE_PARSE("*mut std::Vector");
 }

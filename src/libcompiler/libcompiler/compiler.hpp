@@ -200,20 +200,6 @@ namespace kieli {
 
     enum class Mutability { mut, immut };
 
-    namespace type {
-        enum class Integer { i8, i16, i32, i64, u8, u16, u32, u64, _enumerator_count };
-
-        struct Floating {};
-
-        struct Boolean {};
-
-        struct Character {};
-
-        struct String {};
-
-        auto integer_name(Integer) noexcept -> std::string_view;
-    } // namespace type
-
 } // namespace kieli
 
 template <utl::one_of<kieli::Name, kieli::Upper, kieli::Lower> Name>

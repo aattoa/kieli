@@ -1,6 +1,21 @@
 #include <libcompiler/hir/hir.hpp>
 #include <libcompiler/hir/formatters.hpp>
 
+auto kieli::hir::integer_name(type::Integer const type) -> std::string_view
+{
+    switch (type) {
+    case type::Integer::i8:  return "I8";
+    case type::Integer::i16: return "I16";
+    case type::Integer::i32: return "I32";
+    case type::Integer::i64: return "I64";
+    case type::Integer::u8:  return "U8";
+    case type::Integer::u16: return "U16";
+    case type::Integer::u32: return "U32";
+    case type::Integer::u64: return "U64";
+    default:                 cpputil::unreachable();
+    }
+}
+
 auto kieli::hir::expression_type(Expression const& expression) -> Type
 {
     return Type { expression.type, expression.range };

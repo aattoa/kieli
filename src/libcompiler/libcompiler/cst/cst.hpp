@@ -580,10 +580,6 @@ namespace kieli::cst {
             Surrounded<Type_id> type;
         };
 
-        struct Self {
-            Token_id self_keyword_token;
-        };
-
         struct Never {
             Token_id exclamation_token;
         };
@@ -644,14 +640,8 @@ namespace kieli::cst {
 
     struct Type_variant
         : std::variant<
-              kieli::type::Integer,
-              kieli::type::Floating,
-              kieli::type::Character,
-              kieli::type::Boolean,
-              kieli::type::String,
               Wildcard,
               type::Parenthesized,
-              type::Self,
               type::Never,
               type::Typename,
               type::Tuple,
