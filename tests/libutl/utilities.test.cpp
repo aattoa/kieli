@@ -39,17 +39,6 @@ struct std::formatter<Move_only> {
     }
 };
 
-TEST("vector capacity operations")
-{
-    std::vector<int> vector;
-    CHECK(vector.empty());
-    vector.reserve(10);
-    CHECK(vector.capacity() >= 10);
-    utl::release_vector_memory(vector);
-    CHECK(vector.empty());
-    CHECK_EQUAL(vector.capacity(), 0UZ);
-}
-
 TEST("to_vector")
 {
     std::vector<Move_only> vector;

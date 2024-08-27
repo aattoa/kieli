@@ -108,25 +108,6 @@ namespace utl {
         return std::forward_like<decltype(pair)>(second);
     };
 
-    template <class E>
-        requires std::is_enum_v<E> && requires { E::_enumerator_count; }
-    constexpr std::size_t enumerator_count = static_cast<std::size_t>(E::_enumerator_count);
-
-    template <class E, E min = E {}, E max = E::_enumerator_count>
-    [[nodiscard]] constexpr auto is_valid_enumerator(E const e) noexcept -> bool
-        requires std::is_enum_v<E>
-    {
-        return min <= e && max > e;
-    }
-
-    template <class E>
-    [[nodiscard]] constexpr auto as_index(E const e) noexcept -> std::size_t
-        requires std::is_enum_v<E>
-    {
-        cpputil::always_assert(is_valid_enumerator(e));
-        return static_cast<std::size_t>(e);
-    }
-
     auto times(std::size_t const count, auto&& callback) -> void
     {
         for (std::size_t i = 0; i != count; ++i) {
@@ -151,14 +132,6 @@ namespace utl {
             return std::forward_like<decltype(self)>(self.m_value);
         }
     };
-
-    auto disable_short_string_optimization(std::string&) -> void;
-
-    template <class T, class A>
-    constexpr auto release_vector_memory(std::vector<T, A>& vector) noexcept -> void
-    {
-        std::vector<T, A> {}.swap(vector);
-    }
 
     template <class T, std::size_t n>
     [[nodiscard]] constexpr auto to_vector(T (&&array)[n]) -> std::vector<T>
