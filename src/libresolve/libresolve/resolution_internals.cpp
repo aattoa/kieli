@@ -17,10 +17,10 @@ auto libresolve::Constants::make_with(hir::Arena& arenas) -> Constants
         .string_type      = arenas.types.push(hir::type::String {}),
         .character_type   = arenas.types.push(hir::type::Character {}),
         .unit_type        = arenas.types.push(hir::type::Tuple {}),
-        .error_type       = arenas.types.push(hir::type::Error {}),
-        .mutability_yes   = arenas.mutabilities.push(hir::mutability::Concrete::mut),
-        .mutability_no    = arenas.mutabilities.push(hir::mutability::Concrete::immut),
-        .mutability_error = arenas.mutabilities.push(hir::mutability::Error {}),
+        .error_type       = arenas.types.push(hir::Error {}),
+        .mutability_yes   = arenas.mutabilities.push(kieli::Mutability::mut),
+        .mutability_no    = arenas.mutabilities.push(kieli::Mutability::immut),
+        .mutability_error = arenas.mutabilities.push(hir::Error {}),
     };
 }
 
@@ -43,7 +43,7 @@ auto libresolve::error_expression(Constants const& constants, kieli::Range const
     -> hir::Expression
 {
     return hir::Expression {
-        hir::expression::Error {},
+        hir::Error {},
         constants.error_type,
         hir::Expression_kind::place,
         range,
@@ -160,19 +160,15 @@ auto libresolve::ensure_no_unsolved_variables(Context& context, Inference_state&
 {
     for (Mutability_variable_data& data : state.mutability_variables.underlying) {
         if (!data.is_solved) {
-            state.set_solution(context, data, hir::mutability::Concrete::immut);
+            state.set_solution(context, data, kieli::Mutability::immut);
         }
     }
     for (Type_variable_data& data : state.type_variables.underlying) {
         state.flatten(context, context.hir.types[data.type_id]);
         if (!data.is_solved) {
-            kieli::Diagnostic diagnostic {
-                .message  = std::format("Unsolved type variable: ?{}", data.variable_id.get()),
-                .range    = data.origin,
-                .severity = kieli::Severity::error,
-            };
-            kieli::add_diagnostic(context.db, state.document_id, std::move(diagnostic));
-            state.set_solution(context, data, hir::type::Error {});
+            auto message = std::format("Unsolved type variable: ?{}", data.variable_id.get());
+            kieli::add_error(context.db, state.document_id, data.origin, std::move(message));
+            state.set_solution(context, data, hir::Error {});
         }
     }
 }

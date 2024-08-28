@@ -97,12 +97,7 @@ auto liblex::error(
     std::string_view const  position,
     std::string             message) -> std::unexpected<Error>
 {
-    kieli::Diagnostic diagnostic {
-        .message  = std::move(message),
-        .range    = range_for(state, position),
-        .severity = kieli::Severity::error,
-    };
-    kieli::add_diagnostic(state.db, state.document_id, std::move(diagnostic));
+    kieli::add_error(state.db, state.document_id, range_for(state, position), std::move(message));
     return std::unexpected(Error {});
 }
 

@@ -361,7 +361,7 @@ namespace {
             -> ast::Expression_variant
         {
             if (check_has_duplicate_fields(context, initializer)) {
-                return ast::expression::Error {};
+                return ast::Error {};
             }
             return ast::expression::Struct_initializer {
                 .constructor_path = context.desugar(initializer.constructor_path),
@@ -552,13 +552,12 @@ namespace {
 
         auto operator()(cst::expression::For_loop const&) -> ast::Expression_variant
         {
-            kieli::Diagnostic diagnostic {
-                .message  = "For loops are not supported yet",
-                .range    = this_expression.range,
-                .severity = kieli::Severity::error,
-            };
-            kieli::add_diagnostic(context.db, context.document_id, std::move(diagnostic));
-            return ast::expression::Error {};
+            kieli::add_error(
+                context.db,
+                context.document_id,
+                this_expression.range,
+                "For loops are not supported yet");
+            return ast::Error {};
         }
 
         auto operator()(cst::expression::Conditional_let const&) -> ast::Expression_variant

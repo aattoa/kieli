@@ -192,7 +192,7 @@ namespace kieli::hir::dtl {
             std::format_to(out, R"(???)");
         }
 
-        auto operator()(expression::Error const&) const
+        auto operator()(Error const&) const
         {
             std::format_to(out, "ERROR-EXPRESSION");
         }
@@ -332,7 +332,7 @@ namespace kieli::hir::dtl {
             std::format_to(out, "?{}", variable.id.get());
         }
 
-        auto operator()(type::Error const&) const
+        auto operator()(Error const&) const
         {
             std::format_to(out, "ERROR-TYPE");
         }
@@ -397,14 +397,14 @@ LIBRESOLVE_DEFINE_FORMATTER(kieli::hir::Mutability_variant)
 {
     return std::visit(
         utl::Overload {
-            [&](kieli::hir::mutability::Concrete const concrete) {
+            [&](kieli::hir::Error const&) {
+                return std::format_to(context.out(), "mut?ERROR"); //
+            },
+            [&](kieli::Mutability const concrete) {
                 return std::format_to(context.out(), "{}", concrete);
             },
             [&](kieli::hir::mutability::Parameterized const& parameterized) {
                 return std::format_to(context.out(), "mut?{}", parameterized.tag.get());
-            },
-            [&](kieli::hir::mutability::Error const&) {
-                return std::format_to(context.out(), "mut?ERROR");
             },
             [&](kieli::hir::mutability::Variable const& variable) {
                 return std::format_to(context.out(), "?mut{}", variable.id.get());

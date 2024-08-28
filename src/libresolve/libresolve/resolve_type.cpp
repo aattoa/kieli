@@ -41,12 +41,11 @@ namespace {
                 }
             }
             // TODO: lookup
-            kieli::Diagnostic diagnostic {
-                .message  = "Use of an undeclared identifier",
-                .range    = this_type.range,
-                .severity = kieli::Severity::error,
-            };
-            kieli::add_diagnostic(context.db, scope.document_id(), std::move(diagnostic));
+            kieli::add_error(
+                context.db,
+                scope.document_id(),
+                this_type.range,
+                "Use of an undeclared identifier");
             return { context.constants.error_type, this_type.range };
         }
 
@@ -124,7 +123,7 @@ namespace {
             cpputil::todo();
         }
 
-        auto operator()(ast::type::Error const&) -> hir::Type
+        auto operator()(ast::Error const&) -> hir::Type
         {
             return error_type(context.constants, this_type.range);
         }

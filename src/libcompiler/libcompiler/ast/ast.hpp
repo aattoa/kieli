@@ -37,6 +37,8 @@ namespace kieli::ast {
     struct [[nodiscard]] Pattern;
     struct [[nodiscard]] Definition;
 
+    struct Error {};
+
     struct Wildcard {
         Range range;
     };
@@ -296,12 +298,11 @@ namespace kieli::ast {
         };
 
         struct Hole {};
-
-        struct Error {};
     } // namespace expression
 
     struct Expression_variant
         : std::variant<
+              Error,
               Integer,
               Floating,
               Character,
@@ -338,8 +339,7 @@ namespace kieli::ast {
               expression::Move,
               expression::Defer,
               expression::Meta,
-              expression::Hole,
-              expression::Error> {
+              expression::Hole> {
         using variant::variant;
     };
 
@@ -474,12 +474,11 @@ namespace kieli::ast {
             std::vector<Template_argument> arguments;
             Path                           path;
         };
-
-        struct Error {};
     } // namespace type
 
     struct Type_variant
         : std::variant<
+              Error,
               Wildcard,
               type::Never,
               type::Typename,
@@ -491,8 +490,7 @@ namespace kieli::ast {
               type::Reference,
               type::Pointer,
               type::Implementation,
-              type::Template_application,
-              type::Error> {
+              type::Template_application> {
         using variant::variant;
     };
 

@@ -611,7 +611,7 @@ namespace {
             write_line(state, "hole");
         }
 
-        auto operator()(expression::Error const&)
+        auto operator()(Error const&)
         {
             write_line(state, "error");
         }
@@ -757,7 +757,7 @@ namespace {
             display_vector_node(state, Last::yes, "template arguments", application.arguments);
         }
 
-        auto operator()(type::Error const&)
+        auto operator()(Error const&)
         {
             write_line(state, "error");
         }

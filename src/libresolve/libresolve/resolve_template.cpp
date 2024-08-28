@@ -77,11 +77,12 @@ namespace {
         auto operator()(ast::Template_value_parameter const& parameter)
             -> hir::Template_parameter_variant
         {
-            kieli::fatal_error(
+            kieli::add_error(
                 context.db,
                 scope.document_id(),
                 parameter.name.range,
                 "Template value parameters are not supported yet");
+            throw std::runtime_error("fatal error"); // todo
         }
     };
 } // namespace

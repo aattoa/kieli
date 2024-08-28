@@ -68,13 +68,10 @@ auto libparse::Context::commit(Stage const stage) -> void
 auto libparse::Context::error_expected(
     kieli::Range const error_range, std::string_view const description) -> void
 {
-    kieli::Diagnostic diagnostic {
-        .message = std::format(
-            "Expected {}, but found {}", description, kieli::token_description(peek().type)),
-        .range    = error_range,
-        .severity = kieli::Severity::error,
-    };
-    kieli::fatal_error(db(), document_id(), std::move(diagnostic));
+    auto message = std::format(
+        "Expected {}, but found {}", description, kieli::token_description(peek().type));
+    kieli::add_error(db(), document_id(), error_range, std::move(message));
+    throw std::runtime_error("fatal parse error"); // todo
 }
 
 auto libparse::Context::error_expected(std::string_view const description) -> void

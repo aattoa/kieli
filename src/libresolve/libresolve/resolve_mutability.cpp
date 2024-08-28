@@ -16,12 +16,8 @@ namespace {
     auto error(Context& context, kieli::Document_id const document_id, kieli::Lower const name)
         -> hir::Mutability
     {
-        kieli::Diagnostic diagnostic {
-            .message  = std::format("No mutability binding '{}' in scope", name),
-            .range    = name.range,
-            .severity = kieli::Severity::error,
-        };
-        kieli::add_diagnostic(context.db, document_id, std::move(diagnostic));
+        auto message = std::format("No mutability binding '{}' in scope", name);
+        kieli::add_error(context.db, document_id, name.range, std::move(message));
         return hir::Mutability { context.constants.mutability_error, name.range };
     }
 } // namespace
@@ -29,19 +25,18 @@ namespace {
 auto libresolve::resolve_mutability(
     Context& context, Scope& scope, ast::Mutability const& mutability) -> hir::Mutability
 {
-    return std::visit(
-        utl::Overload {
-            [&](kieli::Mutability const& concrete) {
-                return hir::Mutability {
-                    .id    = resolve_concrete(context.constants, concrete),
-                    .range = mutability.range,
-                };
-            },
-            [&](ast::Parameterized_mutability const& parameterized) {
-                auto const* const bound = scope.find_mutability(parameterized.name.identifier);
-                return bound ? bound->mutability
-                             : error(context, scope.document_id(), parameterized.name);
-            },
+    auto visitor = utl::Overload {
+        [&](kieli::Mutability const& concrete) {
+            return hir::Mutability {
+                .id    = resolve_concrete(context.constants, concrete),
+                .range = mutability.range,
+            };
         },
-        mutability.variant);
+        [&](ast::Parameterized_mutability const& parameterized) {
+            auto const* const bound = scope.find_mutability(parameterized.name.identifier);
+            return bound ? bound->mutability
+                         : error(context, scope.document_id(), parameterized.name);
+        },
+    };
+    return std::visit(visitor, mutability.variant);
 }

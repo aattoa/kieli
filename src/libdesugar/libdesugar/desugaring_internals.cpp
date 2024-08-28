@@ -136,14 +136,9 @@ auto libdesugar::Context::desugar(cst::Function_parameters const& cst_parameters
 
     auto const desugar_argument = [&](cst::Value_parameter_default_argument const& argument) {
         if (auto const* const wildcard = std::get_if<cst::Wildcard>(&argument.variant)) {
-            auto const        range = cst.tokens[wildcard->underscore_token].range;
-            kieli::Diagnostic diagnostic {
-                .message  = "A default function argument may not be a wildcard",
-                .range    = range,
-                .severity = kieli::Severity::error,
-            };
-            kieli::add_diagnostic(db, document_id, std::move(diagnostic));
-            return ast.expressions.push(ast::expression::Error {}, range);
+            auto const range = cst.tokens[wildcard->underscore_token].range;
+            kieli::add_error(db, document_id, range, "A default argument may not be a wildcard");
+            return ast.expressions.push(ast::Error {}, range);
         }
         return desugar(std::get<cst::Expression_id>(argument.variant));
     };
@@ -156,14 +151,9 @@ auto libdesugar::Context::desugar(cst::Function_parameters const& cst_parameters
             return ast_parameters.front().type;
         }
         auto const range = cst.patterns[parameter.pattern].range;
-
-        kieli::Diagnostic diagnostic {
-            .message  = "The type of the final parameter must not be omitted",
-            .range    = range,
-            .severity = kieli::Severity::error,
-        };
-        kieli::add_diagnostic(db, document_id, std::move(diagnostic));
-        return ast.types.push(ast::type::Error {}, range);
+        kieli::add_error(
+            db, document_id, range, "The type of the final parameter must not be omitted");
+        return ast.types.push(ast::Error {}, range);
     };
 
     for (auto const& parameter : std::views::reverse(cst_parameters.value.elements)) {

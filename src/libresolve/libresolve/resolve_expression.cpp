@@ -13,15 +13,7 @@ namespace {
 
         auto error(kieli::Range const range, std::string message) -> hir::Expression
         {
-            kieli::Diagnostic diagnostic {
-                .message  = std::move(message),
-                .range    = range,
-                .severity = kieli::Severity::error,
-            };
-            kieli::add_diagnostic(
-                context.db,
-                context.info.environments[environment].document_id,
-                std::move(diagnostic));
+            kieli::add_error(context.db, state.document_id, range, std::move(message));
             return error_expression(context.constants, this_expression.range);
         }
 
@@ -463,7 +455,7 @@ namespace {
             };
         }
 
-        auto operator()(ast::expression::Error const&) -> hir::Expression
+        auto operator()(ast::Error const&) -> hir::Expression
         {
             return error_expression(context.constants, this_expression.range);
         }

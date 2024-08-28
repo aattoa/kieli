@@ -123,9 +123,6 @@ namespace {
             try {
                 callback(db, document_id);
             }
-            catch (kieli::Compilation_failure const&) {
-                (void)0; // Do nothing, diagnostics are printed below
-            }
             catch (std::exception const& exception) {
                 std::print(stderr, "{}{}\n\n", error_header(colors), exception.what());
             }

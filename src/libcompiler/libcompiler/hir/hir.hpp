@@ -70,6 +70,8 @@ namespace kieli::hir {
 
     enum class Expression_kind { place, value };
 
+    struct Error {};
+
     struct Mutability {
         Mutability_id id;
         kieli::Range  range;
@@ -221,12 +223,11 @@ namespace kieli::hir {
         };
 
         struct Hole {};
-
-        struct Error {};
     } // namespace expression
 
     struct Expression_variant
         : std::variant<
+              Error,
               kieli::Integer,
               kieli::Floating,
               kieli::Character,
@@ -248,8 +249,7 @@ namespace kieli::hir {
               expression::Addressof,
               expression::Dereference,
               expression::Defer,
-              expression::Hole,
-              expression::Error> {
+              expression::Hole> {
         using variant::variant, variant::operator=;
     };
 
@@ -311,12 +311,11 @@ namespace kieli::hir {
         struct Variable {
             Type_variable_id id;
         };
-
-        struct Error {};
     } // namespace type
 
     struct Type_variant
         : std::variant<
+              Error,
               type::Integer,
               type::Floating,
               type::Character,
@@ -330,14 +329,11 @@ namespace kieli::hir {
               type::Enumeration,
               type::Tuple,
               type::Parameterized,
-              type::Variable,
-              type::Error> {
+              type::Variable> {
         using variant::variant, variant::operator=;
     };
 
     namespace mutability {
-        using Concrete = kieli::Mutability;
-
         struct Parameterized {
             Template_parameter_tag tag;
         };
@@ -345,16 +341,10 @@ namespace kieli::hir {
         struct Variable {
             Mutability_variable_id id;
         };
-
-        struct Error {};
     } // namespace mutability
 
     struct Mutability_variant
-        : std::variant<
-              mutability::Concrete,
-              mutability::Parameterized,
-              mutability::Variable,
-              mutability::Error> {
+        : std::variant<Error, kieli::Mutability, mutability::Parameterized, mutability::Variable> {
         using variant::variant, variant::operator=;
     };
 

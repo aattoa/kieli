@@ -66,13 +66,13 @@ namespace {
         }
 
         auto operator()(utl::one_of<
+                        hir::Error,
                         hir::type::Integer,
                         hir::type::Floating,
                         hir::type::Character,
                         hir::type::Boolean,
                         hir::type::String,
-                        hir::type::Parameterized,
-                        hir::type::Error> auto const&) const -> bool
+                        hir::type::Parameterized> auto const&) const -> bool
         {
             return false;
         }

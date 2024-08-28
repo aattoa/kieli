@@ -16,12 +16,12 @@ auto kieli::query::document_id(Database& db, std::filesystem::path const& path)
 
 auto kieli::query::cst(Database& db, Document_id const source) -> Result<CST>
 {
-    // TODO: get rid of Compilation_failure
+    // TODO: Remove try-catch when libparse is fixed
     try {
         return parse(db, source);
     }
-    catch (Compilation_failure const&) {
-        return std::unexpected("cst query failed"s);
+    catch (std::exception const& exception) {
+        return std::unexpected(std::format("cst query failed: {}", exception.what()));
     }
 }
 

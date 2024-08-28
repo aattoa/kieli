@@ -7,11 +7,6 @@
 
 namespace kieli {
 
-    // Thrown when an unrecoverable error is encountered. To be removed.
-    struct Compilation_failure : std::exception {
-        [[nodiscard]] auto what() const noexcept -> char const* override;
-    };
-
     // Identifies a document.
     struct Document_id : utl::Vector_index<Document_id> {
         using Vector_index::Vector_index;
@@ -142,19 +137,17 @@ namespace kieli {
     // Add `diagnostic` to the document identified by `document_id`.
     auto add_diagnostic(Database& db, Document_id document_id, Diagnostic diagnostic) -> void;
 
+    // Add an error diagnostic to the document identified by `document_id`.
+    auto add_error(Database& db, Document_id document_id, Range range, std::string message) -> void;
+
+    // Construct an error diagnostic.
+    [[nodiscard]] auto error(Range range, std::string message) -> Diagnostic;
+
     // Format the diagnostics belonging to the document identified by `document_id`.
     [[nodiscard]] auto format_document_diagnostics(
         Database const& db,
         Document_id     document_id,
         cppdiag::Colors colors = cppdiag::Colors::none()) -> std::string;
-
-    // Emit `diagnostic` and terminate compilation by throwing `Compilation_failure`.
-    [[noreturn]] auto fatal_error(Database& db, Document_id document_id, Diagnostic diagnostic)
-        -> void;
-
-    // Emit a diagnostic with `message` and terminate compilation by throwing `Compilation_failure`.
-    [[noreturn]] auto fatal_error(
-        Database& db, Document_id document_id, Range range, std::string message) -> void;
 
     // Pooled string that is cheap to copy and compare.
     using Identifier = cpputil::mem::Stable_pool_string;

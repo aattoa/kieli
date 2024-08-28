@@ -63,10 +63,9 @@ namespace {
             return result;
         }
 
-        auto operator()(hir::mutability::Concrete const sub, hir::mutability::Concrete const super)
-            const -> bool
+        auto operator()(kieli::Mutability const sub, kieli::Mutability const super) const -> bool
         {
-            return (sub == super) || (sub == hir::mutability::Concrete::mut && allow_coercion());
+            return (sub == super) || (sub == kieli::Mutability::mut && allow_coercion());
         }
 
         auto operator()(hir::mutability::Variable const sub, hir::mutability::Variable const super)
@@ -265,21 +264,21 @@ namespace {
             return sub.id == super.id;
         }
 
-        auto operator()(hir::type::Error, hir::type::Error) const -> bool
+        auto operator()(hir::Error, hir::Error) const -> bool
         {
             return true;
         }
 
         template <class T>
             requires(!std::is_same_v<T, hir::type::Variable>)
-        auto operator()(hir::type::Error, T const&) const -> bool
+        auto operator()(hir::Error, T const&) const -> bool
         {
             return true;
         }
 
         template <class T>
             requires(!std::is_same_v<T, hir::type::Variable>)
-        auto operator()(T const&, hir::type::Error) const -> bool
+        auto operator()(T const&, hir::Error) const -> bool
         {
             return true;
         }

@@ -9,11 +9,12 @@ namespace {
     {
         auto path = extract_path(context, std::move(root));
         if (!path.head.is_upper()) {
-            kieli::fatal_error(
+            kieli::add_error(
                 context.db(),
                 context.document_id(),
                 context.up_to_current(path.head.range),
                 "Expected a type, but found a lowercase name");
+            throw std::runtime_error("fatal error"); // todo
         }
         if (auto template_arguments = parse_template_arguments(context)) {
             return cst::type::Template_application {

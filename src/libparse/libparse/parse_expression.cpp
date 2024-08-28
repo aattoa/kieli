@@ -423,11 +423,12 @@ namespace {
                     };
                     return extract_expression_path(context, std::move(root));
                 }
-                kieli::fatal_error(
+                kieli::add_error(
                     context.db(),
                     context.document_id(),
                     context.cst().types[type].range,
                     "Expected an expression, but found a type");
+                throw std::runtime_error("fatal error"); // todo
             });
     }
 

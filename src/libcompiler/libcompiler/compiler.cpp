@@ -2,11 +2,6 @@
 #include <libcompiler/compiler.hpp>
 #include <cpputil/io.hpp>
 
-auto kieli::Compilation_failure::what() const noexcept -> char const*
-{
-    return "kieli::Compilation_failure";
-}
-
 auto kieli::Position::advance_with(char const character) noexcept -> void
 {
     if (character == '\n') {
@@ -152,21 +147,19 @@ auto kieli::add_diagnostic(Database& db, Document_id const id, Diagnostic diagno
     db.documents.at(id).diagnostics.push_back(std::move(diagnostic));
 }
 
-auto kieli::fatal_error(Database& db, Document_id const id, Diagnostic diagnostic) -> void
-{
-    add_diagnostic(db, id, std::move(diagnostic));
-    throw Compilation_failure {};
-}
-
-auto kieli::fatal_error(Database& db, Document_id const id, Range const range, std::string message)
+auto kieli::add_error(Database& db, Document_id const id, Range const range, std::string message)
     -> void
 {
-    Diagnostic diagnostic {
+    add_diagnostic(db, id, error(range, std::move(message)));
+}
+
+auto kieli::error(Range const range, std::string message) -> Diagnostic
+{
+    return Diagnostic {
         .message  = std::move(message),
         .range    = range,
         .severity = Severity::error,
     };
-    fatal_error(db, id, std::move(diagnostic));
 }
 
 auto kieli::format_document_diagnostics(

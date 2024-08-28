@@ -9,21 +9,17 @@ namespace {
     {
         auto       db          = kieli::Database {};
         auto const document_id = kieli::test_document(db, std::move(text));
-        try {
-            auto       arena   = kieli::cst::Arena {};
-            auto       context = libparse::Context { arena, kieli::lex_state(db, document_id) };
-            auto const result  = libparse::require<parser>(context, expectation);
-            if (context.is_finished()) {
-                auto config = kieli::Format_configuration {};
-                auto state  = libformat::State { .config = config, .arena = arena };
-                libformat::format(state, result);
-                return std::move(state.output);
-            }
-            context.error_expected(expectation);
+        auto       arena       = kieli::cst::Arena {};
+        auto       context     = libparse::Context { arena, kieli::lex_state(db, document_id) };
+
+        auto const result = libparse::require<parser>(context, expectation);
+        if (context.is_finished()) {
+            auto config = kieli::Format_configuration {};
+            auto state  = libformat::State { .config = config, .arena = arena };
+            libformat::format(state, result);
+            return std::move(state.output);
         }
-        catch (kieli::Compilation_failure const&) {
-            return kieli::format_document_diagnostics(db, document_id);
-        }
+        context.error_expected(expectation);
     }
 } // namespace
 

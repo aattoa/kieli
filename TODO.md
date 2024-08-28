@@ -1,9 +1,7 @@
 # Kieli TODO
 
 ## liblex
-- Single-character operator tokens, glue in the parser
-- Integer types should be simple identifiers
-- Delay numeric literal parsing to libparse?
+- Single-character operator tokens, glue in the parser?
 
 ## libparse
 - `struct Parse_state`
@@ -17,6 +15,7 @@
 - Shunting yard?
 
 ## libresolve
+- Inject built in types
 - Unique zero-sized type for each function, coerce to function pointer type
 - Scope stack, scope id
 - Generate logs for rollback
@@ -24,6 +23,7 @@
 
 ## libcompiler
 - Document paths should always be absolute
+- Generic tree walkers
 - `enum class Phase { lex, parse, etc. }`
 - `enum class liblex::diagnostic`
 - `auto diag_code(Phase, std::size_t code) -> std::string`
@@ -56,6 +56,3 @@
 ## Look into for potential inspiration
 - Swift actors
 - Go generics
-
-## To remove
-- `kieli::Compilation_failure`
