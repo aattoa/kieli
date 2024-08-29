@@ -11,7 +11,7 @@
 - Error node, error recovery
 
 ## libdesugar
-- More tests
+- Tests
 - Shunting yard?
 
 ## libresolve
