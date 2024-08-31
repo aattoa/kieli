@@ -16,10 +16,10 @@ TEST("literals")
     CHECK_SIMPLE_PARSE("true");
     CHECK_SIMPLE_PARSE("false");
     CHECK_SIMPLE_PARSE("'x'");
-    CHECK_SIMPLE_PARSE("'\n'");
+    CHECK_SIMPLE_PARSE("'\\n'");
     CHECK_SIMPLE_PARSE("\"\"");
     CHECK_SIMPLE_PARSE("\"hello\"");
-    CHECK_SIMPLE_PARSE("\"hello,\tworld!\n\"");
+    CHECK_SIMPLE_PARSE("\"hello,\\tworld!\\n\"");
 }
 
 TEST("parenthesized")

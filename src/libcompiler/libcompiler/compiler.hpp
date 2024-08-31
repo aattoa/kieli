@@ -220,15 +220,7 @@ struct std::formatter<Literal> {
 
     static auto format(Literal const& literal, auto& context)
     {
-        if constexpr (std::is_same_v<Literal, kieli::Character>) {
-            return std::format_to(context.out(), "'{}'", literal.value);
-        }
-        else if constexpr (std::is_same_v<Literal, kieli::String>) {
-            return std::format_to(context.out(), "\"{}\"", literal.value);
-        }
-        else {
-            static_assert(false);
-        }
+        return std::format_to(context.out(), "{:?}", literal.value);
     }
 };
 

@@ -24,7 +24,7 @@ TEST("valid character literals")
 {
     CHECK_EQUAL(
         lex_success("'x' 'y' '\\t' '\\\\'"),
-        "(char: 'x'), (char: 'y'), (char: '\t'), (char: '\\')");
+        "(char: 'x'), (char: 'y'), (char: '\\t'), (char: '\\\\')");
 }
 
 TEST("unterminating character literal")
@@ -44,14 +44,14 @@ TEST("unrecognized escape sequence")
 
 TEST("quote-character literal")
 {
-    CHECK_EQUAL(lex_success("''' '\"'"), "(char: '''), (char: '\"')");
+    CHECK_EQUAL(lex_success("''' '\"'"), "(char: '\\''), (char: '\"')");
 }
 
 TEST("valid string literals")
 {
     CHECK_EQUAL(
         lex_success("\"test\t\\\",\", 'a', '\\\\'"),
-        "(str: \"test\t\",\"), ,, (char: 'a'), ,, (char: '\\')");
+        R"((str: "test\t\","), ,, (char: 'a'), ,, (char: '\\'))");
 }
 
 TEST("unterminating string literal")

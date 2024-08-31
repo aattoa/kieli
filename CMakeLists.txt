@@ -15,7 +15,7 @@ FetchContent_Declare(cppdiag
     GIT_TAG        c037929a4b8064870f3deda15e4dc1b3effa64f5)
 FetchContent_Declare(cpputil
     GIT_REPOSITORY https://github.com/aattoa/cpputil.git
-    GIT_TAG        5158407ff86284539cf565d2282a02ebe3cb9835)
+    GIT_TAG        6bc154d6ba019ee9be25f9666fcb2dcb7214b8dd)
 
 set(CPPARGS_BUILD_TESTS OFF)
 set(CPPDIAG_BUILD_TESTS OFF)

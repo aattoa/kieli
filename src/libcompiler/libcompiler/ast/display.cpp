@@ -7,7 +7,7 @@ namespace {
     struct Display_state {
         std::string  output;
         std::string  indent;
-        bool const   unicode = true;
+        bool         unicode = true;
         Arena const& arena;
     };
 
@@ -363,12 +363,7 @@ namespace {
 
     auto display_literal(Display_state& state, kieli::Character const& character) -> void
     {
-        if (std::isprint(static_cast<unsigned char>(character.value))) {
-            write_line(state, "character literal '{}'", character.value);
-        }
-        else {
-            write_line(state, "character literal {:#x}", static_cast<int>(character.value));
-        }
+        write_line(state, "character literal {:?}", character.value);
     }
 
     auto display_literal(Display_state& state, kieli::Boolean const& boolean) -> void
@@ -378,8 +373,7 @@ namespace {
 
     auto display_literal(Display_state& state, kieli::String const& string) -> void
     {
-        // todo: nonprintables
-        write_line(state, "string literal \"{}\"", string.value);
+        write_line(state, "string literal {:?}", string.value);
     }
 
     struct Expression_display_visitor {

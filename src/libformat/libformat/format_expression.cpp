@@ -53,11 +53,8 @@ namespace {
         template <kieli::literal Literal>
         auto operator()(Literal const& literal)
         {
-            if constexpr (std::is_same_v<Literal, kieli::String>) {
-                format(state, "\"{}\"", literal.value);
-            }
-            else if constexpr (std::is_same_v<Literal, kieli::Character>) {
-                format(state, "'{}'", literal.value);
+            if constexpr (utl::one_of<Literal, kieli::Character, kieli::String>) {
+                format(state, "{:?}", literal.value);
             }
             else {
                 format(state, "{}", literal.value);
