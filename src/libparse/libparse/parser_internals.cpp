@@ -17,18 +17,21 @@ auto libparse::Context::is_finished() -> bool
 
 auto libparse::Context::peek() -> Token
 {
-    if (m_token_index == m_cached_tokens.size()) {
-        return m_cached_tokens.emplace_back(kieli::lex(m_lex_state));
+    if (!m_next_token.has_value()) {
+        m_next_token = kieli::lex(m_lex_state);
     }
-    return m_cached_tokens[m_token_index];
+    return m_next_token.value();
 }
 
 auto libparse::Context::extract() -> Token
 {
-    Token token = peek();
-    ++m_token_index;
-    m_previous_token_range = token.range;
-    return token;
+    if (m_next_token.has_value()) {
+        Token token = m_next_token.value();
+        m_next_token.reset();
+        m_previous_token_range = token.range;
+        return token;
+    }
+    return kieli::lex(m_lex_state);
 }
 
 auto libparse::Context::try_extract(Token_type const type) -> std::optional<Token>
@@ -42,27 +45,6 @@ auto libparse::Context::require_extract(Token_type const type) -> Token
         return token.value();
     }
     error_expected(kieli::token_description(type));
-}
-
-auto libparse::Context::stage() const -> Stage
-{
-    return { .old_token_index = m_token_index };
-}
-
-auto libparse::Context::unstage(Stage const stage) -> void
-{
-    cpputil::always_assert(stage.old_token_index < m_cached_tokens.size());
-    m_token_index = stage.old_token_index;
-}
-
-auto libparse::Context::commit(Stage const stage) -> void
-{
-    if (stage.old_token_index == 0) {
-        auto const offset
-            = utl::safe_cast<decltype(m_cached_tokens)::difference_type>(m_token_index);
-        m_cached_tokens.erase(m_cached_tokens.begin(), m_cached_tokens.begin() + offset);
-        m_token_index = 0;
-    }
 }
 
 auto libparse::Context::error_expected(

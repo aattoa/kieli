@@ -10,10 +10,6 @@ namespace libparse {
 
     namespace cst = kieli::cst;
 
-    struct Stage {
-        std::size_t old_token_index {};
-    };
-
     struct Special_identifiers {
         kieli::Identifier plus;
         kieli::Identifier asterisk;
@@ -21,9 +17,8 @@ namespace libparse {
 
     class Context {
         kieli::Lex_state            m_lex_state;
+        std::optional<Token>        m_next_token;
         std::optional<kieli::Range> m_previous_token_range;
-        std::vector<Token>          m_cached_tokens;
-        std::size_t                 m_token_index {};
         cst::Arena&                 m_arena;
         Special_identifiers         m_special_identifiers;
     public:
@@ -43,15 +38,6 @@ namespace libparse {
 
         // Consume the current token if it matches `type`, otherwise emit an error.
         [[nodiscard]] auto require_extract(Token_type type) -> Token;
-
-        // Set up a token stage, which can later be unstaged or committed.
-        [[nodiscard]] auto stage() const -> Stage;
-
-        // Reset a token stage.
-        auto unstage(Stage stage) -> void;
-
-        // Commit to a parse; irreversibly consume every token extracted in `stage`.
-        auto commit(Stage stage) -> void;
 
         // Emit an error that describes an expectation failure:
         // Encountered `error_range` where `description` was expected.

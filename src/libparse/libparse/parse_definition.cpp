@@ -227,33 +227,29 @@ namespace {
         };
     }
 
-    auto dispatch_parse_definition(Context& context, Token const& token, Stage const stage)
-        -> std::optional<cst::Definition_variant>
+    auto dispatch_parse_definition(Context& context) -> std::optional<cst::Definition_variant>
     {
-        switch (token.type) {
-        case Token_type::fn:       return extract_function(context, token);
-        case Token_type::struct_:  return extract_structure(context, token);
-        case Token_type::enum_:    return extract_enumeration(context, token);
-        case Token_type::concept_: return extract_concept(context, token);
-        case Token_type::alias:    return extract_alias(context, token);
-        case Token_type::impl:     return extract_implementation(context, token);
-        case Token_type::module_:  return extract_submodule(context, token);
-        default:                   context.unstage(stage); return std::nullopt;
+        switch (context.peek().type) {
+        case Token_type::fn:       return extract_function(context, context.extract());
+        case Token_type::struct_:  return extract_structure(context, context.extract());
+        case Token_type::enum_:    return extract_enumeration(context, context.extract());
+        case Token_type::concept_: return extract_concept(context, context.extract());
+        case Token_type::alias:    return extract_alias(context, context.extract());
+        case Token_type::impl:     return extract_implementation(context, context.extract());
+        case Token_type::module_:  return extract_submodule(context, context.extract());
+        default:                   return std::nullopt;
         }
     }
 } // namespace
 
 auto libparse::parse_definition(Context& context) -> std::optional<cst::Definition>
 {
-    Stage const stage       = context.stage();
-    Token const first_token = context.extract();
-    return dispatch_parse_definition(context, first_token, stage)
-        .transform([&](cst::Definition_variant&& variant) {
-            context.commit(stage);
-            return cst::Definition {
-                .variant = std::move(variant),
-                .source  = context.document_id(),
-                .range   = context.up_to_current(first_token.range),
-            };
-        });
+    kieli::Range const anchor_range = context.peek().range;
+    return dispatch_parse_definition(context).transform([&](cst::Definition_variant&& variant) {
+        return cst::Definition {
+            .variant = std::move(variant),
+            .source  = context.document_id(),
+            .range   = context.up_to_current(anchor_range),
+        };
+    });
 }
