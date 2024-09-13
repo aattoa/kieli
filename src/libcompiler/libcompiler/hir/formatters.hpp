@@ -61,7 +61,6 @@ LIBRESOLVE_DECLARE_FORMATTER(kieli::hir::Mutability_id);
 LIBRESOLVE_DECLARE_FORMATTER(kieli::hir::Mutability);
 
 LIBRESOLVE_DECLARE_FORMATTER(kieli::hir::Function_parameter);
-LIBRESOLVE_DECLARE_FORMATTER(kieli::hir::Function_argument);
 
 template <class T>
     requires std::formattable<kieli::hir::dtl::With_arena<T>, char>
@@ -89,6 +88,11 @@ namespace kieli::hir::dtl {
         auto wrap(auto const& x) const
         {
             return With_arena { std::cref(arena), std::cref(x) };
+        }
+
+        auto operator()(hir::Wildcard const&) const
+        {
+            std::format_to(out, "_");
         }
 
         auto operator()(kieli::literal auto const& literal) const
@@ -187,11 +191,6 @@ namespace kieli::hir::dtl {
             std::format_to(out, "defer {}", wrap(defer.effect_expression));
         }
 
-        auto operator()(expression::Hole const&) const
-        {
-            std::format_to(out, R"(???)");
-        }
-
         auto operator()(Error const&) const
         {
             std::format_to(out, "ERROR-EXPRESSION");
@@ -213,7 +212,7 @@ namespace kieli::hir::dtl {
             std::format_to(out, "{}", literal);
         }
 
-        auto operator()(pattern::Wildcard const&) const
+        auto operator()(Wildcard const&) const
         {
             std::format_to(out, "_");
         }
@@ -431,14 +430,6 @@ LIBRESOLVE_DEFINE_FORMATTER(kieli::hir::Function_parameter)
         std::format_to(context.out(), " = {}", value.wrap(value->default_argument.value()));
     }
     return context.out();
-}
-
-LIBRESOLVE_DEFINE_FORMATTER(kieli::hir::Function_argument)
-{
-    if (value->name.has_value()) {
-        std::format_to(context.out(), "{} = ", value->name.value());
-    }
-    return std::format_to(context.out(), "{}", value.wrap(value->expression));
 }
 
 #undef LIBRESOLVE_DECLARE_FORMATTER

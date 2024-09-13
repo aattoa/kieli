@@ -12,9 +12,9 @@ target_sources(libcompiler
     PRIVATE libcompiler/hir/formatters.hpp
     PRIVATE libcompiler/hir/hir.cpp
     PRIVATE libcompiler/hir/hir.hpp
+    PRIVATE libcompiler/token/token-x-macro-table.hpp
     PRIVATE libcompiler/token/token.cpp
     PRIVATE libcompiler/token/token.hpp
-    PRIVATE libcompiler/token/token-x-macro-table.hpp
     PRIVATE libcompiler/tree_fwd.hpp)
 
 target_include_directories(libcompiler

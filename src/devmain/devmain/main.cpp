@@ -117,7 +117,8 @@ namespace {
 
             kieli::add_to_history(input.value().c_str());
 
-            auto       db          = kieli::Database {};
+            kieli::Database db { .manifest { .root_path = std::filesystem::current_path() } };
+
             auto const document_id = kieli::test_document(db, std::move(input).value());
 
             try {

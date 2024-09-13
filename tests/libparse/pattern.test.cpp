@@ -43,6 +43,9 @@ TEST("name")
 
 TEST("constructor")
 {
+    CHECK_SIMPLE_PARSE("X");
+    CHECK_SIMPLE_PARSE("X(a, b, c)");
+    CHECK_SIMPLE_PARSE("X { a, b = 5, c }");
     CHECK_SIMPLE_PARSE("X::X");
     CHECK_SIMPLE_PARSE("X::X(a, b, c)");
     CHECK_SIMPLE_PARSE("X::X { a, b = 5, c }");

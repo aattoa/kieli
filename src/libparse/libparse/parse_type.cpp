@@ -4,45 +4,6 @@
 using namespace libparse;
 
 namespace {
-    auto extract_type_path(Context& context, std::optional<cst::Path_root>&& root)
-        -> cst::Type_variant
-    {
-        auto path = extract_path(context, std::move(root));
-        if (!path.head.is_upper()) {
-            kieli::add_error(
-                context.db(),
-                context.document_id(),
-                context.up_to_current(path.head.range),
-                "Expected a type, but found a lowercase name");
-            throw std::runtime_error("fatal error"); // todo
-        }
-        if (auto template_arguments = parse_template_arguments(context)) {
-            return cst::type::Template_application {
-                .template_arguments = std::move(template_arguments.value()),
-                .path               = std::move(path),
-            };
-        }
-        return cst::type::Typename { std::move(path) };
-    }
-
-    auto extract_typename(Context& context, Stage const stage) -> cst::Type_variant
-    {
-        context.unstage(stage);
-        return extract_type_path(context, {});
-    }
-
-    auto extract_global_typename(Context& context, Token const& global) -> cst::Type_variant
-    {
-        return extract_type_path(
-            context,
-            cst::Path_root {
-                .variant = cst::Path_root_global { context.token(global) },
-                .double_colon_token
-                = context.token(context.require_extract(Token_type::double_colon)),
-                .range = global.range,
-            });
-    }
-
     auto extract_tuple(Context& context, Token const& open_parenthesis) -> cst::Type_variant
     {
         auto        types = extract_comma_separated_zero_or_more<parse_type, "a type">(context);
@@ -140,65 +101,39 @@ namespace {
         };
     }
 
-    auto dispatch_parse_type(Context& context, Token const& token, Stage const stage)
-        -> std::optional<cst::Type_variant>
+    auto dispatch_parse_type(Context& context) -> std::optional<cst::Type_variant>
     {
-        switch (token.type) {
-        case Token_type::underscore:   return cst::Wildcard { context.token(token) };
-        case Token_type::exclamation:  return cst::type::Never { context.token(token) };
-        case Token_type::paren_open:   return extract_tuple(context, token);
-        case Token_type::bracket_open: return extract_array_or_slice(context, token);
-        case Token_type::fn:           return extract_function(context, token);
-        case Token_type::typeof_:      return extract_typeof(context, token);
-        case Token_type::impl:         return extract_implementation(context, token);
-        case Token_type::ampersand:    return extract_reference(context, token);
-        case Token_type::asterisk:     return extract_pointer(context, token);
-        case Token_type::upper_name:   [[fallthrough]];
-        case Token_type::lower_name:   return extract_typename(context, stage);
-        case Token_type::global:       return extract_global_typename(context, token);
-        default:                       context.unstage(stage); return std::nullopt;
+        switch (context.peek().type) {
+        case Token_type::underscore:   return cst::Wildcard { context.token(context.extract()) };
+        case Token_type::exclamation:  return cst::type::Never { context.token(context.extract()) };
+        case Token_type::paren_open:   return extract_tuple(context, context.extract());
+        case Token_type::bracket_open: return extract_array_or_slice(context, context.extract());
+        case Token_type::fn:           return extract_function(context, context.extract());
+        case Token_type::typeof_:      return extract_typeof(context, context.extract());
+        case Token_type::impl:         return extract_implementation(context, context.extract());
+        case Token_type::ampersand:    return extract_reference(context, context.extract());
+        case Token_type::asterisk:     return extract_pointer(context, context.extract());
+        default:                       return parse_simple_path(context);
         }
-    }
-
-    auto try_extract_path(Context& context, cst::Type_id const type) -> cst::Type_id
-    {
-        Stage const stage = context.stage();
-
-        if (auto const double_colon = context.try_extract(Token_type::double_colon)) {
-            cst::Path_root root {
-                .variant            = type,
-                .double_colon_token = context.token(double_colon.value()),
-                .range              = context.cst().types[type].range,
-            };
-            cst::Path path = extract_path(context, std::move(root));
-
-            if (path.head.is_upper()) {
-                return context.cst().types.push(
-                    std::invoke([&]() -> cst::Type_variant {
-                        if (auto template_arguments = parse_template_arguments(context)) {
-                            return cst::type::Template_application {
-                                .template_arguments = std::move(template_arguments.value()),
-                                .path               = std::move(path),
-                            };
-                        }
-                        return cst::type::Typename { std::move(path) };
-                    }),
-                    context.up_to_current(context.cst().types[type].range));
-            }
-            // Not a type path, retreat
-            context.unstage(stage);
-        }
-        return type;
     }
 } // namespace
 
+auto libparse::parse_type_root(Context& context) -> std::optional<cst::Type_id>
+{
+    kieli::Range const anchor_range = context.peek().range;
+    return dispatch_parse_type(context).transform([&](cst::Type_variant&& variant) {
+        return context.cst().types.push(std::move(variant), context.up_to_current(anchor_range));
+    });
+}
+
 auto libparse::parse_type(Context& context) -> std::optional<cst::Type_id>
 {
-    Stage const stage       = context.stage();
-    Token const first_token = context.extract();
-    return dispatch_parse_type(context, first_token, stage)
-        .transform([&](cst::Type_variant&& variant) -> cst::Type_id {
-            kieli::Range const range = context.up_to_current(first_token.range);
-            return try_extract_path(context, context.cst().types.push(std::move(variant), range));
-        });
+    return parse_type_root(context).transform([&](cst::Type_id const type_id) {
+        if (context.peek().type != Token_type::double_colon) {
+            return type_id;
+        }
+        kieli::Range const range = context.cst().types[type_id].range;
+        cst::Path          path  = extract_path(context, type_id);
+        return context.cst().types.push(std::move(path), context.up_to_current(range));
+    });
 }

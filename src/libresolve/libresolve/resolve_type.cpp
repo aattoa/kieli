@@ -33,20 +33,9 @@ namespace {
             cpputil::todo();
         }
 
-        auto operator()(ast::type::Typename const& type) -> hir::Type
+        auto operator()(ast::Path const&) -> hir::Type
         {
-            if (type.path.is_simple_name()) {
-                if (auto* const bind = scope.find_type(type.path.head.identifier)) {
-                    return { bind->type, this_type.range };
-                }
-            }
-            // TODO: lookup
-            kieli::add_error(
-                context.db,
-                scope.document_id(),
-                this_type.range,
-                "Use of an undeclared identifier");
-            return { context.constants.error_type, this_type.range };
+            cpputil::todo();
         }
 
         auto operator()(ast::type::Tuple const& tuple) -> hir::Type
@@ -114,11 +103,6 @@ namespace {
         }
 
         auto operator()(ast::type::Implementation const&) -> hir::Type
-        {
-            cpputil::todo();
-        }
-
-        auto operator()(ast::type::Template_application const&) -> hir::Type
         {
             cpputil::todo();
         }

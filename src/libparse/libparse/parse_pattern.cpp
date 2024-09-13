@@ -6,7 +6,7 @@ using namespace libparse;
 namespace {
     auto extract_tuple(Context& context, Token const& paren_open) -> cst::Pattern_variant
     {
-        auto patterns = extract_comma_separated_zero_or_more<parse_pattern, "a pattern ">(context);
+        auto patterns = extract_comma_separated_zero_or_more<parse_pattern, "a pattern">(context);
         Token const paren_close = context.require_extract(Token_type::paren_close);
         if (patterns.elements.size() == 1) {
             return cst::pattern::Parenthesized { {
@@ -36,38 +36,6 @@ namespace {
         context.error_expected(
             patterns.elements.empty() ? "a slice element pattern or a ']'" : "a ',' or a ']'");
     };
-
-    auto parse_constructor_name(Context& context) -> std::optional<cst::Path>
-    {
-        // TODO: cleanup
-        switch (context.peek().type) {
-        case Token_type::upper_name:
-        case Token_type::lower_name: return extract_path(context, std::nullopt);
-        case Token_type::global:
-        {
-            auto const global       = context.extract();
-            auto const double_colon = context.require_extract(Token_type::double_colon);
-            return extract_path(
-                context,
-                cst::Path_root {
-                    .variant            = cst::Path_root_global { context.token(global) },
-                    .double_colon_token = context.token(double_colon),
-                    .range              = global.range,
-                });
-        }
-        default:
-            return parse_type(context).transform([&](cst::Type_id const type) {
-                Token const double_colon = context.require_extract(Token_type::double_colon);
-                return extract_path(
-                    context,
-                    cst::Path_root {
-                        .variant            = type,
-                        .double_colon_token = context.token(double_colon),
-                        .range              = context.cst().types[type].range,
-                    });
-            });
-        }
-    }
 
     auto parse_field_pattern(Context& context) -> std::optional<cst::pattern::Field>
     {
@@ -101,23 +69,20 @@ namespace {
         return cst::pattern::Unit_constructor {};
     }
 
-    auto extract_name(Context& context, Stage const stage) -> cst::Pattern_variant
+    auto extract_name(Context& context) -> cst::Pattern_variant
     {
-        // TODO: cleanup
-        context.unstage(stage);
         auto mutability = parse_mutability(context);
 
         std::optional<kieli::Lower> name;
         if (!mutability.has_value()) {
-            if (auto constructor_name = parse_constructor_name(context)) {
-                if (!constructor_name.value().is_simple_name()) {
+            if (auto path = parse_complex_path(context)) {
+                if (path.value().is_upper() || !path.value().is_unqualified()) {
                     return cst::pattern::Constructor {
-                        .path = std::move(constructor_name.value()),
+                        .path = std::move(path.value()),
                         .body = extract_constructor_body(context),
                     };
                 }
-                cpputil::always_assert(!constructor_name.value().head.is_upper());
-                name = kieli::Lower { constructor_name.value().head };
+                name = kieli::Lower { path.value().head().name };
             }
         }
         if (!name.has_value()) {
@@ -129,11 +94,10 @@ namespace {
         };
     };
 
-    auto extract_constructor_path(Context& context, Stage const stage) -> cst::Pattern_variant
+    auto extract_constructor_path(Context& context) -> cst::Pattern_variant
     {
-        context.unstage(stage);
         return cst::pattern::Constructor {
-            .path = require<parse_constructor_name>(context, "a constructor name"),
+            .path = require<parse_complex_path>(context, "a constructor name"),
             .body = extract_constructor_body(context),
         };
     };
@@ -148,39 +112,38 @@ namespace {
         };
     }
 
-    auto dispatch_parse_pattern(Context& context, Token const& token, Stage const stage)
-        -> std::optional<cst::Pattern_variant>
+    auto dispatch_parse_pattern(Context& context) -> std::optional<cst::Pattern_variant>
     {
-        switch (token.type) {
-        case Token_type::underscore:        return cst::Wildcard { context.token(token) };
-        case Token_type::integer_literal:   return token.value_as<kieli::Integer>();
-        case Token_type::floating_literal:  return token.value_as<kieli::Floating>();
-        case Token_type::character_literal: return token.value_as<kieli::Character>();
-        case Token_type::boolean_literal:   return token.value_as<kieli::Boolean>();
-        case Token_type::string_literal:    return token.value_as<kieli::String>();
-        case Token_type::paren_open:        return extract_tuple(context, token);
-        case Token_type::bracket_open:      return extract_slice(context, token);
-        case Token_type::lower_name:        [[fallthrough]];
-        case Token_type::mut:               return extract_name(context, stage);
-        case Token_type::upper_name:        return extract_constructor_path(context, stage);
-        case Token_type::double_colon:      return extract_abbreviated_constructor(context, token);
-        default:                            context.unstage(stage); return std::nullopt;
+        switch (context.peek().type) {
+        case Token_type::underscore:        return cst::Wildcard { context.token(context.extract()) };
+        case Token_type::integer_literal:   return context.extract().value_as<kieli::Integer>();
+        case Token_type::floating_literal:  return context.extract().value_as<kieli::Floating>();
+        case Token_type::character_literal: return context.extract().value_as<kieli::Character>();
+        case Token_type::boolean_literal:   return context.extract().value_as<kieli::Boolean>();
+        case Token_type::string_literal:    return context.extract().value_as<kieli::String>();
+        case Token_type::paren_open:        return extract_tuple(context, context.extract());
+        case Token_type::bracket_open:      return extract_slice(context, context.extract());
+        case Token_type::lower_name:
+        case Token_type::mut:
+        case Token_type::immut:             return extract_name(context);
+        case Token_type::upper_name:        return extract_constructor_path(context);
+        case Token_type::double_colon:
+            return extract_abbreviated_constructor(context, context.extract());
+        default: return std::nullopt;
         }
     }
 
     auto parse_potentially_aliased_pattern(Context& context) -> std::optional<cst::Pattern_variant>
     {
-        Stage const stage       = context.stage();
-        Token const first_token = context.extract();
-        return dispatch_parse_pattern(context, first_token, stage)
-            .transform([&](cst::Pattern_variant variant) -> cst::Pattern_variant {
+        kieli::Range const anchor_range = context.peek().range;
+        return dispatch_parse_pattern(context).transform(
+            [&](cst::Pattern_variant variant) -> cst::Pattern_variant {
                 if (auto const as_keyword = context.try_extract(Token_type::as)) {
+                    kieli::Range const range(anchor_range.start, as_keyword.value().range.stop);
                     return cst::pattern::Alias {
-                        .mutability = parse_mutability(context),
-                        .name       = extract_lower_name(context, "a pattern alias"),
-                        .pattern    = context.cst().patterns.push(
-                            std::move(variant),
-                            kieli::Range(first_token.range.start, as_keyword.value().range.stop)),
+                        .mutability       = parse_mutability(context),
+                        .name             = extract_lower_name(context, "a pattern alias"),
+                        .pattern          = context.cst().patterns.push(std::move(variant), range),
                         .as_keyword_token = context.token(as_keyword.value()),
                     };
                 }

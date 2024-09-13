@@ -46,14 +46,12 @@ namespace libformat {
     auto format(State&, cst::Wildcard const&) -> void;
     auto format(State&, cst::Path const&) -> void;
     auto format(State&, cst::Mutability const&) -> void;
-    auto format(State&, cst::Concept_reference const&) -> void;
     auto format(State&, cst::pattern::Field const&) -> void;
     auto format(State&, cst::Struct_field_initializer const&) -> void;
     auto format(State&, cst::definition::Field const&) -> void;
     auto format(State&, cst::Template_arguments const&) -> void;
     auto format(State&, cst::Template_parameter const&) -> void;
     auto format(State&, cst::Template_parameters const&) -> void;
-    auto format(State&, cst::Function_argument const&) -> void;
     auto format(State&, cst::Function_arguments const&) -> void;
     auto format(State&, cst::Function_parameter const&) -> void;
     auto format(State&, cst::Function_parameters const&) -> void;

@@ -144,11 +144,11 @@ namespace libresolve {
         ast::Type const&    type) -> hir::Type;
 
     auto resolve_concept_reference(
-        Context&                      context,
-        Inference_state&              state,
-        Scope&                        scope,
-        hir::Environment_id           environment,
-        ast::Concept_reference const& concept_reference) -> hir::Concept_reference;
+        Context&            context,
+        Inference_state&    state,
+        Scope&              scope,
+        hir::Environment_id environment,
+        ast::Path const&    path) -> hir::Concept_id;
 
     // Check whether a type variable with `tag` occurs in `type`.
     auto occurs_check(

@@ -13,6 +13,11 @@ namespace {
             return std::visit(*this, context.cst.types[parenthesized.type.value].variant);
         }
 
+        auto operator()(cst::Path const& path) -> ast::Type_variant
+        {
+            return context.desugar(path);
+        }
+
         auto operator()(cst::Wildcard const& wildcard) -> ast::Type_variant
         {
             return context.desugar(wildcard);
@@ -21,11 +26,6 @@ namespace {
         auto operator()(cst::type::Never const&) -> ast::Type_variant
         {
             return ast::type::Never {};
-        }
-
-        auto operator()(cst::type::Typename const& type) -> ast::Type_variant
-        {
-            return ast::type::Typename { .path = context.desugar(type.path) };
         }
 
         auto operator()(cst::type::Tuple const& tuple) -> ast::Type_variant
@@ -86,14 +86,6 @@ namespace {
         auto operator()(cst::type::Implementation const& implementation) -> ast::Type_variant
         {
             return ast::type::Implementation { context.desugar(implementation.concepts.elements) };
-        }
-
-        auto operator()(cst::type::Template_application const& application) -> ast::Type_variant
-        {
-            return ast::type::Template_application {
-                .arguments = context.desugar(application.template_arguments.value.elements),
-                .path      = context.desugar(application.path),
-            };
         }
     };
 } // namespace

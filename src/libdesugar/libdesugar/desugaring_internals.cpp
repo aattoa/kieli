@@ -47,14 +47,6 @@ auto libdesugar::Context::desugar(cst::Type_id const id) -> ast::Type_id
     return ast.types.push(deref_desugar(id));
 }
 
-auto libdesugar::Context::desugar(cst::Function_argument const& argument) -> ast::Function_argument
-{
-    return ast::Function_argument {
-        .expression = desugar(argument.expression),
-        .name       = argument.name.transform([](auto const& syntax) { return syntax.name; }),
-    };
-}
-
 auto libdesugar::Context::desugar(cst::Wildcard const& wildcard) -> ast::Wildcard
 {
     return ast::Wildcard { .range = cst.tokens[wildcard.underscore_token].range };
@@ -107,24 +99,13 @@ auto libdesugar::Context::desugar(cst::Path_segment const& segment) -> ast::Path
 auto libdesugar::Context::desugar(cst::Path const& path) -> ast::Path
 {
     auto const root_visitor = utl::Overload {
+        [](std::monostate) { return std::monostate {}; },
         [](cst::Path_root_global const&) { return ast::Path_root_global {}; },
         [&](cst::Type_id const type) { return desugar(type); },
     };
     return ast::Path {
-        .segments = desugar(path.segments.elements),
-        .root     = path.root.transform([&](cst::Path_root const& root) {
-            return std::visit<ast::Path_root>(root_visitor, root.variant);
-        }),
-        .head = path.head,
-    };
-}
-
-auto libdesugar::Context::desugar(cst::Concept_reference const& reference) -> ast::Concept_reference
-{
-    return ast::Concept_reference {
-        .template_arguments = reference.template_arguments.transform(desugar()),
-        .path               = desugar(reference.path),
-        .range              = reference.range,
+        .root     = std::visit<ast::Path_root>(root_visitor, path.root),
+        .segments = desugar(path.segments),
     };
 }
 

@@ -16,7 +16,7 @@ namespace {
         "let",    "mut",      "immut", "if",    "else",   "elif",    "for",    "in",     "while",
         "loop",   "continue", "break", "match", "ret",    "discard", "fn",     "as",     "enum",
         "struct", "concept",  "impl",  "alias", "import", "export",  "module", "sizeof", "typeof",
-        "unsafe", "mov",      "meta",  "where", "dyn",    "macro",   "global", "defer",
+        "mv",     "where",    "dyn",   "macro", "global", "defer",
     });
 } // namespace
 

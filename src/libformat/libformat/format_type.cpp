@@ -12,20 +12,14 @@ namespace {
             format(state, wildcard);
         }
 
+        auto operator()(cst::Path const& path)
+        {
+            format(state, path);
+        }
+
         auto operator()(cst::type::Never const&)
         {
             format(state, "!");
-        }
-
-        auto operator()(cst::type::Typename const& type)
-        {
-            format(state, type.path);
-        }
-
-        auto operator()(cst::type::Template_application const& application)
-        {
-            format(state, application.path);
-            format(state, application.template_arguments);
         }
 
         auto operator()(cst::type::Parenthesized const& parenthesized)

@@ -73,8 +73,11 @@ namespace libparse {
         [[nodiscard]] auto document_id() const -> kieli::Document_id;
     };
 
-    auto extract_path(Context&, std::optional<cst::Path_root>&&) -> cst::Path;
-    auto extract_concept_references(Context&) -> cst::Separated_sequence<cst::Concept_reference>;
+    auto parse_simple_path_root(Context&) -> std::optional<cst::Path_root>;
+    auto parse_simple_path(Context&) -> std::optional<cst::Path>;
+    auto parse_complex_path(Context&) -> std::optional<cst::Path>;
+    auto extract_path(Context&, cst::Path_root) -> cst::Path;
+    auto extract_concept_references(Context&) -> cst::Separated_sequence<cst::Path>;
 
     auto parse_block_expression(Context&) -> std::optional<cst::Expression_id>;
     auto parse_expression(Context&) -> std::optional<cst::Expression_id>;
@@ -90,12 +93,11 @@ namespace libparse {
     auto parse_function_parameters(Context&) -> std::optional<cst::Function_parameters>;
     auto parse_function_parameter(Context&) -> std::optional<cst::Function_parameter>;
     auto parse_function_arguments(Context&) -> std::optional<cst::Function_arguments>;
-    auto parse_function_argument(Context&) -> std::optional<cst::Function_argument>;
 
-    auto parse_concept_reference(Context&) -> std::optional<cst::Concept_reference>;
-    auto parse_type_annotation(Context&) -> std::optional<cst::Type_annotation>;
     auto parse_definition(Context&) -> std::optional<cst::Definition>;
     auto parse_mutability(Context&) -> std::optional<cst::Mutability>;
+    auto parse_type_annotation(Context&) -> std::optional<cst::Type_annotation>;
+    auto parse_type_root(Context&) -> std::optional<cst::Type_id>;
     auto parse_type(Context&) -> std::optional<cst::Type_id>;
 
     template <class Function>
@@ -189,15 +191,13 @@ namespace libparse {
     constexpr auto parse_comma_separated_one_or_more
         = parse_separated_one_or_more<parser, description, Token_type::comma>;
 
+    auto name_from_token(Token const& token) -> kieli::Name;
+
     template <Token_type type, std::derived_from<kieli::Name> Name>
     auto parse_name(Context& context) -> std::optional<Name>
     {
-        return context.try_extract(type).transform([](Token const& token) {
-            return Name { kieli::Name {
-                .identifier = token.value_as<kieli::Identifier>(),
-                .range      = token.range,
-            } };
-        });
+        return context.try_extract(type).transform(
+            [](Token const& token) { return Name { name_from_token(token) }; });
     }
 
     template <Token_type type, std::derived_from<kieli::Name> Name>

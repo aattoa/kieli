@@ -23,7 +23,6 @@ namespace {
         { "\\", Token_type::lambda },
         { "<-", Token_type::left_arrow },
         { "->", Token_type::right_arrow },
-        { R"(???)", Token_type::hole },
     });
 
     constexpr auto keyword_token_map = std::to_array<std::pair<std::string_view, Token_type>>({
@@ -53,9 +52,7 @@ namespace {
         { "module", Token_type::module_ },
         { "sizeof", Token_type::sizeof_ },
         { "typeof", Token_type::typeof_ },
-        { "unsafe", Token_type::unsafe },
-        { "mov", Token_type::mov },
-        { "meta", Token_type::meta },
+        { "mv", Token_type::mv },
         { "where", Token_type::where },
         { "immut", Token_type::immut },
         { "dyn", Token_type::dyn },

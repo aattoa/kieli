@@ -61,6 +61,16 @@ namespace {
             }
         }
 
+        auto operator()(cst::Wildcard const& wildcard)
+        {
+            format(state, wildcard);
+        }
+
+        auto operator()(cst::Path const& path)
+        {
+            format(state, path);
+        }
+
         auto operator()(cst::expression::Block const& block)
         {
             format_regular_block(block);
@@ -101,11 +111,6 @@ namespace {
         {
             format(state, call.invocable);
             format(state, call.arguments);
-        }
-
-        auto operator()(cst::expression::Unit_initializer const& initializer)
-        {
-            format(state, initializer.constructor_path);
         }
 
         auto operator()(cst::expression::Tuple_initializer const& initializer)
@@ -152,17 +157,6 @@ namespace {
             format(state, "{}}}", state.newline());
         }
 
-        auto operator()(cst::expression::Variable const& variable)
-        {
-            format(state, variable.path);
-        }
-
-        auto operator()(cst::expression::Unsafe const& unsafe)
-        {
-            format(state, "unsafe ");
-            format(state, unsafe.expression);
-        }
-
         auto operator()(cst::expression::Sizeof const& sizeof_)
         {
             format(state, "sizeof(");
@@ -172,7 +166,7 @@ namespace {
 
         auto operator()(cst::expression::Move const& move)
         {
-            format(state, "mov ");
+            format(state, "mv ");
             format(state, move.place_expression);
         }
 
@@ -231,13 +225,6 @@ namespace {
             format(state, dereference.reference_expression);
         }
 
-        auto operator()(cst::expression::Meta const& meta)
-        {
-            format(state, "meta(");
-            format(state, meta.expression.value);
-            format(state, ")");
-        }
-
         auto operator()(cst::expression::Type_cast const& cast)
         {
             format(state, cast.base_expression);
@@ -250,12 +237,6 @@ namespace {
             format(state, ascription.base_expression);
             format(state, ": ");
             format(state, ascription.ascribed_type);
-        }
-
-        auto operator()(cst::expression::Template_application const& application)
-        {
-            format(state, application.path);
-            format(state, application.template_arguments);
         }
 
         auto operator()(cst::expression::Discard const& discard)
@@ -340,11 +321,6 @@ namespace {
         auto operator()(cst::expression::Continue const&)
         {
             format(state, "continue");
-        }
-
-        auto operator()(cst::expression::Hole const&)
-        {
-            format(state, R"(???)");
         }
     };
 } // namespace

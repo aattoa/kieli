@@ -25,53 +25,34 @@ namespace {
 
         auto operator()(kieli::Integer const& integer) -> hir::Pattern
         {
-            return {
-                integer,
-                state.fresh_integral_type_variable(context.hir, this_pattern.range).id,
-                this_pattern.range,
-            };
+            hir::Type type = state.fresh_integral_type_variable(context.hir, this_pattern.range);
+            return { integer, type.id, this_pattern.range };
         }
 
         auto operator()(kieli::Floating const& floating) -> hir::Pattern
         {
-            return {
-                floating,
-                context.constants.floating_type,
-                this_pattern.range,
-            };
+            return { floating, context.constants.floating_type, this_pattern.range };
         }
 
         auto operator()(kieli::Character const& character) -> hir::Pattern
         {
-            return {
-                character,
-                context.constants.character_type,
-                this_pattern.range,
-            };
+            return { character, context.constants.character_type, this_pattern.range };
         }
 
         auto operator()(kieli::Boolean const& boolean) -> hir::Pattern
         {
-            return {
-                boolean,
-                context.constants.boolean_type,
-                this_pattern.range,
-            };
+            return { boolean, context.constants.boolean_type, this_pattern.range };
         }
 
         auto operator()(kieli::String const& string) -> hir::Pattern
         {
-            return {
-                string,
-                context.constants.string_type,
-                this_pattern.range,
-            };
+            return { string, context.constants.string_type, this_pattern.range };
         }
 
         auto operator()(ast::Wildcard const&) -> hir::Pattern
         {
             return {
-                hir::pattern::Wildcard {},
+                hir::Wildcard {},
                 state.fresh_general_type_variable(context.hir, this_pattern.range).id,
                 this_pattern.range,
             };
@@ -111,14 +92,13 @@ namespace {
             hir::Mutability const mutability = resolve_mutability(context, scope, alias.mutability);
             hir::Local_variable_tag const tag = context.tags.fresh_local_variable_tag();
 
-            scope.bind_variable(
-                alias.name.identifier,
-                Variable_bind {
-                    .name       = alias.name,
-                    .type       = pattern.type,
-                    .mutability = mutability,
-                    .tag        = tag,
-                });
+            Variable_bind bind {
+                .name       = alias.name,
+                .type       = pattern.type,
+                .mutability = mutability,
+                .tag        = tag,
+            };
+            scope.bind_variable(alias.name.identifier, std::move(bind));
 
             return {
                 hir::pattern::Alias {

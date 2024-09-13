@@ -18,59 +18,9 @@ namespace kieli::hir {
         using Explicit::Explicit;
     };
 
-    struct Expression_id : utl::Vector_index<Expression_id> {
-        using Vector_index::Vector_index;
-    };
-
-    struct Pattern_id : utl::Vector_index<Pattern_id> {
-        using Vector_index::Vector_index;
-    };
-
-    struct Type_id : utl::Vector_index<Type_id> {
-        using Vector_index::Vector_index;
-    };
-
-    struct Mutability_id : utl::Vector_index<Mutability_id> {
-        using Vector_index::Vector_index;
-    };
-
-    struct Type_variable_id : utl::Vector_index<Type_variable_id> {
-        using Vector_index::Vector_index;
-    };
-
-    struct Mutability_variable_id : utl::Vector_index<Mutability_variable_id> {
-        using Vector_index::Vector_index;
-    };
-
-    struct Module_id : utl::Vector_index<Module_id> {
-        using Vector_index::Vector_index;
-    };
-
-    struct Environment_id : utl::Vector_index<Environment_id> {
-        using Vector_index::Vector_index;
-    };
-
-    struct Function_id : utl::Vector_index<Function_id> {
-        using Vector_index::Vector_index;
-    };
-
-    struct Enumeration_id : utl::Vector_index<Enumeration_id> {
-        using Vector_index::Vector_index;
-    };
-
-    struct Alias_id : utl::Vector_index<Alias_id> {
-        using Vector_index::Vector_index;
-    };
-
-    struct Concept_id : utl::Vector_index<Concept_id> {
-        using Vector_index::Vector_index;
-    };
-
-    enum class Type_variable_kind { general, integral };
-
-    enum class Expression_kind { place, value };
-
     struct Error {};
+
+    struct Wildcard {};
 
     struct Mutability {
         Mutability_id id;
@@ -82,24 +32,12 @@ namespace kieli::hir {
         kieli::Range range;
     };
 
-    struct Concept_reference {
-        Concept_id   id;
-        kieli::Upper name;
-    };
-
     struct Match_case {
         Pattern_id    pattern;
         Expression_id expression;
     };
 
-    struct Function_argument {
-        Expression_id               expression;
-        std::optional<kieli::Lower> name;
-    };
-
     namespace pattern {
-        struct Wildcard {};
-
         struct Tuple {
             std::vector<Pattern> field_patterns;
         };
@@ -134,7 +72,7 @@ namespace kieli::hir {
               kieli::Character,
               kieli::Boolean,
               kieli::String,
-              pattern::Wildcard,
+              Wildcard,
               pattern::Tuple,
               pattern::Slice,
               pattern::Name,
@@ -195,14 +133,14 @@ namespace kieli::hir {
         };
 
         struct Indirect_function_call {
-            Expression_id                  invocable;
-            std::vector<Function_argument> arguments;
+            Expression_id              invocable;
+            std::vector<Expression_id> arguments;
         };
 
         struct Direct_function_call {
-            kieli::Lower                   function_name;
-            Function_id                    function_id;
-            std::vector<Function_argument> arguments;
+            kieli::Lower               function_name;
+            Function_id                function_id;
+            std::vector<Expression_id> arguments;
         };
 
         struct Sizeof {
@@ -221,13 +159,12 @@ namespace kieli::hir {
         struct Defer {
             Expression_id effect_expression;
         };
-
-        struct Hole {};
     } // namespace expression
 
     struct Expression_variant
         : std::variant<
               Error,
+              Wildcard,
               kieli::Integer,
               kieli::Floating,
               kieli::Character,
@@ -248,8 +185,7 @@ namespace kieli::hir {
               expression::Sizeof,
               expression::Addressof,
               expression::Dereference,
-              expression::Defer,
-              expression::Hole> {
+              expression::Defer> {
         using variant::variant, variant::operator=;
     };
 
@@ -352,15 +288,11 @@ namespace kieli::hir {
         using variant::variant, variant::operator=;
     };
 
-    struct Wildcard {
-        kieli::Range range;
-    };
-
     struct Template_type_parameter {
         using Default = std::variant<Type, Wildcard>;
-        std::vector<Concept_reference> concepts;
-        kieli::Upper                   name;
-        std::optional<Default>         default_argument;
+        std::vector<Concept_id> concept_ids;
+        kieli::Upper            name;
+        std::optional<Default>  default_argument;
     };
 
     struct Template_mutability_parameter {

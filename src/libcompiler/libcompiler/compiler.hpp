@@ -4,6 +4,7 @@
 #include <libutl/index_vector.hpp>
 #include <cpputil/mem/stable_string_pool.hpp>
 #include <cppdiag/cppdiag.hpp> // TODO: remove
+#include <libcompiler/tree_fwd.hpp>
 
 namespace kieli {
 
@@ -73,6 +74,13 @@ namespace kieli {
     // If a document is owned by a client, the server will not attempt to read it from disk.
     enum class Document_ownership { server, client };
 
+    // Description of a project.
+    struct Manifest {
+        std::filesystem::path root_path;
+        std::string           main_name      = "main";
+        std::string           file_extension = "kieli";
+    };
+
     // In-memory representation of a text document.
     struct Document {
         std::string                     text;
@@ -81,6 +89,9 @@ namespace kieli {
         Document_ownership              ownership {};
         std::size_t                     revision {};
     };
+
+    // Pooled string that is cheap to copy and compare.
+    using Identifier = cpputil::mem::Stable_pool_string;
 
     using Document_map   = std::unordered_map<Document_id, Document, utl::Hash_vector_index>;
     using Document_paths = utl::Index_vector<Document_id, std::filesystem::path>;
@@ -91,6 +102,7 @@ namespace kieli {
         Document_map   documents;
         Document_paths paths;
         String_pool    string_pool;
+        Manifest       manifest;
     };
 
     // Represents a file read failure.
@@ -148,9 +160,6 @@ namespace kieli {
         Database const& db,
         Document_id     document_id,
         cppdiag::Colors colors = cppdiag::Colors::none()) -> std::string;
-
-    // Pooled string that is cheap to copy and compare.
-    using Identifier = cpputil::mem::Stable_pool_string;
 
     // Identifier with a range.
     struct Name {

@@ -91,7 +91,42 @@ namespace {
             .import_keyword_token = context.token(import_keyword),
         };
     }
+
+    auto root_range(cst::Arena const& arena, cst::Path_root const& root)
+        -> std::optional<kieli::Range>
+    {
+        if (auto const* const global = std::get_if<cst::Path_root_global>(&root)) {
+            return arena.tokens[global->global_keyword].range;
+        }
+        if (auto const* const type_id = std::get_if<cst::Type_id>(&root)) {
+            return arena.types[*type_id].range;
+        }
+        return std::nullopt;
+    }
 } // namespace
+
+auto libparse::parse_simple_path_root(Context& context) -> std::optional<cst::Path_root>
+{
+    switch (context.peek().type) {
+    case Token_type::lower_name:
+    case Token_type::upper_name: return cst::Path_root {}; // Extract nothing
+    case Token_type::global:     return cst::Path_root_global { context.token(context.extract()) };
+    default:                     return std::nullopt;
+    }
+}
+
+auto libparse::parse_simple_path(Context& context) -> std::optional<cst::Path>
+{
+    return parse_simple_path_root(context).transform(
+        [&](cst::Path_root const root) { return extract_path(context, root); });
+}
+
+auto libparse::parse_complex_path(Context& context) -> std::optional<cst::Path>
+{
+    return parse_simple_path_root(context)
+        .or_else([&] { return std::optional<cst::Path_root>(parse_type_root(context)); })
+        .transform([&](cst::Path_root const root) { return extract_path(context, root); });
+}
 
 auto libparse::parse_mutability(Context& context) -> std::optional<cst::Mutability>
 {
@@ -117,49 +152,6 @@ auto libparse::parse_mutability(Context& context) -> std::optional<cst::Mutabili
             .variant                    = kieli::Mutability::immut,
             .range                      = immut_keyword.value().range,
             .mut_or_immut_keyword_token = context.token(immut_keyword.value()),
-        };
-    }
-    return std::nullopt;
-}
-
-auto libparse::parse_concept_reference(Context& context) -> std::optional<cst::Concept_reference>
-{
-    // TODO: cleanup
-
-    auto const anchor_range = context.peek().range;
-
-    auto path = std::invoke([&]() -> std::optional<cst::Path> {
-        std::optional<cst::Path_root> root;
-        if (context.peek().type != Token_type::upper_name
-            && context.peek().type != Token_type::lower_name) {
-            if (auto const global = context.try_extract(Token_type::global)) {
-                root = cst::Path_root {
-                    .variant = cst::Path_root_global {
-                        .global_keyword = context.token(global.value()),
-                    },
-                    .double_colon_token
-                    = context.token(context.require_extract(Token_type::double_colon)),
-                    .range = global.value().range,
-                };
-            }
-            else {
-                return std::nullopt;
-            }
-        }
-
-        auto path = extract_path(context, std::move(root));
-        if (!path.head.is_upper()) {
-            context.error_expected(path.head.range, "a concept name");
-        }
-        return path;
-    });
-
-    if (path.has_value()) {
-        auto template_arguments = parse_template_arguments(context);
-        return cst::Concept_reference {
-            .template_arguments = std::move(template_arguments),
-            .path               = std::move(path.value()),
-            .range              = context.up_to_current(anchor_range),
         };
     }
     return std::nullopt;
@@ -244,80 +236,55 @@ auto libparse::parse_function_parameter(Context& context) -> std::optional<cst::
     });
 }
 
-auto libparse::parse_function_argument(Context& context) -> std::optional<cst::Function_argument>
-{
-    Stage const stage = context.stage();
-    if (auto const name = parse_lower_name(context)) {
-        if (auto equals_sign = context.try_extract(Token_type::equals)) {
-            return cst::Function_argument {
-                .name { cst::Name_lower_equals {
-                    .name              = name.value(),
-                    .equals_sign_token = context.token(equals_sign.value()),
-                } },
-                .expression = require<parse_expression>(context, "expression"),
-            };
-        }
-        context.unstage(stage);
-    }
-    return parse_expression(context).transform([](cst::Expression_id const expression) {
-        return cst::Function_argument { .expression = expression };
-    });
-}
-
 auto libparse::parse_function_arguments(Context& context) -> std::optional<cst::Function_arguments>
 {
     static constexpr auto extract
-        = extract_comma_separated_zero_or_more<parse_function_argument, "a function argument">;
+        = extract_comma_separated_zero_or_more<parse_expression, "a function argument">;
     return parse_parenthesized<pretend_parse<extract>, "">(context);
 }
 
-auto libparse::extract_path(Context& context, std::optional<cst::Path_root>&& root) -> cst::Path
+auto libparse::extract_path(Context& context, cst::Path_root const root) -> cst::Path
 {
-    auto const anchor_range = context.peek().range;
+    kieli::Range const anchor_range = context.peek().range;
 
-    cst::Separated_sequence<cst::Path_segment> segments;
-    for (;;) {
+    std::vector<cst::Path_segment> segments;
+
+    auto extract_segment = [&](std::optional<cst::Token_id> const double_colon_token_id) {
         Token const token = context.extract();
         if (token.type == Token_type::upper_name || token.type == Token_type::lower_name) {
-            kieli::Name const segment_name {
-                .identifier = token.value_as<kieli::Identifier>(),
-                .range      = token.range,
-            };
-            auto const template_arguments_stage = context.stage();
-            auto       template_arguments       = parse_template_arguments(context);
-
-            if (auto const double_colon = context.try_extract(Token_type::double_colon)) {
-                segments.separator_tokens.push_back(context.token(double_colon.value()));
-                segments.elements.push_back({
-                    .template_arguments          = std::move(template_arguments),
-                    .name                        = segment_name,
-                    .trailing_double_colon_token = context.token(double_colon.value()),
-                });
-                continue;
-            }
-            // Primary name encountered
-            context.unstage(template_arguments_stage);
-
-            kieli::Range const range
-                = context.up_to_current(root.has_value() ? root.value().range : anchor_range);
-
-            return cst::Path {
-                .segments = std::move(segments),
-                .root     = std::move(root),
-                .head     = segment_name,
-                .range    = range,
-            };
+            segments.push_back(cst::Path_segment {
+                .template_arguments         = parse_template_arguments(context),
+                .name                       = name_from_token(token),
+                .leading_double_colon_token = double_colon_token_id,
+            });
         }
-        context.error_expected(token.range, "an identifier");
+        else {
+            context.error_expected(token.range, "an identifier");
+        }
+    };
+
+    if (std::holds_alternative<std::monostate>(root)) {
+        extract_segment(std::nullopt);
     }
+    while (auto const double_colon = context.try_extract(Token_type::double_colon)) {
+        extract_segment(context.token(double_colon.value()));
+    }
+    if (segments.empty()) {
+        context.error_expected("at least one path segment");
+    }
+
+    return cst::Path {
+        .root     = root,
+        .segments = std::move(segments),
+        .range    = context.up_to_current(root_range(context.cst(), root).value_or(anchor_range)),
+    };
 }
 
-auto libparse::extract_concept_references(Context& context)
-    -> cst::Separated_sequence<cst::Concept_reference>
+auto libparse::extract_concept_references(Context& context) -> cst::Separated_sequence<cst::Path>
 {
-    return require<
-        parse_separated_one_or_more<parse_concept_reference, "a concept name", Token_type::plus>>(
-        context, "one or more '+'-separated concept names");
+    static constexpr auto parse_paths
+        = parse_separated_one_or_more<parse_simple_path, "a concept path", Token_type::plus>;
+    return require<parse_paths>(context, "one or more '+'-separated concept paths");
 }
 
 auto kieli::parse(Database& db, Document_id const document_id) -> CST

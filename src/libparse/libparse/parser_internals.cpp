@@ -109,3 +109,8 @@ auto libparse::Context::document_id() const -> kieli::Document_id
 {
     return m_lex_state.document_id;
 }
+
+auto libparse::name_from_token(Token const& token) -> kieli::Name
+{
+    return kieli::Name { token.value_as<kieli::Identifier>(), token.range };
+}

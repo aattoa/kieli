@@ -67,29 +67,18 @@ namespace kieli::ast {
 
     struct Path_root_global {};
 
-    struct Path_root : std::variant<Path_root_global, Type_id> {
-        using variant::variant;
-    };
+    using Path_root = std::variant<std::monostate, Path_root_global, Type_id>;
 
     struct Path {
+        Path_root                 root;
         std::vector<Path_segment> segments;
-        std::optional<Path_root>  root;
-        Name                      head;
-
-        [[nodiscard]] auto is_simple_name() const noexcept -> bool;
-    };
-
-    struct Concept_reference {
-        std::optional<std::vector<Template_argument>> template_arguments;
-        Path                                          path;
-        Range                                         range;
     };
 
     struct Template_type_parameter {
         using Default = std::variant<Type_id, Wildcard>;
-        Upper                          name;
-        std::vector<Concept_reference> concepts;
-        std::optional<Default>         default_argument;
+        Upper                  name;
+        std::vector<Path>      concepts;
+        std::optional<Default> default_argument;
     };
 
     struct Template_value_parameter {
@@ -120,11 +109,6 @@ namespace kieli::ast {
 
     using Template_parameters = std::optional<std::vector<Template_parameter>>;
 
-    struct Function_argument {
-        Expression_id        expression;
-        std::optional<Lower> name;
-    };
-
     struct Function_parameter {
         Pattern_id                   pattern;
         Type_id                      type;
@@ -152,10 +136,6 @@ namespace kieli::ast {
             std::vector<Expression> elements;
         };
 
-        struct Variable {
-            Path path;
-        };
-
         struct Tuple {
             std::vector<Expression> fields;
         };
@@ -177,12 +157,8 @@ namespace kieli::ast {
         };
 
         struct Function_call {
-            std::vector<Function_argument> arguments;
-            Expression_id                  invocable;
-        };
-
-        struct Unit_initializer {
-            Path constructor_path;
+            std::vector<Expression_id> arguments;
+            Expression_id              invocable;
         };
 
         struct Tuple_initializer {
@@ -219,7 +195,7 @@ namespace kieli::ast {
         };
 
         struct Method_call {
-            std::vector<Function_argument>                function_arguments;
+            std::vector<Expression_id>                    function_arguments;
             std::optional<std::vector<Template_argument>> template_arguments;
             Expression_id                                 base_expression;
             Lower                                         method_name;
@@ -236,11 +212,6 @@ namespace kieli::ast {
         struct Match {
             std::vector<Match_case> cases;
             Expression_id           expression;
-        };
-
-        struct Template_application {
-            std::vector<Template_argument> template_arguments;
-            Path                           path;
         };
 
         struct Type_cast {
@@ -281,10 +252,6 @@ namespace kieli::ast {
             Expression_id reference_expression;
         };
 
-        struct Unsafe {
-            Expression_id expression;
-        };
-
         struct Move {
             Expression_id place_expression;
         };
@@ -292,31 +259,25 @@ namespace kieli::ast {
         struct Defer {
             Expression_id effect_expression;
         };
-
-        struct Meta {
-            Expression_id expression;
-        };
-
-        struct Hole {};
     } // namespace expression
 
     struct Expression_variant
         : std::variant<
               Error,
+              Wildcard,
               Integer,
               Floating,
               Character,
               Boolean,
               String,
+              Path,
               expression::Array_literal,
-              expression::Variable,
               expression::Tuple,
               expression::Loop,
               expression::Break,
               expression::Continue,
               expression::Block,
               expression::Function_call,
-              expression::Unit_initializer,
               expression::Tuple_initializer,
               expression::Struct_initializer,
               expression::Binary_operator_application,
@@ -326,7 +287,6 @@ namespace kieli::ast {
               expression::Method_call,
               expression::Conditional,
               expression::Match,
-              expression::Template_application,
               expression::Type_cast,
               expression::Type_ascription,
               expression::Let_binding,
@@ -335,11 +295,8 @@ namespace kieli::ast {
               expression::Sizeof,
               expression::Addressof,
               expression::Dereference,
-              expression::Unsafe,
               expression::Move,
-              expression::Defer,
-              expression::Meta,
-              expression::Hole> {
+              expression::Defer> {
         using variant::variant;
     };
 
@@ -430,10 +387,6 @@ namespace kieli::ast {
     namespace type {
         struct Never {};
 
-        struct Typename {
-            Path path;
-        };
-
         struct Tuple {
             std::vector<Type> field_types;
         };
@@ -467,12 +420,7 @@ namespace kieli::ast {
         };
 
         struct Implementation {
-            std::vector<Concept_reference> concepts;
-        };
-
-        struct Template_application {
-            std::vector<Template_argument> arguments;
-            Path                           path;
+            std::vector<Path> concepts;
         };
     } // namespace type
 
@@ -480,8 +428,8 @@ namespace kieli::ast {
         : std::variant<
               Error,
               Wildcard,
+              Path,
               type::Never,
-              type::Typename,
               type::Tuple,
               type::Array,
               type::Slice,
@@ -489,8 +437,7 @@ namespace kieli::ast {
               type::Typeof,
               type::Reference,
               type::Pointer,
-              type::Implementation,
-              type::Template_application> {
+              type::Implementation> {
         using variant::variant;
     };
 
@@ -507,8 +454,8 @@ namespace kieli::ast {
     };
 
     struct Type_signature {
-        std::vector<Concept_reference> concepts;
-        Upper                          name;
+        std::vector<Path> concepts;
+        Upper             name;
     };
 
     namespace definition {

@@ -52,45 +52,32 @@ auto libformat::format(State& state, cst::Type_annotation const& annotation) -> 
 
 auto libformat::format(State& state, cst::Path const& path) -> void
 {
-    if (path.root.has_value()) {
-        std::visit(
-            utl::Overload {
-                [&](cst::Path_root_global const&) {
-                    format(state, "global::"); //
-                },
-                [&](cst::Type_id const type) {
-                    format(state, type);
-                    format(state, "::");
-                },
-            },
-            path.root.value().variant);
-    }
-    for (auto const& segment : path.segments.elements) {
+    auto const visitor = utl::Overload {
+        [&](std::monostate) {},
+        [&](cst::Path_root_global const&) { format(state, "global"); },
+        [&](cst::Type_id const type) { format(state, type); },
+    };
+    std::visit(visitor, path.root);
+    for (auto const& segment : path.segments) {
+        if (segment.leading_double_colon_token.has_value()) {
+            format(state, "::");
+        }
         format(state, "{}", segment.name);
         format(state, segment.template_arguments);
-        format(state, "::");
     }
-    format(state, "{}", path.head);
 }
 
 auto libformat::format(State& state, cst::Mutability const& mutability) -> void
 {
-    return std::visit(
-        utl::Overload {
-            [&](kieli::Mutability const concrete) {
-                format(state, "{}", concrete); //
-            },
-            [&](kieli::cst::Parameterized_mutability const& parameterized) {
-                format(state, "mut?{}", parameterized.name);
-            },
+    auto const visitor = utl::Overload {
+        [&](kieli::Mutability const concrete) {
+            format(state, "{}", concrete); //
         },
-        mutability.variant);
-}
-
-auto libformat::format(State& state, cst::Concept_reference const& reference) -> void
-{
-    format(state, reference.path);
-    format(state, reference.template_arguments);
+        [&](kieli::cst::Parameterized_mutability const& parameterized) {
+            format(state, "mut?{}", parameterized.name);
+        },
+    };
+    return std::visit(visitor, mutability.variant);
 }
 
 auto libformat::format(State& state, cst::pattern::Field const& field) -> void
@@ -161,14 +148,6 @@ auto libformat::format(State& state, cst::Template_parameters const& parameters)
     format(state, "[");
     format_comma_separated(state, parameters.value.elements);
     format(state, "]");
-}
-
-auto libformat::format(State& state, cst::Function_argument const& argument) -> void
-{
-    if (argument.name.has_value()) {
-        format(state, "{} = ", argument.name.value().name);
-    }
-    format(state, argument.expression);
 }
 
 auto libformat::format(State& state, cst::Function_arguments const& arguments) -> void

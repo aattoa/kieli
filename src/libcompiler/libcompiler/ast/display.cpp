@@ -146,6 +146,7 @@ namespace {
     auto do_display(Display_state& state, Path_root const& root) -> void
     {
         auto const visitor = utl::Overload {
+            [&](std::monostate) { write_line(state, "none"); },
             [&](Path_root_global const&) { write_line(state, "global"); },
             [&](Type_id const type) { do_display(state, type); },
         };
@@ -155,11 +156,8 @@ namespace {
     auto do_display(Display_state& state, Path const& path) -> void
     {
         write_line(state, "path");
-        if (path.root.has_value()) {
-            display_node(state, Last::no, "root", path.root.value());
-        }
-        display_vector_node(state, Last::no, "segments", path.segments);
-        display_node(state, Last::yes, "head", path.head);
+        display_node(state, Last::no, "root", path.root);
+        display_vector_node(state, Last::yes, "segments", path.segments);
     }
 
     auto display_template_parameters_node(
@@ -240,25 +238,6 @@ namespace {
         write_line(state, "constructor");
         display_node(state, Last::no, "name", constructor.name);
         display_node(state, Last::yes, "body", constructor.body);
-    }
-
-    auto do_display(Display_state& state, Concept_reference const& reference) -> void
-    {
-        write_line(state, "concept reference");
-        if (reference.template_arguments.has_value()) {
-            display_vector_node(
-                state, Last::no, "template arguments", reference.template_arguments.value());
-        }
-        display_node(state, Last::yes, "reference path", reference.path);
-    }
-
-    auto do_display(Display_state& state, Function_argument const& argument) -> void
-    {
-        write_line(state, "function argument");
-        if (argument.name.has_value()) {
-            display_node(state, Last::no, "name", argument.name.value());
-        }
-        display_node(state, Last::yes, "expression", argument.expression);
     }
 
     auto do_display(Display_state& state, Function_parameter const& parameter) -> void
@@ -384,16 +363,20 @@ namespace {
             display_literal(state, literal);
         }
 
+        auto operator()(Wildcard const&)
+        {
+            write_line(state, "wildcard");
+        }
+
+        auto operator()(Path const& path)
+        {
+            do_display(state, path);
+        }
+
         auto operator()(expression::Array_literal const& array)
         {
             write_line(state, "array literal");
             display_vector_node(state, Last::yes, "elements", array.elements);
-        }
-
-        auto operator()(expression::Variable const& variable)
-        {
-            write_line(state, "variable");
-            display_node(state, Last::yes, "path", variable.path);
         }
 
         auto operator()(expression::Tuple const& tuple)
@@ -432,12 +415,6 @@ namespace {
             write_line(state, "function call");
             display_node(state, Last::no, "invocable", call.invocable);
             display_vector_node(state, Last::yes, "arguments", call.arguments);
-        }
-
-        auto operator()(expression::Unit_initializer const& initializer)
-        {
-            write_line(state, "unit initializer");
-            display_node(state, Last::yes, "constructor path", initializer.constructor_path);
         }
 
         auto operator()(expression::Tuple_initializer const& initializer)
@@ -513,14 +490,6 @@ namespace {
             display_vector_node(state, Last::yes, "cases", match.cases);
         }
 
-        auto operator()(expression::Template_application const& application)
-        {
-            write_line(state, "template application");
-            display_node(state, Last::no, "path", application.path);
-            display_vector_node(
-                state, Last::yes, "template arguments", application.template_arguments);
-        }
-
         auto operator()(expression::Type_cast const& cast)
         {
             write_line(state, "type cast");
@@ -576,15 +545,9 @@ namespace {
                 state, Last::yes, "reference expression", dereference.reference_expression);
         }
 
-        auto operator()(expression::Unsafe const& unsafe)
-        {
-            write_line(state, "unsafe");
-            display_node(state, Last::yes, "expression", unsafe.expression);
-        }
-
         auto operator()(expression::Move const& move)
         {
-            write_line(state, "move");
+            write_line(state, "mv");
             display_node(state, Last::yes, "place expression", move.place_expression);
         }
 
@@ -592,17 +555,6 @@ namespace {
         {
             write_line(state, "defer");
             display_node(state, Last::yes, "effect", defer.effect_expression);
-        }
-
-        auto operator()(expression::Meta const& meta)
-        {
-            write_line(state, "meta");
-            display_node(state, Last::yes, "expression", meta.expression);
-        }
-
-        auto operator()(expression::Hole const&)
-        {
-            write_line(state, "hole");
         }
 
         auto operator()(Error const&)
@@ -621,7 +573,7 @@ namespace {
 
         auto operator()(Wildcard const&)
         {
-            write_line(state, "wildcard");
+            write_line(state, "built-in wildcard");
         }
 
         auto operator()(pattern::Name const& name)
@@ -676,6 +628,11 @@ namespace {
     struct Type_display_visitor {
         Display_state& state;
 
+        auto operator()(Path const& path)
+        {
+            do_display(state, path);
+        }
+
         auto operator()(type::Never const&)
         {
             write_line(state, "built-in never");
@@ -684,12 +641,6 @@ namespace {
         auto operator()(Wildcard const&)
         {
             write_line(state, "built-in wildcard");
-        }
-
-        auto operator()(type::Typename const& typename_)
-        {
-            write_line(state, "type name");
-            display_node(state, Last::yes, "type path", typename_.path);
         }
 
         auto operator()(type::Tuple const& tuple)
@@ -742,13 +693,6 @@ namespace {
         {
             write_line(state, "implementation");
             display_vector_node(state, Last::yes, "concepts", implementation.concepts);
-        }
-
-        auto operator()(type::Template_application const& application)
-        {
-            write_line(state, "template application");
-            display_node(state, Last::no, "template path", application.path);
-            display_vector_node(state, Last::yes, "template arguments", application.arguments);
         }
 
         auto operator()(Error const&)

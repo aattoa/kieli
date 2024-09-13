@@ -7,22 +7,6 @@ static constexpr auto parse = libparse::test_parse_type;
 #define TEST(name) UNITTEST("parse type: " name)
 #define CHECK_SIMPLE_PARSE(string) CHECK_EQUAL(parse(string), (string))
 
-TEST("built in types")
-{
-    CHECK_SIMPLE_PARSE("I8");
-    CHECK_SIMPLE_PARSE("I16");
-    CHECK_SIMPLE_PARSE("I32");
-    CHECK_SIMPLE_PARSE("I64");
-    CHECK_SIMPLE_PARSE("U8");
-    CHECK_SIMPLE_PARSE("U16");
-    CHECK_SIMPLE_PARSE("U32");
-    CHECK_SIMPLE_PARSE("U64");
-    CHECK_SIMPLE_PARSE("Float");
-    CHECK_SIMPLE_PARSE("Char");
-    CHECK_SIMPLE_PARSE("Bool");
-    CHECK_SIMPLE_PARSE("String");
-}
-
 TEST("parenthesized")
 {
     CHECK_SIMPLE_PARSE("()");
@@ -36,25 +20,19 @@ TEST("wildcard")
     CHECK_SIMPLE_PARSE("____");
 }
 
-TEST("typename")
+TEST("path")
 {
     CHECK_SIMPLE_PARSE("T");
-    CHECK_SIMPLE_PARSE("a::B");
-    CHECK_SIMPLE_PARSE("A::B");
-    CHECK_SIMPLE_PARSE("typeof(x)::B");
-    CHECK_SIMPLE_PARSE("typeof(x)::B[I32]::C");
-}
-
-TEST("template application")
-{
     CHECK_SIMPLE_PARSE("T[]");
     CHECK_SIMPLE_PARSE("T[I32]");
+    CHECK_SIMPLE_PARSE("a::B");
     CHECK_SIMPLE_PARSE("a::B[]");
     CHECK_SIMPLE_PARSE("a::B[I32]");
-    CHECK_SIMPLE_PARSE("A::B[]");
     CHECK_SIMPLE_PARSE("A::B[I32]");
+    CHECK_SIMPLE_PARSE("typeof(x)::B");
     CHECK_SIMPLE_PARSE("typeof(x)::B[]");
     CHECK_SIMPLE_PARSE("typeof(x)::B[I32]");
+    CHECK_SIMPLE_PARSE("typeof(x)::B[I32]::C");
     CHECK_SIMPLE_PARSE("typeof(x)::B[I32]::C[]");
     CHECK_SIMPLE_PARSE("typeof(x)::B[I32]::C[I32]");
 }

@@ -25,14 +25,12 @@ namespace libdesugar {
         auto desugar(cst::Pattern const&) -> ast::Pattern;
         auto desugar(cst::Definition const&) -> ast::Definition;
 
-        auto desugar(cst::Function_argument const&) -> ast::Function_argument;
         auto desugar(cst::Function_parameters const&) -> std::vector<ast::Function_parameter>;
         auto desugar(cst::Template_argument const&) -> ast::Template_argument;
         auto desugar(cst::Template_parameter const&) -> ast::Template_parameter;
         auto desugar(cst::Path_segment const&) -> ast::Path_segment;
         auto desugar(cst::Path const&) -> ast::Path;
         auto desugar(cst::Type_annotation const&) -> ast::Type_id;
-        auto desugar(cst::Concept_reference const&) -> ast::Concept_reference;
         auto desugar(cst::Function_signature const&) -> ast::Function_signature;
         auto desugar(cst::Type_signature const&) -> ast::Type_signature;
         auto desugar(cst::Struct_field_initializer const&) -> ast::Struct_field_initializer;

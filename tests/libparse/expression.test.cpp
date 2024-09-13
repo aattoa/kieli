@@ -36,9 +36,11 @@ TEST("array literal")
     CHECK_SIMPLE_PARSE("[5, 3]");
 }
 
-TEST("variable")
+TEST("path")
 {
     CHECK_SIMPLE_PARSE("x");
+    CHECK_SIMPLE_PARSE("x[]");
+    CHECK_SIMPLE_PARSE("x[A, B]");
     CHECK_SIMPLE_PARSE("_x");
     CHECK_SIMPLE_PARSE("x::y");
     CHECK_SIMPLE_PARSE("x::_y");
@@ -53,15 +55,19 @@ TEST("variable")
     CHECK_SIMPLE_PARSE("global::x[]::y");
     CHECK_SIMPLE_PARSE("global::x[]::_y");
     CHECK_SIMPLE_PARSE("global::x[A, B]::y");
+    CHECK_SIMPLE_PARSE("global::x[A, B]::y[]");
+    CHECK_SIMPLE_PARSE("global::x[A, B]::y[A, B]");
     CHECK_SIMPLE_PARSE("global::x[A, B]::_y");
-}
-
-TEST("template application")
-{
-    CHECK_SIMPLE_PARSE("x[]");
-    CHECK_SIMPLE_PARSE("x[A, B]");
-    CHECK_SIMPLE_PARSE("x::y[]");
-    CHECK_SIMPLE_PARSE("x::y[A, B]");
+    CHECK_SIMPLE_PARSE("typeof(x)::x");
+    CHECK_SIMPLE_PARSE("typeof(x)::_x");
+    CHECK_SIMPLE_PARSE("typeof(x)::x::y");
+    CHECK_SIMPLE_PARSE("typeof(x)::x::_y");
+    CHECK_SIMPLE_PARSE("typeof(x)::x[]::y");
+    CHECK_SIMPLE_PARSE("typeof(x)::x[]::_y");
+    CHECK_SIMPLE_PARSE("typeof(x)::x[A, B]::y");
+    CHECK_SIMPLE_PARSE("typeof(x)::x[A, B]::y[]");
+    CHECK_SIMPLE_PARSE("typeof(x)::x[A, B]::y[A, B]");
+    CHECK_SIMPLE_PARSE("typeof(x)::x[A, B]::_y");
 }
 
 TEST("block")
@@ -297,31 +303,9 @@ TEST("dereference")
     CHECK_SIMPLE_PARSE("*x.y");
 }
 
-TEST("unsafe")
+TEST("mv")
 {
-    CHECK_SIMPLE_PARSE("unsafe {}");
-    CHECK_SIMPLE_PARSE("unsafe { x }");
-    CHECK_EQUAL(
-        parse("unsafe { x; y }"),
-        "unsafe {\n"
-        "    x;\n"
-        "    y\n"
-        "}");
-}
-
-TEST("mov")
-{
-    CHECK_SIMPLE_PARSE("mov x");
-    CHECK_SIMPLE_PARSE("mov x.y");
-    CHECK_SIMPLE_PARSE("mov x.[y]");
-}
-
-TEST("meta")
-{
-    CHECK_SIMPLE_PARSE("meta(5)");
-}
-
-TEST("hole")
-{
-    CHECK_SIMPLE_PARSE("\?\?\?");
+    CHECK_SIMPLE_PARSE("mv x");
+    CHECK_SIMPLE_PARSE("mv x.y");
+    CHECK_SIMPLE_PARSE("mv x.[y]");
 }

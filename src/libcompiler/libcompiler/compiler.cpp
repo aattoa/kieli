@@ -196,7 +196,7 @@ auto kieli::Name::is_upper() const -> bool
 {
     static constexpr auto is_upper = [](char const c) { return 'A' <= c && c <= 'Z'; };
     std::size_t const     position = identifier.view().find_first_not_of('_');
-    return position == std::string_view::npos ? false : is_upper(identifier.view().at(position));
+    return position != std::string_view::npos && is_upper(identifier.view().at(position));
 }
 
 auto kieli::Name::operator==(Name const& other) const noexcept -> bool

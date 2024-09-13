@@ -79,6 +79,11 @@ namespace {
             };
         }
 
+        auto operator()(ast::Path const&) -> hir::Expression
+        {
+            cpputil::todo();
+        }
+
         auto operator()(ast::expression::Array_literal const& array) -> hir::Expression
         {
             hir::Type const element_type
@@ -108,26 +113,6 @@ namespace {
                 hir::Expression_kind::value,
                 this_expression.range,
             };
-        }
-
-        auto operator()(ast::expression::Variable const& variable) -> hir::Expression
-        {
-            if (variable.path.is_simple_name()) {
-                if (Variable_bind const* const bind
-                    = scope.find_variable(variable.path.head.identifier)) {
-                    return hir::Expression {
-                        hir::expression::Variable_reference {
-                            .name = bind->name,
-                            .tag  = bind->tag,
-                        },
-                        bind->type,
-                        hir::Expression_kind::place,
-                        this_expression.range,
-                    };
-                }
-            }
-            // TODO: lookup
-            return error(this_expression.range, "Use of an undeclared identifier");
         }
 
         auto operator()(ast::expression::Tuple const& tuple) -> hir::Expression
@@ -194,11 +179,6 @@ namespace {
         }
 
         auto operator()(ast::expression::Function_call const&) -> hir::Expression
-        {
-            cpputil::todo();
-        }
-
-        auto operator()(ast::expression::Unit_initializer const&) -> hir::Expression
         {
             cpputil::todo();
         }
@@ -281,11 +261,6 @@ namespace {
                 hir::Expression_kind::value, // TODO
                 this_expression.range,
             };
-        }
-
-        auto operator()(ast::expression::Template_application const&) -> hir::Expression
-        {
-            cpputil::todo();
         }
 
         auto operator()(ast::expression::Type_cast const&) -> hir::Expression
@@ -430,25 +405,15 @@ namespace {
             };
         }
 
-        auto operator()(ast::expression::Unsafe const&) -> hir::Expression
-        {
-            cpputil::todo();
-        }
-
         auto operator()(ast::expression::Move const&) -> hir::Expression
         {
             cpputil::todo();
         }
 
-        auto operator()(ast::expression::Meta const&) -> hir::Expression
-        {
-            cpputil::todo();
-        }
-
-        auto operator()(ast::expression::Hole const&) -> hir::Expression
+        auto operator()(ast::Wildcard const&) -> hir::Expression
         {
             return {
-                hir::expression::Hole {},
+                hir::Wildcard {},
                 state.fresh_general_type_variable(context.hir, this_expression.range).id,
                 hir::Expression_kind::value,
                 this_expression.range,
@@ -469,7 +434,6 @@ auto libresolve::resolve_expression(
     hir::Environment_id    environment,
     ast::Expression const& expression) -> hir::Expression
 {
-    return std::visit(
-        Expression_resolution_visitor { context, state, scope, environment, expression },
-        expression.variant);
+    Expression_resolution_visitor visitor { context, state, scope, environment, expression };
+    return std::visit(visitor, expression.variant);
 }

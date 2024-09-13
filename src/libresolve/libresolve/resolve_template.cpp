@@ -15,20 +15,19 @@ namespace {
         auto resolve_default_argument()
         {
             return [&](auto const& argument) {
-                return std::visit<Default>(
-                    utl::Overload {
-                        [&](ast::Wildcard const& wildcard) {
-                            return hir::Wildcard { .range = wildcard.range };
-                        },
-                        [&](ast::Type_id const type) {
-                            return resolve_type(
-                                context, state, scope, environment, context.ast.types[type]);
-                        },
-                        [&](ast::Mutability const& mutability) {
-                            return resolve_mutability(context, scope, mutability);
-                        },
+                auto const visitor = utl::Overload {
+                    [&](ast::Wildcard const&) {
+                        return hir::Wildcard {}; //
                     },
-                    argument);
+                    [&](ast::Type_id const type) {
+                        return resolve_type(
+                            context, state, scope, environment, context.ast.types[type]);
+                    },
+                    [&](ast::Mutability const& mutability) {
+                        return resolve_mutability(context, scope, mutability);
+                    },
+                };
+                return std::visit<Default>(visitor, argument);
             };
         }
 
@@ -41,12 +40,11 @@ namespace {
                     parameter.name,
                     context.hir.types.push(hir::type::Parameterized { parameter_id }),
                 });
-            auto const resolve_concept = [&](ast::Concept_reference const& concept_reference) {
-                return resolve_concept_reference(
-                    context, state, scope, environment, concept_reference);
+            auto const resolve_concept = [&](ast::Path const& concept_path) {
+                return resolve_concept_reference(context, state, scope, environment, concept_path);
             };
             return hir::Template_type_parameter {
-                .concepts = std::ranges::to<std::vector>(
+                .concept_ids = std::ranges::to<std::vector>(
                     std::views::transform(parameter.concepts, resolve_concept)),
                 .name             = parameter.name,
                 .default_argument = parameter.default_argument.transform(
@@ -57,16 +55,12 @@ namespace {
         auto operator()(ast::Template_mutability_parameter const& parameter)
             -> hir::Template_parameter_variant
         {
-            scope.bind_mutability(
-                parameter.name.identifier,
-                Mutability_bind {
-                    .name = parameter.name,
-                    .mutability {
-                        context.hir.mutabilities.push(
-                            hir::mutability::Parameterized { parameter_id }),
-                        parameter.name.range,
-                    },
-                });
+            hir::Mutability mutability {
+                context.hir.mutabilities.push(hir::mutability::Parameterized { parameter_id }),
+                parameter.name.range,
+            };
+            Mutability_bind bind { .name = parameter.name, .mutability = std::move(mutability) };
+            scope.bind_mutability(parameter.name.identifier, bind);
             return hir::Template_mutability_parameter {
                 .name             = parameter.name,
                 .default_argument = parameter.default_argument.transform(

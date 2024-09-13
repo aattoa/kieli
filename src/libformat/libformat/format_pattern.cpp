@@ -6,21 +6,20 @@ using namespace libformat;
 namespace {
     auto format_constructor_body(State& state, cst::pattern::Constructor_body const& body)
     {
-        std::visit(
-            utl::Overload {
-                [&](cst::pattern::Struct_constructor const& constructor) {
-                    format(state, " {{ ");
-                    format_comma_separated(state, constructor.fields.value.elements);
-                    format(state, " }}");
-                },
-                [&](cst::pattern::Tuple_constructor const& constructor) {
-                    format(state, "(");
-                    format(state, constructor.pattern.value);
-                    format(state, ")");
-                },
-                [](cst::pattern::Unit_constructor const&) {},
+        auto const visitor = utl::Overload {
+            [&](cst::pattern::Struct_constructor const& constructor) {
+                format(state, " {{ ");
+                format_comma_separated(state, constructor.fields.value.elements);
+                format(state, " }}");
             },
-            body);
+            [&](cst::pattern::Tuple_constructor const& constructor) {
+                format(state, "(");
+                format(state, constructor.pattern.value);
+                format(state, ")");
+            },
+            [](cst::pattern::Unit_constructor const&) {},
+        };
+        std::visit(visitor, body);
     }
 
     struct Pattern_format_visitor {

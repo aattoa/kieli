@@ -119,6 +119,16 @@ namespace {
             return literal;
         }
 
+        auto operator()(cst::Path const& path) -> ast::Expression_variant
+        {
+            return context.desugar(path);
+        }
+
+        auto operator()(cst::Wildcard const& wildcard) -> ast::Expression_variant
+        {
+            return ast::Wildcard { .range = context.cst.tokens[wildcard.underscore_token].range };
+        }
+
         auto operator()(cst::expression::Parenthesized const& parenthesized)
             -> ast::Expression_variant
         {
@@ -135,11 +145,6 @@ namespace {
                           | std::views::transform(context.deref_desugar())
                           | std::ranges::to<std::vector>(),
             };
-        }
-
-        auto operator()(cst::expression::Variable const& variable) -> ast::Expression_variant
-        {
-            return ast::expression::Variable { .path = context.desugar(variable.path) };
         }
 
         auto operator()(cst::expression::Tuple const& tuple) -> ast::Expression_variant
@@ -340,14 +345,6 @@ namespace {
             };
         }
 
-        auto operator()(cst::expression::Unit_initializer const& initializer)
-            -> ast::Expression_variant
-        {
-            return ast::expression::Unit_initializer {
-                .constructor_path = context.desugar(initializer.constructor_path),
-            };
-        }
-
         auto operator()(cst::expression::Tuple_initializer const& initializer)
             -> ast::Expression_variant
         {
@@ -374,16 +371,6 @@ namespace {
             std::span   tail       = chain.tail;
             std::size_t precedence = lowest_operator_precedence;
             return desugar_operator_chain(context, chain.lhs, precedence, tail).variant;
-        }
-
-        auto operator()(cst::expression::Template_application const& application)
-            -> ast::Expression_variant
-        {
-            return ast::expression::Template_application {
-                .template_arguments
-                = context.desugar(application.template_arguments.value.elements),
-                .path = context.desugar(application.path),
-            };
         }
 
         auto operator()(cst::expression::Struct_field_access const& access)
@@ -525,11 +512,6 @@ namespace {
             };
         }
 
-        auto operator()(cst::expression::Unsafe const& unsafe) -> ast::Expression_variant
-        {
-            return ast::expression::Unsafe { context.desugar(unsafe.expression) };
-        }
-
         auto operator()(cst::expression::Move const& move) -> ast::Expression_variant
         {
             return ast::expression::Move { context.desugar(move.place_expression) };
@@ -538,16 +520,6 @@ namespace {
         auto operator()(cst::expression::Defer const& defer) -> ast::Expression_variant
         {
             return ast::expression::Defer { context.desugar(defer.effect_expression) };
-        }
-
-        auto operator()(cst::expression::Meta const& meta) -> ast::Expression_variant
-        {
-            return ast::expression::Meta { context.desugar(meta.expression.value) };
-        }
-
-        auto operator()(cst::expression::Hole const&) -> ast::Expression_variant
-        {
-            return ast::expression::Hole {};
         }
 
         auto operator()(cst::expression::For_loop const&) -> ast::Expression_variant
