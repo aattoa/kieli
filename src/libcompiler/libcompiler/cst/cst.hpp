@@ -23,23 +23,6 @@
 */
 
 namespace kieli::cst {
-    struct [[nodiscard]] Expression;
-    struct [[nodiscard]] Pattern;
-    struct [[nodiscard]] Type;
-    struct [[nodiscard]] Definition;
-
-    struct Expression_id : utl::Vector_index<Expression_id> {
-        using Vector_index::Vector_index;
-    };
-
-    struct Pattern_id : utl::Vector_index<Pattern_id> {
-        using Vector_index::Vector_index;
-    };
-
-    struct Type_id : utl::Vector_index<Type_id> {
-        using Vector_index::Vector_index;
-    };
-
     // Since tokens are used all over the CST, this saves a significant amount of memory.
     struct Token_id : utl::Vector_index<Token_id, std::uint32_t> {
         using Vector_index::Vector_index;

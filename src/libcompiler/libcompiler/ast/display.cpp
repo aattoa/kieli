@@ -91,6 +91,11 @@ namespace {
         do_display(state, state.arena.types[id]);
     }
 
+    auto do_display(Display_state& state, Wildcard const&) -> void
+    {
+        write_line(state, "built-in wildcard");
+    }
+
     auto do_display(Display_state& state, kieli::Name const& name) -> void
     {
         write_line(state, "\"{}\"", name);
@@ -107,25 +112,6 @@ namespace {
             },
         };
         std::visit(visitor, mutability.variant);
-    }
-
-    auto do_display(Display_state& state, Template_parameter const& parameter) -> void
-    {
-        auto const visitor = utl::Overload {
-            [&](Template_type_parameter const& parameter) {
-                write_line(state, "type parameter");
-                display_node(state, Last::yes, "name", parameter.name);
-            },
-            [&](Template_value_parameter const& parameter) {
-                write_line(state, "value parameter");
-                display_node(state, Last::yes, "name", parameter.name);
-            },
-            [&](Template_mutability_parameter const& parameter) {
-                write_line(state, "mutability parameter");
-                display_node(state, Last::yes, "name", parameter.name);
-            },
-        };
-        std::visit(visitor, parameter.variant); // TODO
     }
 
     auto do_display(Display_state& state, Template_argument const& argument) -> void
@@ -158,6 +144,42 @@ namespace {
         write_line(state, "path");
         display_node(state, Last::no, "root", path.root);
         display_vector_node(state, Last::yes, "segments", path.segments);
+    }
+
+    auto do_display(Display_state& state, Template_parameter const& parameter) -> void
+    {
+        auto display_default = [&](auto const& argument) {
+            if (argument.has_value()) {
+                write_node(state, Last::no, [&] {
+                    write_line(state, "default argument");
+                    write_node(state, Last::yes, [&] {
+                        auto const visitor
+                            = [&](auto const& alternative) { do_display(state, alternative); };
+                        std::visit(visitor, argument.value());
+                    });
+                });
+            }
+        };
+        auto const visitor = utl::Overload {
+            [&](Template_type_parameter const& parameter) {
+                write_line(state, "type parameter");
+                display_default(parameter.default_argument);
+                display_node(state, Last::no, "name", parameter.name);
+                display_vector_node(state, Last::yes, "concepts", parameter.concepts);
+            },
+            [&](Template_value_parameter const& parameter) {
+                write_line(state, "value parameter");
+                display_default(parameter.default_argument);
+                display_node(state, Last::no, "name", parameter.name);
+                display_node(state, Last::yes, "type", parameter.type);
+            },
+            [&](Template_mutability_parameter const& parameter) {
+                write_line(state, "mutability parameter");
+                display_default(parameter.default_argument);
+                display_node(state, Last::yes, "name", parameter.name);
+            },
+        };
+        std::visit(visitor, parameter.variant);
     }
 
     auto display_template_parameters_node(
@@ -363,9 +385,9 @@ namespace {
             display_literal(state, literal);
         }
 
-        auto operator()(Wildcard const&)
+        auto operator()(Wildcard const& wildcard)
         {
-            write_line(state, "wildcard");
+            do_display(state, wildcard);
         }
 
         auto operator()(Path const& path)
@@ -571,9 +593,9 @@ namespace {
             display_literal(state, literal);
         }
 
-        auto operator()(Wildcard const&)
+        auto operator()(Wildcard const& wildcard)
         {
-            write_line(state, "built-in wildcard");
+            do_display(state, wildcard);
         }
 
         auto operator()(pattern::Name const& name)
@@ -638,9 +660,9 @@ namespace {
             write_line(state, "built-in never");
         }
 
-        auto operator()(Wildcard const&)
+        auto operator()(Wildcard const& wildcard)
         {
-            write_line(state, "built-in wildcard");
+            do_display(state, wildcard);
         }
 
         auto operator()(type::Tuple const& tuple)

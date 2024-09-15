@@ -2,6 +2,7 @@
 
 #include <libutl/utilities.hpp>
 #include <libformat/format.hpp>
+#include <libcompiler/cst/cst.hpp>
 
 namespace libformat {
     namespace cst = kieli::cst;
@@ -21,10 +22,10 @@ namespace libformat {
     };
 
     struct State {
-        std::string                 output;
-        kieli::Format_configuration config;
-        std::size_t                 indentation {};
-        cst::Arena const&           arena;
+        cst::Arena const&            arena;
+        kieli::Format_options const& options;
+        std::string&                 output;
+        std::size_t                  indentation {};
 
         auto newline(std::size_t lines = 1) const noexcept -> Newline;
         auto indent() noexcept -> Indentation;

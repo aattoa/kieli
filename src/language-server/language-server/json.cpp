@@ -189,8 +189,8 @@ auto kieli::lsp::document_item_from_json(Json::Object const& object) -> Document
 auto kieli::lsp::format_options_from_json(Json::Object const& object) -> Format_options
 {
     return Format_options {
-        .tab_size      = as_unsigned(at(object, "tabSize")),
-        .insert_spaces = as<Json::Boolean>(at(object, "insertSpaces")),
+        .tab_size   = as_unsigned(at(object, "tabSize")),
+        .use_spaces = as<Json::Boolean>(at(object, "insertSpaces")),
     };
 }
 

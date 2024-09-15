@@ -59,7 +59,7 @@ namespace {
     auto debug_parse(kieli::Database& db, kieli::Document_id const document_id) -> void
     {
         auto const cst = kieli::parse(db, document_id);
-        std::print("{}", kieli::format_module(cst.get(), kieli::Format_configuration {}));
+        std::print("{}", kieli::format_module(cst.get(), kieli::Format_options {}));
     }
 
     auto debug_desugar(kieli::Database& db, kieli::Document_id const document_id) -> void

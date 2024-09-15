@@ -3,12 +3,8 @@
 #include <libutl/utilities.hpp>
 #include <libutl/index_vector.hpp>
 
-// This file provides compilation firewalls for syntax trees, which speeds up compilation.
-// Source files that must access the tree structures can include their definition headers.
-
 namespace kieli {
-
-    // Concrete syntax tree
+    // Concrete syntax tree compilation firewall.
     struct CST {
         // Defined in `cst.hpp`
         struct Module;
@@ -22,65 +18,39 @@ namespace kieli {
         [[nodiscard]] auto get() const -> Module const&;
         [[nodiscard]] auto get() -> Module&;
     };
-
 } // namespace kieli
 
+#define DEFINE_INDEX(name)                  \
+    struct name : utl::Vector_index<name> { \
+        using Vector_index::Vector_index;   \
+    }
+
+namespace kieli::cst {
+    struct Arena;
+    struct Definition;
+    struct Expression;
+    struct Pattern;
+    struct Type;
+
+    DEFINE_INDEX(Expression_id);
+    DEFINE_INDEX(Pattern_id);
+    DEFINE_INDEX(Type_id);
+} // namespace kieli::cst
+
 namespace kieli::hir {
-
-    enum class Type_variable_kind { general, integral };
-
-    enum class Expression_kind { place, value };
-
-    struct Expression_id : utl::Vector_index<Expression_id> {
-        using Vector_index::Vector_index;
-    };
-
-    struct Pattern_id : utl::Vector_index<Pattern_id> {
-        using Vector_index::Vector_index;
-    };
-
-    struct Type_id : utl::Vector_index<Type_id> {
-        using Vector_index::Vector_index;
-    };
-
-    struct Mutability_id : utl::Vector_index<Mutability_id> {
-        using Vector_index::Vector_index;
-    };
-
-    struct Module_id : utl::Vector_index<Module_id> {
-        using Vector_index::Vector_index;
-    };
-
-    struct Environment_id : utl::Vector_index<Environment_id> {
-        using Vector_index::Vector_index;
-    };
-
-    struct Function_id : utl::Vector_index<Function_id> {
-        using Vector_index::Vector_index;
-    };
-
-    struct Enumeration_id : utl::Vector_index<Enumeration_id> {
-        using Vector_index::Vector_index;
-    };
-
-    struct Alias_id : utl::Vector_index<Alias_id> {
-        using Vector_index::Vector_index;
-    };
-
-    struct Concept_id : utl::Vector_index<Concept_id> {
-        using Vector_index::Vector_index;
-    };
-
-    struct Constructor_id : utl::Vector_index<Constructor_id> {
-        using Vector_index::Vector_index;
-    };
-
-    struct Type_variable_id : utl::Vector_index<Type_variable_id> {
-        using Vector_index::Vector_index;
-    };
-
-    struct Mutability_variable_id : utl::Vector_index<Mutability_variable_id> {
-        using Vector_index::Vector_index;
-    };
-
+    DEFINE_INDEX(Expression_id);
+    DEFINE_INDEX(Pattern_id);
+    DEFINE_INDEX(Type_id);
+    DEFINE_INDEX(Mutability_id);
+    DEFINE_INDEX(Module_id);
+    DEFINE_INDEX(Environment_id);
+    DEFINE_INDEX(Function_id);
+    DEFINE_INDEX(Enumeration_id);
+    DEFINE_INDEX(Alias_id);
+    DEFINE_INDEX(Concept_id);
+    DEFINE_INDEX(Constructor_id);
+    DEFINE_INDEX(Type_variable_id);
+    DEFINE_INDEX(Mutability_variable_id);
 } // namespace kieli::hir
+
+#undef DEFINE_INDEX

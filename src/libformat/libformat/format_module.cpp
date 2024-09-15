@@ -14,7 +14,7 @@ namespace {
         }
         format(state, definitions.front());
         for (auto it = definitions.begin() + 1; it != definitions.end(); ++it) {
-            format(state, "{}", state.newline(state.config.empty_lines_between_definitions + 1));
+            format(state, "{}", state.newline(state.options.empty_lines_between_definitions + 1));
             format(state, *it);
         }
     }
@@ -63,7 +63,7 @@ namespace {
             format_function_signature(state, function.signature);
             cst::Expression const& body = state.arena.expressions[function.body];
 
-            switch (state.config.function_body) {
+            switch (state.options.function_body) {
             case kieli::Format_function_body::leave_as_is:
             {
                 if (function.optional_equals_sign_token.has_value()) {
@@ -203,21 +203,81 @@ auto libformat::format(State& state, cst::Definition const& definition) -> void
     std::visit(Definition_format_visitor { state }, definition.variant);
 }
 
-auto kieli::format_module(CST::Module const& module, kieli::Format_configuration const& config)
+auto kieli::format_module(CST::Module const& module, kieli::Format_options const& options)
     -> std::string
 {
-    State state { .config = config, .arena = module.arena };
+    std::string output;
+
+    State state { module.arena, options, output };
     format_definitions(state, module.definitions);
-    state.output.push_back('\n');
-    return std::move(state.output);
+
+    output.push_back('\n');
+    return output;
 }
 
-auto kieli::format_definition(
-    cst::Arena const&           arena,
-    cst::Definition const&      definition,
-    Format_configuration const& config) -> std::string
+auto kieli::format(
+    cst::Arena const&      arena,
+    Format_options const&  options,
+    cst::Definition const& definition,
+    std::string&           output) -> void
 {
-    State state { .config = config, .arena = arena };
-    std::visit(Definition_format_visitor { state }, definition.variant);
-    return std::move(state.output);
+    State state { arena, options, output };
+    libformat::format(state, definition);
+}
+
+auto kieli::format(
+    cst::Arena const&      arena,
+    Format_options const&  options,
+    cst::Expression const& expression,
+    std::string&           output) -> void
+{
+    State state { arena, options, output };
+    libformat::format(state, expression);
+}
+
+auto kieli::format(
+    cst::Arena const&     arena,
+    Format_options const& options,
+    cst::Pattern const&   pattern,
+    std::string&          output) -> void
+{
+    State state { arena, options, output };
+    libformat::format(state, pattern);
+}
+
+auto kieli::format(
+    cst::Arena const&     arena,
+    Format_options const& options,
+    cst::Type const&      type,
+    std::string&          output) -> void
+{
+    State state { arena, options, output };
+    libformat::format(state, type);
+}
+
+auto kieli::format(
+    cst::Arena const&     arena,
+    Format_options const& options,
+    cst::Expression_id    expression_id,
+    std::string&          output) -> void
+{
+    kieli::format(arena, options, arena.expressions[expression_id], output);
+}
+
+auto kieli::format(
+    cst::Arena const&     arena,
+    Format_options const& options,
+    cst::Pattern_id       pattern_id,
+    std::string&          output) -> void
+{
+    kieli::format(arena, options, arena.patterns[pattern_id], output);
+}
+
+auto kieli::format(
+    cst::Arena const&     arena,
+    Format_options const& options,
+    cst::Type_id          type_id,
+    std::string&          output) -> void
+{
+    kieli::format(arena, options, arena.types[type_id], output);
 }

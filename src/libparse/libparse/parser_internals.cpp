@@ -25,13 +25,10 @@ auto libparse::Context::peek() -> Token
 
 auto libparse::Context::extract() -> Token
 {
-    if (m_next_token.has_value()) {
-        Token token = m_next_token.value();
-        m_next_token.reset();
-        m_previous_token_range = token.range;
-        return token;
-    }
-    return kieli::lex(m_lex_state);
+    Token token = peek();
+    m_next_token.reset();
+    m_previous_token_range = token.range;
+    return token;
 }
 
 auto libparse::Context::try_extract(Token_type const type) -> std::optional<Token>

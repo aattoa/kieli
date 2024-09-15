@@ -1,8 +1,9 @@
 #pragma once
 
 #include <libutl/utilities.hpp>
-#include <libcompiler/compiler.hpp>
 #include <cpputil/json.hpp>
+#include <libcompiler/compiler.hpp>
+#include <libformat/format.hpp>
 
 namespace kieli::lsp {
 
@@ -29,12 +30,6 @@ namespace kieli::lsp {
         invalid_params         = -32602,
         parse_error            = -32700,
         request_failed         = -32803,
-    };
-
-    // https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#formattingOptions
-    struct Format_options {
-        std::size_t tab_size {};
-        bool        insert_spaces {};
     };
 
     // https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#textDocumentItem
@@ -80,7 +75,7 @@ namespace kieli::lsp {
     auto diagnostic_to_json(Database const& db, Diagnostic const& diagnostic) -> Json;
     auto markdown_content_to_json(std::string markdown) -> Json;
     auto document_item_from_json(Json::Object const& object) -> Document_item;
-    auto format_options_from_json(Json::Object const& object) -> Format_options;
+    auto format_options_from_json(Json::Object const& object) -> kieli::Format_options;
 
     // Throws `Bad_client_json` if `json` is not `T`.
     template <class T>

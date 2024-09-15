@@ -6,8 +6,8 @@ auto libformat::State::newline(std::size_t const lines) const noexcept -> Newlin
     return {
         .indentation = indentation,
         .lines       = lines,
-        .tab_size    = config.tab_size,
-        .use_spaces  = config.use_spaces,
+        .tab_size    = options.tab_size,
+        .use_spaces  = options.use_spaces,
     };
 }
 

@@ -119,7 +119,15 @@ TEST("struct initializer")
     CHECK_SIMPLE_PARSE("S { x = 10 }");
     CHECK_SIMPLE_PARSE("S { x = 10, y = \"hello\" }");
     CHECK_SIMPLE_PARSE("A::B { x = 10 }");
-    // CHECK_SIMPLE_PARSE("typeof(x)::T {}"); // TODO
+    CHECK_SIMPLE_PARSE("typeof(x)::T { x = 10 }");
+}
+
+TEST("tuple initializer")
+{
+    CHECK_SIMPLE_PARSE("S(10)");
+    CHECK_SIMPLE_PARSE("S(10, \"hello\")");
+    CHECK_SIMPLE_PARSE("A::B(10)");
+    CHECK_SIMPLE_PARSE("typeof(x)::T(10)");
 }
 
 TEST("binary operator application")

@@ -12,14 +12,6 @@ using kieli::query::Result;
 using namespace kieli::lsp;
 
 namespace {
-    auto format_config_from_options(Format_options const& options) -> kieli::Format_configuration
-    {
-        return kieli::Format_configuration {
-            .tab_size   = options.tab_size,
-            .use_spaces = options.insert_spaces,
-        };
-    };
-
     auto maybe_markdown_content(std::optional<std::string> markdown) -> Json
     {
         return std::move(markdown).transform(markdown_content_to_json).value_or(Json {});
@@ -54,13 +46,10 @@ namespace {
     {
         auto const document_id
             = document_id_from_json(db, as<Json::Object>(at(params, "textDocument")));
-
-        return kieli::query::cst(db, document_id)
-            .transform([&](kieli::CST const& cst) {
-                auto const options = format_options_from_json(params.at("options").as_object());
-                return kieli::format_module(cst.get(), format_config_from_options(options));
-            })
-            .transform(document_format_edit);
+        return kieli::query::cst(db, document_id).transform([&](kieli::CST const& cst) {
+            auto const options = format_options_from_json(params.at("options").as_object());
+            return document_format_edit(kieli::format_module(cst.get(), options));
+        });
     }
 
     auto handle_pull_diagnostics(Database& db, Json::Object const& params) -> Result<Json>

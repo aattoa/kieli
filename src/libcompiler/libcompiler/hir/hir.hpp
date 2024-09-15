@@ -10,6 +10,10 @@ namespace kieli::hir {
     struct [[nodiscard]] Pattern;
     struct [[nodiscard]] Type;
 
+    enum class Type_variable_kind { general, integral };
+
+    enum class Expression_kind { place, value };
+
     struct Template_parameter_tag : utl::Explicit<std::size_t> {
         using Explicit::Explicit;
     };
