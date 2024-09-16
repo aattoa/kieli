@@ -101,6 +101,16 @@ namespace {
         // clang-format on
     }
 
+    auto wrap_exceptions(std::invocable auto const& callback, cppdiag::Colors const colors) -> void
+    {
+        try {
+            std::invoke(callback);
+        }
+        catch (std::exception const& exception) {
+            std::print(stderr, "{}{}\n\n", error_header(colors), exception.what());
+        }
+    }
+
     auto run_debug_repl(
         void (&callback)(kieli::Database&, kieli::Document_id),
         cppdiag::Colors const colors) -> void
@@ -114,21 +124,11 @@ namespace {
             if (input.value().find_first_not_of(' ') == std::string::npos) {
                 continue;
             }
-
             kieli::add_to_history(input.value().c_str());
-
             kieli::Database db { .manifest { .root_path = std::filesystem::current_path() } };
-
-            auto const document_id = kieli::test_document(db, std::move(input).value());
-
-            try {
-                callback(db, document_id);
-            }
-            catch (std::exception const& exception) {
-                std::print(stderr, "{}{}\n\n", error_header(colors), exception.what());
-            }
-
-            std::print(stderr, "{}", kieli::format_document_diagnostics(db, document_id, colors));
+            auto const      document_id = kieli::test_document(db, std::move(input).value());
+            wrap_exceptions([&] { callback(db, document_id); }, colors);
+            std::print("{}", kieli::format_document_diagnostics(db, document_id, colors));
         }
     }
 
@@ -142,6 +142,28 @@ namespace {
         return EXIT_FAILURE;
     }
 
+    auto dump(
+        std::string_view const                                           filename,
+        cppdiag::Colors const                                            colors,
+        std::invocable<kieli::Database&, kieli::Document_id> auto const& callback) -> int
+    {
+        kieli::Database db;
+        if (auto document_id = kieli::read_document(db, filename)) {
+            wrap_exceptions([&] { callback(db, document_id.value()); }, colors);
+            std::print("{}", kieli::format_document_diagnostics(db, document_id.value(), colors));
+            return EXIT_SUCCESS;
+        }
+        else {
+            std::println(
+                stderr,
+                "{}Failed to read '{}': {}",
+                error_header(colors),
+                filename,
+                kieli::describe_read_failure(document_id.error()));
+            return EXIT_FAILURE;
+        }
+    }
+
 } // namespace
 
 auto main(int const argc, char const* const* const argv) -> int
@@ -151,6 +173,8 @@ auto main(int const argc, char const* const* const argv) -> int
     auto const help_flag    = parameters.add('h', "help", "Show this help text");
     auto const version_flag = parameters.add('v', "version", "Show Kieli version");
     auto const nocolor_flag = parameters.add("nocolor", "Disable colored output");
+    auto const cst_flag     = parameters.add<std::string_view>("cst", "Dump the CST of a file");
+    auto const ast_flag     = parameters.add<std::string_view>("ast", "Dump the AST of a file");
     auto const repl_option  = parameters.add<std::string_view>("repl", "Run the given REPL");
 
     cppdiag::Colors colors = cppdiag::Colors::defaults();
@@ -166,6 +190,12 @@ auto main(int const argc, char const* const* const argv) -> int
         }
         if (help_flag) {
             std::print("Valid options:\n{}", parameters.help_string());
+        }
+        if (cst_flag) {
+            return dump(cst_flag.value(), colors, debug_parse);
+        }
+        if (ast_flag) {
+            return dump(ast_flag.value(), colors, debug_desugar);
         }
         if (repl_option) {
             return choose_and_run_debug_repl(repl_option.value(), colors);
