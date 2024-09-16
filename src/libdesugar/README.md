@@ -37,6 +37,10 @@ Some errors are also caught at this stage, such as duplicate struct fields.
 
 `a + b * c` → `(a + (b * c))`
 
+## Field initializer shorthand
+
+`T { a, b = 10, c }` → `T { a = a, b = 10, c = c }`
+
 ## Normalize function bodies to block form
 
 `fn f(): I32 = 0` → `fn f(): I32 { 0 }`

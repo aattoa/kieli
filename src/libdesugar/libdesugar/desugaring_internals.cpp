@@ -175,7 +175,11 @@ auto libdesugar::Context::desugar(cst::Type_signature const& signature) -> ast::
 auto libdesugar::Context::desugar(cst::Struct_field_initializer const& field)
     -> ast::Struct_field_initializer
 {
-    return { .name = field.name, .expression = desugar(field.expression) };
+    if (field.equals.has_value()) {
+        return { field.name, desugar(field.equals.value().expression) };
+    }
+    ast::Path path { .segments = utl::to_vector({ ast::Path_segment { .name = field.name } }) };
+    return { field.name, ast.expressions.push(std::move(path), field.name.range) };
 }
 
 auto libdesugar::Context::desugar(cst::Mutability const& mutability) -> ast::Mutability

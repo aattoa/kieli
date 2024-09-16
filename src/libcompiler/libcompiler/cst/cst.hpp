@@ -152,10 +152,14 @@ namespace kieli::cst {
 
     using Template_parameters = Surrounded<Separated_sequence<Template_parameter>>;
 
-    struct Struct_field_initializer {
-        Lower         name;
+    struct Struct_field_equals {
         Token_id      equals_sign_token;
         Expression_id expression;
+    };
+
+    struct Struct_field_initializer {
+        Lower                              name;
+        std::optional<Struct_field_equals> equals;
     };
 
     struct Match_case {

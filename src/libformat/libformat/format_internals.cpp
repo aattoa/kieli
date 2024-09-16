@@ -91,8 +91,11 @@ auto libformat::format(State& state, cst::pattern::Field const& field) -> void
 
 auto libformat::format(State& state, cst::Struct_field_initializer const& initializer) -> void
 {
-    format(state, "{} = ", initializer.name);
-    format(state, initializer.expression);
+    format(state, "{}", initializer.name);
+    if (initializer.equals.has_value()) {
+        format(state, " = ");
+        format(state, initializer.equals.value().expression);
+    }
 }
 
 auto libformat::format(State& state, cst::definition::Field const& field) -> void

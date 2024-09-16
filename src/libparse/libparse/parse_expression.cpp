@@ -74,11 +74,14 @@ namespace {
         -> std::optional<cst::Struct_field_initializer>
     {
         return parse_lower_name(context).transform([&](kieli::Lower const name) {
-            Token const equals_sign = context.require_extract(Token_type::equals);
             return cst::Struct_field_initializer {
-                .name              = name,
-                .equals_sign_token = context.token(equals_sign),
-                .expression = require<parse_expression>(context, "an initializer expression"),
+                name,
+                context.try_extract(Token_type::equals).transform([&](Token const equals_sign) {
+                    return cst::Struct_field_equals {
+                        context.token(equals_sign),
+                        require<parse_expression>(context, "an initializer expression"),
+                    };
+                }),
             };
         });
     }
