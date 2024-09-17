@@ -5,13 +5,15 @@
 #include <language-server/json.hpp>
 #include <language-server/server.hpp>
 #include <libformat/format.hpp>
-#include <libquery/query.hpp>
+#include <libparse/parse.hpp> // TODO: remove
 
 using kieli::Database;
-using kieli::query::Result;
 using namespace kieli::lsp;
 
 namespace {
+    template <class T>
+    using Result = std::expected<T, std::string>;
+
     auto maybe_markdown_content(std::optional<std::string> markdown) -> Json
     {
         return std::move(markdown).transform(markdown_content_to_json).value_or(Json {});
@@ -31,25 +33,26 @@ namespace {
     auto handle_hover(Database& db, Json::Object const& params) -> Result<Json>
     {
         auto const cursor = character_location_from_json(db, params);
-        return kieli::query::hover(db, cursor).transform(maybe_markdown_content);
-    }
-
-    auto handle_goto_definition(Database& db, Json::Object const& params) -> Result<Json>
-    {
-        auto const cursor = character_location_from_json(db, params);
-        return kieli::query::definition(db, cursor).transform([&](kieli::Location const location) {
-            return location_to_json(db, location);
-        });
+        return maybe_markdown_content(std::format(
+            "Hello, world!\n\nFile: `{}`\nPosition: {}",
+            db.paths[cursor.document_id].c_str(),
+            cursor.position));
     }
 
     auto handle_formatting(Database& db, Json::Object const& params) -> Result<Json>
     {
         auto const document_id
             = document_id_from_json(db, as<Json::Object>(at(params, "textDocument")));
-        return kieli::query::cst(db, document_id).transform([&](kieli::CST const& cst) {
-            auto const options = format_options_from_json(params.at("options").as_object());
+        auto const options = format_options_from_json(params.at("options").as_object());
+
+        // TODO: Remove try-catch when libparse behaves properly.
+        try {
+            auto const cst = kieli::parse(db, document_id);
             return document_format_edit(kieli::format_module(cst.get(), options));
-        });
+        }
+        catch (std::exception const& exception) {
+            return std::unexpected(std::format("Failed to format document: {}", exception.what()));
+        }
     }
 
     auto handle_pull_diagnostics(Database& db, Json::Object const& params) -> Result<Json>
@@ -76,7 +79,6 @@ namespace {
             { "capabilities",
               Json { Json::Object {
                   { "hoverProvider", Json { true } },
-                  { "definitionProvider", Json { true } },
                   { "documentFormattingProvider", Json { true } },
                   { "textDocumentSync",
                     Json { Json::Object {
@@ -106,9 +108,6 @@ namespace {
     {
         if (method == "textDocument/hover") {
             return handle_hover(server.db, params.as_object());
-        }
-        if (method == "textDocument/definition") {
-            return handle_goto_definition(server.db, params.as_object());
         }
         if (method == "textDocument/formatting") {
             return handle_formatting(server.db, params.as_object());

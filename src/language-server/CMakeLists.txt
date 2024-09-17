@@ -18,5 +18,7 @@ target_precompile_headers(language-server
 
 target_link_libraries(language-server
     PUBLIC  libutl
-    PRIVATE libquery
+    PUBLIC  libcompiler
+    PUBLIC  libparse
+    PUBLIC  libformat
     PRIVATE cpputil::json)
