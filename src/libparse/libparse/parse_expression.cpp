@@ -531,30 +531,30 @@ namespace {
         }
     }
 
-    auto parse_operator_name(Context& context) -> std::optional<cst::expression::Operator_name>
+    auto parse_infix_name(Context& context) -> std::optional<cst::expression::Infix_name>
     {
         kieli::Range const anchor_range = context.peek().range;
         return parse_operator_id(context).transform([&](kieli::Identifier const identifier) {
-            return cst::expression::Operator_name { identifier, anchor_range };
+            return cst::expression::Infix_name { identifier, anchor_range };
         });
     }
 
-    auto parse_binary_operator_chain(Context& context) -> std::optional<cst::Expression_id>
+    auto parse_infix_chain(Context& context) -> std::optional<cst::Expression_id>
     {
         return parse_potential_type_cast(context).transform(
             [&](cst::Expression_id const expression) {
-                std::vector<cst::expression::Operator_chain::Rhs> tail;
-                while (auto const operator_name = parse_operator_name(context)) {
+                std::vector<cst::expression::Infix_chain::Rhs> tail;
+                while (auto const operator_name = parse_infix_name(context)) {
                     tail.push_back({
-                        .operand       = require<parse_potential_type_cast>(context, "an operand"),
-                        .operator_name = operator_name.value(),
+                        .operand    = require<parse_potential_type_cast>(context, "an operand"),
+                        .infix_name = operator_name.value(),
                     });
                 }
                 if (tail.empty()) {
                     return expression;
                 }
                 return context.cst().expressions.push(
-                    cst::expression::Operator_chain { .tail = std::move(tail), .lhs = expression },
+                    cst::expression::Infix_chain { .tail = std::move(tail), .lhs = expression },
                     context.up_to_current(context.cst().expressions[expression].range));
             });
     }
@@ -568,5 +568,5 @@ auto libparse::parse_block_expression(Context& context) -> std::optional<cst::Ex
 
 auto libparse::parse_expression(Context& context) -> std::optional<cst::Expression_id>
 {
-    return parse_binary_operator_chain(context);
+    return parse_infix_chain(context);
 }

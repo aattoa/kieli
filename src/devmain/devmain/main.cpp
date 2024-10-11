@@ -10,7 +10,6 @@
 #include <devmain/history.hpp>
 
 namespace {
-
     [[nodiscard]] auto format_command_line_error(
         cppargs::Parse_error_info const& info,
         std::string_view const           program_name,
@@ -64,25 +63,19 @@ namespace {
 
     auto debug_desugar(kieli::Database& db, kieli::Document_id const document_id) -> void
     {
-        auto const cst_module = kieli::parse(db, document_id);
-        for (kieli::cst::Definition const& cst_definition : cst_module.get().definitions) {
-            kieli::ast::Arena            ast_arena;
-            kieli::ast::Definition const ast_definition = kieli::desugar(
-                db, document_id, ast_arena, cst_module.get().arena, cst_definition);
-            std::println("{}", kieli::ast::display(ast_arena, ast_definition));
+        auto const             cst = kieli::parse(db, document_id);
+        kieli::ast::Arena      arena;
+        kieli::Desugar_context context { db, arena, cst.get().arena, document_id };
+        for (kieli::cst::Definition const& definition : cst.get().definitions) {
+            std::println("{}", display(arena, kieli::desugar_definition(context, definition)));
         }
     }
 
     auto debug_resolve(kieli::Database& db, kieli::Document_id const document_id) -> void
     {
         auto hir       = kieli::hir::Arena {};
-        auto constants = libresolve::Constants::make_with(hir);
-
-        libresolve::Context context {
-            .db        = db,
-            .hir       = std::move(hir),
-            .constants = std::move(constants),
-        };
+        auto constants = libresolve::make_constants(hir);
+        auto context   = libresolve::Context { .db = db, .constants = std::move(constants) };
 
         (void)context;
         (void)document_id;
@@ -163,7 +156,6 @@ namespace {
             return EXIT_FAILURE;
         }
     }
-
 } // namespace
 
 auto main(int const argc, char const* const* const argv) -> int

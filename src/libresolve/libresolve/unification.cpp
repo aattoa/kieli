@@ -39,8 +39,9 @@ namespace {
             hir::Mutability_variable_id const variable_id,
             hir::Mutability const             mutability) const -> bool
         {
-            state.set_solution(
+            set_solution(
                 context,
+                state,
                 state.mutability_variables[variable_id],
                 context.hir.mutabilities[mutability.id]);
             return true;
@@ -121,8 +122,8 @@ namespace {
                 }
                 return false;
             }
-            state.flatten(context, type);
-            state.set_solution(context, state.type_variables[tag], std::move(type));
+            flatten_type(context, state, type);
+            set_solution(context, state, state.type_variables[tag], std::move(type));
             return true;
         }
 

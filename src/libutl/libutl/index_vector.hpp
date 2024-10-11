@@ -62,6 +62,30 @@ namespace utl {
         auto operator==(Index_vector const& other) const -> bool = default;
     };
 
+    template <vector_index Index, class T, class Allocator = std::allocator<T>>
+    struct Index_arena {
+        Index_vector<Index, T, Allocator> index_vector;
+        std::vector<Index>                free_indices;
+
+        auto kill(Index const index) -> void
+        {
+            free_indices.push_back(index);
+        }
+
+        template <class... Args>
+        [[nodiscard]] constexpr auto push(Args&&... args) -> Index
+            requires std::is_constructible_v<T, Args...>
+        {
+            if (free_indices.empty()) {
+                return index_vector.push(std::forward<Args>(args)...);
+            }
+            Index const index = free_indices.back();
+            free_indices.pop_back();
+            index_vector[index] = T(std::forward<Args>(args)...);
+            return index;
+        }
+    };
+
     struct Hash_vector_index : std::hash<std::size_t> {
         auto operator()(vector_index auto const& index) const noexcept -> std::size_t
         {

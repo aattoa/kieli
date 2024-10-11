@@ -335,7 +335,7 @@ namespace {
             display_vector_node(state, Last::yes, "types", concept_.type_signatures);
         }
 
-        auto operator()(definition::Implementation const& implementation)
+        auto operator()(definition::Impl const& implementation)
         {
             write_line(state, "implementation");
             display_template_parameters_node(state, Last::no, implementation.template_parameters);
@@ -453,9 +453,9 @@ namespace {
             display_vector_node(state, Last::yes, "field initializers", initializer.initializers);
         }
 
-        auto operator()(expression::Binary_operator_application const& application)
+        auto operator()(expression::Infix_call const& application)
         {
-            write_line(state, "binary operator application");
+            write_line(state, "infix call");
             display_node(state, Last::no, "left operand", application.left);
             display_node(state, Last::no, "right operand", application.right);
             display_node(state, Last::yes, "operator", application.op);
@@ -711,7 +711,7 @@ namespace {
             display_node(state, Last::yes, "pointee type", pointer.pointee_type);
         }
 
-        auto operator()(type::Implementation const& implementation)
+        auto operator()(type::Impl const& implementation)
         {
             write_line(state, "implementation");
             display_vector_node(state, Last::yes, "concepts", implementation.concepts);

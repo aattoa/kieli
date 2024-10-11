@@ -160,7 +160,7 @@ namespace {
             format(state, "{}}}", state.newline());
         }
 
-        auto operator()(cst::definition::Implementation const& implementation) -> void
+        auto operator()(cst::definition::Impl const& implementation) -> void
         {
             format(state, "impl");
             format(state, implementation.template_parameters);

@@ -81,7 +81,7 @@ namespace {
             format(state, ")");
         }
 
-        auto operator()(cst::type::Implementation const& implementation)
+        auto operator()(cst::type::Impl const& implementation)
         {
             format(state, "impl ");
             format_separated(state, implementation.concepts.elements, " + ");

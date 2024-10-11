@@ -208,7 +208,7 @@ namespace {
         auto self_type           = require<parse_type>(context, "the Self type");
         auto definitions         = extract_definition_sequence(context);
 
-        return cst::definition::Implementation {
+        return cst::definition::Impl {
             .template_parameters = std::move(template_parameters),
             .definitions         = std::move(definitions),
             .self_type           = self_type,
@@ -247,9 +247,9 @@ auto libparse::parse_definition(Context& context) -> std::optional<cst::Definiti
     kieli::Range const anchor_range = context.peek().range;
     return dispatch_parse_definition(context).transform([&](cst::Definition_variant&& variant) {
         return cst::Definition {
-            .variant = std::move(variant),
-            .source  = context.document_id(),
-            .range   = context.up_to_current(anchor_range),
+            .variant     = std::move(variant),
+            .document_id = context.document_id(),
+            .range       = context.up_to_current(anchor_range),
         };
     });
 }

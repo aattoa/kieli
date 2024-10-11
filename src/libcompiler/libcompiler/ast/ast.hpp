@@ -20,23 +20,6 @@
 */
 
 namespace kieli::ast {
-    struct Expression_id : utl::Vector_index<Expression_id> {
-        using Vector_index::Vector_index;
-    };
-
-    struct Pattern_id : utl::Vector_index<Pattern_id> {
-        using Vector_index::Vector_index;
-    };
-
-    struct Type_id : utl::Vector_index<Type_id> {
-        using Vector_index::Vector_index;
-    };
-
-    struct [[nodiscard]] Expression;
-    struct [[nodiscard]] Type;
-    struct [[nodiscard]] Pattern;
-    struct [[nodiscard]] Definition;
-
     struct Error {};
 
     struct Wildcard {
@@ -161,6 +144,13 @@ namespace kieli::ast {
             Expression_id              invocable;
         };
 
+        struct Infix_call {
+            Expression_id left;
+            Expression_id right;
+            Identifier    op;
+            Range         op_range;
+        };
+
         struct Tuple_initializer {
             Path                       constructor_path;
             std::vector<Expression_id> initializers;
@@ -169,13 +159,6 @@ namespace kieli::ast {
         struct Struct_initializer {
             Path                                  constructor_path;
             std::vector<Struct_field_initializer> initializers;
-        };
-
-        struct Binary_operator_application {
-            Expression_id left;
-            Expression_id right;
-            Identifier    op;
-            Range         op_range;
         };
 
         struct Struct_field_access {
@@ -280,7 +263,7 @@ namespace kieli::ast {
               expression::Function_call,
               expression::Tuple_initializer,
               expression::Struct_initializer,
-              expression::Binary_operator_application,
+              expression::Infix_call,
               expression::Struct_field_access,
               expression::Tuple_field_access,
               expression::Array_index_access,
@@ -419,7 +402,7 @@ namespace kieli::ast {
             Mutability mutability;
         };
 
-        struct Implementation {
+        struct Impl {
             std::vector<Path> concepts;
         };
     } // namespace type
@@ -437,7 +420,7 @@ namespace kieli::ast {
               type::Typeof,
               type::Reference,
               type::Pointer,
-              type::Implementation> {
+              type::Impl> {
         using variant::variant;
     };
 
@@ -509,7 +492,7 @@ namespace kieli::ast {
             Template_parameters             template_parameters;
         };
 
-        struct Implementation {
+        struct Impl {
             Type                    type;
             std::vector<Definition> definitions;
             Template_parameters     template_parameters;
@@ -528,7 +511,7 @@ namespace kieli::ast {
               definition::Enumeration,
               definition::Alias,
               definition::Concept,
-              definition::Implementation,
+              definition::Impl,
               definition::Submodule> {
         using variant::variant;
     };

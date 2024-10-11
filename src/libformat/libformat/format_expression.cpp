@@ -90,7 +90,7 @@ namespace {
             format(state, ")");
         }
 
-        auto operator()(cst::expression::Operator_chain const& sequence)
+        auto operator()(cst::expression::Infix_chain const& sequence)
         {
             format(state, sequence.lhs);
             for (auto const& [rhs, op] : sequence.tail) {

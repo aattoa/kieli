@@ -209,15 +209,15 @@ namespace kieli::cst {
             Surrounded<Separated_sequence<Struct_field_initializer>> initializers;
         };
 
-        struct Operator_name {
+        struct Infix_name {
             Identifier identifier;
             Range      range;
         };
 
-        struct Operator_chain {
+        struct Infix_chain {
             struct Rhs {
                 Expression_id operand;
-                Operator_name operator_name;
+                Infix_name    infix_name;
             };
 
             std::vector<Rhs> tail;
@@ -384,7 +384,7 @@ namespace kieli::cst {
               expression::Function_call,
               expression::Tuple_initializer,
               expression::Struct_initializer,
-              expression::Operator_chain,
+              expression::Infix_chain,
               expression::Struct_field_access,
               expression::Tuple_field_access,
               expression::Array_index_access,
@@ -561,7 +561,7 @@ namespace kieli::cst {
             Token_id                  asterisk_token;
         };
 
-        struct Implementation {
+        struct Impl {
             Separated_sequence<Path> concepts;
             Token_id                 impl_keyword_token;
         };
@@ -578,7 +578,7 @@ namespace kieli::cst {
               type::Slice,
               type::Function,
               type::Typeof,
-              type::Implementation,
+              type::Impl,
               type::Reference,
               type::Pointer> {
         using variant::variant;
@@ -673,7 +673,7 @@ namespace kieli::cst {
             Token_id                           close_brace_token;
         };
 
-        struct Implementation {
+        struct Impl {
             std::optional<Template_parameters>  template_parameters;
             Surrounded<std::vector<Definition>> definitions;
             Type_id                             self_type;
@@ -695,14 +695,14 @@ namespace kieli::cst {
               definition::Enum,
               definition::Alias,
               definition::Concept,
-              definition::Implementation,
+              definition::Impl,
               definition::Submodule> {
         using variant::variant;
     };
 
     struct Definition {
         Definition_variant variant;
-        Document_id        source;
+        Document_id        document_id;
         Range              range;
     };
 

@@ -77,7 +77,7 @@ namespace {
 
     auto extract_implementation(Context& context, Token const& impl_keyword) -> cst::Type_variant
     {
-        return cst::type::Implementation {
+        return cst::type::Impl {
             .concepts           = extract_concept_references(context),
             .impl_keyword_token = context.token(impl_keyword),
         };

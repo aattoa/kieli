@@ -5,11 +5,6 @@
 #include <libcompiler/compiler.hpp>
 
 namespace kieli::hir {
-    struct [[nodiscard]] Mutability;
-    struct [[nodiscard]] Expression;
-    struct [[nodiscard]] Pattern;
-    struct [[nodiscard]] Type;
-
     enum class Type_variable_kind { general, integral };
 
     enum class Expression_kind { place, value };
@@ -82,7 +77,7 @@ namespace kieli::hir {
               pattern::Name,
               pattern::Alias,
               pattern::Guarded> {
-        using variant::variant, variant::operator=;
+        using variant::variant;
     };
 
     struct Pattern {
@@ -190,7 +185,7 @@ namespace kieli::hir {
               expression::Addressof,
               expression::Dereference,
               expression::Defer> {
-        using variant::variant, variant::operator=;
+        using variant::variant;
     };
 
     struct Expression {
@@ -270,7 +265,7 @@ namespace kieli::hir {
               type::Tuple,
               type::Parameterized,
               type::Variable> {
-        using variant::variant, variant::operator=;
+        using variant::variant;
     };
 
     namespace mutability {
@@ -285,11 +280,11 @@ namespace kieli::hir {
 
     struct Mutability_variant
         : std::variant<Error, kieli::Mutability, mutability::Parameterized, mutability::Variable> {
-        using variant::variant, variant::operator=;
+        using variant::variant;
     };
 
     struct Template_argument : std::variant<Expression, Type, Mutability> {
-        using variant::variant, variant::operator=;
+        using variant::variant;
     };
 
     struct Template_type_parameter {
@@ -315,7 +310,7 @@ namespace kieli::hir {
               Template_type_parameter,
               Template_mutability_parameter,
               Template_value_parameter> {
-        using variant::variant, variant::operator=;
+        using variant::variant;
     };
 
     struct Template_parameter {
@@ -336,11 +331,7 @@ namespace kieli::hir {
         Type                            return_type;
         Type                            function_type;
         kieli::Lower                    name;
-    };
-
-    struct Function {
-        Function_signature signature;
-        Expression         body;
+        Scope_id                        scope_id;
     };
 
     struct Enumeration {

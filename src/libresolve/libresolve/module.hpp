@@ -2,29 +2,14 @@
 
 #include <libutl/utilities.hpp>
 #include <libcompiler/compiler.hpp>
+#include <libcompiler/cst/cst.hpp>
 #include <libcompiler/ast/ast.hpp>
 #include <libcompiler/hir/hir.hpp>
 
 namespace libresolve {
+    namespace cst = kieli::cst;
     namespace ast = kieli::ast;
     namespace hir = kieli::hir;
-
-    struct Function_info;
-    struct Enumeration_info;
-    struct Concept_info;
-    struct Alias_info;
-    struct Module_info;
-    struct Environment;
-    class Scope;
-
-    struct Info_arena {
-        utl::Index_vector<hir::Module_id, Module_info>           modules;
-        utl::Index_vector<hir::Environment_id, Environment>      environments;
-        utl::Index_vector<hir::Function_id, Function_info>       functions;
-        utl::Index_vector<hir::Enumeration_id, Enumeration_info> enumerations;
-        utl::Index_vector<hir::Concept_id, Concept_info>         concepts;
-        utl::Index_vector<hir::Alias_id, Alias_info>             aliases;
-    };
 
     struct Lower_info {
         using Variant = std::variant<hir::Function_id, hir::Module_id>;
@@ -47,7 +32,7 @@ namespace libresolve {
               hir::Enumeration_id,
               hir::Concept_id,
               hir::Alias_id> {
-        using variant::variant, variant::operator=;
+        using variant::variant;
     };
 
     struct Variable_bind {
@@ -70,107 +55,79 @@ namespace libresolve {
         bool            unused = true;
     };
 
-    struct Function_with_resolved_signature;
+    struct Function_info {
+        cst::definition::Function              cst;
+        ast::definition::Function              ast;
+        std::optional<hir::Function_signature> signature;
+        std::optional<hir::Expression>         body;
+        hir::Environment_id                    environment_id;
+        kieli::Document_id                     document_id;
+        kieli::Lower                           name;
+    };
+
+    struct Enumeration_info {
+        cst::definition::Enum           cst;
+        ast::definition::Enumeration    ast;
+        std::optional<hir::Enumeration> hir;
+        hir::Type                       type;
+        hir::Environment_id             environment_id;
+        kieli::Document_id              document_id;
+        kieli::Upper                    name;
+    };
+
+    struct Concept_info {
+        cst::definition::Concept    cst;
+        ast::definition::Concept    ast;
+        std::optional<hir::Concept> hir;
+        hir::Environment_id         environment_id;
+        kieli::Document_id          document_id;
+        kieli::Upper                name;
+    };
+
+    struct Alias_info {
+        cst::definition::Alias    cst;
+        ast::definition::Alias    ast;
+        std::optional<hir::Alias> hir;
+        hir::Environment_id       environment_id;
+        kieli::Document_id        document_id;
+        kieli::Upper              name;
+    };
+
+    struct Module_info {
+        cst::definition::Submodule cst;
+        ast::definition::Submodule ast;
+        hir::Module                hir;
+        hir::Environment_id        environment_id;
+        kieli::Document_id         document_id;
+        kieli::Lower               name;
+    };
 
     template <class T>
     using Identifier_map = std::vector<std::pair<kieli::Identifier, T>>;
+
+    struct Environment {
+        Identifier_map<Upper_info>         upper_map;
+        Identifier_map<Lower_info>         lower_map;
+        std::vector<Definition_variant>    in_order;
+        std::optional<hir::Environment_id> parent;
+        kieli::Document_id                 document_id;
+    };
+
+    struct Scope {
+        Identifier_map<Variable_bind>   variables;
+        Identifier_map<Type_bind>       types;
+        Identifier_map<Mutability_bind> mutabilities;
+        kieli::Document_id              document_id;
+        std::optional<hir::Scope_id>    parent_id;
+    };
+
+    struct Info_arena {
+        utl::Index_vector<hir::Module_id, Module_info>           modules;
+        utl::Index_vector<hir::Function_id, Function_info>       functions;
+        utl::Index_vector<hir::Enumeration_id, Enumeration_info> enumerations;
+        utl::Index_vector<hir::Concept_id, Concept_info>         concepts;
+        utl::Index_vector<hir::Alias_id, Alias_info>             aliases;
+        utl::Index_vector<hir::Environment_id, Environment>      environments;
+        utl::Index_arena<hir::Scope_id, Scope>                   scopes;
+    };
 } // namespace libresolve
-
-class libresolve::Scope {
-    Identifier_map<Variable_bind>   m_variables;
-    Identifier_map<Type_bind>       m_types;
-    Identifier_map<Mutability_bind> m_mutabilities;
-    kieli::Document_id              m_document_id;
-    Scope*                          m_parent {};
-public:
-    explicit Scope(kieli::Document_id const document_id) : m_document_id { document_id } {}
-
-    Scope(Scope&&)                    = default;
-    auto operator=(Scope&&) -> Scope& = default;
-
-    Scope(Scope const&)                    = delete;
-    auto operator=(Scope const&) -> Scope& = delete;
-
-    auto bind_mutability(kieli::Identifier identifier, Mutability_bind binding) -> void;
-    auto bind_variable(kieli::Identifier identifier, Variable_bind binding) -> void;
-    auto bind_type(kieli::Identifier identifier, Type_bind binding) -> void;
-
-    [[nodiscard]] auto find_mutability(kieli::Identifier identifier) -> Mutability_bind*;
-    [[nodiscard]] auto find_variable(kieli::Identifier identifier) -> Variable_bind*;
-    [[nodiscard]] auto find_type(kieli::Identifier identifier) -> Type_bind*;
-
-    // Make a child scope. `this` must not be moved or destroyed while the child lives.
-    [[nodiscard]] auto child() noexcept -> Scope;
-
-    // Retrieve the parent pointer. Returns `nullptr` if there is no parent.
-    [[nodiscard]] auto parent() const noexcept -> Scope*;
-
-    // Retrieve the `Document_id`.
-    [[nodiscard]] auto document_id() const noexcept -> kieli::Document_id;
-
-    // Emit warnings for any unused bindings.
-    auto report_unused(kieli::Database& db) -> void;
-};
-
-struct libresolve::Function_with_resolved_signature {
-    ast::Expression         unresolved_body;
-    hir::Function_signature signature;
-    Scope                   signature_scope;
-};
-
-struct libresolve::Function_info {
-    using Variant = std::variant<
-        ast::definition::Function, //
-        Function_with_resolved_signature,
-        hir::Function>;
-    Variant             variant;
-    hir::Environment_id environment;
-    kieli::Document_id  document_id;
-    kieli::Lower        name;
-    bool                currently_resolving {};
-};
-
-struct libresolve::Enumeration_info {
-    using Variant = std::variant<ast::definition::Enumeration, hir::Enumeration>;
-    Variant             variant;
-    hir::Environment_id environment;
-    kieli::Document_id  document_id;
-    kieli::Upper        name;
-    hir::Type           type;
-    bool                currently_resolving {};
-};
-
-struct libresolve::Concept_info {
-    using Variant = std::variant<ast::definition::Concept, hir::Concept>;
-    Variant             variant;
-    hir::Environment_id environment;
-    kieli::Document_id  document_id;
-    kieli::Upper        name;
-    bool                currently_resolving {};
-};
-
-struct libresolve::Alias_info {
-    using Variant = std::variant<ast::definition::Alias, hir::Alias>;
-    Variant             variant;
-    hir::Environment_id environment;
-    kieli::Document_id  document_id;
-    kieli::Upper        name;
-    bool                currently_resolving {};
-};
-
-struct libresolve::Module_info {
-    // TODO: import
-    using Variant = std::variant<ast::definition::Submodule, hir::Module>;
-    Variant             variant;
-    hir::Environment_id environment;
-    kieli::Document_id  document_id;
-    kieli::Lower        name;
-};
-
-struct libresolve::Environment {
-    Identifier_map<Upper_info>         upper_map;
-    Identifier_map<Lower_info>         lower_map;
-    std::vector<Definition_variant>    in_order;
-    std::optional<hir::Environment_id> parent;
-    kieli::Document_id                 document_id;
-};

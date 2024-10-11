@@ -4,109 +4,105 @@
 #include <libcompiler/compiler.hpp>
 #include <libcompiler/cst/cst.hpp>
 #include <libcompiler/ast/ast.hpp>
+#include <libdesugar/desugar.hpp>
 
 namespace libdesugar {
     namespace cst = kieli::cst;
     namespace ast = kieli::ast;
+    using Context = kieli::Desugar_context;
 
-    auto unit_type(kieli::Range range) -> ast::Type;
-    auto wildcard_type(kieli::Range range) -> ast::Type;
-    auto unit_value(kieli::Range range) -> ast::Expression;
-    auto wildcard_pattern(kieli::Range range) -> ast::Pattern;
+    auto desugar(Context, cst::Definition const&) -> ast::Definition;
+    auto desugar(Context, cst::Expression const&) -> ast::Expression;
+    auto desugar(Context, cst::Pattern const&) -> ast::Pattern;
+    auto desugar(Context, cst::Type const&) -> ast::Type;
+    auto desugar(Context, cst::Function_signature const&) -> ast::Function_signature;
+    auto desugar(Context, cst::definition::Function const&) -> ast::definition::Function;
+    auto desugar(Context, cst::definition::Struct const&) -> ast::definition::Enumeration;
+    auto desugar(Context, cst::definition::Enum const&) -> ast::definition::Enumeration;
+    auto desugar(Context, cst::definition::Alias const&) -> ast::definition::Alias;
+    auto desugar(Context, cst::definition::Concept const&) -> ast::definition::Concept;
+    auto desugar(Context, cst::definition::Impl const&) -> ast::definition::Impl;
+    auto desugar(Context, cst::definition::Submodule const&) -> ast::definition::Submodule;
 
-    struct Context {
-        kieli::Database&   db;
-        cst::Arena const&  cst;
-        ast::Arena&        ast;
-        kieli::Document_id document_id;
+    auto desugar(Context, cst::Function_parameters const&) -> std::vector<ast::Function_parameter>;
+    auto desugar(Context, cst::Template_argument const&) -> ast::Template_argument;
+    auto desugar(Context, cst::Template_parameter const&) -> ast::Template_parameter;
+    auto desugar(Context, cst::Mutability const&) -> ast::Mutability;
+    auto desugar(Context, cst::Path_segment const&) -> ast::Path_segment;
+    auto desugar(Context, cst::Path const&) -> ast::Path;
+    auto desugar(Context, cst::Type_annotation const&) -> ast::Type_id;
+    auto desugar(Context, cst::Type_signature const&) -> ast::Type_signature;
+    auto desugar(Context, cst::Struct_field_initializer const&) -> ast::Struct_field_initializer;
+    auto desugar(Context, cst::pattern::Field const&) -> ast::pattern::Field;
+    auto desugar(Context, cst::pattern::Constructor_body const&) -> ast::pattern::Constructor_body;
+    auto desugar(Context, cst::definition::Field const&) -> ast::definition::Field;
+    auto desugar(Context, cst::definition::Constructor_body const&)
+        -> ast::definition::Constructor_body;
+    auto desugar(Context, cst::definition::Constructor const&) -> ast::definition::Constructor;
+    auto desugar(Context, cst::Wildcard const&) -> ast::Wildcard;
+    auto desugar(Context, cst::Type_parameter_default_argument const&)
+        -> ast::Template_type_parameter::Default;
+    auto desugar(Context, cst::Value_parameter_default_argument const&)
+        -> ast::Template_value_parameter::Default;
+    auto desugar(Context, cst::Mutability_parameter_default_argument const&)
+        -> ast::Template_mutability_parameter::Default;
+    auto desugar(Context, cst::Expression_id) -> ast::Expression_id;
+    auto desugar(Context, cst::Pattern_id) -> ast::Pattern_id;
+    auto desugar(Context, cst::Type_id) -> ast::Type_id;
 
-        auto desugar(cst::Expression const&) -> ast::Expression;
-        auto desugar(cst::Type const&) -> ast::Type;
-        auto desugar(cst::Pattern const&) -> ast::Pattern;
-        auto desugar(cst::Definition const&) -> ast::Definition;
+    template <class T>
+    auto desugar(Context, std::vector<T> const&);
+    template <class T>
+    auto desugar(Context, cst::Separated_sequence<T> const&);
+    template <class T>
+    auto desugar(Context, cst::Surrounded<T> const&);
 
-        auto desugar(cst::Function_parameters const&) -> std::vector<ast::Function_parameter>;
-        auto desugar(cst::Template_argument const&) -> ast::Template_argument;
-        auto desugar(cst::Template_parameter const&) -> ast::Template_parameter;
-        auto desugar(cst::Path_segment const&) -> ast::Path_segment;
-        auto desugar(cst::Path const&) -> ast::Path;
-        auto desugar(cst::Type_annotation const&) -> ast::Type_id;
-        auto desugar(cst::Function_signature const&) -> ast::Function_signature;
-        auto desugar(cst::Type_signature const&) -> ast::Type_signature;
-        auto desugar(cst::Struct_field_initializer const&) -> ast::Struct_field_initializer;
-        auto desugar(cst::pattern::Field const&) -> ast::pattern::Field;
-        auto desugar(cst::pattern::Constructor_body const&) -> ast::pattern::Constructor_body;
-        auto desugar(cst::definition::Field const&) -> ast::definition::Field;
-        auto desugar(cst::definition::Constructor_body const&) -> ast::definition::Constructor_body;
-        auto desugar(cst::definition::Constructor const&) -> ast::definition::Constructor;
-        auto desugar(cst::Wildcard const&) -> ast::Wildcard;
+    inline auto desugar(Context const context) noexcept
+    {
+        return [=](auto const& sugared) { return desugar(context, sugared); };
+    }
 
-        static auto desugar(cst::Mutability const&) -> ast::Mutability;
+    template <class T>
+    auto desugar(Context const context, std::vector<T> const& vector)
+    {
+        return std::ranges::to<std::vector>(std::views::transform(vector, desugar(context)));
+    }
 
-        auto desugar() noexcept
-        {
-            return [this](auto const& node) { return this->desugar(node); };
-        }
+    template <class T>
+    auto desugar(Context const context, cst::Separated_sequence<T> const& sequence)
+    {
+        return desugar(context, sequence.elements);
+    }
 
-        auto desugar(cst::Expression_id) -> ast::Expression_id;
-        auto desugar(cst::Pattern_id) -> ast::Pattern_id;
-        auto desugar(cst::Type_id) -> ast::Type_id;
+    template <class T>
+    auto desugar(Context const context, cst::Surrounded<T> const& surrounded)
+    {
+        return desugar(context, surrounded.value);
+    }
 
-        auto wrap_desugar(cst::Expression const&) -> ast::Expression_id;
-        auto wrap_desugar(cst::Pattern const&) -> ast::Pattern_id;
-        auto wrap_desugar(cst::Type const&) -> ast::Type_id;
+    auto wrap_desugar(Context, cst::Expression const&) -> ast::Expression_id;
+    auto wrap_desugar(Context, cst::Pattern const&) -> ast::Pattern_id;
+    auto wrap_desugar(Context, cst::Type const&) -> ast::Type_id;
 
-        auto deref_desugar(cst::Expression_id) -> ast::Expression;
-        auto deref_desugar(cst::Pattern_id) -> ast::Pattern;
-        auto deref_desugar(cst::Type_id) -> ast::Type;
+    auto deref_desugar(Context, cst::Expression_id) -> ast::Expression;
+    auto deref_desugar(Context, cst::Pattern_id) -> ast::Pattern;
+    auto deref_desugar(Context, cst::Type_id) -> ast::Type;
 
-        auto wrap_desugar() noexcept
-        {
-            return [this](auto const& node) { return this->wrap_desugar(node); };
-        }
+    inline auto wrap_desugar(Context const context) noexcept
+    {
+        return [=](auto const& sugared) { return wrap_desugar(context, sugared); };
+    }
 
-        auto deref_desugar() noexcept
-        {
-            return [this](auto const& node) { return this->deref_desugar(node); };
-        }
+    inline auto deref_desugar(Context const context) noexcept
+    {
+        return [=](auto const& sugared) { return deref_desugar(context, sugared); };
+    }
 
-        template <class T>
-        auto desugar(std::vector<T> const& vector)
-        {
-            return std::ranges::to<std::vector>(std::views::transform(vector, desugar()));
-        }
+    auto desugar_mutability(std::optional<cst::Mutability> const&, kieli::Range) -> ast::Mutability;
+    auto desugar_mutability(cst::Mutability const&) -> ast::Mutability;
 
-        template <class T>
-        auto desugar(cst::Separated_sequence<T> const& sequence)
-        {
-            return desugar(sequence.elements);
-        }
-
-        template <class T>
-        auto desugar(cst::Surrounded<T> const& surrounded)
-        {
-            return desugar(surrounded.value);
-        }
-
-        auto desugar(cst::Type_parameter_default_argument const& argument)
-        {
-            return std::visit<ast::Template_type_parameter::Default>(desugar(), argument.variant);
-        }
-
-        auto desugar(cst::Value_parameter_default_argument const& argument)
-        {
-            return std::visit<ast::Template_value_parameter::Default>(desugar(), argument.variant);
-        }
-
-        auto desugar(cst::Mutability_parameter_default_argument const& default_argument)
-        {
-            return std::visit<ast::Template_mutability_parameter::Default>(
-                desugar(), default_argument.variant);
-        }
-
-        auto desugar_mutability(cst::Mutability const&, kieli::Range) = delete;
-
-        static auto desugar_mutability(std::optional<cst::Mutability> const&, kieli::Range)
-            -> ast::Mutability;
-    };
+    auto unit_type(kieli::Range) -> ast::Type;
+    auto wildcard_type(kieli::Range) -> ast::Type;
+    auto unit_value(kieli::Range) -> ast::Expression;
+    auto wildcard_pattern(kieli::Range) -> ast::Pattern;
 } // namespace libdesugar

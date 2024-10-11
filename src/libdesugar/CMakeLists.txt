@@ -16,4 +16,5 @@ target_precompile_headers(libdesugar
     REUSE_FROM libutl)
 
 target_link_libraries(libdesugar
+    PUBLIC libutl
     PUBLIC libcompiler)

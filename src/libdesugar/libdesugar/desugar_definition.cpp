@@ -6,7 +6,7 @@ using namespace libdesugar;
 
 namespace {
     auto duplicate_fields_error(
-        Context&                context,
+        Context const           context,
         std::string_view const  description,
         kieli::Identifier const identifier,
         kieli::Range const      first,
@@ -27,7 +27,7 @@ namespace {
 
     template <class T>
     auto ensure_no_duplicates(
-        Context&               context,
+        Context const          context,
         std::string_view const description,
         std::vector<T> const&  elements) -> void
     {
@@ -46,7 +46,8 @@ namespace {
     }
 
     // Convert function bodies defined with `=body` syntax into block form.
-    auto normalize_function_body(Context& context, ast::Expression expression) -> ast::Expression
+    auto normalize_function_body(Context const context, ast::Expression expression)
+        -> ast::Expression
     {
         if (std::holds_alternative<ast::expression::Block>(expression.variant)) {
             return expression;
@@ -57,116 +58,28 @@ namespace {
         };
         return ast::Expression { std::move(block), range };
     }
-
-    struct Definition_desugaring_visitor {
-        Context&           context;
-        kieli::Document_id source;
-
-        auto operator()(cst::definition::Function const& function) -> ast::Definition_variant
-        {
-            return ast::definition::Function {
-                .signature = context.desugar(function.signature),
-                .body      = normalize_function_body(context, context.deref_desugar(function.body)),
-            };
-        }
-
-        auto operator()(cst::definition::Struct const& structure) -> ast::Definition_variant
-        {
-            return ast::definition::Enumeration {
-                .constructors { utl::to_vector({ ast::definition::Constructor {
-                    .name = structure.name,
-                    .body = context.desugar(structure.body),
-                } }) },
-                .name                = structure.name,
-                .template_parameters = structure.template_parameters.transform(context.desugar()),
-            };
-        }
-
-        auto operator()(cst::definition::Enum const& enumeration) -> ast::Definition_variant
-        {
-            ensure_no_duplicates(context, "constructor", enumeration.constructors.elements);
-            return ast::definition::Enumeration {
-                .constructors        = context.desugar(enumeration.constructors),
-                .name                = enumeration.name,
-                .template_parameters = enumeration.template_parameters.transform(context.desugar()),
-            };
-        }
-
-        auto operator()(cst::definition::Alias const& alias) -> ast::Definition_variant
-        {
-            return ast::definition::Alias {
-                .name                = alias.name,
-                .type                = context.deref_desugar(alias.type),
-                .template_parameters = alias.template_parameters.transform(context.desugar()),
-            };
-        }
-
-        auto operator()(cst::definition::Concept const& concept_) -> ast::Definition_variant
-        {
-            std::vector<ast::Function_signature> functions;
-            std::vector<ast::Type_signature>     types;
-
-            for (auto const& requirement : concept_.requirements) {
-                auto const visitor = utl::Overload {
-                    [&](cst::Function_signature const& signature) {
-                        functions.push_back(context.desugar(signature));
-                    },
-                    [&](cst::Type_signature const& signature) {
-                        types.push_back(context.desugar(signature));
-                    },
-                };
-                std::visit(visitor, requirement);
-            }
-
-            return ast::definition::Concept {
-                .function_signatures = std::move(functions),
-                .type_signatures     = std::move(types),
-                .name                = concept_.name,
-                .template_parameters = concept_.template_parameters.transform(context.desugar()),
-            };
-        }
-
-        auto operator()(cst::definition::Implementation const& implementation)
-            -> ast::Definition_variant
-        {
-            return ast::definition::Implementation {
-                .type        = context.deref_desugar(implementation.self_type),
-                .definitions = context.desugar(implementation.definitions),
-                .template_parameters
-                = implementation.template_parameters.transform(context.desugar()),
-            };
-        }
-
-        auto operator()(cst::definition::Submodule const& submodule) -> ast::Definition_variant
-        {
-            return ast::definition::Submodule {
-                .definitions         = context.desugar(submodule.definitions),
-                .name                = submodule.name,
-                .template_parameters = submodule.template_parameters.transform(context.desugar()),
-            };
-        }
-    };
 } // namespace
 
-auto libdesugar::Context::desugar(cst::definition::Field const& field) -> ast::definition::Field
+auto libdesugar::desugar(Context const ctx, cst::definition::Field const& field)
+    -> ast::definition::Field
 {
     return ast::definition::Field {
         .name  = field.name,
-        .type  = deref_desugar(field.type.type),
+        .type  = deref_desugar(ctx, field.type.type),
         .range = field.range,
     };
 };
 
-auto libdesugar::Context::desugar(cst::definition::Constructor_body const& body)
+auto libdesugar::desugar(Context const ctx, cst::definition::Constructor_body const& body)
     -> ast::definition::Constructor_body
 {
     auto const visitor = utl::Overload {
         [&](cst::definition::Struct_constructor const& constructor) {
-            ensure_no_duplicates(*this, "field", constructor.fields.value.elements);
-            return ast::definition::Struct_constructor { desugar(constructor.fields) };
+            ensure_no_duplicates(ctx, "field", constructor.fields.value.elements);
+            return ast::definition::Struct_constructor { desugar(ctx, constructor.fields) };
         },
         [&](cst::definition::Tuple_constructor const& constructor) {
-            return ast::definition::Tuple_constructor { desugar(constructor.types) };
+            return ast::definition::Tuple_constructor { desugar(ctx, constructor.types) };
         },
         [&](cst::definition::Unit_constructor const&) {
             return ast::definition::Unit_constructor {};
@@ -175,31 +88,122 @@ auto libdesugar::Context::desugar(cst::definition::Constructor_body const& body)
     return std::visit<ast::definition::Constructor_body>(visitor, body);
 }
 
-auto libdesugar::Context::desugar(cst::definition::Constructor const& constructor)
+auto libdesugar::desugar(Context const ctx, cst::definition::Constructor const& constructor)
     -> ast::definition::Constructor
 {
     return ast::definition::Constructor {
         .name = constructor.name,
-        .body = desugar(constructor.body),
+        .body = desugar(ctx, constructor.body),
     };
 }
 
-auto libdesugar::Context::desugar(cst::Definition const& definition) -> ast::Definition
+auto libdesugar::desugar(Context context, cst::definition::Function const& function)
+    -> ast::definition::Function
 {
+    return ast::definition::Function {
+        .signature = desugar(context, function.signature),
+        .body      = normalize_function_body(context, deref_desugar(context, function.body)),
+    };
+}
+
+auto libdesugar::desugar(Context const ctx, cst::definition::Struct const& structure)
+    -> ast::definition::Enumeration
+{
+    return ast::definition::Enumeration {
+        .constructors { utl::to_vector({ ast::definition::Constructor {
+            .name = structure.name,
+            .body = desugar(ctx, structure.body),
+        } }) },
+        .name                = structure.name,
+        .template_parameters = structure.template_parameters.transform(desugar(ctx)),
+    };
+}
+
+auto libdesugar::desugar(Context const ctx, cst::definition::Enum const& enumeration)
+    -> ast::definition::Enumeration
+{
+    ensure_no_duplicates(ctx, "constructor", enumeration.constructors.elements);
+    return ast::definition::Enumeration {
+        .constructors        = desugar(ctx, enumeration.constructors),
+        .name                = enumeration.name,
+        .template_parameters = enumeration.template_parameters.transform(desugar(ctx)),
+    };
+}
+
+auto libdesugar::desugar(Context const ctx, cst::definition::Alias const& alias)
+    -> ast::definition::Alias
+{
+    return ast::definition::Alias {
+        .name                = alias.name,
+        .type                = deref_desugar(ctx, alias.type),
+        .template_parameters = alias.template_parameters.transform(desugar(ctx)),
+    };
+}
+
+auto libdesugar::desugar(Context const ctx, cst::definition::Concept const& concept_)
+    -> ast::definition::Concept
+{
+    std::vector<ast::Function_signature> functions;
+    std::vector<ast::Type_signature>     types;
+
+    for (auto const& requirement : concept_.requirements) {
+        auto const visitor = utl::Overload {
+            [&](cst::Function_signature const& signature) {
+                functions.push_back(desugar(ctx, signature));
+            },
+            [&](cst::Type_signature const& signature) { types.push_back(desugar(ctx, signature)); },
+        };
+        std::visit(visitor, requirement);
+    }
+
+    return ast::definition::Concept {
+        .function_signatures = std::move(functions),
+        .type_signatures     = std::move(types),
+        .name                = concept_.name,
+        .template_parameters = concept_.template_parameters.transform(desugar(ctx)),
+    };
+}
+
+auto libdesugar::desugar(Context const ctx, cst::definition::Impl const& impl)
+    -> ast::definition::Impl
+{
+    return ast::definition::Impl {
+        .type                = deref_desugar(ctx, impl.self_type),
+        .definitions         = desugar(ctx, impl.definitions),
+        .template_parameters = impl.template_parameters.transform(desugar(ctx)),
+    };
+}
+
+auto libdesugar::desugar(Context const ctx, cst::definition::Submodule const& submodule)
+    -> ast::definition::Submodule
+{
+    return ast::definition::Submodule {
+        .definitions         = desugar(ctx, submodule.definitions),
+        .name                = submodule.name,
+        .template_parameters = submodule.template_parameters.transform(desugar(ctx)),
+    };
+}
+
+auto libdesugar::desugar(Context const ctx, cst::Definition const& definition) -> ast::Definition
+{
+    auto const visitor = utl::Overload {
+        [&](cst::definition::Function const& function) { return desugar(ctx, function); },
+        [&](cst::definition::Struct const& structure) { return desugar(ctx, structure); },
+        [&](cst::definition::Enum const& enumeration) { return desugar(ctx, enumeration); },
+        [&](cst::definition::Alias const& alias) { return desugar(ctx, alias); },
+        [&](cst::definition::Concept const& concept_) { return desugar(ctx, concept_); },
+        [&](cst::definition::Impl const& impl) { return desugar(ctx, impl); },
+        [&](cst::definition::Submodule const& module) { return desugar(ctx, module); },
+    };
     return ast::Definition {
-        std::visit(Definition_desugaring_visitor { *this, definition.source }, definition.variant),
-        definition.source,
-        definition.range,
+        .variant     = std::visit<ast::Definition_variant>(visitor, definition.variant),
+        .document_id = definition.document_id,
+        .range       = definition.range,
     };
 }
 
-auto kieli::desugar(
-    Database&              db,
-    Document_id const      document_id,
-    ast::Arena&            ast,
-    cst::Arena const&      cst,
-    cst::Definition const& definition) -> ast::Definition
+auto kieli::desugar_definition(Context const context, cst::Definition const& definition)
+    -> ast::Definition
 {
-    libdesugar::Context context { db, cst, ast, document_id };
-    return context.desugar(definition);
+    return desugar(context, definition);
 }

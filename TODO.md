@@ -20,6 +20,7 @@
 - Scope stack, scope id
 - Generate logs for rollback
 - Attribute `linear` means type has to be explicitly dropped with a function marked `drop`
+- Interned HIR
 
 ## libcompiler
 - Document paths should always be absolute

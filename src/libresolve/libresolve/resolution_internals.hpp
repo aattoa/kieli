@@ -4,8 +4,17 @@
 #include <libutl/index_vector.hpp>
 #include <libutl/disjoint_set.hpp>
 #include <libresolve/module.hpp>
+#include <libdesugar/desugar.hpp>
 
 namespace libresolve {
+
+    class Tag_state {
+        std::size_t m_current_template_parameter_tag {};
+        std::size_t m_current_local_variable_tag {};
+    public:
+        auto fresh_template_parameter_tag() -> hir::Template_parameter_tag;
+        auto fresh_local_variable_tag() -> hir::Local_variable_tag;
+    };
 
     struct Constants {
         hir::Type_id       i8_type;
@@ -25,8 +34,6 @@ namespace libresolve {
         hir::Mutability_id mutability_yes;
         hir::Mutability_id mutability_no;
         hir::Mutability_id mutability_error;
-
-        static auto make_with(hir::Arena& arena) -> Constants;
     };
 
     struct Type_variable_data {
@@ -44,50 +51,57 @@ namespace libresolve {
         bool                        is_solved {};
     };
 
-    class Tag_state {
-        std::size_t m_current_template_parameter_tag {};
-        std::size_t m_current_local_variable_tag {};
-    public:
-        auto fresh_template_parameter_tag() -> hir::Template_parameter_tag;
-        auto fresh_local_variable_tag() -> hir::Local_variable_tag;
+    struct Document_info {
+        cst::Arena cst;
+        ast::Arena ast;
     };
+
+    using Document_info_map
+        = std::unordered_map<kieli::Document_id, Document_info, utl::Hash_vector_index>;
 
     struct Context {
-        kieli::Database& db;
-        ast::Arena       ast;
-        hir::Arena       hir;
-        Info_arena       info;
-        Tag_state        tags;
-        Constants        constants;
+        kieli::Database&  db;
+        hir::Arena        hir;
+        Info_arena        info;
+        Tag_state         tags;
+        Constants         constants;
+        Document_info_map documents;
     };
 
-    struct Inference_state {
-        using Type_variables = utl::Index_vector<hir::Type_variable_id, Type_variable_data>;
-        using Mutability_variables
-            = utl::Index_vector<hir::Mutability_variable_id, Mutability_variable_data>;
+    using Type_variables = utl::Index_vector<hir::Type_variable_id, Type_variable_data>;
+    using Mutability_variables
+        = utl::Index_vector<hir::Mutability_variable_id, Mutability_variable_data>;
 
+    struct Inference_state {
         Type_variables       type_variables;
         Mutability_variables mutability_variables;
         utl::Disjoint_set    type_variable_disjoint_set;
         utl::Disjoint_set    mutability_variable_disjoint_set;
         kieli::Document_id   document_id;
-
-        auto flatten(Context& context, hir::Type_variant& type) -> void;
-
-        auto fresh_general_type_variable(hir::Arena& arena, kieli::Range origin) -> hir::Type;
-        auto fresh_integral_type_variable(hir::Arena& arena, kieli::Range origin) -> hir::Type;
-        auto fresh_mutability_variable(hir::Arena& arena, kieli::Range origin) -> hir::Mutability;
-
-        auto set_solution(
-            Context&            context,
-            Type_variable_data& variable_data,
-            hir::Type_variant   solution) -> void;
-
-        auto set_solution(
-            Context&                  context,
-            Mutability_variable_data& variable_data,
-            hir::Mutability_variant   solution) -> void;
     };
+
+    auto make_constants(hir::Arena& arena) -> Constants;
+
+    auto flatten_type(Context& context, Inference_state& state, hir::Type_variant& type) -> void;
+
+    auto fresh_general_type_variable(Inference_state& state, hir::Arena& arena, kieli::Range origin)
+        -> hir::Type;
+    auto fresh_integral_type_variable(
+        Inference_state& state, hir::Arena& arena, kieli::Range origin) -> hir::Type;
+    auto fresh_mutability_variable(Inference_state& state, hir::Arena& arena, kieli::Range origin)
+        -> hir::Mutability;
+
+    auto set_solution(
+        Context&            context,
+        Inference_state&    state,
+        Type_variable_data& variable_data,
+        hir::Type_variant   solution) -> void;
+
+    auto set_solution(
+        Context&                  context,
+        Inference_state&          state,
+        Mutability_variable_data& variable_data,
+        hir::Mutability_variant   solution) -> void;
 
     auto ensure_no_unsolved_variables(Context& context, Inference_state& state) -> void;
 
@@ -97,58 +111,74 @@ namespace libresolve {
 
     auto resolve_alias(Context& context, Alias_info& info) -> hir::Alias&;
 
-    auto resolve_function_body(Context& context, Function_info& info) -> hir::Function&;
+    auto resolve_function_body(Context& context, Function_info& info) -> hir::Expression&;
 
     auto resolve_function_signature(Context& context, Function_info& info)
         -> hir::Function_signature&;
 
-    // Resolve template parameters and register them in the given `scope`.
+    // Resolve template parameters and register them in the given scope.
     auto resolve_template_parameters(
         Context&                        context,
         Inference_state&                state,
-        Scope&                          scope,
-        hir::Environment_id             environment,
+        hir::Scope_id                   scope_id,
+        hir::Environment_id             environment_id,
         ast::Template_parameters const& parameters) -> std::vector<hir::Template_parameter>;
 
     auto resolve_template_arguments(
         Context&                                    context,
         Inference_state&                            state,
-        Scope&                                      scope,
-        hir::Environment_id                         environment,
+        hir::Scope_id                               scope_id,
+        hir::Environment_id                         environment_id,
         std::vector<hir::Template_parameter> const& parameters,
         std::vector<ast::Template_argument> const&  arguments)
         -> std::vector<hir::Template_argument>;
 
-    auto resolve_mutability(Context& context, Scope& scope, ast::Mutability const& mutability)
-        -> hir::Mutability;
+    auto resolve_mutability(
+        Context&               context,
+        hir::Scope_id          scope_id,
+        ast::Mutability const& mutability) -> hir::Mutability;
 
     auto resolve_expression(
         Context&               context,
         Inference_state&       state,
-        Scope&                 scope,
-        hir::Environment_id    environment,
+        hir::Scope_id          scope_id,
+        hir::Environment_id    environment_id,
         ast::Expression const& expression) -> hir::Expression;
 
     auto resolve_pattern(
         Context&            context,
         Inference_state&    state,
-        Scope&              scope,
-        hir::Environment_id environment,
+        hir::Scope_id       scope_id,
+        hir::Environment_id environment_id,
         ast::Pattern const& pattern) -> hir::Pattern;
 
     auto resolve_type(
         Context&            context,
         Inference_state&    state,
-        Scope&              scope,
-        hir::Environment_id environment,
+        hir::Scope_id       scope_id,
+        hir::Environment_id environment_id,
         ast::Type const&    type) -> hir::Type;
 
     auto resolve_concept_reference(
         Context&            context,
         Inference_state&    state,
-        Scope&              scope,
-        hir::Environment_id environment,
+        hir::Scope_id       scope_id,
+        hir::Environment_id environment_id,
         ast::Path const&    path) -> hir::Concept_id;
+
+    auto bind_mutability(Scope& scope, kieli::Identifier identifier, Mutability_bind bind) -> void;
+    auto bind_variable(Scope& scope, kieli::Identifier identifier, Variable_bind bind) -> void;
+    auto bind_type(Scope& scope, kieli::Identifier identifier, Type_bind bind) -> void;
+
+    // Emit warnings for any unused bindings.
+    auto report_unused(kieli::Database& db, Scope& scope) -> void;
+
+    auto find_mutability(Context& context, hir::Scope_id scope_id, kieli::Identifier identifier)
+        -> Mutability_bind*;
+    auto find_variable(Context& context, hir::Scope_id scope_id, kieli::Identifier identifier)
+        -> Variable_bind*;
+    auto find_type(Context& context, hir::Scope_id scope_id, kieli::Identifier identifier)
+        -> Type_bind*;
 
     // Check whether a type variable with `tag` occurs in `type`.
     auto occurs_check(
@@ -169,5 +199,24 @@ namespace libresolve {
 
     // Get the HIR representation of a unit tuple expression with `range`.
     auto unit_expression(Constants const& constants, kieli::Range range) -> hir::Expression;
+
+    // Invoke `callback` with a temporary `Scope_id`.
+    auto scope(Context& context, Scope scope, std::invocable<hir::Scope_id> auto const& callback)
+    {
+        auto scope_id = context.info.scopes.push(std::move(scope));
+        auto result   = std::invoke(callback, scope_id);
+        context.info.scopes.kill(scope_id);
+        return result;
+    }
+
+    auto child_scope(
+        Context&                                  context,
+        hir::Scope_id const                       parent_id,
+        std::invocable<hir::Scope_id> auto const& callback)
+    {
+        auto const document_id = context.info.scopes.index_vector[parent_id].document_id;
+        auto       child       = Scope { .document_id = document_id, .parent_id = parent_id };
+        return scope(context, std::move(child), callback);
+    }
 
 } // namespace libresolve

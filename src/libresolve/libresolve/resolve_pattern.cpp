@@ -7,14 +7,19 @@ namespace {
     struct Pattern_resolution_visitor {
         Context&            context;
         Inference_state&    state;
-        Scope&              scope;
-        hir::Environment_id environment;
+        hir::Scope_id       scope_id;
+        hir::Environment_id environment_id;
         ast::Pattern const& this_pattern;
+
+        auto ast() -> ast::Arena&
+        {
+            return context.documents.at(state.document_id).ast;
+        }
 
         auto recurse()
         {
             return [&](ast::Pattern const& pattern) -> hir::Pattern {
-                return resolve_pattern(context, state, scope, environment, pattern);
+                return resolve_pattern(context, state, scope_id, environment_id, pattern);
             };
         }
 
@@ -25,7 +30,7 @@ namespace {
 
         auto operator()(kieli::Integer const& integer) -> hir::Pattern
         {
-            hir::Type type = state.fresh_integral_type_variable(context.hir, this_pattern.range);
+            hir::Type type = fresh_integral_type_variable(state, context.hir, this_pattern.range);
             return { integer, type.id, this_pattern.range };
         }
 
@@ -53,7 +58,7 @@ namespace {
         {
             return {
                 hir::Wildcard {},
-                state.fresh_general_type_variable(context.hir, this_pattern.range).id,
+                fresh_general_type_variable(state, context.hir, this_pattern.range).id,
                 this_pattern.range,
             };
         }
@@ -61,19 +66,21 @@ namespace {
         auto operator()(ast::pattern::Name const& pattern) -> hir::Pattern
         {
             hir::Mutability const mutability
-                = resolve_mutability(context, scope, pattern.mutability);
+                = resolve_mutability(context, scope_id, pattern.mutability);
             hir::Type const type
-                = state.fresh_general_type_variable(context.hir, pattern.name.range);
+                = fresh_general_type_variable(state, context.hir, pattern.name.range);
             hir::Local_variable_tag const tag = context.tags.fresh_local_variable_tag();
 
-            scope.bind_variable(
+            Variable_bind bind {
+                .name       = pattern.name,
+                .type       = type.id,
+                .mutability = mutability,
+                .tag        = tag,
+            };
+            bind_variable(
+                context.info.scopes.index_vector[scope_id],
                 pattern.name.identifier,
-                Variable_bind {
-                    .name       = pattern.name,
-                    .type       = type.id,
-                    .mutability = mutability,
-                    .tag        = tag,
-                });
+                std::move(bind));
 
             return {
                 hir::pattern::Name {
@@ -88,8 +95,10 @@ namespace {
 
         auto operator()(ast::pattern::Alias const& alias) -> hir::Pattern
         {
-            hir::Pattern          pattern    = recurse(context.ast.patterns[alias.pattern]);
-            hir::Mutability const mutability = resolve_mutability(context, scope, alias.mutability);
+            hir::Pattern pattern = recurse(ast().patterns[alias.pattern]);
+
+            hir::Mutability const mutability
+                = resolve_mutability(context, scope_id, alias.mutability);
             hir::Local_variable_tag const tag = context.tags.fresh_local_variable_tag();
 
             Variable_bind bind {
@@ -98,7 +107,8 @@ namespace {
                 .mutability = mutability,
                 .tag        = tag,
             };
-            scope.bind_variable(alias.name.identifier, std::move(bind));
+            bind_variable(
+                context.info.scopes.index_vector[scope_id], alias.name.identifier, std::move(bind));
 
             return {
                 hir::pattern::Alias {
@@ -141,7 +151,7 @@ namespace {
                           | std::ranges::to<std::vector>();
 
             hir::Type const element_type
-                = state.fresh_general_type_variable(context.hir, this_pattern.range);
+                = fresh_general_type_variable(state, context.hir, this_pattern.range);
 
             for (hir::Pattern const& pattern : patterns) {
                 require_subtype_relationship(
@@ -162,9 +172,9 @@ namespace {
 
         auto operator()(ast::pattern::Guarded const& guarded) -> hir::Pattern
         {
-            hir::Pattern guarded_pattern = recurse(context.ast.patterns[guarded.guarded_pattern]);
-            hir::Expression guard_expression
-                = resolve_expression(context, state, scope, environment, guarded.guard_expression);
+            hir::Pattern    guarded_pattern  = recurse(ast().patterns[guarded.guarded_pattern]);
+            hir::Expression guard_expression = resolve_expression(
+                context, state, scope_id, environment_id, guarded.guard_expression);
 
             require_subtype_relationship(
                 context,
@@ -185,12 +195,12 @@ namespace {
 } // namespace
 
 auto libresolve::resolve_pattern(
-    Context&            context,
-    Inference_state&    state,
-    Scope&              scope,
-    hir::Environment_id environment,
-    ast::Pattern const& pattern) -> hir::Pattern
+    Context&                  context,
+    Inference_state&          state,
+    hir::Scope_id const       scope_id,
+    hir::Environment_id const environment_id,
+    ast::Pattern const&       pattern) -> hir::Pattern
 {
-    Pattern_resolution_visitor visitor { context, state, scope, environment, pattern };
+    Pattern_resolution_visitor visitor { context, state, scope_id, environment_id, pattern };
     return std::visit(visitor, pattern.variant);
 }

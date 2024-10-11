@@ -1,5 +1,5 @@
 #include <libutl/utilities.hpp>
-#include <libresolve/module.hpp>
+#include <libresolve/resolution_internals.hpp>
 
 using namespace libresolve;
 
@@ -16,15 +16,21 @@ namespace {
     }
 
     template <class T, Identifier_map<T> Scope::*bindings>
-    auto do_find(Scope* scope, kieli::Identifier const identifier) -> T*
+    auto do_find(Context& context, hir::Scope_id scope_id, kieli::Identifier const identifier) -> T*
     {
-        for (; scope; scope = scope->parent()) {
-            auto const it = std::ranges::find(scope->*bindings, identifier, utl::first);
-            if (it != (scope->*bindings).end()) {
+        for (;;) {
+            Scope& scope = context.info.scopes.index_vector[scope_id];
+            if (auto const it = std::ranges::find(scope.*bindings, identifier, utl::first);
+                it != (scope.*bindings).end()) {
                 return std::addressof(it->second);
             }
+            else if (scope.parent_id.has_value()) {
+                scope_id = scope.parent_id.value();
+            }
+            else {
+                return nullptr;
+            }
         }
-        return nullptr;
     }
 
     auto warn_unused(kieli::Name const& name) -> kieli::Diagnostic
@@ -48,59 +54,52 @@ namespace {
     }
 } // namespace
 
-auto libresolve::Scope::bind_mutability(kieli::Identifier const identifier, Mutability_bind binding)
+auto libresolve::bind_mutability(
+    Scope& scope, kieli::Identifier const identifier, Mutability_bind bind) -> void
+{
+    do_bind(scope.mutabilities, identifier, std::move(bind));
+}
+
+auto libresolve::bind_variable(
+    Scope& scope, kieli::Identifier const identifier, Variable_bind binding) -> void
+{
+    do_bind(scope.variables, identifier, std::move(binding));
+}
+
+auto libresolve::bind_type(Scope& scope, kieli::Identifier const identifier, Type_bind binding)
     -> void
 {
-    do_bind(m_mutabilities, identifier, std::move(binding));
-};
-
-auto libresolve::Scope::bind_variable(kieli::Identifier const identifier, Variable_bind binding)
-    -> void
-{
-    do_bind(m_variables, identifier, std::move(binding));
-};
-
-auto libresolve::Scope::bind_type(kieli::Identifier const identifier, Type_bind binding) -> void
-{
-    do_bind(m_types, identifier, std::move(binding));
-};
-
-auto libresolve::Scope::find_mutability(kieli::Identifier const identifier) -> Mutability_bind*
-{
-    return do_find<Mutability_bind, &Scope::m_mutabilities>(this, identifier);
+    do_bind(scope.types, identifier, std::move(binding));
 }
 
-auto libresolve::Scope::find_variable(kieli::Identifier const identifier) -> Variable_bind*
+auto libresolve::find_mutability(
+    Context&                context,
+    hir::Scope_id const     scope_id,
+    kieli::Identifier const identifier) -> Mutability_bind*
 {
-    return do_find<Variable_bind, &Scope::m_variables>(this, identifier);
+    return do_find<Mutability_bind, &Scope::mutabilities>(context, scope_id, identifier);
 }
 
-auto libresolve::Scope::find_type(kieli::Identifier const identifier) -> Type_bind*
+auto libresolve::find_variable(
+    Context&                context,
+    hir::Scope_id const     scope_id,
+    kieli::Identifier const identifier) -> Variable_bind*
 {
-    return do_find<Type_bind, &Scope::m_types>(this, identifier);
+    return do_find<Variable_bind, &Scope::variables>(context, scope_id, identifier);
 }
 
-auto libresolve::Scope::child() noexcept -> Scope
+auto libresolve::find_type(
+    Context&                context,
+    hir::Scope_id const     scope_id,
+    kieli::Identifier const identifier) -> Type_bind*
 {
-    Scope scope { m_document_id };
-    scope.m_parent = this;
-    return scope;
+    return do_find<Type_bind, &Scope::types>(context, scope_id, identifier);
 }
 
-auto libresolve::Scope::parent() const noexcept -> Scope*
+auto libresolve::report_unused(kieli::Database& db, Scope& scope) -> void
 {
-    return m_parent;
-}
-
-auto libresolve::Scope::document_id() const noexcept -> kieli::Document_id
-{
-    return m_document_id;
-}
-
-auto libresolve::Scope::report_unused(kieli::Database& db) -> void
-{
-    kieli::Document& document = db.documents.at(document_id());
-    do_report_unused_bindings(document, m_types);
-    do_report_unused_bindings(document, m_variables);
-    do_report_unused_bindings(document, m_mutabilities);
+    kieli::Document& document = db.documents.at(scope.document_id);
+    do_report_unused_bindings(document, scope.types);
+    do_report_unused_bindings(document, scope.variables);
+    do_report_unused_bindings(document, scope.mutabilities);
 }

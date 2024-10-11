@@ -23,7 +23,9 @@ namespace {
 } // namespace
 
 auto libresolve::resolve_mutability(
-    Context& context, Scope& scope, ast::Mutability const& mutability) -> hir::Mutability
+    Context&               context,
+    hir::Scope_id const    scope_id,
+    ast::Mutability const& mutability) -> hir::Mutability
 {
     auto visitor = utl::Overload {
         [&](kieli::Mutability const& concrete) {
@@ -33,9 +35,10 @@ auto libresolve::resolve_mutability(
             };
         },
         [&](ast::Parameterized_mutability const& parameterized) {
-            auto const* const bound = scope.find_mutability(parameterized.name.identifier);
-            return bound ? bound->mutability
-                         : error(context, scope.document_id(), parameterized.name);
+            auto const* const bound
+                = find_mutability(context, scope_id, parameterized.name.identifier);
+            auto const document_id = context.info.scopes.index_vector[scope_id].document_id;
+            return bound ? bound->mutability : error(context, document_id, parameterized.name);
         },
     };
     return std::visit(visitor, mutability.variant);
