@@ -9,7 +9,7 @@ namespace {
 
     struct Vector : utl::Index_vector<Index, std::string> {};
 
-    template <class T>
+    template <typename T>
     using Subscript = decltype(std::declval<T>()[Index(0UZ)]);
 
     static_assert(utl::vector_index<Index>);

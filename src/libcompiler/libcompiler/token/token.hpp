@@ -13,7 +13,7 @@ namespace kieli {
         String,
         Identifier>;
 
-    enum class Token_type {
+    enum struct Token_type {
 #define KIELI_X_TOKEN_DO(identifier, spelling, description) identifier,
 #include <libcompiler/token/token-x-macro-table.hpp>
 #undef KIELI_X_TOKEN_DO
@@ -25,7 +25,7 @@ namespace kieli {
         std::string_view preceding_trivia;
         Range            range;
 
-        template <class T>
+        template <typename T>
         [[nodiscard]] auto value_as() const -> T
         {
             T const* const pointer = std::get_if<T>(&variant);

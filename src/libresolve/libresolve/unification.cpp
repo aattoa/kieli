@@ -4,7 +4,7 @@
 using namespace libresolve;
 
 namespace {
-    enum class Unification_goal { equality, subtype };
+    enum struct Unification_goal { equality, subtype };
 
     struct Type_unification_arguments {
         using Report_unification_failure
@@ -58,7 +58,7 @@ namespace {
                 Mutability_unification_visitor { context, state, recurse_arguments, sub, super },
                 context.hir.mutabilities[sub.id],
                 context.hir.mutabilities[super.id]);
-            if (!result && arguments.report_unification_failure) {
+            if (not result and arguments.report_unification_failure) {
                 arguments.report_unification_failure(context, sub.id, super.id);
             }
             return result;
@@ -66,7 +66,7 @@ namespace {
 
         auto operator()(kieli::Mutability const sub, kieli::Mutability const super) const -> bool
         {
-            return (sub == super) || (sub == kieli::Mutability::mut && allow_coercion());
+            return (sub == super) or (sub == kieli::Mutability::mut and allow_coercion());
         }
 
         auto operator()(hir::mutability::Variable const sub, hir::mutability::Variable const super)
@@ -137,7 +137,7 @@ namespace {
             };
             Type_unification_visitor visitor { context, state, recurse_arguments, sub, super };
             bool const               result = std::visit(visitor, sub, super);
-            if (!result && arguments.report_unification_failure) {
+            if (not result and arguments.report_unification_failure) {
                 arguments.report_unification_failure(context, sub, super);
             }
             return result;
@@ -219,13 +219,13 @@ namespace {
         auto operator()(hir::type::Tuple const& sub, hir::type::Tuple const& super) const -> bool
         {
             return sub.types.size() == super.types.size()
-                && std::ranges::all_of(std::views::zip(sub.types, super.types), unify());
+               and std::ranges::all_of(std::views::zip(sub.types, super.types), unify());
         }
 
         auto operator()(hir::type::Array const& sub, hir::type::Array const& super) const -> bool
         {
             return unify(sub.element_type, super.element_type)
-                && unify(
+               and unify(
                        hir::expression_type(context.hir.expressions[sub.length]),
                        hir::expression_type(context.hir.expressions[super.length]));
         }
@@ -239,22 +239,22 @@ namespace {
             -> bool
         {
             return unify(sub.referenced_type, super.referenced_type)
-                && unify(sub.mutability, super.mutability);
+               and unify(sub.mutability, super.mutability);
         }
 
         auto operator()(hir::type::Pointer const& sub, hir::type::Pointer const& super) const
             -> bool
         {
             return unify(sub.pointee_type, super.pointee_type)
-                && unify(sub.mutability, super.mutability);
+               and unify(sub.mutability, super.mutability);
         }
 
         auto operator()(hir::type::Function const& sub, hir::type::Function const& super) const
             -> bool
         {
             return sub.parameter_types.size() == super.parameter_types.size()
-                && unify(sub.return_type, super.return_type)
-                && std::ranges::all_of(
+               and unify(sub.return_type, super.return_type)
+               and std::ranges::all_of(
                        std::views::zip(sub.parameter_types, super.parameter_types), unify());
         }
 
@@ -270,15 +270,15 @@ namespace {
             return true;
         }
 
-        template <class T>
-            requires(!std::is_same_v<T, hir::type::Variable>)
+        template <typename T>
+            requires(not std::is_same_v<T, hir::type::Variable>)
         auto operator()(hir::Error, T const&) const -> bool
         {
             return true;
         }
 
-        template <class T>
-            requires(!std::is_same_v<T, hir::type::Variable>)
+        template <typename T>
+            requires(not std::is_same_v<T, hir::type::Variable>)
         auto operator()(T const&, hir::Error) const -> bool
         {
             return true;
@@ -302,16 +302,16 @@ namespace {
     }
 } // namespace
 
-auto libresolve::require_subtype_relationship(
+void libresolve::require_subtype_relationship(
     Context&                 context,
     Inference_state&         state,
     hir::Type_variant const& sub,
-    hir::Type_variant const& super) -> void
+    hir::Type_variant const& super)
 {
     Type_unification_arguments const arguments {
         .goal = Unification_goal::subtype,
     };
-    if (!unify(context, state, arguments, sub, super)) {
+    if (not unify(context, state, arguments, sub, super)) {
         cpputil::todo();
     }
 }

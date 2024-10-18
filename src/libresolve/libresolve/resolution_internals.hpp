@@ -82,8 +82,6 @@ namespace libresolve {
 
     auto make_constants(hir::Arena& arena) -> Constants;
 
-    auto flatten_type(Context& context, Inference_state& state, hir::Type_variant& type) -> void;
-
     auto fresh_general_type_variable(Inference_state& state, hir::Arena& arena, kieli::Range origin)
         -> hir::Type;
     auto fresh_integral_type_variable(
@@ -91,19 +89,21 @@ namespace libresolve {
     auto fresh_mutability_variable(Inference_state& state, hir::Arena& arena, kieli::Range origin)
         -> hir::Mutability;
 
-    auto set_solution(
+    void flatten_type(Context& context, Inference_state& state, hir::Type_variant& type);
+
+    void set_solution(
         Context&            context,
         Inference_state&    state,
         Type_variable_data& variable_data,
-        hir::Type_variant   solution) -> void;
+        hir::Type_variant   solution);
 
-    auto set_solution(
+    void set_solution(
         Context&                  context,
         Inference_state&          state,
         Mutability_variable_data& variable_data,
-        hir::Mutability_variant   solution) -> void;
+        hir::Mutability_variant   solution);
 
-    auto ensure_no_unsolved_variables(Context& context, Inference_state& state) -> void;
+    void ensure_no_unsolved_variables(Context& context, Inference_state& state);
 
     auto resolve_enumeration(Context& context, Enumeration_info& info) -> hir::Enumeration&;
 
@@ -166,12 +166,12 @@ namespace libresolve {
         hir::Environment_id environment_id,
         ast::Path const&    path) -> hir::Concept_id;
 
-    auto bind_mutability(Scope& scope, kieli::Identifier identifier, Mutability_bind bind) -> void;
-    auto bind_variable(Scope& scope, kieli::Identifier identifier, Variable_bind bind) -> void;
-    auto bind_type(Scope& scope, kieli::Identifier identifier, Type_bind bind) -> void;
+    void bind_mutability(Scope& scope, kieli::Identifier identifier, Mutability_bind bind);
+    void bind_variable(Scope& scope, kieli::Identifier identifier, Variable_bind bind);
+    void bind_type(Scope& scope, kieli::Identifier identifier, Type_bind bind);
 
     // Emit warnings for any unused bindings.
-    auto report_unused(kieli::Database& db, Scope& scope) -> void;
+    void report_unused(kieli::Database& db, Scope& scope);
 
     auto find_mutability(Context& context, hir::Scope_id scope_id, kieli::Identifier identifier)
         -> Mutability_bind*;
@@ -185,11 +185,11 @@ namespace libresolve {
         hir::Arena const& arena, hir::Type_variable_id id, hir::Type_variant const& type) -> bool;
 
     // Require that `sub` is equal to or a subtype of `super`.
-    auto require_subtype_relationship(
+    void require_subtype_relationship(
         Context&                 context,
         Inference_state&         state,
         hir::Type_variant const& sub,
-        hir::Type_variant const& super) -> void;
+        hir::Type_variant const& super);
 
     // Get the HIR representation of the error type with `range`.
     auto error_type(Constants const& constants, kieli::Range range) -> hir::Type;

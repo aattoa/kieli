@@ -33,14 +33,14 @@ namespace kieli::cst {
         std::string_view preceding_trivia;
     };
 
-    template <class T>
+    template <typename T>
     struct Surrounded {
         T        value;
         Token_id open_token;
         Token_id close_token;
     };
 
-    template <class T>
+    template <typename T>
     struct Separated_sequence {
         std::vector<T>        elements;
         std::vector<Token_id> separator_tokens;
@@ -98,7 +98,7 @@ namespace kieli::cst {
         [[nodiscard]] auto is_unqualified() const noexcept -> bool;
     };
 
-    template <class T>
+    template <typename T>
     struct Default_argument {
         std::variant<T, Wildcard> variant;
         Token_id                  equals_sign_token;

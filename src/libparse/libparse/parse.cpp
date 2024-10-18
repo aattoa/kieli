@@ -5,7 +5,7 @@
 using namespace libparse;
 
 namespace {
-    template <class Default, parser auto parse_argument>
+    template <typename Default, parser auto parse_argument>
     auto parse_default_argument(Context& context) -> std::optional<Default>
     {
         return context.try_extract(Token_type::equals).transform([&](Token const& equals) {
@@ -251,7 +251,7 @@ auto libparse::extract_path(Context& context, cst::Path_root const root) -> cst:
 
     auto extract_segment = [&](std::optional<cst::Token_id> const double_colon_token_id) {
         Token const token = context.extract();
-        if (token.type == Token_type::upper_name || token.type == Token_type::lower_name) {
+        if (token.type == Token_type::upper_name or token.type == Token_type::lower_name) {
             segments.push_back(cst::Path_segment {
                 .template_arguments         = parse_template_arguments(context),
                 .name                       = name_from_token(token),
@@ -303,7 +303,7 @@ auto kieli::parse(Database& db, Document_id const document_id) -> CST
     while (auto definition = libparse::parse_definition(context)) {
         definitions.push_back(std::move(definition.value()));
     }
-    if (!context.is_finished()) {
+    if (not context.is_finished()) {
         context.error_expected("a definition");
     }
 

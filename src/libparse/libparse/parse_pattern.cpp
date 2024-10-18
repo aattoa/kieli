@@ -74,9 +74,9 @@ namespace {
         auto mutability = parse_mutability(context);
 
         std::optional<kieli::Lower> name;
-        if (!mutability.has_value()) {
+        if (not mutability.has_value()) {
             if (auto path = parse_complex_path(context)) {
-                if (path.value().is_upper() || !path.value().is_unqualified()) {
+                if (path.value().is_upper() or not path.value().is_unqualified()) {
                     return cst::pattern::Constructor {
                         .path = std::move(path.value()),
                         .body = extract_constructor_body(context),
@@ -85,7 +85,7 @@ namespace {
                 name = kieli::Lower { path.value().head().name };
             }
         }
-        if (!name.has_value()) {
+        if (not name.has_value()) {
             name = extract_lower_name(context, "a lowercase identifier");
         }
         return cst::pattern::Name {

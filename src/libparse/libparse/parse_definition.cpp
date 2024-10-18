@@ -29,7 +29,7 @@ namespace {
         auto       template_parameters = parse_template_parameters(context);
         auto       function_parameters = parse_function_parameters(context);
 
-        if (!function_parameters.has_value()) {
+        if (not function_parameters.has_value()) {
             context.error_expected("a '(' followed by a function parameter list");
         }
 
@@ -50,7 +50,7 @@ namespace {
         auto const function_body
             = equals_sign.has_value() ? parse_expression(context) : parse_block_expression(context);
 
-        if (!function_body.has_value()) {
+        if (not function_body.has_value()) {
             context.error_expected(
                 equals_sign.has_value() ? "the function body expression"
                                         : "the function body: '=' or '{'");

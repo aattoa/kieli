@@ -19,7 +19,7 @@ namespace kieli {
         std::uint32_t column {};
 
         // Advance this position with `character`.
-        auto advance_with(char character) noexcept -> void;
+        void advance_with(char character) noexcept;
 
         [[nodiscard]] auto operator==(Position const&) const -> bool                  = default;
         [[nodiscard]] auto operator<=>(Position const&) const -> std::strong_ordering = default;
@@ -55,7 +55,7 @@ namespace kieli {
     };
 
     // https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#diagnosticSeverity
-    enum class Severity { error, warning, hint, information };
+    enum struct Severity { error, warning, hint, information };
 
     // https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#diagnosticRelatedInformation
     struct Diagnostic_related_info {
@@ -72,7 +72,7 @@ namespace kieli {
     };
 
     // If a document is owned by a client, the server will not attempt to read it from disk.
-    enum class Document_ownership { server, client };
+    enum struct Document_ownership { server, client };
 
     // Description of a project.
     struct Manifest {
@@ -106,7 +106,7 @@ namespace kieli {
     };
 
     // Represents a file read failure.
-    enum class Read_failure { does_not_exist, failed_to_open, failed_to_read };
+    enum struct Read_failure { does_not_exist, failed_to_open, failed_to_read };
 
     // Retrieve the `Document_id` corresponding to `path`.
     [[nodiscard]] auto document_id(Database& db, std::filesystem::path path) -> Document_id;
@@ -124,7 +124,7 @@ namespace kieli {
         Database& db, std::filesystem::path path, std::string text) -> Document_id;
 
     // If the document identified by `document_id` is open and owned by a client, deallocate it.
-    auto client_close_document(Database& db, Document_id document_id) -> void;
+    void client_close_document(Database& db, Document_id document_id);
 
     // Creates a temporary document with `text`.
     [[nodiscard]] auto test_document(Database& db, std::string text) -> Document_id;
@@ -144,13 +144,13 @@ namespace kieli {
     [[nodiscard]] auto text_range(std::string_view text, Range range) -> std::string_view;
 
     // Replace `range` in `text` with `new_text`.
-    auto edit_text(std::string& text, Range range, std::string_view new_text) -> void;
+    void edit_text(std::string& text, Range range, std::string_view new_text);
 
     // Add `diagnostic` to the document identified by `document_id`.
-    auto add_diagnostic(Database& db, Document_id document_id, Diagnostic diagnostic) -> void;
+    void add_diagnostic(Database& db, Document_id document_id, Diagnostic diagnostic);
 
     // Add an error diagnostic to the document identified by `document_id`.
-    auto add_error(Database& db, Document_id document_id, Range range, std::string message) -> void;
+    void add_error(Database& db, Document_id document_id, Range range, std::string message);
 
     // Construct an error diagnostic.
     [[nodiscard]] auto error(Range range, std::string message) -> Diagnostic;
@@ -197,10 +197,10 @@ namespace kieli {
         cpputil::mem::Stable_pool_string value;
     };
 
-    template <class T>
-    concept literal = utl::one_of<T, Integer, Floating, Boolean, Character, String>;
+    enum struct Mutability { mut, immut };
 
-    enum class Mutability { mut, immut };
+    template <typename T>
+    concept literal = utl::one_of<T, Integer, Floating, Boolean, Character, String>;
 
 } // namespace kieli
 

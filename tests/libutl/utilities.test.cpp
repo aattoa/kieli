@@ -23,7 +23,7 @@ namespace {
         return Move_only { utl::safe_cast<int>(value) };
     }
 
-    static_assert(std::movable<Move_only> && !std::copyable<Move_only>);
+    static_assert(std::movable<Move_only> and not std::copyable<Move_only>);
 } // namespace
 
 template <>
@@ -54,14 +54,14 @@ TEST("pop_back")
     CHECK_EQUAL(utl::pop_back(vector).value(), 30_mov);
     CHECK_EQUAL(utl::pop_back(vector).value(), 20_mov);
     CHECK_EQUAL(utl::pop_back(vector).value(), 10_mov);
-    CHECK(!utl::pop_back(vector).has_value());
+    CHECK(not utl::pop_back(vector).has_value());
 }
 
 static_assert(utl::losslessly_convertible_to<std::int8_t, std::int16_t>);
 static_assert(utl::losslessly_convertible_to<std::int32_t, std::int32_t>);
 static_assert(utl::losslessly_convertible_to<std::uint8_t, std::int32_t>);
 static_assert(utl::losslessly_convertible_to<std::uint32_t, std::int64_t>);
-static_assert(!utl::losslessly_convertible_to<std::int8_t, std::uint8_t>);
-static_assert(!utl::losslessly_convertible_to<std::uint64_t, std::int8_t>);
-static_assert(!utl::losslessly_convertible_to<std::int8_t, std::uint64_t>);
-static_assert(!utl::losslessly_convertible_to<std::int16_t, std::int8_t>);
+static_assert(not utl::losslessly_convertible_to<std::int8_t, std::uint8_t>);
+static_assert(not utl::losslessly_convertible_to<std::uint64_t, std::int8_t>);
+static_assert(not utl::losslessly_convertible_to<std::int8_t, std::uint64_t>);
+static_assert(not utl::losslessly_convertible_to<std::int16_t, std::int8_t>);

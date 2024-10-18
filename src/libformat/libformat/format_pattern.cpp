@@ -4,7 +4,7 @@
 using namespace libformat;
 
 namespace {
-    auto format_constructor_body(State& state, cst::pattern::Constructor_body const& body)
+    void format_constructor_body(State& state, cst::pattern::Constructor_body const& body)
     {
         auto const visitor = utl::Overload {
             [&](cst::pattern::Struct_constructor const& constructor) {
@@ -25,44 +25,44 @@ namespace {
     struct Pattern_format_visitor {
         State& state;
 
-        auto operator()(kieli::literal auto const& literal)
+        void operator()(kieli::literal auto const& literal)
         {
             format(state, "{}", literal);
         }
 
-        auto operator()(cst::pattern::Parenthesized const& parenthesized)
+        void operator()(cst::pattern::Parenthesized const& parenthesized)
         {
             format(state, "(");
             format(state, parenthesized.pattern.value);
             format(state, ")");
         }
 
-        auto operator()(cst::pattern::Tuple const& tuple)
+        void operator()(cst::pattern::Tuple const& tuple)
         {
             format(state, "(");
             format_comma_separated(state, tuple.patterns.value.elements);
             format(state, ")");
         }
 
-        auto operator()(cst::pattern::Slice const& slice)
+        void operator()(cst::pattern::Slice const& slice)
         {
             format(state, "[");
             format_comma_separated(state, slice.patterns.value.elements);
             format(state, "]");
         }
 
-        auto operator()(cst::Wildcard const& wildcard)
+        void operator()(cst::Wildcard const& wildcard)
         {
             format(state, wildcard);
         }
 
-        auto operator()(cst::pattern::Name const& name)
+        void operator()(cst::pattern::Name const& name)
         {
             format_mutability_with_whitespace(state, name.mutability);
             format(state, "{}", name.name);
         }
 
-        auto operator()(cst::pattern::Alias const& alias)
+        void operator()(cst::pattern::Alias const& alias)
         {
             format(state, alias.pattern);
             format(state, " as ");
@@ -70,33 +70,33 @@ namespace {
             format(state, "{}", alias.name);
         }
 
-        auto operator()(cst::pattern::Guarded const& guarded)
+        void operator()(cst::pattern::Guarded const& guarded)
         {
             format(state, guarded.guarded_pattern);
             format(state, " if ");
             format(state, guarded.guard_expression);
         }
 
-        auto operator()(cst::pattern::Constructor const& constructor)
+        void operator()(cst::pattern::Constructor const& constructor)
         {
             format(state, constructor.path);
             format_constructor_body(state, constructor.body);
         }
 
-        auto operator()(cst::pattern::Abbreviated_constructor const& constructor)
+        void operator()(cst::pattern::Abbreviated_constructor const& constructor)
         {
             format(state, "::{}", constructor.name);
             format_constructor_body(state, constructor.body);
         }
 
-        auto operator()(cst::pattern::Top_level_tuple const& tuple)
+        void operator()(cst::pattern::Top_level_tuple const& tuple)
         {
             format_comma_separated(state, tuple.patterns.elements);
         }
     };
 } // namespace
 
-auto libformat::format(State& state, cst::Pattern const& pattern) -> void
+void libformat::format(State& state, cst::Pattern const& pattern)
 {
     std::visit(Pattern_format_visitor { state }, pattern.variant);
 }

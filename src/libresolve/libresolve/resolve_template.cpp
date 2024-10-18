@@ -16,7 +16,7 @@ namespace {
             return context.documents.at(state.document_id).ast;
         }
 
-        template <class Default>
+        template <typename Default>
         auto resolve_default_argument()
         {
             return [&](auto const& argument) {

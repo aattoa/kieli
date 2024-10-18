@@ -6,7 +6,7 @@ utl::Disjoint_set::Disjoint_set(std::size_t const size)
     , m_weights(size, 1UZ)
 {}
 
-auto utl::Disjoint_set::merge(std::size_t x, std::size_t y) -> void
+void utl::Disjoint_set::merge(std::size_t x, std::size_t y)
 {
     x = find(x);
     y = find(y);

@@ -10,7 +10,7 @@ auto kieli::lsp::run_server(bool const debug, std::istream& in, std::ostream& ou
         std::println(stderr, "[debug] Started server.");
     }
 
-    while (!server.exit_code.has_value()) {
+    while (not server.exit_code.has_value()) {
         if (auto const message = kieli::lsp::rpc_read_message(in)) {
             if (debug) {
                 std::println(stderr, "[debug] --> {}", message.value());

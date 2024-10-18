@@ -6,9 +6,9 @@
 
 namespace kieli::lsp {
 
-    enum class Read_failure { no_header, no_length, no_separator, no_content };
+    enum struct Read_failure { no_header, no_length, no_separator, no_content };
 
-    auto rpc_write_message(std::ostream& out, std::string_view message) -> void;
+    void rpc_write_message(std::ostream& out, std::string_view message);
 
     auto rpc_read_message(std::istream& in) -> std::expected<std::string, Read_failure>;
 

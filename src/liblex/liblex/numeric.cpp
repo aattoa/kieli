@@ -5,7 +5,7 @@
 namespace {
     auto without_separators(std::string_view const digits) -> std::string_view
     {
-        if (!digits.contains('\'')) {
+        if (not digits.contains('\'')) {
             return digits;
         }
         static thread_local std::string buffer;
@@ -14,7 +14,7 @@ namespace {
         return buffer;
     }
 
-    template <class T>
+    template <typename T>
     auto parse_impl(std::string_view const string, std::same_as<int> auto const... base)
         -> std::expected<T, liblex::Numeric_error>
     {

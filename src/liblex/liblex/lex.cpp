@@ -77,13 +77,13 @@ namespace {
     constexpr auto is_in_range(char const c) noexcept -> bool
         requires(a < b)
     {
-        return a <= c && c <= b;
+        return a <= c and c <= b;
     }
 
     template <std::predicate<char> auto... predicates>
     constexpr auto satisfies_one_of(char const c) noexcept -> bool
     {
-        return (predicates(c) || ...);
+        return (predicates(c) or ...);
     }
 
     constexpr auto is_space = is_one_of<" \t\n">;
@@ -109,12 +109,12 @@ namespace {
 
     static_assert(is_one_of<"ab">('a'));
     static_assert(is_one_of<"ab">('b'));
-    static_assert(!is_one_of<"ab">('c'));
+    static_assert(not is_one_of<"ab">('c'));
 
     template <std::predicate<char> auto predicate>
     constexpr auto or_digit_separator(char const c)
     {
-        return predicate(c) || c == '\'';
+        return predicate(c) or c == '\'';
     }
 
     constexpr auto digit_predicate_for(int const base) noexcept -> auto (*)(char) -> bool
@@ -167,7 +167,7 @@ namespace {
     auto ensure_no_trailing_separator(std::string_view const string, kieli::Lex_state& state)
         -> liblex::Expected<void>
     {
-        cpputil::always_assert(!string.empty());
+        cpputil::always_assert(not string.empty());
         if (string.back() == '\'') {
             return liblex::error(state, "Expected one or more digits after the digit separator");
         }
@@ -198,7 +198,7 @@ namespace {
     auto skip_string_literal_within_comment(kieli::Lex_state& state) -> liblex::Expected<void>
     {
         char const* const anchor = state.text.data();
-        if (!liblex::try_consume(state, '"')) {
+        if (not liblex::try_consume(state, '"')) {
             return {};
         }
         for (;;) {
@@ -218,7 +218,7 @@ namespace {
         -> liblex::Expected<void>
     {
         for (std::size_t depth = 1; depth != 0;) {
-            if (auto const result = skip_string_literal_within_comment(state); !result) {
+            if (auto const result = skip_string_literal_within_comment(state); not result) {
                 return result;
             }
             if (liblex::try_consume(state, "*/")) {
@@ -262,7 +262,7 @@ namespace {
     auto extract_identifier(Token_maker const& token, kieli::Lex_state& state) -> Token
     {
         std::string_view const view = liblex::extract(state, is_identifier_tail);
-        cpputil::always_assert(!view.empty());
+        cpputil::always_assert(not view.empty());
         if (auto const type = find_token(keyword_token_map, view)) {
             return token({}, type.value());
         }
@@ -364,12 +364,12 @@ namespace {
         if (suffix.empty()) {
             return {};
         }
-        if (suffix != "e" && suffix != "E") {
+        if (suffix != "e" and suffix != "E") {
             return liblex::error(
                 state, suffix, "Erroneous floating point literal alphabetic suffix");
         }
         (void)liblex::try_consume(state, '-');
-        if (state.text.empty() || !is_digit10(liblex::current(state))) {
+        if (state.text.empty() or not is_digit10(liblex::current(state))) {
             return liblex::error(state, "Expected an exponent");
         }
         return ensure_no_trailing_separator(
@@ -390,7 +390,7 @@ namespace {
         std::string_view const old_string,
         kieli::Lex_state&      state) -> liblex::Expected<Token>
     {
-        if (state.text.empty() || !or_digit_separator<is_digit10>(liblex::current(state))) {
+        if (state.text.empty() or not or_digit_separator<is_digit10>(liblex::current(state))) {
             return liblex::error(state, "Expected one or more digits after the decimal separator");
         }
         return ensure_no_trailing_separator(
@@ -404,7 +404,7 @@ namespace {
             })
             .and_then([&](double const floating) -> liblex::Expected<Token> {
                 std::string_view const extraneous_suffix = liblex::extract(state, is_alpha);
-                if (!extraneous_suffix.empty()) {
+                if (not extraneous_suffix.empty()) {
                     return liblex::error(
                         state,
                         extraneous_suffix,
@@ -420,7 +420,7 @@ namespace {
         return ensure_no_trailing_separator(digits, state)
             .and_then([&]() -> liblex::Expected<std::size_t> {
                 std::string_view const extraneous_suffix = liblex::extract(state, is_alpha);
-                if (!extraneous_suffix.empty()) {
+                if (not extraneous_suffix.empty()) {
                     return liblex::error(
                         state, extraneous_suffix, "Erroneous integer literal alphabetic suffix");
                 }
@@ -458,14 +458,14 @@ namespace {
         if (suffix.empty()) {
             return integer;
         }
-        if (suffix != "e" && suffix != "E") {
+        if (suffix != "e" and suffix != "E") {
             return liblex::error(state, suffix, "Erroneous integer literal alphabetic suffix");
         }
         if (liblex::try_consume(state, '-')) {
             liblex::consume(state, is_digit10);
             return liblex::error(state, "An integer literal may not have a negative exponent");
         }
-        if (state.text.empty() || !is_digit10(liblex::current(state))) {
+        if (state.text.empty() or not is_digit10(liblex::current(state))) {
             return liblex::error(state, "Expected an exponent");
         }
         return extract_integer_exponent(state).and_then([&](std::size_t const exponent) {
@@ -517,9 +517,9 @@ namespace {
                 std::string_view const preceding_string
                     = view_difference(liblex::source_begin(state), old_string);
                 bool const has_preceding_dot
-                    = !preceding_string.empty() && preceding_string.back() == '.';
+                    = not preceding_string.empty() and preceding_string.back() == '.';
 
-                if (!has_preceding_dot && liblex::try_consume(state, '.')) {
+                if (not has_preceding_dot and liblex::try_consume(state, '.')) {
                     if (base.has_value()) {
                         liblex::consume(state, is_digit10);
                         return liblex::error(

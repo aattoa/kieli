@@ -132,7 +132,7 @@ namespace {
         }
     }
 
-    enum class Conditional_kind { if_, elif };
+    enum struct Conditional_kind { if_, elif };
 
     auto extract_conditional(
         Context&               context,
@@ -227,7 +227,7 @@ namespace {
         while (auto match_case = parse_match_case(context)) {
             cases.push_back(std::move(match_case.value()));
         }
-        return !cases.empty() ? std::optional(std::move(cases)) : std::nullopt;
+        return not cases.empty() ? std::optional(std::move(cases)) : std::nullopt;
     }
 
     auto extract_match(Context& context, Token const& match_keyword) -> cst::Expression_variant

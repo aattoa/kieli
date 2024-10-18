@@ -25,11 +25,9 @@ namespace {
         };
     }
 
-    template <class T>
-    auto ensure_no_duplicates(
-        Context const          context,
-        std::string_view const description,
-        std::vector<T> const&  elements) -> void
+    template <typename T>
+    void ensure_no_duplicates(
+        Context const context, std::string_view const description, std::vector<T> const& elements)
     {
         for (auto it = elements.begin(); it != elements.end(); ++it) {
             auto const duplicate = std::ranges::find(it + 1, elements.end(), it->name, &T::name);

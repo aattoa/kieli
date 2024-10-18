@@ -29,19 +29,19 @@ auto liblex::source_end(const kieli::Lex_state& state) noexcept -> char const*
 
 auto liblex::current(const kieli::Lex_state& state) noexcept -> char
 {
-    cpputil::always_assert(!state.text.empty());
+    cpputil::always_assert(not state.text.empty());
     return state.text.front();
 }
 
 auto liblex::extract_current(kieli::Lex_state& state) noexcept -> char
 {
-    cpputil::always_assert(!state.text.empty());
+    cpputil::always_assert(not state.text.empty());
     char const character = state.text.front();
     advance(state);
     return character;
 }
 
-auto liblex::advance(kieli::Lex_state& state, std::size_t const offset) noexcept -> void
+void liblex::advance(kieli::Lex_state& state, std::size_t const offset) noexcept
 {
     cpputil::always_assert(offset <= state.text.size());
     for (char const character : state.text.substr(0, offset)) {
@@ -81,14 +81,14 @@ auto liblex::make_string_literal(kieli::Lex_state const& state, std::string_view
 auto liblex::make_operator_identifier(kieli::Lex_state const& state, std::string_view const string)
     -> kieli::Identifier
 {
-    assert(!string.empty());
+    assert(not string.empty());
     return kieli::Identifier { state.db.string_pool.add(string) };
 }
 
 auto liblex::make_identifier(kieli::Lex_state const& state, std::string_view const string)
     -> kieli::Identifier
 {
-    assert(!string.empty());
+    assert(not string.empty());
     return kieli::Identifier { state.db.string_pool.add(string) };
 }
 

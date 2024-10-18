@@ -7,50 +7,50 @@ namespace {
     struct Type_format_visitor {
         State& state;
 
-        auto operator()(cst::Wildcard const& wildcard)
+        void operator()(cst::Wildcard const& wildcard)
         {
             format(state, wildcard);
         }
 
-        auto operator()(cst::Path const& path)
+        void operator()(cst::Path const& path)
         {
             format(state, path);
         }
 
-        auto operator()(cst::type::Never const&)
+        void operator()(cst::type::Never const&)
         {
             format(state, "!");
         }
 
-        auto operator()(cst::type::Parenthesized const& parenthesized)
+        void operator()(cst::type::Parenthesized const& parenthesized)
         {
             format(state, "(");
             format(state, parenthesized.type.value);
             format(state, ")");
         }
 
-        auto operator()(cst::type::Tuple const& tuple)
+        void operator()(cst::type::Tuple const& tuple)
         {
             format(state, "(");
             format_comma_separated(state, tuple.field_types.value.elements);
             format(state, ")");
         }
 
-        auto operator()(cst::type::Reference const& reference)
+        void operator()(cst::type::Reference const& reference)
         {
             format(state, "&");
             format_mutability_with_whitespace(state, reference.mutability);
             format(state, reference.referenced_type);
         }
 
-        auto operator()(cst::type::Pointer const& pointer)
+        void operator()(cst::type::Pointer const& pointer)
         {
             format(state, "*");
             format_mutability_with_whitespace(state, pointer.mutability);
             format(state, pointer.pointee_type);
         }
 
-        auto operator()(cst::type::Function const& function)
+        void operator()(cst::type::Function const& function)
         {
             format(state, "fn(");
             format_comma_separated(state, function.parameter_types.value.elements);
@@ -58,7 +58,7 @@ namespace {
             format(state, function.return_type);
         }
 
-        auto operator()(cst::type::Array const& array)
+        void operator()(cst::type::Array const& array)
         {
             format(state, "[");
             format(state, array.element_type);
@@ -67,21 +67,21 @@ namespace {
             format(state, "]");
         }
 
-        auto operator()(cst::type::Slice const& slice)
+        void operator()(cst::type::Slice const& slice)
         {
             format(state, "[");
             format(state, slice.element_type.value);
             format(state, "]");
         }
 
-        auto operator()(cst::type::Typeof const& typeof_)
+        void operator()(cst::type::Typeof const& typeof_)
         {
             format(state, "typeof(");
             format(state, typeof_.inspected_expression.value);
             format(state, ")");
         }
 
-        auto operator()(cst::type::Impl const& implementation)
+        void operator()(cst::type::Impl const& implementation)
         {
             format(state, "impl ");
             format_separated(state, implementation.concepts.elements, " + ");
@@ -89,7 +89,7 @@ namespace {
     };
 } // namespace
 
-auto libformat::format(State& state, cst::Type const& type) -> void
+void libformat::format(State& state, cst::Type const& type)
 {
     std::visit(Type_format_visitor { state }, type.variant);
 }

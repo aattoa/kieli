@@ -3,7 +3,7 @@
 
 auto kieli::cst::Path::head() const -> Path_segment const&
 {
-    cpputil::always_assert(!segments.empty());
+    cpputil::always_assert(not segments.empty());
     return segments.back();
 }
 
@@ -14,7 +14,7 @@ auto kieli::cst::Path::is_upper() const -> bool
 
 auto kieli::cst::Path::is_unqualified() const noexcept -> bool
 {
-    return std::holds_alternative<std::monostate>(root) && segments.size() == 1;
+    return std::holds_alternative<std::monostate>(root) and segments.size() == 1;
 }
 
 kieli::CST::CST(Module&& module) : module(std::make_unique<Module>(std::move(module))) {}

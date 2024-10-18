@@ -5,9 +5,9 @@
 #include <libcompiler/compiler.hpp>
 
 namespace kieli::hir {
-    enum class Type_variable_kind { general, integral };
+    enum struct Type_variable_kind { general, integral };
 
-    enum class Expression_kind { place, value };
+    enum struct Expression_kind { place, value };
 
     struct Template_parameter_tag : utl::Explicit<std::size_t> {
         using Explicit::Explicit;
@@ -196,7 +196,7 @@ namespace kieli::hir {
     };
 
     namespace type {
-        enum class Integer { i8, i16, i32, i64, u8, u16, u32, u64 };
+        enum struct Integer { i8, i16, i32, i64, u8, u16, u32, u64 };
 
         struct Floating {};
 
@@ -367,12 +367,12 @@ namespace kieli::hir {
     // Get the type of a pattern.
     auto pattern_type(Pattern const& pattern) -> hir::Type;
 
-    auto format(Arena const&, Pattern const&, std::string&) -> void;
-    auto format(Arena const&, Expression const&, std::string&) -> void;
-    auto format(Arena const&, Type const&, std::string&) -> void;
-    auto format(Arena const&, Type_variant const&, std::string&) -> void;
-    auto format(Arena const&, Mutability const&, std::string&) -> void;
-    auto format(Arena const&, Mutability_variant const&, std::string&) -> void;
+    void format(Arena const&, Pattern const&, std::string&);
+    void format(Arena const&, Expression const&, std::string&);
+    void format(Arena const&, Type const&, std::string&);
+    void format(Arena const&, Type_variant const&, std::string&);
+    void format(Arena const&, Mutability const&, std::string&);
+    void format(Arena const&, Mutability_variant const&, std::string&);
 
     auto to_string(Arena const& arena, auto const& x) -> std::string
         requires requires(std::string output) { hir::format(arena, x, output); }

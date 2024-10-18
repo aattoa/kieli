@@ -44,7 +44,7 @@ namespace {
         return cppdiag::Severity_header::make(cppdiag::Severity::error, colors);
     }
 
-    auto debug_lex(kieli::Database& db, kieli::Document_id const document_id) -> void
+    void debug_lex(kieli::Database& db, kieli::Document_id const document_id)
     {
         auto state = kieli::lex_state(db, document_id);
         auto token = kieli::lex(state);
@@ -55,13 +55,13 @@ namespace {
         std::println("");
     }
 
-    auto debug_parse(kieli::Database& db, kieli::Document_id const document_id) -> void
+    void debug_parse(kieli::Database& db, kieli::Document_id const document_id)
     {
         auto const cst = kieli::parse(db, document_id);
         std::print("{}", kieli::format_module(cst.get(), kieli::Format_options {}));
     }
 
-    auto debug_desugar(kieli::Database& db, kieli::Document_id const document_id) -> void
+    void debug_desugar(kieli::Database& db, kieli::Document_id const document_id)
     {
         auto const             cst = kieli::parse(db, document_id);
         kieli::ast::Arena      arena;
@@ -71,7 +71,7 @@ namespace {
         }
     }
 
-    auto debug_resolve(kieli::Database& db, kieli::Document_id const document_id) -> void
+    void debug_resolve(kieli::Database& db, kieli::Document_id const document_id)
     {
         auto hir       = kieli::hir::Arena {};
         auto constants = libresolve::make_constants(hir);
@@ -94,7 +94,7 @@ namespace {
         // clang-format on
     }
 
-    auto wrap_exceptions(std::invocable auto const& callback, cppdiag::Colors const colors) -> void
+    void wrap_exceptions(std::invocable auto const& callback, cppdiag::Colors const colors)
     {
         try {
             std::invoke(callback);
@@ -104,9 +104,8 @@ namespace {
         }
     }
 
-    auto run_debug_repl(
-        void (&callback)(kieli::Database&, kieli::Document_id),
-        cppdiag::Colors const colors) -> void
+    void run_debug_repl(
+        void (&callback)(kieli::Database&, kieli::Document_id), cppdiag::Colors const colors)
     {
         kieli::read_history_file_to_active_history();
 

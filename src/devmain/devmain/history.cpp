@@ -7,7 +7,7 @@ namespace {
     auto is_valid_history_file_path(std::filesystem::path const& path) -> bool
     {
         try {
-            return !std::filesystem::exists(path) || std::filesystem::is_regular_file(path);
+            return not std::filesystem::exists(path) or std::filesystem::is_regular_file(path);
         }
         catch (std::filesystem::filesystem_error const&) {
             return false;
@@ -42,10 +42,10 @@ namespace {
         return environment_defined_path("KIELI_HISTORY").or_else(default_history_file_path);
     }
 
-    auto add_line_to_history_file(std::string_view const line) -> void
+    void add_line_to_history_file(std::string_view const line)
     {
         auto const path = history_file_path();
-        if (!path.has_value() || !is_valid_history_file_path(path.value())) {
+        if (not path.has_value() or not is_valid_history_file_path(path.value())) {
             return;
         }
         if (auto const file = cpputil::io::File::open_append(path.value().c_str())) {
@@ -57,9 +57,9 @@ namespace {
     thread_local std::string previous_history_line;
 } // namespace
 
-auto kieli::add_to_history(char const* const line) -> void
+void kieli::add_to_history(char const* const line)
 {
-    if (!line || previous_history_line == line) {
+    if (not line or previous_history_line == line) {
         return;
     }
     cpputil::input::add_history(line);
@@ -67,10 +67,10 @@ auto kieli::add_to_history(char const* const line) -> void
     previous_history_line = line;
 }
 
-auto kieli::read_history_file_to_active_history() -> void
+void kieli::read_history_file_to_active_history()
 {
     auto const path = history_file_path();
-    if (!path.has_value() || !is_valid_history_file_path(path.value())) {
+    if (not path.has_value() or not is_valid_history_file_path(path.value())) {
         return;
     }
     if (auto const file = cpputil::io::File::open_read(path.value().c_str())) {

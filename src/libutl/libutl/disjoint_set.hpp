@@ -12,7 +12,7 @@ namespace utl {
         explicit Disjoint_set(std::size_t size);
 
         // Replace the set containing `x` and the set containing `y` with their union.
-        auto merge(std::size_t x, std::size_t y) -> void;
+        void merge(std::size_t x, std::size_t y);
 
         // Add a new node to the set.
         [[nodiscard]] auto add() -> std::size_t;

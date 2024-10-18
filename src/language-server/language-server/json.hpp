@@ -23,7 +23,7 @@ namespace kieli::lsp {
     //
     // Codes defined by LSP:
     // https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#errorCodes
-    enum class Error_code : Json::Number {
+    enum struct Error_code : Json::Number {
         server_not_initialized = -32002,
         invalid_request        = -32600,
         method_not_found       = -32601,
@@ -78,7 +78,7 @@ namespace kieli::lsp {
     auto format_options_from_json(Json::Object const& object) -> kieli::Format_options;
 
     // Throws `Bad_client_json` if `json` is not `T`.
-    template <class T>
+    template <typename T>
     auto as(Json const& json) -> T const&
     {
         if (std::holds_alternative<T>(json.variant)) {

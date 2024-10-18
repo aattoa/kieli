@@ -4,18 +4,16 @@
 using namespace libresolve;
 
 namespace {
-    template <class Binding>
-    auto do_bind(
-        Identifier_map<Binding>& bindings,
-        kieli::Identifier const  identifier,
-        Binding                  binding) -> void
+    template <typename Binding>
+    void do_bind(
+        Identifier_map<Binding>& bindings, kieli::Identifier const identifier, Binding binding)
     {
         // Easy way to implement variable shadowing
         auto const it = std::ranges::find(bindings, identifier, utl::first);
         bindings.emplace(it, identifier, std::move(binding));
     }
 
-    template <class T, Identifier_map<T> Scope::*bindings>
+    template <typename T, Identifier_map<T> Scope::*bindings>
     auto do_find(Context& context, hir::Scope_id scope_id, kieli::Identifier const identifier) -> T*
     {
         for (;;) {
@@ -42,9 +40,9 @@ namespace {
         };
     }
 
-    template <class Binding>
-    auto do_report_unused_bindings(
-        kieli::Document& document, Identifier_map<Binding> const& bindings) -> void
+    template <typename Binding>
+    void do_report_unused_bindings(
+        kieli::Document& document, Identifier_map<Binding> const& bindings)
     {
         auto diagnostics = std::views::values(bindings) //
                          | std::views::filter(&Binding::unused)
@@ -54,20 +52,19 @@ namespace {
     }
 } // namespace
 
-auto libresolve::bind_mutability(
-    Scope& scope, kieli::Identifier const identifier, Mutability_bind bind) -> void
+void libresolve::bind_mutability(
+    Scope& scope, kieli::Identifier const identifier, Mutability_bind bind)
 {
     do_bind(scope.mutabilities, identifier, std::move(bind));
 }
 
-auto libresolve::bind_variable(
-    Scope& scope, kieli::Identifier const identifier, Variable_bind binding) -> void
+void libresolve::bind_variable(
+    Scope& scope, kieli::Identifier const identifier, Variable_bind binding)
 {
     do_bind(scope.variables, identifier, std::move(binding));
 }
 
-auto libresolve::bind_type(Scope& scope, kieli::Identifier const identifier, Type_bind binding)
-    -> void
+void libresolve::bind_type(Scope& scope, kieli::Identifier const identifier, Type_bind binding)
 {
     do_bind(scope.types, identifier, std::move(binding));
 }
@@ -96,7 +93,7 @@ auto libresolve::find_type(
     return do_find<Type_bind, &Scope::types>(context, scope_id, identifier);
 }
 
-auto libresolve::report_unused(kieli::Database& db, Scope& scope) -> void
+void libresolve::report_unused(kieli::Database& db, Scope& scope)
 {
     kieli::Document& document = db.documents.at(scope.document_id);
     do_report_unused_bindings(document, scope.types);

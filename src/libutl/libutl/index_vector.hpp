@@ -5,14 +5,14 @@
 namespace utl {
 
     // A type that models `vector_index` can be used as the index type of `Index_vector`.
-    template <class Index>
+    template <typename Index>
     concept vector_index = requires(Index const index) {
         { index.get() } -> std::same_as<std::size_t>;
         requires std::is_constructible_v<Index, std::size_t>;
     };
 
     // Wraps `Integral`. Specializations model `vector_index`.
-    template <class Uniqueness_tag, std::integral Integral = std::size_t>
+    template <typename Uniqueness_tag, std::integral Integral = std::size_t>
     class Vector_index {
         Integral m_value;
     public:
@@ -32,7 +32,7 @@ namespace utl {
     };
 
     // Wraps a `std::vector`. The subscript operator uses `Index` instead of `size_t`.
-    template <vector_index Index, class T, class Allocator = std::allocator<T>>
+    template <vector_index Index, typename T, typename Allocator = std::allocator<T>>
     struct [[nodiscard]] Index_vector {
         std::vector<T, Allocator> underlying;
 
@@ -41,7 +41,7 @@ namespace utl {
             return std::forward_like<decltype(self)>(self.underlying.at(index.get()));
         }
 
-        template <class... Args>
+        template <typename... Args>
         [[nodiscard]] constexpr auto push(Args&&... args) -> Index
             requires std::is_constructible_v<T, Args...>
         {
@@ -62,17 +62,17 @@ namespace utl {
         auto operator==(Index_vector const& other) const -> bool = default;
     };
 
-    template <vector_index Index, class T, class Allocator = std::allocator<T>>
+    template <vector_index Index, typename T, typename Allocator = std::allocator<T>>
     struct Index_arena {
         Index_vector<Index, T, Allocator> index_vector;
         std::vector<Index>                free_indices;
 
-        auto kill(Index const index) -> void
+        void kill(Index const index)
         {
             free_indices.push_back(index);
         }
 
-        template <class... Args>
+        template <typename... Args>
         [[nodiscard]] constexpr auto push(Args&&... args) -> Index
             requires std::is_constructible_v<T, Args...>
         {

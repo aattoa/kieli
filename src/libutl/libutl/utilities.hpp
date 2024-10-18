@@ -43,24 +43,24 @@
 using namespace std::literals;
 
 namespace utl::dtl {
-    template <class, template <class...> class>
+    template <typename, template <typename...> typename>
     struct Is_specialization_of : std::false_type {};
 
-    template <class... Ts, template <class...> class F>
+    template <typename... Ts, template <typename...> typename F>
     struct Is_specialization_of<F<Ts...>, F> : std::true_type {};
 } // namespace utl::dtl
 
 namespace utl {
-    template <class T, template <class...> class F>
+    template <typename T, template <typename...> typename F>
     concept specialization_of = dtl::Is_specialization_of<T, F>::value;
 
-    template <class T, class... Ts>
+    template <typename T, typename... Ts>
     concept one_of = std::disjunction_v<std::is_same<T, Ts>...>;
 
-    template <class From, class To>
-    concept losslessly_convertible_to = std::integral<From> && std::integral<To>
-                                     && std::in_range<To>(std::numeric_limits<From>::min())
-                                     && std::in_range<To>(std::numeric_limits<From>::max());
+    template <typename From, typename To>
+    concept losslessly_convertible_to = std::integral<From> and std::integral<To>
+                                    and std::in_range<To>(std::numeric_limits<From>::min())
+                                    and std::in_range<To>(std::numeric_limits<From>::max());
 
     struct Safe_cast_argument_out_of_range : std::invalid_argument {
         Safe_cast_argument_out_of_range();
@@ -70,8 +70,8 @@ namespace utl {
     [[nodiscard]] constexpr auto safe_cast(From const from)
         noexcept(losslessly_convertible_to<From, To>) -> To
     {
-        if constexpr (!losslessly_convertible_to<From, To>) {
-            if (!std::in_range<To>(from)) {
+        if constexpr (not losslessly_convertible_to<From, To>) {
+            if (not std::in_range<To>(from)) {
                 throw Safe_cast_argument_out_of_range {};
             }
         }
@@ -80,20 +80,20 @@ namespace utl {
 
     template <std::size_t length>
     struct [[nodiscard]] Metastring {
-        std::array<char, length> m_string;
+        std::array<char, length> array;
 
         consteval Metastring(char const (&string)[length])
         {
-            std::copy_n(static_cast<char const*>(string), length, m_string.data());
+            std::copy_n(static_cast<char const*>(string), length, array.data());
         }
 
         [[nodiscard]] consteval auto view() const noexcept -> std::string_view
         {
-            return { m_string.data(), length - 1 };
+            return std::string_view(array.data(), length - 1);
         }
     };
 
-    template <class... Fs>
+    template <typename... Fs>
     struct Overload : Fs... {
         using Fs::operator()...;
     };
@@ -108,7 +108,7 @@ namespace utl {
         return std::forward_like<decltype(pair)>(second);
     };
 
-    auto times(std::size_t const count, auto&& callback) -> void
+    void times(std::size_t const count, auto&& callback)
     {
         for (std::size_t i = 0; i != count; ++i) {
             std::invoke(callback);
@@ -116,14 +116,14 @@ namespace utl {
     }
 
     // Value wrapper that is used to disable default constructors
-    template <class T>
-    class [[nodiscard]] Explicit {
+    template <typename T>
+    class Explicit {
         T m_value;
     public:
-        template <class Arg>
+        template <typename Arg>
         constexpr Explicit(Arg&& arg) noexcept(std::is_nothrow_constructible_v<T, Arg&&>)
-            requires(!std::is_same_v<Explicit, std::remove_cvref_t<Arg>>)
-                 && std::is_constructible_v<T, Arg&&>
+            requires std::is_constructible_v<T, Arg&&>
+                 and (not std::is_same_v<Explicit, std::remove_cvref_t<Arg>>)
             : m_value { std::forward<Arg>(arg) }
         {}
 
@@ -133,13 +133,13 @@ namespace utl {
         }
     };
 
-    template <class T, std::size_t n>
+    template <typename T, std::size_t n>
     [[nodiscard]] constexpr auto to_vector(T (&&array)[n]) -> std::vector<T>
     {
         return std::ranges::to<std::vector>(std::views::as_rvalue(array));
     }
 
-    template <class T, class A>
+    template <typename T, typename A>
     [[nodiscard]] auto pop_back(std::vector<T, A>& vector) -> std::optional<T>
     {
         if (vector.empty()) {
@@ -155,7 +155,7 @@ namespace utl {
     {
         // https://stackoverflow.com/questions/61786685/how-do-i-print-ordinal-indicators-in-a-c-program-cant-print-numbers-with-st
         n %= 100;
-        if (n == 11 || n == 12 || n == 13) {
+        if (n == 11 or n == 12 or n == 13) {
             return "th";
         }
         switch (n % 10) {
@@ -193,7 +193,7 @@ namespace utl::fmt {
     }
 } // namespace utl::fmt
 
-template <class Char, std::formattable<Char>... Ts>
+template <typename Char, std::formattable<Char>... Ts>
 struct std::formatter<std::variant<Ts...>, Char> {
     static constexpr auto parse(auto& context)
     {
@@ -209,7 +209,7 @@ struct std::formatter<std::variant<Ts...>, Char> {
     }
 };
 
-template <class Char>
+template <typename Char>
 struct std::formatter<std::monostate, Char> {
     static constexpr auto parse(auto& context)
     {
@@ -222,7 +222,7 @@ struct std::formatter<std::monostate, Char> {
     }
 };
 
-template <class Char, std::formattable<Char> T, std::formattable<Char> E>
+template <typename Char, std::formattable<Char> T, std::formattable<Char> E>
 struct std::formatter<std::expected<T, E>, Char> {
     static constexpr auto parse(auto& context)
     {
@@ -238,7 +238,7 @@ struct std::formatter<std::expected<T, E>, Char> {
     }
 };
 
-template <class Char, std::formattable<Char> E>
+template <typename Char, std::formattable<Char> E>
 struct std::formatter<std::unexpected<E>, Char> {
     static constexpr auto parse(auto& context)
     {
@@ -251,7 +251,7 @@ struct std::formatter<std::unexpected<E>, Char> {
     }
 };
 
-template <class Char, class Range>
+template <typename Char, typename Range>
 struct std::formatter<utl::fmt::Join_closure<Range>, Char> {
     static constexpr auto parse(auto& context)
     {
@@ -273,7 +273,7 @@ struct std::formatter<utl::fmt::Join_closure<Range>, Char> {
     }
 };
 
-template <class Char, std::formattable<Char> T>
+template <typename Char, std::formattable<Char> T>
 struct std::formatter<utl::fmt::Integer_with_ordinal_indicator_closure<T>, Char> {
     static constexpr auto parse(auto& context)
     {

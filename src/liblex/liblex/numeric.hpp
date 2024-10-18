@@ -3,7 +3,7 @@
 #include <libutl/utilities.hpp>
 
 namespace liblex {
-    enum class Numeric_error {
+    enum struct Numeric_error {
         out_of_range,
         invalid_argument,
     };

@@ -102,7 +102,7 @@ namespace libresolve {
         kieli::Lower               name;
     };
 
-    template <class T>
+    template <typename T>
     using Identifier_map = std::vector<std::pair<kieli::Identifier, T>>;
 
     struct Environment {

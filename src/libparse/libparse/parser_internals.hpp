@@ -39,14 +39,6 @@ namespace libparse {
         // Consume the current token if it matches `type`, otherwise emit an error.
         [[nodiscard]] auto require_extract(Token_type type) -> Token;
 
-        // Emit an error that describes an expectation failure:
-        // Encountered `error_range` where `description` was expected.
-        [[noreturn]] auto error_expected(kieli::Range range, std::string_view description) -> void;
-
-        // Emit an error that describes an expectation failure:
-        // Encountered the current token where `description` was expected.
-        [[noreturn]] auto error_expected(std::string_view description) -> void;
-
         // Source view from `range` up to (but not including) the current token.
         [[nodiscard]] auto up_to_current(kieli::Range range) const -> kieli::Range;
 
@@ -57,6 +49,14 @@ namespace libparse {
         [[nodiscard]] auto cst() const -> cst::Arena&;
         [[nodiscard]] auto special_identifiers() const -> Special_identifiers;
         [[nodiscard]] auto document_id() const -> kieli::Document_id;
+
+        // Emit an error that describes an expectation failure:
+        // Encountered `error_range` where `description` was expected.
+        [[noreturn]] void error_expected(kieli::Range range, std::string_view description);
+
+        // Emit an error that describes an expectation failure:
+        // Encountered the current token where `description` was expected.
+        [[noreturn]] void error_expected(std::string_view description);
     };
 
     auto parse_simple_path_root(Context&) -> std::optional<cst::Path_root>;
@@ -86,7 +86,7 @@ namespace libparse {
     auto parse_type_root(Context&) -> std::optional<cst::Type_id>;
     auto parse_type(Context&) -> std::optional<cst::Type_id>;
 
-    template <class Function>
+    template <typename Function>
     concept parser = requires(Function const function, Context context) {
         { function(context) } -> utl::specialization_of<std::optional>;
     };

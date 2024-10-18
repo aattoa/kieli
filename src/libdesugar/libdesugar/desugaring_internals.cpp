@@ -131,7 +131,7 @@ auto libdesugar::desugar(Context const ctx, cst::Function_parameters const& cst_
         if (parameter.type.has_value()) {
             return desugar(ctx, parameter.type.value());
         }
-        if (!ast_parameters.empty()) {
+        if (not ast_parameters.empty()) {
             return ast_parameters.front().type;
         }
         auto const range = ctx.cst.patterns[parameter.pattern].range;

@@ -108,8 +108,8 @@ namespace kieli::ast {
         Expression_id expression;
     };
 
-    enum class Loop_source { plain_loop, while_loop, for_loop };
-    enum class Conditional_source { if_, elif, while_loop_body };
+    enum struct Loop_source { plain_loop, while_loop, for_loop };
+    enum struct Conditional_source { if_, elif, while_loop_body };
 
     auto describe_loop_source(Loop_source source) -> std::string_view;
     auto describe_conditional_source(Conditional_source source) -> std::string_view;

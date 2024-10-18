@@ -7,7 +7,7 @@ using namespace libformat;
 // TODO: collapse string literals, expand integer literals, insert digit separators
 
 namespace {
-    auto format_definitions(State& state, std::vector<cst::Definition> const& definitions) -> void
+    void format_definitions(State& state, std::vector<cst::Definition> const& definitions)
     {
         if (definitions.empty()) {
             return;
@@ -19,7 +19,7 @@ namespace {
         }
     }
 
-    auto format_function_signature(State& state, cst::Function_signature const& signature) -> void
+    void format_function_signature(State& state, cst::Function_signature const& signature)
     {
         format(state, "fn {}", signature.name);
         format(state, signature.template_parameters);
@@ -27,7 +27,7 @@ namespace {
         format(state, signature.return_type);
     }
 
-    auto format_type_signature(State& state, cst::Type_signature const& signature) -> void
+    void format_type_signature(State& state, cst::Type_signature const& signature)
     {
         format(state, "alias {}", signature.name);
         format(state, signature.template_parameters);
@@ -37,7 +37,7 @@ namespace {
         }
     }
 
-    auto format_constructor(State& state, cst::definition::Constructor_body const& body) -> void
+    void format_constructor(State& state, cst::definition::Constructor_body const& body)
     {
         auto const visitor = utl::Overload {
             [&](cst::definition::Struct_constructor const& constructor) {
@@ -58,7 +58,7 @@ namespace {
     struct Definition_format_visitor {
         State& state;
 
-        auto operator()(cst::definition::Function const& function) const -> void
+        void operator()(cst::definition::Function const& function) const
         {
             format_function_signature(state, function.signature);
             cst::Expression const& body = state.arena.expressions[function.body];
@@ -79,7 +79,7 @@ namespace {
             case kieli::Format_function_body::normalize_to_equals_sign:
             {
                 if (auto const* const block = std::get_if<cst::expression::Block>(&body.variant)) {
-                    if (block->result_expression.has_value() && block->side_effects.empty()) {
+                    if (block->result_expression.has_value() and block->side_effects.empty()) {
                         format(state, " = ");
                         format(state, block->result_expression.value());
                     }
@@ -111,14 +111,14 @@ namespace {
             }
         }
 
-        auto operator()(cst::definition::Struct const& structure) -> void
+        void operator()(cst::definition::Struct const& structure)
         {
             format(state, "struct {}", structure.name);
             format(state, structure.template_parameters);
             format_constructor(state, structure.body);
         }
 
-        auto operator()(cst::definition::Enum const& enumeration) -> void
+        void operator()(cst::definition::Enum const& enumeration)
         {
             format(state, "enum {}", enumeration.name);
             format(state, enumeration.template_parameters);
@@ -126,7 +126,7 @@ namespace {
 
             auto const& constructors = enumeration.constructors.elements;
 
-            cpputil::always_assert(!constructors.empty());
+            cpputil::always_assert(not constructors.empty());
             format(state, "{}", constructors.front().name);
             format_constructor(state, constructors.front().body);
 
@@ -137,7 +137,7 @@ namespace {
             }
         }
 
-        auto operator()(cst::definition::Concept const& concept_) -> void
+        void operator()(cst::definition::Concept const& concept_)
         {
             format(state, "concept {}", concept_.name);
             format(state, concept_.template_parameters);
@@ -160,7 +160,7 @@ namespace {
             format(state, "{}}}", state.newline());
         }
 
-        auto operator()(cst::definition::Impl const& implementation) -> void
+        void operator()(cst::definition::Impl const& implementation)
         {
             format(state, "impl");
             format(state, implementation.template_parameters);
@@ -175,7 +175,7 @@ namespace {
             format(state, "{}}}", state.newline());
         }
 
-        auto operator()(cst::definition::Alias const& alias) -> void
+        void operator()(cst::definition::Alias const& alias)
         {
             format(state, "alias {}", alias.name);
             format(state, alias.template_parameters);
@@ -183,7 +183,7 @@ namespace {
             format(state, alias.type);
         }
 
-        auto operator()(cst::definition::Submodule const& module) -> void
+        void operator()(cst::definition::Submodule const& module)
         {
             format(state, "module {}", module.name);
             format(state, module.template_parameters);
@@ -198,7 +198,7 @@ namespace {
     };
 } // namespace
 
-auto libformat::format(State& state, cst::Definition const& definition) -> void
+void libformat::format(State& state, cst::Definition const& definition)
 {
     std::visit(Definition_format_visitor { state }, definition.variant);
 }
@@ -215,69 +215,69 @@ auto kieli::format_module(CST::Module const& module, kieli::Format_options const
     return output;
 }
 
-auto kieli::format(
+void kieli::format(
     cst::Arena const&      arena,
     Format_options const&  options,
     cst::Definition const& definition,
-    std::string&           output) -> void
+    std::string&           output)
 {
     State state { arena, options, output };
     libformat::format(state, definition);
 }
 
-auto kieli::format(
+void kieli::format(
     cst::Arena const&      arena,
     Format_options const&  options,
     cst::Expression const& expression,
-    std::string&           output) -> void
+    std::string&           output)
 {
     State state { arena, options, output };
     libformat::format(state, expression);
 }
 
-auto kieli::format(
+void kieli::format(
     cst::Arena const&     arena,
     Format_options const& options,
     cst::Pattern const&   pattern,
-    std::string&          output) -> void
+    std::string&          output)
 {
     State state { arena, options, output };
     libformat::format(state, pattern);
 }
 
-auto kieli::format(
+void kieli::format(
     cst::Arena const&     arena,
     Format_options const& options,
     cst::Type const&      type,
-    std::string&          output) -> void
+    std::string&          output)
 {
     State state { arena, options, output };
     libformat::format(state, type);
 }
 
-auto kieli::format(
+void kieli::format(
     cst::Arena const&     arena,
     Format_options const& options,
     cst::Expression_id    expression_id,
-    std::string&          output) -> void
+    std::string&          output)
 {
     kieli::format(arena, options, arena.expressions[expression_id], output);
 }
 
-auto kieli::format(
+void kieli::format(
     cst::Arena const&     arena,
     Format_options const& options,
     cst::Pattern_id       pattern_id,
-    std::string&          output) -> void
+    std::string&          output)
 {
     kieli::format(arena, options, arena.patterns[pattern_id], output);
 }
 
-auto kieli::format(
+void kieli::format(
     cst::Arena const&     arena,
     Format_options const& options,
     cst::Type_id          type_id,
-    std::string&          output) -> void
+    std::string&          output)
 {
     kieli::format(arena, options, arena.types[type_id], output);
 }

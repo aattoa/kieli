@@ -11,7 +11,7 @@ using kieli::Database;
 using namespace kieli::lsp;
 
 namespace {
-    template <class T>
+    template <typename T>
     using Result = std::expected<T, std::string>;
 
     auto maybe_markdown_content(std::optional<std::string> markdown) -> Json
@@ -96,7 +96,7 @@ namespace {
 
     auto handle_shutdown(Server& server) -> Json
     {
-        if (!std::exchange(server.is_initialized, false)) {
+        if (not std::exchange(server.is_initialized, false)) {
             std::println(stderr, "Received shutdown request while uninitialized");
         }
         server.db = Database {}; // Reset the compilation database.
@@ -141,7 +141,7 @@ namespace {
     }
 
     // https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#textDocumentContentChangeEvent
-    auto apply_content_change(std::string& text, Json::Object const& change) -> void
+    void apply_content_change(std::string& text, Json::Object const& change)
     {
         std::string const& new_text = change.at("text").as_string();
         if (auto const it = change.find("range"); it != change.end()) {
@@ -191,7 +191,7 @@ namespace {
             }
             return success_response(handle_initialize(), id);
         }
-        else if (!server.is_initialized) {
+        else if (not server.is_initialized) {
             return error_response(Error_code::server_not_initialized, "Server not initialized", id);
         }
         else if (auto result = handle_request(server, method, params)) {
@@ -202,19 +202,19 @@ namespace {
         }
     }
 
-    auto dispatch_handle_notification(
-        Server& server, std::string_view const method, Json const& params) -> void
+    void dispatch_handle_notification(
+        Server& server, std::string_view const method, Json const& params)
     {
         if (method == "exit") {
             // https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#exit
             server.exit_code = server.is_initialized ? 1 : 0;
         }
-        else if (!server.is_initialized) {
+        else if (not server.is_initialized) {
             std::println(stderr, "Server is uninitialized, dropping notification");
         }
         else {
             auto const result = handle_notification(server, method, params);
-            if (!result.has_value()) {
+            if (not result.has_value()) {
                 std::println(stderr, "Error while handling notification: {}", result.error());
             }
         }

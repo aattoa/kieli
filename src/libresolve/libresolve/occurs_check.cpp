@@ -30,7 +30,7 @@ namespace {
 
         auto operator()(hir::type::Array const& array) const -> bool
         {
-            return recurse(array.element_type) || recurse(arena.expressions[array.length].type);
+            return recurse(array.element_type) or recurse(arena.expressions[array.length].type);
         }
 
         auto operator()(hir::type::Slice const& slice) const -> bool
@@ -51,7 +51,7 @@ namespace {
         auto operator()(hir::type::Function const& function) const -> bool
         {
             return recurse(function.return_type)
-                || std::ranges::any_of(function.parameter_types, recurse());
+                or std::ranges::any_of(function.parameter_types, recurse());
         }
 
         auto operator()(hir::type::Tuple const& tuple) const -> bool

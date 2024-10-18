@@ -5,7 +5,7 @@
 namespace liblex {
     struct Error {};
 
-    template <class T>
+    template <typename T>
     using Expected = std::expected<T, Error>;
 
     [[nodiscard]] auto source_begin(kieli::Lex_state const&) noexcept -> char const*;
@@ -25,12 +25,11 @@ namespace liblex {
     [[nodiscard]] auto error(kieli::Lex_state const& state, std::string message)
         -> std::unexpected<Error>;
 
-    auto advance(kieli::Lex_state&, std::size_t offset = 1) noexcept -> void;
+    void advance(kieli::Lex_state&, std::size_t offset = 1) noexcept;
 
-    auto consume(kieli::Lex_state& state, std::predicate<char> auto const& predicate) noexcept
-        -> void
+    void consume(kieli::Lex_state& state, std::predicate<char> auto const& predicate) noexcept
     {
-        while (!state.text.empty() && predicate(state.text.front())) {
+        while (not state.text.empty() and predicate(state.text.front())) {
             state.position.advance_with(state.text.front());
             state.text.remove_prefix(1);
         }

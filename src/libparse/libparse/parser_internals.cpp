@@ -17,7 +17,7 @@ auto libparse::Context::is_finished() -> bool
 
 auto libparse::Context::peek() -> Token
 {
-    if (!m_next_token.has_value()) {
+    if (not m_next_token.has_value()) {
         m_next_token = kieli::lex(m_lex_state);
     }
     return m_next_token.value();
@@ -44,8 +44,8 @@ auto libparse::Context::require_extract(Token_type const type) -> Token
     error_expected(kieli::token_description(type));
 }
 
-auto libparse::Context::error_expected(
-    kieli::Range const error_range, std::string_view const description) -> void
+void libparse::Context::error_expected(
+    kieli::Range const error_range, std::string_view const description)
 {
     auto message = std::format(
         "Expected {}, but found {}", description, kieli::token_description(peek().type));
@@ -53,7 +53,7 @@ auto libparse::Context::error_expected(
     throw std::runtime_error("fatal parse error"); // todo
 }
 
-auto libparse::Context::error_expected(std::string_view const description) -> void
+void libparse::Context::error_expected(std::string_view const description)
 {
     error_expected(peek().range, description);
 }

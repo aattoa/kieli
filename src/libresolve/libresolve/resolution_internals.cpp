@@ -61,8 +61,7 @@ auto libresolve::unit_expression(Constants const& constants, kieli::Range const 
     };
 }
 
-auto libresolve::flatten_type(Context& context, Inference_state& state, hir::Type_variant& type)
-    -> void
+void libresolve::flatten_type(Context& context, Inference_state& state, hir::Type_variant& type)
 {
     if (auto const* const variable = std::get_if<hir::type::Variable>(&type)) {
         Type_variable_data& data = state.type_variables[variable->id];
@@ -88,11 +87,11 @@ auto libresolve::flatten_type(Context& context, Inference_state& state, hir::Typ
     }
 }
 
-auto libresolve::set_solution(
+void libresolve::set_solution(
     Context&            context,
     Inference_state&    state,
     Type_variable_data& variable_data,
-    hir::Type_variant   solution) -> void
+    hir::Type_variant   solution)
 {
     auto const index = state.type_variable_disjoint_set.find(variable_data.variable_id.get());
     Type_variable_data& representative_data = state.type_variables.underlying.at(index);
@@ -104,15 +103,15 @@ auto libresolve::set_solution(
     representative_data.is_solved = true;
 }
 
-auto libresolve::set_solution(
+void libresolve::set_solution(
     Context&                  context,
     Inference_state&          state,
     Mutability_variable_data& variable_data,
-    hir::Mutability_variant   solution) -> void
+    hir::Mutability_variant   solution)
 {
     auto const index = state.mutability_variable_disjoint_set.find(variable_data.variable_id.get());
     Mutability_variable_data& representative = state.mutability_variables.underlying.at(index);
-    cpputil::always_assert(!std::exchange(representative.is_solved, true));
+    cpputil::always_assert(not std::exchange(representative.is_solved, true));
     context.hir.mutabilities[representative.mutability_id] = std::move(solution);
 }
 
@@ -160,16 +159,16 @@ auto libresolve::fresh_mutability_variable(
     return hir::Mutability { mutability_id, origin };
 }
 
-auto libresolve::ensure_no_unsolved_variables(Context& context, Inference_state& state) -> void
+void libresolve::ensure_no_unsolved_variables(Context& context, Inference_state& state)
 {
     for (Mutability_variable_data& data : state.mutability_variables.underlying) {
-        if (!data.is_solved) {
+        if (not data.is_solved) {
             set_solution(context, state, data, kieli::Mutability::immut);
         }
     }
     for (Type_variable_data& data : state.type_variables.underlying) {
         flatten_type(context, state, context.hir.types[data.type_id]);
-        if (!data.is_solved) {
+        if (not data.is_solved) {
             auto message = std::format("Unsolved type variable: ?{}", data.variable_id.get());
             kieli::add_error(context.db, state.document_id, data.origin, std::move(message));
             set_solution(context, state, data, hir::Error {});

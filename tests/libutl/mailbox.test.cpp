@@ -11,7 +11,7 @@ UNITTEST("mailbox")
 
     mailbox.push(5, 'a');
 
-    REQUIRE(!mailbox.is_empty());
+    REQUIRE(not mailbox.is_empty());
     REQUIRE(mailbox.pop() == "aaaaa");
     REQUIRE(mailbox.pop() == std::nullopt);
 
@@ -19,7 +19,7 @@ UNITTEST("mailbox")
     mailbox.push("bbb");
     mailbox.push("ccc");
 
-    REQUIRE(!mailbox.is_empty());
+    REQUIRE(not mailbox.is_empty());
     REQUIRE(mailbox.pop() == "aaa");
     REQUIRE(mailbox.pop() == "bbb");
     REQUIRE(mailbox.pop() == "ccc");

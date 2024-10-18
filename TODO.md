@@ -25,8 +25,8 @@
 ## libcompiler
 - Document paths should always be absolute
 - Generic tree walkers
-- `enum class Phase { lex, parse, etc. }`
-- `enum class liblex::diagnostic`
+- `enum struct Phase { lex, parse, etc. }`
+- `enum struct liblex::diagnostic`
 - `auto diag_code(Phase, std::size_t code) -> std::string`
 
 ## Language server
@@ -37,7 +37,6 @@
 
 ## Build process
 - Profile compilation with `-ftime-trace`
-- Try the mold linker, `-fuse-ld=mold`
 - git submodules?
 
 ## Miscellaneous

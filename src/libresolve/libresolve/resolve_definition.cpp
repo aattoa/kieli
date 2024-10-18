@@ -84,7 +84,7 @@ namespace {
 
 auto libresolve::resolve_function_body(Context& context, Function_info& info) -> hir::Expression&
 {
-    if (!info.body.has_value()) {
+    if (not info.body.has_value()) {
         hir::Function_signature& signature = resolve_function_signature(context, info);
         Inference_state          state { .document_id = info.document_id };
         info.body = resolve_expression(
@@ -102,7 +102,7 @@ auto libresolve::resolve_function_body(Context& context, Function_info& info) ->
 auto libresolve::resolve_function_signature(Context& context, Function_info& info)
     -> hir::Function_signature&
 {
-    if (!info.signature.has_value()) {
+    if (not info.signature.has_value()) {
         scope(context, Scope { .document_id = info.document_id }, [&](hir::Scope_id scope_id) {
             info.signature = resolve_signature(
                 context, scope_id, info.environment_id, info.document_id, info.ast.signature);
@@ -114,7 +114,7 @@ auto libresolve::resolve_function_signature(Context& context, Function_info& inf
 
 auto libresolve::resolve_enumeration(Context& context, Enumeration_info& info) -> hir::Enumeration&
 {
-    if (!info.hir.has_value()) {
+    if (not info.hir.has_value()) {
         (void)context;
         cpputil::todo();
     }
@@ -123,7 +123,7 @@ auto libresolve::resolve_enumeration(Context& context, Enumeration_info& info) -
 
 auto libresolve::resolve_concept(Context& context, Concept_info& info) -> hir::Concept&
 {
-    if (!info.hir.has_value()) {
+    if (not info.hir.has_value()) {
         (void)context;
         cpputil::todo();
     }
@@ -132,7 +132,7 @@ auto libresolve::resolve_concept(Context& context, Concept_info& info) -> hir::C
 
 auto libresolve::resolve_alias(Context& context, Alias_info& info) -> hir::Alias&
 {
-    if (!info.hir.has_value()) {
+    if (not info.hir.has_value()) {
         (void)context;
         cpputil::todo();
     }

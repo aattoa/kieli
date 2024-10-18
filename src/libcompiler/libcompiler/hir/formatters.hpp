@@ -6,7 +6,7 @@
 // TODO: simplify
 
 namespace kieli::hir::dtl {
-    template <class T>
+    template <typename T>
     struct With_arena {
         std::reference_wrapper<Arena const> arena;
         std::reference_wrapper<T const>     object;
@@ -21,7 +21,7 @@ namespace kieli::hir::dtl {
             return std::addressof(get());
         }
 
-        template <class Other>
+        template <typename Other>
         [[nodiscard]] auto wrap(Other const& other) const noexcept -> With_arena<Other>
         {
             return { arena, std::cref(other) };
@@ -62,7 +62,7 @@ LIBRESOLVE_DECLARE_FORMATTER(kieli::hir::Mutability);
 
 LIBRESOLVE_DECLARE_FORMATTER(kieli::hir::Function_parameter);
 
-template <class T>
+template <typename T>
     requires std::formattable<kieli::hir::dtl::With_arena<T>, char>
 struct std::formatter<kieli::hir::dtl::With_arena<std::vector<T>>> {
     static constexpr auto parse(auto& context)
@@ -80,7 +80,7 @@ struct std::formatter<kieli::hir::dtl::With_arena<std::vector<T>>> {
 };
 
 namespace kieli::hir::dtl {
-    template <class Out>
+    template <typename Out>
     struct Expression_format_visitor {
         Out          out;
         Arena const& arena;
@@ -90,42 +90,42 @@ namespace kieli::hir::dtl {
             return With_arena { std::cref(arena), std::cref(x) };
         }
 
-        auto operator()(hir::Wildcard const&) const
+        void operator()(hir::Wildcard const&) const
         {
             std::format_to(out, "_");
         }
 
-        auto operator()(kieli::literal auto const& literal) const
+        void operator()(kieli::literal auto const& literal) const
         {
             std::format_to(out, "{}", literal);
         }
 
-        auto operator()(expression::Array_literal const& literal) const
+        void operator()(expression::Array_literal const& literal) const
         {
             std::format_to(out, "[{}]", wrap(literal.elements));
         }
 
-        auto operator()(expression::Tuple const& tuple) const
+        void operator()(expression::Tuple const& tuple) const
         {
             std::format_to(out, "({})", wrap(tuple.fields));
         }
 
-        auto operator()(expression::Loop const& loop) const
+        void operator()(expression::Loop const& loop) const
         {
             std::format_to(out, "loop {}", wrap(loop.body));
         }
 
-        auto operator()(expression::Break const& break_) const
+        void operator()(expression::Break const& break_) const
         {
             std::format_to(out, "break {}", wrap(break_.result));
         }
 
-        auto operator()(expression::Continue const&) const
+        void operator()(expression::Continue const&) const
         {
             std::format_to(out, "continue");
         }
 
-        auto operator()(expression::Block const& block) const
+        void operator()(expression::Block const& block) const
         {
             std::format_to(out, "{{");
             for (Expression const& side_effect : block.side_effects) {
@@ -134,13 +134,13 @@ namespace kieli::hir::dtl {
             std::format_to(out, " {} }}", wrap(block.result));
         }
 
-        auto operator()(expression::Let_binding const& let) const
+        void operator()(expression::Let_binding const& let) const
         {
             std::format_to(
                 out, "let {}: {} = {}", wrap(let.pattern), wrap(let.type), wrap(let.initializer));
         }
 
-        auto operator()(expression::Match const& match) const
+        void operator()(expression::Match const& match) const
         {
             std::format_to(out, "match {} {{", wrap(match.expression));
             for (auto const& match_case : match.cases) {
@@ -150,54 +150,54 @@ namespace kieli::hir::dtl {
             std::format_to(out, " }}");
         }
 
-        auto operator()(expression::Variable_reference const& variable) const
+        void operator()(expression::Variable_reference const& variable) const
         {
             std::format_to(out, "{}", variable.name);
         }
 
-        auto operator()(expression::Function_reference const& reference) const
+        void operator()(expression::Function_reference const& reference) const
         {
             std::format_to(out, "{}", reference.name);
         }
 
-        auto operator()(expression::Indirect_function_call const& call) const
+        void operator()(expression::Indirect_function_call const& call) const
         {
             std::format_to(out, "{}({})", wrap(call.invocable), wrap(call.arguments));
         }
 
-        auto operator()(expression::Direct_function_call const& call) const
+        void operator()(expression::Direct_function_call const& call) const
         {
             std::format_to(out, "{}({})", call.function_name, wrap(call.arguments));
         }
 
-        auto operator()(expression::Sizeof const& sizeof_) const
+        void operator()(expression::Sizeof const& sizeof_) const
         {
             std::format_to(out, "sizeof({})", wrap(sizeof_.inspected_type));
         }
 
-        auto operator()(expression::Addressof const& addressof) const
+        void operator()(expression::Addressof const& addressof) const
         {
             std::format_to(
                 out, "(&{} {})", wrap(addressof.mutability), wrap(addressof.place_expression));
         }
 
-        auto operator()(expression::Dereference const& dereference) const
+        void operator()(expression::Dereference const& dereference) const
         {
             std::format_to(out, "(*{})", wrap(dereference.reference_expression));
         }
 
-        auto operator()(expression::Defer const& defer) const
+        void operator()(expression::Defer const& defer) const
         {
             std::format_to(out, "defer {}", wrap(defer.effect_expression));
         }
 
-        auto operator()(Error const&) const
+        void operator()(Error const&) const
         {
             std::format_to(out, "ERROR-EXPRESSION");
         }
     };
 
-    template <class Out>
+    template <typename Out>
     struct Pattern_format_visitor {
         Out          out;
         Arena const& arena;
@@ -207,45 +207,45 @@ namespace kieli::hir::dtl {
             return With_arena { std::cref(arena), std::cref(x) };
         }
 
-        auto operator()(kieli::literal auto const& literal) const
+        void operator()(kieli::literal auto const& literal) const
         {
             std::format_to(out, "{}", literal);
         }
 
-        auto operator()(Wildcard const&) const
+        void operator()(Wildcard const&) const
         {
             std::format_to(out, "_");
         }
 
-        auto operator()(pattern::Tuple const& tuple) const
+        void operator()(pattern::Tuple const& tuple) const
         {
             std::format_to(out, "({})", wrap(tuple.field_patterns));
         }
 
-        auto operator()(pattern::Slice const& slice) const
+        void operator()(pattern::Slice const& slice) const
         {
             std::format_to(out, "[{}]", wrap(slice.patterns));
         }
 
-        auto operator()(pattern::Name const& name) const
+        void operator()(pattern::Name const& name) const
         {
             std::format_to(out, "{} {}", wrap(name.mutability), name.identifier);
         }
 
-        auto operator()(pattern::Alias const& alias) const
+        void operator()(pattern::Alias const& alias) const
         {
             std::format_to(
                 out, "{} as {} {}", wrap(alias.pattern), wrap(alias.mutability), alias.identifier);
         }
 
-        auto operator()(pattern::Guarded const& guarded) const
+        void operator()(pattern::Guarded const& guarded) const
         {
             std::format_to(
                 out, "{} if {}", wrap(guarded.guarded_pattern), wrap(guarded.guard_expression));
         }
     };
 
-    template <class Out>
+    template <typename Out>
     struct Type_format_visitor {
         Out          out;
         Arena const& arena;
@@ -255,32 +255,32 @@ namespace kieli::hir::dtl {
             return With_arena { std::cref(arena), std::cref(x) };
         }
 
-        auto operator()(type::Integer const integer) const
+        void operator()(type::Integer const integer) const
         {
             std::format_to(out, "{}", integer_name(integer));
         }
 
-        auto operator()(type::Floating const&) const
+        void operator()(type::Floating const&) const
         {
             std::format_to(out, "Float");
         }
 
-        auto operator()(type::Character const&) const
+        void operator()(type::Character const&) const
         {
             std::format_to(out, "Char");
         }
 
-        auto operator()(type::Boolean const&) const
+        void operator()(type::Boolean const&) const
         {
             std::format_to(out, "Bool");
         }
 
-        auto operator()(type::String const&) const
+        void operator()(type::String const&) const
         {
             std::format_to(out, "String");
         }
 
-        auto operator()(type::Array const& array) const
+        void operator()(type::Array const& array) const
         {
             std::format_to(
                 out,
@@ -289,49 +289,49 @@ namespace kieli::hir::dtl {
                 wrap(std::cref(array.length)));
         }
 
-        auto operator()(type::Slice const& slice) const
+        void operator()(type::Slice const& slice) const
         {
             std::format_to(out, "[{}]", wrap(slice.element_type));
         }
 
-        auto operator()(type::Reference const& reference) const
+        void operator()(type::Reference const& reference) const
         {
             std::format_to(
                 out, "&{} {}", wrap(reference.mutability), wrap(reference.referenced_type));
         }
 
-        auto operator()(type::Pointer const& pointer) const
+        void operator()(type::Pointer const& pointer) const
         {
             std::format_to(out, "*{} {}", wrap(pointer.mutability), wrap(pointer.pointee_type));
         }
 
-        auto operator()(type::Function const& function) const
+        void operator()(type::Function const& function) const
         {
             std::format_to(
                 out, "fn({}): {}", wrap(function.parameter_types), wrap(function.return_type));
         }
 
-        auto operator()(type::Enumeration const& enumeration) const
+        void operator()(type::Enumeration const& enumeration) const
         {
             std::format_to(out, "{}", enumeration.name);
         }
 
-        auto operator()(type::Tuple const& tuple) const
+        void operator()(type::Tuple const& tuple) const
         {
             std::format_to(out, "({})", wrap(tuple.types));
         }
 
-        auto operator()(type::Parameterized const& parameterized) const
+        void operator()(type::Parameterized const& parameterized) const
         {
             std::format_to(out, "template-parameter-{}", parameterized.tag.get());
         }
 
-        auto operator()(type::Variable const& variable) const
+        void operator()(type::Variable const& variable) const
         {
             std::format_to(out, "?{}", variable.id.get());
         }
 
-        auto operator()(Error const&) const
+        void operator()(Error const&) const
         {
             std::format_to(out, "ERROR-TYPE");
         }

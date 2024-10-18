@@ -2,7 +2,7 @@
 #include <libcompiler/compiler.hpp>
 #include <cpputil/io.hpp>
 
-auto kieli::Position::advance_with(char const character) noexcept -> void
+void kieli::Position::advance_with(char const character) noexcept
 {
     if (character == '\n') {
         ++line, column = 0;
@@ -58,7 +58,7 @@ auto kieli::client_open_document(Database& db, std::filesystem::path path, std::
     return set_document(db, std::move(path), std::move(document));
 }
 
-auto kieli::client_close_document(Database& db, Document_id const id) -> void
+void kieli::client_close_document(Database& db, Document_id const id)
 {
     if (auto const it = db.documents.find(id); it != db.documents.end()) {
         if (it->second.ownership == Document_ownership::client) {
@@ -135,20 +135,19 @@ auto kieli::text_range(std::string_view const text, Range const range) -> std::s
     return { begin, end };
 }
 
-auto kieli::edit_text(std::string& text, Range const range, std::string_view const new_text) -> void
+void kieli::edit_text(std::string& text, Range const range, std::string_view const new_text)
 {
     auto const where  = text_range(text, range);
     auto const offset = static_cast<std::size_t>(where.data() - text.data());
     text.replace(offset, where.size(), new_text);
 }
 
-auto kieli::add_diagnostic(Database& db, Document_id const id, Diagnostic diagnostic) -> void
+void kieli::add_diagnostic(Database& db, Document_id const id, Diagnostic diagnostic)
 {
     db.documents.at(id).diagnostics.push_back(std::move(diagnostic));
 }
 
-auto kieli::add_error(Database& db, Document_id const id, Range const range, std::string message)
-    -> void
+void kieli::add_error(Database& db, Document_id const id, Range const range, std::string message)
 {
     add_diagnostic(db, id, error(range, std::move(message)));
 }
@@ -194,9 +193,9 @@ auto kieli::format_document_diagnostics(
 
 auto kieli::Name::is_upper() const -> bool
 {
-    static constexpr auto is_upper = [](char const c) { return 'A' <= c && c <= 'Z'; };
+    static constexpr auto is_upper = [](char const c) { return 'A' <= c and c <= 'Z'; };
     std::size_t const     position = identifier.view().find_first_not_of('_');
-    return position != std::string_view::npos && is_upper(identifier.view().at(position));
+    return position != std::string_view::npos and is_upper(identifier.view().at(position));
 }
 
 auto kieli::Name::operator==(Name const& other) const noexcept -> bool

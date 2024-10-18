@@ -76,11 +76,11 @@ namespace {
         };
 
         ast::Expression left = recurse(leftmost_expression);
-        while (!tail.empty()) {
+        while (not tail.empty()) {
             auto const& [rhs, op] = tail.front();
             if (precedence != lowest_operator_precedence) {
                 auto const operators = operator_precedence_table.at(precedence);
-                if (!std::ranges::contains(operators, op.identifier.view())) {
+                if (not std::ranges::contains(operators, op.identifier.view())) {
                     return left;
                 }
             }

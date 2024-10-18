@@ -50,11 +50,11 @@ namespace libdesugar {
     auto desugar(Context, cst::Pattern_id) -> ast::Pattern_id;
     auto desugar(Context, cst::Type_id) -> ast::Type_id;
 
-    template <class T>
+    template <typename T>
     auto desugar(Context, std::vector<T> const&);
-    template <class T>
+    template <typename T>
     auto desugar(Context, cst::Separated_sequence<T> const&);
-    template <class T>
+    template <typename T>
     auto desugar(Context, cst::Surrounded<T> const&);
 
     inline auto desugar(Context const context) noexcept
@@ -62,19 +62,19 @@ namespace libdesugar {
         return [=](auto const& sugared) { return desugar(context, sugared); };
     }
 
-    template <class T>
+    template <typename T>
     auto desugar(Context const context, std::vector<T> const& vector)
     {
         return std::ranges::to<std::vector>(std::views::transform(vector, desugar(context)));
     }
 
-    template <class T>
+    template <typename T>
     auto desugar(Context const context, cst::Separated_sequence<T> const& sequence)
     {
         return desugar(context, sequence.elements);
     }
 
-    template <class T>
+    template <typename T>
     auto desugar(Context const context, cst::Surrounded<T> const& surrounded)
     {
         return desugar(context, surrounded.value);
