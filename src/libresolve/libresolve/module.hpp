@@ -66,13 +66,12 @@ namespace libresolve {
     };
 
     struct Enumeration_info {
-        cst::definition::Enum           cst;
-        ast::definition::Enumeration    ast;
-        std::optional<hir::Enumeration> hir;
-        hir::Type                       type;
-        hir::Environment_id             environment_id;
-        kieli::Document_id              document_id;
-        kieli::Upper                    name;
+        std::variant<cst::definition::Struct, cst::definition::Enum> cst; // TODO: improve
+        ast::definition::Enumeration                                 ast;
+        std::optional<hir::Enumeration>                              hir;
+        hir::Environment_id                                          environment_id;
+        kieli::Document_id                                           document_id;
+        kieli::Upper                                                 name;
     };
 
     struct Concept_info {

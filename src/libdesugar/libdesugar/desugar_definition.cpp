@@ -205,3 +205,39 @@ auto kieli::desugar_definition(Context const context, cst::Definition const& def
 {
     return desugar(context, definition);
 }
+
+auto kieli::desugar_function(Context const context, cst::definition::Function const& function)
+    -> ast::definition::Function
+{
+    return desugar(context, function);
+}
+
+auto kieli::desugar_struct(Context const context, cst::definition::Struct const& structure)
+    -> ast::definition::Enumeration
+{
+    return desugar(context, structure);
+}
+
+auto kieli::desugar_enum(Context const context, cst::definition::Enum const& enumeration)
+    -> ast::definition::Enumeration
+{
+    return desugar(context, enumeration);
+}
+
+auto kieli::desugar_alias(Context const context, cst::definition::Alias const& alias)
+    -> ast::definition::Alias
+{
+    return desugar(context, alias);
+}
+
+auto kieli::desugar_concept(Context const context, cst::definition::Concept const& concept_)
+    -> ast::definition::Concept
+{
+    return desugar(context, concept_);
+}
+
+auto kieli::desugar_impl(Context const context, cst::definition::Impl const& impl)
+    -> ast::definition::Impl
+{
+    return desugar(context, impl);
+}

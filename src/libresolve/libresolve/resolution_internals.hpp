@@ -51,6 +51,18 @@ namespace libresolve {
         bool                        is_solved {};
     };
 
+    using Type_variables = utl::Index_vector<hir::Type_variable_id, Type_variable_data>;
+    using Mutability_variables
+        = utl::Index_vector<hir::Mutability_variable_id, Mutability_variable_data>;
+
+    struct Inference_state {
+        Type_variables       type_variables;
+        Mutability_variables mutability_variables;
+        utl::Disjoint_set    type_variable_disjoint_set;
+        utl::Disjoint_set    mutability_variable_disjoint_set;
+        kieli::Document_id   document_id;
+    };
+
     struct Document_info {
         cst::Arena cst;
         ast::Arena ast;
@@ -66,18 +78,6 @@ namespace libresolve {
         Tag_state         tags;
         Constants         constants;
         Document_info_map documents;
-    };
-
-    using Type_variables = utl::Index_vector<hir::Type_variable_id, Type_variable_data>;
-    using Mutability_variables
-        = utl::Index_vector<hir::Mutability_variable_id, Mutability_variable_data>;
-
-    struct Inference_state {
-        Type_variables       type_variables;
-        Mutability_variables mutability_variables;
-        utl::Disjoint_set    type_variable_disjoint_set;
-        utl::Disjoint_set    mutability_variable_disjoint_set;
-        kieli::Document_id   document_id;
     };
 
     auto make_constants(hir::Arena& arena) -> Constants;
@@ -104,6 +104,8 @@ namespace libresolve {
         hir::Mutability_variant   solution);
 
     void ensure_no_unsolved_variables(Context& context, Inference_state& state);
+
+    auto collect_document(Context& context, kieli::Document_id document_id) -> hir::Environment_id;
 
     auto resolve_enumeration(Context& context, Enumeration_info& info) -> hir::Enumeration&;
 

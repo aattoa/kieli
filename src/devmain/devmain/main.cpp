@@ -65,7 +65,7 @@ namespace {
     {
         auto const             cst = kieli::parse(db, document_id);
         kieli::ast::Arena      arena;
-        kieli::Desugar_context context { db, arena, cst.get().arena, document_id };
+        kieli::Desugar_context context { db, cst.get().arena, arena, document_id };
         for (kieli::cst::Definition const& definition : cst.get().definitions) {
             std::println("{}", display(arena, kieli::desugar_definition(context, definition)));
         }
@@ -76,10 +76,7 @@ namespace {
         auto hir       = kieli::hir::Arena {};
         auto constants = libresolve::make_constants(hir);
         auto context   = libresolve::Context { .db = db, .constants = std::move(constants) };
-
-        (void)context;
-        (void)document_id;
-        cpputil::todo();
+        (void)libresolve::collect_document(context, document_id);
     }
 
     auto choose_debug_repl_callback(std::string_view const name)
