@@ -294,62 +294,58 @@ namespace {
         display_node(state, Last::yes, "handler", match_case.expression);
     }
 
+    void do_display(Display_state& state, definition::Function const& function)
+    {
+        write_line(state, "function");
+        display_node(state, Last::no, "signature", function.signature);
+        display_node(state, Last::yes, "body", function.body);
+    }
+
+    void do_display(Display_state& state, definition::Enumeration const& enumeration)
+    {
+        write_line(state, "enumeration");
+        display_node(state, Last::no, "name", enumeration.name);
+        display_template_parameters_node(state, Last::no, enumeration.template_parameters);
+        display_vector_node(state, Last::yes, "constructors", enumeration.constructors);
+    }
+
+    void do_display(Display_state& state, definition::Alias const& alias)
+    {
+        write_line(state, "type alias");
+        display_node(state, Last::no, "name", alias.name);
+        display_template_parameters_node(state, Last::no, alias.template_parameters);
+        display_node(state, Last::yes, "aliased type", alias.type);
+    }
+
+    void do_display(Display_state& state, definition::Concept const& concept_)
+    {
+        write_line(state, "concept");
+        display_node(state, Last::no, "name", concept_.name);
+        display_template_parameters_node(state, Last::no, concept_.template_parameters);
+        display_vector_node(state, Last::no, "functions", concept_.function_signatures);
+        display_vector_node(state, Last::yes, "types", concept_.type_signatures);
+    }
+
+    void do_display(Display_state& state, definition::Impl const& implementation)
+    {
+        write_line(state, "implementation");
+        display_template_parameters_node(state, Last::no, implementation.template_parameters);
+        display_node(state, Last::no, "type", implementation.type);
+        display_vector_node(state, Last::yes, "definitions", implementation.definitions);
+    }
+
+    void do_display(Display_state& state, definition::Submodule const& submodule)
+    {
+        write_line(state, "submodule");
+        display_node(state, Last::no, "name", submodule.name);
+        display_template_parameters_node(state, Last::no, submodule.template_parameters);
+        display_vector_node(state, Last::yes, "definitions", submodule.definitions);
+    }
+
     void do_display(Display_state& state, kieli::Identifier const identifier)
     {
         write_line(state, "identifier {}", identifier);
     }
-
-    struct Definition_display_visitor {
-        Display_state& state;
-
-        void operator()(definition::Function const& function)
-        {
-            write_line(state, "function");
-            display_node(state, Last::no, "signature", function.signature);
-            display_node(state, Last::yes, "body", function.body);
-        }
-
-        void operator()(definition::Enumeration const& enumeration)
-        {
-            write_line(state, "enumeration");
-            display_node(state, Last::no, "name", enumeration.name);
-            display_template_parameters_node(state, Last::no, enumeration.template_parameters);
-            display_vector_node(state, Last::yes, "constructors", enumeration.constructors);
-        }
-
-        void operator()(definition::Alias const& alias)
-        {
-            write_line(state, "type alias");
-            display_node(state, Last::no, "name", alias.name);
-            display_template_parameters_node(state, Last::no, alias.template_parameters);
-            display_node(state, Last::yes, "aliased type", alias.type);
-        }
-
-        void operator()(definition::Concept const& concept_)
-        {
-            write_line(state, "concept");
-            display_node(state, Last::no, "name", concept_.name);
-            display_template_parameters_node(state, Last::no, concept_.template_parameters);
-            display_vector_node(state, Last::no, "functions", concept_.function_signatures);
-            display_vector_node(state, Last::yes, "types", concept_.type_signatures);
-        }
-
-        void operator()(definition::Impl const& implementation)
-        {
-            write_line(state, "implementation");
-            display_template_parameters_node(state, Last::no, implementation.template_parameters);
-            display_node(state, Last::no, "type", implementation.type);
-            display_vector_node(state, Last::yes, "definitions", implementation.definitions);
-        }
-
-        void operator()(definition::Submodule const& submodule)
-        {
-            write_line(state, "submodule");
-            display_node(state, Last::no, "name", submodule.name);
-            display_template_parameters_node(state, Last::no, submodule.template_parameters);
-            display_vector_node(state, Last::yes, "definitions", submodule.definitions);
-        }
-    };
 
     void display_literal(Display_state& state, kieli::Integer const& integer)
     {
@@ -724,7 +720,7 @@ namespace {
 
     void do_display(Display_state& state, Definition const& definition)
     {
-        std::visit(Definition_display_visitor { state }, definition.variant);
+        std::visit([&](auto const& def) { do_display(state, def); }, definition.variant);
     }
 
     void do_display(Display_state& state, Expression const& expression)
@@ -741,32 +737,57 @@ namespace {
     {
         std::visit(Type_display_visitor { state }, type.variant);
     }
+
+    auto display_string(Arena const& arena, auto const& object) -> std::string
+    {
+        Display_state state { .arena = arena };
+        do_display(state, object);
+        return std::move(state.output);
+    }
 } // namespace
+
+auto kieli::ast::display(Arena const& arena, definition::Function const& function) -> std::string
+{
+    return display_string(arena, function);
+}
+
+auto kieli::ast::display(Arena const& arena, definition::Enumeration const& enumeration)
+    -> std::string
+{
+    return display_string(arena, enumeration);
+}
+
+auto kieli::ast::display(Arena const& arena, definition::Alias const& alias) -> std::string
+{
+    return display_string(arena, alias);
+}
+
+auto kieli::ast::display(Arena const& arena, definition::Concept const& concept_) -> std::string
+{
+    return display_string(arena, concept_);
+}
+
+auto kieli::ast::display(Arena const& arena, definition::Submodule const& submodule) -> std::string
+{
+    return display_string(arena, submodule);
+}
 
 auto kieli::ast::display(Arena const& arena, Definition const& definition) -> std::string
 {
-    Display_state state { .arena = arena };
-    do_display(state, definition);
-    return std::move(state.output);
+    return display_string(arena, definition);
 }
 
 auto kieli::ast::display(Arena const& arena, Expression const& expression) -> std::string
 {
-    Display_state state { .arena = arena };
-    do_display(state, expression);
-    return std::move(state.output);
+    return display_string(arena, expression);
 }
 
 auto kieli::ast::display(Arena const& arena, Pattern const& pattern) -> std::string
 {
-    Display_state state { .arena = arena };
-    do_display(state, pattern);
-    return std::move(state.output);
+    return display_string(arena, pattern);
 }
 
 auto kieli::ast::display(Arena const& arena, Type const& type) -> std::string
 {
-    Display_state state { .arena = arena };
-    do_display(state, type);
-    return std::move(state.output);
+    return display_string(arena, type);
 }

@@ -1,5 +1,6 @@
 #include <libutl/utilities.hpp>
 #include <libresolve/resolution_internals.hpp>
+#include <libcompiler/ast/display.hpp>
 
 auto libresolve::make_constants(hir::Arena& arenas) -> Constants
 {
@@ -189,4 +190,53 @@ auto libresolve::resolve_concept_reference(
     (void)environment_id;
     (void)path;
     cpputil::todo();
+}
+
+void libresolve::debug_display_environment(Context const& context, hir::Environment_id const id)
+{
+    auto const& environment = context.info.environments[id];
+    auto const& document    = context.documents.at(environment.document_id);
+
+    auto const visitor = utl::Overload {
+        [&](hir::Function_id const& id) {
+            auto const& function = context.info.functions[id];
+            std::println(
+                "function {}\nresolved: {}\nast: {}",
+                function.name,
+                function.signature.has_value(),
+                ast::display(document.ast, function.ast));
+        },
+        [&](hir::Module_id const& id) {
+            auto const& module = context.info.modules[id];
+            std::println("module {}\nast: {}", module.name, ast::display(document.ast, module.ast));
+        },
+        [&](hir::Enumeration_id const& id) {
+            auto const& enumeration = context.info.enumerations[id];
+            std::println(
+                "enumeration {}\nresolved: {}\nast: {}",
+                enumeration.name,
+                enumeration.hir.has_value(),
+                ast::display(document.ast, enumeration.ast));
+        },
+        [&](hir::Concept_id const& id) {
+            auto const& concept_ = context.info.concepts[id];
+            std::println(
+                "concept {}\nresolved: {}\nast: {}",
+                concept_.name,
+                concept_.hir.has_value(),
+                ast::display(document.ast, concept_.ast));
+        },
+        [&](hir::Alias_id const& id) {
+            auto const& alias = context.info.aliases[id];
+            std::println(
+                "alias {}\nresolved: {}\nast: {}",
+                alias.name,
+                alias.hir.has_value(),
+                ast::display(document.ast, alias.ast));
+        },
+    };
+
+    for (auto const& definition : environment.in_order) {
+        std::visit(visitor, definition);
+    }
 }

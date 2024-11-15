@@ -76,7 +76,8 @@ namespace {
         auto hir       = kieli::hir::Arena {};
         auto constants = libresolve::make_constants(hir);
         auto context   = libresolve::Context { .db = db, .constants = std::move(constants) };
-        (void)libresolve::collect_document(context, document_id);
+        auto env_id    = libresolve::collect_document(context, document_id);
+        libresolve::debug_display_environment(context, env_id);
     }
 
     auto choose_debug_repl_callback(std::string_view const name)

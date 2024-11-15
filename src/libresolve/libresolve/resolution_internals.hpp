@@ -221,4 +221,6 @@ namespace libresolve {
         return scope(context, std::move(child), callback);
     }
 
+    void debug_display_environment(Context const& context, hir::Environment_id id);
+
 } // namespace libresolve
