@@ -10,17 +10,22 @@ namespace libparse {
 
     namespace cst = kieli::cst;
 
+    using Semantic = kieli::Semantic_token_type;
+
     struct Special_identifiers {
         kieli::Identifier plus;
         kieli::Identifier asterisk;
     };
 
     class Context {
-        kieli::Lex_state            m_lex_state;
-        std::optional<Token>        m_next_token;
-        std::optional<kieli::Range> m_previous_token_range;
-        cst::Arena&                 m_arena;
-        Special_identifiers         m_special_identifiers;
+        kieli::Lex_state                   m_lex_state;
+        std::optional<Token>               m_next_token;
+        std::optional<kieli::Range>        m_previous_token_range;
+        std::vector<kieli::Semantic_token> m_semantic_tokens;
+        kieli::Position                    m_previous_semantic_token_position;
+        std::size_t                        m_previous_path_head_semantic_token_offset {};
+        Special_identifiers                m_special_identifiers;
+        cst::Arena&                        m_arena;
     public:
         explicit Context(cst::Arena&, kieli::Lex_state);
 
@@ -47,8 +52,24 @@ namespace libparse {
 
         [[nodiscard]] auto db() -> kieli::Database&;
         [[nodiscard]] auto cst() const -> cst::Arena&;
-        [[nodiscard]] auto special_identifiers() const -> Special_identifiers;
         [[nodiscard]] auto document_id() const -> kieli::Document_id;
+        [[nodiscard]] auto special_identifiers() const -> Special_identifiers;
+        [[nodiscard]] auto semantic_tokens() -> std::vector<kieli::Semantic_token>&;
+
+        // Add a semantic token corresponding to `range` to the current document.
+        void add_semantic_token(kieli::Range range, kieli::Semantic_token_type type);
+
+        // Add a keyword semantic token corresponding to `token` to the current document.
+        void add_keyword(Token const& token);
+
+        // Add a punctuation semantic token corresponding to `token` to the current document.
+        void add_punctuation(Token const& token);
+
+        // Set the previously parsed path head's semantic token offset to `offset`.
+        void set_previous_path_head_semantic_token_offset(std::size_t offset);
+
+        // Set the previously parsed path head's semantic type to `type`.
+        void set_previous_path_head_semantic_type(Semantic type);
 
         // Emit an error that describes an expectation failure:
         // Encountered `error_range` where `description` was expected.
@@ -123,10 +144,14 @@ namespace libparse {
     auto parse_surrounded(Context& context) -> std::optional<cst::Surrounded<Parser_target<parser>>>
     {
         return context.try_extract(open_type).transform([&](Token const& open) {
+            context.add_punctuation(open);
+            auto value = require<parser>(context, description.view());
+            auto close = context.require_extract(close_type);
+            context.add_punctuation(close);
             return cst::Surrounded<Parser_target<parser>> {
-                .value       = require<parser>(context, description.view()),
+                .value       = std::move(value),
                 .open_token  = context.token(open),
-                .close_token = context.token(context.require_extract(close_type)),
+                .close_token = context.token(close),
             };
         });
     }
@@ -151,7 +176,8 @@ namespace libparse {
         cst::Separated_sequence<Parser_target<parser>> sequence;
         if (auto first_element = parser(context)) {
             sequence.elements.push_back(std::move(first_element.value()));
-            while (auto separator = context.try_extract(separator_type)) {
+            while (auto const separator = context.try_extract(separator_type)) {
+                context.add_punctuation(separator.value());
                 sequence.separator_tokens.push_back(context.token(separator.value()));
                 sequence.elements.push_back(require<parser>(context, description.view()));
             }
@@ -199,5 +225,11 @@ namespace libparse {
     constexpr auto parse_upper_name   = parse_name<Token_type::upper_name, kieli::Upper>;
     constexpr auto extract_lower_name = extract_name<Token_type::lower_name, kieli::Lower>;
     constexpr auto extract_upper_name = extract_name<Token_type::upper_name, kieli::Upper>;
+
+    auto extract_string(Context& context, Token const& literal) -> kieli::String;
+    auto extract_integer(Context& context, Token const& literal) -> kieli::Integer;
+    auto extract_floating(Context& context, Token const& literal) -> kieli::Floating;
+    auto extract_character(Context& context, Token const& literal) -> kieli::Character;
+    auto extract_boolean(Context& context, Token const& literal) -> kieli::Boolean;
 
 } // namespace libparse

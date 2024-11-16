@@ -8,6 +8,7 @@ namespace {
         -> cst::Surrounded<std::vector<cst::Definition>>
     {
         Token const open = context.require_extract(Token_type::brace_open);
+        context.add_punctuation(open);
 
         std::vector<cst::Definition> definitions;
         while (auto definition = parse_definition(context)) {
@@ -15,6 +16,7 @@ namespace {
         }
 
         Token const close = context.require_extract(Token_type::brace_close);
+        context.add_punctuation(close);
         return {
             .value       = std::move(definitions),
             .open_token  = context.token(open),
@@ -25,9 +27,12 @@ namespace {
     auto extract_function_signature(Context& context, Token const& fn_keyword)
         -> cst::Function_signature
     {
-        auto const name                = extract_lower_name(context, "a function name");
-        auto       template_parameters = parse_template_parameters(context);
-        auto       function_parameters = parse_function_parameters(context);
+        context.add_semantic_token(fn_keyword.range, Semantic::keyword);
+        auto const name = extract_lower_name(context, "a function name");
+        context.add_semantic_token(name.range, Semantic::function);
+
+        auto template_parameters = parse_template_parameters(context);
+        auto function_parameters = parse_function_parameters(context);
 
         if (not function_parameters.has_value()) {
             context.error_expected("a '(' followed by a function parameter list");
@@ -46,6 +51,10 @@ namespace {
     {
         auto signature   = extract_function_signature(context, fn_keyword);
         auto equals_sign = context.try_extract(Token_type::equals);
+
+        if (equals_sign.has_value()) {
+            context.add_semantic_token(equals_sign.value().range, Semantic::operator_name);
+        }
 
         auto const function_body
             = equals_sign.has_value() ? parse_expression(context) : parse_block_expression(context);
@@ -68,6 +77,7 @@ namespace {
     auto parse_field(Context& context) -> std::optional<cst::definition::Field>
     {
         return parse_lower_name(context).transform([&](kieli::Lower const& name) {
+            context.add_semantic_token(name.range, Semantic::property);
             return cst::definition::Field {
                 .name  = name,
                 .type  = require<parse_type_annotation>(context, "a ':' followed by a type"),
@@ -101,6 +111,7 @@ namespace {
     auto parse_constructor(Context& context) -> std::optional<cst::definition::Constructor>
     {
         return parse_upper_name(context).transform([&](kieli::Upper const& name) {
+            context.add_semantic_token(name.range, Semantic::constructor);
             return cst::definition::Constructor {
                 .name = name,
                 .body = extract_constructor_body(context),
@@ -110,7 +121,9 @@ namespace {
 
     auto extract_structure(Context& context, Token const& struct_keyword) -> cst::Definition_variant
     {
+        context.add_semantic_token(struct_keyword.range, Semantic::keyword);
         auto const name = extract_upper_name(context, "a struct name");
+        context.add_semantic_token(name.range, Semantic::structure);
         return cst::definition::Struct {
             .template_parameters  = parse_template_parameters(context),
             .body                 = extract_constructor_body(context),
@@ -126,9 +139,13 @@ namespace {
             "an enum constructor",
             Token_type::pipe>>;
 
-        auto const name                = extract_upper_name(context, "an enum name");
+        context.add_semantic_token(enum_keyword.range, Semantic::keyword);
+        auto const name = extract_upper_name(context, "an enum name");
+        context.add_semantic_token(name.range, Semantic::enumeration);
+
         auto       template_parameters = parse_template_parameters(context);
         auto const equals_sign         = context.require_extract(Token_type::equals);
+        context.add_semantic_token(equals_sign.range, Semantic::operator_name);
 
         return cst::definition::Enum {
             .template_parameters = std::move(template_parameters),
@@ -141,8 +158,10 @@ namespace {
 
     auto extract_type_signature(Context& context, Token const& alias_keyword) -> cst::Type_signature
     {
-        auto const name                = extract_upper_name(context, "an alias name");
-        auto       template_parameters = parse_template_parameters(context);
+        context.add_semantic_token(alias_keyword.range, Semantic::keyword);
+        auto const name = extract_upper_name(context, "an alias name");
+        context.add_semantic_token(name.range, Semantic::type);
+        auto template_parameters = parse_template_parameters(context);
 
         cst::Type_signature signature {
             .template_parameters = std::move(template_parameters),
@@ -158,22 +177,25 @@ namespace {
 
     auto extract_concept(Context& context, Token const& concept_keyword) -> cst::Definition_variant
     {
-        auto const name                = extract_upper_name(context, "a concept name");
-        auto       template_parameters = parse_template_parameters(context);
-        auto const open_brace          = context.require_extract(Token_type::brace_open);
+        context.add_semantic_token(concept_keyword.range, Semantic::keyword);
+        auto const name = extract_upper_name(context, "a concept name");
+        context.add_semantic_token(name.range, Semantic::interface);
+
+        auto template_parameters = parse_template_parameters(context);
+        auto open_brace          = context.require_extract(Token_type::brace_open);
+        context.add_punctuation(open_brace);
 
         std::vector<cst::Concept_requirement> requirements;
-
         for (;;) {
-            switch (context.peek().type) {
-            case Token_type::fn:
-                requirements.emplace_back(extract_function_signature(context, context.extract()));
-                continue;
-            case Token_type::alias:
-                requirements.emplace_back(extract_type_signature(context, context.extract()));
-                continue;
-            default:
+            if (auto const fn_keyword = context.try_extract(Token_type::fn)) {
+                requirements.emplace_back(extract_function_signature(context, fn_keyword.value()));
+            }
+            else if (auto const alias_keyword = context.try_extract(Token_type::alias)) {
+                requirements.emplace_back(extract_type_signature(context, alias_keyword.value()));
+            }
+            else {
                 Token const close_brace = context.require_extract(Token_type::brace_close);
+                context.add_punctuation(close_brace);
                 return cst::definition::Concept {
                     .template_parameters   = std::move(template_parameters),
                     .requirements          = std::move(requirements),
@@ -188,9 +210,13 @@ namespace {
 
     auto extract_alias(Context& context, Token const& alias_keyword) -> cst::Definition_variant
     {
-        auto const name                = extract_upper_name(context, "an alias name");
+        context.add_semantic_token(alias_keyword.range, Semantic::keyword);
+        auto const name = extract_upper_name(context, "an alias name");
+        context.add_semantic_token(name.range, Semantic::type);
+
         auto       template_parameters = parse_template_parameters(context);
         auto const equals_sign         = context.require_extract(Token_type::equals);
+        context.add_semantic_token(equals_sign.range, Semantic::operator_name);
 
         return cst::definition::Alias {
             .template_parameters = std::move(template_parameters),
@@ -204,6 +230,7 @@ namespace {
     auto extract_implementation(Context& context, Token const& impl_keyword)
         -> cst::Definition_variant
     {
+        context.add_semantic_token(impl_keyword.range, Semantic::keyword);
         auto template_parameters = parse_template_parameters(context);
         auto self_type           = require<parse_type>(context, "the Self type");
         auto definitions         = extract_definition_sequence(context);
@@ -218,7 +245,9 @@ namespace {
 
     auto extract_submodule(Context& context, Token const& module_keyword) -> cst::Definition_variant
     {
-        auto const name = extract_lower_name(context, "a namespace name");
+        context.add_semantic_token(module_keyword.range, Semantic::keyword);
+        auto const name = extract_lower_name(context, "a module name");
+        context.add_semantic_token(name.range, Semantic::module);
         return cst::definition::Submodule {
             .template_parameters  = parse_template_parameters(context),
             .definitions          = extract_definition_sequence(context),

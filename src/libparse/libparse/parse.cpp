@@ -9,6 +9,7 @@ namespace {
     auto parse_default_argument(Context& context) -> std::optional<Default>
     {
         return context.try_extract(Token_type::equals).transform([&](Token const& equals) {
+            context.add_semantic_token(equals.range, Semantic::operator_name);
             if (auto const underscore = context.try_extract(Token_type::underscore)) {
                 return Default {
                     .variant           = cst::Wildcard { context.token(underscore.value()) },
@@ -32,8 +33,11 @@ namespace {
     auto extract_template_value_or_mutability_parameter(Context& context, kieli::Lower const name)
         -> cst::Template_parameter_variant
     {
+        context.add_semantic_token(name.range, Semantic::parameter);
         Token const colon = context.require_extract(Token_type::colon);
+        context.add_punctuation(colon);
         if (auto const mut_keyword = context.try_extract(Token_type::mut)) {
+            context.add_keyword(mut_keyword.value());
             return cst::Template_mutability_parameter {
                 .name              = name,
                 .colon_token       = context.token(colon),
@@ -57,7 +61,9 @@ namespace {
     auto extract_template_type_parameter(Context& context, kieli::Upper const name)
         -> cst::Template_parameter_variant
     {
+        context.add_semantic_token(name.range, Semantic::type_parameter);
         if (auto const colon = context.try_extract(Token_type::colon)) {
+            context.add_punctuation(colon.value());
             return cst::Template_type_parameter {
                 .name             = name,
                 .colon_token      = context.token(colon.value()),
@@ -86,10 +92,20 @@ namespace {
             parse_lower_name,
             "a module path segment",
             Token_type::dot>;
+        context.add_keyword(import_keyword);
         return cst::Import {
             .segments             = require<parse_segments>(context, "a module path"),
             .import_keyword_token = context.token(import_keyword),
         };
+    }
+
+    auto parse_concept_path(Context& context) -> std::optional<cst::Path>
+    {
+        auto path = parse_simple_path(context);
+        if (path.has_value()) {
+            context.set_previous_path_head_semantic_type(Semantic::interface);
+        }
+        return path;
     }
 
     auto root_range(cst::Arena const& arena, cst::Path_root const& root)
@@ -131,7 +147,9 @@ auto libparse::parse_complex_path(Context& context) -> std::optional<cst::Path>
 auto libparse::parse_mutability(Context& context) -> std::optional<cst::Mutability>
 {
     if (auto mut_keyword = context.try_extract(Token_type::mut)) {
+        context.add_keyword(mut_keyword.value());
         if (auto question_mark = context.try_extract(Token_type::question)) {
+            context.add_semantic_token(question_mark.value().range, Semantic::operator_name);
             return cst::Mutability {
                 .variant = cst::Parameterized_mutability {
                     .name = extract_lower_name(context, "a mutability parameter name"),
@@ -148,6 +166,7 @@ auto libparse::parse_mutability(Context& context) -> std::optional<cst::Mutabili
         };
     }
     if (auto immut_keyword = context.try_extract(Token_type::immut)) {
+        context.add_keyword(immut_keyword.value());
         return cst::Mutability {
             .variant                    = kieli::Mutability::immut,
             .range                      = immut_keyword.value().range,
@@ -160,6 +179,7 @@ auto libparse::parse_mutability(Context& context) -> std::optional<cst::Mutabili
 auto libparse::parse_type_annotation(Context& context) -> std::optional<cst::Type_annotation>
 {
     return context.try_extract(Token_type::colon).transform([&](Token const& token) {
+        context.add_punctuation(token);
         return cst::Type_annotation {
             .type        = require<parse_type>(context, "a type"),
             .colon_token = context.token(token),
@@ -190,6 +210,7 @@ auto libparse::parse_template_parameter(Context& context) -> std::optional<cst::
 auto libparse::parse_template_argument(Context& context) -> std::optional<cst::Template_argument>
 {
     if (auto const underscore = context.try_extract(Token_type::underscore)) {
+        context.add_semantic_token(underscore.value().range, Semantic::variable);
         return cst::Template_argument { cst::Wildcard { context.token(underscore.value()) } };
     }
     if (auto const type = parse_type(context)) {
@@ -199,6 +220,7 @@ auto libparse::parse_template_argument(Context& context) -> std::optional<cst::T
         return cst::Template_argument { expression.value() };
     }
     if (auto const immut_keyword = context.try_extract(Token_type::immut)) {
+        context.add_keyword(immut_keyword.value());
         return cst::Template_argument { cst::Mutability {
             .variant                    = kieli::Mutability::immut,
             .range                      = immut_keyword->range,
@@ -245,32 +267,43 @@ auto libparse::parse_function_arguments(Context& context) -> std::optional<cst::
 
 auto libparse::extract_path(Context& context, cst::Path_root const root) -> cst::Path
 {
-    kieli::Range const anchor_range = context.peek().range;
-
+    kieli::Range const             anchor_range = context.peek().range;
     std::vector<cst::Path_segment> segments;
+    std::size_t                    head_semantic_token_offset {};
 
     auto extract_segment = [&](std::optional<cst::Token_id> const double_colon_token_id) {
-        Token const token = context.extract();
-        if (token.type == Token_type::upper_name or token.type == Token_type::lower_name) {
-            segments.push_back(cst::Path_segment {
-                .template_arguments         = parse_template_arguments(context),
-                .name                       = name_from_token(token),
-                .leading_double_colon_token = double_colon_token_id,
-            });
+        Token const token          = context.extract();
+        head_semantic_token_offset = context.semantic_tokens().size();
+        if (token.type == Token_type::upper_name) {
+            context.add_semantic_token(token.range, Semantic::type);
+        }
+        else if (token.type == Token_type::lower_name) {
+            context.add_semantic_token(token.range, Semantic::variable);
         }
         else {
             context.error_expected(token.range, "an identifier");
         }
+        segments.push_back(cst::Path_segment {
+            .template_arguments         = parse_template_arguments(context),
+            .name                       = name_from_token(token),
+            .leading_double_colon_token = double_colon_token_id,
+        });
     };
 
     if (std::holds_alternative<std::monostate>(root)) {
         extract_segment(std::nullopt);
     }
     while (auto const double_colon = context.try_extract(Token_type::double_colon)) {
+        context.add_semantic_token(double_colon.value().range, Semantic::operator_name);
         extract_segment(context.token(double_colon.value()));
     }
     if (segments.empty()) {
         context.error_expected("at least one path segment");
+    }
+
+    context.set_previous_path_head_semantic_token_offset(head_semantic_token_offset);
+    if (context.peek().type == Token_type::paren_open) {
+        context.set_previous_path_head_semantic_type(Semantic::function);
     }
 
     return cst::Path {
@@ -283,16 +316,14 @@ auto libparse::extract_path(Context& context, cst::Path_root const root) -> cst:
 auto libparse::extract_concept_references(Context& context) -> cst::Separated_sequence<cst::Path>
 {
     static constexpr auto parse_paths
-        = parse_separated_one_or_more<parse_simple_path, "a concept path", Token_type::plus>;
+        = parse_separated_one_or_more<parse_concept_path, "a concept path", Token_type::plus>;
     return require<parse_paths>(context, "one or more '+'-separated concept paths");
 }
 
-auto kieli::parse(Database& db, Document_id const document_id) -> CST
+auto kieli::parse(Database& db, Document_id const id) -> CST
 {
-    db.documents.at(document_id).diagnostics.clear();
-
     auto arena   = cst::Arena {};
-    auto context = libparse::Context { arena, lex_state(db, document_id) };
+    auto context = libparse::Context { arena, lex_state(db, id) };
 
     std::vector<cst::Import> imports;
     while (auto const import_token = context.try_extract(Token_type::import_)) {
@@ -307,10 +338,12 @@ auto kieli::parse(Database& db, Document_id const document_id) -> CST
         context.error_expected("a definition");
     }
 
+    db.documents.at(id).semantic_tokens = std::move(context.semantic_tokens());
+
     return CST { CST::Module {
         .imports     = std::move(imports),
         .definitions = std::move(definitions),
         .arena       = std::move(arena),
-        .document_id = document_id,
+        .document_id = id,
     } };
 }

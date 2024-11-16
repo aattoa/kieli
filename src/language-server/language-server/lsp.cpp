@@ -41,13 +41,13 @@ namespace {
 
     auto handle_formatting(Database& db, Json::Object const& params) -> Result<Json>
     {
-        auto const document_id
-            = document_id_from_json(db, as<Json::Object>(at(params, "textDocument")));
+        auto const id = document_id_from_json(db, as<Json::Object>(at(params, "textDocument")));
         auto const options = format_options_from_json(params.at("options").as_object());
 
         // TODO: Remove try-catch when libparse behaves properly.
         try {
-            auto const cst = kieli::parse(db, document_id);
+            db.documents.at(id).diagnostics.clear();
+            auto const cst = kieli::parse(db, id);
             return document_format_edit(kieli::format_module(cst.get(), options));
         }
         catch (std::exception const& exception) {
@@ -70,6 +70,27 @@ namespace {
         } };
     }
 
+    auto encode_semantic_tokens(std::span<kieli::Semantic_token const> tokens) -> Json
+    {
+        Json::Array array;
+        array.reserve(tokens.size() * 5); // Each token is represented by five integers.
+        for (auto const& token : tokens) {
+            array.emplace_back(utl::safe_cast<Json::Number>(token.delta_line));
+            array.emplace_back(utl::safe_cast<Json::Number>(token.delta_column));
+            array.emplace_back(utl::safe_cast<Json::Number>(token.length));
+            array.emplace_back(utl::safe_cast<Json::Number>(std::to_underlying(token.type)));
+            array.emplace_back(0); // token modifiers bitmask
+        }
+        return Json { std::move(array) };
+    }
+
+    auto handle_semantic_tokens(Database const& db, Json::Object const& params) -> Json
+    {
+        auto id   = document_id_from_json(db, as<Json::Object>(at(params, "textDocument")));
+        auto data = encode_semantic_tokens(db.documents.at(id).semantic_tokens);
+        return Json { Json::Object { { "data", std::move(data) } } };
+    }
+
     auto handle_initialize() -> Json
     {
         // https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#textDocumentSyncKind
@@ -89,6 +110,34 @@ namespace {
                     Json { Json::Object {
                         { "interFileDependencies", Json { true } },
                         { "workspaceDiagnostics", Json { false } },
+                    } } },
+                  { "semanticTokensProvider",
+                    Json { Json::Object {
+                        { "legend",
+                          Json { Json::Object {
+                              { "tokenTypes", // https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#semanticTokenTypes
+                                Json { Json::Array {
+                                    Json { "comment" },
+                                    Json { "enumMember" },
+                                    Json { "enum" },
+                                    Json { "function" },
+                                    Json { "interface" },
+                                    Json { "keyword" },
+                                    Json { "method" },
+                                    Json { "namespace" },
+                                    Json { "number" },
+                                    Json { "operator" },
+                                    Json { "parameter" },
+                                    Json { "property" },
+                                    Json { "string" },
+                                    Json { "struct" },
+                                    Json { "type" },
+                                    Json { "typeParameter" },
+                                    Json { "variable" },
+                                } } },
+                              { "tokenModifiers", Json { Json::Array {} } },
+                          } } },
+                        { "full", Json { true } },
                     } } },
               } } },
         } };
@@ -114,6 +163,9 @@ namespace {
         }
         if (method == "textDocument/diagnostic") {
             return handle_pull_diagnostics(server.db, params.as_object());
+        }
+        if (method == "textDocument/semanticTokens/full") {
+            return handle_semantic_tokens(server.db, params.as_object());
         }
         if (method == "shutdown") {
             return handle_shutdown(server);

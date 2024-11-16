@@ -6,8 +6,10 @@ using namespace libparse;
 namespace {
     auto extract_tuple(Context& context, Token const& open_parenthesis) -> cst::Type_variant
     {
+        context.add_punctuation(open_parenthesis);
         auto        types = extract_comma_separated_zero_or_more<parse_type, "a type">(context);
         Token const close_parenthesis = context.require_extract(Token_type::paren_close);
+        context.add_punctuation(close_parenthesis);
         if (types.elements.size() == 1) {
             return cst::type::Parenthesized { {
                 .value       = types.elements.front(),
@@ -24,11 +26,13 @@ namespace {
 
     auto extract_array_or_slice(Context& context, Token const& open_bracket) -> cst::Type_variant
     {
+        context.add_punctuation(open_bracket);
         auto const element_type = require<parse_type>(context, "the element type");
-
         if (auto const semicolon = context.try_extract(Token_type::semicolon)) {
+            context.add_punctuation(semicolon.value());
             if (auto const length = parse_expression(context)) {
                 Token const close_bracket = context.require_extract(Token_type::bracket_close);
+                context.add_punctuation(close_bracket);
                 return cst::type::Array {
                     .element_type        = element_type,
                     .length              = length.value(),
@@ -40,6 +44,7 @@ namespace {
             context.error_expected("the array length; remove the ';' if a slice type was intended");
         }
         Token const close_bracket = context.require_extract(Token_type::bracket_close);
+        context.add_punctuation(close_bracket);
         return cst::type::Slice { .element_type {
             .value       = element_type,
             .open_token  = context.token(open_bracket),
@@ -53,6 +58,7 @@ namespace {
             pretend_parse<extract_comma_separated_zero_or_more<parse_type, "a parameter type">>,
             "">>;
 
+        context.add_keyword(fn_keyword);
         auto parameters_types
             = extract_parameter_types(context, "a parenthesized list of argument types");
         auto return_type_annotation
@@ -69,6 +75,7 @@ namespace {
     {
         static constexpr auto extract_inspected
             = require<parse_parenthesized<parse_expression, "the inspected expression">>;
+        context.add_keyword(typeof_keyword);
         return cst::type::Typeof {
             .inspected_expression = extract_inspected(context, "a parenthesized expression"),
             .typeof_keyword_token = context.token(typeof_keyword),
@@ -77,6 +84,7 @@ namespace {
 
     auto extract_implementation(Context& context, Token const& impl_keyword) -> cst::Type_variant
     {
+        context.add_keyword(impl_keyword);
         return cst::type::Impl {
             .concepts           = extract_concept_references(context),
             .impl_keyword_token = context.token(impl_keyword),
@@ -85,6 +93,7 @@ namespace {
 
     auto extract_reference(Context& context, Token const& ampersand) -> cst::Type_variant
     {
+        context.add_semantic_token(ampersand.range, Semantic::operator_name);
         return cst::type::Reference {
             .mutability      = parse_mutability(context),
             .referenced_type = require<parse_type>(context, "the referenced type"),
@@ -94,6 +103,7 @@ namespace {
 
     auto extract_pointer(Context& context, Token const& asterisk) -> cst::Type_variant
     {
+        context.add_semantic_token(asterisk.range, Semantic::operator_name);
         return cst::type::Pointer {
             .mutability     = parse_mutability(context),
             .pointee_type   = require<parse_type>(context, "the pointee type"),

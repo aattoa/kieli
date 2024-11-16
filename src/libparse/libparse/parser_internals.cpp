@@ -3,11 +3,11 @@
 
 libparse::Context::Context(cst::Arena& arena, kieli::Lex_state const state)
     : m_lex_state { state }
-    , m_arena { arena }
     , m_special_identifiers {
         .plus     = kieli::Identifier { state.db.string_pool.add("+") },
         .asterisk = kieli::Identifier { state.db.string_pool.add("*") },
     }
+    , m_arena { arena }
 {}
 
 auto libparse::Context::is_finished() -> bool
@@ -79,17 +79,106 @@ auto libparse::Context::cst() const -> cst::Arena&
     return m_arena;
 }
 
-auto libparse::Context::special_identifiers() const -> Special_identifiers
-{
-    return m_special_identifiers;
-}
-
 auto libparse::Context::document_id() const -> kieli::Document_id
 {
     return m_lex_state.document_id;
 }
 
+auto libparse::Context::special_identifiers() const -> Special_identifiers
+{
+    return m_special_identifiers;
+}
+
+auto libparse::Context::semantic_tokens() -> std::vector<kieli::Semantic_token>&
+{
+    return m_semantic_tokens;
+}
+
+void libparse::Context::add_semantic_token(kieli::Range range, kieli::Semantic_token_type type)
+{
+    auto& prev = m_previous_semantic_token_position;
+    if (range.start.line != range.stop.line) {
+        return; // TODO
+    }
+    cpputil::always_assert(range.start.column <= range.stop.column);
+    cpputil::always_assert(prev.line <= range.start.line);
+    cpputil::always_assert(prev.line != range.start.line || prev.column <= range.start.column);
+    if (range.start.column != range.stop.column) {
+        if (range.start.line != prev.line) {
+            prev.column = 0;
+        }
+        m_semantic_tokens.push_back({
+            .delta_line   = range.start.line - prev.line,
+            .delta_column = range.start.column - prev.column,
+            .length       = range.stop.column - range.start.column,
+            .type         = type,
+        });
+        prev = range.start;
+    }
+}
+
+void libparse::Context::add_keyword(Token const& token)
+{
+    // TODO: register token type for hover info
+    add_semantic_token(token.range, Semantic::keyword);
+}
+
+void libparse::Context::add_punctuation(Token const& token)
+{
+    // TODO: maybe introduce Semantic::punctuation
+    add_semantic_token(token.range, Semantic::operator_name);
+}
+
+void libparse::Context::set_previous_path_head_semantic_token_offset(std::size_t offset)
+{
+    m_previous_path_head_semantic_token_offset = offset;
+}
+
+void libparse::Context::set_previous_path_head_semantic_type(Semantic const type)
+{
+    m_semantic_tokens.at(m_previous_path_head_semantic_token_offset).type = type;
+}
+
 auto libparse::name_from_token(Token const& token) -> kieli::Name
 {
     return kieli::Name { token.value_as<kieli::Identifier>(), token.range };
+}
+
+auto libparse::extract_string(Context& context, Token const& literal) -> kieli::String
+{
+    context.add_semantic_token(literal.range, Semantic::string);
+    auto const first_string = literal.value_as<kieli::String>();
+    if (context.peek().type != Token_type::string_literal) {
+        return first_string;
+    }
+    std::string combined_string { first_string.value.view() };
+    while (auto const token = context.try_extract(Token_type::string_literal)) {
+        context.add_semantic_token(token.value().range, Semantic::string);
+        combined_string.append(token.value().value_as<kieli::String>().value.view());
+    }
+    return kieli::String { context.db().string_pool.add(combined_string) };
+}
+
+auto libparse::extract_integer(Context& context, Token const& literal) -> kieli::Integer
+{
+    context.add_semantic_token(literal.range, Semantic::number);
+    return literal.value_as<kieli::Integer>();
+}
+
+auto libparse::extract_floating(Context& context, Token const& literal) -> kieli::Floating
+{
+    context.add_semantic_token(literal.range, Semantic::number);
+    return literal.value_as<kieli::Floating>();
+}
+
+auto libparse::extract_character(Context& context, Token const& literal) -> kieli::Character
+{
+    context.add_semantic_token(literal.range, Semantic::string);
+    return literal.value_as<kieli::Character>();
+}
+
+auto libparse::extract_boolean(Context& context, Token const& literal) -> kieli::Boolean
+{
+    context.add_keyword(literal);
+    return literal.value_as<kieli::Boolean>();
 }

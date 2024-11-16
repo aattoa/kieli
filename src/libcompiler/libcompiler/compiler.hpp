@@ -71,6 +71,35 @@ namespace kieli {
         std::vector<Diagnostic_related_info> related_info;
     };
 
+    // https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#semanticTokenTypes
+    enum struct Semantic_token_type {
+        comment,
+        constructor,
+        enumeration,
+        function,
+        interface,
+        keyword,
+        method,
+        module,
+        number,
+        operator_name,
+        parameter,
+        property,
+        string,
+        structure,
+        type,
+        type_parameter,
+        variable,
+    };
+
+    // https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#textDocument_semanticTokens
+    struct Semantic_token {
+        std::uint32_t       delta_line;
+        std::uint32_t       delta_column;
+        std::uint32_t       length;
+        Semantic_token_type type;
+    };
+
     // If a document is owned by a client, the server will not attempt to read it from disk.
     enum struct Document_ownership { server, client };
 
@@ -85,6 +114,7 @@ namespace kieli {
     struct Document {
         std::string                     text;
         std::vector<Diagnostic>         diagnostics;
+        std::vector<Semantic_token>     semantic_tokens;
         std::filesystem::file_time_type time;
         Document_ownership              ownership {};
         std::size_t                     revision {};

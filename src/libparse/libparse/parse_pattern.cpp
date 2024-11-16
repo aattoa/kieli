@@ -40,10 +40,12 @@ namespace {
     auto parse_field_pattern(Context& context) -> std::optional<cst::pattern::Field>
     {
         return parse_lower_name(context).transform([&](kieli::Lower const& name) {
+            context.add_semantic_token(name.range, Semantic::property);
             return cst::pattern::Field {
                 .name = name,
                 .field_pattern
                 = context.try_extract(Token_type::equals).transform([&](Token const& equals_sign) {
+                      context.add_punctuation(equals_sign);
                       return cst::pattern::Field::Field_pattern {
                           .equals_sign_token = context.token(equals_sign),
                           .pattern           = require<parse_pattern>(context, "a field pattern"),
@@ -87,6 +89,7 @@ namespace {
         }
         if (not name.has_value()) {
             name = extract_lower_name(context, "a lowercase identifier");
+            context.add_semantic_token(name.value().range, Semantic::variable);
         }
         return cst::pattern::Name {
             .name       = name.value(),
@@ -105,6 +108,7 @@ namespace {
     auto extract_abbreviated_constructor(Context& context, Token const& double_colon)
         -> cst::Pattern_variant
     {
+        context.add_punctuation(double_colon);
         return cst::pattern::Abbreviated_constructor {
             .name               = extract_upper_name(context, "a constructor name"),
             .body               = extract_constructor_body(context),
@@ -116,11 +120,11 @@ namespace {
     {
         switch (context.peek().type) {
         case Token_type::underscore:        return cst::Wildcard { context.token(context.extract()) };
-        case Token_type::integer_literal:   return context.extract().value_as<kieli::Integer>();
-        case Token_type::floating_literal:  return context.extract().value_as<kieli::Floating>();
-        case Token_type::character_literal: return context.extract().value_as<kieli::Character>();
-        case Token_type::boolean_literal:   return context.extract().value_as<kieli::Boolean>();
-        case Token_type::string_literal:    return context.extract().value_as<kieli::String>();
+        case Token_type::string_literal:    return extract_string(context, context.extract());
+        case Token_type::integer_literal:   return extract_integer(context, context.extract());
+        case Token_type::floating_literal:  return extract_floating(context, context.extract());
+        case Token_type::character_literal: return extract_character(context, context.extract());
+        case Token_type::boolean_literal:   return extract_boolean(context, context.extract());
         case Token_type::paren_open:        return extract_tuple(context, context.extract());
         case Token_type::bracket_open:      return extract_slice(context, context.extract());
         case Token_type::lower_name:
