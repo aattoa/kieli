@@ -1,6 +1,11 @@
 #include <libutl/utilities.hpp>
 #include <libparse/parser_internals.hpp>
 
+auto libparse::Parse_error::what() const noexcept -> char const*
+{
+    return "parse error";
+}
+
 libparse::Context::Context(cst::Arena& arena, kieli::Lex_state const state)
     : m_lex_state { state }
     , m_special_identifiers {
@@ -50,7 +55,7 @@ void libparse::Context::error_expected(
     auto message = std::format(
         "Expected {}, but found {}", description, kieli::token_description(peek().type));
     kieli::add_error(db(), document_id(), error_range, std::move(message));
-    throw std::runtime_error("fatal parse error"); // todo
+    throw Parse_error {};
 }
 
 void libparse::Context::error_expected(std::string_view const description)
@@ -102,7 +107,7 @@ void libparse::Context::add_semantic_token(kieli::Range range, kieli::Semantic_t
     }
     cpputil::always_assert(range.start.column <= range.stop.column);
     cpputil::always_assert(prev.line <= range.start.line);
-    cpputil::always_assert(prev.line != range.start.line || prev.column <= range.start.column);
+    cpputil::always_assert(prev.line != range.start.line or prev.column <= range.start.column);
     if (range.start.column != range.stop.column) {
         if (range.start.line != prev.line) {
             prev.column = 0;
@@ -137,6 +142,13 @@ void libparse::Context::set_previous_path_head_semantic_token_offset(std::size_t
 void libparse::Context::set_previous_path_head_semantic_type(Semantic const type)
 {
     m_semantic_tokens.at(m_previous_path_head_semantic_token_offset).type = type;
+}
+
+void libparse::Context::skip_to_next_recovery_point()
+{
+    while (not is_recovery_point(peek().type)) {
+        (void)extract();
+    }
 }
 
 auto libparse::name_from_token(Token const& token) -> kieli::Name
@@ -181,4 +193,16 @@ auto libparse::extract_boolean(Context& context, Token const& literal) -> kieli:
 {
     context.add_keyword(literal);
     return literal.value_as<kieli::Boolean>();
+}
+
+auto libparse::is_recovery_point(Token_type const type) -> bool
+{
+    return type == Token_type::fn       //
+        or type == Token_type::struct_  //
+        or type == Token_type::enum_    //
+        or type == Token_type::concept_ //
+        or type == Token_type::alias    //
+        or type == Token_type::impl     //
+        or type == Token_type::module_  //
+        or type == Token_type::end_of_input;
 }

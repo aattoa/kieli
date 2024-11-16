@@ -439,7 +439,7 @@ namespace {
         Context&                 context) -> cst::Expression_variant
     {
         if (context.peek().type == Token_type::bracket_open
-            || context.peek().type == Token_type::paren_open) {
+            or context.peek().type == Token_type::paren_open) {
             context.add_semantic_token(field_name.range, Semantic::method);
         }
         else {

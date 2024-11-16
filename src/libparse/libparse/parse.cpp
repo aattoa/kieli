@@ -331,11 +331,19 @@ auto kieli::parse(Database& db, Document_id const id) -> CST
     }
 
     std::vector<cst::Definition> definitions;
-    while (auto definition = libparse::parse_definition(context)) {
-        definitions.push_back(std::move(definition.value()));
-    }
-    if (not context.is_finished()) {
-        context.error_expected("a definition");
+    while (not context.is_finished()) {
+        try {
+            if (auto definition = libparse::parse_definition(context)) {
+                definitions.push_back(std::move(definition).value());
+            }
+            else {
+                kieli::add_error(db, id, context.peek().range, "Expected a definition");
+                context.skip_to_next_recovery_point();
+            }
+        }
+        catch (Parse_error const&) {
+            context.skip_to_next_recovery_point();
+        }
     }
 
     db.documents.at(id).semantic_tokens = std::move(context.semantic_tokens());

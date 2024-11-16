@@ -4,8 +4,11 @@
 #include <cpputil/json/format.hpp>
 #include <language-server/json.hpp>
 #include <language-server/server.hpp>
+
+// TODO: remove
+#include <libcompiler/cst/cst.hpp>
+#include <libparse/parse.hpp>
 #include <libformat/format.hpp>
-#include <libparse/parse.hpp> // TODO: remove
 
 using kieli::Database;
 using namespace kieli::lsp;
@@ -17,17 +20,6 @@ namespace {
     auto maybe_markdown_content(std::optional<std::string> markdown) -> Json
     {
         return std::move(markdown).transform(markdown_content_to_json).value_or(Json {});
-    }
-
-    auto document_format_edit(std::string new_text) -> Json
-    {
-        // TODO: send one edit per definition
-        return Json { Json::Array {
-            Json { Json::Object {
-                { "range", range_to_json(kieli::Range { {}, { 999999999 } }) },
-                { "newText", Json { std::move(new_text) } },
-            } },
-        } };
     }
 
     auto handle_hover(Database& db, Json::Object const& params) -> Result<Json>
@@ -44,23 +36,32 @@ namespace {
         auto const id = document_id_from_json(db, as<Json::Object>(at(params, "textDocument")));
         auto const options = format_options_from_json(params.at("options").as_object());
 
-        // TODO: Remove try-catch when libparse behaves properly.
-        try {
-            db.documents.at(id).diagnostics.clear();
-            auto const cst = kieli::parse(db, id);
-            return document_format_edit(kieli::format_module(cst.get(), options));
+        kieli::Document& document = db.documents.at(id);
+        document.diagnostics.clear();
+        auto const cst = kieli::parse(db, id);
+
+        Json::Array edits;
+        for (auto const& definition : cst.get().definitions) {
+            std::string new_text;
+            kieli::format(cst.get().arena, options, definition, new_text);
+            if (new_text == kieli::text_range(document.text, definition.range)) {
+                // Avoid sending redundant edits when nothing changed.
+                // text_range takes linear time, but it's fine for now.
+                continue;
+            }
+            edits.emplace_back(Json::Object {
+                { "range", range_to_json(definition.range) },
+                { "newText", Json { std::move(new_text) } },
+            });
         }
-        catch (std::exception const& exception) {
-            return std::unexpected(std::format("Failed to format document: {}", exception.what()));
-        }
+        return Json { std::move(edits) };
     }
 
     auto handle_pull_diagnostics(Database& db, Json::Object const& params) -> Result<Json>
     {
-        auto const document_id
-            = document_id_from_json(db, as<Json::Object>(at(params, "textDocument")));
+        auto const id = document_id_from_json(db, as<Json::Object>(at(params, "textDocument")));
 
-        auto items = db.documents.at(document_id).diagnostics
+        auto items = db.documents.at(id).diagnostics
                    | std::views::transform(std::bind_front(diagnostic_to_json, std::cref(db)))
                    | std::ranges::to<Json::Array>();
 
@@ -96,6 +97,32 @@ namespace {
         // https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#textDocumentSyncKind
         static constexpr Json::Number incremental_sync = 2;
 
+        // https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#semanticTokensLegend
+        Json semantic_tokens_legend { Json::Object {
+            { "tokenTypes",
+              Json { Json::Array {
+                  Json { "comment" },
+                  Json { "enumMember" },
+                  Json { "enum" },
+                  Json { "function" },
+                  Json { "interface" },
+                  Json { "keyword" },
+                  Json { "method" },
+                  Json { "namespace" },
+                  Json { "number" },
+                  Json { "operator" },
+                  Json { "parameter" },
+                  Json { "property" },
+                  Json { "string" },
+                  Json { "struct" },
+                  Json { "type" },
+                  Json { "typeParameter" },
+                  Json { "variable" },
+              } } },
+            { "tokenModifiers", Json { Json::Array {} } },
+        } };
+
+        // https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#initializeResult
         return Json { Json::Object {
             { "capabilities",
               Json { Json::Object {
@@ -113,30 +140,7 @@ namespace {
                     } } },
                   { "semanticTokensProvider",
                     Json { Json::Object {
-                        { "legend",
-                          Json { Json::Object {
-                              { "tokenTypes", // https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#semanticTokenTypes
-                                Json { Json::Array {
-                                    Json { "comment" },
-                                    Json { "enumMember" },
-                                    Json { "enum" },
-                                    Json { "function" },
-                                    Json { "interface" },
-                                    Json { "keyword" },
-                                    Json { "method" },
-                                    Json { "namespace" },
-                                    Json { "number" },
-                                    Json { "operator" },
-                                    Json { "parameter" },
-                                    Json { "property" },
-                                    Json { "string" },
-                                    Json { "struct" },
-                                    Json { "type" },
-                                    Json { "typeParameter" },
-                                    Json { "variable" },
-                                } } },
-                              { "tokenModifiers", Json { Json::Array {} } },
-                          } } },
+                        { "legend", std::move(semantic_tokens_legend) },
                         { "full", Json { true } },
                     } } },
               } } },
@@ -186,9 +190,8 @@ namespace {
 
     auto handle_close(Database& db, Json::Object const& params) -> Result<void>
     {
-        auto const document_id
-            = document_id_from_json(db, as<Json::Object>(at(params, "textDocument")));
-        kieli::client_close_document(db, document_id);
+        auto const id = document_id_from_json(db, as<Json::Object>(at(params, "textDocument")));
+        kieli::client_close_document(db, id);
         return {};
     }
 
@@ -206,14 +209,12 @@ namespace {
 
     auto handle_change(Database& db, Json::Object const& params) -> Result<void>
     {
-        auto const document_id
-            = document_id_from_json(db, as<Json::Object>(at(params, "textDocument")));
-
-        std::string& text = db.documents.at(document_id).text;
+        auto const   id   = document_id_from_json(db, as<Json::Object>(at(params, "textDocument")));
+        std::string& text = db.documents.at(id).text;
         for (Json const& change : params.at("contentChanges").as_array()) {
             apply_content_change(text, change.as_object());
         }
-        return {};
+        return {}; // TODO: trigger reanalysis
     }
 
     auto handle_notification(Server& server, std::string_view const method, Json const& params)

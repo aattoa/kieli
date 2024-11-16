@@ -12,6 +12,10 @@ namespace libparse {
 
     using Semantic = kieli::Semantic_token_type;
 
+    struct Parse_error : std::exception {
+        [[nodiscard]] auto what() const noexcept -> char const* override;
+    };
+
     struct Special_identifiers {
         kieli::Identifier plus;
         kieli::Identifier asterisk;
@@ -71,6 +75,9 @@ namespace libparse {
         // Set the previously parsed path head's semantic type to `type`.
         void set_previous_path_head_semantic_type(Semantic type);
 
+        // Skip every token up to the next potential recovery point.
+        void skip_to_next_recovery_point();
+
         // Emit an error that describes an expectation failure:
         // Encountered `error_range` where `description` was expected.
         [[noreturn]] void error_expected(kieli::Range range, std::string_view description);
@@ -79,6 +86,8 @@ namespace libparse {
         // Encountered the current token where `description` was expected.
         [[noreturn]] void error_expected(std::string_view description);
     };
+
+    [[nodiscard]] auto is_recovery_point(Token_type type) -> bool;
 
     auto parse_simple_path_root(Context&) -> std::optional<cst::Path_root>;
     auto parse_simple_path(Context&) -> std::optional<cst::Path>;
