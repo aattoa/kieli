@@ -58,17 +58,17 @@ namespace kieli {
     enum struct Severity { error, warning, hint, information };
 
     // https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#diagnosticRelatedInformation
-    struct Diagnostic_related_info {
+    struct Diagnostic_related {
         std::string message;
         Location    location;
     };
 
     // https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#diagnostic
     struct Diagnostic {
-        std::string                          message;
-        Range                                range;
-        Severity                             severity {};
-        std::vector<Diagnostic_related_info> related_info;
+        std::string                     message;
+        Range                           range;
+        Severity                        severity {};
+        std::vector<Diagnostic_related> related_info;
     };
 
     // https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#semanticTokenTypes

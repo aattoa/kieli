@@ -1,7 +1,7 @@
 #include <libutl/utilities.hpp>
 #include <libparse/parse.hpp>
 #include <libdesugar/desugar.hpp>
-#include <libresolve/resolution_internals.hpp>
+#include <libresolve/resolve.hpp>
 
 using namespace libresolve;
 

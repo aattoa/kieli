@@ -1,5 +1,5 @@
 #include <libutl/utilities.hpp>
-#include <libresolve/resolution_internals.hpp>
+#include <libresolve/resolve.hpp>
 
 using namespace libresolve;
 
@@ -19,13 +19,21 @@ namespace {
             = resolve_type(context, state, scope_id, environment_id, ast.types[parameter.type]);
 
         require_subtype_relationship(
-            context, state, context.hir.types[pattern.type], context.hir.types[type.id]);
+            context,
+            state,
+            pattern.range,
+            context.hir.types[pattern.type],
+            context.hir.types[type.id]);
 
         auto const resolve_default = [&](ast::Expression_id const argument) {
             hir::Expression expression = resolve_expression(
                 context, state, scope_id, environment_id, ast.expressions[argument]);
             require_subtype_relationship(
-                context, state, context.hir.types[expression.type], context.hir.types[type.id]);
+                context,
+                state,
+                expression.range,
+                context.hir.types[expression.type],
+                context.hir.types[type.id]);
             return expression;
         };
 
@@ -92,6 +100,7 @@ auto libresolve::resolve_function_body(Context& context, Function_info& info) ->
         require_subtype_relationship(
             context,
             state,
+            info.body.value().range,
             context.hir.types[info.body.value().type],
             context.hir.types[signature.return_type.id]);
         ensure_no_unsolved_variables(context, state);

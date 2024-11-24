@@ -1,5 +1,5 @@
 #include <libutl/utilities.hpp>
-#include <libresolve/resolution_internals.hpp>
+#include <libresolve/resolve.hpp>
 
 using namespace libresolve;
 
@@ -69,7 +69,7 @@ namespace {
                 = resolve_mutability(context, scope_id, pattern.mutability);
             hir::Type const type
                 = fresh_general_type_variable(state, context.hir, pattern.name.range);
-            hir::Local_variable_tag const tag = context.tags.fresh_local_variable_tag();
+            hir::Local_variable_tag const tag = fresh_local_variable_tag(context.tags);
 
             Variable_bind bind {
                 .name       = pattern.name,
@@ -99,7 +99,7 @@ namespace {
 
             hir::Mutability const mutability
                 = resolve_mutability(context, scope_id, alias.mutability);
-            hir::Local_variable_tag const tag = context.tags.fresh_local_variable_tag();
+            hir::Local_variable_tag const tag = fresh_local_variable_tag(context.tags);
 
             Variable_bind bind {
                 .name       = alias.name,
@@ -157,6 +157,7 @@ namespace {
                 require_subtype_relationship(
                     context,
                     state,
+                    pattern.range,
                     context.hir.types[pattern.type],
                     context.hir.types[element_type.id]);
             }
@@ -179,6 +180,7 @@ namespace {
             require_subtype_relationship(
                 context,
                 state,
+                guard_expression.range,
                 context.hir.types[guard_expression.type],
                 context.hir.types[context.constants.boolean_type]);
 

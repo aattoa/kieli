@@ -69,9 +69,7 @@ namespace kieli::lsp {
         -> Character_location;
     auto character_location_to_json(Database const& db, Character_location location) -> Json;
 
-    auto severity_from_json(Json const& json) -> Severity;
     auto severity_to_json(Severity severity) -> Json;
-
     auto diagnostic_to_json(Database const& db, Diagnostic const& diagnostic) -> Json;
     auto markdown_content_to_json(std::string markdown) -> Json;
     auto document_item_from_json(Json::Object const& object) -> Document_item;

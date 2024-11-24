@@ -1,5 +1,5 @@
 #include <libutl/utilities.hpp>
-#include <libresolve/resolution_internals.hpp>
+#include <libresolve/resolve.hpp>
 
 using namespace libresolve;
 

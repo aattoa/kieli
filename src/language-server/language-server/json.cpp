@@ -134,17 +134,6 @@ auto kieli::lsp::character_location_to_json(Database const& db, Character_locati
     } };
 }
 
-auto kieli::lsp::severity_from_json(Json const& json) -> Severity
-{
-    switch (auto const number = as<Json::Number>(json)) {
-    case 1:  return Severity::error;
-    case 2:  return Severity::warning;
-    case 3:  return Severity::information;
-    case 4:  return Severity::hint;
-    default: throw Bad_client_json(std::format("Invalid severity: {}", number));
-    }
-}
-
 auto kieli::lsp::severity_to_json(Severity severity) -> Json
 {
     switch (severity) {
@@ -158,7 +147,7 @@ auto kieli::lsp::severity_to_json(Severity severity) -> Json
 
 auto kieli::lsp::diagnostic_to_json(Database const& db, Diagnostic const& diagnostic) -> Json
 {
-    auto const info_to_json = [&](Diagnostic_related_info const& info) {
+    auto const info_to_json = [&](Diagnostic_related const& info) {
         return Json { Json::Object {
             { "location", location_to_json(db, info.location) },
             { "message", Json { info.message } },

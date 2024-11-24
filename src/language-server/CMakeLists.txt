@@ -21,4 +21,5 @@ target_link_libraries(language-server
     PUBLIC  libcompiler
     PUBLIC  libparse
     PUBLIC  libformat
+    PUBLIC  libresolve
     PRIVATE cpputil::json)

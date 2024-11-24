@@ -4,17 +4,8 @@
 #include <libutl/index_vector.hpp>
 #include <libutl/disjoint_set.hpp>
 #include <libresolve/module.hpp>
-#include <libdesugar/desugar.hpp>
 
 namespace libresolve {
-
-    class Tag_state {
-        std::size_t m_current_template_parameter_tag {};
-        std::size_t m_current_local_variable_tag {};
-    public:
-        auto fresh_template_parameter_tag() -> hir::Template_parameter_tag;
-        auto fresh_local_variable_tag() -> hir::Local_variable_tag;
-    };
 
     struct Constants {
         hir::Type_id       i8_type;
@@ -63,6 +54,11 @@ namespace libresolve {
         kieli::Document_id   document_id;
     };
 
+    struct Tags {
+        std::size_t current_template_parameter_tag {};
+        std::size_t current_local_variable_tag {};
+    };
+
     struct Document_info {
         cst::Arena cst;
         ast::Arena ast;
@@ -75,17 +71,23 @@ namespace libresolve {
         kieli::Database&  db;
         hir::Arena        hir;
         Info_arena        info;
-        Tag_state         tags;
+        Tags              tags;
         Constants         constants;
         Document_info_map documents;
     };
 
     auto make_constants(hir::Arena& arena) -> Constants;
 
+    auto fresh_template_parameter_tag(Tags& tags) -> hir::Template_parameter_tag;
+
+    auto fresh_local_variable_tag(Tags& tags) -> hir::Local_variable_tag;
+
     auto fresh_general_type_variable(Inference_state& state, hir::Arena& arena, kieli::Range origin)
         -> hir::Type;
+
     auto fresh_integral_type_variable(
         Inference_state& state, hir::Arena& arena, kieli::Range origin) -> hir::Type;
+
     auto fresh_mutability_variable(Inference_state& state, hir::Arena& arena, kieli::Range origin)
         -> hir::Mutability;
 
@@ -106,6 +108,8 @@ namespace libresolve {
     void ensure_no_unsolved_variables(Context& context, Inference_state& state);
 
     auto collect_document(Context& context, kieli::Document_id document_id) -> hir::Environment_id;
+
+    void resolve_environment(Context& context, hir::Environment_id environment_id);
 
     auto resolve_enumeration(Context& context, Enumeration_info& info) -> hir::Enumeration&;
 
@@ -190,6 +194,7 @@ namespace libresolve {
     void require_subtype_relationship(
         Context&                 context,
         Inference_state&         state,
+        kieli::Range             range,
         hir::Type_variant const& sub,
         hir::Type_variant const& super);
 

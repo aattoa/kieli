@@ -1,5 +1,5 @@
 #include <libutl/utilities.hpp>
-#include <libresolve/resolution_internals.hpp>
+#include <libresolve/resolve.hpp>
 
 using namespace libresolve;
 
@@ -16,6 +16,12 @@ namespace {
             return context.documents.at(state.document_id).ast;
         }
 
+        auto unsupported() -> hir::Type
+        {
+            kieli::add_error(context.db, state.document_id, this_type.range, "Unsupported type");
+            return error_type(context.constants, this_type.range);
+        }
+
         auto recurse()
         {
             return [&](ast::Type const& type) -> hir::Type {
@@ -23,9 +29,9 @@ namespace {
             };
         }
 
-        auto recurse(ast::Type const& expression) -> hir::Type
+        auto recurse(ast::Type const& type) -> hir::Type
         {
-            return recurse()(expression);
+            return recurse()(type);
         }
 
         auto operator()(ast::Wildcard const&) -> hir::Type
@@ -35,12 +41,12 @@ namespace {
 
         auto operator()(ast::type::Never const&) -> hir::Type
         {
-            cpputil::todo();
+            return unsupported(); // TODO
         }
 
         auto operator()(ast::Path const&) -> hir::Type
         {
-            cpputil::todo();
+            return unsupported(); // TODO
         }
 
         auto operator()(ast::type::Tuple const& tuple) -> hir::Type
@@ -113,7 +119,7 @@ namespace {
 
         auto operator()(ast::type::Impl const&) -> hir::Type
         {
-            cpputil::todo();
+            return unsupported(); // TODO
         }
 
         auto operator()(ast::Error const&) -> hir::Type

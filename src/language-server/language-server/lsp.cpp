@@ -9,6 +9,7 @@
 #include <libcompiler/cst/cst.hpp>
 #include <libparse/parse.hpp>
 #include <libformat/format.hpp>
+#include <libresolve/resolve.hpp>
 
 using kieli::Database;
 using namespace kieli::lsp;
@@ -16,6 +17,19 @@ using namespace kieli::lsp;
 namespace {
     template <typename T>
     using Result = std::expected<T, std::string>;
+
+    void placeholder_analyze_document(Database& db, kieli::Document_id const id)
+    {
+        db.documents.at(id).diagnostics.clear();
+        auto hir       = kieli::hir::Arena {};
+        auto constants = libresolve::make_constants(hir);
+        auto context   = libresolve::Context {
+              .db        = db,
+              .hir       = std::move(hir),
+              .constants = std::move(constants),
+        };
+        libresolve::resolve_environment(context, libresolve::collect_document(context, id));
+    }
 
     auto maybe_markdown_content(std::optional<std::string> markdown) -> Json
     {
@@ -126,8 +140,6 @@ namespace {
         return Json { Json::Object {
             { "capabilities",
               Json { Json::Object {
-                  { "hoverProvider", Json { true } },
-                  { "documentFormattingProvider", Json { true } },
                   { "textDocumentSync",
                     Json { Json::Object {
                         { "openClose", Json { true } },
@@ -143,6 +155,8 @@ namespace {
                         { "legend", std::move(semantic_tokens_legend) },
                         { "full", Json { true } },
                     } } },
+                  { "hoverProvider", Json { true } },
+                  { "documentFormattingProvider", Json { true } },
               } } },
         } };
     }
@@ -159,6 +173,9 @@ namespace {
     auto handle_request(Server& server, std::string_view const method, Json const& params)
         -> Result<Json>
     {
+        if (method == "textDocument/semanticTokens/full") {
+            return handle_semantic_tokens(server.db, params.as_object());
+        }
         if (method == "textDocument/hover") {
             return handle_hover(server.db, params.as_object());
         }
@@ -167,9 +184,6 @@ namespace {
         }
         if (method == "textDocument/diagnostic") {
             return handle_pull_diagnostics(server.db, params.as_object());
-        }
-        if (method == "textDocument/semanticTokens/full") {
-            return handle_semantic_tokens(server.db, params.as_object());
         }
         if (method == "shutdown") {
             return handle_shutdown(server);
@@ -181,8 +195,9 @@ namespace {
     {
         auto document = document_item_from_json(as<Json::Object>(at(params, "textDocument")));
         if (document.language == "kieli") {
-            (void)kieli::client_open_document(
+            auto const id = kieli::client_open_document(
                 db, std::move(document.path), std::move(document.text));
+            placeholder_analyze_document(db, id);
             return {};
         }
         return std::unexpected(std::format("Unsupported language: '{}'", document.language));
@@ -214,22 +229,26 @@ namespace {
         for (Json const& change : params.at("contentChanges").as_array()) {
             apply_content_change(text, change.as_object());
         }
-        return {}; // TODO: trigger reanalysis
+        placeholder_analyze_document(db, id);
+        return {};
     }
 
     auto handle_notification(Server& server, std::string_view const method, Json const& params)
         -> Result<void>
     {
+        if (method == "textDocument/didChange") {
+            return handle_change(server.db, params.as_object());
+        }
         if (method == "textDocument/didOpen") {
             return handle_open(server.db, params.as_object());
         }
         if (method == "textDocument/didClose") {
             return handle_close(server.db, params.as_object());
         }
-        if (method == "textDocument/didChange") {
-            return handle_change(server.db, params.as_object());
-        }
         if (method == "initialized") {
+            return {};
+        }
+        if (method.starts_with("$/")) {
             return {};
         }
         return std::unexpected(std::format("Unsupported notification method: {}", method));

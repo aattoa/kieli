@@ -1,5 +1,5 @@
 #include <libutl/utilities.hpp>
-#include <libresolve/resolution_internals.hpp>
+#include <libresolve/resolve.hpp>
 
 using namespace libresolve;
 
@@ -20,6 +20,11 @@ namespace {
         {
             kieli::add_error(context.db, state.document_id, range, std::move(message));
             return error_expression(context.constants, this_expression.range);
+        }
+
+        auto unsupported() -> hir::Expression
+        {
+            return error(this_expression.range, "Unsupported expression");
         }
 
         auto recurse()
@@ -86,7 +91,7 @@ namespace {
 
         auto operator()(ast::Path const&) -> hir::Expression
         {
-            cpputil::todo();
+            return error(this_expression.range, "Path expressions are not supported yet");
         }
 
         auto operator()(ast::expression::Array_literal const& array) -> hir::Expression
@@ -100,6 +105,7 @@ namespace {
                 require_subtype_relationship(
                     context,
                     state,
+                    element.range,
                     context.hir.types[elements.back().type],
                     context.hir.types[element_type.id]);
             }
@@ -136,17 +142,17 @@ namespace {
 
         auto operator()(ast::expression::Loop const&) -> hir::Expression
         {
-            cpputil::todo();
+            return unsupported(); // TODO
         }
 
         auto operator()(ast::expression::Break const&) -> hir::Expression
         {
-            cpputil::todo();
+            return unsupported(); // TODO
         }
 
         auto operator()(ast::expression::Continue const&) -> hir::Expression
         {
-            cpputil::todo();
+            return unsupported(); // TODO
         }
 
         auto operator()(ast::expression::Block const& block) -> hir::Expression
@@ -158,6 +164,7 @@ namespace {
                     require_subtype_relationship(
                         context,
                         state,
+                        effect.range,
                         context.hir.types[effect.type],
                         context.hir.types[context.constants.unit_type]);
                     return effect;
@@ -185,47 +192,47 @@ namespace {
 
         auto operator()(ast::expression::Function_call const&) -> hir::Expression
         {
-            cpputil::todo();
+            return unsupported(); // TODO
         }
 
         auto operator()(ast::expression::Tuple_initializer const&) -> hir::Expression
         {
-            cpputil::todo();
+            return unsupported(); // TODO
         }
 
         auto operator()(ast::expression::Struct_initializer const&) -> hir::Expression
         {
-            cpputil::todo();
+            return unsupported(); // TODO
         }
 
         auto operator()(ast::expression::Infix_call const&) -> hir::Expression
         {
-            cpputil::todo();
+            return unsupported(); // TODO
         }
 
         auto operator()(ast::expression::Struct_field_access const&) -> hir::Expression
         {
-            cpputil::todo();
+            return unsupported(); // TODO
         }
 
         auto operator()(ast::expression::Tuple_field_access const&) -> hir::Expression
         {
-            cpputil::todo();
+            return unsupported(); // TODO
         }
 
         auto operator()(ast::expression::Array_index_access const&) -> hir::Expression
         {
-            cpputil::todo();
+            return unsupported(); // TODO
         }
 
         auto operator()(ast::expression::Method_call const&) -> hir::Expression
         {
-            cpputil::todo();
+            return unsupported(); // TODO
         }
 
         auto operator()(ast::expression::Conditional const&) -> hir::Expression
         {
-            cpputil::todo();
+            return unsupported(); // TODO
         }
 
         auto operator()(ast::expression::Match const& match) -> hir::Expression
@@ -242,12 +249,14 @@ namespace {
                 require_subtype_relationship(
                     context,
                     state,
+                    matched_expression.range,
                     context.hir.types[matched_expression.type],
                     context.hir.types[pattern.type]);
                 hir::Expression expression = recurse(ast.expressions[match_case.expression]);
                 require_subtype_relationship(
                     context,
                     state,
+                    expression.range,
                     context.hir.types[expression.type],
                     context.hir.types[result_type.id]);
                 return hir::Match_case {
@@ -270,7 +279,7 @@ namespace {
 
         auto operator()(ast::expression::Type_cast const&) -> hir::Expression
         {
-            cpputil::todo();
+            return unsupported(); // TODO
         }
 
         auto operator()(ast::expression::Type_ascription const& ascription) -> hir::Expression
@@ -281,7 +290,11 @@ namespace {
             hir::Type const ascribed   = resolve_type(
                 context, state, scope_id, environment_id, ast.types[ascription.ascribed_type]);
             require_subtype_relationship(
-                context, state, context.hir.types[expression.type], context.hir.types[ascribed.id]);
+                context,
+                state,
+                expression.range,
+                context.hir.types[expression.type],
+                context.hir.types[ascribed.id]);
             return expression;
         }
 
@@ -295,9 +308,17 @@ namespace {
             hir::Expression initializer = recurse(ast.expressions[let.initializer]);
 
             require_subtype_relationship(
-                context, state, context.hir.types[pattern.type], context.hir.types[type.id]);
+                context,
+                state,
+                pattern.range,
+                context.hir.types[pattern.type],
+                context.hir.types[type.id]);
             require_subtype_relationship(
-                context, state, context.hir.types[initializer.type], context.hir.types[type.id]);
+                context,
+                state,
+                initializer.range,
+                context.hir.types[initializer.type],
+                context.hir.types[type.id]);
 
             return {
                 hir::expression::Let_binding {
@@ -324,7 +345,7 @@ namespace {
 
         auto operator()(ast::expression::Ret const&) -> hir::Expression
         {
-            cpputil::todo();
+            return unsupported(); // TODO
         }
 
         auto operator()(ast::expression::Sizeof const& sizeof_) -> hir::Expression
@@ -390,6 +411,7 @@ namespace {
             require_subtype_relationship(
                 context,
                 state,
+                reference_expression.range,
                 context.hir.types[reference_expression.type],
                 context.hir.types[reference_type.id]);
 
@@ -418,7 +440,7 @@ namespace {
 
         auto operator()(ast::expression::Move const&) -> hir::Expression
         {
-            cpputil::todo();
+            return unsupported(); // TODO
         }
 
         auto operator()(ast::Wildcard const&) -> hir::Expression

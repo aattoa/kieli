@@ -27,7 +27,7 @@ namespace {
     auto extract_function_signature(Context& context, Token const& fn_keyword)
         -> cst::Function_signature
     {
-        context.add_semantic_token(fn_keyword.range, Semantic::keyword);
+        context.add_keyword(fn_keyword);
         auto const name = extract_lower_name(context, "a function name");
         context.add_semantic_token(name.range, Semantic::function);
 
@@ -121,7 +121,7 @@ namespace {
 
     auto extract_structure(Context& context, Token const& struct_keyword) -> cst::Definition_variant
     {
-        context.add_semantic_token(struct_keyword.range, Semantic::keyword);
+        context.add_keyword(struct_keyword);
         auto const name = extract_upper_name(context, "a struct name");
         context.add_semantic_token(name.range, Semantic::structure);
         return cst::definition::Struct {
@@ -139,7 +139,7 @@ namespace {
             "an enum constructor",
             Token_type::pipe>>;
 
-        context.add_semantic_token(enum_keyword.range, Semantic::keyword);
+        context.add_keyword(enum_keyword);
         auto const name = extract_upper_name(context, "an enum name");
         context.add_semantic_token(name.range, Semantic::enumeration);
 
@@ -158,7 +158,7 @@ namespace {
 
     auto extract_type_signature(Context& context, Token const& alias_keyword) -> cst::Type_signature
     {
-        context.add_semantic_token(alias_keyword.range, Semantic::keyword);
+        context.add_keyword(alias_keyword);
         auto const name = extract_upper_name(context, "an alias name");
         context.add_semantic_token(name.range, Semantic::type);
         auto template_parameters = parse_template_parameters(context);
@@ -177,7 +177,7 @@ namespace {
 
     auto extract_concept(Context& context, Token const& concept_keyword) -> cst::Definition_variant
     {
-        context.add_semantic_token(concept_keyword.range, Semantic::keyword);
+        context.add_keyword(concept_keyword);
         auto const name = extract_upper_name(context, "a concept name");
         context.add_semantic_token(name.range, Semantic::interface);
 
@@ -210,7 +210,7 @@ namespace {
 
     auto extract_alias(Context& context, Token const& alias_keyword) -> cst::Definition_variant
     {
-        context.add_semantic_token(alias_keyword.range, Semantic::keyword);
+        context.add_keyword(alias_keyword);
         auto const name = extract_upper_name(context, "an alias name");
         context.add_semantic_token(name.range, Semantic::type);
 
@@ -230,7 +230,7 @@ namespace {
     auto extract_implementation(Context& context, Token const& impl_keyword)
         -> cst::Definition_variant
     {
-        context.add_semantic_token(impl_keyword.range, Semantic::keyword);
+        context.add_keyword(impl_keyword);
         auto template_parameters = parse_template_parameters(context);
         auto self_type           = require<parse_type>(context, "the Self type");
         auto definitions         = extract_definition_sequence(context);
@@ -245,7 +245,7 @@ namespace {
 
     auto extract_submodule(Context& context, Token const& module_keyword) -> cst::Definition_variant
     {
-        context.add_semantic_token(module_keyword.range, Semantic::keyword);
+        context.add_keyword(module_keyword);
         auto const name = extract_lower_name(context, "a module name");
         context.add_semantic_token(name.range, Semantic::module);
         return cst::definition::Submodule {

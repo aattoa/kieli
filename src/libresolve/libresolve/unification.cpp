@@ -1,5 +1,5 @@
 #include <libutl/utilities.hpp>
-#include <libresolve/resolution_internals.hpp>
+#include <libresolve/resolve.hpp>
 
 using namespace libresolve;
 
@@ -305,6 +305,7 @@ namespace {
 void libresolve::require_subtype_relationship(
     Context&                 context,
     Inference_state&         state,
+    kieli::Range const       range,
     hir::Type_variant const& sub,
     hir::Type_variant const& super)
 {
@@ -312,6 +313,10 @@ void libresolve::require_subtype_relationship(
         .goal = Unification_goal::subtype,
     };
     if (not unify(context, state, arguments, sub, super)) {
-        cpputil::todo();
+        auto message = std::format(
+            "Could not unify {} <: {}",
+            hir::to_string(context.hir, sub),
+            hir::to_string(context.hir, super));
+        kieli::add_error(context.db, state.document_id, range, std::move(message));
     }
 }

@@ -17,7 +17,7 @@ namespace {
             .range        = second,
             .severity     = kieli::Severity::error,
             .related_info = utl::to_vector({
-                kieli::Diagnostic_related_info {
+                kieli::Diagnostic_related {
                     .message = "First defined here here",
                     .location { .document_id = context.document_id, .range = first },
                 },

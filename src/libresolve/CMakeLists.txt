@@ -4,8 +4,8 @@ target_sources(libresolve
     PRIVATE libresolve/collect.cpp
     PRIVATE libresolve/module.hpp
     PRIVATE libresolve/occurs_check.cpp
-    PRIVATE libresolve/resolution_internals.cpp
-    PRIVATE libresolve/resolution_internals.hpp
+    PRIVATE libresolve/resolve.cpp
+    PRIVATE libresolve/resolve.hpp
     PRIVATE libresolve/resolve_definition.cpp
     PRIVATE libresolve/resolve_expression.cpp
     PRIVATE libresolve/resolve_mutability.cpp

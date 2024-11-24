@@ -1,5 +1,5 @@
 #include <libutl/utilities.hpp>
-#include <libresolve/resolution_internals.hpp>
+#include <libresolve/resolve.hpp>
 
 using namespace libresolve;
 
@@ -103,7 +103,7 @@ auto libresolve::resolve_template_parameters(
     ast::Template_parameters const& parameters) -> std::vector<hir::Template_parameter>
 {
     auto const resolve_parameter = [&](ast::Template_parameter const& parameter) {
-        auto const tag = context.tags.fresh_template_parameter_tag();
+        auto const tag = fresh_template_parameter_tag(context.tags);
         return hir::Template_parameter {
             .variant = std::visit(
                 Template_parameter_resolution_visitor {

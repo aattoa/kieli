@@ -1,5 +1,5 @@
 #include <libutl/utilities.hpp>
-#include <libresolve/resolution_internals.hpp>
+#include <libresolve/resolve.hpp>
 #include <libcompiler/ast/display.hpp>
 
 auto libresolve::make_constants(hir::Arena& arenas) -> Constants
@@ -25,14 +25,14 @@ auto libresolve::make_constants(hir::Arena& arenas) -> Constants
     };
 }
 
-auto libresolve::Tag_state::fresh_template_parameter_tag() -> hir::Template_parameter_tag
+auto libresolve::fresh_template_parameter_tag(Tags& tags) -> hir::Template_parameter_tag
 {
-    return hir::Template_parameter_tag { ++m_current_template_parameter_tag };
+    return hir::Template_parameter_tag { ++tags.current_template_parameter_tag };
 }
 
-auto libresolve::Tag_state::fresh_local_variable_tag() -> hir::Local_variable_tag
+auto libresolve::fresh_local_variable_tag(Tags& tags) -> hir::Local_variable_tag
 {
-    return hir::Local_variable_tag { ++m_current_local_variable_tag };
+    return hir::Local_variable_tag { ++tags.current_local_variable_tag };
 }
 
 auto libresolve::error_type(Constants const& constants, kieli::Range const range) -> hir::Type
@@ -98,7 +98,8 @@ void libresolve::set_solution(
     Type_variable_data& representative_data = state.type_variables.underlying.at(index);
     hir::Type_variant&  representative_type = context.hir.types[representative_data.type_id];
     if (representative_data.is_solved) {
-        require_subtype_relationship(context, state, solution, representative_type);
+        require_subtype_relationship(
+            context, state, variable_data.origin, solution, representative_type);
     }
     representative_type           = std::move(solution);
     representative_data.is_solved = true;
@@ -190,6 +191,30 @@ auto libresolve::resolve_concept_reference(
     (void)environment_id;
     (void)path;
     cpputil::todo();
+}
+
+void libresolve::resolve_environment(Context& context, hir::Environment_id id)
+{
+    auto const visitor = utl::Overload {
+        [&](hir::Function_id const id) {
+            resolve_function_body(context, context.info.functions[id]);
+        },
+        [&](hir::Enumeration_id const id) {
+            resolve_enumeration(context, context.info.enumerations[id]);
+        },
+        [&](hir::Concept_id const id) {
+            resolve_concept(context, context.info.concepts[id]); //
+        },
+        [&](hir::Alias_id const id) {
+            resolve_alias(context, context.info.aliases[id]); //
+        },
+        [&](hir::Module_id const id) {
+            resolve_environment(context, context.info.modules[id].environment_id);
+        },
+    };
+    for (auto const& definition : context.info.environments[id].in_order) {
+        std::visit(visitor, definition);
+    }
 }
 
 void libresolve::debug_display_environment(Context const& context, hir::Environment_id const id)

@@ -11,11 +11,6 @@
                 "CMAKE_LINKER_TYPE": "LLD",
                 "CMAKE_EXPORT_COMPILE_COMMANDS": true,
                 "KIELI_BUILD_TESTS": true
-            },
-            "condition": {
-                "type": "equals",
-                "lhs": "${hostSystemName}",
-                "rhs": "Linux"
             }
         },
         {

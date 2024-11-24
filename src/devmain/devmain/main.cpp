@@ -2,7 +2,7 @@
 #include <liblex/lex.hpp>
 #include <libparse/parse.hpp>
 #include <libdesugar/desugar.hpp>
-#include <libresolve/resolution_internals.hpp>
+#include <libresolve/resolve.hpp>
 #include <libformat/format.hpp>
 #include <libcompiler/ast/display.hpp>
 #include <cpputil/input.hpp>
@@ -75,8 +75,14 @@ namespace {
     {
         auto hir       = kieli::hir::Arena {};
         auto constants = libresolve::make_constants(hir);
-        auto context   = libresolve::Context { .db = db, .constants = std::move(constants) };
-        auto env_id    = libresolve::collect_document(context, document_id);
+
+        auto context = libresolve::Context {
+            .db        = db,
+            .hir       = std::move(hir),
+            .constants = std::move(constants),
+        };
+        auto env_id = libresolve::collect_document(context, document_id);
+        libresolve::resolve_environment(context, env_id);
         libresolve::debug_display_environment(context, env_id);
     }
 

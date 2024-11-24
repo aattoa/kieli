@@ -30,6 +30,7 @@
 - `auto diag_code(Phase, std::size_t code) -> std::string`
 
 ## Language server
+- Semantic token deltas
 - Handle command line properly
 - Gather code actions per line
 - Split executable into communication thread and analysis thread, actor mailboxes
