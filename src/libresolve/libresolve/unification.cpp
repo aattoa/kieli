@@ -314,7 +314,7 @@ void libresolve::require_subtype_relationship(
     };
     if (not unify(context, state, arguments, sub, super)) {
         auto message = std::format(
-            "Could not unify {} <: {}",
+            "Could not unify {} <~ {}",
             hir::to_string(context.hir, sub),
             hir::to_string(context.hir, super));
         kieli::add_error(context.db, state.document_id, range, std::move(message));

@@ -390,7 +390,7 @@ namespace {
             do_display(state, path);
         }
 
-        void operator()(expression::Array_literal const& array)
+        void operator()(expression::Array const& array)
         {
             write_line(state, "array literal");
             display_vector_node(state, Last::yes, "elements", array.elements);
@@ -456,27 +456,27 @@ namespace {
             display_node(state, Last::yes, "operator", application.op);
         }
 
-        void operator()(expression::Struct_field_access const& access)
+        void operator()(expression::Struct_field const& field)
         {
-            write_line(state, "struct index access");
-            display_node(state, Last::no, "base expression", access.base_expression);
-            display_node(state, Last::yes, "field name", access.field_name);
+            write_line(state, "struct index");
+            display_node(state, Last::no, "base expression", field.base_expression);
+            display_node(state, Last::yes, "field name", field.field_name);
         }
 
-        void operator()(expression::Tuple_field_access const& access)
+        void operator()(expression::Tuple_field const& field)
         {
-            write_line(state, "tuple index access");
-            display_node(state, Last::no, "base expression", access.base_expression);
+            write_line(state, "tuple index");
+            display_node(state, Last::no, "base expression", field.base_expression);
             write_node(state, Last::yes, [&] {
-                write_line(state, "field index {}", access.field_index.get());
+                write_line(state, "field index {}", field.field_index.get());
             });
         }
 
-        void operator()(expression::Array_index_access const& access)
+        void operator()(expression::Array_index const& index)
         {
-            write_line(state, "array index access");
-            display_node(state, Last::no, "base expression", access.base_expression);
-            display_node(state, Last::yes, "index expression", access.index_expression);
+            write_line(state, "array index");
+            display_node(state, Last::no, "base expression", index.base_expression);
+            display_node(state, Last::yes, "index expression", index.index_expression);
         }
 
         void operator()(expression::Method_call const& call)
@@ -507,13 +507,6 @@ namespace {
             display_vector_node(state, Last::yes, "cases", match.cases);
         }
 
-        void operator()(expression::Type_cast const& cast)
-        {
-            write_line(state, "type cast");
-            display_node(state, Last::no, "expression", cast.expression);
-            display_node(state, Last::yes, "target type", cast.target_type);
-        }
-
         void operator()(expression::Type_ascription const& ascription)
         {
             write_line(state, "type ascription");
@@ -521,7 +514,7 @@ namespace {
             display_node(state, Last::yes, "ascribed type", ascription.ascribed_type);
         }
 
-        void operator()(expression::Let_binding const& let)
+        void operator()(expression::Let const& let)
         {
             write_line(state, "let binding");
             display_node(state, Last::no, "type", let.type);
@@ -529,7 +522,7 @@ namespace {
             display_node(state, Last::yes, "initializer", let.initializer);
         }
 
-        void operator()(expression::Local_type_alias const& alias)
+        void operator()(expression::Type_alias const& alias)
         {
             write_line(state, "local type alias");
             display_node(state, Last::no, "name", alias.name);
@@ -624,14 +617,6 @@ namespace {
         {
             write_line(state, "slice");
             display_vector_node(state, Last::yes, "element patterns", slice.element_patterns);
-        }
-
-        void operator()(pattern::Alias const& alias)
-        {
-            write_line(state, "alias");
-            display_node(state, Last::no, "name", alias.name);
-            display_node(state, Last::no, "pattern", alias.pattern);
-            display_node(state, Last::yes, "mutability", alias.mutability);
         }
 
         void operator()(pattern::Guarded const& guarded)

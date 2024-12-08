@@ -11,7 +11,7 @@ namespace {
         Token const close_parenthesis = context.require_extract(Token_type::paren_close);
         context.add_punctuation(close_parenthesis);
         if (types.elements.size() == 1) {
-            return cst::type::Parenthesized { {
+            return cst::type::Paren { {
                 .value       = types.elements.front(),
                 .open_token  = context.token(open_parenthesis),
                 .close_token = context.token(close_parenthesis),
@@ -65,9 +65,9 @@ namespace {
             = require<parse_type_annotation>(context, "a ':' followed by the function return type");
 
         return cst::type::Function {
-            .parameter_types  = std::move(parameters_types),
-            .return_type      = std::move(return_type_annotation),
-            .fn_keyword_token = context.token(fn_keyword),
+            .parameter_types = std::move(parameters_types),
+            .return_type     = std::move(return_type_annotation),
+            .fn_token        = context.token(fn_keyword),
         };
     }
 
@@ -78,7 +78,7 @@ namespace {
         context.add_keyword(typeof_keyword);
         return cst::type::Typeof {
             .inspected_expression = extract_inspected(context, "a parenthesized expression"),
-            .typeof_keyword_token = context.token(typeof_keyword),
+            .typeof_token         = context.token(typeof_keyword),
         };
     }
 
@@ -86,8 +86,8 @@ namespace {
     {
         context.add_keyword(impl_keyword);
         return cst::type::Impl {
-            .concepts           = extract_concept_references(context),
-            .impl_keyword_token = context.token(impl_keyword),
+            .concepts   = extract_concept_references(context),
+            .impl_token = context.token(impl_keyword),
         };
     }
 

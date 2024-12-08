@@ -76,10 +76,10 @@ namespace {
             format_regular_block(block);
         }
 
-        void operator()(cst::expression::Parenthesized const& parenthesized)
+        void operator()(cst::expression::Paren const& paren)
         {
             format(state, "(");
-            format(state, parenthesized.expression.value);
+            format(state, paren.expression.value);
             format(state, ")");
         }
 
@@ -170,13 +170,13 @@ namespace {
             format(state, move.place_expression);
         }
 
-        void operator()(cst::expression::Local_type_alias const& alias)
+        void operator()(cst::expression::Type_alias const& alias)
         {
             format(state, "alias {} = ", alias.name);
             format(state, alias.type);
         }
 
-        void operator()(cst::expression::Let_binding const& let)
+        void operator()(cst::expression::Let const& let)
         {
             format(state, "let ");
             format(state, let.pattern);
@@ -185,30 +185,30 @@ namespace {
             format(state, let.initializer);
         }
 
-        void operator()(cst::expression::Array_literal const& array)
+        void operator()(cst::expression::Array const& array)
         {
             format(state, "[");
             format_comma_separated(state, array.elements.value.elements);
             format(state, "]");
         }
 
-        void operator()(cst::expression::Tuple_field_access const& access)
+        void operator()(cst::expression::Tuple_field const& field)
         {
-            format(state, access.base_expression);
-            format(state, ".{}", access.field_index);
+            format(state, field.base_expression);
+            format(state, ".{}", field.field_index);
         }
 
-        void operator()(cst::expression::Struct_field_access const& access)
+        void operator()(cst::expression::Struct_field const& field)
         {
-            format(state, access.base_expression);
-            format(state, ".{}", access.field_name);
+            format(state, field.base_expression);
+            format(state, ".{}", field.name);
         }
 
-        void operator()(cst::expression::Array_index_access const& access)
+        void operator()(cst::expression::Array_index const& index)
         {
-            format(state, access.base_expression);
+            format(state, index.base_expression);
             format(state, ".[");
-            format(state, access.index_expression.value);
+            format(state, index.index_expression.value);
             format(state, "]");
         }
 
@@ -225,24 +225,11 @@ namespace {
             format(state, dereference.reference_expression);
         }
 
-        void operator()(cst::expression::Type_cast const& cast)
-        {
-            format(state, cast.base_expression);
-            format(state, " as ");
-            format(state, cast.target_type);
-        }
-
-        void operator()(cst::expression::Type_ascription const& ascription)
+        void operator()(cst::expression::Ascription const& ascription)
         {
             format(state, ascription.base_expression);
             format(state, ": ");
             format(state, ascription.ascribed_type);
-        }
-
-        void operator()(cst::expression::Discard const& discard)
-        {
-            format(state, "discard ");
-            format(state, discard.discarded_expression);
         }
 
         void operator()(cst::expression::For_loop const& loop)
@@ -263,7 +250,7 @@ namespace {
             format_regular_block(as_block(loop.body));
         }
 
-        void operator()(cst::expression::Plain_loop const& loop)
+        void operator()(cst::expression::Loop const& loop)
         {
             format(state, "loop ");
             format_regular_block(as_block(loop.body));

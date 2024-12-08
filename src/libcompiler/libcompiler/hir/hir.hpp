@@ -51,13 +51,6 @@ namespace kieli::hir {
             Local_variable_tag variable_tag;
         };
 
-        struct Alias {
-            Mutability         mutability;
-            kieli::Identifier  identifier;
-            Local_variable_tag variable_tag;
-            Pattern_id         pattern;
-        };
-
         struct Guarded {
             Pattern_id    guarded_pattern;
             Expression_id guard_expression;
@@ -75,7 +68,6 @@ namespace kieli::hir {
               pattern::Tuple,
               pattern::Slice,
               pattern::Name,
-              pattern::Alias,
               pattern::Guarded> {
         using variant::variant;
     };
@@ -110,7 +102,7 @@ namespace kieli::hir {
             Expression_id           result;
         };
 
-        struct Let_binding {
+        struct Let {
             Pattern_id    pattern;
             Type          type;
             Expression_id initializer;
@@ -131,12 +123,12 @@ namespace kieli::hir {
             Function_id  id;
         };
 
-        struct Indirect_function_call {
+        struct Indirect_call {
             Expression_id              invocable;
             std::vector<Expression_id> arguments;
         };
 
-        struct Direct_function_call {
+        struct Direct_call {
             kieli::Lower               function_name;
             Function_id                function_id;
             std::vector<Expression_id> arguments;
@@ -175,12 +167,12 @@ namespace kieli::hir {
               expression::Break,
               expression::Continue,
               expression::Block,
-              expression::Let_binding,
+              expression::Let,
               expression::Match,
               expression::Variable_reference,
               expression::Function_reference,
-              expression::Indirect_function_call,
-              expression::Direct_function_call,
+              expression::Indirect_call,
+              expression::Direct_call,
               expression::Sizeof,
               expression::Addressof,
               expression::Dereference,

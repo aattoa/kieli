@@ -22,10 +22,10 @@ namespace {
             format(state, "!");
         }
 
-        void operator()(cst::type::Parenthesized const& parenthesized)
+        void operator()(cst::type::Paren const& paren)
         {
             format(state, "(");
-            format(state, parenthesized.type.value);
+            format(state, paren.type.value);
             format(state, ")");
         }
 

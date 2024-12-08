@@ -39,10 +39,10 @@ namespace {
         if (auto const mut_keyword = context.try_extract(Token_type::mut)) {
             context.add_keyword(mut_keyword.value());
             return cst::Template_mutability_parameter {
-                .name              = name,
-                .colon_token       = context.token(colon),
-                .mut_keyword_token = context.token(mut_keyword.value()),
-                .default_argument  = parse_mutability_parameter_default_argument(context),
+                .name             = name,
+                .colon_token      = context.token(colon),
+                .mut_token        = context.token(mut_keyword.value()),
+                .default_argument = parse_mutability_parameter_default_argument(context),
             };
         }
         if (auto const type = parse_type(context)) {
@@ -94,8 +94,8 @@ namespace {
             Token_type::dot>;
         context.add_keyword(import_keyword);
         return cst::Import {
-            .segments             = require<parse_segments>(context, "a module path"),
-            .import_keyword_token = context.token(import_keyword),
+            .segments     = require<parse_segments>(context, "a module path"),
+            .import_token = context.token(import_keyword),
         };
     }
 
@@ -112,7 +112,7 @@ namespace {
         -> std::optional<kieli::Range>
     {
         if (auto const* const global = std::get_if<cst::Path_root_global>(&root)) {
-            return arena.tokens[global->global_keyword].range;
+            return arena.tokens[global->global_token].range;
         }
         if (auto const* const type_id = std::get_if<cst::Type_id>(&root)) {
             return arena.types[*type_id].range;
@@ -156,21 +156,21 @@ auto libparse::parse_mutability(Context& context) -> std::optional<cst::Mutabili
                     .question_mark_token = context.token(question_mark.value()),
                 },
                 .range = context.up_to_current(mut_keyword.value().range),
-                .mut_or_immut_keyword_token = context.token(mut_keyword.value()),
+                .mut_or_immut_token = context.token(mut_keyword.value()),
             };
         }
         return cst::Mutability {
-            .variant                    = kieli::Mutability::mut,
-            .range                      = mut_keyword.value().range,
-            .mut_or_immut_keyword_token = context.token(mut_keyword.value()),
+            .variant            = kieli::Mutability::mut,
+            .range              = mut_keyword.value().range,
+            .mut_or_immut_token = context.token(mut_keyword.value()),
         };
     }
     if (auto immut_keyword = context.try_extract(Token_type::immut)) {
         context.add_keyword(immut_keyword.value());
         return cst::Mutability {
-            .variant                    = kieli::Mutability::immut,
-            .range                      = immut_keyword.value().range,
-            .mut_or_immut_keyword_token = context.token(immut_keyword.value()),
+            .variant            = kieli::Mutability::immut,
+            .range              = immut_keyword.value().range,
+            .mut_or_immut_token = context.token(immut_keyword.value()),
         };
     }
     return std::nullopt;
@@ -222,9 +222,9 @@ auto libparse::parse_template_argument(Context& context) -> std::optional<cst::T
     if (auto const immut_keyword = context.try_extract(Token_type::immut)) {
         context.add_keyword(immut_keyword.value());
         return cst::Template_argument { cst::Mutability {
-            .variant                    = kieli::Mutability::immut,
-            .range                      = immut_keyword->range,
-            .mut_or_immut_keyword_token = context.token(immut_keyword.value()),
+            .variant            = kieli::Mutability::immut,
+            .range              = immut_keyword->range,
+            .mut_or_immut_token = context.token(immut_keyword.value()),
         } };
     }
     return parse_mutability(context).transform([](cst::Mutability&& mutability) {
@@ -313,7 +313,7 @@ auto libparse::extract_path(Context& context, cst::Path_root const root) -> cst:
     };
 }
 
-auto libparse::extract_concept_references(Context& context) -> cst::Separated_sequence<cst::Path>
+auto libparse::extract_concept_references(Context& context) -> cst::Separated<cst::Path>
 {
     static constexpr auto parse_paths
         = parse_separated_one_or_more<parse_concept_path, "a concept path", Token_type::plus>;

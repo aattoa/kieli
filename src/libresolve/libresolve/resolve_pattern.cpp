@@ -93,35 +93,6 @@ namespace {
             };
         }
 
-        auto operator()(ast::pattern::Alias const& alias) -> hir::Pattern
-        {
-            hir::Pattern pattern = recurse(ast().patterns[alias.pattern]);
-
-            hir::Mutability const mutability
-                = resolve_mutability(context, scope_id, alias.mutability);
-            hir::Local_variable_tag const tag = fresh_local_variable_tag(context.tags);
-
-            Variable_bind bind {
-                .name       = alias.name,
-                .type       = pattern.type,
-                .mutability = mutability,
-                .tag        = tag,
-            };
-            bind_variable(
-                context.info.scopes.index_vector[scope_id], alias.name.identifier, std::move(bind));
-
-            return {
-                hir::pattern::Alias {
-                    .mutability   = mutability,
-                    .identifier   = alias.name.identifier,
-                    .variable_tag = tag,
-                    .pattern      = context.hir.patterns.push(std::move(pattern)),
-                },
-                pattern.type,
-                this_pattern.range,
-            };
-        }
-
         auto operator()(ast::pattern::Constructor const&) -> hir::Pattern
         {
             cpputil::todo();
@@ -163,9 +134,7 @@ namespace {
             }
 
             return {
-                hir::pattern::Slice {
-                    .patterns = std::move(patterns),
-                },
+                hir::pattern::Slice { std::move(patterns) },
                 context.hir.types.push(hir::type::Slice { element_type }),
                 this_pattern.range,
             };

@@ -9,7 +9,7 @@ namespace {
         auto patterns = extract_comma_separated_zero_or_more<parse_pattern, "a pattern">(context);
         Token const paren_close = context.require_extract(Token_type::paren_close);
         if (patterns.elements.size() == 1) {
-            return cst::pattern::Parenthesized { {
+            return cst::pattern::Paren { {
                 .value       = std::move(patterns.elements.front()),
                 .open_token  = context.token(paren_open),
                 .close_token = context.token(paren_close),
@@ -43,10 +43,10 @@ namespace {
             context.add_semantic_token(name.range, Semantic::property);
             return cst::pattern::Field {
                 .name = name,
-                .field_pattern
+                .equals
                 = context.try_extract(Token_type::equals).transform([&](Token const& equals_sign) {
                       context.add_punctuation(equals_sign);
-                      return cst::pattern::Field::Field_pattern {
+                      return cst::pattern::Equals {
                           .equals_sign_token = context.token(equals_sign),
                           .pattern           = require<parse_pattern>(context, "a field pattern"),
                       };
@@ -137,28 +137,10 @@ namespace {
         }
     }
 
-    auto parse_potentially_aliased_pattern(Context& context) -> std::optional<cst::Pattern_variant>
-    {
-        kieli::Range const anchor_range = context.peek().range;
-        return dispatch_parse_pattern(context).transform(
-            [&](cst::Pattern_variant variant) -> cst::Pattern_variant {
-                if (auto const as_keyword = context.try_extract(Token_type::as)) {
-                    kieli::Range const range(anchor_range.start, as_keyword.value().range.stop);
-                    return cst::pattern::Alias {
-                        .mutability       = parse_mutability(context),
-                        .name             = extract_lower_name(context, "a pattern alias"),
-                        .pattern          = context.cst().patterns.push(std::move(variant), range),
-                        .as_keyword_token = context.token(as_keyword.value()),
-                    };
-                }
-                return variant;
-            });
-    }
-
     auto parse_potentially_guarded_pattern(Context& context) -> std::optional<cst::Pattern_variant>
     {
         auto const anchor_range = context.peek().range;
-        return parse_potentially_aliased_pattern(context).transform(
+        return dispatch_parse_pattern(context).transform(
             [&](cst::Pattern_variant variant) -> cst::Pattern_variant {
                 if (auto const if_keyword = context.try_extract(Token_type::if_)) {
                     auto guard = require<parse_expression>(context, "a guard expression");
@@ -167,7 +149,7 @@ namespace {
                             std::move(variant),
                             kieli::Range(anchor_range.start, if_keyword.value().range.stop)),
                         .guard_expression = std::move(guard),
-                        .if_keyword_token = context.token(if_keyword.value()),
+                        .if_token         = context.token(if_keyword.value()),
                     };
                 }
                 return variant;
@@ -189,7 +171,7 @@ auto libparse::parse_top_level_pattern(Context& context) -> std::optional<cst::P
 {
     auto const anchor_range = context.peek().range;
     return parse_comma_separated_one_or_more<parse_pattern, "a pattern">(context).transform(
-        [&](cst::Separated_sequence<cst::Pattern_id>&& patterns) {
+        [&](cst::Separated<cst::Pattern_id>&& patterns) {
             if (patterns.elements.size() == 1) {
                 return patterns.elements.front();
             }

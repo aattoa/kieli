@@ -65,12 +65,6 @@ TEST("slice")
     CHECK_SIMPLE_PARSE("[a, [b, c], (d, e), f]");
 }
 
-TEST("alias")
-{
-    CHECK_SIMPLE_PARSE("(_, ___) as x");
-    CHECK_SIMPLE_PARSE("(___, _) as mut x");
-}
-
 TEST("guarded")
 {
     CHECK_SIMPLE_PARSE("_ if x");

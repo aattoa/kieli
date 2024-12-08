@@ -7,15 +7,14 @@ namespace {
     struct Pattern_desugaring_visitor {
         Context context;
 
-        auto operator()(cst ::pattern ::Parenthesized const& parenthesized) const
-            -> ast ::Pattern_variant
+        auto operator()(cst::pattern::Paren const& paren) const -> ast::Pattern_variant
         {
             return std::visit(
                 Pattern_desugaring_visitor { context },
-                context.cst.patterns[parenthesized.pattern.value].variant);
+                context.cst.patterns[paren.pattern.value].variant);
         }
 
-        auto operator()(kieli ::literal auto const& literal) const -> ast ::Pattern_variant
+        auto operator()(kieli::literal auto const& literal) const -> ast::Pattern_variant
         {
             return literal;
         }
@@ -35,29 +34,20 @@ namespace {
 
         auto operator()(cst::pattern::Tuple const& tuple) const -> ast::Pattern_variant
         {
-            return ast::pattern::Tuple {
-                .field_patterns = tuple.patterns.value.elements
-                                | std::views::transform(deref_desugar(context))
-                                | std::ranges::to<std::vector>(),
-            };
+            return ast::pattern::Tuple { std::ranges::to<std::vector>(
+                std::views::transform(tuple.patterns.value.elements, deref_desugar(context))) };
         }
 
         auto operator()(cst::pattern::Top_level_tuple const& tuple) const -> ast::Pattern_variant
         {
-            return ast::pattern::Tuple {
-                .field_patterns = tuple.patterns.elements
-                                | std::views::transform(deref_desugar(context))
-                                | std::ranges::to<std::vector>(),
-            };
+            return ast::pattern::Tuple { std::ranges::to<std::vector>(
+                std::views::transform(tuple.patterns.elements, deref_desugar(context))) };
         }
 
         auto operator()(cst::pattern::Slice const& slice) const -> ast::Pattern_variant
         {
-            return ast::pattern::Slice {
-                .element_patterns = slice.patterns.value.elements
-                                  | std::views::transform(deref_desugar(context))
-                                  | std::ranges::to<std::vector>(),
-            };
+            return ast::pattern::Slice { std::ranges::to<std::vector>(
+                std::views::transform(slice.patterns.value.elements, deref_desugar(context))) };
         }
 
         auto operator()(cst::pattern::Constructor const& constructor) const -> ast::Pattern_variant
@@ -74,15 +64,6 @@ namespace {
             return ast::pattern::Abbreviated_constructor {
                 .name = constructor.name,
                 .body = desugar(context, constructor.body),
-            };
-        }
-
-        auto operator()(cst::pattern::Alias const& alias) const -> ast::Pattern_variant
-        {
-            return ast::pattern::Alias {
-                .name       = alias.name,
-                .mutability = desugar_mutability(alias.mutability, alias.name.range),
-                .pattern    = desugar(context, alias.pattern),
             };
         }
 

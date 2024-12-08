@@ -115,7 +115,7 @@ namespace kieli::ast {
     auto describe_conditional_source(Conditional_source source) -> std::string_view;
 
     namespace expression {
-        struct Array_literal {
+        struct Array {
             std::vector<Expression> elements;
         };
 
@@ -161,18 +161,18 @@ namespace kieli::ast {
             std::vector<Struct_field_initializer> initializers;
         };
 
-        struct Struct_field_access {
+        struct Struct_field {
             Expression_id base_expression;
             Lower         field_name;
         };
 
-        struct Tuple_field_access {
+        struct Tuple_field {
             Expression_id              base_expression;
             utl::Explicit<std::size_t> field_index;
             Range                      field_index_range;
         };
 
-        struct Array_index_access {
+        struct Array_index {
             Expression_id base_expression;
             Expression_id index_expression;
         };
@@ -197,23 +197,18 @@ namespace kieli::ast {
             Expression_id           expression;
         };
 
-        struct Type_cast {
-            Expression_id expression;
-            Type_id       target_type;
-        };
-
         struct Type_ascription {
             Expression_id expression;
             Type_id       ascribed_type;
         };
 
-        struct Let_binding {
+        struct Let {
             Pattern_id    pattern;
             Expression_id initializer;
             Type_id       type;
         };
 
-        struct Local_type_alias {
+        struct Type_alias {
             Upper   name;
             Type_id type;
         };
@@ -254,7 +249,7 @@ namespace kieli::ast {
               Boolean,
               String,
               Path,
-              expression::Array_literal,
+              expression::Array,
               expression::Tuple,
               expression::Loop,
               expression::Break,
@@ -264,16 +259,15 @@ namespace kieli::ast {
               expression::Tuple_initializer,
               expression::Struct_initializer,
               expression::Infix_call,
-              expression::Struct_field_access,
-              expression::Tuple_field_access,
-              expression::Array_index_access,
+              expression::Struct_field,
+              expression::Tuple_field,
+              expression::Array_index,
               expression::Method_call,
               expression::Conditional,
               expression::Match,
-              expression::Type_cast,
               expression::Type_ascription,
-              expression::Let_binding,
-              expression::Local_type_alias,
+              expression::Let,
+              expression::Type_alias,
               expression::Ret,
               expression::Sizeof,
               expression::Addressof,
@@ -332,12 +326,6 @@ namespace kieli::ast {
             std::vector<Pattern> element_patterns;
         };
 
-        struct Alias {
-            Lower      name;
-            Mutability mutability;
-            Pattern_id pattern;
-        };
-
         struct Guarded {
             Pattern_id guarded_pattern;
             Expression guard_expression;
@@ -357,7 +345,6 @@ namespace kieli::ast {
               pattern::Abbreviated_constructor,
               pattern::Tuple,
               pattern::Slice,
-              pattern::Alias,
               pattern::Guarded> {
         using variant::variant;
     };

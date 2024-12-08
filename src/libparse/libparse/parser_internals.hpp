@@ -93,7 +93,7 @@ namespace libparse {
     auto parse_simple_path(Context&) -> std::optional<cst::Path>;
     auto parse_complex_path(Context&) -> std::optional<cst::Path>;
     auto extract_path(Context&, cst::Path_root) -> cst::Path;
-    auto extract_concept_references(Context&) -> cst::Separated_sequence<cst::Path>;
+    auto extract_concept_references(Context&) -> cst::Separated<cst::Path>;
 
     auto parse_block_expression(Context&) -> std::optional<cst::Expression_id>;
     auto parse_expression(Context&) -> std::optional<cst::Expression_id>;
@@ -179,10 +179,9 @@ namespace libparse {
         Token_type::bracket_close>;
 
     template <parser auto parser, utl::Metastring description, Token_type separator_type>
-    auto extract_separated_zero_or_more(Context& context)
-        -> cst::Separated_sequence<Parser_target<parser>>
+    auto extract_separated_zero_or_more(Context& context) -> cst::Separated<Parser_target<parser>>
     {
-        cst::Separated_sequence<Parser_target<parser>> sequence;
+        cst::Separated<Parser_target<parser>> sequence;
         if (auto first_element = parser(context)) {
             sequence.elements.push_back(std::move(first_element.value()));
             while (auto const separator = context.try_extract(separator_type)) {
@@ -196,7 +195,7 @@ namespace libparse {
 
     template <parser auto parser, utl::Metastring description, Token_type separator>
     auto parse_separated_one_or_more(Context& context)
-        -> std::optional<cst::Separated_sequence<Parser_target<parser>>>
+        -> std::optional<cst::Separated<Parser_target<parser>>>
     {
         auto sequence = extract_separated_zero_or_more<parser, description, separator>(context);
         if (sequence.elements.empty()) {

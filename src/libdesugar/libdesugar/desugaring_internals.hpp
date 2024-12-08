@@ -53,7 +53,7 @@ namespace libdesugar {
     template <typename T>
     auto desugar(Context, std::vector<T> const&);
     template <typename T>
-    auto desugar(Context, cst::Separated_sequence<T> const&);
+    auto desugar(Context, cst::Separated<T> const&);
     template <typename T>
     auto desugar(Context, cst::Surrounded<T> const&);
 
@@ -69,7 +69,7 @@ namespace libdesugar {
     }
 
     template <typename T>
-    auto desugar(Context const context, cst::Separated_sequence<T> const& sequence)
+    auto desugar(Context const context, cst::Separated<T> const& sequence)
     {
         return desugar(context, sequence.elements);
     }

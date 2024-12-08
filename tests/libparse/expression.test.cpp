@@ -138,19 +138,19 @@ TEST("binary operator application")
     CHECK_SIMPLE_PARSE("a *** (a <=> b) +++ c");
 }
 
-TEST("struct field access")
+TEST("struct field")
 {
     CHECK_SIMPLE_PARSE("a.b");
     CHECK_SIMPLE_PARSE("a.b.c");
 }
 
-TEST("tuple field access")
+TEST("tuple field")
 {
     CHECK_SIMPLE_PARSE("x.0");
     CHECK_SIMPLE_PARSE("x.0.1");
 }
 
-TEST("array field access")
+TEST("array field")
 {
     CHECK_SIMPLE_PARSE("x.[y]");
     CHECK_SIMPLE_PARSE("x.[y].[z]");
@@ -227,12 +227,6 @@ TEST("match")
         "}");
 }
 
-TEST("type cast")
-{
-    CHECK_SIMPLE_PARSE("x as X");
-    CHECK_SIMPLE_PARSE("a as B as C");
-}
-
 TEST("type ascription")
 {
     CHECK_SIMPLE_PARSE("x: X");
@@ -274,14 +268,6 @@ TEST("loop directives")
     CHECK_SIMPLE_PARSE("continue");
     CHECK_SIMPLE_PARSE("break");
     CHECK_SIMPLE_PARSE("break 5");
-}
-
-TEST("discard")
-{
-    CHECK_SIMPLE_PARSE("discard x");
-    CHECK_SIMPLE_PARSE("discard (x)");
-    CHECK_SIMPLE_PARSE("discard {}");
-    CHECK_SIMPLE_PARSE("discard { x }");
 }
 
 TEST("ret")

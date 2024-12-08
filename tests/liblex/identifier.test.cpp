@@ -13,10 +13,10 @@ namespace {
     }
 
     constexpr auto keywords = std::to_array<std::string_view>({
-        "let",    "mut",      "immut", "if",    "else",   "elif",    "for",    "in",     "while",
-        "loop",   "continue", "break", "match", "ret",    "discard", "fn",     "as",     "enum",
-        "struct", "concept",  "impl",  "alias", "import", "export",  "module", "sizeof", "typeof",
-        "mv",     "where",    "dyn",   "macro", "global", "defer",
+        "let",    "mut",     "immut",    "if",    "else",   "elif",   "for",    "in",
+        "while",  "loop",    "continue", "break", "match",  "ret",    "fn",     "enum",
+        "struct", "concept", "impl",     "alias", "import", "export", "module", "sizeof",
+        "typeof", "mv",      "where",    "dyn",   "macro",  "global", "defer",
     });
 } // namespace
 

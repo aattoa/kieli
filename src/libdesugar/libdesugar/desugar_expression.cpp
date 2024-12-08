@@ -123,30 +123,22 @@ namespace {
             return ast::Wildcard { .range = context.cst.tokens[wildcard.underscore_token].range };
         }
 
-        auto operator()(cst::expression::Parenthesized const& parenthesized) const
-            -> ast::Expression_variant
+        auto operator()(cst::expression::Paren const& paren) const -> ast::Expression_variant
         {
-            cst::Expression const& expr = context.cst.expressions[parenthesized.expression.value];
+            cst::Expression const& expr = context.cst.expressions[paren.expression.value];
             return std::visit(Expression_desugaring_visitor { context, expr }, expr.variant);
         }
 
-        auto operator()(cst::expression::Array_literal const& literal) const
-            -> ast::Expression_variant
+        auto operator()(cst::expression::Array const& literal) const -> ast::Expression_variant
         {
-            return ast::expression::Array_literal {
-                .elements = literal.elements.value.elements
-                          | std::views::transform(deref_desugar(context))
-                          | std::ranges::to<std::vector>(),
-            };
+            return ast::expression::Array { std::ranges::to<std::vector>(
+                std::views::transform(literal.elements.value.elements, deref_desugar(context))) };
         }
 
         auto operator()(cst::expression::Tuple const& tuple) const -> ast::Expression_variant
         {
-            return ast::expression::Tuple {
-                .fields = tuple.fields.value.elements
-                        | std::views::transform(deref_desugar(context))
-                        | std::ranges::to<std::vector>(),
-            };
+            return ast::expression::Tuple { std::ranges::to<std::vector>(
+                std::views::transform(tuple.fields.value.elements, deref_desugar(context))) };
         }
 
         auto operator()(cst::expression::Conditional const& conditional) const
@@ -169,7 +161,6 @@ namespace {
                         _ -> d
                     }
                 */
-
                 return ast::expression::Match {
                     .cases = utl::to_vector({
                         ast::Match_case {
@@ -324,7 +315,7 @@ namespace {
             return desugar_while_loop(loop);
         }
 
-        auto operator()(cst::expression::Plain_loop const& loop) const -> ast::Expression_variant
+        auto operator()(cst::expression::Loop const& loop) const -> ast::Expression_variant
         {
             return ast::expression::Loop {
                 .body   = desugar(context, loop.body),
@@ -368,31 +359,28 @@ namespace {
             return desugar_operator_chain(context, chain.lhs, precedence, tail).variant;
         }
 
-        auto operator()(cst::expression::Struct_field_access const& access) const
-            -> ast::Expression_variant
+        auto operator()(cst::expression::Struct_field const& field) const -> ast::Expression_variant
         {
-            return ast::expression::Struct_field_access {
-                .base_expression = desugar(context, access.base_expression),
-                .field_name      = access.field_name,
+            return ast::expression::Struct_field {
+                .base_expression = desugar(context, field.base_expression),
+                .field_name      = field.name,
             };
         }
 
-        auto operator()(cst::expression::Tuple_field_access const& access) const
-            -> ast::Expression_variant
+        auto operator()(cst::expression::Tuple_field const& field) const -> ast::Expression_variant
         {
-            return ast::expression::Tuple_field_access {
-                .base_expression   = desugar(context, access.base_expression),
-                .field_index       = access.field_index,
-                .field_index_range = context.cst.tokens[access.field_index_token].range,
+            return ast::expression::Tuple_field {
+                .base_expression   = desugar(context, field.base_expression),
+                .field_index       = field.field_index,
+                .field_index_range = context.cst.tokens[field.field_index_token].range,
             };
         }
 
-        auto operator()(cst::expression::Array_index_access const& access) const
-            -> ast::Expression_variant
+        auto operator()(cst::expression::Array_index const& field) const -> ast::Expression_variant
         {
-            return ast::expression::Array_index_access {
-                .base_expression  = desugar(context, access.base_expression),
-                .index_expression = desugar(context, access.index_expression),
+            return ast::expression::Array_index {
+                .base_expression  = desugar(context, field.base_expression),
+                .index_expression = desugar(context, field.index_expression),
             };
         }
 
@@ -400,32 +388,24 @@ namespace {
         {
             return ast::expression::Method_call {
                 .function_arguments = desugar(context, call.function_arguments.value.elements),
-                // .template_arguments = call.template_arguments.transform(desugar(context)),
-                .base_expression = desugar(context, call.base_expression),
-                .method_name     = call.method_name,
+                .template_arguments = call.template_arguments.transform(desugar(context)),
+                .base_expression    = desugar(context, call.base_expression),
+                .method_name        = call.method_name,
             };
         }
 
-        auto operator()(cst::expression::Type_cast const& cast) const -> ast::Expression_variant
-        {
-            return ast::expression::Type_cast {
-                .expression  = desugar(context, cast.base_expression),
-                .target_type = desugar(context, cast.target_type),
-            };
-        }
-
-        auto operator()(cst::expression::Type_ascription const& cast) const
+        auto operator()(cst::expression::Ascription const& ascription) const
             -> ast::Expression_variant
         {
             return ast::expression::Type_ascription {
-                .expression    = desugar(context, cast.base_expression),
-                .ascribed_type = desugar(context, cast.ascribed_type),
+                .expression    = desugar(context, ascription.base_expression),
+                .ascribed_type = desugar(context, ascription.ascribed_type),
             };
         }
 
-        auto operator()(cst::expression::Let_binding const& let) const -> ast::Expression_variant
+        auto operator()(cst::expression::Let const& let) const -> ast::Expression_variant
         {
-            return ast::expression::Let_binding {
+            return ast::expression::Let {
                 .pattern     = desugar(context, let.pattern),
                 .initializer = desugar(context, let.initializer),
                 .type        = let.type.has_value()
@@ -434,10 +414,9 @@ namespace {
             };
         }
 
-        auto operator()(cst::expression::Local_type_alias const& alias) const
-            -> ast::Expression_variant
+        auto operator()(cst::expression::Type_alias const& alias) const -> ast::Expression_variant
         {
-            return ast::expression::Local_type_alias {
+            return ast::expression::Type_alias {
                 .name = alias.name,
                 .type = desugar(context, alias.type),
             };
@@ -449,28 +428,6 @@ namespace {
                 ret.returned_expression.has_value()
                     ? desugar(context, ret.returned_expression.value())
                     : context.ast.expressions.push(unit_value(this_expression.range)),
-            };
-        }
-
-        auto operator()(cst::expression::Discard const& discard) const -> ast::Expression_variant
-        {
-            /*
-                discard x
-
-                is transformed into
-
-                { let _: _ = x; () }
-            */
-            ast::expression::Let_binding let {
-                .pattern     = context.ast.patterns.push(wildcard_pattern(this_expression.range)),
-                .initializer = desugar(context, discard.discarded_expression),
-                .type        = context.ast.types.push(wildcard_type(this_expression.range)),
-            };
-            return ast::expression::Block {
-                .side_effects = utl::to_vector({
-                    ast::Expression { std::move(let), this_expression.range },
-                }),
-                .result       = context.ast.expressions.push(unit_value(this_expression.range)),
             };
         }
 

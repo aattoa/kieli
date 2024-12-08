@@ -94,7 +94,7 @@ namespace {
             return error(this_expression.range, "Path expressions are not supported yet");
         }
 
-        auto operator()(ast::expression::Array_literal const& array) -> hir::Expression
+        auto operator()(ast::expression::Array const& array) -> hir::Expression
         {
             hir::Type const element_type
                 = fresh_general_type_variable(state, context.hir, this_expression.range);
@@ -210,17 +210,17 @@ namespace {
             return unsupported(); // TODO
         }
 
-        auto operator()(ast::expression::Struct_field_access const&) -> hir::Expression
+        auto operator()(ast::expression::Struct_field const&) -> hir::Expression
         {
             return unsupported(); // TODO
         }
 
-        auto operator()(ast::expression::Tuple_field_access const&) -> hir::Expression
+        auto operator()(ast::expression::Tuple_field const&) -> hir::Expression
         {
             return unsupported(); // TODO
         }
 
-        auto operator()(ast::expression::Array_index_access const&) -> hir::Expression
+        auto operator()(ast::expression::Array_index const&) -> hir::Expression
         {
             return unsupported(); // TODO
         }
@@ -277,11 +277,6 @@ namespace {
             };
         }
 
-        auto operator()(ast::expression::Type_cast const&) -> hir::Expression
-        {
-            return unsupported(); // TODO
-        }
-
         auto operator()(ast::expression::Type_ascription const& ascription) -> hir::Expression
         {
             ast::Arena& ast = this->ast();
@@ -298,7 +293,7 @@ namespace {
             return expression;
         }
 
-        auto operator()(ast::expression::Let_binding const& let) -> hir::Expression
+        auto operator()(ast::expression::Let const& let) -> hir::Expression
         {
             ast::Arena&  ast     = this->ast();
             hir::Pattern pattern = resolve_pattern(
@@ -321,7 +316,7 @@ namespace {
                 context.hir.types[type.id]);
 
             return {
-                hir::expression::Let_binding {
+                hir::expression::Let {
                     .pattern     = context.hir.patterns.push(std::move(pattern)),
                     .type        = type,
                     .initializer = context.hir.expressions.push(std::move(initializer)),
@@ -332,7 +327,7 @@ namespace {
             };
         }
 
-        auto operator()(ast::expression::Local_type_alias const& alias) -> hir::Expression
+        auto operator()(ast::expression::Type_alias const& alias) -> hir::Expression
         {
             hir::Type const type
                 = resolve_type(context, state, scope_id, environment_id, ast().types[alias.type]);

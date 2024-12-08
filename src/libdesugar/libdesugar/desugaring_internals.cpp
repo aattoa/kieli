@@ -189,10 +189,8 @@ auto libdesugar::desugar(Context const ctx, cst::pattern::Field const& field) ->
 {
     return ast::pattern::Field {
         .name    = field.name,
-        .pattern = field.field_pattern.transform(
-            [&](cst::pattern::Field::Field_pattern const& field_pattern) {
-                return desugar(ctx, field_pattern.pattern);
-            }),
+        .pattern = field.equals.transform(
+            [&](cst::pattern::Equals const& field) { return desugar(ctx, field.pattern); }),
     };
 }
 

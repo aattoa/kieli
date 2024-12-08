@@ -8,9 +8,9 @@ namespace {
         Context          context;
         cst::Type const& this_type;
 
-        auto operator()(cst::type::Parenthesized const& parenthesized) const -> ast::Type_variant
+        auto operator()(cst::type::Paren const& paren) const -> ast::Type_variant
         {
-            cst::Type const& type = context.cst.types[parenthesized.type.value];
+            cst::Type const& type = context.cst.types[paren.type.value];
             return std::visit(Type_desugaring_visitor { context, type }, type.variant);
         }
 
@@ -31,11 +31,8 @@ namespace {
 
         auto operator()(cst::type::Tuple const& tuple) const -> ast::Type_variant
         {
-            return ast::type::Tuple {
-                .field_types = tuple.field_types.value.elements
-                             | std::views::transform(deref_desugar(context))
-                             | std::ranges::to<std::vector>(),
-            };
+            return ast::type::Tuple { std::ranges::to<std::vector>(
+                std::views::transform(tuple.field_types.value.elements, deref_desugar(context))) };
         }
 
         auto operator()(cst::type::Array const& array) const -> ast::Type_variant

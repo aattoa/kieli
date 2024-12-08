@@ -83,9 +83,9 @@ void libformat::format(State& state, cst::Mutability const& mutability)
 void libformat::format(State& state, cst::pattern::Field const& field)
 {
     format(state, "{}", field.name);
-    if (field.field_pattern.has_value()) {
+    if (field.equals.has_value()) {
         format(state, " = ");
-        format(state, field.field_pattern.value().pattern);
+        format(state, field.equals.value().pattern);
     }
 }
 

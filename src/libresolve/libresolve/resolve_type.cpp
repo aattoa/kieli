@@ -51,9 +51,8 @@ namespace {
 
         auto operator()(ast::type::Tuple const& tuple) -> hir::Type
         {
-            hir::type::Tuple type {
-                std::ranges::to<std::vector>(std::views::transform(tuple.field_types, recurse())),
-            };
+            hir::type::Tuple type { std::ranges::to<std::vector>(
+                std::views::transform(tuple.field_types, recurse())) };
             return { context.hir.types.push(std::move(type)), this_type.range };
         }
 

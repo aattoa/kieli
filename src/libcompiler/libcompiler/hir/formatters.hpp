@@ -134,7 +134,7 @@ namespace kieli::hir::dtl {
             std::format_to(out, " {} }}", wrap(block.result));
         }
 
-        void operator()(expression::Let_binding const& let) const
+        void operator()(expression::Let const& let) const
         {
             std::format_to(
                 out, "let {}: {} = {}", wrap(let.pattern), wrap(let.type), wrap(let.initializer));
@@ -160,12 +160,12 @@ namespace kieli::hir::dtl {
             std::format_to(out, "{}", reference.name);
         }
 
-        void operator()(expression::Indirect_function_call const& call) const
+        void operator()(expression::Indirect_call const& call) const
         {
             std::format_to(out, "{}({})", wrap(call.invocable), wrap(call.arguments));
         }
 
-        void operator()(expression::Direct_function_call const& call) const
+        void operator()(expression::Direct_call const& call) const
         {
             std::format_to(out, "{}({})", call.function_name, wrap(call.arguments));
         }
@@ -230,12 +230,6 @@ namespace kieli::hir::dtl {
         void operator()(pattern::Name const& name) const
         {
             std::format_to(out, "{} {}", wrap(name.mutability), name.identifier);
-        }
-
-        void operator()(pattern::Alias const& alias) const
-        {
-            std::format_to(
-                out, "{} as {} {}", wrap(alias.pattern), wrap(alias.mutability), alias.identifier);
         }
 
         void operator()(pattern::Guarded const& guarded) const

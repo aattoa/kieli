@@ -30,10 +30,10 @@ namespace {
             format(state, "{}", literal);
         }
 
-        void operator()(cst::pattern::Parenthesized const& parenthesized)
+        void operator()(cst::pattern::Paren const& paren)
         {
             format(state, "(");
-            format(state, parenthesized.pattern.value);
+            format(state, paren.pattern.value);
             format(state, ")");
         }
 
@@ -60,14 +60,6 @@ namespace {
         {
             format_mutability_with_whitespace(state, name.mutability);
             format(state, "{}", name.name);
-        }
-
-        void operator()(cst::pattern::Alias const& alias)
-        {
-            format(state, alias.pattern);
-            format(state, " as ");
-            format_mutability_with_whitespace(state, alias.mutability);
-            format(state, "{}", alias.name);
         }
 
         void operator()(cst::pattern::Guarded const& guarded)
