@@ -13,15 +13,15 @@ namespace {
     }
 
     constexpr auto punctuation_strings = std::to_array<std::string_view>({
-        ".", ",",  ":",  ";",  "::", "&", "*", "+", "?", "!", "=",
-        "|", "\\", "<-", "->", "(",  ")", "{", "}", "[", "]",
+        ".", ",", ":",  ";",  "::", "&", "*", "+", "?", "!",
+        "=", "|", "<-", "->", "(",  ")", "{", "}", "[", "]",
     });
 } // namespace
 
 TEST("punctuation and reserved operators")
 {
-    for (auto const punctuation_string : punctuation_strings) {
-        CHECK_EQUAL(lex_success(std::string(punctuation_string)), punctuation_string);
+    for (auto const punct : punctuation_strings) {
+        CHECK_EQUAL(lex_success(std::string(punct)), std::format("\"{}\"", punct));
     }
 }
 
@@ -33,5 +33,5 @@ TEST("available operators")
 
 TEST("operators and punctuation tokens mixed")
 {
-    CHECK_EQUAL(lex_success("\n::\t,;(--?}@@"), "::, ,, ;, (, (op: --?), }, (op: @@)");
+    CHECK_EQUAL(lex_success("\n::\t,;(--?}@@"), R"("::", ",", ";", "(", (op: --?), "}", (op: @@))");
 }

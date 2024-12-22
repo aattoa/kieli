@@ -260,7 +260,7 @@ namespace kieli::cst {
             Expression_id               true_branch;
             std::optional<False_branch> false_branch;
             Token_id                    if_or_elif_token;
-            utl::Explicit<bool>         is_elif;
+            bool                        is_elif {};
         };
 
         struct Match {

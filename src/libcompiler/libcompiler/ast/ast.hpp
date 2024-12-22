@@ -124,8 +124,8 @@ namespace kieli::ast {
         };
 
         struct Loop {
-            Expression_id              body;
-            utl::Explicit<Loop_source> source;
+            Expression_id body;
+            Loop_source   source {};
         };
 
         struct Continue {};
@@ -167,9 +167,9 @@ namespace kieli::ast {
         };
 
         struct Tuple_field {
-            Expression_id              base_expression;
-            utl::Explicit<std::size_t> field_index;
-            Range                      field_index_range;
+            Expression_id base_expression;
+            std::size_t   field_index {};
+            Range         field_index_range;
         };
 
         struct Array_index {
@@ -185,11 +185,11 @@ namespace kieli::ast {
         };
 
         struct Conditional {
-            Expression_id                     condition;
-            Expression_id                     true_branch;
-            Expression_id                     false_branch;
-            utl::Explicit<Conditional_source> source;
-            utl::Explicit<bool>               has_explicit_false_branch;
+            Expression_id      condition;
+            Expression_id      true_branch;
+            Expression_id      false_branch;
+            Conditional_source source {};
+            bool               has_explicit_false_branch {};
         };
 
         struct Match {

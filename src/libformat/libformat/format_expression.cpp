@@ -269,7 +269,7 @@ namespace {
 
         void operator()(cst::expression::Conditional const& conditional)
         {
-            format(state, "{} ", conditional.is_elif.get() ? "elif" : "if");
+            format(state, "{} ", conditional.is_elif ? "elif" : "if");
             format(state, conditional.condition);
             format(state, " ");
             format_indented_block_body(as_block(conditional.true_branch));
@@ -278,7 +278,7 @@ namespace {
             }
             if (auto const* const else_conditional = std::get_if<cst::expression::Conditional>(
                     &state.arena.expressions[conditional.false_branch.value().body].variant)) {
-                if (else_conditional->is_elif.get()) {
+                if (else_conditional->is_elif) {
                     format(state, "{}", state.newline());
                     format(state, conditional.false_branch.value().body);
                     return;

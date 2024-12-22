@@ -9,12 +9,12 @@ namespace kieli::hir {
 
     enum struct Expression_kind { place, value };
 
-    struct Template_parameter_tag : utl::Explicit<std::size_t> {
-        using Explicit::Explicit;
+    struct Template_parameter_tag : utl::Vector_index<Template_parameter_tag> {
+        using Vector_index::Vector_index;
     };
 
-    struct Local_variable_tag : utl::Explicit<std::size_t> {
-        using Explicit::Explicit;
+    struct Local_variable_tag : utl::Vector_index<Local_variable_tag> {
+        using Vector_index::Vector_index;
     };
 
     struct Error {};

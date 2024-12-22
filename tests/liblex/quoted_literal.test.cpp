@@ -15,7 +15,7 @@ namespace {
     auto lex_failure(std::string&& string) -> std::string
     {
         auto result = liblex::test_lex(std::move(string));
-        REQUIRE_EQUAL(result.formatted_tokens, "error");
+        REQUIRE_EQUAL(result.formatted_tokens, "\"error\"");
         return result.diagnostic_messages;
     }
 } // namespace
@@ -51,7 +51,7 @@ TEST("valid string literals")
 {
     CHECK_EQUAL(
         lex_success("\"test\t\\\",\", 'a', '\\\\'"),
-        R"((str: "test\t\","), ,, (char: 'a'), ,, (char: '\\'))");
+        R"((str: "test\t\","), ",", (char: 'a'), ",", (char: '\\'))");
 }
 
 TEST("unterminating string literal")

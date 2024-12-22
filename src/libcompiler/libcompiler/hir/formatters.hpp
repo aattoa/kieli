@@ -388,22 +388,21 @@ LIBRESOLVE_DEFINE_FORMATTER(kieli::hir::Type)
 
 LIBRESOLVE_DEFINE_FORMATTER(kieli::hir::Mutability_variant)
 {
-    return std::visit(
-        utl::Overload {
-            [&](kieli::hir::Error const&) {
-                return std::format_to(context.out(), "mut?ERROR"); //
-            },
-            [&](kieli::Mutability const concrete) {
-                return std::format_to(context.out(), "{}", concrete);
-            },
-            [&](kieli::hir::mutability::Parameterized const& parameterized) {
-                return std::format_to(context.out(), "mut?{}", parameterized.tag.get());
-            },
-            [&](kieli::hir::mutability::Variable const& variable) {
-                return std::format_to(context.out(), "?mut{}", variable.id.get());
-            },
+    auto const visitor = utl::Overload {
+        [&](kieli::hir::Error const&) {
+            return std::format_to(context.out(), "mut?ERROR"); //
         },
-        value.get());
+        [&](kieli::Mutability const concrete) {
+            return std::format_to(context.out(), "{}", concrete);
+        },
+        [&](kieli::hir::mutability::Parameterized const& parameterized) {
+            return std::format_to(context.out(), "mut?{}", parameterized.tag.get());
+        },
+        [&](kieli::hir::mutability::Variable const& variable) {
+            return std::format_to(context.out(), "?mut{}", variable.id.get());
+        },
+    };
+    return std::visit(visitor, value.get());
 }
 
 LIBRESOLVE_DEFINE_FORMATTER(kieli::hir::Mutability_id)

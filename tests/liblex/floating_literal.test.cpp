@@ -15,7 +15,7 @@ namespace {
     auto lex_failure(std::string&& string) -> std::string
     {
         auto result = liblex::test_lex(std::move(string));
-        REQUIRE_EQUAL(result.formatted_tokens, "error");
+        REQUIRE_EQUAL(result.formatted_tokens, "\"error\"");
         return result.diagnostic_messages;
     }
 } // namespace
@@ -27,16 +27,16 @@ TEST("floating point literal explicit base rejection")
 
 TEST("basic floating point syntax")
 {
-    CHECK_EQUAL(lex_success("3.14"), "(float: 3.14)");
-    CHECK_EQUAL(lex_success(".314"), "., (int: 314)");
+    CHECK_EQUAL(lex_success("3.14"), R"((float: 3.14))");
+    CHECK_EQUAL(lex_success(".314"), R"(".", (int: 314))");
     CHECK(lex_failure("314.").contains("Expected one or more digits after the decimal separator"));
 }
 
 TEST("precending dot")
 {
-    CHECK_EQUAL(lex_success(".3.14"), "., (int: 3), ., (int: 14)");
-    CHECK_EQUAL(lex_success(".3 .14"), "., (int: 3), ., (int: 14)");
-    CHECK_EQUAL(lex_success(". 3.14"), "., (float: 3.14)");
+    CHECK_EQUAL(lex_success(".3.14"), R"(".", (int: 3), ".", (int: 14))");
+    CHECK_EQUAL(lex_success(".3 .14"), R"(".", (int: 3), ".", (int: 14))");
+    CHECK_EQUAL(lex_success(". 3.14"), R"(".", (float: 3.14))");
 }
 
 TEST("floating point literal suffix")
@@ -90,7 +90,7 @@ TEST("floating point literal digit separators")
         auto const result = liblex::test_lex("1'.3");
         CHECK(result.diagnostic_messages.contains(
             "Expected one or more digits after the digit separator"));
-        CHECK_EQUAL(result.formatted_tokens, "error, ., (int: 3)");
+        CHECK_EQUAL(result.formatted_tokens, R"("error", ".", (int: 3))");
     }
     // SECTION("digit separator trailing decimal separator")
     {

@@ -115,24 +115,6 @@ namespace utl {
         }
     }
 
-    // Value wrapper that is used to disable default constructors
-    template <typename T>
-    class Explicit {
-        T m_value;
-    public:
-        template <typename Arg>
-        constexpr Explicit(Arg&& arg) noexcept(std::is_nothrow_constructible_v<T, Arg&&>)
-            requires std::is_constructible_v<T, Arg&&>
-                 and (not std::is_same_v<Explicit, std::remove_cvref_t<Arg>>)
-            : m_value { std::forward<Arg>(arg) }
-        {}
-
-        [[nodiscard]] constexpr auto get(this auto&& self) noexcept -> decltype(auto)
-        {
-            return std::forward_like<decltype(self)>(self.m_value);
-        }
-    };
-
     template <typename T, std::size_t n>
     [[nodiscard]] constexpr auto to_vector(T (&&array)[n]) -> std::vector<T>
     {
@@ -166,32 +148,6 @@ namespace utl {
         }
     }
 } // namespace utl
-
-namespace utl::fmt {
-    template <std::integral Integer>
-    struct Integer_with_ordinal_indicator_closure {
-        Integer integer {};
-    };
-
-    template <std::integral Integer>
-    constexpr auto integer_with_ordinal_indicator(Integer const integer) noexcept
-        -> Integer_with_ordinal_indicator_closure<Integer>
-    {
-        return { integer };
-    }
-
-    template <std::ranges::input_range Range>
-    struct Join_closure {
-        Range*           range {};
-        std::string_view delimiter;
-    };
-
-    template <std::ranges::input_range Range>
-    auto join(Range&& range, std::string_view const delimiter)
-    {
-        return Join_closure { std::addressof(range), delimiter };
-    }
-} // namespace utl::fmt
 
 template <typename Char, std::formattable<Char>... Ts>
 struct std::formatter<std::variant<Ts...>, Char> {
@@ -248,49 +204,5 @@ struct std::formatter<std::unexpected<E>, Char> {
     static auto format(std::unexpected<E> const& unexpected, auto& context)
     {
         return std::format_to(context.out(), "std::unexpected({})", unexpected.error());
-    }
-};
-
-template <typename Char, typename Range>
-struct std::formatter<utl::fmt::Join_closure<Range>, Char> {
-    static constexpr auto parse(auto& context)
-    {
-        return context.begin();
-    }
-
-    static auto format(auto const closure, auto& context)
-    {
-        if (closure.range->empty()) {
-            return context.out();
-        }
-        auto       it  = std::ranges::begin(*closure.range);
-        auto const end = std::ranges::end(*closure.range);
-        auto       out = std::format_to(context.out(), "{}", *it++);
-        while (it != end) {
-            out = std::format_to(out, "{}{}", closure.delimiter, *it++);
-        }
-        return out;
-    }
-};
-
-template <typename Char, std::formattable<Char> T>
-struct std::formatter<utl::fmt::Integer_with_ordinal_indicator_closure<T>, Char> {
-    static constexpr auto parse(auto& context)
-    {
-        return context.begin();
-    }
-
-    static auto format(auto const closure, auto& context)
-    {
-        return std::format_to(
-            context.out(), "{}{}", closure.integer, utl::ordinal_indicator(closure.integer));
-    }
-};
-
-template <std::formattable<char> T>
-struct std::formatter<utl::Explicit<T>> : std::formatter<T> {
-    auto format(utl::Explicit<T> const& e, auto& context) const
-    {
-        return std::formatter<T>::format(e.get(), context);
     }
 };

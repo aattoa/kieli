@@ -18,7 +18,7 @@ auto liblex::test_lex(std::string&& text) -> Test_lex_result
     }
 
     return Test_lex_result {
-        .formatted_tokens    = std::format("{}", utl::fmt::join(tokens, ", ")),
+        .formatted_tokens    = std::format("{:n}", tokens),
         .diagnostic_messages = kieli::format_document_diagnostics(db, document_id),
     };
 }

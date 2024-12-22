@@ -406,7 +406,7 @@ namespace {
         {
             write_line(state, "loop");
             display_node(state, Last::no, "body", loop.body);
-            display_node(state, Last::yes, "source", loop.source.get());
+            display_node(state, Last::yes, "source", loop.source);
         }
 
         void operator()(expression::Break const& break_)
@@ -467,9 +467,8 @@ namespace {
         {
             write_line(state, "tuple index");
             display_node(state, Last::no, "base expression", field.base_expression);
-            write_node(state, Last::yes, [&] {
-                write_line(state, "field index {}", field.field_index.get());
-            });
+            write_node(
+                state, Last::yes, [&] { write_line(state, "field index {}", field.field_index); });
         }
 
         void operator()(expression::Array_index const& index)
@@ -497,7 +496,7 @@ namespace {
             display_node(state, Last::no, "condition", conditional.condition);
             display_node(state, Last::no, "true branch", conditional.true_branch);
             display_node(state, Last::no, "false branch", conditional.false_branch);
-            display_node(state, Last::yes, "source", conditional.source.get());
+            display_node(state, Last::yes, "source", conditional.source);
         }
 
         void operator()(expression::Match const& match)

@@ -15,7 +15,7 @@ namespace {
     auto lex_failure(std::string&& string) -> std::string
     {
         auto result = liblex::test_lex(std::move(string));
-        REQUIRE_EQUAL(result.formatted_tokens, "error");
+        REQUIRE_EQUAL(result.formatted_tokens, "\"error\"");
         return result.diagnostic_messages;
     }
 } // namespace

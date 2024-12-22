@@ -190,11 +190,11 @@ namespace {
             }
 
             return ast::expression::Conditional {
-                .condition    = context.ast.expressions.push(std::move(condition)),
-                .true_branch  = desugar(context, conditional.true_branch),
-                .false_branch = false_branch,
-                .source       = conditional.is_elif.get() ? ast::Conditional_source::elif
-                                                          : ast::Conditional_source::if_,
+                .condition                 = context.ast.expressions.push(std::move(condition)),
+                .true_branch               = desugar(context, conditional.true_branch),
+                .false_branch              = false_branch,
+                .source                    = conditional.is_elif ? ast::Conditional_source::elif
+                                                                 : ast::Conditional_source::if_,
                 .has_explicit_false_branch = conditional.false_branch.has_value(),
             };
         }

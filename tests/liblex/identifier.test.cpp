@@ -23,7 +23,7 @@ namespace {
 TEST("keywords")
 {
     for (auto const keyword : keywords) {
-        CHECK_EQUAL(lex_success(std::string(keyword)), keyword);
+        CHECK_EQUAL(lex_success(std::string(keyword)), std::format("\"{}\"", keyword));
     }
 }
 
@@ -35,8 +35,8 @@ TEST("boolean literals")
 
 TEST("underscores")
 {
-    CHECK_EQUAL(lex_success("_"), "_");
-    CHECK_EQUAL(lex_success("_____"), "_");
+    CHECK_EQUAL(lex_success("_"), R"("_")");
+    CHECK_EQUAL(lex_success("_____"), R"("_")");
 }
 
 TEST("uncapitalized identifiers")

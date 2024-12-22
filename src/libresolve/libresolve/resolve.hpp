@@ -216,10 +216,8 @@ namespace libresolve {
         return result;
     }
 
-    auto child_scope(
-        Context&                                  context,
-        hir::Scope_id const                       parent_id,
-        std::invocable<hir::Scope_id> auto const& callback)
+    template <std::invocable<hir::Scope_id> Callback>
+    auto child_scope(Context& context, hir::Scope_id const parent_id, Callback const& callback)
     {
         auto const document_id = context.info.scopes.index_vector[parent_id].document_id;
         auto       child       = Scope { .document_id = document_id, .parent_id = parent_id };
