@@ -8,7 +8,6 @@ Some subdirectories under `src/` have individual READMEs.
 
 ## Dependencies
 
-- [github.com/aattoa/cppargs](https://github.com/aattoa/cppargs)
 - [github.com/aattoa/cppdiag](https://github.com/aattoa/cppdiag)
 - [github.com/aattoa/cpputil](https://github.com/aattoa/cpputil)
 - [github.com/aattoa/cppunittest](https://github.com/aattoa/cppunittest)
