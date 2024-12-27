@@ -144,7 +144,7 @@ namespace {
         auto operator()(Token_variant&& value, Token_type const type) const noexcept -> Token
         {
             return Token {
-                .variant          = std::move(value),
+                .variant          = value,
                 .type             = type,
                 .preceding_trivia = m_trivia,
                 .range            = kieli::Range { m_old_position, m_state.position },

@@ -39,14 +39,13 @@ namespace {
         auto operator()(ast::Template_type_parameter const& parameter)
             -> hir::Template_parameter_variant
         {
-            Type_bind bind {
-                parameter.name,
-                context.hir.types.push(hir::type::Parameterized { parameter_id }),
-            };
             bind_type(
                 context.info.scopes.index_vector[scope_id],
                 parameter.name.identifier,
-                std::move(bind));
+                Type_bind {
+                    parameter.name,
+                    context.hir.types.push(hir::type::Parameterized { parameter_id }),
+                });
             auto const resolve_concept = [&](ast::Path const& concept_path) {
                 return resolve_concept_reference(
                     context, state, scope_id, environment_id, concept_path);
@@ -67,11 +66,10 @@ namespace {
                 context.hir.mutabilities.push(hir::mutability::Parameterized { parameter_id }),
                 parameter.name.range,
             };
-            Mutability_bind bind { .name = parameter.name, .mutability = std::move(mutability) };
             bind_mutability(
                 context.info.scopes.index_vector[scope_id],
                 parameter.name.identifier,
-                std::move(bind));
+                Mutability_bind { .name = parameter.name, .mutability = mutability });
             return hir::Template_mutability_parameter {
                 .name             = parameter.name,
                 .default_argument = parameter.default_argument.transform(

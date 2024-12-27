@@ -4,192 +4,145 @@
 using namespace libresolve;
 
 namespace {
-    enum struct Unification_goal { equality, subtype };
+    enum struct Goal { equality, subtype };
+    enum struct Result { ok, mismatch, recursive };
 
-    struct Type_unification_arguments {
-        using Report_unification_failure
-            = void(Context& context, hir::Type_variant const& sub, hir::Type_variant const& super);
-        using Report_recursive_solution
-            = void(Context& context, hir::Type_variable_id id, hir::Type_variant const& type);
-        Unification_goal            goal {};
-        Report_unification_failure* report_unification_failure {};
-        Report_recursive_solution*  report_recursive_solution {};
-    };
+    auto result(bool result) -> Result
+    {
+        return result ? Result::ok : Result::mismatch;
+    }
 
-    struct Mutability_unification_arguments {
-        using Report_unification_failure
-            = void(Context& context, hir::Mutability_id sub, hir::Mutability_id super);
-        Unification_goal            goal {};
-        Report_unification_failure* report_unification_failure {};
-    };
+    auto bind(Result result, std::invocable auto callback) -> Result
+    {
+        return result != Result::ok ? result : std::invoke(std::move(callback));
+    }
 
-    struct Mutability_unification_visitor {
-        Context&                                context;
-        Inference_state&                        state;
-        Mutability_unification_arguments const& arguments;
-        hir::Mutability const&                  current_sub;
-        hir::Mutability const&                  current_super;
+    struct Mutability_visitor {
+        Context&               context;
+        Inference_state&       state;
+        hir::Mutability const& current_sub;
+        hir::Mutability const& current_super;
+        Goal                   goal {};
 
-        [[nodiscard]] auto allow_coercion() const noexcept -> bool
-        {
-            return arguments.goal == Unification_goal::subtype;
-        }
-
-        [[nodiscard]] auto solution(
-            hir::Mutability_variable_id const variable_id,
-            hir::Mutability const             mutability) const -> bool
+        auto solution(hir::Mutability_variable_id var_id, hir::Mutability mut) const -> Result
         {
             set_solution(
                 context,
                 state,
-                state.mutability_variables[variable_id],
-                context.hir.mutabilities[mutability.id]);
-            return true;
+                state.mutability_variables[var_id],
+                context.hir.mutabilities[mut.id]);
+            return Result::ok;
         }
 
-        [[nodiscard]] auto unify(hir::Mutability const sub, hir::Mutability const super) const
-            -> bool
+        auto unify(hir::Mutability const sub, hir::Mutability const super) const -> Result
         {
-            Mutability_unification_arguments const recurse_arguments {
-                arguments.goal,
-                arguments.report_unification_failure,
-            };
-            bool const result = std::visit(
-                Mutability_unification_visitor { context, state, recurse_arguments, sub, super },
-                context.hir.mutabilities[sub.id],
-                context.hir.mutabilities[super.id]);
-            if (not result and arguments.report_unification_failure) {
-                arguments.report_unification_failure(context, sub.id, super.id);
-            }
-            return result;
+            Mutability_visitor visitor { context, state, sub, super, goal };
+            return std::visit(
+                visitor, context.hir.mutabilities[sub.id], context.hir.mutabilities[super.id]);
         }
 
-        auto operator()(kieli::Mutability const sub, kieli::Mutability const super) const -> bool
+        auto operator()(kieli::Mutability const sub, kieli::Mutability const super) const -> Result
         {
-            return (sub == super) or (sub == kieli::Mutability::mut and allow_coercion());
+            return result(
+                (sub == super) or (sub == kieli::Mutability::mut and goal == Goal::subtype));
         }
 
         auto operator()(hir::mutability::Variable const sub, hir::mutability::Variable const super)
-            const -> bool
+            const -> Result
         {
             if (sub.id != super.id) {
                 state.mutability_variable_disjoint_set.merge(sub.id.get(), super.id.get());
             }
-            return true;
+            return Result::ok;
         }
 
-        auto operator()(hir::mutability::Variable const variable, auto const&) const -> bool
+        auto operator()(hir::mutability::Variable const variable, auto const&) const -> Result
         {
             return solution(variable.id, current_super);
         }
 
-        auto operator()(auto const&, hir::mutability::Variable const variable) const -> bool
+        auto operator()(auto const&, hir::mutability::Variable const variable) const -> Result
         {
             return solution(variable.id, current_sub);
         }
 
         auto operator()(
             hir::mutability::Parameterized const sub,
-            hir::mutability::Parameterized const super) const -> bool
+            hir::mutability::Parameterized const super) const -> Result
         {
-            return sub.tag.get() == super.tag.get();
+            return result(sub.tag.get() == super.tag.get());
         }
 
-        auto operator()(auto const&, auto const&) const -> bool
+        auto operator()(auto const&, auto const&) const -> Result
         {
-            return false;
+            return Result::mismatch;
         }
     };
 
-    struct Type_unification_visitor {
-        Context&                          context;
-        Inference_state&                  state;
-        Type_unification_arguments const& arguments;
-        hir::Type_variant const&          current_sub;
-        hir::Type_variant const&          current_super;
+    struct Type_visitor {
+        Context&                 context;
+        Inference_state&         state;
+        hir::Type_variant const& current_sub;
+        hir::Type_variant const& current_super;
+        Goal                     goal {};
 
-        [[nodiscard]] auto allow_coercion() const noexcept -> bool
-        {
-            return arguments.goal == Unification_goal::subtype;
-        }
-
-        [[nodiscard]] auto solution(hir::Type_variable_id const tag, hir::Type_variant type) const
-            -> bool
+        auto solution(hir::Type_variable_id const tag, hir::Type_variant type) const -> Result
         {
             if (occurs_check(context.hir, tag, type)) {
-                if (arguments.report_recursive_solution) {
-                    arguments.report_recursive_solution(context, tag, type);
-                }
-                return false;
+                return Result::recursive;
             }
             flatten_type(context, state, type);
             set_solution(context, state, state.type_variables[tag], std::move(type));
-            return true;
+            return Result::ok;
         }
 
-        [[nodiscard]] auto unify(hir::Type_variant const& sub, hir::Type_variant const& super) const
-            -> bool
+        auto unify(hir::Type_variant const& sub, hir::Type_variant const& super) const -> Result
         {
-            Type_unification_arguments const recurse_arguments {
-                .goal                       = arguments.goal,
-                .report_unification_failure = arguments.report_unification_failure,
-                .report_recursive_solution  = arguments.report_recursive_solution,
-            };
-            Type_unification_visitor visitor { context, state, recurse_arguments, sub, super };
-            bool const               result = std::visit(visitor, sub, super);
-            if (not result and arguments.report_unification_failure) {
-                arguments.report_unification_failure(context, sub, super);
-            }
-            return result;
+            Type_visitor visitor { context, state, sub, super, goal };
+            return std::visit(visitor, sub, super);
         }
 
-        [[nodiscard]] auto unify(hir::Type const sub, hir::Type const super) const -> bool
+        auto unify(hir::Type const sub, hir::Type const super) const -> Result
         {
             return unify(context.hir.types[sub.id], context.hir.types[super.id]);
         }
 
-        [[nodiscard]] auto unify() const
+        auto unify(hir::Mutability const sub, hir::Mutability const super) const -> Result
         {
-            return utl::Overload {
-                [&](hir::Type const sub, hir::Type const super) -> bool {
-                    return unify(sub, super);
-                },
-                [&](auto const& pair) -> bool {
-                    return unify(std::get<0>(pair), std::get<1>(pair));
-                },
-            };
-        }
-
-        [[nodiscard]] auto unify(hir::Mutability const sub, hir::Mutability const super) const
-            -> bool
-        {
-            Mutability_unification_arguments const mutability_arguments {
-                .goal                       = arguments.goal,
-                .report_unification_failure = nullptr,
-            };
-            Mutability_unification_visitor visitor {
-                context, state, mutability_arguments, sub, super
-            };
+            Mutability_visitor visitor { context, state, sub, super, goal };
             return visitor.unify(sub, super);
         }
 
+        auto unify(std::span<hir::Type const> sub, std::span<hir::Type const> super) const -> Result
+        {
+            if (sub.size() != super.size()) {
+                return Result::mismatch;
+            }
+            for (auto const& [sub, super] : std::views::zip(sub, super)) {
+                if (auto result = unify(sub, super); result != Result::ok) {
+                    return result;
+                }
+            }
+            return Result::ok;
+        }
+
         auto operator()(hir::type::Variable const sub, hir::type::Variable const super) const
-            -> bool
+            -> Result
         {
             // TODO: handle integrals
             if (sub.id != super.id) {
                 state.type_variable_disjoint_set.merge(sub.id.get(), super.id.get());
             }
-            return true;
+            return Result::ok;
         }
 
-        auto operator()(hir::type::Variable const sub, auto const&) const -> bool
+        auto operator()(hir::type::Variable const sub, auto const&) const -> Result
         {
             // TODO: handle integrals
             return solution(sub.id, current_super);
         }
 
-        auto operator()(auto const&, hir::type::Variable const super) const -> bool
+        auto operator()(auto const&, hir::type::Variable const super) const -> Result
         {
             // TODO: handle integrals
             return solution(super.id, current_sub);
@@ -200,106 +153,97 @@ namespace {
             hir::type::Character,
             hir::type::Boolean,
             hir::type::String> T>
-        auto operator()(T, T) const -> bool
+        auto operator()(T, T) const -> Result
         {
-            return true;
+            return Result::ok;
         }
 
-        auto operator()(hir::type::Integer const sub, hir::type::Integer const super) const -> bool
+        auto operator()(hir::type::Integer const sub, hir::type::Integer const super) const
+            -> Result
         {
-            return sub == super;
+            return result(sub == super);
         }
 
         auto operator()(hir::type::Parameterized const& sub, hir::type::Parameterized const& super)
-            const -> bool
+            const -> Result
         {
-            return sub.tag.get() == super.tag.get();
+            return result(sub.tag.get() == super.tag.get());
         }
 
-        auto operator()(hir::type::Tuple const& sub, hir::type::Tuple const& super) const -> bool
+        auto operator()(hir::type::Tuple const& sub, hir::type::Tuple const& super) const -> Result
         {
-            return sub.types.size() == super.types.size()
-               and std::ranges::all_of(std::views::zip(sub.types, super.types), unify());
+            return unify(sub.types, super.types);
         }
 
-        auto operator()(hir::type::Array const& sub, hir::type::Array const& super) const -> bool
+        auto operator()(hir::type::Array const& sub, hir::type::Array const& super) const -> Result
         {
-            return unify(sub.element_type, super.element_type)
-               and unify(
-                       hir::expression_type(context.hir.expressions[sub.length]),
-                       hir::expression_type(context.hir.expressions[super.length]));
+            return bind(unify(sub.element_type, super.element_type), [&] {
+                return unify(
+                    hir::expression_type(context.hir.expressions[sub.length]),
+                    hir::expression_type(context.hir.expressions[super.length]));
+            });
         }
 
-        auto operator()(hir::type::Slice const& sub, hir::type::Slice const& super) const -> bool
+        auto operator()(hir::type::Slice const& sub, hir::type::Slice const& super) const -> Result
         {
             return unify(sub.element_type, super.element_type);
         }
 
         auto operator()(hir::type::Reference const& sub, hir::type::Reference const& super) const
-            -> bool
+            -> Result
         {
-            return unify(sub.referenced_type, super.referenced_type)
-               and unify(sub.mutability, super.mutability);
+            return bind(unify(sub.referenced_type, super.referenced_type), [&] {
+                return unify(sub.mutability, super.mutability);
+            });
         }
 
         auto operator()(hir::type::Pointer const& sub, hir::type::Pointer const& super) const
-            -> bool
+            -> Result
         {
-            return unify(sub.pointee_type, super.pointee_type)
-               and unify(sub.mutability, super.mutability);
+            return bind(unify(sub.pointee_type, super.pointee_type), [&] {
+                return unify(sub.mutability, super.mutability);
+            });
         }
 
         auto operator()(hir::type::Function const& sub, hir::type::Function const& super) const
-            -> bool
+            -> Result
         {
-            return sub.parameter_types.size() == super.parameter_types.size()
-               and unify(sub.return_type, super.return_type)
-               and std::ranges::all_of(
-                       std::views::zip(sub.parameter_types, super.parameter_types), unify());
+            return bind(unify(sub.return_type, super.return_type), [&] {
+                return unify(sub.parameter_types, super.parameter_types);
+            });
         }
 
         auto operator()(
-            hir::type::Enumeration const& sub, hir::type::Enumeration const& super) const -> bool
+            hir::type::Enumeration const& sub, hir::type::Enumeration const& super) const -> Result
         {
             // TODO: visit template arguments
-            return sub.id == super.id;
+            return result(sub.id == super.id);
         }
 
-        auto operator()(hir::Error, hir::Error) const -> bool
+        auto operator()(hir::Error, hir::Error) const -> Result
         {
-            return true;
-        }
-
-        template <typename T>
-            requires(not std::is_same_v<T, hir::type::Variable>)
-        auto operator()(hir::Error, T const&) const -> bool
-        {
-            return true;
+            return Result::ok;
         }
 
         template <typename T>
             requires(not std::is_same_v<T, hir::type::Variable>)
-        auto operator()(T const&, hir::Error) const -> bool
+        auto operator()(hir::Error, T const&) const -> Result
         {
-            return true;
+            return Result::ok;
         }
 
-        auto operator()(auto const&, auto const&) const -> bool
+        template <typename T>
+            requires(not std::is_same_v<T, hir::type::Variable>)
+        auto operator()(T const&, hir::Error) const -> Result
         {
-            return false;
+            return Result::ok;
+        }
+
+        auto operator()(auto const&, auto const&) const -> Result
+        {
+            return Result::mismatch;
         }
     };
-
-    auto unify(
-        Context&                          context,
-        Inference_state&                  state,
-        Type_unification_arguments const& arguments,
-        hir::Type_variant const&          sub,
-        hir::Type_variant const&          super) -> bool
-    {
-        Type_unification_visitor const visitor { context, state, arguments, sub, super };
-        return visitor.unify(sub, super);
-    }
 } // namespace
 
 void libresolve::require_subtype_relationship(
@@ -309,14 +253,17 @@ void libresolve::require_subtype_relationship(
     hir::Type_variant const& sub,
     hir::Type_variant const& super)
 {
-    Type_unification_arguments const arguments {
-        .goal = Unification_goal::subtype,
-    };
-    if (not unify(context, state, arguments, sub, super)) {
-        auto message = std::format(
-            "Could not unify {} <~ {}",
-            hir::to_string(context.hir, sub),
-            hir::to_string(context.hir, super));
+    auto const visitor = Type_visitor { context, state, sub, super, Goal::subtype };
+    auto const result  = visitor.unify(sub, super);
+
+    if (result != Result::ok) {
+        auto const left  = hir::to_string(context.hir, sub);
+        auto const right = hir::to_string(context.hir, super);
+
+        auto const description
+            = result == Result::recursive ? "Recursive type variable solution" : "Could not unify";
+
+        auto message = std::format("{} {} ~> {}", description, left, right);
         kieli::add_error(context.db, state.document_id, range, std::move(message));
     }
 }

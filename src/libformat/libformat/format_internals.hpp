@@ -7,8 +7,6 @@
 namespace libformat {
     namespace cst = kieli::cst;
 
-    struct State;
-
     struct Newline {
         std::size_t indentation {};
         std::size_t lines {};
@@ -16,23 +14,24 @@ namespace libformat {
         bool        use_spaces {};
     };
 
-    struct Indentation {
-        State& state;
-        ~Indentation();
-    };
-
     struct State {
         cst::Arena const&            arena;
         kieli::Format_options const& options;
         std::string&                 output;
         std::size_t                  indentation {};
-
-        [[nodiscard]] auto newline(std::size_t lines = 1) const noexcept -> Newline;
-        [[nodiscard]] auto indent() noexcept -> Indentation;
     };
 
+    auto newline(State const& state, std::size_t lines = 1) noexcept -> Newline;
+
+    void indent(State& state, std::invocable auto block)
+    {
+        ++state.indentation;
+        std::invoke(std::move(block));
+        --state.indentation;
+    }
+
     template <typename T>
-    concept formattable = requires(State& state, T const& object) {
+    concept formattable = requires(State state, T const object) {
         { format(state, object) } -> std::same_as<void>;
     };
 

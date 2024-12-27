@@ -43,17 +43,10 @@ namespace {
 
     void debug_resolve(kieli::Database& db, kieli::Document_id id)
     {
-        auto hir       = kieli::hir::Arena {};
-        auto constants = libresolve::make_constants(hir);
-
-        auto context = libresolve::Context {
-            .db        = db,
-            .hir       = std::move(hir),
-            .constants = std::move(constants),
-        };
-        auto env_id = libresolve::collect_document(context, id);
-        libresolve::resolve_environment(context, env_id);
-        libresolve::debug_display_environment(context, env_id);
+        auto ctx = libresolve::context(db);
+        auto env = libresolve::collect_document(ctx, id);
+        libresolve::resolve_environment(ctx, env);
+        libresolve::debug_display_environment(ctx, env);
     }
 
     auto choose_debug_repl_callback(std::string_view const name)
@@ -127,7 +120,7 @@ namespace {
         }
     }
 
-    template <class... Args>
+    template <typename... Args>
     auto error(std::format_string<Args...> fmt, Args&&... args) -> int
     {
         std::println(stderr, fmt, std::forward<Args>(args)...);

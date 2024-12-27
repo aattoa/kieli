@@ -8,19 +8,19 @@ namespace {
         hir::Arena const&     arena;
         hir::Type_variable_id id;
 
-        [[nodiscard]] auto recurse(hir::Type_id const type_id) const -> bool
+        auto recurse(hir::Type_id type_id) const -> bool
         {
             return occurs_check(arena, id, arena.types[type_id]);
         }
 
-        [[nodiscard]] auto recurse(hir::Type const type) const -> bool
+        auto recurse(hir::Type type) const -> bool
         {
             return recurse(type.id);
         }
 
-        [[nodiscard]] auto recurse() const
+        auto recurse() const
         {
-            return [*this](auto const type) -> bool { return recurse(type); };
+            return [*this](hir::Type type) -> bool { return recurse(type); };
         }
 
         auto operator()(hir::type::Variable const& variable) const -> bool
@@ -80,7 +80,7 @@ namespace {
 } // namespace
 
 auto libresolve::occurs_check(
-    hir::Arena const& arena, hir::Type_variable_id const id, hir::Type_variant const& type) -> bool
+    hir::Arena const& arena, hir::Type_variable_id id, hir::Type_variant const& type) -> bool
 {
     return std::visit(Occurs_check_visitor { arena, id }, type);
 }

@@ -4,13 +4,13 @@
 using namespace libresolve;
 
 namespace {
-    template <typename Binding>
-    void do_bind(
-        Identifier_map<Binding>& bindings, kieli::Identifier const identifier, Binding binding)
+    template <typename Bind>
+    void do_bind(Identifier_map<Bind>& bindings, kieli::Identifier const identifier, Bind bind)
     {
         // Easy way to implement variable shadowing
         auto const it = std::ranges::find(bindings, identifier, utl::first);
-        bindings.emplace(it, identifier, std::move(binding));
+        bind.unused   = not identifier.view().starts_with('_');
+        bindings.emplace(it, identifier, std::move(bind));
     }
 
     template <typename T, Identifier_map<T> Scope::*bindings>
@@ -33,6 +33,7 @@ namespace {
 
     auto warn_unused(kieli::Name const& name) -> kieli::Diagnostic
     {
+        name.identifier.view().starts_with('_');
         return kieli::Diagnostic {
             .message  = std::format("Unused name: {}. If this is intentional, use _{}", name, name),
             .range    = name.range,

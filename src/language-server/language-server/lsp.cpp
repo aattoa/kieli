@@ -18,17 +18,12 @@ namespace {
     template <typename T>
     using Result = std::expected<T, std::string>;
 
-    void placeholder_analyze_document(Database& db, kieli::Document_id const id)
+    void placeholder_analyze_document(Database& db, kieli::Document_id id)
     {
         db.documents.at(id).diagnostics.clear();
-        auto hir       = kieli::hir::Arena {};
-        auto constants = libresolve::make_constants(hir);
-        auto context   = libresolve::Context {
-              .db        = db,
-              .hir       = std::move(hir),
-              .constants = std::move(constants),
-        };
-        libresolve::resolve_environment(context, libresolve::collect_document(context, id));
+        auto ctx = libresolve::context(db);
+        auto env = libresolve::collect_document(ctx, id);
+        libresolve::resolve_environment(ctx, env);
     }
 
     auto maybe_markdown_content(std::optional<std::string> markdown) -> Json

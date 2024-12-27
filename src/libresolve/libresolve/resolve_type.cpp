@@ -44,8 +44,14 @@ namespace {
             return unsupported(); // TODO
         }
 
-        auto operator()(ast::Path const&) -> hir::Type
+        auto operator()(ast::Path const& path) -> hir::Type
         {
+            if (path.is_unqualified()) {
+                if (auto* bind = find_type(context, scope_id, path.head().name.identifier)) {
+                    bind->unused = false;
+                    return { bind->type, this_type.range };
+                }
+            }
             return unsupported(); // TODO
         }
 

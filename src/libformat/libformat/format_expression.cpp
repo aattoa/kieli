@@ -10,19 +10,18 @@ namespace {
         void format_indented_block_body(cst::expression::Block const& block)
         {
             format(state, "{{");
-            {
-                auto const _ = state.indent();
+            indent(state, [&] {
                 for (auto const& side_effect : block.side_effects) {
-                    format(state, "{}", state.newline());
+                    format(state, "{}", newline(state));
                     format(state, side_effect.expression);
                     format(state, ";");
                 }
                 if (block.result_expression.has_value()) {
-                    format(state, "{}", state.newline());
+                    format(state, "{}", newline(state));
                     format(state, block.result_expression.value());
                 }
-            }
-            format(state, "{}}}", state.newline());
+            });
+            format(state, "{}}}", newline(state));
         }
 
         void format_regular_block(cst::expression::Block const& block)
@@ -142,10 +141,9 @@ namespace {
             format(state, "match ");
             format(state, match.matched_expression);
             format(state, " {{");
-            {
-                auto const _ = state.indent();
+            indent(state, [&] {
                 for (auto const& match_case : match.cases.value) {
-                    format(state, "{}", state.newline());
+                    format(state, "{}", newline(state));
                     format(state, match_case.pattern);
                     format(state, " -> ");
                     format(state, match_case.handler);
@@ -153,8 +151,8 @@ namespace {
                         format(state, ";");
                     }
                 }
-            }
-            format(state, "{}}}", state.newline());
+            });
+            format(state, "{}}}", newline(state));
         }
 
         void operator()(cst::expression::Sizeof const& sizeof_)
@@ -279,12 +277,12 @@ namespace {
             if (auto const* const else_conditional = std::get_if<cst::expression::Conditional>(
                     &state.arena.expressions[conditional.false_branch.value().body].variant)) {
                 if (else_conditional->is_elif) {
-                    format(state, "{}", state.newline());
+                    format(state, "{}", newline(state));
                     format(state, conditional.false_branch.value().body);
                     return;
                 }
             }
-            format(state, "{}else ", state.newline());
+            format(state, "{}else ", newline(state));
             format_indented_block_body(as_block(conditional.false_branch.value().body));
         }
 

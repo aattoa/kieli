@@ -11,8 +11,13 @@ namespace kieli {
         std::unique_ptr<Module> module;
 
         explicit CST(Module&&);
+
         CST(CST&&) noexcept;
         auto operator=(CST&&) noexcept -> CST&;
+
+        CST(CST const&)            = delete;
+        auto operator=(CST const&) = delete;
+
         ~CST();
 
         [[nodiscard]] auto get() const -> Module const&;

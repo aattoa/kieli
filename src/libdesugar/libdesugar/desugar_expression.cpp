@@ -292,16 +292,16 @@ namespace {
                     context.document_id,
                     constant_loop_condition_diagnostic(condition.range, boolean->value));
             }
-            ast::expression::Conditional conditional {
-                .condition                 = context.ast.expressions.push(std::move(condition)),
-                .true_branch               = desugar(context, loop.body),
-                .false_branch              = break_expression(context, this_expression.range),
-                .source                    = ast::Conditional_source::while_loop_body,
-                .has_explicit_false_branch = true,
-            };
             return ast::expression::Loop {
                 .body = context.ast.expressions.push(
-                    std::move(conditional), context.cst.expressions[loop.body].range),
+                    ast::expression::Conditional {
+                        .condition    = context.ast.expressions.push(std::move(condition)),
+                        .true_branch  = desugar(context, loop.body),
+                        .false_branch = break_expression(context, this_expression.range),
+                        .source       = ast::Conditional_source::while_loop_body,
+                        .has_explicit_false_branch = true,
+                    },
+                    context.cst.expressions[loop.body].range),
                 .source = ast::Loop_source::while_loop,
             };
         }

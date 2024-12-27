@@ -43,7 +43,7 @@ namespace kieli::lsp {
     // Thrown when the JSON sent by the client is syntactically correct but invalid in some way.
     struct Bad_client_json : std::exception {
         std::string message;
-        Bad_client_json(std::string message) noexcept;
+        explicit Bad_client_json(std::string message) noexcept;
         [[nodiscard]] auto what() const noexcept -> char const* override;
     };
 

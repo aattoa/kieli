@@ -108,7 +108,7 @@ namespace libresolve {
         Identifier_map<Upper_info>         upper_map;
         Identifier_map<Lower_info>         lower_map;
         std::vector<Definition_variant>    in_order;
-        std::optional<hir::Environment_id> parent;
+        std::optional<hir::Environment_id> parent_id;
         kieli::Document_id                 document_id;
     };
 

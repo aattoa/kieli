@@ -14,7 +14,7 @@ namespace {
         }
         format(state, definitions.front());
         for (auto it = definitions.begin() + 1; it != definitions.end(); ++it) {
-            format(state, "{}", state.newline(state.options.empty_lines_between_definitions + 1));
+            format(state, "{}", newline(state, state.options.empty_lines_between_definitions + 1));
             format(state, *it);
         }
     }
@@ -124,17 +124,18 @@ namespace {
             format(state, enumeration.template_parameters);
             format(state, " = ");
 
-            auto const& constructors = enumeration.constructors.elements;
+            auto const& ctors = enumeration.constructors.elements;
+            cpputil::always_assert(not ctors.empty());
 
-            cpputil::always_assert(not constructors.empty());
-            format(state, "{}", constructors.front().name);
-            format_constructor(state, constructors.front().body);
+            format(state, "{}", ctors.front().name);
+            format_constructor(state, ctors.front().body);
 
-            auto const _ = state.indent();
-            for (auto it = constructors.begin() + 1; it != constructors.end(); ++it) {
-                format(state, "{}| {}", state.newline(), it->name);
-                format_constructor(state, it->body);
-            }
+            indent(state, [&] {
+                for (auto it = ctors.begin() + 1; it != ctors.end(); ++it) {
+                    format(state, "{}| {}", newline(state), it->name);
+                    format_constructor(state, it->body);
+                }
+            });
         }
 
         void operator()(cst::definition::Concept const& concept_)
@@ -142,8 +143,7 @@ namespace {
             format(state, "concept {}", concept_.name);
             format(state, concept_.template_parameters);
             format(state, " {{");
-            {
-                auto const _ = state.indent();
+            indent(state, [&] {
                 for (auto const& requirement : concept_.requirements) {
                     auto const visitor = utl::Overload {
                         [&](cst::Function_signature const& signature) {
@@ -153,11 +153,11 @@ namespace {
                             format_type_signature(state, signature);
                         },
                     };
-                    format(state, "{}", state.newline());
+                    format(state, "{}", newline(state));
                     std::visit(visitor, requirement);
                 }
-            }
-            format(state, "{}}}", state.newline());
+            });
+            format(state, "{}}}", newline(state));
         }
 
         void operator()(cst::definition::Impl const& implementation)
@@ -167,12 +167,11 @@ namespace {
             format(state, " ");
             format(state, implementation.self_type);
             format(state, " {{");
-            {
-                auto const _ = state.indent();
-                format(state, "{}", state.newline());
+            indent(state, [&] {
+                format(state, "{}", newline(state));
                 format_definitions(state, implementation.definitions.value);
-            }
-            format(state, "{}}}", state.newline());
+            });
+            format(state, "{}}}", newline(state));
         }
 
         void operator()(cst::definition::Alias const& alias)
@@ -188,12 +187,11 @@ namespace {
             format(state, "module {}", module.name);
             format(state, module.template_parameters);
             format(state, " {{");
-            {
-                auto const _ = state.indent();
-                format(state, "{}", state.newline());
+            indent(state, [&] {
+                format(state, "{}", newline(state));
                 format_definitions(state, module.definitions.value);
-            }
-            format(state, "{}}}", state.newline());
+            });
+            format(state, "{}}}", newline(state));
         }
     };
 } // namespace

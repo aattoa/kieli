@@ -76,6 +76,8 @@ namespace libresolve {
         Document_info_map documents;
     };
 
+    auto context(kieli::Database& db) -> Context;
+
     auto make_constants(hir::Arena& arena) -> Constants;
 
     auto fresh_template_parameter_tag(Tags& tags) -> hir::Template_parameter_tag;

@@ -55,6 +55,10 @@ namespace kieli::ast {
     struct Path {
         Path_root                 root;
         std::vector<Path_segment> segments;
+
+        [[nodiscard]] auto head() const -> Path_segment const&;
+        [[nodiscard]] auto is_upper() const -> bool;
+        [[nodiscard]] auto is_unqualified() const noexcept -> bool;
     };
 
     struct Template_type_parameter {

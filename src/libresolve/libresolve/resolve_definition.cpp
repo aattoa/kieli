@@ -46,12 +46,13 @@ namespace {
 
     auto resolve_signature(
         Context&                       context,
-        hir::Scope_id const            scope_id,
         hir::Environment_id const      environment_id,
         kieli::Document_id const       document_id,
         ast::Function_signature const& signature) -> hir::Function_signature
     {
         Inference_state state { .document_id = document_id };
+
+        auto const scope_id = context.info.scopes.push(Scope { .document_id = document_id });
 
         auto template_parameters = resolve_template_parameters(
             context, state, scope_id, environment_id, signature.template_parameters);
@@ -60,12 +61,9 @@ namespace {
             return resolve_function_parameter(context, state, scope_id, environment_id, parameter);
         };
 
-        auto parameters = signature.function_parameters
-                        | std::views::transform(resolve_parameter) //
+        auto parameters = std::views::transform(signature.function_parameters, resolve_parameter)
                         | std::ranges::to<std::vector>();
-
-        auto parameter_types = parameters //
-                             | std::views::transform(&hir::Function_parameter::type)
+        auto parameter_types = std::views::transform(parameters, &hir::Function_parameter::type)
                              | std::ranges::to<std::vector>();
 
         hir::Type const return_type
@@ -85,7 +83,7 @@ namespace {
                 signature.name.range,
             },
             .name     = signature.name,
-            .scope_id = context.info.scopes.push(Scope { .document_id = document_id }),
+            .scope_id = scope_id,
         };
     }
 } // namespace
@@ -112,11 +110,8 @@ auto libresolve::resolve_function_signature(Context& context, Function_info& inf
     -> hir::Function_signature&
 {
     if (not info.signature.has_value()) {
-        scope(context, Scope { .document_id = info.document_id }, [&](hir::Scope_id scope_id) {
-            info.signature = resolve_signature(
-                context, scope_id, info.environment_id, info.document_id, info.ast.signature);
-            return 0; // dummy return
-        });
+        info.signature
+            = resolve_signature(context, info.environment_id, info.document_id, info.ast.signature);
     }
     return info.signature.value();
 }

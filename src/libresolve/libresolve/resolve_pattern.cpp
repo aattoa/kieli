@@ -71,16 +71,15 @@ namespace {
                 = fresh_general_type_variable(state, context.hir, pattern.name.range);
             hir::Local_variable_tag const tag = fresh_local_variable_tag(context.tags);
 
-            Variable_bind bind {
-                .name       = pattern.name,
-                .type       = type.id,
-                .mutability = mutability,
-                .tag        = tag,
-            };
             bind_variable(
                 context.info.scopes.index_vector[scope_id],
                 pattern.name.identifier,
-                std::move(bind));
+                Variable_bind {
+                    .name       = pattern.name,
+                    .type       = type.id,
+                    .mutability = mutability,
+                    .tag        = tag,
+                });
 
             return {
                 hir::pattern::Name {

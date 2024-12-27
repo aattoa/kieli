@@ -79,10 +79,10 @@ namespace utl {
     }
 
     template <std::size_t length>
-    struct [[nodiscard]] Metastring {
+    struct Metastring {
         std::array<char, length> array;
 
-        consteval Metastring(char const (&string)[length])
+        consteval Metastring(char const (&string)[length]) // NOLINT(*explicit-conversions)
         {
             std::copy_n(static_cast<char const*>(string), length, array.data());
         }
@@ -107,6 +107,16 @@ namespace utl {
         auto& [_, second] = pair;
         return std::forward_like<decltype(pair)>(second);
     };
+
+    // clang-format off
+    template <typename T>
+    static constexpr auto make = []<typename... Args>(Args&&... args)
+        noexcept(std::is_nothrow_constructible_v<T, Args...>) -> T
+        requires std::is_constructible_v<T, Args...>
+    {
+        return T(std::forward<Args>(args)...);
+    };
+    // clang-format on
 
     void times(std::size_t const count, auto&& callback)
     {

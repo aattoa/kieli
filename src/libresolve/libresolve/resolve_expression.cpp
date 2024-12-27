@@ -89,9 +89,26 @@ namespace {
             };
         }
 
-        auto operator()(ast::Path const&) -> hir::Expression
+        auto operator()(ast::Path const& path) -> hir::Expression
         {
-            return error(this_expression.range, "Path expressions are not supported yet");
+            if (path.is_unqualified()) {
+                if (auto* bind = find_variable(context, scope_id, path.head().name.identifier)) {
+                    bind->unused = false;
+                    return {
+                        hir::expression::Variable_reference {
+                            .name = bind->name,
+                            .tag  = bind->tag,
+                        },
+                        bind->type,
+                        hir::Expression_kind::place,
+                        this_expression.range,
+                    };
+                }
+                return error(
+                    this_expression.range,
+                    std::format("Undeclared identifier: {}", path.head().name));
+            }
+            return unsupported(); // TODO
         }
 
         auto operator()(ast::expression::Array const& array) -> hir::Expression
@@ -174,10 +191,14 @@ namespace {
                                   | std::ranges::to<std::vector>();
 
                 hir::Expression result = resolve_expression(
-                    context, state, scope_id, environment_id, ast().expressions[block.result]);
-
+                    context,
+                    state,
+                    block_scope_id,
+                    environment_id,
+                    ast().expressions[block.result]);
                 auto const result_type = result.type;
 
+                report_unused(context.db, context.info.scopes.index_vector[block_scope_id]);
                 return hir::Expression {
                     hir::expression::Block {
                         .side_effects = std::move(side_effects),
@@ -295,12 +316,14 @@ namespace {
 
         auto operator()(ast::expression::Let const& let) -> hir::Expression
         {
-            ast::Arena&  ast     = this->ast();
-            hir::Pattern pattern = resolve_pattern(
-                context, state, scope_id, environment_id, ast.patterns[let.pattern]);
+            ast::Arena& ast = this->ast();
+
+            hir::Expression initializer = recurse(ast.expressions[let.initializer]);
+
             hir::Type type
                 = resolve_type(context, state, scope_id, environment_id, ast.types[let.type]);
-            hir::Expression initializer = recurse(ast.expressions[let.initializer]);
+            hir::Pattern pattern = resolve_pattern(
+                context, state, scope_id, environment_id, ast.patterns[let.pattern]);
 
             require_subtype_relationship(
                 context,

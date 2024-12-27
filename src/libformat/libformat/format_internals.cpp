@@ -1,25 +1,14 @@
 #include <libutl/utilities.hpp>
 #include <libformat/format_internals.hpp>
 
-auto libformat::State::newline(std::size_t const lines) const noexcept -> Newline
+auto libformat::newline(State const& state, std::size_t const lines) noexcept -> Newline
 {
     return {
-        .indentation = indentation,
+        .indentation = state.indentation,
         .lines       = lines,
-        .tab_size    = options.tab_size,
-        .use_spaces  = options.use_spaces,
+        .tab_size    = state.options.tab_size,
+        .use_spaces  = state.options.use_spaces,
     };
-}
-
-auto libformat::State::indent() noexcept -> Indentation
-{
-    ++indentation;
-    return { .state = *this };
-}
-
-libformat::Indentation::~Indentation()
-{
-    --state.indentation;
 }
 
 void libformat::format(State& state, cst::Expression_id const id)

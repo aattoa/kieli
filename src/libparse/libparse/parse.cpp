@@ -227,9 +227,7 @@ auto libparse::parse_template_argument(Context& context) -> std::optional<cst::T
             .mut_or_immut_token = context.token(immut_keyword.value()),
         } };
     }
-    return parse_mutability(context).transform([](cst::Mutability&& mutability) {
-        return cst::Template_argument { std::move(mutability) };
-    });
+    return parse_mutability(context).transform(utl::make<cst::Template_argument>);
 }
 
 auto libparse::parse_template_arguments(Context& context) -> std::optional<cst::Template_arguments>
