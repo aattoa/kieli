@@ -196,7 +196,8 @@ namespace {
                     block_scope_id,
                     environment_id,
                     ast().expressions[block.result]);
-                auto const result_type = result.type;
+                auto const result_type  = result.type;
+                auto const result_range = result.range;
 
                 report_unused(context.db, context.info.scopes.index_vector[block_scope_id]);
                 return hir::Expression {
@@ -206,7 +207,7 @@ namespace {
                     },
                     result_type,
                     hir::Expression_kind::value,
-                    this_expression.range,
+                    result_range,
                 };
             });
         }
