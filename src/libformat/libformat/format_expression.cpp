@@ -89,13 +89,11 @@ namespace {
             format(state, ")");
         }
 
-        void operator()(cst::expression::Infix_chain const& sequence)
+        void operator()(cst::expression::Infix_call const& call)
         {
-            format(state, sequence.lhs);
-            for (auto const& [rhs, op] : sequence.tail) {
-                format(state, " {} ", op.identifier);
-                format(state, rhs);
-            }
+            format(state, call.left);
+            format(state, " {} ", call.op);
+            format(state, call.right);
         }
 
         void operator()(cst::expression::Conditional_let const& let)

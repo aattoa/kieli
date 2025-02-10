@@ -455,17 +455,15 @@ namespace {
         };
     }
 
-    auto extract_member_access(
-        cst::Token_id const      dot_token,
-        cst::Expression_id const base_expression,
-        Context&                 context) -> cst::Expression_variant
+    auto extract_member_access(cst::Token_id dot_token, cst::Expression_id base, Context& context)
+        -> cst::Expression_variant
     {
         if (auto const name = parse_lower_name(context)) {
-            return extract_struct_field_access(name.value(), dot_token, base_expression, context);
+            return extract_struct_field_access(name.value(), dot_token, base, context);
         }
         if (auto const index = parse_bracketed<parse_expression, "an index expression">(context)) {
             return cst::expression::Array_index {
-                .base_expression  = base_expression,
+                .base_expression  = base,
                 .index_expression = index.value(),
                 .dot_token        = dot_token,
             };
@@ -473,7 +471,7 @@ namespace {
         if (auto const literal = context.try_extract(Token_type::integer_literal)) {
             context.add_semantic_token(literal.value().range, Semantic::number);
             return cst::expression::Tuple_field {
-                .base_expression   = base_expression,
+                .base_expression   = base,
                 .field_index       = literal.value().value_as<kieli::Integer>().value,
                 .field_index_token = context.token(literal.value()),
                 .dot_token         = dot_token,
@@ -512,59 +510,78 @@ namespace {
         });
     }
 
-    auto parse_operator_id(Context& context) -> std::optional<kieli::Identifier>
+    auto operator_id(Context const& context, Token const& token) -> std::optional<kieli::Identifier>
     {
-        if (auto const op = context.try_extract(Token_type::operator_name)) {
-            context.add_semantic_token(op.value().range, Semantic::operator_name);
-            return op.value().value_as<kieli::Identifier>();
+        switch (token.type) {
+        case Token_type::operator_name: return token.value_as<kieli::Identifier>();
+        case Token_type::asterisk:      return context.special_identifiers().asterisk;
+        case Token_type::plus:          return context.special_identifiers().plus;
+        default:                        return std::nullopt;
         }
-        if (auto const asterisk = context.try_extract(Token_type::asterisk)) {
-            context.add_semantic_token(asterisk.value().range, Semantic::operator_name);
-            return context.special_identifiers().asterisk;
-        }
-        if (auto const plus = context.try_extract(Token_type::plus)) {
-            context.add_semantic_token(plus.value().range, Semantic::operator_name);
-            return context.special_identifiers().plus;
-        }
-        return std::nullopt;
     }
 
-    auto parse_infix_name(Context& context) -> std::optional<cst::expression::Infix_name>
+    constexpr std::tuple operators_tuple {
+        std::to_array<std::string_view>({ ":=", "+=", "*=", "/=", "%=" }),
+        std::to_array<std::string_view>({ "&&", "||" }),
+        std::to_array<std::string_view>({ "<", "<=", ">=", ">" }),
+        std::to_array<std::string_view>({ "?=", "!=" }),
+        std::to_array<std::string_view>({ "+", "-" }),
+        std::to_array<std::string_view>({ "*", "/", "%" }),
+    };
+
+    constexpr auto operator_table = std::to_array<std::span<std::string_view const>>({
+        std::get<0>(operators_tuple),
+        std::get<1>(operators_tuple),
+        std::get<2>(operators_tuple),
+        std::get<3>(operators_tuple),
+        std::get<4>(operators_tuple),
+        std::get<5>(operators_tuple),
+    });
+
+    auto is_precedence(std::size_t precedence, kieli::Identifier op) -> bool
     {
-        kieli::Range const anchor_range = context.peek().range;
-        return parse_operator_id(context).transform([&](kieli::Identifier const identifier) {
-            return cst::expression::Infix_name { identifier, anchor_range };
-        });
+        return precedence == operator_table.size()
+            || std::ranges::contains(operator_table.at(precedence), op.view());
     }
 
-    auto parse_infix_chain(Context& context) -> std::optional<cst::Expression_id>
+    auto parse_infix_chain(Context& context, std::size_t const level)
+        -> std::optional<cst::Expression_id>
     {
-        return parse_potential_type_ascriptions(context).transform(
-            [&](cst::Expression_id const expression) {
-                std::vector<cst::expression::Infix_chain::Rhs> tail;
-                while (auto const operator_name = parse_infix_name(context)) {
-                    tail.push_back({
-                        .operand = require<parse_potential_type_ascriptions>(context, "an operand"),
-                        .infix_name = operator_name.value(),
-                    });
-                }
-                if (tail.empty()) {
+        if (level == operator_table.size() + 1) {
+            return parse_potential_type_ascriptions(context);
+        }
+        return parse_infix_chain(context, level + 1).transform([&](cst::Expression_id expression) {
+            for (;;) {
+                auto op = context.peek();
+                auto id = operator_id(context, op);
+                if (not id.has_value() || is_precedence(level, id.value())) {
                     return expression;
                 }
-                return context.cst().expressions.push(
-                    cst::expression::Infix_chain { .tail = std::move(tail), .lhs = expression },
-                    context.up_to_current(context.cst().expressions[expression].range));
-            });
+                (void)context.extract(); // Skip the infix operator
+                if (auto const rhs = parse_infix_chain(context, level + 1)) {
+                    cst::expression::Infix_call call {
+                        .left     = expression,
+                        .right    = rhs.value(),
+                        .op       = id.value(),
+                        .op_token = context.token(op),
+                    };
+                    expression = context.cst().expressions.push(std::move(call), op.range);
+                }
+                else {
+                    context.error_expected("an operand");
+                }
+            }
+        });
     }
 } // namespace
 
 auto libparse::parse_block_expression(Context& context) -> std::optional<cst::Expression_id>
 {
-    bool const is_block = context.peek().type == Token_type::brace_open;
+    bool is_block = context.peek().type == Token_type::brace_open;
     return is_block ? parse_normal_expression(context) : std::nullopt;
 }
 
 auto libparse::parse_expression(Context& context) -> std::optional<cst::Expression_id>
 {
-    return parse_infix_chain(context);
+    return parse_infix_chain(context, 0);
 }

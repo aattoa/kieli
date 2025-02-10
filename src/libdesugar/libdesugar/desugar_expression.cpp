@@ -50,54 +50,6 @@ namespace {
         return false;
     }
 
-    constexpr auto operators_1 = std::to_array<std::string_view>({ "*", "/", "%" });
-    constexpr auto operators_2 = std::to_array<std::string_view>({ "+", "-" });
-    constexpr auto operators_3 = std::to_array<std::string_view>({ "?=", "!=" });
-    constexpr auto operators_4 = std::to_array<std::string_view>({ "<", "<=", ">=", ">" });
-    constexpr auto operators_5 = std::to_array<std::string_view>({ "&&", "||" });
-    constexpr auto operators_6 = std::to_array<std::string_view>({ ":=", "+=", "*=", "/=", "%=" });
-
-    constexpr auto operator_precedence_table = std::to_array<std::span<std::string_view const>>(
-        { operators_1, operators_2, operators_3, operators_4, operators_5, operators_6 });
-
-    constexpr auto lowest_operator_precedence = operator_precedence_table.size() - 1;
-
-    auto desugar_operator_chain(
-        Context const                                       context,
-        cst::Expression_id const                            leftmost_expression,
-        std::size_t const                                   precedence,
-        std::span<cst::expression::Infix_chain::Rhs const>& tail) -> ast::Expression
-    {
-        if (precedence == std::numeric_limits<std::size_t>::max()) {
-            return deref_desugar(context, leftmost_expression);
-        }
-        auto const recurse = [&](cst::Expression_id const leftmost) {
-            return desugar_operator_chain(context, leftmost, precedence - 1, tail);
-        };
-
-        ast::Expression left = recurse(leftmost_expression);
-        while (not tail.empty()) {
-            auto const& [rhs, op] = tail.front();
-            if (precedence != lowest_operator_precedence) {
-                auto const operators = operator_precedence_table.at(precedence);
-                if (not std::ranges::contains(operators, op.identifier.view())) {
-                    return left;
-                }
-            }
-            tail = tail.subspan<1>();
-            left = ast::Expression {
-                ast::expression::Infix_call {
-                    .left     = context.ast.expressions.push(std::move(left)),
-                    .right    = context.ast.expressions.push(recurse(rhs)),
-                    .op       = op.identifier,
-                    .op_range = op.range,
-                },
-                kieli::Range(left.range.start, context.cst.expressions[rhs].range.stop),
-            };
-        }
-        return left;
-    }
-
     auto break_expression(Context const context, kieli::Range const range) -> ast::Expression_id
     {
         return context.ast.expressions.push(
@@ -216,11 +168,11 @@ namespace {
 
         auto operator()(cst::expression::Block const& block) const -> ast::Expression_variant
         {
-            std::vector<ast::Expression> side_effects;
-            side_effects.reserve(block.side_effects.size());
-            for (auto const& side_effect : block.side_effects) {
-                side_effects.push_back(deref_desugar(context, side_effect.expression));
-            }
+            auto desugar_effect
+                = [&](auto const& effect) { return deref_desugar(context, effect.expression); };
+
+            auto side_effects = std::views::transform(block.side_effects, desugar_effect)
+                              | std::ranges::to<std::vector>();
 
             cst::Token_id const unit_token = //
                 block.side_effects.empty()   //
@@ -352,11 +304,14 @@ namespace {
             };
         }
 
-        auto operator()(cst::expression::Infix_chain const& chain) const -> ast::Expression_variant
+        auto operator()(cst::expression::Infix_call const& call) const -> ast::Expression_variant
         {
-            std::span   tail       = chain.tail;
-            std::size_t precedence = lowest_operator_precedence;
-            return desugar_operator_chain(context, chain.lhs, precedence, tail).variant;
+            return ast::expression::Infix_call {
+                .left     = desugar(context, call.left),
+                .right    = desugar(context, call.right),
+                .op       = call.op,
+                .op_range = context.cst.tokens[call.op_token].range,
+            };
         }
 
         auto operator()(cst::expression::Struct_field const& field) const -> ast::Expression_variant

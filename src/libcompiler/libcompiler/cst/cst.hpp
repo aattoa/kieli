@@ -209,19 +209,11 @@ namespace kieli::cst {
             Surrounded<Separated<Struct_field_initializer>> initializers;
         };
 
-        struct Infix_name {
-            Identifier identifier;
-            Range      range;
-        };
-
-        struct Infix_chain {
-            struct Rhs {
-                Expression_id operand;
-                Infix_name    infix_name;
-            };
-
-            std::vector<Rhs> tail;
-            Expression_id    lhs;
+        struct Infix_call {
+            Expression_id left;
+            Expression_id right;
+            Identifier    op;
+            Token_id      op_token;
         };
 
         struct Struct_field {
@@ -373,7 +365,7 @@ namespace kieli::cst {
               expression::Function_call,
               expression::Tuple_initializer,
               expression::Struct_initializer,
-              expression::Infix_chain,
+              expression::Infix_call,
               expression::Struct_field,
               expression::Tuple_field,
               expression::Array_index,
