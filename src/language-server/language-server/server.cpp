@@ -11,15 +11,15 @@ auto kieli::lsp::run_server(bool const debug, std::istream& in, std::ostream& ou
     }
 
     while (not server.exit_code.has_value()) {
-        if (auto const message = kieli::lsp::rpc_read_message(in)) {
+        if (auto const message = rpc_read_message(in)) {
             if (debug) {
                 std::println(stderr, "[debug] --> {}", message.value());
             }
-            if (auto const reply = kieli::lsp::handle_client_message(server, message.value())) {
+            if (auto const reply = handle_client_message(server, message.value())) {
                 if (debug) {
                     std::println(stderr, "[debug] <-- {}", reply.value());
                 }
-                kieli::lsp::rpc_write_message(out, reply.value());
+                rpc_write_message(out, reply.value());
             }
         }
         else {

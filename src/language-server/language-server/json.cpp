@@ -95,9 +95,9 @@ auto kieli::lsp::document_id_from_json(Database const& db, Json::Object const& o
     return document_id_from_path(db, path_from_json(as<Json::String>(at(object, "uri"))));
 }
 
-auto kieli::lsp::document_id_to_json(Database const& db, Document_id const document_id) -> Json
+auto kieli::lsp::document_id_to_json(Database const& db, Document_id const id) -> Json
 {
-    return Json { Json::Object { { "uri", path_to_json(db.paths[document_id]) } } };
+    return Json { Json::Object { { "uri", path_to_json(document_path(db, id)) } } };
 }
 
 auto kieli::lsp::location_from_json(Database const& db, Json::Object const& object) -> Location
@@ -111,7 +111,7 @@ auto kieli::lsp::location_from_json(Database const& db, Json::Object const& obje
 auto kieli::lsp::location_to_json(Database const& db, Location const location) -> Json
 {
     return Json { Json::Object {
-        { "uri", path_to_json(db.paths[location.document_id]) },
+        { "uri", path_to_json(document_path(db, location.document_id)) },
         { "range", range_to_json(location.range) },
     } };
 }

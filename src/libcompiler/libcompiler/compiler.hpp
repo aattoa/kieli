@@ -39,6 +39,9 @@ namespace kieli {
         // Dummy range for mock purposes.
         static auto dummy() noexcept -> Range;
 
+        // Check whether `position` is contained within this range.
+        [[nodiscard]] auto contains(Position position) const noexcept -> bool;
+
         [[nodiscard]] auto operator==(Range const&) const -> bool = default;
     };
 
@@ -123,13 +126,13 @@ namespace kieli {
     // Pooled string that is cheap to copy and compare.
     using Identifier = cpputil::mem::Stable_pool_string;
 
-    using Document_map   = std::unordered_map<Document_id, Document, utl::Hash_vector_index>;
-    using Document_paths = utl::Index_vector<Document_id, std::filesystem::path>;
+    using Documents      = utl::Index_vector<Document_id, Document>;
+    using Document_paths = std::unordered_map<std::filesystem::path, Document_id>;
     using String_pool    = cpputil::mem::Stable_string_pool;
 
     // Compilation database.
     struct Database {
-        Document_map   documents;
+        Documents      documents;
         Document_paths paths;
         String_pool    string_pool;
         Manifest       manifest;
@@ -138,12 +141,13 @@ namespace kieli {
     // Represents a file read failure.
     enum struct Read_failure { does_not_exist, failed_to_open, failed_to_read };
 
-    // Retrieve the `Document_id` corresponding to `path`.
-    [[nodiscard]] auto document_id(Database& db, std::filesystem::path path) -> Document_id;
-
     // If `db` contains a document with `path`, return its `Document_id`.
     [[nodiscard]] auto find_existing_document_id(
         Database const& db, std::filesystem::path const& path) -> std::optional<Document_id>;
+
+    // Find the `path` corresponding to the document identified by `document_id`.
+    [[nodiscard]] auto document_path(Database const& db, Document_id document_id)
+        -> std::filesystem::path const&;
 
     // Map `path` to `document`.
     [[nodiscard]] auto set_document(Database& db, std::filesystem::path path, Document document)

@@ -114,23 +114,22 @@ namespace {
     };
 } // namespace
 
-auto libresolve::collect_document(Context& context, kieli::Document_id const id)
-    -> hir::Environment_id
+auto libresolve::collect_document(Context& context, kieli::Document_id id) -> hir::Environment_id
 {
-    auto cst    = kieli::parse(context.db, id);
-    auto info   = Document_info { .cst = std::move(cst.get().arena) };
-    auto env_id = context.info.environments.push(Environment { .document_id = id });
+    auto cst  = kieli::parse(context.db, id);
+    auto env  = context.info.environments.push(Environment { .document_id = id });
+    auto info = Document_info { .cst = std::move(cst.get().arena) };
 
-    Collector const collector {
-        .ctx = context,
-        .des_ctx { context.db, info.cst, info.ast, id },
-        .doc_id = id,
-        .env_id = env_id,
+    Collector collector {
+        .ctx     = context,
+        .des_ctx = kieli::Desugar_context { context.db, info.cst, info.ast, id },
+        .doc_id  = id,
+        .env_id  = env,
     };
     for (cst::Definition& definition : cst.get().definitions) {
         std::visit(collector, definition.variant);
     }
 
     context.documents.insert_or_assign(id, std::move(info));
-    return env_id;
+    return env;
 }

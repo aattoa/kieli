@@ -141,7 +141,7 @@ namespace {
             , m_state { state }
         {}
 
-        auto operator()(Token_variant&& value, Token_type const type) const noexcept -> Token
+        auto operator()(Token_variant value, Token_type const type) const noexcept -> Token
         {
             return Token {
                 .variant          = value,
@@ -384,9 +384,8 @@ namespace {
     }
 
     auto extract_numeric_floating(
-        Token_maker const&     token,
-        std::string_view const old_string,
-        kieli::Lex_state&      state) -> liblex::Expected<Token>
+        Token_maker const& token, std::string_view const old_string, kieli::Lex_state& state)
+        -> liblex::Expected<Token>
     {
         if (state.text.empty() or not or_digit_separator<is_digit10>(liblex::current(state))) {
             return liblex::error(state, "Expected one or more digits after the decimal separator");
@@ -448,9 +447,8 @@ namespace {
     }
 
     auto extract_and_apply_potential_integer_exponent(
-        kieli::Lex_state&      state,
-        std::string_view const old_string,
-        std::size_t const      integer) -> liblex::Expected<std::size_t>
+        kieli::Lex_state& state, std::string_view const old_string, std::size_t const integer)
+        -> liblex::Expected<std::size_t>
     {
         std::string_view const suffix = liblex::extract(state, is_alpha);
         if (suffix.empty()) {
@@ -580,11 +578,11 @@ auto kieli::lex(Lex_state& state) -> Token
     return token_maker({}, Token_type::error);
 }
 
-auto kieli::lex_state(Database& db, Document_id const document_id) -> Lex_state
+auto kieli::lex_state(Database& db, Document_id const id) -> Lex_state
 {
     return Lex_state {
         .db          = db,
-        .document_id = document_id,
-        .text        = db.documents.at(document_id).text,
+        .document_id = id,
+        .text        = db.documents[id].text,
     };
 }

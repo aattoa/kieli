@@ -233,6 +233,7 @@ namespace kieli::hir {
 
         struct Parameterized {
             Template_parameter_tag tag;
+            Identifier             identifier;
         };
 
         struct Variable {

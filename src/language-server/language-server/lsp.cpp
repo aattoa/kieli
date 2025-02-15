@@ -20,7 +20,7 @@ namespace {
 
     void placeholder_analyze_document(Database& db, kieli::Document_id id)
     {
-        db.documents.at(id).diagnostics.clear();
+        db.documents[id].diagnostics.clear();
         auto ctx = libresolve::context(db);
         auto env = libresolve::collect_document(ctx, id);
         libresolve::resolve_environment(ctx, env);
@@ -34,10 +34,7 @@ namespace {
     auto handle_hover(Database& db, Json::Object const& params) -> Result<Json>
     {
         auto const cursor = character_location_from_json(db, params);
-        return maybe_markdown_content(std::format(
-            "Hello, world!\n\nFile: `{}`\nPosition: {}",
-            db.paths[cursor.document_id].c_str(),
-            cursor.position));
+        return maybe_markdown_content(std::format("Position: {}", cursor.position));
     }
 
     auto handle_formatting(Database& db, Json::Object const& params) -> Result<Json>
@@ -45,15 +42,14 @@ namespace {
         auto const id = document_id_from_json(db, as<Json::Object>(at(params, "textDocument")));
         auto const options = format_options_from_json(params.at("options").as_object());
 
-        kieli::Document& document = db.documents.at(id);
-        document.diagnostics.clear();
+        db.documents[id].diagnostics.clear();
         auto const cst = kieli::parse(db, id);
 
         Json::Array edits;
         for (auto const& definition : cst.get().definitions) {
             std::string new_text;
             kieli::format(cst.get().arena, options, definition, new_text);
-            if (new_text == kieli::text_range(document.text, definition.range)) {
+            if (new_text == kieli::text_range(db.documents[id].text, definition.range)) {
                 // Avoid sending redundant edits when nothing changed.
                 // text_range takes linear time, but it's fine for now.
                 continue;
@@ -70,7 +66,7 @@ namespace {
     {
         auto const id = document_id_from_json(db, as<Json::Object>(at(params, "textDocument")));
 
-        auto items = db.documents.at(id).diagnostics
+        auto items = db.documents[id].diagnostics
                    | std::views::transform(std::bind_front(diagnostic_to_json, std::cref(db)))
                    | std::ranges::to<Json::Array>();
 
@@ -97,7 +93,7 @@ namespace {
     auto handle_semantic_tokens(Database const& db, Json::Object const& params) -> Json
     {
         auto id   = document_id_from_json(db, as<Json::Object>(at(params, "textDocument")));
-        auto data = encode_semantic_tokens(db.documents.at(id).semantic_tokens);
+        auto data = encode_semantic_tokens(db.documents[id].semantic_tokens);
         return Json { Json::Object { { "data", std::move(data) } } };
     }
 
@@ -206,23 +202,23 @@ namespace {
     }
 
     // https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#textDocumentContentChangeEvent
-    void apply_content_change(std::string& text, Json::Object const& change)
+    void apply_content_change(std::string& text, Json::Object change)
     {
-        std::string const& new_text = change.at("text").as_string();
+        std::string new_text = std::move(change.at("text")).as_string();
         if (auto const it = change.find("range"); it != change.end()) {
             kieli::edit_text(text, range_from_json(it->second.as_object()), new_text);
         }
         else {
-            text = new_text;
+            text = std::move(new_text);
         }
     }
 
     auto handle_change(Database& db, Json::Object const& params) -> Result<void>
     {
         auto const   id   = document_id_from_json(db, as<Json::Object>(at(params, "textDocument")));
-        std::string& text = db.documents.at(id).text;
-        for (Json const& change : params.at("contentChanges").as_array()) {
-            apply_content_change(text, change.as_object());
+        std::string& text = db.documents[id].text;
+        for (Json change : params.at("contentChanges").as_array()) {
+            apply_content_change(text, std::move(change).as_object());
         }
         placeholder_analyze_document(db, id);
         return {};

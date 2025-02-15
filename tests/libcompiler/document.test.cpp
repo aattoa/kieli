@@ -61,7 +61,7 @@ TEST("find_existing_document_id")
     CHECK(kieli::find_existing_document_id(db, "path B") == b);
     CHECK(kieli::find_existing_document_id(db, "path C") == c);
 
-    CHECK_EQUAL(db.documents.at(a).text, "content A");
-    CHECK_EQUAL(db.documents.at(b).text, "content B");
-    CHECK_EQUAL(db.documents.at(c).text, "content C");
+    CHECK_EQUAL(db.documents[a].text, "content A");
+    CHECK_EQUAL(db.documents[b].text, "content B");
+    CHECK_EQUAL(db.documents[c].text, "content C");
 }

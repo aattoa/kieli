@@ -50,9 +50,8 @@ namespace {
         kieli::Document_id const       document_id,
         ast::Function_signature const& signature) -> hir::Function_signature
     {
-        Inference_state state { .document_id = document_id };
-
-        auto const scope_id = context.info.scopes.push(Scope { .document_id = document_id });
+        auto state    = Inference_state { .document_id = document_id };
+        auto scope_id = context.info.scopes.push(Scope { .document_id = document_id });
 
         auto template_parameters = resolve_template_parameters(
             context, state, scope_id, environment_id, signature.template_parameters);

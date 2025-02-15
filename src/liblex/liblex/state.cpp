@@ -19,7 +19,7 @@ namespace {
 
 auto liblex::source_begin(const kieli::Lex_state& state) noexcept -> char const*
 {
-    return state.db.documents.at(state.document_id).text.data();
+    return state.db.documents[state.document_id].text.data();
 }
 
 auto liblex::source_end(const kieli::Lex_state& state) noexcept -> char const*
@@ -81,21 +81,19 @@ auto liblex::make_string_literal(kieli::Lex_state const& state, std::string_view
 auto liblex::make_operator_identifier(kieli::Lex_state const& state, std::string_view const string)
     -> kieli::Identifier
 {
-    assert(not string.empty());
+    cpputil::always_assert(not string.empty());
     return kieli::Identifier { state.db.string_pool.add(string) };
 }
 
 auto liblex::make_identifier(kieli::Lex_state const& state, std::string_view const string)
     -> kieli::Identifier
 {
-    assert(not string.empty());
+    cpputil::always_assert(not string.empty());
     return kieli::Identifier { state.db.string_pool.add(string) };
 }
 
-auto liblex::error(
-    kieli::Lex_state const& state,
-    std::string_view const  position,
-    std::string             message) -> std::unexpected<Error>
+auto liblex::error(kieli::Lex_state const& state, std::string_view position, std::string message)
+    -> std::unexpected<Error>
 {
     kieli::add_error(state.db, state.document_id, range_for(state, position), std::move(message));
     return std::unexpected(Error {});

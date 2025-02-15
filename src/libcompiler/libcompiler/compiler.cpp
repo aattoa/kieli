@@ -27,24 +27,32 @@ auto kieli::Range::dummy() noexcept -> Range
     return Range::for_position(Position {});
 }
 
-auto kieli::document_id(Database& db, std::filesystem::path path) -> Document_id
+auto kieli::Range::contains(Position const position) const noexcept -> bool
 {
-    auto const id = find_existing_document_id(db, path);
-    return id.has_value() ? id.value() : db.paths.push(std::move(path));
+    return start <= position && position < stop;
 }
 
 auto kieli::find_existing_document_id(Database const& db, std::filesystem::path const& path)
     -> std::optional<Document_id>
 {
-    auto const it    = std::ranges::find(db.paths.underlying, path);
-    auto const index = static_cast<std::size_t>(it - db.paths.underlying.begin());
-    return it != db.paths.underlying.end() ? std::optional(Document_id(index)) : std::nullopt;
+    auto const it = db.paths.find(path);
+    return it != db.paths.end() ? std::optional(it->second) : std::nullopt;
+}
+
+auto kieli::document_path(const Database& db, Document_id id) -> std::filesystem::path const&
+{
+    for (auto const& [path, document_id] : db.paths) {
+        if (id == document_id) {
+            return path;
+        }
+    }
+    cpputil::unreachable();
 }
 
 auto kieli::set_document(Database& db, std::filesystem::path path, Document document) -> Document_id
 {
-    Document_id const id = document_id(db, std::move(path));
-    db.documents.insert_or_assign(id, std::move(document));
+    auto id = db.documents.push(std::move(document));
+    db.paths.insert_or_assign(std::move(path), id);
     return id;
 }
 
@@ -60,10 +68,8 @@ auto kieli::client_open_document(Database& db, std::filesystem::path path, std::
 
 void kieli::client_close_document(Database& db, Document_id const id)
 {
-    if (auto const it = db.documents.find(id); it != db.documents.end()) {
-        if (it->second.ownership == Document_ownership::client) {
-            db.documents.erase(it);
-        }
+    if (db.documents[id].ownership == Document_ownership::client) {
+        db.documents[id] = Document {};
     }
 }
 
@@ -144,7 +150,7 @@ void kieli::edit_text(std::string& text, Range const range, std::string_view con
 
 void kieli::add_diagnostic(Database& db, Document_id const id, Diagnostic diagnostic)
 {
-    db.documents.at(id).diagnostics.push_back(std::move(diagnostic));
+    db.documents[id].diagnostics.push_back(std::move(diagnostic));
 }
 
 void kieli::add_error(Database& db, Document_id const id, Range const range, std::string message)
@@ -166,16 +172,14 @@ auto kieli::format_document_diagnostics(
 {
     // TODO: remove cppdiag
 
-    Document const& document = db.documents.at(id);
-
     auto const to_cppdiag = [&](kieli::Diagnostic const& diagnostic) {
         auto const pos = [](Position const position) {
             return cppdiag::Position { .line = position.line, .column = position.column };
         };
         return cppdiag::Diagnostic {
             .text_sections = utl::to_vector({ cppdiag::Text_section {
-                .source_string  = document.text,
-                .source_name    = db.paths[id],
+                .source_string  = db.documents[id].text,
+                .source_name    = document_path(db, id),
                 .start_position = pos(diagnostic.range.start),
                 .stop_position  = pos(diagnostic.range.stop),
             } }),
@@ -185,7 +189,7 @@ auto kieli::format_document_diagnostics(
     };
 
     std::string output;
-    for (Diagnostic const& diagnostic : document.diagnostics) {
+    for (Diagnostic const& diagnostic : db.documents[id].diagnostics) {
         cppdiag::format_diagnostic(output, to_cppdiag(diagnostic), colors);
     }
     return output;

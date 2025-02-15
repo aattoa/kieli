@@ -142,9 +142,8 @@ namespace libresolve {
         -> std::vector<hir::Template_argument>;
 
     auto resolve_mutability(
-        Context&               context,
-        hir::Scope_id          scope_id,
-        ast::Mutability const& mutability) -> hir::Mutability;
+        Context& context, hir::Scope_id scope_id, ast::Mutability const& mutability)
+        -> hir::Mutability;
 
     auto resolve_expression(
         Context&               context,

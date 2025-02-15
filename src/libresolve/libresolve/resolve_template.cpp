@@ -9,7 +9,7 @@ namespace {
         Inference_state&            state;
         hir::Scope_id               scope_id;
         hir::Environment_id         environment_id;
-        hir::Template_parameter_tag parameter_id;
+        hir::Template_parameter_tag tag;
 
         auto ast() -> ast::Arena&
         {
@@ -44,7 +44,8 @@ namespace {
                 parameter.name.identifier,
                 Type_bind {
                     parameter.name,
-                    context.hir.types.push(hir::type::Parameterized { parameter_id }),
+                    context.hir.types.push(
+                        hir::type::Parameterized { tag, parameter.name.identifier }),
                 });
             auto const resolve_concept = [&](ast::Path const& concept_path) {
                 return resolve_concept_reference(
@@ -63,7 +64,7 @@ namespace {
             -> hir::Template_parameter_variant
         {
             hir::Mutability mutability {
-                context.hir.mutabilities.push(hir::mutability::Parameterized { parameter_id }),
+                context.hir.mutabilities.push(hir::mutability::Parameterized { tag }),
                 parameter.name.range,
             };
             bind_mutability(

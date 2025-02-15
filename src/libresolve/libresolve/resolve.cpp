@@ -2,6 +2,13 @@
 #include <libresolve/resolve.hpp>
 #include <libcompiler/ast/display.hpp>
 
+auto libresolve::context(kieli::Database& db) -> Context
+{
+    auto hir       = hir::Arena {};
+    auto constants = make_constants(hir);
+    return Context { .db = db, .hir = std::move(hir), .constants = constants };
+}
+
 auto libresolve::make_constants(hir::Arena& arenas) -> Constants
 {
     return Constants {

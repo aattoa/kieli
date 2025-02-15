@@ -315,9 +315,9 @@ namespace kieli::hir::dtl {
             std::format_to(out, "({})", wrap(tuple.types));
         }
 
-        void operator()(type::Parameterized const& parameterized) const
+        void operator()(type::Parameterized const& param) const
         {
-            std::format_to(out, "template-parameter-{}", parameterized.tag.get());
+            std::format_to(out, "{}", param.identifier);
         }
 
         void operator()(type::Variable const& variable) const

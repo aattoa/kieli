@@ -344,7 +344,7 @@ auto kieli::parse(Database& db, Document_id const id) -> CST
         }
     }
 
-    db.documents.at(id).semantic_tokens = std::move(context.semantic_tokens());
+    db.documents[id].semantic_tokens = std::move(context.semantic_tokens());
 
     return CST { CST::Module {
         .imports     = std::move(imports),
