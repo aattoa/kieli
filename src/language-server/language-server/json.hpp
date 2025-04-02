@@ -1,11 +1,12 @@
-#pragma once
+#ifndef KIELI_LANGUAGE_SERVER_JSON
+#define KIELI_LANGUAGE_SERVER_JSON
 
 #include <libutl/utilities.hpp>
 #include <cpputil/json.hpp>
 #include <libcompiler/compiler.hpp>
 #include <libformat/format.hpp>
 
-namespace kieli::lsp {
+namespace ki::lsp {
 
     struct Json_config {
         using Object  = std::unordered_map<std::string, cpputil::json::Basic_value<Json_config>>;
@@ -18,18 +19,14 @@ namespace kieli::lsp {
     // The JSON type used for JSON-RPC communication.
     using Json = cpputil::json::Basic_value<Json_config>;
 
-    // Codes defined by JSON-RPC:
-    // https://www.jsonrpc.org/specification#error_object
-    //
-    // Codes defined by LSP:
     // https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#errorCodes
     enum struct Error_code : Json::Number {
-        server_not_initialized = -32002,
-        invalid_request        = -32600,
-        method_not_found       = -32601,
-        invalid_params         = -32602,
-        parse_error            = -32700,
-        request_failed         = -32803,
+        Server_not_initialized = -32002,
+        Invalid_request        = -32600,
+        Method_not_found       = -32601,
+        Invalid_params         = -32602,
+        Parse_error            = -32700,
+        Request_failed         = -32803,
     };
 
     // https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#textDocumentItem
@@ -53,45 +50,49 @@ namespace kieli::lsp {
     auto path_from_json(Json::String const& uri) -> std::filesystem::path;
     auto path_to_json(std::filesystem::path const& path) -> Json;
 
-    auto position_from_json(Json::Object const& object) -> Position;
+    auto position_from_json(Json::Object object) -> Position;
     auto position_to_json(Position position) -> Json;
 
-    auto range_from_json(Json::Object const& object) -> Range;
+    auto range_from_json(Json::Object object) -> Range;
     auto range_to_json(Range range) -> Json;
 
-    auto document_id_from_json(Database const& db, Json::Object const& object) -> Document_id;
+    auto document_id_from_json(Database const& db, Json::Object object) -> Document_id;
     auto document_id_to_json(Database const& db, Document_id document_id) -> Json;
 
-    auto location_from_json(Database const& db, Json::Object const& object) -> Location;
+    auto location_from_json(Database const& db, Json::Object object) -> Location;
     auto location_to_json(Database const& db, Location location) -> Json;
 
-    auto character_location_from_json(Database const& db, Json::Object const& object)
+    auto character_location_from_json(Database const& db, Json::Object object)
         -> Character_location;
     auto character_location_to_json(Database const& db, Character_location location) -> Json;
 
     auto severity_to_json(Severity severity) -> Json;
     auto diagnostic_to_json(Database const& db, Diagnostic const& diagnostic) -> Json;
     auto markdown_content_to_json(std::string markdown) -> Json;
-    auto document_item_from_json(Json::Object const& object) -> Document_item;
-    auto format_options_from_json(Json::Object const& object) -> kieli::Format_options;
+    auto semantic_tokens_to_json(std::span<Semantic_token const> tokens) -> Json;
+
+    auto document_item_from_json(Json::Object object) -> Document_item;
+    auto format_options_from_json(Json::Object object) -> format::Options;
 
     // Throws `Bad_client_json` if `json` is not `T`.
     template <typename T>
-    auto as(Json const& json) -> T const&
+    auto as(Json json) -> T
     {
-        if (std::holds_alternative<T>(json.variant)) {
-            return std::get<T>(json.variant);
+        if (T* const ptr = std::get_if<T>(&json.variant)) {
+            return std::move(*ptr);
         }
         throw Bad_client_json("Value has unexpected type");
     }
 
     // Throws `Bad_client_json` if `json` is not a non-negative integer.
-    auto as_unsigned(Json const& json) -> std::uint32_t;
+    auto as_unsigned(Json json) -> std::uint32_t;
 
-    // Throws `Bad_client_json` if `object` does not contain `key`.
-    auto at(Json::Object const& object, char const* key) -> Json const&;
+    // If `object` contains `key`, moves out the value. Otherwise throws `Bad_client_json`.
+    auto at(Json::Object& object, char const* key) -> Json;
 
-    // If `object` contains `key`, returns the value. Otherwise, returns nullopt.
-    auto maybe_at(Json::Object const& object, char const* key) -> std::optional<Json>;
+    // If `object` contains `key`, moves out the value. Otherwise returns nullopt.
+    auto maybe_at(Json::Object& object, char const* key) -> std::optional<Json>;
 
-} // namespace kieli::lsp
+} // namespace ki::lsp
+
+#endif // KIELI_LANGUAGE_SERVER_JSON

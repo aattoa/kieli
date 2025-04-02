@@ -1,4 +1,5 @@
-#pragma once
+#ifndef KIELI_LIBCOMPILER_AST
+#define KIELI_LIBCOMPILER_AST
 
 #include <libutl/utilities.hpp>
 #include <libutl/index_vector.hpp>
@@ -19,8 +20,7 @@
 
 */
 
-namespace kieli::ast {
-    struct Error {};
+namespace ki::ast {
 
     struct Wildcard {
         Range range;
@@ -30,7 +30,7 @@ namespace kieli::ast {
         Lower name;
     };
 
-    struct Mutability_variant : std::variant<kieli::Mutability, Parameterized_mutability> {
+    struct Mutability_variant : std::variant<Mutability, Parameterized_mutability> {
         using variant::variant;
     };
 
@@ -57,7 +57,6 @@ namespace kieli::ast {
         std::vector<Path_segment> segments;
 
         [[nodiscard]] auto head() const -> Path_segment const&;
-        [[nodiscard]] auto is_upper() const -> bool;
         [[nodiscard]] auto is_unqualified() const noexcept -> bool;
     };
 
@@ -112,8 +111,8 @@ namespace kieli::ast {
         Expression_id expression;
     };
 
-    enum struct Loop_source { plain_loop, while_loop, for_loop };
-    enum struct Conditional_source { if_, elif, while_loop_body };
+    enum struct Loop_source : std::uint8_t { Plain_loop, While_loop, For_loop };
+    enum struct Conditional_source : std::uint8_t { If, Elif, While };
 
     auto describe_loop_source(Loop_source source) -> std::string_view;
     auto describe_conditional_source(Conditional_source source) -> std::string_view;
@@ -149,10 +148,10 @@ namespace kieli::ast {
         };
 
         struct Infix_call {
-            Expression_id left;
-            Expression_id right;
-            Identifier    op;
-            Range         op_range;
+            Expression_id  left;
+            Expression_id  right;
+            utl::String_id op;
+            Range          op_range;
         };
 
         struct Tuple_initializer {
@@ -198,12 +197,12 @@ namespace kieli::ast {
 
         struct Match {
             std::vector<Match_case> cases;
-            Expression_id           expression;
+            Expression_id           scrutinee;
         };
 
         struct Type_ascription {
             Expression_id expression;
-            Type_id       ascribed_type;
+            Type_id       type;
         };
 
         struct Let {
@@ -222,7 +221,7 @@ namespace kieli::ast {
         };
 
         struct Sizeof {
-            Type_id inspected_type;
+            Type_id type;
         };
 
         struct Addressof {
@@ -232,10 +231,6 @@ namespace kieli::ast {
 
         struct Dereference {
             Expression_id reference_expression;
-        };
-
-        struct Move {
-            Expression_id place_expression;
         };
 
         struct Defer {
@@ -249,7 +244,6 @@ namespace kieli::ast {
               Wildcard,
               Integer,
               Floating,
-              Character,
               Boolean,
               String,
               Path,
@@ -276,7 +270,6 @@ namespace kieli::ast {
               expression::Sizeof,
               expression::Addressof,
               expression::Dereference,
-              expression::Move,
               expression::Defer> {
         using variant::variant;
     };
@@ -340,7 +333,6 @@ namespace kieli::ast {
         : std::variant<
               Integer,
               Floating,
-              Character,
               Boolean,
               String,
               Wildcard,
@@ -380,7 +372,7 @@ namespace kieli::ast {
         };
 
         struct Typeof {
-            Expression_id inspected_expression;
+            Expression_id expression;
         };
 
         struct Reference {
@@ -432,78 +424,70 @@ namespace kieli::ast {
         Upper             name;
     };
 
-    namespace definition {
-        struct Function {
-            Function_signature signature;
-            Expression         body;
-        };
+    struct Function {
+        Function_signature signature;
+        Expression         body;
+    };
 
-        struct Field {
-            Lower name;
-            Type  type;
-            Range range;
-        };
+    struct Field {
+        Lower name;
+        Type  type;
+        Range range;
+    };
 
-        struct Struct_constructor {
-            std::vector<Field> fields;
-        };
+    struct Struct_constructor {
+        std::vector<Field> fields;
+    };
 
-        struct Tuple_constructor {
-            std::vector<Type_id> types;
-        };
+    struct Tuple_constructor {
+        std::vector<Type_id> types;
+    };
 
-        struct Unit_constructor {};
+    struct Unit_constructor {};
 
-        struct Constructor_body
-            : std::variant<Struct_constructor, Tuple_constructor, Unit_constructor> {
-            using variant::variant;
-        };
+    struct Constructor_body
+        : std::variant<Struct_constructor, Tuple_constructor, Unit_constructor> {
+        using variant::variant;
+    };
 
-        struct Constructor {
-            Upper            name;
-            Constructor_body body;
-        };
+    struct Constructor {
+        Upper            name;
+        Constructor_body body;
+    };
 
-        struct Enumeration {
-            std::vector<Constructor> constructors;
-            Upper                    name;
-            Template_parameters      template_parameters;
-        };
+    struct Enumeration {
+        std::vector<Constructor> constructors;
+        Upper                    name;
+        Template_parameters      template_parameters;
+    };
 
-        struct Alias {
-            Upper               name;
-            Type                type;
-            Template_parameters template_parameters;
-        };
+    struct Alias {
+        Upper               name;
+        Type                type;
+        Template_parameters template_parameters;
+    };
 
-        struct Concept {
-            std::vector<Function_signature> function_signatures;
-            std::vector<Type_signature>     type_signatures;
-            Upper                           name;
-            Template_parameters             template_parameters;
-        };
+    struct Concept {
+        std::vector<Function_signature> function_signatures;
+        std::vector<Type_signature>     type_signatures;
+        Upper                           name;
+        Template_parameters             template_parameters;
+    };
 
-        struct Impl {
-            Type                    type;
-            std::vector<Definition> definitions;
-            Template_parameters     template_parameters;
-        };
+    struct Impl {
+        Type                    type;
+        std::vector<Definition> definitions;
+        Template_parameters     template_parameters;
+    };
 
-        struct Submodule {
-            std::vector<Definition> definitions;
-            Lower                   name;
-            Template_parameters     template_parameters;
-        };
-    } // namespace definition
+    struct Submodule {
+        std::vector<Definition> definitions;
+        Lower                   name;
+        Template_parameters     template_parameters;
+    };
 
     struct Definition_variant
-        : std::variant<
-              definition::Function,
-              definition::Enumeration,
-              definition::Alias,
-              definition::Concept,
-              definition::Impl,
-              definition::Submodule> {
+        : std::variant<Function, Enumeration, Alias, Concept, Impl, Submodule> {
         using variant::variant;
     };
 
@@ -514,8 +498,11 @@ namespace kieli::ast {
     };
 
     struct Arena {
-        utl::Index_vector<Expression_id, Expression> expressions;
-        utl::Index_vector<Pattern_id, Pattern>       patterns;
-        utl::Index_vector<Type_id, Type>             types;
+        utl::Index_vector<Expression_id, Expression> expr;
+        utl::Index_vector<Pattern_id, Pattern>       patt;
+        utl::Index_vector<Type_id, Type>             type;
     };
-} // namespace kieli::ast
+
+} // namespace ki::ast
+
+#endif // KIELI_LIBCOMPILER_AST

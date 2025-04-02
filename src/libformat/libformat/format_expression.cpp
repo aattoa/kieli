@@ -1,7 +1,7 @@
 #include <libutl/utilities.hpp>
-#include <libformat/format_internals.hpp>
+#include <libformat/internals.hpp>
 
-using namespace libformat;
+using namespace ki::format;
 
 namespace {
     struct Expression_format_visitor {
@@ -43,21 +43,20 @@ namespace {
 
         auto as_block(cst::Expression_id const id) -> cst::expression::Block const&
         {
-            auto const&       expression = state.arena.expressions[id];
+            auto const&       expression = state.arena.expr[id];
             auto const* const block      = std::get_if<cst::expression::Block>(&expression.variant);
             cpputil::always_assert(block != nullptr);
             return *block;
         }
 
-        template <kieli::literal Literal>
-        void operator()(Literal const& literal)
+        void operator()(utl::one_of<ki::Integer, ki::Floating, ki::Boolean> auto const literal)
         {
-            if constexpr (utl::one_of<Literal, kieli::Character, kieli::String>) {
-                format(state, "{:?}", literal.value);
-            }
-            else {
-                format(state, "{}", literal.value);
-            }
+            format(state, "{}", literal.value);
+        }
+
+        void operator()(ki::String const string)
+        {
+            format(state, "{:?}", state.pool.get(string.id));
         }
 
         void operator()(cst::Wildcard const& wildcard)
@@ -92,16 +91,8 @@ namespace {
         void operator()(cst::expression::Infix_call const& call)
         {
             format(state, call.left);
-            format(state, " {} ", call.op);
+            format(state, " {} ", state.pool.get(call.op));
             format(state, call.right);
-        }
-
-        void operator()(cst::expression::Conditional_let const& let)
-        {
-            format(state, "let ");
-            format(state, let.pattern);
-            format(state, " = ");
-            format(state, let.initializer);
         }
 
         void operator()(cst::expression::Function_call const& call)
@@ -110,26 +101,26 @@ namespace {
             format(state, call.arguments);
         }
 
-        void operator()(cst::expression::Tuple_initializer const& initializer)
+        void operator()(cst::expression::Tuple_init const& structure)
         {
-            format(state, initializer.constructor_path);
+            format(state, structure.path);
             format(state, "(");
-            format_comma_separated(state, initializer.initializers.value.elements);
+            format_comma_separated(state, structure.fields.value.elements);
             format(state, ")");
         }
 
-        void operator()(cst::expression::Struct_initializer const& initializer)
+        void operator()(cst::expression::Struct_init const& structure)
         {
-            format(state, initializer.constructor_path);
+            format(state, structure.path);
             format(state, " {{ ");
-            format_comma_separated(state, initializer.initializers.value.elements);
+            format_comma_separated(state, structure.fields.value.elements);
             format(state, " }}");
         }
 
         void operator()(cst::expression::Method_call const& call)
         {
             format(state, call.base_expression);
-            format(state, ".{}", call.method_name);
+            format(state, ".{}", state.pool.get(call.method_name.id));
             format(state, call.template_arguments);
             format(state, call.function_arguments);
         }
@@ -137,7 +128,7 @@ namespace {
         void operator()(cst::expression::Match const& match)
         {
             format(state, "match ");
-            format(state, match.matched_expression);
+            format(state, match.scrutinee);
             format(state, " {{");
             indent(state, [&] {
                 for (auto const& match_case : match.cases.value) {
@@ -145,7 +136,7 @@ namespace {
                     format(state, match_case.pattern);
                     format(state, " -> ");
                     format(state, match_case.handler);
-                    if (match_case.optional_semicolon_token.has_value()) {
+                    if (match_case.semicolon_token.has_value()) {
                         format(state, ";");
                     }
                 }
@@ -156,19 +147,13 @@ namespace {
         void operator()(cst::expression::Sizeof const& sizeof_)
         {
             format(state, "sizeof(");
-            format(state, sizeof_.inspected_type.value);
+            format(state, sizeof_.type.value);
             format(state, ")");
-        }
-
-        void operator()(cst::expression::Move const& move)
-        {
-            format(state, "mv ");
-            format(state, move.place_expression);
         }
 
         void operator()(cst::expression::Type_alias const& alias)
         {
-            format(state, "alias {} = ", alias.name);
+            format(state, "alias {} = ", state.pool.get(alias.name.id));
             format(state, alias.type);
         }
 
@@ -197,7 +182,7 @@ namespace {
         void operator()(cst::expression::Struct_field const& field)
         {
             format(state, field.base_expression);
-            format(state, ".{}", field.name);
+            format(state, ".{}", state.pool.get(field.name.id));
         }
 
         void operator()(cst::expression::Array_index const& index)
@@ -225,7 +210,7 @@ namespace {
         {
             format(state, ascription.base_expression);
             format(state, ": ");
-            format(state, ascription.ascribed_type);
+            format(state, ascription.type);
         }
 
         void operator()(cst::expression::For_loop const& loop)
@@ -273,7 +258,7 @@ namespace {
                 return;
             }
             if (auto const* const else_conditional = std::get_if<cst::expression::Conditional>(
-                    &state.arena.expressions[conditional.false_branch.value().body].variant)) {
+                    &state.arena.expr[conditional.false_branch.value().body].variant)) {
                 if (else_conditional->is_elif) {
                     format(state, "{}", newline(state));
                     format(state, conditional.false_branch.value().body);
@@ -305,10 +290,15 @@ namespace {
         {
             format(state, "continue");
         }
+
+        void operator()(ki::Error)
+        {
+            cpputil::todo();
+        }
     };
 } // namespace
 
-void libformat::format(State& state, cst::Expression const& expression)
+void ki::format::format(State& state, cst::Expression const& expression)
 {
     std::visit(Expression_format_visitor { state }, expression.variant);
 }

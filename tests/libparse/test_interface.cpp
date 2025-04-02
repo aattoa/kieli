@@ -1,36 +1,36 @@
 #include <libutl/utilities.hpp>
-#include <libparse/parser_internals.hpp>
+#include <libparse/internals.hpp>
 #include <libformat/format.hpp>
 #include "test_interface.hpp"
 
 namespace {
-    template <libparse::parser auto parser>
+    template <std::invocable<ki::parse::Context&> auto parser>
     auto test_parse(std::string&& text, std::string_view const expectation) -> std::string
     {
-        auto db          = kieli::Database {};
-        auto document_id = kieli::test_document(db, std::move(text));
-        auto arena       = kieli::cst::Arena {};
-        auto context     = libparse::Context { arena, kieli::lex_state(db, document_id) };
+        auto db     = ki::Database {};
+        auto doc_id = ki::test_document(db, std::move(text));
+        auto arena  = ki::cst::Arena {};
+        auto ctx    = ki::parse::context(db, arena, doc_id);
 
-        auto const result = libparse::require<parser>(context, expectation);
-        if (context.is_finished()) {
-            return kieli::to_string(arena, kieli::Format_options {}, result);
+        auto const result = ki::parse::require<parser>(ctx, expectation);
+        if (is_finished(ctx)) {
+            return ki::format::to_string(db.string_pool, arena, ki::format::Options {}, result);
         }
-        context.error_expected(expectation);
+        error_expected(ctx, expectation);
     }
 } // namespace
 
-auto libparse::test_parse_expression(std::string&& string) -> std::string
+auto ki::parse::test_parse_expression(std::string text) -> std::string
 {
-    return test_parse<parse_expression>(std::move(string), "an expression");
+    return test_parse<parse_expression>(std::move(text), "an expression");
 }
 
-auto libparse::test_parse_pattern(std::string&& string) -> std::string
+auto ki::parse::test_parse_pattern(std::string text) -> std::string
 {
-    return test_parse<parse_pattern>(std::move(string), "a pattern");
+    return test_parse<parse_pattern>(std::move(text), "a pattern");
 }
 
-auto libparse::test_parse_type(std::string&& string) -> std::string
+auto ki::parse::test_parse_type(std::string text) -> std::string
 {
-    return test_parse<parse_type>(std::move(string), "a type");
+    return test_parse<parse_type>(std::move(text), "a type");
 }

@@ -2,7 +2,9 @@
 #include <libutl/disjoint_set.hpp>
 #include <libutl/index_vector.hpp>
 #include <libutl/mailbox.hpp>
+#include <libutl/string_pool.hpp>
 
-utl::Safe_cast_argument_out_of_range::Safe_cast_argument_out_of_range()
-    : invalid_argument { "utl::safe_cast argument out of target range" }
-{}
+auto utl::View::string(std::string_view string) const -> std::string_view
+{
+    return string.substr(offset, length);
+}

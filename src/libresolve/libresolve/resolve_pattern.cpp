@@ -1,25 +1,25 @@
 #include <libutl/utilities.hpp>
 #include <libresolve/resolve.hpp>
 
-using namespace libresolve;
+using namespace ki::resolve;
 
 namespace {
     struct Pattern_resolution_visitor {
-        Context&            context;
+        Context&            ctx;
         Inference_state&    state;
         hir::Scope_id       scope_id;
-        hir::Environment_id environment_id;
+        hir::Environment_id env_id;
         ast::Pattern const& this_pattern;
 
         auto ast() -> ast::Arena&
         {
-            return context.documents.at(state.document_id).ast;
+            return ctx.documents.at(state.doc_id).ast;
         }
 
         auto recurse()
         {
             return [&](ast::Pattern const& pattern) -> hir::Pattern {
-                return resolve_pattern(context, state, scope_id, environment_id, pattern);
+                return resolve_pattern(ctx, state, scope_id, env_id, pattern);
             };
         }
 
@@ -28,67 +28,73 @@ namespace {
             return recurse()(pattern);
         }
 
-        auto operator()(kieli::Integer const& integer) -> hir::Pattern
+        auto operator()(ki::Integer const& integer) -> hir::Pattern
         {
-            hir::Type type = fresh_integral_type_variable(state, context.hir, this_pattern.range);
-            return { integer, type.id, this_pattern.range };
+            auto type = fresh_integral_type_variable(state, ctx.hir, this_pattern.range);
+            return { .variant = integer, .type = type.id, .range = this_pattern.range };
         }
 
-        auto operator()(kieli::Floating const& floating) -> hir::Pattern
+        auto operator()(ki::Floating const& floating) -> hir::Pattern
         {
-            return { floating, context.constants.floating_type, this_pattern.range };
+            return {
+                .variant = floating,
+                .type    = ctx.constants.type_floating,
+                .range   = this_pattern.range,
+            };
         }
 
-        auto operator()(kieli::Character const& character) -> hir::Pattern
+        auto operator()(ki::Boolean const& boolean) -> hir::Pattern
         {
-            return { character, context.constants.character_type, this_pattern.range };
+            return {
+                .variant = boolean,
+                .type    = ctx.constants.type_boolean,
+                .range   = this_pattern.range,
+            };
         }
 
-        auto operator()(kieli::Boolean const& boolean) -> hir::Pattern
+        auto operator()(ki::String const& string) -> hir::Pattern
         {
-            return { boolean, context.constants.boolean_type, this_pattern.range };
-        }
-
-        auto operator()(kieli::String const& string) -> hir::Pattern
-        {
-            return { string, context.constants.string_type, this_pattern.range };
+            return {
+                .variant = string,
+                .type    = ctx.constants.type_string,
+                .range   = this_pattern.range,
+            };
         }
 
         auto operator()(ast::Wildcard const&) -> hir::Pattern
         {
             return {
-                hir::Wildcard {},
-                fresh_general_type_variable(state, context.hir, this_pattern.range).id,
-                this_pattern.range,
+                .variant = hir::Wildcard {},
+                .type    = fresh_general_type_variable(state, ctx.hir, this_pattern.range).id,
+                .range   = this_pattern.range,
             };
         }
 
         auto operator()(ast::pattern::Name const& pattern) -> hir::Pattern
         {
-            hir::Mutability const mutability
-                = resolve_mutability(context, scope_id, pattern.mutability);
-            hir::Type const type
-                = fresh_general_type_variable(state, context.hir, pattern.name.range);
-            hir::Local_variable_tag const tag = fresh_local_variable_tag(context.tags);
+            auto const tag  = fresh_local_variable_tag(ctx.tags);
+            auto const mut  = resolve_mutability(ctx, scope_id, pattern.mutability);
+            auto const type = fresh_general_type_variable(state, ctx.hir, pattern.name.range);
 
             bind_variable(
-                context.info.scopes.index_vector[scope_id],
-                pattern.name.identifier,
+                ctx.info.scopes.index_vector[scope_id],
                 Variable_bind {
                     .name       = pattern.name,
                     .type       = type.id,
-                    .mutability = mutability,
+                    .mutability = mut,
                     .tag        = tag,
                 });
 
+            hir::pattern::Name variant {
+                .mutability   = mut,
+                .identifier   = pattern.name.id,
+                .variable_tag = tag,
+            };
+
             return {
-                hir::pattern::Name {
-                    .mutability   = mutability,
-                    .identifier   = pattern.name.identifier,
-                    .variable_tag = tag,
-                },
-                type.id,
-                this_pattern.range,
+                .variant = std::move(variant),
+                .type    = type.id,
+                .range   = this_pattern.range,
             };
         }
 
@@ -109,9 +115,9 @@ namespace {
             auto types = std::views::transform(patterns, hir::pattern_type)
                        | std::ranges::to<std::vector>();
             return {
-                hir::pattern::Tuple { std::move(patterns) },
-                context.hir.types.push(hir::type::Tuple { std::move(types) }),
-                this_pattern.range,
+                .variant = hir::pattern::Tuple { std::move(patterns) },
+                .type    = ctx.hir.type.push(hir::type::Tuple { std::move(types) }),
+                .range   = this_pattern.range,
             };
         }
 
@@ -120,57 +126,62 @@ namespace {
             auto patterns = std::views::transform(slice.element_patterns, recurse())
                           | std::ranges::to<std::vector>();
 
-            hir::Type const element_type
-                = fresh_general_type_variable(state, context.hir, this_pattern.range);
+            auto const element_type
+                = fresh_general_type_variable(state, ctx.hir, this_pattern.range);
 
             for (hir::Pattern const& pattern : patterns) {
                 require_subtype_relationship(
-                    context,
+                    ctx,
                     state,
                     pattern.range,
-                    context.hir.types[pattern.type],
-                    context.hir.types[element_type.id]);
+                    ctx.hir.type[pattern.type],
+                    ctx.hir.type[element_type.id]);
             }
 
             return {
-                hir::pattern::Slice { std::move(patterns) },
-                context.hir.types.push(hir::type::Slice { element_type }),
-                this_pattern.range,
+                .variant = hir::pattern::Slice { std::move(patterns) },
+                .type    = ctx.hir.type.push(hir::type::Slice { element_type }),
+                .range   = this_pattern.range,
             };
         }
 
         auto operator()(ast::pattern::Guarded const& guarded) -> hir::Pattern
         {
-            hir::Pattern    guarded_pattern  = recurse(ast().patterns[guarded.guarded_pattern]);
-            hir::Expression guard_expression = resolve_expression(
-                context, state, scope_id, environment_id, guarded.guard_expression);
+            auto pattern = recurse(ast().patt[guarded.guarded_pattern]);
+            auto guard = resolve_expression(ctx, state, scope_id, env_id, guarded.guard_expression);
 
             require_subtype_relationship(
-                context,
+                ctx,
                 state,
-                guard_expression.range,
-                context.hir.types[guard_expression.type],
-                context.hir.types[context.constants.boolean_type]);
+                guard.range,
+                ctx.hir.type[guard.type],
+                ctx.hir.type[ctx.constants.type_boolean]);
 
             return {
-                hir::pattern::Guarded {
-                    .guarded_pattern  = context.hir.patterns.push(std::move(guarded_pattern)),
-                    .guard_expression = context.hir.expressions.push(std::move(guard_expression)),
+                .variant = hir::pattern::Guarded {
+                    .guarded_pattern  = ctx.hir.patt.push(std::move(pattern)),
+                    .guard_expression = ctx.hir.expr.push(std::move(guard)),
                 },
-                guarded_pattern.type,
-                this_pattern.range,
+                .type  = pattern.type,
+                .range = this_pattern.range,
             };
         }
     };
 } // namespace
 
-auto libresolve::resolve_pattern(
-    Context&                  context,
+auto ki::resolve::resolve_pattern(
+    Context&                  ctx,
     Inference_state&          state,
     hir::Scope_id const       scope_id,
-    hir::Environment_id const environment_id,
+    hir::Environment_id const env_id,
     ast::Pattern const&       pattern) -> hir::Pattern
 {
-    Pattern_resolution_visitor visitor { context, state, scope_id, environment_id, pattern };
+    Pattern_resolution_visitor visitor {
+        .ctx          = ctx,
+        .state        = state,
+        .scope_id     = scope_id,
+        .env_id       = env_id,
+        .this_pattern = pattern,
+    };
     return std::visit(visitor, pattern.variant);
 }

@@ -1,29 +1,8 @@
-#pragma once
+#ifndef KIELI_LIBCOMPILER_TREE_FWD
+#define KIELI_LIBCOMPILER_TREE_FWD
 
 #include <libutl/utilities.hpp>
 #include <libutl/index_vector.hpp>
-
-namespace kieli {
-    // Concrete syntax tree compilation firewall.
-    struct CST {
-        // Defined in `cst.hpp`
-        struct Module;
-        std::unique_ptr<Module> module;
-
-        explicit CST(Module&&);
-
-        CST(CST&&) noexcept;
-        auto operator=(CST&&) noexcept -> CST&;
-
-        CST(CST const&)            = delete;
-        auto operator=(CST const&) = delete;
-
-        ~CST();
-
-        [[nodiscard]] auto get() const -> Module const&;
-        [[nodiscard]] auto get() -> Module&;
-    };
-} // namespace kieli
 
 #define DEFINE_INDEX(name)                      \
     struct name : utl::Vector_index<name> {     \
@@ -32,7 +11,7 @@ namespace kieli {
 
 // NOLINTBEGIN(bugprone-forward-declaration-namespace)
 
-namespace kieli::cst {
+namespace ki::cst {
     struct Arena;
     struct Definition;
     struct Expression;
@@ -41,9 +20,9 @@ namespace kieli::cst {
     DEFINE_INDEX(Expression_id);
     DEFINE_INDEX(Pattern_id);
     DEFINE_INDEX(Type_id);
-} // namespace kieli::cst
+} // namespace ki::cst
 
-namespace kieli::ast {
+namespace ki::ast {
     struct Arena;
     struct Expression;
     struct Type;
@@ -52,9 +31,9 @@ namespace kieli::ast {
     DEFINE_INDEX(Expression_id);
     DEFINE_INDEX(Pattern_id);
     DEFINE_INDEX(Type_id);
-} // namespace kieli::ast
+} // namespace ki::ast
 
-namespace kieli::hir {
+namespace ki::hir {
     struct Mutability;
     struct Expression;
     struct Pattern;
@@ -73,8 +52,10 @@ namespace kieli::hir {
     DEFINE_INDEX(Type_variable_id);
     DEFINE_INDEX(Mutability_variable_id);
     DEFINE_INDEX(Scope_id);
-} // namespace kieli::hir
+} // namespace ki::hir
 
 // NOLINTEND(bugprone-forward-declaration-namespace)
 
 #undef DEFINE_INDEX
+
+#endif // KIELI_LIBCOMPILER_TREE_FWD

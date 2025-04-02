@@ -4,15 +4,13 @@
 - Single-character operator tokens, glue in the parser?
 
 ## libparse
-- `struct Parse_state`
-- `auto parse(Parse_state& state) -> std::expected<Definition, EOF or error>`
 - Accept trailing commas
 - Test definition parsing
-- Error node, error recovery
+- Integer exponents
+- Digit separators
 
 ## libdesugar
 - Tests
-- Shunting yard?
 
 ## libresolve
 - Inject built in types
@@ -25,14 +23,11 @@
 ## libcompiler
 - Document paths should always be absolute
 - Generic tree walkers
-- `enum struct Phase { lex, parse, etc. }`
-- `enum struct liblex::diagnostic`
-- `auto diag_code(Phase, std::size_t code) -> std::string`
 
 ## Language server
+- Semantic tokens for escape sequences
 - Semantic token deltas
 - Handle command line properly
-- Gather code actions per line
 - Split executable into communication thread and analysis thread, actor mailboxes
 
 ## Build process
@@ -49,7 +44,6 @@
 - in, inout, out, mv, fwd?
 - libtommath for arbitrary precision integers?
 - String interpolation
-- lsp character offsets are utf8
 - Configure builds with `build.kieli`
 - Backends: bytecode, C, x86 asm
 

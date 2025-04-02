@@ -1,19 +1,19 @@
 #include <libutl/utilities.hpp>
 #include <libresolve/resolve.hpp>
 
-using namespace libresolve;
+using namespace ki::resolve;
 
 namespace {
     struct Template_parameter_resolution_visitor {
-        Context&                    context;
+        Context&                    ctx;
         Inference_state&            state;
         hir::Scope_id               scope_id;
-        hir::Environment_id         environment_id;
+        hir::Environment_id         env_id;
         hir::Template_parameter_tag tag;
 
         auto ast() -> ast::Arena&
         {
-            return context.documents.at(state.document_id).ast;
+            return ctx.documents.at(state.doc_id).ast;
         }
 
         template <typename Default>
@@ -25,11 +25,10 @@ namespace {
                         return hir::Wildcard {}; //
                     },
                     [&](ast::Type_id const type) -> hir::Type {
-                        return resolve_type(
-                            context, state, scope_id, environment_id, ast().types[type]);
+                        return resolve_type(ctx, state, scope_id, env_id, ast().type[type]);
                     },
                     [&](ast::Mutability const& mutability) {
-                        return resolve_mutability(context, scope_id, mutability);
+                        return resolve_mutability(ctx, scope_id, mutability);
                     },
                 };
                 return std::visit<Default>(visitor, argument);
@@ -40,16 +39,16 @@ namespace {
             -> hir::Template_parameter_variant
         {
             bind_type(
-                context.info.scopes.index_vector[scope_id],
-                parameter.name.identifier,
+                ctx.info.scopes.index_vector[scope_id],
                 Type_bind {
-                    parameter.name,
-                    context.hir.types.push(
-                        hir::type::Parameterized { tag, parameter.name.identifier }),
+                    .name = parameter.name,
+                    .type = ctx.hir.type.push(hir::type::Parameterized {
+                        .tag = tag,
+                        .id  = parameter.name.id,
+                    }),
                 });
             auto const resolve_concept = [&](ast::Path const& concept_path) {
-                return resolve_concept_reference(
-                    context, state, scope_id, environment_id, concept_path);
+                return resolve_concept_reference(ctx, state, scope_id, env_id, concept_path);
             };
             return hir::Template_type_parameter {
                 .concept_ids = std::ranges::to<std::vector>(
@@ -64,12 +63,11 @@ namespace {
             -> hir::Template_parameter_variant
         {
             hir::Mutability mutability {
-                context.hir.mutabilities.push(hir::mutability::Parameterized { tag }),
-                parameter.name.range,
+                .id    = ctx.hir.mut.push(hir::mutability::Parameterized { tag }),
+                .range = parameter.name.range,
             };
             bind_mutability(
-                context.info.scopes.index_vector[scope_id],
-                parameter.name.identifier,
+                ctx.info.scopes.index_vector[scope_id],
                 Mutability_bind { .name = parameter.name, .mutability = mutability });
             return hir::Template_mutability_parameter {
                 .name             = parameter.name,
@@ -81,32 +79,37 @@ namespace {
         auto operator()(ast::Template_value_parameter const& parameter)
             -> hir::Template_parameter_variant
         {
-            kieli::add_error(
-                context.db,
-                state.document_id,
+            ki::add_error(
+                ctx.db,
+                state.doc_id,
                 parameter.name.range,
                 "Template value parameters are not supported yet");
             return hir::Template_value_parameter {
-                .type = error_type(context.constants, parameter.name.range),
+                .type = error_type(ctx.constants, parameter.name.range),
                 .name = parameter.name,
             };
         }
     };
 } // namespace
 
-auto libresolve::resolve_template_parameters(
-    Context&                        context,
+auto ki::resolve::resolve_template_parameters(
+    Context&                        ctx,
     Inference_state&                state,
     hir::Scope_id const             scope_id,
-    hir::Environment_id const       environment_id,
+    hir::Environment_id const       env_id,
     ast::Template_parameters const& parameters) -> std::vector<hir::Template_parameter>
 {
     auto const resolve_parameter = [&](ast::Template_parameter const& parameter) {
-        auto const tag = fresh_template_parameter_tag(context.tags);
+        auto const tag = fresh_template_parameter_tag(ctx.tags);
         return hir::Template_parameter {
             .variant = std::visit(
                 Template_parameter_resolution_visitor {
-                    context, state, scope_id, environment_id, tag },
+                    .ctx      = ctx,
+                    .state    = state,
+                    .scope_id = scope_id,
+                    .env_id   = env_id,
+                    .tag      = tag,
+                },
                 parameter.variant),
             .tag   = tag,
             .range = parameter.range,
@@ -116,18 +119,18 @@ auto libresolve::resolve_template_parameters(
     return parameters.transform(resolve).value_or(std::vector<hir::Template_parameter> {});
 }
 
-auto libresolve::resolve_template_arguments(
-    Context&                                    context,
+auto ki::resolve::resolve_template_arguments(
+    Context&                                    ctx,
     Inference_state&                            state,
     hir::Scope_id const                         scope_id,
-    hir::Environment_id const                   environment_id,
+    hir::Environment_id const                   env_id,
     std::vector<hir::Template_parameter> const& parameters,
     std::vector<ast::Template_argument> const&  arguments) -> std::vector<hir::Template_argument>
 {
-    (void)context;
+    (void)ctx;
     (void)state;
     (void)scope_id;
-    (void)environment_id;
+    (void)env_id;
     (void)parameters;
     (void)arguments;
     cpputil::todo();

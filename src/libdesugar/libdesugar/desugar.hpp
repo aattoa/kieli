@@ -1,36 +1,34 @@
-#pragma once
+#ifndef KIELI_LIBDESUGAR_DESUGAR
+#define KIELI_LIBDESUGAR_DESUGAR
 
 #include <libutl/utilities.hpp>
 #include <libcompiler/compiler.hpp>
 #include <libcompiler/cst/cst.hpp>
 #include <libcompiler/ast/ast.hpp>
 
-namespace kieli {
-    struct Desugar_context {
+namespace ki::desugar {
+
+    struct Context {
         Database&         db;
         cst::Arena const& cst;
         ast::Arena&       ast;
-        Document_id       document_id;
+        Document_id       doc_id;
     };
 
-    auto desugar_definition(Desugar_context context, cst::Definition const& definition)
-        -> ast::Definition;
+    auto desugar_definition(Context ctx, cst::Definition const& definition) -> ast::Definition;
 
-    auto desugar_function(Desugar_context context, cst::definition::Function const& function)
-        -> ast::definition::Function;
+    auto desugar_function(Context ctx, cst::Function const& function) -> ast::Function;
 
-    auto desugar_struct(Desugar_context context, cst::definition::Struct const& structure)
-        -> ast::definition::Enumeration;
+    auto desugar_struct(Context ctx, cst::Struct const& structure) -> ast::Enumeration;
 
-    auto desugar_enum(Desugar_context context, cst::definition::Enum const& enumeration)
-        -> ast::definition::Enumeration;
+    auto desugar_enum(Context ctx, cst::Enum const& enumeration) -> ast::Enumeration;
 
-    auto desugar_alias(Desugar_context context, cst::definition::Alias const& alias)
-        -> ast::definition::Alias;
+    auto desugar_alias(Context ctx, cst::Alias const& alias) -> ast::Alias;
 
-    auto desugar_concept(Desugar_context context, cst::definition::Concept const& concept_)
-        -> ast::definition::Concept;
+    auto desugar_concept(Context ctx, cst::Concept const& concept_) -> ast::Concept;
 
-    auto desugar_impl(Desugar_context context, cst::definition::Impl const& impl)
-        -> ast::definition::Impl;
-} // namespace kieli
+    auto desugar_impl(Context ctx, cst::Impl const& impl) -> ast::Impl;
+
+} // namespace ki::desugar
+
+#endif // KIELI_LIBDESUGAR_DESUGAR

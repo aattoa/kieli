@@ -3,7 +3,6 @@ add_executable(language-server)
 target_sources(language-server
     PRIVATE language-server/json.cpp
     PRIVATE language-server/json.hpp
-    PRIVATE language-server/lsp.cpp
     PRIVATE language-server/main.cpp
     PRIVATE language-server/rpc.cpp
     PRIVATE language-server/rpc.hpp

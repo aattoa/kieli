@@ -33,10 +33,6 @@ Some errors are also caught at this stage, such as duplicate struct fields.
 
 `T { a, b = 10, c }` → `T { a = a, b = 10, c = c }`
 
-## Normalize function bodies to block form
-
-`fn f(): I32 = 0` → `fn f(): I32 { 0 }`
-
 ## Fill in omitted function parameter types
 
 `(a, b, c: T)` → `(a: T, b: T, c: T)`

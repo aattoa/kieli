@@ -1,7 +1,7 @@
 #include <libutl/utilities.hpp>
-#include <libformat/format_internals.hpp>
+#include <libformat/internals.hpp>
 
-using namespace libformat;
+using namespace ki::format;
 
 namespace {
     void format_constructor_body(State& state, cst::pattern::Constructor_body const& body)
@@ -25,9 +25,14 @@ namespace {
     struct Pattern_format_visitor {
         State& state;
 
-        void operator()(kieli::literal auto const& literal)
+        void operator()(utl::one_of<ki::Integer, ki::Floating, ki::Boolean> auto const literal)
         {
-            format(state, "{}", literal);
+            format(state, "{}", literal.value);
+        }
+
+        void operator()(ki::String const string)
+        {
+            format(state, "{:?}", state.pool.get(string.id));
         }
 
         void operator()(cst::pattern::Paren const& paren)
@@ -59,7 +64,7 @@ namespace {
         void operator()(cst::pattern::Name const& name)
         {
             format_mutability_with_whitespace(state, name.mutability);
-            format(state, "{}", name.name);
+            format(state, "{}", state.pool.get(name.name.id));
         }
 
         void operator()(cst::pattern::Guarded const& guarded)
@@ -77,7 +82,7 @@ namespace {
 
         void operator()(cst::pattern::Abbreviated_constructor const& constructor)
         {
-            format(state, "::{}", constructor.name);
+            format(state, "::{}", state.pool.get(constructor.name.id));
             format_constructor_body(state, constructor.body);
         }
 
@@ -88,7 +93,7 @@ namespace {
     };
 } // namespace
 
-void libformat::format(State& state, cst::Pattern const& pattern)
+void ki::format::format(State& state, cst::Pattern const& pattern)
 {
     std::visit(Pattern_format_visitor { state }, pattern.variant);
 }

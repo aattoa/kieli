@@ -9,48 +9,46 @@
 #include <cpputil/input.hpp>
 
 namespace {
-    [[nodiscard]] auto error_header(cppdiag::Colors colors) -> cppdiag::Severity_header
+    void debug_lex(ki::Database& db, ki::Document_id id)
     {
-        return cppdiag::Severity_header::make(cppdiag::Severity::error, colors);
-    }
-
-    void debug_lex(kieli::Database& db, kieli::Document_id id)
-    {
-        auto state = kieli::lex_state(db, id);
-        auto token = kieli::lex(state);
-        while (token.type != kieli::Token_type::end_of_input) {
-            std::print("{} ", token);
-            token = kieli::lex(state);
+        auto state = ki::lex::state(db.documents[id].text);
+        auto token = ki::lex::next(state);
+        while (token.type != ki::Token_type::End_of_input) {
+            std::print("{} ", ki::token_type_string(token.type));
+            token = ki::lex::next(state);
         }
         std::println("");
     }
 
-    void debug_parse(kieli::Database& db, kieli::Document_id id)
+    void debug_parse(ki::Database& db, ki::Document_id id)
     {
-        auto const cst = kieli::parse(db, id);
-        std::print("{}", kieli::format_module(cst.get(), kieli::Format_options {}));
+        auto cst = ki::parse::parse(db, id);
+        auto mod = ki::format::format_module(cst, db.string_pool, ki::format::Options {});
+        std::print("{}", mod);
     }
 
-    void debug_desugar(kieli::Database& db, kieli::Document_id id)
+    void debug_desugar(ki::Database& db, ki::Document_id id)
     {
-        auto const             cst = kieli::parse(db, id);
-        kieli::ast::Arena      arena;
-        kieli::Desugar_context context { db, cst.get().arena, arena, id };
-        for (kieli::cst::Definition const& definition : cst.get().definitions) {
-            std::println("{}", display(arena, kieli::desugar_definition(context, definition)));
+        auto ast = ki::ast::Arena {};
+        auto cst = ki::parse::parse(db, id);
+
+        ki::desugar::Context ctx { .db = db, .cst = cst.arena, .ast = ast, .doc_id = id };
+        for (ki::cst::Definition const& definition : cst.definitions) {
+            auto def = ki::desugar::desugar_definition(ctx, definition);
+            std::println("{}", ki::ast::display(ast, db.string_pool, def));
         }
     }
 
-    void debug_resolve(kieli::Database& db, kieli::Document_id id)
+    void debug_resolve(ki::Database& db, ki::Document_id id)
     {
-        auto ctx = libresolve::context(db);
-        auto env = libresolve::collect_document(ctx, id);
-        libresolve::resolve_environment(ctx, env);
-        libresolve::debug_display_environment(ctx, env);
+        auto ctx = ki::resolve::context(db);
+        auto env = ki::resolve::collect_document(ctx, id);
+        ki::resolve::resolve_environment(ctx, env);
+        ki::resolve::debug_display_environment(ctx, env);
     }
 
     auto choose_debug_repl_callback(std::string_view const name)
-        -> void (*)(kieli::Database&, kieli::Document_id)
+        -> void (*)(ki::Database&, ki::Document_id)
     {
         // clang-format off
         if (name == "lex") return debug_lex;
@@ -61,20 +59,19 @@ namespace {
         // clang-format on
     }
 
-    void wrap_exceptions(std::invocable auto const& callback, cppdiag::Colors colors)
+    void wrap_exceptions(std::invocable auto const& callback)
     {
         try {
             std::invoke(callback);
         }
         catch (std::exception const& exception) {
-            std::print(stderr, "{}{}\n\n", error_header(colors), exception.what());
+            std::print(stderr, "Error: {}\n\n", exception.what());
         }
     }
 
-    void run_debug_repl(
-        void (&callback)(kieli::Database&, kieli::Document_id), cppdiag::Colors colors)
+    void run_debug_repl(void (&callback)(ki::Database&, ki::Document_id))
     {
-        kieli::read_history_file_to_active_history();
+        ki::read_history_file_to_active_history();
 
         while (auto input = cpputil::input::read_line(">>> ")) {
             if (input == "q") {
@@ -83,39 +80,39 @@ namespace {
             if (input.value().find_first_not_of(' ') == std::string::npos) {
                 continue;
             }
-            kieli::add_to_history(input.value().c_str());
-            kieli::Database db { .manifest { .root_path = std::filesystem::current_path() } };
-            auto const      id = kieli::test_document(db, std::move(input).value());
-            wrap_exceptions([&] { callback(db, id); }, colors);
-            std::print("{}", kieli::format_document_diagnostics(db, id, colors));
+            ki::add_to_history(input.value().c_str());
+
+            auto db = ki::database({ .root_path = std::filesystem::current_path() });
+            auto id = ki::test_document(db, std::move(input).value());
+            wrap_exceptions([&] { callback(db, id); });
+            ki::print_diagnostics(stderr, db, id);
         }
     }
 
-    auto choose_and_run_repl(std::string_view name, cppdiag::Colors colors) -> int
+    auto choose_and_run_repl(std::string_view name) -> int
     {
         if (auto* const callback = choose_debug_repl_callback(name)) {
-            run_debug_repl(*callback, colors);
+            run_debug_repl(*callback);
             return EXIT_SUCCESS;
         }
-        std::println(stderr, "{}Unrecognized REPL name: '{}'", error_header(colors), name);
+        std::println(stderr, "Error: Unrecognized REPL name: '{}'", name);
         return EXIT_FAILURE;
     }
 
-    auto dump(std::string_view filename, cppdiag::Colors colors, auto const& callback) -> int
+    auto dump(std::string_view filename, auto const& callback) -> int
     {
-        kieli::Database db;
-        if (auto id = kieli::read_document(db, filename)) {
-            wrap_exceptions([&] { callback(db, id.value()); }, colors);
-            std::print("{}", kieli::format_document_diagnostics(db, id.value(), colors));
+        ki::Database db;
+        if (auto id = ki::read_document(db, filename)) {
+            wrap_exceptions([&] { callback(db, id.value()); });
+            ki::print_diagnostics(stderr, db, id.value());
             return EXIT_SUCCESS;
         }
         else {
             std::println(
                 stderr,
-                "{}Failed to read '{}': {}",
-                error_header(colors),
+                "Error: Failed to read '{}': {}",
                 filename,
-                kieli::describe_read_failure(id.error()));
+                ki::describe_read_failure(id.error()));
             return EXIT_FAILURE;
         }
     }
@@ -125,16 +122,6 @@ namespace {
     {
         std::println(stderr, fmt, std::forward<Args>(args)...);
         return EXIT_FAILURE;
-    }
-
-    auto bad_argument(char const* argument, char const* program, cppdiag::Colors colors) -> int
-    {
-        return error(
-            "Unrecognized argument: '{}'\n\nFor help, use {}{} --help{}",
-            argument,
-            colors.hint.code,
-            program,
-            colors.normal.code);
     }
 
     auto const help_string = R"(Valid options:
@@ -148,43 +135,39 @@ namespace {
 
 auto main(int const argc, char const* const* const argv) -> int
 {
-    cppdiag::Colors colors  = cppdiag::Colors::defaults();
-    const char*     program = *argv ? *argv : "kieli";
+    const char* program = *argv ? *argv : "kieli";
 
     try {
-        for (auto arg = argv + 1; arg != argv + argc; ++arg) {
+        for (char const* const* arg = argv + 1; arg != argv + argc; ++arg) {
             auto const next = [&] { return ++arg != argv + argc; };
 
-            if (*arg == "--nocolor"sv) {
-                colors = cppdiag::Colors::none();
-            }
-            else if (*arg == "-v"sv || *arg == "--version"sv) {
+            if (*arg == "-v"sv or *arg == "--version"sv) {
                 std::println("Kieli version 0");
             }
-            else if (*arg == "-h"sv || *arg == "--help"sv) {
+            else if (*arg == "-h"sv or *arg == "--help"sv) {
                 std::println("Usage: {} [options]\n{}", program, help_string);
             }
             else if (*arg == "cst"sv) {
-                return next() ? dump(*arg, colors, debug_parse) : error("Missing file path");
+                return next() ? dump(*arg, debug_parse) : error("Missing file path");
             }
             else if (*arg == "ast"sv) {
-                return next() ? dump(*arg, colors, debug_desugar) : error("Missing file path");
+                return next() ? dump(*arg, debug_desugar) : error("Missing file path");
             }
             else if (*arg == "repl"sv) {
-                return next() ? choose_and_run_repl(*arg, colors) : error("Missing REPL name");
+                return next() ? choose_and_run_repl(*arg) : error("Missing REPL name");
             }
             else {
-                return bad_argument(*arg, program, colors);
+                return error("Unrecognized option: '{}'\n\nFor help, use {} --help", *arg, program);
             }
         }
         return EXIT_SUCCESS;
     }
     catch (std::exception const& exception) {
-        std::println(stderr, "{}Unhandled exception: {}", error_header(colors), exception.what());
+        std::println(stderr, "Error: Unhandled exception: {}", exception.what());
         return EXIT_FAILURE;
     }
     catch (...) {
-        std::println(stderr, "{}Caught unrecognized exception", error_header(colors));
+        std::println(stderr, "Error: Caught unrecognized exception");
         throw;
     }
 }

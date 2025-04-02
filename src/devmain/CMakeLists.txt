@@ -18,7 +18,6 @@ target_link_libraries(devmain
     PRIVATE libformat
     PRIVATE libdesugar
     PRIVATE libresolve
-    PRIVATE cppdiag
     PRIVATE cpputil::util
     PRIVATE cpputil::input
     PRIVATE cpputil::io)

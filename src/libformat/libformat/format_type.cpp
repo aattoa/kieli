@@ -1,7 +1,7 @@
 #include <libutl/utilities.hpp>
-#include <libformat/format_internals.hpp>
+#include <libformat/internals.hpp>
 
-using namespace libformat;
+using namespace ki::format;
 
 namespace {
     struct Type_format_visitor {
@@ -77,7 +77,7 @@ namespace {
         void operator()(cst::type::Typeof const& typeof_)
         {
             format(state, "typeof(");
-            format(state, typeof_.inspected_expression.value);
+            format(state, typeof_.expression.value);
             format(state, ")");
         }
 
@@ -89,7 +89,7 @@ namespace {
     };
 } // namespace
 
-void libformat::format(State& state, cst::Type const& type)
+void ki::format::format(State& state, cst::Type const& type)
 {
     std::visit(Type_format_visitor { state }, type.variant);
 }

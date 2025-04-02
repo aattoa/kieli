@@ -1,4 +1,5 @@
-#pragma once
+#ifndef KIELI_LIBRESOLVE_MODULE
+#define KIELI_LIBRESOLVE_MODULE
 
 #include <libutl/utilities.hpp>
 #include <libcompiler/compiler.hpp>
@@ -6,23 +7,24 @@
 #include <libcompiler/ast/ast.hpp>
 #include <libcompiler/hir/hir.hpp>
 
-namespace libresolve {
-    namespace cst = kieli::cst;
-    namespace ast = kieli::ast;
-    namespace hir = kieli::hir;
+namespace ki::resolve {
+
+    namespace cst = ki::cst;
+    namespace ast = ki::ast;
+    namespace hir = ki::hir;
 
     struct Lower_info {
         using Variant = std::variant<hir::Function_id, hir::Module_id>;
-        kieli::Lower       name;
-        kieli::Document_id document_id;
-        Variant            variant;
+        Lower       name;
+        Document_id doc_id;
+        Variant     variant;
     };
 
     struct Upper_info {
         using Variant = std::variant<hir::Enumeration_id, hir::Concept_id, hir::Alias_id>;
-        kieli::Upper       name;
-        kieli::Document_id document_id;
-        Variant            variant;
+        Upper       name;
+        Document_id doc_id;
+        Variant     variant;
     };
 
     struct Definition_variant
@@ -36,7 +38,7 @@ namespace libresolve {
     };
 
     struct Variable_bind {
-        kieli::Lower            name;
+        Lower                   name;
         hir::Type_id            type;
         hir::Mutability         mutability;
         hir::Local_variable_tag tag;
@@ -44,79 +46,79 @@ namespace libresolve {
     };
 
     struct Type_bind {
-        kieli::Upper name;
+        Upper        name;
         hir::Type_id type;
         bool         unused = true;
     };
 
     struct Mutability_bind {
-        kieli::Lower    name;
+        Lower           name;
         hir::Mutability mutability;
         bool            unused = true;
     };
 
     struct Function_info {
-        cst::definition::Function              cst;
-        ast::definition::Function              ast;
+        cst::Function                          cst;
+        ast::Function                          ast;
         std::optional<hir::Function_signature> signature;
         std::optional<hir::Expression>         body;
-        hir::Environment_id                    environment_id;
-        kieli::Document_id                     document_id;
-        kieli::Lower                           name;
+        hir::Environment_id                    env_id;
+        Document_id                            doc_id;
+        Lower                                  name;
     };
 
     struct Enumeration_info {
-        std::variant<cst::definition::Struct, cst::definition::Enum> cst; // TODO: improve
-        ast::definition::Enumeration                                 ast;
-        std::optional<hir::Enumeration>                              hir;
-        hir::Environment_id                                          environment_id;
-        kieli::Document_id                                           document_id;
-        kieli::Upper                                                 name;
+        std::variant<cst::Struct, cst::Enum> cst; // TODO: improve
+        ast::Enumeration                     ast;
+        std::optional<hir::Enumeration>      hir;
+        hir::Environment_id                  env_id;
+        Document_id                          doc_id;
+        Upper                                name;
     };
 
     struct Concept_info {
-        cst::definition::Concept    cst;
-        ast::definition::Concept    ast;
+        cst::Concept                cst;
+        ast::Concept                ast;
         std::optional<hir::Concept> hir;
-        hir::Environment_id         environment_id;
-        kieli::Document_id          document_id;
-        kieli::Upper                name;
+        hir::Environment_id         env_id;
+        Document_id                 doc_id;
+        Upper                       name;
     };
 
     struct Alias_info {
-        cst::definition::Alias    cst;
-        ast::definition::Alias    ast;
+        cst::Alias                cst;
+        ast::Alias                ast;
         std::optional<hir::Alias> hir;
-        hir::Environment_id       environment_id;
-        kieli::Document_id        document_id;
-        kieli::Upper              name;
+        hir::Environment_id       env_id;
+        Document_id               doc_id;
+        Upper                     name;
     };
 
     struct Module_info {
-        cst::definition::Submodule cst;
-        ast::definition::Submodule ast;
-        hir::Module                hir;
-        hir::Environment_id        environment_id;
-        kieli::Document_id         document_id;
-        kieli::Lower               name;
+        cst::Submodule      cst;
+        ast::Submodule      ast;
+        hir::Module         hir;
+        hir::Environment_id env_id;
+        Document_id         doc_id;
+        Lower               name;
     };
 
     template <typename T>
-    using Identifier_map = std::vector<std::pair<kieli::Identifier, T>>;
+    using Identifier_map = std::vector<std::pair<utl::String_id, T>>;
 
     struct Environment {
         Identifier_map<Upper_info>         upper_map;
         Identifier_map<Lower_info>         lower_map;
         std::vector<Definition_variant>    in_order;
         std::optional<hir::Environment_id> parent_id;
-        kieli::Document_id                 document_id;
+        Document_id                        doc_id;
     };
 
     struct Scope {
         Identifier_map<Variable_bind>   variables;
         Identifier_map<Type_bind>       types;
         Identifier_map<Mutability_bind> mutabilities;
-        kieli::Document_id              document_id;
+        Document_id                     doc_id;
         std::optional<hir::Scope_id>    parent_id;
     };
 
@@ -129,4 +131,9 @@ namespace libresolve {
         utl::Index_vector<hir::Environment_id, Environment>      environments;
         utl::Index_arena<hir::Scope_id, Scope>                   scopes;
     };
-} // namespace libresolve
+
+    auto make_scope(Document_id doc_id) -> Scope;
+
+} // namespace ki::resolve
+
+#endif // KIELI_LIBRESOLVE_MODULE

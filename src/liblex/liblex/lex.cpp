@@ -1,65 +1,45 @@
 #include <libutl/utilities.hpp>
-#include <liblex/numeric.hpp>
 #include <liblex/lex.hpp>
-#include <liblex/state.hpp>
 
-using kieli::Token;
-using kieli::Token_type;
-using kieli::Token_variant;
+using namespace ki::lex;
 
 namespace {
 
-    constexpr auto punctuation_token_map = std::to_array<std::pair<std::string_view, Token_type>>({
-        { ".", Token_type::dot },
-        { ":", Token_type::colon },
-        { "::", Token_type::double_colon },
-        { "|", Token_type::pipe },
-        { "=", Token_type::equals },
-        { "&", Token_type::ampersand },
-        { "*", Token_type::asterisk },
-        { "+", Token_type::plus },
-        { "?", Token_type::question },
-        { "!", Token_type::exclamation },
-        { "\\", Token_type::lambda },
-        { "<-", Token_type::left_arrow },
-        { "->", Token_type::right_arrow },
+    constexpr auto punctuation_token_map = std::to_array<std::pair<std::string_view, Type>>({
+        { ".", Type::Dot },
+        { ":", Type::Colon },
+        { "::", Type::Double_colon },
+        { "|", Type::Pipe },
+        { "=", Type::Equals },
+        { "&", Type::Ampersand },
+        { "*", Type::Asterisk },
+        { "+", Type::Plus },
+        { "?", Type::Question },
+        { "!", Type::Exclamation },
+        { "\\", Type::Lambda },
+        { "<-", Type::Left_arrow },
+        { "->", Type::Right_arrow },
     });
 
-    constexpr auto keyword_token_map = std::to_array<std::pair<std::string_view, Token_type>>({
-        { "let", Token_type::let },
-        { "mut", Token_type::mut },
-        { "if", Token_type::if_ },
-        { "else", Token_type::else_ },
-        { "elif", Token_type::elif },
-        { "for", Token_type::for_ },
-        { "in", Token_type::in },
-        { "while", Token_type::while_ },
-        { "loop", Token_type::loop },
-        { "continue", Token_type::continue_ },
-        { "break", Token_type::break_ },
-        { "match", Token_type::match },
-        { "ret", Token_type::ret },
-        { "fn", Token_type::fn },
-        { "enum", Token_type::enum_ },
-        { "struct", Token_type::struct_ },
-        { "concept", Token_type::concept_ },
-        { "impl", Token_type::impl },
-        { "alias", Token_type::alias },
-        { "import", Token_type::import_ },
-        { "export", Token_type::export_ },
-        { "module", Token_type::module_ },
-        { "sizeof", Token_type::sizeof_ },
-        { "typeof", Token_type::typeof_ },
-        { "mv", Token_type::mv },
-        { "where", Token_type::where },
-        { "immut", Token_type::immut },
-        { "dyn", Token_type::dyn },
-        { "macro", Token_type::macro },
-        { "global", Token_type::global },
-        { "defer", Token_type::defer },
+    constexpr auto keyword_token_map = std::to_array<std::pair<std::string_view, Type>>({
+        { "let", Type::Let },         { "mut", Type::Mut },
+        { "if", Type::If },           { "else", Type::Else },
+        { "elif", Type::Elif },       { "for", Type::For },
+        { "in", Type::In },           { "while", Type::While },
+        { "loop", Type::Loop },       { "continue", Type::Continue },
+        { "break", Type::Break },     { "match", Type::Match },
+        { "ret", Type::Ret },         { "fn", Type::Fn },
+        { "enum", Type::Enum },       { "struct", Type::Struct },
+        { "concept", Type::Concept }, { "impl", Type::Impl },
+        { "alias", Type::Alias },     { "import", Type::Import },
+        { "export", Type::Export },   { "module", Type::Module },
+        { "sizeof", Type::Sizeof },   { "typeof", Type::Typeof },
+        { "where", Type::Where },     { "immut", Type::Immut },
+        { "dyn", Type::Dyn },         { "macro", Type::Macro },
+        { "global", Type::Global },   { "defer", Type::Defer },
     });
 
-    auto find_token(auto const& map, std::string_view const string) -> std::optional<Token_type>
+    auto find_token(auto const& map, std::string_view const string) -> std::optional<Type>
     {
         auto const it = std::ranges::find(map, string, utl::first);
         return it != map.end() ? std::optional(it->second) : std::nullopt;
@@ -84,505 +64,221 @@ namespace {
         return (predicates(c) or ...);
     }
 
-    constexpr auto is_space = is_one_of<" \t\n">;
-    constexpr auto is_lower = is_in_range<'a', 'z'>;
-    constexpr auto is_upper = is_in_range<'A', 'Z'>;
+    constexpr auto is_whitespace = is_one_of<" \n\r\t">;
+    constexpr auto is_lowercase  = is_in_range<'a', 'z'>;
+    constexpr auto is_uppercase  = is_in_range<'A', 'Z'>;
+    constexpr auto is_digit      = is_in_range<'0', '9'>;
+    constexpr auto is_alphabetic = satisfies_one_of<is_lowercase, is_uppercase>;
+    constexpr auto is_name       = satisfies_one_of<is_alphabetic, is_digit, is_one_of<"_'">>;
+    constexpr auto is_name_head  = satisfies_one_of<is_alphabetic, is_one_of<"_">>;
+    constexpr auto is_operator   = is_one_of<"+-*/.|<=>:!?#%&^~$@\\">;
 
-    constexpr auto is_digit2  = is_in_range<'0', '1'>;
-    constexpr auto is_digit4  = is_in_range<'0', '3'>;
-    constexpr auto is_digit8  = is_in_range<'0', '7'>;
-    constexpr auto is_digit10 = is_in_range<'0', '9'>;
-    constexpr auto is_digit12 = satisfies_one_of<is_digit10, is_one_of<"abAB">>;
-    constexpr auto is_digit16 = satisfies_one_of<is_digit10, is_one_of<"abcdefABCDEF">>;
+    constexpr auto is_valid_character
+        = satisfies_one_of<is_name, is_operator, is_whitespace, is_one_of<"(){}[],'\"">>;
 
-    constexpr auto is_alpha = satisfies_one_of<is_lower, is_upper>;
-    constexpr auto is_alnum = satisfies_one_of<is_alpha, is_digit10>;
-
-    constexpr auto is_identifier_head = satisfies_one_of<is_alpha, is_one_of<"_">>;
-    constexpr auto is_identifier_tail = satisfies_one_of<is_alnum, is_one_of<"_'">>;
-    constexpr auto is_operator        = is_one_of<"+-*/.|<=>:!?#%&^~$@\\">;
-
-    constexpr auto is_invalid_character = std::not_fn(
-        satisfies_one_of<is_identifier_tail, is_operator, is_space, is_one_of<"(){}[],\"'">>);
-
-    static_assert(is_one_of<"ab">('a'));
-    static_assert(is_one_of<"ab">('b'));
-    static_assert(not is_one_of<"ab">('c'));
-
-    template <std::predicate<char> auto predicate>
-    constexpr auto or_digit_separator(char const c)
+    auto current(State const& state) -> char
     {
-        return predicate(c) or c == '\'';
+        return state.text.at(state.offset);
     }
 
-    constexpr auto digit_predicate_for(int const base) noexcept -> auto (*)(char) -> bool
+    auto is_finished(State const& state) -> bool
     {
-        switch (base) {
-        case 2:  return or_digit_separator<is_digit2>;
-        case 4:  return or_digit_separator<is_digit4>;
-        case 8:  return or_digit_separator<is_digit8>;
-        case 10: return or_digit_separator<is_digit10>;
-        case 12: return or_digit_separator<is_digit12>;
-        case 16: return or_digit_separator<is_digit16>;
-        default: cpputil::unreachable();
+        return state.offset == state.text.size();
+    }
+
+    void advance(State& state, std::size_t const distance = 1)
+    {
+        for (std::size_t i = 0; i != distance; ++i) {
+            state.position.advance_with(state.text.at(state.offset++));
         }
     }
 
-    class Token_maker {
-        std::string_view  m_old_string;
-        std::string_view  m_trivia;
-        kieli::Position   m_old_position;
-        kieli::Lex_state& m_state;
-    public:
-        explicit Token_maker(std::string_view const trivia, kieli::Lex_state& state) noexcept
-            : m_old_string { state.text }
-            , m_trivia { trivia }
-            , m_old_position { state.position }
-            , m_state { state }
-        {}
-
-        auto operator()(Token_variant value, Token_type const type) const noexcept -> Token
-        {
-            return Token {
-                .variant          = value,
-                .type             = type,
-                .preceding_trivia = m_trivia,
-                .range            = kieli::Range { m_old_position, m_state.position },
-            };
-        }
-    };
-
-    // If `longer` is `"abcdef"` and `shorter` is `"def"`, return `"abc"`.
-    constexpr auto view_difference(std::string_view const longer, std::string_view const shorter)
-        -> std::string_view
+    auto extract_current(State& state) -> char
     {
-        assert(longer.size() >= shorter.size());
-        return longer.substr(0, longer.size() - shorter.size());
+        cpputil::always_assert(not is_finished(state));
+        advance(state);
+        return state.text.at(state.offset - 1);
     }
 
-    static_assert(view_difference("abcdef", "def") == "abc");
-
-    auto ensure_no_trailing_separator(std::string_view const string, kieli::Lex_state& state)
-        -> liblex::Expected<void>
+    auto try_consume(State& state, char const character) -> bool
     {
-        cpputil::always_assert(not string.empty());
-        if (string.back() == '\'') {
-            return liblex::error(state, "Expected one or more digits after the digit separator");
+        if (is_finished(state)) {
+            return false;
         }
-        return {};
+        if (current(state) == character) {
+            advance(state);
+            return true;
+        }
+        return false;
     }
 
-    auto handle_escape_sequence(kieli::Lex_state& state) -> liblex::Expected<char>
+    auto try_consume(State& state, std::string_view const string) -> bool
     {
-        char const* const anchor = state.text.data();
-        if (state.text.empty()) {
-            return liblex::error(state, "Expected an escape sequence, but found the end of input");
+        if (state.text.substr(state.offset).starts_with(string)) {
+            advance(state, string.size());
+            return true;
         }
-        switch (liblex::extract_current(state)) {
-        case 'a':  return '\a';
-        case 'b':  return '\b';
-        case 'f':  return '\f';
-        case 'n':  return '\n';
-        case 'r':  return '\r';
-        case 't':  return '\t';
-        case 'v':  return '\v';
-        case '\'': return '\'';
-        case '\"': return '\"';
-        case '\\': return '\\';
-        default:   return liblex::error(state, { anchor, 1 }, "Unrecognized escape sequence");
+        return false;
+    }
+
+    void consume(State& state, std::predicate<char> auto const& predicate)
+    {
+        while (not is_finished(state) and predicate(current(state))) {
+            advance(state);
         }
     }
 
-    auto skip_string_literal_within_comment(kieli::Lex_state& state) -> liblex::Expected<void>
+    auto extract(State& state, std::predicate<char> auto const& predicate) -> std::string_view
     {
-        char const* const anchor = state.text.data();
-        if (not liblex::try_consume(state, '"')) {
-            return {};
-        }
-        for (;;) {
-            if (state.text.empty()) {
-                return liblex::error(
-                    state, { anchor, 1 }, "Unterminating string literal within comment block");
-            }
-            switch (liblex::extract_current(state)) {
-            case '"':  return {};
-            case '\\': (void)handle_escape_sequence(state); [[fallthrough]];
-            default:   continue;
-            }
-        }
+        auto const offset = state.offset;
+        consume(state, predicate);
+        return state.text.substr(offset, state.offset - offset);
     }
 
-    auto skip_block_comment(kieli::Lex_state& state, std::string_view const comment_begin)
-        -> liblex::Expected<void>
+    auto skip_block_comment(State& state) -> std::optional<Type>
     {
         for (std::size_t depth = 1; depth != 0;) {
-            if (auto const result = skip_string_literal_within_comment(state); not result) {
-                return result;
-            }
-            if (liblex::try_consume(state, "*/")) {
+            if (try_consume(state, "*/")) {
                 --depth;
             }
-            else if (liblex::try_consume(state, "/*")) {
+            else if (try_consume(state, "/*")) {
                 ++depth;
             }
-            else if (state.text.empty()) {
-                return liblex::error(
-                    state,
-                    comment_begin.substr(0, 2),
-                    "Unterminating comment block; missing `*/` terminator");
+            else if (is_finished(state)) [[unlikely]] {
+                return Type::Unterminated_comment;
             }
             else {
-                liblex::advance(state);
+                advance(state);
             }
         }
-        return {};
-    }
-
-    auto extract_comments_and_whitespace(kieli::Lex_state& state) -> std::string_view
-    {
-        std::string_view const old_string = state.text;
-        for (;;) {
-            liblex::consume(state, is_space);
-            std::string_view const comment_begin = state.text;
-            if (liblex::try_consume(state, "//")) {
-                liblex::consume(state, [](char const c) { return c != '\n'; });
-            }
-            else if (liblex::try_consume(state, "/*")) {
-                (void)skip_block_comment(state, comment_begin);
-            }
-            else {
-                break;
-            }
-        }
-        return view_difference(old_string, state.text);
-    }
-
-    auto extract_identifier(Token_maker const& token, kieli::Lex_state& state) -> Token
-    {
-        std::string_view const view = liblex::extract(state, is_identifier_tail);
-        cpputil::always_assert(not view.empty());
-        if (auto const type = find_token(keyword_token_map, view)) {
-            return token({}, type.value());
-        }
-        if (view == "true") {
-            return token(kieli::Boolean { true }, Token_type::boolean_literal);
-        }
-        if (view == "false") {
-            return token(kieli::Boolean { false }, Token_type::boolean_literal);
-        }
-        if (std::ranges::all_of(view, is_one_of<"_">)) {
-            return token({}, Token_type::underscore);
-        }
-        if (is_upper(view[view.find_first_not_of('_')])) {
-            return token(liblex::make_identifier(state, view), Token_type::upper_name);
-        }
-        return token(liblex::make_identifier(state, view), Token_type::lower_name);
-    }
-
-    auto extract_operator(Token_maker const& token, kieli::Lex_state& state) -> Token
-    {
-        std::string_view const view = liblex::extract(state, is_operator);
-        if (auto const type = find_token(punctuation_token_map, view)) {
-            return token({}, type.value());
-        }
-        return token(liblex::make_operator_identifier(state, view), Token_type::operator_name);
-    }
-
-    auto extract_potentially_escaped_character(kieli::Lex_state& state) -> liblex::Expected<char>
-    {
-        char const character = liblex::extract_current(state);
-        if (character == '\\') {
-            return handle_escape_sequence(state);
-        }
-        return character;
-    }
-
-    auto extract_character_literal(Token_maker const& token, kieli::Lex_state& state)
-        -> liblex::Expected<Token>
-    {
-        cpputil::always_assert(liblex::current(state) == '\'');
-        liblex::advance(state);
-        if (state.text.empty()) {
-            return liblex::error(state, "Unterminating character literal");
-        }
-        return extract_potentially_escaped_character(state).and_then(
-            [&](char const character) -> liblex::Expected<Token> {
-                if (liblex::try_consume(state, '\'')) {
-                    return token(kieli::Character { character }, Token_type::character_literal);
-                }
-                return liblex::error(state, "Expected a closing single-quote");
-            });
-    }
-
-    auto extract_string_literal(Token_maker const& token, kieli::Lex_state& state)
-        -> liblex::Expected<Token>
-    {
-        char const* const anchor = state.text.data();
-        cpputil::always_assert(liblex::current(state) == '"');
-        liblex::advance(state);
-
-        std::string string;
-        for (;;) {
-            if (state.text.empty()) {
-                return liblex::error(state, { anchor, 1 }, "Unterminating string literal");
-            }
-            switch (char const character = liblex::extract_current(state)) {
-            case '"':
-                return token(
-                    liblex::make_string_literal(state, string), Token_type::string_literal);
-            case '\\':
-                if (auto const escaped = handle_escape_sequence(state)) {
-                    string.push_back(escaped.value());
-                    continue;
-                }
-                else {
-                    return std::unexpected { escaped.error() };
-                }
-            default: string.push_back(character);
-            }
-        }
-    }
-
-    auto try_extract_numeric_base(kieli::Lex_state& state) -> std::optional<int>
-    {
-        // clang-format off
-        if (liblex::try_consume(state, "0b")) return 2;  // binary
-        if (liblex::try_consume(state, "0q")) return 4;  // quaternary
-        if (liblex::try_consume(state, "0o")) return 8;  // octal
-        if (liblex::try_consume(state, "0d")) return 12; // duodecimal
-        if (liblex::try_consume(state, "0x")) return 16; // hexadecimal
         return std::nullopt;
-        // clang-format on
     }
 
-    auto consume_and_validate_floating_point_alphabetic_suffix(kieli::Lex_state& state)
-        -> liblex::Expected<void>
+    auto skip_comments_and_whitespace(State& state) -> std::optional<Type>
     {
-        std::string_view const suffix = liblex::extract(state, is_alpha);
-        if (suffix.empty()) {
-            return {};
-        }
-        if (suffix != "e" and suffix != "E") {
-            return liblex::error(
-                state, suffix, "Erroneous floating point literal alphabetic suffix");
-        }
-        (void)liblex::try_consume(state, '-');
-        if (state.text.empty() or not is_digit10(liblex::current(state))) {
-            return liblex::error(state, "Expected an exponent");
-        }
-        return ensure_no_trailing_separator(
-            liblex::extract(state, or_digit_separator<is_digit10>), state);
-    }
-
-    auto parse_floating_value(kieli::Lex_state& state, std::string_view const string)
-        -> liblex::Expected<double>
-    {
-        return liblex::parse_floating(string).transform_error([&](liblex::Numeric_error error) {
-            cpputil::always_assert(error == liblex::Numeric_error::out_of_range);
-            return liblex::error(state, string, "Floating point literal is too large").error();
-        });
-    }
-
-    auto extract_numeric_floating(
-        Token_maker const& token, std::string_view const old_string, kieli::Lex_state& state)
-        -> liblex::Expected<Token>
-    {
-        if (state.text.empty() or not or_digit_separator<is_digit10>(liblex::current(state))) {
-            return liblex::error(state, "Expected one or more digits after the decimal separator");
-        }
-        return ensure_no_trailing_separator(
-                   liblex::extract(state, or_digit_separator<is_digit10>), state)
-            .and_then([&] {
-                // Consume the suffix here so the next block can parse from old string to current
-                return consume_and_validate_floating_point_alphabetic_suffix(state);
-            })
-            .and_then([&] {
-                return parse_floating_value(state, view_difference(old_string, state.text));
-            })
-            .and_then([&](double const floating) -> liblex::Expected<Token> {
-                std::string_view const extraneous_suffix = liblex::extract(state, is_alpha);
-                if (not extraneous_suffix.empty()) {
-                    return liblex::error(
-                        state,
-                        extraneous_suffix,
-                        "Erroneous floating point literal alphabetic suffix");
+        for (;;) {
+            consume(state, is_whitespace);
+            if (try_consume(state, "//")) {
+                consume(state, std::not_fn(is_one_of<"\n">));
+            }
+            else if (try_consume(state, "/*")) {
+                if (auto error = skip_block_comment(state)) {
+                    return error;
                 }
-                return token(kieli::Floating { floating }, Token_type::floating_literal);
-            });
-    }
-
-    auto extract_integer_exponent(kieli::Lex_state& state) -> liblex::Expected<std::size_t>
-    {
-        std::string_view const digits = liblex::extract(state, is_digit10);
-        return ensure_no_trailing_separator(digits, state)
-            .and_then([&]() -> liblex::Expected<std::size_t> {
-                std::string_view const extraneous_suffix = liblex::extract(state, is_alpha);
-                if (not extraneous_suffix.empty()) {
-                    return liblex::error(
-                        state, extraneous_suffix, "Erroneous integer literal alphabetic suffix");
-                }
-                return liblex::parse_integer(digits).transform_error(
-                    [&](liblex::Numeric_error const error) {
-                        cpputil::always_assert(error == liblex::Numeric_error::out_of_range);
-                        return liblex::error(state, digits, "Exponent is too large").error();
-                    });
-            });
-    }
-
-    auto apply_integer_exponent(
-        std::size_t const      integer,
-        std::size_t const      exponent,
-        std::string_view const old_string,
-        kieli::Lex_state&      state) -> liblex::Expected<std::size_t>
-    {
-        return liblex::apply_scientific_exponent(integer, exponent)
-            .transform_error([&](liblex::Numeric_error const error) {
-                cpputil::always_assert(error == liblex::Numeric_error::out_of_range);
-                return liblex::error(
-                           state,
-                           view_difference(old_string, state.text),
-                           "Integer literal is too large after applying scientific exponent")
-                    .error();
-            });
-    }
-
-    auto extract_and_apply_potential_integer_exponent(
-        kieli::Lex_state& state, std::string_view const old_string, std::size_t const integer)
-        -> liblex::Expected<std::size_t>
-    {
-        std::string_view const suffix = liblex::extract(state, is_alpha);
-        if (suffix.empty()) {
-            return integer;
-        }
-        if (suffix != "e" and suffix != "E") {
-            return liblex::error(state, suffix, "Erroneous integer literal alphabetic suffix");
-        }
-        if (liblex::try_consume(state, '-')) {
-            liblex::consume(state, is_digit10);
-            return liblex::error(state, "An integer literal may not have a negative exponent");
-        }
-        if (state.text.empty() or not is_digit10(liblex::current(state))) {
-            return liblex::error(state, "Expected an exponent");
-        }
-        return extract_integer_exponent(state).and_then([&](std::size_t const exponent) {
-            return apply_integer_exponent(integer, exponent, old_string, state);
-        });
-    }
-
-    auto extract_numeric_integer(
-        Token_maker const&     token,
-        std::string_view const old_string,
-        std::string_view const digits,
-        int const              base,
-        kieli::Lex_state&      state) -> liblex::Expected<Token>
-    {
-        return liblex::parse_integer(digits, base)
-            .transform_error([&](liblex::Numeric_error const error) {
-                cpputil::always_assert(error == liblex::Numeric_error::out_of_range);
-                return liblex::error(state, digits, "Integer literal is too large").error();
-            })
-            .and_then([&](std::size_t const integer) {
-                return extract_and_apply_potential_integer_exponent(state, old_string, integer);
-            })
-            .transform([&](std::size_t const integer) {
-                return token(kieli::Integer { integer }, Token_type::integer_literal);
-            });
-    }
-
-    auto extract_numeric(Token_maker const& token, kieli::Lex_state& state)
-        -> liblex::Expected<Token>
-    {
-        std::string_view const old_string = state.text;
-        std::optional const    base       = try_extract_numeric_base(state);
-        auto const             predicate  = digit_predicate_for(base.value_or(10));
-        std::string_view const digits     = liblex::extract(state, predicate);
-
-        if (base.has_value()) {
-            if (digits.find_first_not_of('\'') == std::string_view::npos) {
-                std::string message = std::format(
-                    "Expected one or more digits after the base-{} specifier", base.value());
-                return liblex::error(state, std::move(message));
+            }
+            else {
+                return std::nullopt;
             }
         }
-
-        return ensure_no_trailing_separator(digits, state)
-            .and_then([&]() -> liblex::Expected<Token> {
-                // If the literal is preceded by a dot, don't attempt to extract a float.
-                // This enables nested tuple field access: x.0.0
-
-                std::string_view const preceding_string
-                    = view_difference(liblex::source_begin(state), old_string);
-                bool const has_preceding_dot
-                    = not preceding_string.empty() and preceding_string.back() == '.';
-
-                if (not has_preceding_dot and liblex::try_consume(state, '.')) {
-                    if (base.has_value()) {
-                        liblex::consume(state, is_digit10);
-                        return liblex::error(
-                            state,
-                            old_string.substr(0, 2),
-                            "A floating point literal may not have a base specifier");
-                    }
-                    return extract_numeric_floating(token, old_string, state);
-                }
-                return extract_numeric_integer(token, old_string, digits, base.value_or(10), state);
-            });
     }
 
-    auto extract_token(Token_maker const& token, kieli::Lex_state& state) -> liblex::Expected<Token>
+    auto extract_name(State& state) -> Type
     {
-        auto const simple_token = [&](Token_type const type) noexcept {
-            liblex::advance(state);
-            return token(Token_variant {}, type);
+        auto const string = extract(state, is_name);
+        cpputil::always_assert(not string.empty());
+        if (auto const type = find_token(keyword_token_map, string)) {
+            return type.value();
+        }
+        if (string == "true" or string == "false") {
+            return Type::Boolean;
+        }
+        auto const head = string.find_first_not_of('_');
+        return head == std::string_view::npos ? Type::Underscore
+             : is_uppercase(string[head])     ? Type::Upper_name
+                                              : Type::Lower_name;
+    }
+
+    auto extract_operator(State& state) -> Type
+    {
+        auto const string = extract(state, is_operator);
+        return find_token(punctuation_token_map, string).value_or(Type::Operator);
+    }
+
+    auto extract_string_literal(State& state) -> Type
+    {
+        cpputil::always_assert(extract_current(state) == '"');
+        while (not is_finished(state)) {
+            switch (extract_current(state)) {
+            case '"': return Type::String;
+            case '\\':
+                if (is_finished(state)) [[unlikely]] {
+                    return Type::Unterminated_string;
+                }
+                advance(state);
+            default: continue;
+            }
+        }
+        return Type::Unterminated_string;
+    }
+
+    auto extract_numeric(State& state) -> Type
+    {
+        bool const has_preceding_dot = state.offset != 0 && state.text.at(state.offset - 1) == '.';
+        consume(state, is_name);
+        if (not has_preceding_dot and try_consume(state, '.')) {
+            consume(state, is_name);
+            return Type::Floating;
+        }
+        return Type::Integer;
+    }
+
+    auto extract_token(State& state) -> Type
+    {
+        auto const simple = [&](Type type) {
+            advance(state);
+            return type;
         };
-        switch (char const current = liblex::current(state)) {
-        case '(':  return simple_token(Token_type::paren_open);
-        case ')':  return simple_token(Token_type::paren_close);
-        case '{':  return simple_token(Token_type::brace_open);
-        case '}':  return simple_token(Token_type::brace_close);
-        case '[':  return simple_token(Token_type::bracket_open);
-        case ']':  return simple_token(Token_type::bracket_close);
-        case ';':  return simple_token(Token_type::semicolon);
-        case ',':  return simple_token(Token_type::comma);
-        case '\'': return extract_character_literal(token, state);
-        case '\"': return extract_string_literal(token, state);
+        switch (char const ch = current(state)) {
+        case '(':  return simple(Type::Paren_open);
+        case ')':  return simple(Type::Paren_close);
+        case '{':  return simple(Type::Brace_open);
+        case '}':  return simple(Type::Brace_close);
+        case '[':  return simple(Type::Bracket_open);
+        case ']':  return simple(Type::Bracket_close);
+        case ';':  return simple(Type::Semicolon);
+        case ',':  return simple(Type::Comma);
+        case '\"': return extract_string_literal(state);
         default:
-            if (is_identifier_head(current)) {
-                return extract_identifier(token, state);
+            if (is_name_head(ch)) {
+                return extract_name(state);
             }
-            if (is_operator(current)) {
-                return extract_operator(token, state);
+            if (is_operator(ch)) {
+                return extract_operator(state);
             }
-            if (is_digit10(current)) {
-                return extract_numeric(token, state);
+            if (is_digit(ch)) {
+                return extract_numeric(state);
             }
-            return liblex::error(
-                state,
-                liblex::extract(state, is_invalid_character),
-                "Unable to extract lexical token");
+            consume(state, std::not_fn(is_valid_character));
+            return Type::Invalid_character;
         }
     }
 
 } // namespace
 
-auto kieli::lex(Lex_state& state) -> Token
+auto ki::lex::state(std::string_view text) -> State
 {
-    Token_maker const token_maker { extract_comments_and_whitespace(state), state };
-    if (state.text.empty()) {
-        ++state.position.column; // According to the LSP spec, the stop position is exclusive.
-        return token_maker({}, Token_type::end_of_input);
-    }
-    if (auto token = extract_token(token_maker, state)) {
-        return token.value();
-    }
-    return token_maker({}, Token_type::error);
+    return State { .position = {}, .offset = 0, .text = text };
 }
 
-auto kieli::lex_state(Database& db, Document_id const id) -> Lex_state
+auto ki::lex::next(State& state) -> ki::Token
 {
-    return Lex_state {
-        .db          = db,
-        .document_id = id,
-        .text        = db.documents[id].text,
+    skip_comments_and_whitespace(state);
+
+    if (is_finished(state)) {
+        return ki::Token {
+            .type  = Token_type::End_of_input,
+            .range = ki::Range::for_position(state.position),
+            .view  = utl::View { .offset = state.offset, .length = 0 },
+        };
+    }
+
+    auto const position = state.position;
+    auto const offset   = state.offset;
+    auto const type     = extract_token(state);
+
+    return ki::Token {
+        .type  = type,
+        .range = ki::Range(position, state.position),
+        .view  = utl::View { .offset = offset, .length = state.offset - offset },
     };
 }

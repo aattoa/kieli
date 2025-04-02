@@ -1,45 +1,41 @@
 #include <libutl/utilities.hpp>
 #include <libresolve/resolve.hpp>
 
-using namespace libresolve;
+using namespace ki::resolve;
 
 namespace {
-    auto resolve_concrete(Constants const& constants, kieli::Mutability const mutability)
+    auto resolve_concrete(Constants const& constants, ki::Mutability mut)
     {
-        switch (mutability) {
-        case kieli::Mutability::mut:   return constants.mutability_yes;
-        case kieli::Mutability::immut: return constants.mutability_no;
-        default:                       cpputil::unreachable();
+        switch (mut) {
+        case ki::Mutability::Mut:   return constants.mut_yes;
+        case ki::Mutability::Immut: return constants.mut_no;
+        default:                    cpputil::unreachable();
         }
     }
 
-    auto error(Context& context, kieli::Document_id const document_id, kieli::Lower const name)
-        -> hir::Mutability
+    auto mutability_error(Context& ctx, ki::Document_id doc_id, ki::Lower name) -> hir::Mutability
     {
-        auto message = std::format("No mutability binding '{}' in scope", name);
-        kieli::add_error(context.db, document_id, name.range, std::move(message));
-        return hir::Mutability { context.constants.mutability_error, name.range };
+        auto message = std::format("No mutability '{}' in scope", ctx.db.string_pool.get(name.id));
+        ki::add_error(ctx.db, doc_id, name.range, std::move(message));
+        return { .id = ctx.constants.mut_error, .range = name.range };
     }
 } // namespace
 
-auto libresolve::resolve_mutability(
-    Context&               context,
-    hir::Scope_id const    scope_id,
-    ast::Mutability const& mutability) -> hir::Mutability
+auto ki::resolve::resolve_mutability(
+    Context& ctx, hir::Scope_id const scope_id, ast::Mutability const& mut) -> hir::Mutability
 {
     auto visitor = utl::Overload {
-        [&](kieli::Mutability const& concrete) {
+        [&](Mutability const& concrete) {
             return hir::Mutability {
-                .id    = resolve_concrete(context.constants, concrete),
-                .range = mutability.range,
+                .id    = resolve_concrete(ctx.constants, concrete),
+                .range = mut.range,
             };
         },
         [&](ast::Parameterized_mutability const& parameterized) {
-            auto const* const bound
-                = find_mutability(context, scope_id, parameterized.name.identifier);
-            auto const document_id = context.info.scopes.index_vector[scope_id].document_id;
-            return bound ? bound->mutability : error(context, document_id, parameterized.name);
+            auto const* const bound  = find_mutability(ctx, scope_id, parameterized.name.id);
+            auto const        doc_id = ctx.info.scopes.index_vector[scope_id].doc_id;
+            return bound ? bound->mutability : mutability_error(ctx, doc_id, parameterized.name);
         },
     };
-    return std::visit(visitor, mutability.variant);
+    return std::visit(visitor, mut.variant);
 }

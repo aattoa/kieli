@@ -1,4 +1,5 @@
-#pragma once
+#ifndef KIELI_LIBUTL_DISJOINT_SET
+#define KIELI_LIBUTL_DISJOINT_SET
 
 #include <libutl/utilities.hpp>
 
@@ -25,3 +26,5 @@ namespace utl {
     };
 
 } // namespace utl
+
+#endif // KIELI_LIBUTL_DISJOINT_SET

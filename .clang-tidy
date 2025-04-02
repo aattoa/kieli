@@ -1,29 +1,29 @@
 FormatStyle: "file"
 
-Checks: "
-  *,
-  -altera-*,
-  -android-*,
-  -fuchsia-*,
-  -google-*,
-  -llvm*,
-  -*avoid-c-arrays,
-  -*avoid-const-or-ref-data-members,
-  -*avoid-do-while,
+Checks: "*,
   -*braces-around-statements,
+  -*else-after-return,
   -*magic-numbers,
-  -*member-init,
   -*named-parameter,
+  -altera-unroll-loops,
+  -altera-struct-pack-align,
   -bugprone-easily-swappable-parameters,
+  -cppcoreguidelines-avoid-const-or-ref-data-members,
   -cppcoreguidelines-pro-bounds-pointer-arithmetic,
+  -cppcoreguidelines-pro-type-member-init,
+  -fuchsia-default-arguments*,
+  -fuchsia-overloaded-operator,
+  -fuchsia-trailing-return,
+  -google-build-using-namespace,
+  -google-readability-todo,
+  -hicpp-member-init,
   -hicpp-move-const-arg,
+  -llvm-include-order,
+  -llvmlibc*,
   -misc-no-recursion,
-  -modernize-use-nodiscard,
-  -readability-else-after-return,
+  -readability-avoid-nested-conditional-operator,
   -readability-identifier-length,
-  -readability-implicit-bool-conversion,
-  -readability-qualified-auto,
-  "
+  -readability-implicit-bool-conversion"
 
 CheckOptions:
   misc-non-private-member-variables-in-classes.IgnoreClassesWithAllMemberVariablesBeingPublic: true

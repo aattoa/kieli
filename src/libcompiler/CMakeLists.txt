@@ -25,6 +25,4 @@ target_precompile_headers(libcompiler
 
 target_link_libraries(libcompiler
     PUBLIC  libutl
-    PUBLIC  cppdiag
-    PUBLIC  cpputil::mem
     PRIVATE cpputil::io)

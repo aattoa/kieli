@@ -1,6 +1,8 @@
-#pragma once
+#ifndef KIELI_LIBUTL_INDEX_VECTOR
+#define KIELI_LIBUTL_INDEX_VECTOR
 
 #include <libutl/utilities.hpp>
+#include <cpputil/num.hpp>
 
 namespace utl {
 
@@ -17,14 +19,14 @@ namespace utl {
         Integral m_value;
     public:
         explicit constexpr Vector_index(std::size_t const value)
-            noexcept(losslessly_convertible_to<std::size_t, Integral>)
-            : m_value(safe_cast<Integral>(value))
+            noexcept(cpputil::num::losslessly_convertible<std::size_t, Integral>)
+            : m_value(cpputil::num::safe_cast<Integral>(value))
         {}
 
         [[nodiscard]] constexpr auto get(this Vector_index const self)
-            noexcept(losslessly_convertible_to<Integral, std::size_t>) -> std::size_t
+            noexcept(cpputil::num::losslessly_convertible<Integral, std::size_t>) -> std::size_t
         {
-            return safe_cast<std::size_t>(self.m_value);
+            return cpputil::num::safe_cast<std::size_t>(self.m_value);
         }
 
         auto operator==(Vector_index const& other) const -> bool = default;
@@ -86,11 +88,13 @@ namespace utl {
         }
     };
 
-    struct Hash_vector_index : std::hash<std::size_t> {
-        auto operator()(vector_index auto const& index) const noexcept -> std::size_t
+    struct Hash_vector_index {
+        static auto operator()(vector_index auto const& index) noexcept -> std::size_t
         {
-            return std::hash<std::size_t>::operator()(index.get());
+            return std::hash<std::size_t>()(index.get());
         }
     };
 
 } // namespace utl
+
+#endif // KIELI_LIBUTL_INDEX_VECTOR

@@ -1,4 +1,5 @@
-#pragma once
+#ifndef KIELI_LIBCOMPILER_CST
+#define KIELI_LIBCOMPILER_CST
 
 #include <libutl/utilities.hpp>
 #include <libutl/index_vector.hpp>
@@ -22,52 +23,48 @@
 
 */
 
-namespace kieli::cst {
-    // Since tokens are used all over the CST, this saves a significant amount of memory.
-    struct Token_id : utl::Vector_index<Token_id, std::uint32_t> {
-        using Vector_index::Vector_index;
-    };
+namespace ki::cst {
 
-    struct Token {
-        Range            range;
-        std::string_view preceding_trivia;
+    // Since tokens are used all over the CST, this saves a significant amount of memory.
+    struct Range_id : utl::Vector_index<Range_id, std::uint32_t> {
+        using Vector_index::Vector_index;
     };
 
     template <typename T>
     struct Surrounded {
         T        value;
-        Token_id open_token;
-        Token_id close_token;
+        Range_id open_token;
+        Range_id close_token;
     };
 
     template <typename T>
     struct Separated {
         std::vector<T>        elements;
-        std::vector<Token_id> separator_tokens;
+        std::vector<Range_id> separator_tokens;
     };
 
     struct Type_annotation {
         Type_id  type;
-        Token_id colon_token;
+        Range_id colon_token;
     };
 
     struct Wildcard {
-        Token_id underscore_token;
+        Range_id underscore_token;
     };
 
     struct Parameterized_mutability {
         Lower    name;
-        Token_id question_mark_token;
+        Range_id question_mark_token;
     };
 
-    struct Mutability_variant : std::variant<kieli::Mutability, Parameterized_mutability> {
+    struct Mutability_variant : std::variant<Mutability, Parameterized_mutability> {
         using variant::variant;
     };
 
     struct Mutability {
         Mutability_variant variant;
         Range              range;
-        Token_id           mut_or_immut_token;
+        Range_id           mut_or_immut_token;
     };
 
     struct Template_argument : std::variant<Type_id, Expression_id, Mutability, Wildcard> {
@@ -79,11 +76,11 @@ namespace kieli::cst {
     struct Path_segment {
         std::optional<Template_arguments> template_arguments;
         Name                              name;
-        std::optional<Token_id>           leading_double_colon_token;
+        std::optional<Range_id>           leading_double_colon_token;
     };
 
     struct Path_root_global {
-        Token_id global_token;
+        Range_id global_token;
     };
 
     using Path_root = std::variant<std::monostate, Path_root_global, Type_id>;
@@ -94,14 +91,13 @@ namespace kieli::cst {
         Range                     range;
 
         [[nodiscard]] auto head() const -> Path_segment const&;
-        [[nodiscard]] auto is_upper() const -> bool;
         [[nodiscard]] auto is_unqualified() const noexcept -> bool;
     };
 
     template <typename T>
     struct Default_argument {
         std::variant<T, Wildcard> variant;
-        Token_id                  equals_sign_token;
+        Range_id                  equals_sign_token;
     };
 
     using Type_parameter_default_argument       = Default_argument<Type_id>;
@@ -119,7 +115,7 @@ namespace kieli::cst {
 
     struct Template_type_parameter {
         Upper                                          name;
-        std::optional<Token_id>                        colon_token;
+        std::optional<Range_id>                        colon_token;
         Separated<Path>                                concepts;
         std::optional<Type_parameter_default_argument> default_argument;
     };
@@ -132,8 +128,8 @@ namespace kieli::cst {
 
     struct Template_mutability_parameter {
         Lower                                                name;
-        Token_id                                             colon_token;
-        Token_id                                             mut_token;
+        Range_id                                             colon_token;
+        Range_id                                             mut_token;
         std::optional<Mutability_parameter_default_argument> default_argument;
     };
 
@@ -153,11 +149,11 @@ namespace kieli::cst {
     using Template_parameters = Surrounded<Separated<Template_parameter>>;
 
     struct Struct_field_equals {
-        Token_id      equals_sign_token;
+        Range_id      equals_sign_token;
         Expression_id expression;
     };
 
-    struct Struct_field_initializer {
+    struct Struct_field_init {
         Lower                              name;
         std::optional<Struct_field_equals> equals;
     };
@@ -165,8 +161,8 @@ namespace kieli::cst {
     struct Match_case {
         Pattern_id              pattern;
         Expression_id           handler;
-        Token_id                arrow_token;
-        std::optional<Token_id> optional_semicolon_token;
+        Range_id                arrow_token;
+        std::optional<Range_id> semicolon_token;
     };
 
     namespace expression {
@@ -185,13 +181,13 @@ namespace kieli::cst {
         struct Block {
             struct Side_effect {
                 Expression_id expression;
-                Token_id      trailing_semicolon_token;
+                Range_id      trailing_semicolon_token;
             };
 
             std::vector<Side_effect>     side_effects;
             std::optional<Expression_id> result_expression;
-            Token_id                     open_brace_token;
-            Token_id                     close_brace_token;
+            Range_id                     open_brace_token;
+            Range_id                     close_brace_token;
         };
 
         struct Function_call {
@@ -199,40 +195,40 @@ namespace kieli::cst {
             Expression_id      invocable;
         };
 
-        struct Tuple_initializer {
-            Path                                 constructor_path;
-            Surrounded<Separated<Expression_id>> initializers;
+        struct Tuple_init {
+            Path                                 path;
+            Surrounded<Separated<Expression_id>> fields;
         };
 
-        struct Struct_initializer {
-            Path                                            constructor_path;
-            Surrounded<Separated<Struct_field_initializer>> initializers;
+        struct Struct_init {
+            Path                                     path;
+            Surrounded<Separated<Struct_field_init>> fields;
         };
 
         struct Infix_call {
-            Expression_id left;
-            Expression_id right;
-            Identifier    op;
-            Token_id      op_token;
+            Expression_id  left;
+            Expression_id  right;
+            utl::String_id op;
+            Range_id       op_token;
         };
 
         struct Struct_field {
             Expression_id base_expression;
             Lower         name;
-            Token_id      dot_token;
+            Range_id      dot_token;
         };
 
         struct Tuple_field {
             Expression_id base_expression;
-            std::uint64_t field_index {};
-            Token_id      field_index_token;
-            Token_id      dot_token;
+            std::uint16_t field_index {};
+            Range_id      field_index_token;
+            Range_id      dot_token;
         };
 
         struct Array_index {
             Expression_id             base_expression;
             Surrounded<Expression_id> index_expression;
-            Token_id                  dot_token;
+            Range_id                  dot_token;
         };
 
         struct Method_call {
@@ -244,116 +240,104 @@ namespace kieli::cst {
 
         struct False_branch {
             Expression_id body;
-            Token_id      else_or_elif_token;
+            Range_id      else_or_elif_token;
         };
 
         struct Conditional {
             Expression_id               condition;
             Expression_id               true_branch;
             std::optional<False_branch> false_branch;
-            Token_id                    if_or_elif_token;
+            Range_id                    if_or_elif_token;
             bool                        is_elif {};
         };
 
         struct Match {
             Surrounded<std::vector<Match_case>> cases;
-            Expression_id                       matched_expression;
-            Token_id                            match_token;
+            Expression_id                       scrutinee;
+            Range_id                            match_token;
         };
 
         struct Ascription {
             Expression_id base_expression;
-            Token_id      colon_token;
-            Type_id       ascribed_type;
+            Range_id      colon_token;
+            Type_id       type;
         };
 
         struct Let {
             Pattern_id                     pattern;
             std::optional<Type_annotation> type;
             Expression_id                  initializer;
-            Token_id                       let_token;
-            Token_id                       equals_sign_token;
-        };
-
-        struct Conditional_let {
-            Pattern_id    pattern;
-            Expression_id initializer;
-            Token_id      let_token;
-            Token_id      equals_sign_token;
+            Range_id                       let_token;
+            Range_id                       equals_sign_token;
         };
 
         struct Type_alias {
             Upper    name;
             Type_id  type;
-            Token_id alias_token;
-            Token_id equals_sign_token;
+            Range_id alias_token;
+            Range_id equals_sign_token;
         };
 
         struct Loop {
             Expression_id body;
-            Token_id      loop_token;
+            Range_id      loop_token;
         };
 
         struct While_loop {
             Expression_id condition;
             Expression_id body;
-            Token_id      while_token;
+            Range_id      while_token;
         };
 
         struct For_loop {
             Pattern_id    iterator;
             Expression_id iterable;
             Expression_id body;
-            Token_id      for_token;
-            Token_id      in_token;
+            Range_id      for_token;
+            Range_id      in_token;
         };
 
         struct Continue {
-            Token_id continue_token;
+            Range_id continue_token;
         };
 
         struct Break {
             std::optional<Expression_id> result;
-            Token_id                     break_token;
+            Range_id                     break_token;
         };
 
         struct Ret {
             std::optional<Expression_id> returned_expression;
-            Token_id                     ret_token;
+            Range_id                     ret_token;
         };
 
         struct Sizeof {
-            Surrounded<Type_id> inspected_type;
-            Token_id            sizeof_token;
+            Surrounded<Type_id> type;
+            Range_id            sizeof_token;
         };
 
         struct Addressof {
             std::optional<Mutability> mutability;
             Expression_id             place_expression;
-            Token_id                  ampersand_token;
+            Range_id                  ampersand_token;
         };
 
         struct Dereference {
             Expression_id reference_expression;
-            Token_id      asterisk_token;
-        };
-
-        struct Move {
-            Expression_id place_expression;
-            Token_id      mov_token;
+            Range_id      asterisk_token;
         };
 
         struct Defer {
             Expression_id effect_expression;
-            Token_id      defer_token;
+            Range_id      defer_token;
         };
     } // namespace expression
 
     struct Expression_variant
         : std::variant<
+              Error,
               Integer,
               Floating,
-              Character,
               Boolean,
               String,
               Wildcard,
@@ -363,8 +347,8 @@ namespace kieli::cst {
               expression::Tuple,
               expression::Block,
               expression::Function_call,
-              expression::Tuple_initializer,
-              expression::Struct_initializer,
+              expression::Tuple_init,
+              expression::Struct_init,
               expression::Infix_call,
               expression::Struct_field,
               expression::Tuple_field,
@@ -374,7 +358,6 @@ namespace kieli::cst {
               expression::Match,
               expression::Ascription,
               expression::Let,
-              expression::Conditional_let,
               expression::Type_alias,
               expression::Loop,
               expression::While_loop,
@@ -385,7 +368,6 @@ namespace kieli::cst {
               expression::Sizeof,
               expression::Addressof,
               expression::Dereference,
-              expression::Move,
               expression::Defer> {
         using variant::variant;
     };
@@ -406,7 +388,7 @@ namespace kieli::cst {
         };
 
         struct Equals {
-            Token_id   equals_sign_token;
+            Range_id   equals_sign_token;
             Pattern_id pattern;
         };
 
@@ -438,7 +420,7 @@ namespace kieli::cst {
         struct Abbreviated_constructor {
             Upper            name;
             Constructor_body body;
-            Token_id         double_colon_token;
+            Range_id         double_colon_token;
         };
 
         struct Tuple {
@@ -456,7 +438,7 @@ namespace kieli::cst {
         struct Guarded {
             Pattern_id    guarded_pattern;
             Expression_id guard_expression;
-            Token_id      if_token;
+            Range_id      if_token;
         };
     } // namespace pattern
 
@@ -464,7 +446,6 @@ namespace kieli::cst {
         : std::variant<
               Integer,
               Floating,
-              Character,
               Boolean,
               String,
               Wildcard,
@@ -490,7 +471,7 @@ namespace kieli::cst {
         };
 
         struct Never {
-            Token_id exclamation_token;
+            Range_id exclamation_token;
         };
 
         struct Tuple {
@@ -500,9 +481,9 @@ namespace kieli::cst {
         struct Array {
             Type_id       element_type;
             Expression_id length;
-            Token_id      open_bracket_token;
-            Token_id      close_bracket_token;
-            Token_id      semicolon_token;
+            Range_id      open_bracket_token;
+            Range_id      close_bracket_token;
+            Range_id      semicolon_token;
         };
 
         struct Slice {
@@ -512,29 +493,29 @@ namespace kieli::cst {
         struct Function {
             Surrounded<Separated<Type_id>> parameter_types;
             Type_annotation                return_type;
-            Token_id                       fn_token;
+            Range_id                       fn_token;
         };
 
         struct Typeof {
-            Surrounded<Expression_id> inspected_expression;
-            Token_id                  typeof_token;
+            Surrounded<Expression_id> expression;
+            Range_id                  typeof_token;
         };
 
         struct Reference {
             std::optional<Mutability> mutability;
             Type_id                   referenced_type;
-            Token_id                  ampersand_token;
+            Range_id                  ampersand_token;
         };
 
         struct Pointer {
             std::optional<Mutability> mutability;
             Type_id                   pointee_type;
-            Token_id                  asterisk_token;
+            Range_id                  asterisk_token;
         };
 
         struct Impl {
             Separated<Path> concepts;
-            Token_id        impl_token;
+            Range_id        impl_token;
         };
     } // namespace type
 
@@ -565,134 +546,128 @@ namespace kieli::cst {
         Function_parameters                function_parameters;
         std::optional<Type_annotation>     return_type;
         Lower                              name;
-        Token_id                           fn_token;
+        Range_id                           fn_token;
     };
 
     struct Type_signature {
         std::optional<Template_parameters> template_parameters;
         Separated<Path>                    concepts;
         Upper                              name;
-        std::optional<Token_id>            concepts_colon_token;
-        Token_id                           alias_token;
+        std::optional<Range_id>            concepts_colon_token;
+        Range_id                           alias_token;
     };
 
     using Concept_requirement = std::variant<Function_signature, Type_signature>;
 
-    namespace definition {
-        struct Function {
-            Function_signature      signature;
-            Expression_id           body;
-            std::optional<Token_id> optional_equals_sign_token;
-            Token_id                fn_token;
-        };
+    struct Function {
+        Function_signature      signature;
+        Expression_id           body;
+        std::optional<Range_id> equals_sign_token;
+        Range_id                fn_token;
+    };
 
-        struct Field {
-            Lower           name;
-            Type_annotation type;
-            Range           range;
-        };
+    struct Field {
+        Lower           name;
+        Type_annotation type;
+        Range           range;
+    };
 
-        struct Struct_constructor {
-            Surrounded<Separated<Field>> fields;
-        };
+    struct Struct_constructor {
+        Surrounded<Separated<Field>> fields;
+    };
 
-        struct Tuple_constructor {
-            Surrounded<Separated<Type_id>> types;
-        };
+    struct Tuple_constructor {
+        Surrounded<Separated<Type_id>> types;
+    };
 
-        struct Unit_constructor {};
+    struct Unit_constructor {};
 
-        struct Constructor_body
-            : std::variant<Struct_constructor, Tuple_constructor, Unit_constructor> {
-            using variant::variant;
-        };
+    struct Constructor_body
+        : std::variant<Struct_constructor, Tuple_constructor, Unit_constructor> {
+        using variant::variant;
+    };
 
-        struct Constructor {
-            Upper            name;
-            Constructor_body body;
-        };
+    struct Constructor {
+        Upper            name;
+        Constructor_body body;
+    };
 
-        struct Struct {
-            std::optional<Template_parameters> template_parameters;
-            Constructor_body                   body;
-            Upper                              name;
-            Token_id                           struct_token;
-        };
+    struct Struct {
+        std::optional<Template_parameters> template_parameters;
+        Constructor_body                   body;
+        Upper                              name;
+        Range_id                           struct_token;
+    };
 
-        struct Enum {
-            std::optional<Template_parameters> template_parameters;
-            Separated<Constructor>             constructors;
-            Upper                              name;
-            Token_id                           enum_token;
-            Token_id                           equals_sign_token;
-        };
+    struct Enum {
+        std::optional<Template_parameters> template_parameters;
+        Separated<Constructor>             constructors;
+        Upper                              name;
+        Range_id                           enum_token;
+        Range_id                           equals_sign_token;
+    };
 
-        struct Alias {
-            std::optional<Template_parameters> template_parameters;
-            Upper                              name;
-            Type_id                            type;
-            Token_id                           alias_token;
-            Token_id                           equals_sign_token;
-        };
+    struct Alias {
+        std::optional<Template_parameters> template_parameters;
+        Upper                              name;
+        Type_id                            type;
+        Range_id                           alias_token;
+        Range_id                           equals_sign_token;
+    };
 
-        struct Concept {
-            std::optional<Template_parameters> template_parameters;
-            std::vector<Concept_requirement>   requirements;
-            Upper                              name;
-            Token_id                           concept_token;
-            Token_id                           open_brace_token;
-            Token_id                           close_brace_token;
-        };
+    struct Concept {
+        std::optional<Template_parameters> template_parameters;
+        std::vector<Concept_requirement>   requirements;
+        Upper                              name;
+        Range_id                           concept_token;
+        Range_id                           open_brace_token;
+        Range_id                           close_brace_token;
+    };
 
-        struct Impl {
-            std::optional<Template_parameters>  template_parameters;
-            Surrounded<std::vector<Definition>> definitions;
-            Type_id                             self_type;
-            Token_id                            impl_token;
-        };
+    struct Impl {
+        std::optional<Template_parameters>  template_parameters;
+        Surrounded<std::vector<Definition>> definitions;
+        Type_id                             self_type;
+        Range_id                            impl_token;
+    };
 
-        struct Submodule {
-            std::optional<Template_parameters>  template_parameters;
-            Surrounded<std::vector<Definition>> definitions;
-            Lower                               name;
-            Token_id                            module_token;
-        };
-    } // namespace definition
+    struct Submodule {
+        std::optional<Template_parameters>  template_parameters;
+        Surrounded<std::vector<Definition>> definitions;
+        Lower                               name;
+        Range_id                            module_token;
+    };
 
     struct Definition_variant
-        : std::variant<
-              definition::Function,
-              definition::Struct,
-              definition::Enum,
-              definition::Alias,
-              definition::Concept,
-              definition::Impl,
-              definition::Submodule> {
+        : std::variant<Function, Struct, Enum, Alias, Concept, Impl, Submodule> {
         using variant::variant;
     };
 
     struct Definition {
         Definition_variant variant;
-        Document_id        document_id;
+        Document_id        doc_id;
         Range              range;
     };
 
     struct Arena {
-        utl::Index_vector<Expression_id, Expression> expressions;
-        utl::Index_vector<Pattern_id, Pattern>       patterns;
-        utl::Index_vector<Type_id, Type>             types;
-        utl::Index_vector<Token_id, Token>           tokens;
+        utl::Index_vector<Expression_id, Expression> expr;
+        utl::Index_vector<Type_id, Type>             type;
+        utl::Index_vector<Pattern_id, Pattern>       patt;
+        utl::Index_vector<Range_id, Range>           range;
     };
 
     struct Import {
         Separated<Lower> segments;
-        Token_id         import_token;
+        Range_id         import_token;
     };
-} // namespace kieli::cst
 
-struct kieli::CST::Module {
-    std::vector<cst::Import>     imports;
-    std::vector<cst::Definition> definitions;
-    cst::Arena                   arena;
-    Document_id                  document_id;
-};
+    struct Module {
+        std::vector<cst::Import>     imports;
+        std::vector<cst::Definition> definitions;
+        cst::Arena                   arena;
+        Document_id                  doc_id;
+    };
+
+} // namespace ki::cst
+
+#endif // KIELI_LIBCOMPILER_CST

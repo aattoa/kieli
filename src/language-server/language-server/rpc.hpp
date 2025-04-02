@@ -1,15 +1,16 @@
-#pragma once
+#ifndef KIELI_LANGUAGE_SERVER_RPC
+#define KIELI_LANGUAGE_SERVER_RPC
 
 #include <libutl/utilities.hpp>
 #include <cpputil/json.hpp>
 #include <iosfwd>
 
-namespace kieli::lsp {
+namespace ki::lsp::rpc {
 
-    enum struct Read_failure { no_header, no_length, no_separator, no_content };
+    void write_message(std::ostream& out, std::string_view message);
 
-    void rpc_write_message(std::ostream& out, std::string_view message);
+    auto read_message(std::istream& in) -> std::expected<std::string, std::string_view>;
 
-    auto rpc_read_message(std::istream& in) -> std::expected<std::string, Read_failure>;
+} // namespace ki::lsp::rpc
 
-} // namespace kieli::lsp
+#endif // KIELI_LANGUAGE_SERVER_RPC

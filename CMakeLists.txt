@@ -6,22 +6,17 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 include(FetchContent)
-FetchContent_Declare(cppdiag
-    GIT_REPOSITORY https://github.com/aattoa/cppdiag.git
-    GIT_TAG        c037929a4b8064870f3deda15e4dc1b3effa64f5)
 FetchContent_Declare(cpputil
     GIT_REPOSITORY https://github.com/aattoa/cpputil.git
-    GIT_TAG        6bc154d6ba019ee9be25f9666fcb2dcb7214b8dd)
-
-set(CPPDIAG_BUILD_TESTS OFF)
+    GIT_TAG        f552c2da521a3765248bf6f13a682836e3ae4f37)
 set(CPPUTIL_BUILD_TESTS OFF)
 
 message(STATUS "[kieli] Fetching dependencies...")
-FetchContent_MakeAvailable(cppdiag cpputil)
+FetchContent_MakeAvailable(cpputil)
 message(STATUS "[kieli] Dependencies fetched.")
 
 if(NOT MSVC)
-    add_compile_options(-Wall -Wextra -Wpedantic -Werror -Wno-missing-field-initializers)
+    add_compile_options(-Werror -Wall -Wextra -Wpedantic)
 endif()
 
 add_subdirectory(src/libutl)
@@ -34,7 +29,6 @@ add_subdirectory(src/libresolve)
 add_subdirectory(src/devmain)
 add_subdirectory(src/language-server)
 
-# Build tests by default
 option(KIELI_BUILD_TESTS "Build kieli tests" ON)
 
 if(${KIELI_BUILD_TESTS})

@@ -1,4 +1,5 @@
-#pragma once
+#ifndef KIELI_LIBUTL_MAILBOX
+#define KIELI_LIBUTL_MAILBOX
 
 #include <libutl/utilities.hpp>
 
@@ -39,3 +40,5 @@ namespace utl {
     };
 
 } // namespace utl
+
+#endif // KIELI_LIBUTL_MAILBOX

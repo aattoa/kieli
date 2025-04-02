@@ -1,17 +1,18 @@
 #include <libutl/utilities.hpp>
 #include <libcompiler/ast/display.hpp>
 
-using namespace kieli::ast;
+using namespace ki::ast;
 
 namespace {
     struct Display_state {
-        std::string  output;
-        std::string  indent;
-        bool         unicode = true;
-        Arena const& arena;
+        std::string             output;
+        std::string             indent;
+        bool                    unicode {};
+        Arena const&            arena;
+        utl::String_pool const& pool;
     };
 
-    enum struct Last { no, yes };
+    enum struct Last : std::uint8_t { No, Yes };
 
     template <typename Node>
     concept displayable = requires(Display_state& state, Node const& node) {
@@ -29,7 +30,7 @@ namespace {
     {
         std::size_t const previous_indent = state.indent.size();
         state.output.append(state.indent);
-        if (last == Last::yes) {
+        if (last == Last::Yes) {
             state.output.append(state.unicode ? "└─ " : "+- ");
             state.indent.append("   ");
         }
@@ -49,7 +50,7 @@ namespace {
     {
         write_node(state, last, [&] {
             write_line(state, "{}", description);
-            write_node(state, Last::yes, [&] { do_display(state, node); });
+            write_node(state, Last::Yes, [&] { do_display(state, node); });
         });
     }
 
@@ -63,7 +64,7 @@ namespace {
         write_node(state, last, [&] {
             write_line(state, "{}", description);
             for (std::size_t i = 0; i != vector.size(); ++i) {
-                write_node(state, i == vector.size() - 1 ? Last::yes : Last::no, [&] {
+                write_node(state, i == vector.size() - 1 ? Last::Yes : Last::No, [&] {
                     do_display(state, vector[i]);
                 });
             }
@@ -77,17 +78,17 @@ namespace {
 
     void do_display(Display_state& state, Expression_id const id)
     {
-        do_display(state, state.arena.expressions[id]);
+        do_display(state, state.arena.expr[id]);
     }
 
     void do_display(Display_state& state, Pattern_id const id)
     {
-        do_display(state, state.arena.patterns[id]);
+        do_display(state, state.arena.patt[id]);
     }
 
     void do_display(Display_state& state, Type_id const id)
     {
-        do_display(state, state.arena.types[id]);
+        do_display(state, state.arena.type[id]);
     }
 
     void do_display(Display_state& state, Wildcard const&)
@@ -95,19 +96,19 @@ namespace {
         write_line(state, "built-in wildcard");
     }
 
-    void do_display(Display_state& state, kieli::Name const& name)
+    void do_display(Display_state& state, ki::Name const& name)
     {
-        write_line(state, "\"{}\"", name);
+        write_line(state, "{:?}", state.pool.get(name.id));
     }
 
     void do_display(Display_state& state, Mutability const& mutability)
     {
         auto const visitor = utl::Overload {
-            [&](kieli::Mutability const& concrete) { //
-                write_line(state, "concrete {}", concrete);
+            [&](ki::Mutability concrete) { //
+                write_line(state, "concrete {}", ki::mutability_string(concrete));
             },
             [&](Parameterized_mutability const& parameterized) {
-                write_line(state, "parameterized {}", parameterized.name);
+                write_line(state, "parameterized {}", state.pool.get(parameterized.name.id));
             },
         };
         std::visit(visitor, mutability.variant);
@@ -123,9 +124,9 @@ namespace {
         write_line(state, "path segment");
         if (segment.template_arguments.has_value()) {
             display_vector_node(
-                state, Last::no, "template arguments", segment.template_arguments.value());
+                state, Last::No, "template arguments", segment.template_arguments.value());
         }
-        display_node(state, Last::yes, "name", segment.name);
+        display_node(state, Last::Yes, "name", segment.name);
     }
 
     void do_display(Display_state& state, Path_root const& root)
@@ -141,17 +142,17 @@ namespace {
     void do_display(Display_state& state, Path const& path)
     {
         write_line(state, "path");
-        display_node(state, Last::no, "root", path.root);
-        display_vector_node(state, Last::yes, "segments", path.segments);
+        display_node(state, Last::No, "root", path.root);
+        display_vector_node(state, Last::Yes, "segments", path.segments);
     }
 
     void do_display(Display_state& state, Template_parameter const& parameter)
     {
         auto display_default = [&](auto const& argument) {
             if (argument.has_value()) {
-                write_node(state, Last::no, [&] {
+                write_node(state, Last::No, [&] {
                     write_line(state, "default argument");
-                    write_node(state, Last::yes, [&] {
+                    write_node(state, Last::Yes, [&] {
                         auto const visitor
                             = [&](auto const& alternative) { do_display(state, alternative); };
                         std::visit(visitor, argument.value());
@@ -163,19 +164,19 @@ namespace {
             [&](Template_type_parameter const& parameter) {
                 write_line(state, "type parameter");
                 display_default(parameter.default_argument);
-                display_node(state, Last::no, "name", parameter.name);
-                display_vector_node(state, Last::yes, "concepts", parameter.concepts);
+                display_node(state, Last::No, "name", parameter.name);
+                display_vector_node(state, Last::Yes, "concepts", parameter.concepts);
             },
             [&](Template_value_parameter const& parameter) {
                 write_line(state, "value parameter");
                 display_default(parameter.default_argument);
-                display_node(state, Last::no, "name", parameter.name);
-                display_node(state, Last::yes, "type", parameter.type);
+                display_node(state, Last::No, "name", parameter.name);
+                display_node(state, Last::Yes, "type", parameter.type);
             },
             [&](Template_mutability_parameter const& parameter) {
                 write_line(state, "mutability parameter");
                 display_default(parameter.default_argument);
-                display_node(state, Last::yes, "name", parameter.name);
+                display_node(state, Last::Yes, "name", parameter.name);
             },
         };
         std::visit(visitor, parameter.variant);
@@ -199,41 +200,41 @@ namespace {
         write_line(state, "conditional source: {}", describe_conditional_source(source));
     }
 
-    void do_display(Display_state& state, definition::Field const& field)
+    void do_display(Display_state& state, Field const& field)
     {
         write_line(state, "field");
-        display_node(state, Last::no, "name", field.name);
-        display_node(state, Last::yes, "type", field.type);
+        display_node(state, Last::No, "name", field.name);
+        display_node(state, Last::Yes, "type", field.type);
     }
 
     void do_display(Display_state& state, Struct_field_initializer const& field)
     {
         write_line(state, "struct field initializer");
-        display_node(state, Last::no, "name", field.name);
-        display_node(state, Last::yes, "expression", field.expression);
+        display_node(state, Last::No, "name", field.name);
+        display_node(state, Last::Yes, "expression", field.expression);
     }
 
     void do_display(Display_state& state, pattern::Field const& field)
     {
         write_line(state, "field");
         if (field.pattern.has_value()) {
-            display_node(state, Last::no, "pattern", field.pattern.value());
+            display_node(state, Last::No, "pattern", field.pattern.value());
         }
-        display_node(state, Last::yes, "name", field.name);
+        display_node(state, Last::Yes, "name", field.name);
     }
 
-    void do_display(Display_state& state, definition::Constructor_body const& body)
+    void do_display(Display_state& state, Constructor_body const& body)
     {
         auto const visitor = utl::Overload {
-            [&](definition::Struct_constructor const& constructor) {
+            [&](Struct_constructor const& constructor) {
                 write_line(state, "struct constructor");
-                display_vector_node(state, Last::yes, "fields", constructor.fields);
+                display_vector_node(state, Last::Yes, "fields", constructor.fields);
             },
-            [&](definition::Tuple_constructor const& constructor) {
+            [&](Tuple_constructor const& constructor) {
                 write_line(state, "tuple constructor");
-                display_vector_node(state, Last::yes, "types", constructor.types);
+                display_vector_node(state, Last::Yes, "types", constructor.types);
             },
-            [&](definition::Unit_constructor const&) { write_line(state, "unit constructor"); },
+            [&](Unit_constructor const&) { write_line(state, "unit constructor"); },
         };
         std::visit(visitor, body);
     }
@@ -243,139 +244,135 @@ namespace {
         auto const visitor = utl::Overload {
             [&](pattern::Struct_constructor const& constructor) {
                 write_line(state, "struct constructor");
-                display_vector_node(state, Last::yes, "fields", constructor.fields);
+                display_vector_node(state, Last::Yes, "fields", constructor.fields);
             },
             [&](pattern::Tuple_constructor const& constructor) {
                 write_line(state, "tuple constructor");
-                display_node(state, Last::yes, "pattern", constructor.pattern);
+                display_node(state, Last::Yes, "pattern", constructor.pattern);
             },
             [&](pattern::Unit_constructor const&) { write_line(state, "unit constructor"); },
         };
         std::visit(visitor, body);
     }
 
-    void do_display(Display_state& state, definition::Constructor const& constructor)
+    void do_display(Display_state& state, Constructor const& constructor)
     {
         write_line(state, "constructor");
-        display_node(state, Last::no, "name", constructor.name);
-        display_node(state, Last::yes, "body", constructor.body);
+        display_node(state, Last::No, "name", constructor.name);
+        display_node(state, Last::Yes, "body", constructor.body);
     }
 
     void do_display(Display_state& state, Function_parameter const& parameter)
     {
         write_line(state, "function parameter");
-        display_node(state, Last::no, "type", parameter.type);
+        display_node(state, Last::No, "type", parameter.type);
         if (parameter.default_argument.has_value()) {
-            display_node(state, Last::no, "default argument", parameter.default_argument.value());
+            display_node(state, Last::No, "default argument", parameter.default_argument.value());
         }
-        display_node(state, Last::yes, "pattern", parameter.pattern);
+        display_node(state, Last::Yes, "pattern", parameter.pattern);
     }
 
     void do_display(Display_state& state, Function_signature const& signature)
     {
         write_line(state, "function signature");
-        display_node(state, Last::no, "name", signature.name);
-        display_template_parameters_node(state, Last::no, signature.template_parameters);
-        display_node(state, Last::no, "return type", signature.return_type);
-        display_vector_node(state, Last::yes, "function parameters", signature.function_parameters);
+        display_node(state, Last::No, "name", signature.name);
+        display_template_parameters_node(state, Last::No, signature.template_parameters);
+        display_node(state, Last::No, "return type", signature.return_type);
+        display_vector_node(state, Last::Yes, "function parameters", signature.function_parameters);
     }
 
     void do_display(Display_state& state, Type_signature const& signature)
     {
         write_line(state, "type signature");
-        display_node(state, Last::no, "name", signature.name);
-        display_vector_node(state, Last::yes, "concepts", signature.concepts);
+        display_node(state, Last::No, "name", signature.name);
+        display_vector_node(state, Last::Yes, "concepts", signature.concepts);
     }
 
     void do_display(Display_state& state, Match_case const& match_case)
     {
         write_line(state, "match case");
-        display_node(state, Last::no, "pattern", match_case.pattern);
-        display_node(state, Last::yes, "handler", match_case.expression);
+        display_node(state, Last::No, "pattern", match_case.pattern);
+        display_node(state, Last::Yes, "handler", match_case.expression);
     }
 
-    void do_display(Display_state& state, definition::Function const& function)
+    void do_display(Display_state& state, Function const& function)
     {
         write_line(state, "function");
-        display_node(state, Last::no, "signature", function.signature);
-        display_node(state, Last::yes, "body", function.body);
+        display_node(state, Last::No, "signature", function.signature);
+        display_node(state, Last::Yes, "body", function.body);
     }
 
-    void do_display(Display_state& state, definition::Enumeration const& enumeration)
+    void do_display(Display_state& state, Enumeration const& enumeration)
     {
         write_line(state, "enumeration");
-        display_node(state, Last::no, "name", enumeration.name);
-        display_template_parameters_node(state, Last::no, enumeration.template_parameters);
-        display_vector_node(state, Last::yes, "constructors", enumeration.constructors);
+        display_node(state, Last::No, "name", enumeration.name);
+        display_template_parameters_node(state, Last::No, enumeration.template_parameters);
+        display_vector_node(state, Last::Yes, "constructors", enumeration.constructors);
     }
 
-    void do_display(Display_state& state, definition::Alias const& alias)
+    void do_display(Display_state& state, Alias const& alias)
     {
         write_line(state, "type alias");
-        display_node(state, Last::no, "name", alias.name);
-        display_template_parameters_node(state, Last::no, alias.template_parameters);
-        display_node(state, Last::yes, "aliased type", alias.type);
+        display_node(state, Last::No, "name", alias.name);
+        display_template_parameters_node(state, Last::No, alias.template_parameters);
+        display_node(state, Last::Yes, "aliased type", alias.type);
     }
 
-    void do_display(Display_state& state, definition::Concept const& concept_)
+    void do_display(Display_state& state, Concept const& concept_)
     {
         write_line(state, "concept");
-        display_node(state, Last::no, "name", concept_.name);
-        display_template_parameters_node(state, Last::no, concept_.template_parameters);
-        display_vector_node(state, Last::no, "functions", concept_.function_signatures);
-        display_vector_node(state, Last::yes, "types", concept_.type_signatures);
+        display_node(state, Last::No, "name", concept_.name);
+        display_template_parameters_node(state, Last::No, concept_.template_parameters);
+        display_vector_node(state, Last::No, "functions", concept_.function_signatures);
+        display_vector_node(state, Last::Yes, "types", concept_.type_signatures);
     }
 
-    void do_display(Display_state& state, definition::Impl const& implementation)
+    void do_display(Display_state& state, Impl const& implementation)
     {
         write_line(state, "implementation");
-        display_template_parameters_node(state, Last::no, implementation.template_parameters);
-        display_node(state, Last::no, "type", implementation.type);
-        display_vector_node(state, Last::yes, "definitions", implementation.definitions);
+        display_template_parameters_node(state, Last::No, implementation.template_parameters);
+        display_node(state, Last::No, "type", implementation.type);
+        display_vector_node(state, Last::Yes, "definitions", implementation.definitions);
     }
 
-    void do_display(Display_state& state, definition::Submodule const& submodule)
+    void do_display(Display_state& state, Submodule const& submodule)
     {
         write_line(state, "submodule");
-        display_node(state, Last::no, "name", submodule.name);
-        display_template_parameters_node(state, Last::no, submodule.template_parameters);
-        display_vector_node(state, Last::yes, "definitions", submodule.definitions);
+        display_node(state, Last::No, "name", submodule.name);
+        display_template_parameters_node(state, Last::No, submodule.template_parameters);
+        display_vector_node(state, Last::Yes, "definitions", submodule.definitions);
     }
 
-    void do_display(Display_state& state, kieli::Identifier const identifier)
+    void do_display(Display_state& state, utl::String_id const id)
     {
-        write_line(state, "identifier {}", identifier);
+        write_line(state, "identifier {}", state.pool.get(id));
     }
 
-    void display_literal(Display_state& state, kieli::Integer const& integer)
+    void display_literal(Display_state& state, ki::Integer const& integer)
     {
         write_line(state, "integer literal {}", integer.value);
     }
 
-    void display_literal(Display_state& state, kieli::Floating const& floating)
+    void display_literal(Display_state& state, ki::Floating const& floating)
     {
         write_line(state, "floating point literal {}", floating.value);
     }
 
-    void display_literal(Display_state& state, kieli::Character const& character)
-    {
-        write_line(state, "character literal {:?}", character.value);
-    }
-
-    void display_literal(Display_state& state, kieli::Boolean const& boolean)
+    void display_literal(Display_state& state, ki::Boolean const& boolean)
     {
         write_line(state, "boolean literal {}", boolean.value);
     }
 
-    void display_literal(Display_state& state, kieli::String const& string)
+    void display_literal(Display_state& state, ki::String const& string)
     {
-        write_line(state, "string literal {:?}", string.value);
+        write_line(state, "string literal {:?}", state.pool.get(string.id));
     }
 
     struct Expression_display_visitor {
         Display_state& state;
 
-        void operator()(kieli::literal auto const& literal)
+        void operator()(
+            utl::one_of<ki::Integer, ki::Floating, ki::Boolean, ki::String> auto const& literal)
         {
             display_literal(state, literal);
         }
@@ -393,26 +390,26 @@ namespace {
         void operator()(expression::Array const& array)
         {
             write_line(state, "array literal");
-            display_vector_node(state, Last::yes, "elements", array.elements);
+            display_vector_node(state, Last::Yes, "elements", array.elements);
         }
 
         void operator()(expression::Tuple const& tuple)
         {
             write_line(state, "tuple");
-            display_vector_node(state, Last::yes, "fields", tuple.fields);
+            display_vector_node(state, Last::Yes, "fields", tuple.fields);
         }
 
         void operator()(expression::Loop const& loop)
         {
             write_line(state, "loop");
-            display_node(state, Last::no, "body", loop.body);
-            display_node(state, Last::yes, "source", loop.source);
+            display_node(state, Last::No, "body", loop.body);
+            display_node(state, Last::Yes, "source", loop.source);
         }
 
         void operator()(expression::Break const& break_)
         {
             write_line(state, "break");
-            display_node(state, Last::yes, "result", break_.result);
+            display_node(state, Last::Yes, "result", break_.result);
         }
 
         void operator()(expression::Continue const&)
@@ -423,150 +420,144 @@ namespace {
         void operator()(expression::Block const& block)
         {
             write_line(state, "block");
-            display_vector_node(state, Last::no, "side effects", block.side_effects);
-            display_node(state, Last::yes, "result", block.result);
+            display_vector_node(state, Last::No, "side effects", block.side_effects);
+            display_node(state, Last::Yes, "result", block.result);
         }
 
         void operator()(expression::Function_call const& call)
         {
             write_line(state, "function call");
-            display_node(state, Last::no, "invocable", call.invocable);
-            display_vector_node(state, Last::yes, "arguments", call.arguments);
+            display_node(state, Last::No, "invocable", call.invocable);
+            display_vector_node(state, Last::Yes, "arguments", call.arguments);
         }
 
         void operator()(expression::Tuple_initializer const& initializer)
         {
             write_line(state, "tuple initializer");
-            display_node(state, Last::no, "constructor path", initializer.constructor_path);
-            display_vector_node(state, Last::yes, "field initializers", initializer.initializers);
+            display_node(state, Last::No, "constructor path", initializer.constructor_path);
+            display_vector_node(state, Last::Yes, "field initializers", initializer.initializers);
         }
 
         void operator()(expression::Struct_initializer const& initializer)
         {
             write_line(state, "struct initializer");
-            display_node(state, Last::no, "constructor path", initializer.constructor_path);
-            display_vector_node(state, Last::yes, "field initializers", initializer.initializers);
+            display_node(state, Last::No, "constructor path", initializer.constructor_path);
+            display_vector_node(state, Last::Yes, "field initializers", initializer.initializers);
         }
 
         void operator()(expression::Infix_call const& application)
         {
             write_line(state, "infix call");
-            display_node(state, Last::no, "left operand", application.left);
-            display_node(state, Last::no, "right operand", application.right);
-            display_node(state, Last::yes, "operator", application.op);
+            display_node(state, Last::No, "left operand", application.left);
+            display_node(state, Last::No, "right operand", application.right);
+            display_node(state, Last::Yes, "operator", application.op);
         }
 
         void operator()(expression::Struct_field const& field)
         {
             write_line(state, "struct index");
-            display_node(state, Last::no, "base expression", field.base_expression);
-            display_node(state, Last::yes, "field name", field.field_name);
+            display_node(state, Last::No, "base expression", field.base_expression);
+            display_node(state, Last::Yes, "field name", field.field_name);
         }
 
         void operator()(expression::Tuple_field const& field)
         {
             write_line(state, "tuple index");
-            display_node(state, Last::no, "base expression", field.base_expression);
+            display_node(state, Last::No, "base expression", field.base_expression);
             write_node(
-                state, Last::yes, [&] { write_line(state, "field index {}", field.field_index); });
+                state, Last::Yes, [&] { write_line(state, "field index {}", field.field_index); });
         }
 
         void operator()(expression::Array_index const& index)
         {
             write_line(state, "array index");
-            display_node(state, Last::no, "base expression", index.base_expression);
-            display_node(state, Last::yes, "index expression", index.index_expression);
+            display_node(state, Last::No, "base expression", index.base_expression);
+            display_node(state, Last::Yes, "index expression", index.index_expression);
         }
 
         void operator()(expression::Method_call const& call)
         {
             write_line(state, "method call");
-            display_node(state, Last::no, "method name", call.method_name);
-            display_node(state, Last::no, "base expression", call.base_expression);
+            display_node(state, Last::No, "method name", call.method_name);
+            display_node(state, Last::No, "base expression", call.base_expression);
             if (call.template_arguments.has_value()) {
                 display_vector_node(
-                    state, Last::no, "template arguments", call.template_arguments.value());
+                    state, Last::No, "template arguments", call.template_arguments.value());
             }
-            display_vector_node(state, Last::yes, "method arguments", call.function_arguments);
+            display_vector_node(state, Last::Yes, "method arguments", call.function_arguments);
         }
 
         void operator()(expression::Conditional const& conditional)
         {
             write_line(state, "conditional");
-            display_node(state, Last::no, "condition", conditional.condition);
-            display_node(state, Last::no, "true branch", conditional.true_branch);
-            display_node(state, Last::no, "false branch", conditional.false_branch);
-            display_node(state, Last::yes, "source", conditional.source);
+            display_node(state, Last::No, "condition", conditional.condition);
+            display_node(state, Last::No, "true branch", conditional.true_branch);
+            display_node(state, Last::No, "false branch", conditional.false_branch);
+            display_node(state, Last::Yes, "source", conditional.source);
         }
 
         void operator()(expression::Match const& match)
         {
             write_line(state, "match");
-            display_node(state, Last::no, "expression", match.expression);
-            display_vector_node(state, Last::yes, "cases", match.cases);
+            display_node(state, Last::No, "scrutinee", match.scrutinee);
+            display_vector_node(state, Last::Yes, "cases", match.cases);
         }
 
         void operator()(expression::Type_ascription const& ascription)
         {
             write_line(state, "type ascription");
-            display_node(state, Last::no, "expression", ascription.expression);
-            display_node(state, Last::yes, "ascribed type", ascription.ascribed_type);
+            display_node(state, Last::No, "expression", ascription.expression);
+            display_node(state, Last::Yes, "ascribed type", ascription.type);
         }
 
         void operator()(expression::Let const& let)
         {
             write_line(state, "let binding");
-            display_node(state, Last::no, "type", let.type);
-            display_node(state, Last::no, "pattern", let.pattern);
-            display_node(state, Last::yes, "initializer", let.initializer);
+            display_node(state, Last::No, "type", let.type);
+            display_node(state, Last::No, "pattern", let.pattern);
+            display_node(state, Last::Yes, "initializer", let.initializer);
         }
 
         void operator()(expression::Type_alias const& alias)
         {
             write_line(state, "local type alias");
-            display_node(state, Last::no, "name", alias.name);
-            display_node(state, Last::yes, "aliased type", alias.type);
+            display_node(state, Last::No, "name", alias.name);
+            display_node(state, Last::Yes, "aliased type", alias.type);
         }
 
         void operator()(expression::Ret const& ret)
         {
             write_line(state, "ret");
-            display_node(state, Last::yes, "returned expression", ret.returned_expression);
+            display_node(state, Last::Yes, "returned expression", ret.returned_expression);
         }
 
         void operator()(expression::Sizeof const& sizeof_)
         {
             write_line(state, "sizeof");
-            display_node(state, Last::yes, "inspected type", sizeof_.inspected_type);
+            display_node(state, Last::Yes, "inspected type", sizeof_.type);
         }
 
         void operator()(expression::Addressof const& addressof)
         {
             write_line(state, "addressof");
-            display_node(state, Last::no, "reference mutability", addressof.mutability);
-            display_node(state, Last::yes, "place expression", addressof.place_expression);
+            display_node(state, Last::No, "reference mutability", addressof.mutability);
+            display_node(state, Last::Yes, "place expression", addressof.place_expression);
         }
 
         void operator()(expression::Dereference const& dereference)
         {
             write_line(state, "dereference");
             display_node(
-                state, Last::yes, "reference expression", dereference.reference_expression);
-        }
-
-        void operator()(expression::Move const& move)
-        {
-            write_line(state, "mv");
-            display_node(state, Last::yes, "place expression", move.place_expression);
+                state, Last::Yes, "reference expression", dereference.reference_expression);
         }
 
         void operator()(expression::Defer const& defer)
         {
             write_line(state, "defer");
-            display_node(state, Last::yes, "effect", defer.effect_expression);
+            display_node(state, Last::Yes, "effect", defer.effect_expression);
         }
 
-        void operator()(Error const&)
+        void operator()(ki::Error)
         {
             write_line(state, "error");
         }
@@ -575,7 +566,8 @@ namespace {
     struct Pattern_display_visitor {
         Display_state& state;
 
-        void operator()(kieli::literal auto const& literal)
+        void operator()(
+            utl::one_of<ki::Integer, ki::Floating, ki::Boolean, ki::String> auto const& literal)
         {
             display_literal(state, literal);
         }
@@ -588,41 +580,41 @@ namespace {
         void operator()(pattern::Name const& name)
         {
             write_line(state, "name");
-            display_node(state, Last::no, "name", name.name);
-            display_node(state, Last::yes, "mutability", name.mutability);
+            display_node(state, Last::No, "name", name.name);
+            display_node(state, Last::Yes, "mutability", name.mutability);
         }
 
         void operator()(pattern::Constructor const& constructor)
         {
             write_line(state, "constructor");
-            display_node(state, Last::no, "constructor path", constructor.path);
-            display_node(state, Last::yes, "body", constructor.body);
+            display_node(state, Last::No, "constructor path", constructor.path);
+            display_node(state, Last::Yes, "body", constructor.body);
         }
 
         void operator()(pattern::Abbreviated_constructor const& constructor)
         {
             write_line(state, "abbreviated constructor");
-            display_node(state, Last::no, "name", constructor.name);
-            display_node(state, Last::yes, "body", constructor.body);
+            display_node(state, Last::No, "name", constructor.name);
+            display_node(state, Last::Yes, "body", constructor.body);
         }
 
         void operator()(pattern::Tuple const& tuple)
         {
             write_line(state, "tuple");
-            display_vector_node(state, Last::yes, "field patterns", tuple.field_patterns);
+            display_vector_node(state, Last::Yes, "field patterns", tuple.field_patterns);
         }
 
         void operator()(pattern::Slice const& slice)
         {
             write_line(state, "slice");
-            display_vector_node(state, Last::yes, "element patterns", slice.element_patterns);
+            display_vector_node(state, Last::Yes, "element patterns", slice.element_patterns);
         }
 
         void operator()(pattern::Guarded const& guarded)
         {
             write_line(state, "guarded");
-            display_node(state, Last::no, "guarded pattern", guarded.guarded_pattern);
-            display_node(state, Last::yes, "guard expression", guarded.guard_expression);
+            display_node(state, Last::No, "guarded pattern", guarded.guarded_pattern);
+            display_node(state, Last::Yes, "guard expression", guarded.guard_expression);
         }
     };
 
@@ -647,56 +639,56 @@ namespace {
         void operator()(type::Tuple const& tuple)
         {
             write_line(state, "tuple");
-            display_vector_node(state, Last::yes, "field types", tuple.field_types);
+            display_vector_node(state, Last::Yes, "field types", tuple.field_types);
         }
 
         void operator()(type::Array const& array)
         {
             write_line(state, "tuple");
-            display_node(state, Last::no, "length", array.length);
-            display_node(state, Last::yes, "element type", array.element_type);
+            display_node(state, Last::No, "length", array.length);
+            display_node(state, Last::Yes, "element type", array.element_type);
         }
 
         void operator()(type::Slice const& slice)
         {
             write_line(state, "slice");
-            display_node(state, Last::yes, "element type", slice.element_type);
+            display_node(state, Last::Yes, "element type", slice.element_type);
         }
 
         void operator()(type::Function const& function)
         {
             write_line(state, "function");
-            display_vector_node(state, Last::no, "parameter types", function.parameter_types);
-            display_node(state, Last::yes, "return type", function.return_type);
+            display_vector_node(state, Last::No, "parameter types", function.parameter_types);
+            display_node(state, Last::Yes, "return type", function.return_type);
         }
 
         void operator()(type::Typeof const& typeof_)
         {
             write_line(state, "typeof");
-            display_node(state, Last::yes, "inspected expression", typeof_.inspected_expression);
+            display_node(state, Last::Yes, "inspected expression", typeof_.expression);
         }
 
         void operator()(type::Reference const& reference)
         {
             write_line(state, "reference");
-            display_node(state, Last::no, "reference mutability", reference.mutability);
-            display_node(state, Last::yes, "referenced type", reference.referenced_type);
+            display_node(state, Last::No, "reference mutability", reference.mutability);
+            display_node(state, Last::Yes, "referenced type", reference.referenced_type);
         }
 
         void operator()(type::Pointer const& pointer)
         {
             write_line(state, "pointer");
-            display_node(state, Last::no, "pointer mutability", pointer.mutability);
-            display_node(state, Last::yes, "pointee type", pointer.pointee_type);
+            display_node(state, Last::No, "pointer mutability", pointer.mutability);
+            display_node(state, Last::Yes, "pointee type", pointer.pointee_type);
         }
 
         void operator()(type::Impl const& implementation)
         {
             write_line(state, "implementation");
-            display_vector_node(state, Last::yes, "concepts", implementation.concepts);
+            display_vector_node(state, Last::Yes, "concepts", implementation.concepts);
         }
 
-        void operator()(Error const&)
+        void operator()(ki::Error)
         {
             write_line(state, "error");
         }
@@ -722,56 +714,71 @@ namespace {
         std::visit(Type_display_visitor { state }, type.variant);
     }
 
-    auto display_string(Arena const& arena, auto const& object) -> std::string
+    auto display_string(Arena const& arena, utl::String_pool const& pool, auto const& object)
+        -> std::string
     {
-        Display_state state { .arena = arena };
+        Display_state state {
+            .output  = {},
+            .indent  = {},
+            .unicode = true,
+            .arena   = arena,
+            .pool    = pool,
+        };
         do_display(state, object);
         return std::move(state.output);
     }
 } // namespace
 
-auto kieli::ast::display(Arena const& arena, definition::Function const& function) -> std::string
-{
-    return display_string(arena, function);
-}
-
-auto kieli::ast::display(Arena const& arena, definition::Enumeration const& enumeration)
+auto ki::ast::display(Arena const& arena, utl::String_pool const& pool, Function const& function)
     -> std::string
 {
-    return display_string(arena, enumeration);
+    return display_string(arena, pool, function);
 }
 
-auto kieli::ast::display(Arena const& arena, definition::Alias const& alias) -> std::string
+auto ki::ast::display(
+    Arena const& arena, utl::String_pool const& pool, Enumeration const& enumeration) -> std::string
 {
-    return display_string(arena, alias);
+    return display_string(arena, pool, enumeration);
 }
 
-auto kieli::ast::display(Arena const& arena, definition::Concept const& concept_) -> std::string
+auto ki::ast::display(Arena const& arena, utl::String_pool const& pool, Alias const& alias)
+    -> std::string
 {
-    return display_string(arena, concept_);
+    return display_string(arena, pool, alias);
 }
 
-auto kieli::ast::display(Arena const& arena, definition::Submodule const& submodule) -> std::string
+auto ki::ast::display(Arena const& arena, utl::String_pool const& pool, Concept const& concept_)
+    -> std::string
 {
-    return display_string(arena, submodule);
+    return display_string(arena, pool, concept_);
 }
 
-auto kieli::ast::display(Arena const& arena, Definition const& definition) -> std::string
+auto ki::ast::display(Arena const& arena, utl::String_pool const& pool, Submodule const& submodule)
+    -> std::string
 {
-    return display_string(arena, definition);
+    return display_string(arena, pool, submodule);
 }
 
-auto kieli::ast::display(Arena const& arena, Expression const& expression) -> std::string
+auto ki::ast::display(
+    Arena const& arena, utl::String_pool const& pool, Definition const& definition) -> std::string
 {
-    return display_string(arena, expression);
+    return display_string(arena, pool, definition);
 }
 
-auto kieli::ast::display(Arena const& arena, Pattern const& pattern) -> std::string
+auto ki::ast::display(
+    Arena const& arena, utl::String_pool const& pool, Expression const& expression) -> std::string
 {
-    return display_string(arena, pattern);
+    return display_string(arena, pool, expression);
 }
 
-auto kieli::ast::display(Arena const& arena, Type const& type) -> std::string
+auto ki::ast::display(Arena const& arena, utl::String_pool const& pool, Pattern const& pattern)
+    -> std::string
 {
-    return display_string(arena, type);
+    return display_string(arena, pool, pattern);
+}
+
+auto ki::ast::display(Arena const& arena, utl::String_pool const& pool, Type const& type)
+    -> std::string
+{
+    return display_string(arena, pool, type);
 }

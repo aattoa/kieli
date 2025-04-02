@@ -3,7 +3,7 @@
 
 // Evil x-macro preprocessor hack ensures the switches are always correct.
 
-auto kieli::token_description(Token_type const type) -> std::string_view
+auto ki::token_description(Token_type const type) -> std::string_view
 {
     switch (type) {
 #define KIELI_X_TOKEN_DO(identifier, spelling, description) \
@@ -14,7 +14,7 @@ auto kieli::token_description(Token_type const type) -> std::string_view
     }
 }
 
-auto kieli::token_type_string(Token_type const type) -> std::string_view
+auto ki::token_type_string(Token_type const type) -> std::string_view
 {
     switch (type) {
 #define KIELI_X_TOKEN_DO(identifier, spelling, description) \
@@ -25,4 +25,4 @@ auto kieli::token_type_string(Token_type const type) -> std::string_view
     }
 }
 
-static_assert(std::is_trivially_copyable_v<kieli::Token>);
+static_assert(std::is_trivially_copyable_v<ki::Token>);

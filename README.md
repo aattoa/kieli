@@ -8,7 +8,6 @@ Some subdirectories under `src/` have individual READMEs.
 
 ## Dependencies
 
-- [github.com/aattoa/cppdiag](https://github.com/aattoa/cppdiag)
 - [github.com/aattoa/cpputil](https://github.com/aattoa/cpputil)
 - [github.com/aattoa/cppunittest](https://github.com/aattoa/cppunittest)
 
@@ -22,7 +21,7 @@ Prerequisites:
 - A build system, such as GNU Make or Ninja
 - A C++23 compiler toolchain
 
-NOTE: At the time of writing, LLVM (18 and later) is the only toolchain that supports C++23 well enough to build Kieli.
+NOTE: At the time of writing, LLVM`>=18` is the only toolchain that supports C++23 well enough to build Kieli.
 
 Run the following commands to clone and build Kieli:
 

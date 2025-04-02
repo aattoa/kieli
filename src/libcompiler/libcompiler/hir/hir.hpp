@@ -1,13 +1,16 @@
-#pragma once
+#ifndef KIELI_LIBCOMPILER_HIR
+#define KIELI_LIBCOMPILER_HIR
 
 #include <libutl/utilities.hpp>
+#include <libutl/string_pool.hpp>
 #include <libutl/index_vector.hpp>
 #include <libcompiler/compiler.hpp>
 
-namespace kieli::hir {
-    enum struct Type_variable_kind { general, integral };
+namespace ki::hir {
 
-    enum struct Expression_kind { place, value };
+    enum struct Type_variable_kind : std::uint8_t { General, Integral };
+
+    enum struct Expression_category : std::uint8_t { Place, Value };
 
     struct Template_parameter_tag : utl::Vector_index<Template_parameter_tag> {
         using Vector_index::Vector_index;
@@ -17,18 +20,16 @@ namespace kieli::hir {
         using Vector_index::Vector_index;
     };
 
-    struct Error {};
-
     struct Wildcard {};
 
     struct Mutability {
         Mutability_id id;
-        kieli::Range  range;
+        Range         range;
     };
 
     struct Type {
-        Type_id      id;
-        kieli::Range range;
+        Type_id id;
+        Range   range;
     };
 
     struct Match_case {
@@ -47,7 +48,7 @@ namespace kieli::hir {
 
         struct Name {
             Mutability         mutability;
-            kieli::Identifier  identifier;
+            utl::String_id     identifier;
             Local_variable_tag variable_tag;
         };
 
@@ -59,11 +60,10 @@ namespace kieli::hir {
 
     struct Pattern_variant
         : std::variant<
-              kieli::Integer,
-              kieli::Floating,
-              kieli::Character,
-              kieli::Boolean,
-              kieli::String,
+              Integer,
+              Floating,
+              Boolean,
+              String,
               Wildcard,
               pattern::Tuple,
               pattern::Slice,
@@ -75,7 +75,7 @@ namespace kieli::hir {
     struct Pattern {
         Pattern_variant variant;
         Type_id         type;
-        kieli::Range    range;
+        Range           range;
     };
 
     namespace expression {
@@ -114,13 +114,13 @@ namespace kieli::hir {
         };
 
         struct Variable_reference {
-            kieli::Lower       name;
+            Lower              name;
             Local_variable_tag tag;
         };
 
         struct Function_reference {
-            kieli::Lower name;
-            Function_id  id;
+            Lower       name;
+            Function_id id;
         };
 
         struct Indirect_call {
@@ -129,7 +129,7 @@ namespace kieli::hir {
         };
 
         struct Direct_call {
-            kieli::Lower               function_name;
+            Lower                      function_name;
             Function_id                function_id;
             std::vector<Expression_id> arguments;
         };
@@ -156,11 +156,10 @@ namespace kieli::hir {
         : std::variant<
               Error,
               Wildcard,
-              kieli::Integer,
-              kieli::Floating,
-              kieli::Character,
-              kieli::Boolean,
-              kieli::String,
+              Integer,
+              Floating,
+              Boolean,
+              String,
               expression::Array_literal,
               expression::Tuple,
               expression::Loop,
@@ -181,14 +180,14 @@ namespace kieli::hir {
     };
 
     struct Expression {
-        Expression_variant variant;
-        Type_id            type;
-        Expression_kind    kind;
-        kieli::Range       range;
+        Expression_variant  variant;
+        Type_id             type;
+        Expression_category category;
+        Range               range;
     };
 
     namespace type {
-        enum struct Integer { i8, i16, i32, i64, u8, u16, u32, u64 };
+        enum struct Integer : std::uint8_t { I8, I16, I32, I64, U8, U16, U32, U64 };
 
         struct Floating {};
 
@@ -217,7 +216,7 @@ namespace kieli::hir {
         };
 
         struct Enumeration {
-            kieli::Upper   name;
+            Upper          name;
             Enumeration_id id;
         };
 
@@ -233,7 +232,7 @@ namespace kieli::hir {
 
         struct Parameterized {
             Template_parameter_tag tag;
-            Identifier             identifier;
+            utl::String_id         id;
         };
 
         struct Variable {
@@ -272,7 +271,7 @@ namespace kieli::hir {
     } // namespace mutability
 
     struct Mutability_variant
-        : std::variant<Error, kieli::Mutability, mutability::Parameterized, mutability::Variable> {
+        : std::variant<Error, ki::Mutability, mutability::Parameterized, mutability::Variable> {
         using variant::variant;
     };
 
@@ -283,19 +282,19 @@ namespace kieli::hir {
     struct Template_type_parameter {
         using Default = std::variant<Type, Wildcard>;
         std::vector<Concept_id> concept_ids;
-        kieli::Upper            name;
+        Upper                   name;
         std::optional<Default>  default_argument;
     };
 
     struct Template_mutability_parameter {
         using Default = std::variant<Mutability, Wildcard>;
-        kieli::Lower           name;
+        Lower                  name;
         std::optional<Default> default_argument;
     };
 
     struct Template_value_parameter {
-        Type         type;
-        kieli::Lower name;
+        Type  type;
+        Lower name;
     };
 
     struct Template_parameter_variant
@@ -309,7 +308,7 @@ namespace kieli::hir {
     struct Template_parameter {
         Template_parameter_variant variant;
         Template_parameter_tag     tag;
-        kieli::Range               range;
+        Range                      range;
     };
 
     struct Function_parameter {
@@ -323,7 +322,7 @@ namespace kieli::hir {
         std::vector<Function_parameter> parameters;
         Type                            return_type;
         Type                            function_type;
-        kieli::Lower                    name;
+        Lower                           name;
         Scope_id                        scope_id;
     };
 
@@ -332,8 +331,8 @@ namespace kieli::hir {
     };
 
     struct Alias {
-        kieli::Upper name;
-        Type         type;
+        Upper name;
+        Type  type;
     };
 
     struct Concept {
@@ -345,10 +344,10 @@ namespace kieli::hir {
     };
 
     struct Arena {
-        utl::Index_vector<Expression_id, Expression>         expressions;
-        utl::Index_vector<Pattern_id, Pattern>               patterns;
-        utl::Index_vector<Type_id, Type_variant>             types;
-        utl::Index_vector<Mutability_id, Mutability_variant> mutabilities;
+        utl::Index_vector<Expression_id, Expression>         expr;
+        utl::Index_vector<Type_id, Type_variant>             type;
+        utl::Index_vector<Pattern_id, Pattern>               patt;
+        utl::Index_vector<Mutability_id, Mutability_variant> mut;
     };
 
     // Get the name of a built-in integer type.
@@ -360,18 +359,21 @@ namespace kieli::hir {
     // Get the type of a pattern.
     auto pattern_type(Pattern const& pattern) -> hir::Type;
 
-    void format(Arena const&, Pattern const&, std::string&);
-    void format(Arena const&, Expression const&, std::string&);
-    void format(Arena const&, Type const&, std::string&);
-    void format(Arena const&, Type_variant const&, std::string&);
-    void format(Arena const&, Mutability const&, std::string&);
-    void format(Arena const&, Mutability_variant const&, std::string&);
+    void format(Arena const&, utl::String_pool const&, Pattern const&, std::string&);
+    void format(Arena const&, utl::String_pool const&, Expression const&, std::string&);
+    void format(Arena const&, utl::String_pool const&, Type const&, std::string&);
+    void format(Arena const&, utl::String_pool const&, Type_variant const&, std::string&);
+    void format(Arena const&, utl::String_pool const&, Mutability const&, std::string&);
+    void format(Arena const&, utl::String_pool const&, Mutability_variant const&, std::string&);
 
-    auto to_string(Arena const& arena, auto const& x) -> std::string
-        requires requires(std::string output) { hir::format(arena, x, output); }
+    auto to_string(Arena const& arena, utl::String_pool const& pool, auto const& x) -> std::string
+        requires requires(std::string output) { hir::format(arena, pool, x, output); }
     {
         std::string output;
-        hir::format(arena, x, output);
+        hir::format(arena, pool, x, output);
         return output;
     };
-} // namespace kieli::hir
+
+} // namespace ki::hir
+
+#endif // KIELI_LIBCOMPILER_HIR

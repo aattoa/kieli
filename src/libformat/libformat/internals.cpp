@@ -1,7 +1,7 @@
 #include <libutl/utilities.hpp>
-#include <libformat/format_internals.hpp>
+#include <libformat/internals.hpp>
 
-auto libformat::newline(State const& state, std::size_t const lines) noexcept -> Newline
+auto ki::format::newline(State const& state, std::size_t const lines) noexcept -> Newline
 {
     return {
         .indentation = state.indentation,
@@ -11,35 +11,35 @@ auto libformat::newline(State const& state, std::size_t const lines) noexcept ->
     };
 }
 
-void libformat::format(State& state, cst::Expression_id const id)
+void ki::format::format(State& state, cst::Expression_id const id)
 {
-    format(state, state.arena.expressions[id]);
+    format(state, state.arena.expr[id]);
 }
 
-void libformat::format(State& state, cst::Pattern_id const id)
+void ki::format::format(State& state, cst::Pattern_id const id)
 {
-    format(state, state.arena.patterns[id]);
+    format(state, state.arena.patt[id]);
 }
 
-void libformat::format(State& state, cst::Type_id const id)
+void ki::format::format(State& state, cst::Type_id const id)
 {
-    format(state, state.arena.types[id]);
+    format(state, state.arena.type[id]);
 }
 
-void libformat::format(State& state, cst::Wildcard const& wildcard)
+void ki::format::format(State& state, cst::Wildcard const& wildcard)
 {
-    auto const [start, stop] = state.arena.tokens[wildcard.underscore_token].range;
+    auto const [start, stop] = state.arena.range[wildcard.underscore_token];
     cpputil::always_assert(start.column < stop.column);
     format(state, "{:_^{}}", "", stop.column - start.column);
 }
 
-void libformat::format(State& state, cst::Type_annotation const& annotation)
+void ki::format::format(State& state, cst::Type_annotation const& annotation)
 {
     format(state, ": ");
     format(state, annotation.type);
 }
 
-void libformat::format(State& state, cst::Path const& path)
+void ki::format::format(State& state, cst::Path const& path)
 {
     auto const visitor = utl::Overload {
         [&](std::monostate) {},
@@ -51,49 +51,49 @@ void libformat::format(State& state, cst::Path const& path)
         if (segment.leading_double_colon_token.has_value()) {
             format(state, "::");
         }
-        format(state, "{}", segment.name);
+        format(state, "{}", state.pool.get(segment.name.id));
         format(state, segment.template_arguments);
     }
 }
 
-void libformat::format(State& state, cst::Mutability const& mutability)
+void ki::format::format(State& state, cst::Mutability const& mutability)
 {
     auto const visitor = utl::Overload {
-        [&](kieli::Mutability const concrete) {
-            format(state, "{}", concrete); //
+        [&](ki::Mutability const concrete) {
+            format(state, "{}", ki::mutability_string(concrete));
         },
-        [&](kieli::cst::Parameterized_mutability const& parameterized) {
-            format(state, "mut?{}", parameterized.name);
+        [&](ki::cst::Parameterized_mutability const& parameterized) {
+            format(state, "mut?{}", state.pool.get(parameterized.name.id));
         },
     };
-    return std::visit(visitor, mutability.variant);
+    std::visit(visitor, mutability.variant);
 }
 
-void libformat::format(State& state, cst::pattern::Field const& field)
+void ki::format::format(State& state, cst::pattern::Field const& field)
 {
-    format(state, "{}", field.name);
+    format(state, "{}", state.pool.get(field.name.id));
     if (field.equals.has_value()) {
         format(state, " = ");
         format(state, field.equals.value().pattern);
     }
 }
 
-void libformat::format(State& state, cst::Struct_field_initializer const& initializer)
+void ki::format::format(State& state, cst::Struct_field_init const& initializer)
 {
-    format(state, "{}", initializer.name);
+    format(state, "{}", state.pool.get(initializer.name.id));
     if (initializer.equals.has_value()) {
         format(state, " = ");
         format(state, initializer.equals.value().expression);
     }
 }
 
-void libformat::format(State& state, cst::definition::Field const& field)
+void ki::format::format(State& state, cst::Field const& field)
 {
-    format(state, "{}", field.name);
+    format(state, "{}", state.pool.get(field.name.id));
     format(state, field.type);
 }
 
-void libformat::format_mutability_with_whitespace(
+void ki::format::format_mutability_with_whitespace(
     State& state, std::optional<cst::Mutability> const& mutability)
 {
     if (not mutability.has_value()) {
@@ -103,19 +103,19 @@ void libformat::format_mutability_with_whitespace(
     format(state, " ");
 }
 
-void libformat::format(State& state, cst::Template_arguments const& arguments)
+void ki::format::format(State& state, cst::Template_arguments const& arguments)
 {
     format(state, "[");
     format_comma_separated(state, arguments.value.elements);
     format(state, "]");
 }
 
-void libformat::format(State& state, cst::Template_parameter const& parameter)
+void ki::format::format(State& state, cst::Template_parameter const& parameter)
 {
     std::visit(
         utl::Overload {
             [&](cst::Template_type_parameter const& parameter) {
-                format(state, "{}", parameter.name);
+                format(state, "{}", state.pool.get(parameter.name.id));
                 if (parameter.colon_token.has_value()) {
                     format(state, ": ");
                     format_separated(state, parameter.concepts.elements, " + ");
@@ -123,40 +123,40 @@ void libformat::format(State& state, cst::Template_parameter const& parameter)
                 format(state, parameter.default_argument);
             },
             [&](cst::Template_value_parameter const& parameter) {
-                format(state, "{}", parameter.name);
+                format(state, "{}", state.pool.get(parameter.name.id));
                 format(state, parameter.type_annotation);
                 format(state, parameter.default_argument);
             },
             [&](cst::Template_mutability_parameter const& parameter) {
-                format(state, "{}: mut", parameter.name);
+                format(state, "{}: mut", state.pool.get(parameter.name.id));
                 format(state, parameter.default_argument);
             },
         },
         parameter.variant);
 }
 
-void libformat::format(State& state, cst::Template_parameters const& parameters)
+void ki::format::format(State& state, cst::Template_parameters const& parameters)
 {
     format(state, "[");
     format_comma_separated(state, parameters.value.elements);
     format(state, "]");
 }
 
-void libformat::format(State& state, cst::Function_arguments const& arguments)
+void ki::format::format(State& state, cst::Function_arguments const& arguments)
 {
     format(state, "(");
     format_comma_separated(state, arguments.value.elements);
     format(state, ")");
 }
 
-void libformat::format(State& state, cst::Function_parameter const& parameter)
+void ki::format::format(State& state, cst::Function_parameter const& parameter)
 {
     format(state, parameter.pattern);
     format(state, parameter.type);
     format(state, parameter.default_argument);
 }
 
-void libformat::format(State& state, cst::Function_parameters const& parameters)
+void ki::format::format(State& state, cst::Function_parameters const& parameters)
 {
     format(state, "(");
     format_comma_separated(state, parameters.value.elements);

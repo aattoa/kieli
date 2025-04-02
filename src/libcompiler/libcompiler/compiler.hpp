@@ -1,12 +1,12 @@
-#pragma once
+#ifndef KIELI_LIBCOMPILER_COMPILER
+#define KIELI_LIBCOMPILER_COMPILER
 
 #include <libutl/utilities.hpp>
 #include <libutl/index_vector.hpp>
-#include <cpputil/mem/stable_string_pool.hpp>
-#include <cppdiag/cppdiag.hpp> // TODO: remove
+#include <libutl/string_pool.hpp>
 #include <libcompiler/tree_fwd.hpp>
 
-namespace kieli {
+namespace ki {
 
     // Identifies a document.
     struct Document_id : utl::Vector_index<Document_id> {
@@ -20,6 +20,9 @@ namespace kieli {
 
         // Advance this position with `character`.
         void advance_with(char character) noexcept;
+
+        // Create a position with `column` increased by `offset`.
+        [[nodiscard]] auto horizontal_offset(std::uint32_t offset) const noexcept -> Position;
 
         [[nodiscard]] auto operator==(Position const&) const -> bool                  = default;
         [[nodiscard]] auto operator<=>(Position const&) const -> std::strong_ordering = default;
@@ -39,26 +42,23 @@ namespace kieli {
         // Dummy range for mock purposes.
         static auto dummy() noexcept -> Range;
 
-        // Check whether `position` is contained within this range.
-        [[nodiscard]] auto contains(Position position) const noexcept -> bool;
-
         [[nodiscard]] auto operator==(Range const&) const -> bool = default;
     };
 
     // https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#location
     struct Location {
-        Document_id document_id;
+        Document_id doc_id;
         Range       range;
     };
 
     // https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#textDocumentPositionParams
     struct Character_location {
-        Document_id document_id;
+        Document_id doc_id;
         Position    position;
     };
 
     // https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#diagnosticSeverity
-    enum struct Severity { error, warning, hint, information };
+    enum struct Severity : std::uint8_t { Error, Warning, Hint, Information };
 
     // https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#diagnosticRelatedInformation
     struct Diagnostic_related {
@@ -75,36 +75,35 @@ namespace kieli {
     };
 
     // https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#semanticTokenTypes
-    enum struct Semantic_token_type {
-        comment,
-        constructor,
-        enumeration,
-        function,
-        interface,
-        keyword,
-        method,
-        module,
-        number,
-        operator_name,
-        parameter,
-        property,
-        string,
-        structure,
-        type,
-        type_parameter,
-        variable,
+    enum struct Semantic_token_type : std::uint8_t {
+        Comment,
+        Constructor,
+        Enumeration,
+        Function,
+        Interface,
+        Keyword,
+        Method,
+        Module,
+        Number,
+        Operator_name,
+        Parameter,
+        Property,
+        String,
+        Structure,
+        Type,
+        Type_parameter,
+        Variable,
     };
 
     // https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#textDocument_semanticTokens
     struct Semantic_token {
-        std::uint32_t       delta_line;
-        std::uint32_t       delta_column;
+        Position            position;
         std::uint32_t       length;
         Semantic_token_type type;
     };
 
     // If a document is owned by a client, the server will not attempt to read it from disk.
-    enum struct Document_ownership { server, client };
+    enum struct Document_ownership : std::uint8_t { Server, Client };
 
     // Description of a project.
     struct Manifest {
@@ -123,30 +122,28 @@ namespace kieli {
         std::size_t                     revision {};
     };
 
-    // Pooled string that is cheap to copy and compare.
-    using Identifier = cpputil::mem::Stable_pool_string;
-
     using Documents      = utl::Index_vector<Document_id, Document>;
     using Document_paths = std::unordered_map<std::filesystem::path, Document_id>;
-    using String_pool    = cpputil::mem::Stable_string_pool;
 
     // Compilation database.
     struct Database {
-        Documents      documents;
-        Document_paths paths;
-        String_pool    string_pool;
-        Manifest       manifest;
+        Documents        documents;
+        Document_paths   paths;
+        utl::String_pool string_pool;
+        Manifest         manifest;
     };
 
     // Represents a file read failure.
-    enum struct Read_failure { does_not_exist, failed_to_open, failed_to_read };
+    enum struct Read_failure : std::uint8_t { Does_not_exist, Failed_to_open, Failed_to_read };
 
-    // If `db` contains a document with `path`, return its `Document_id`.
-    [[nodiscard]] auto find_existing_document_id(
-        Database const& db, std::filesystem::path const& path) -> std::optional<Document_id>;
+    // Create a database.
+    [[nodiscard]] auto database(Manifest manifest) -> Database;
 
-    // Find the `path` corresponding to the document identified by `document_id`.
-    [[nodiscard]] auto document_path(Database const& db, Document_id document_id)
+    // Create a new document.
+    [[nodiscard]] auto document(std::string text, Document_ownership ownership) -> ki::Document;
+
+    // Find the `path` corresponding to the document identified by `doc_id`.
+    [[nodiscard]] auto document_path(Database const& db, Document_id doc_id)
         -> std::filesystem::path const&;
 
     // Map `path` to `document`.
@@ -157,8 +154,8 @@ namespace kieli {
     [[nodiscard]] auto client_open_document(
         Database& db, std::filesystem::path path, std::string text) -> Document_id;
 
-    // If the document identified by `document_id` is open and owned by a client, deallocate it.
-    void client_close_document(Database& db, Document_id document_id);
+    // If the document identified by `doc_id` is open and owned by a client, deallocate it.
+    void client_close_document(Database& db, Document_id doc_id);
 
     // Creates a temporary document with `text`.
     [[nodiscard]] auto test_document(Database& db, std::string text) -> Document_id;
@@ -180,39 +177,41 @@ namespace kieli {
     // Replace `range` in `text` with `new_text`.
     void edit_text(std::string& text, Range range, std::string_view new_text);
 
-    // Add `diagnostic` to the document identified by `document_id`.
-    void add_diagnostic(Database& db, Document_id document_id, Diagnostic diagnostic);
+    // Add `diagnostic` to the document identified by `doc_id`.
+    void add_diagnostic(Database& db, Document_id doc_id, Diagnostic diagnostic);
 
-    // Add an error diagnostic to the document identified by `document_id`.
-    void add_error(Database& db, Document_id document_id, Range range, std::string message);
+    // Add an error diagnostic to the document identified by `doc_id`.
+    void add_error(Database& db, Document_id doc_id, Range range, std::string message);
 
     // Construct an error diagnostic.
     [[nodiscard]] auto error(Range range, std::string message) -> Diagnostic;
 
-    // Format the diagnostics belonging to the document identified by `document_id`.
-    [[nodiscard]] auto format_document_diagnostics(
-        Database const& db,
-        Document_id     document_id,
-        cppdiag::Colors colors = cppdiag::Colors::none()) -> std::string;
+    // Construct a warning diagnostic.
+    [[nodiscard]] auto warning(Range range, std::string message) -> Diagnostic;
+
+    // Check whether `position` is contained within `range`.
+    [[nodiscard]] auto range_contains(Range range, Position position) noexcept -> bool;
+
+    // Check whether `range` occupies more than one line of source code.
+    [[nodiscard]] auto is_multiline(Range range) noexcept -> bool;
+
+    // Print diagnostics belonging to the document identified by `doc_id` to `stream`.
+    void print_diagnostics(std::FILE* stream, Database const& db, Document_id doc_id);
 
     // Identifier with a range.
     struct Name {
-        Identifier identifier;
-        Range      range;
-
-        // Check whether this name starts with a capital letter, possibly preceded by underscores.
-        [[nodiscard]] auto is_upper() const -> bool;
-
-        // Compare identifiers.
-        [[nodiscard]] auto operator==(Name const&) const noexcept -> bool;
+        utl::String_id id;
+        Range          range;
     };
 
     struct Upper : Name {};
 
     struct Lower : Name {};
 
+    struct Error {};
+
     struct Integer {
-        std::uint64_t value {};
+        std::int64_t value {};
     };
 
     struct Floating {
@@ -223,81 +222,48 @@ namespace kieli {
         bool value {};
     };
 
-    struct Character {
-        char value {};
-    };
-
     struct String {
-        cpputil::mem::Stable_pool_string value;
+        utl::String_id id;
     };
 
-    enum struct Mutability { mut, immut };
+    // Represents concrete mutability.
+    enum struct Mutability : std::uint8_t { Mut, Immut };
 
-    template <typename T>
-    concept literal = utl::one_of<T, Integer, Floating, Boolean, Character, String>;
+    // Returns `mut` or `immut`.
+    auto mutability_string(Mutability mutability) -> std::string_view;
 
-} // namespace kieli
+    // Severity to string.
+    auto severity_string(Severity severity) -> std::string_view;
 
-template <utl::one_of<kieli::Name, kieli::Upper, kieli::Lower> Name>
-struct std::formatter<Name> : std::formatter<std::string_view> {
-    auto format(Name const& name, auto& context) const
+    // Check whether `name` starts with a capital letter, possibly preceded by underscores.
+    auto is_uppercase(std::string_view name) -> bool;
+
+} // namespace ki
+
+template <>
+struct std::formatter<ki::Position> {
+    static constexpr auto parse(auto& ctx)
     {
-        return std::formatter<std::string_view>::format(name.identifier.view(), context);
-    }
-};
-
-template <utl::one_of<kieli::Integer, kieli::Floating, kieli::Boolean> Literal>
-struct std::formatter<Literal> : std::formatter<decltype(Literal::value)> {
-    auto format(Literal const literal, auto& context) const
-    {
-        return std::formatter<decltype(Literal::value)>::format(literal.value, context);
-    }
-};
-
-template <utl::one_of<kieli::Character, kieli::String> Literal>
-struct std::formatter<Literal> {
-    static constexpr auto parse(auto& context)
-    {
-        return context.begin();
+        return ctx.begin();
     }
 
-    static auto format(Literal const& literal, auto& context)
+    static auto format(ki::Position const position, auto& ctx)
     {
-        return std::format_to(context.out(), "{:?}", literal.value);
+        return std::format_to(ctx.out(), "{}:{}", position.line, position.column);
     }
 };
 
 template <>
-struct std::formatter<kieli::Mutability> : std::formatter<std::string_view> {
-    auto format(kieli::Mutability const mut, auto& context) const
+struct std::formatter<ki::Range> {
+    static constexpr auto parse(auto& ctx)
     {
-        std::string_view const string = mut == kieli::Mutability::mut ? "mut" : "immut";
-        return std::formatter<std::string_view>::format(string, context);
+        return ctx.begin();
+    }
+
+    static auto format(ki::Range const& range, auto& ctx)
+    {
+        return std::format_to(ctx.out(), "{}-{}", range.start, range.stop);
     }
 };
 
-template <>
-struct std::formatter<kieli::Position> {
-    static constexpr auto parse(auto& context)
-    {
-        return context.begin();
-    }
-
-    static auto format(kieli::Position const position, auto& context)
-    {
-        return std::format_to(context.out(), "{}:{}", position.line, position.column);
-    }
-};
-
-template <>
-struct std::formatter<kieli::Range> {
-    static constexpr auto parse(auto& context)
-    {
-        return context.begin();
-    }
-
-    static auto format(kieli::Range const& range, auto& context)
-    {
-        return std::format_to(context.out(), "({}-{})", range.start, range.stop);
-    }
-};
+#endif // KIELI_LIBCOMPILER_COMPILER

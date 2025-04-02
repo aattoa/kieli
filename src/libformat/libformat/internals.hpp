@@ -1,11 +1,13 @@
-#pragma once
+#ifndef KIELI_LIBFORMAT_INTERNALS
+#define KIELI_LIBFORMAT_INTERNALS
 
 #include <libutl/utilities.hpp>
 #include <libformat/format.hpp>
 #include <libcompiler/cst/cst.hpp>
 
-namespace libformat {
-    namespace cst = kieli::cst;
+namespace ki::format {
+
+    namespace cst = ki::cst;
 
     struct Newline {
         std::size_t indentation {};
@@ -15,10 +17,11 @@ namespace libformat {
     };
 
     struct State {
-        cst::Arena const&            arena;
-        kieli::Format_options const& options;
-        std::string&                 output;
-        std::size_t                  indentation {};
+        utl::String_pool const&    pool;
+        cst::Arena const&          arena;
+        ki::format::Options const& options;
+        std::size_t                indentation {};
+        std::string&               output;
     };
 
     auto newline(State const& state, std::size_t lines = 1) noexcept -> Newline;
@@ -29,11 +32,6 @@ namespace libformat {
         std::invoke(std::move(block));
         --state.indentation;
     }
-
-    template <typename T>
-    concept formattable = requires(State state, T const object) {
-        { format(state, object) } -> std::same_as<void>;
-    };
 
     void format(State&, cst::Definition const&);
     void format(State&, cst::Expression const&);
@@ -47,8 +45,8 @@ namespace libformat {
     void format(State&, cst::Path const&);
     void format(State&, cst::Mutability const&);
     void format(State&, cst::pattern::Field const&);
-    void format(State&, cst::Struct_field_initializer const&);
-    void format(State&, cst::definition::Field const&);
+    void format(State&, cst::Struct_field_init const&);
+    void format(State&, cst::Field const&);
     void format(State&, cst::Template_arguments const&);
     void format(State&, cst::Template_parameter const&);
     void format(State&, cst::Template_parameters const&);
@@ -65,13 +63,13 @@ namespace libformat {
     void format_mutability_with_whitespace(
         State& state, std::optional<cst::Mutability> const& mutability);
 
-    template <formattable... Ts>
+    template <typename... Ts>
     void format(State& state, std::variant<Ts...> const& variant)
     {
         std::visit([&](auto const& alternative) { format(state, alternative); }, variant);
     }
 
-    template <formattable T>
+    template <typename T>
     void format(State& state, std::optional<T> const& optional)
     {
         if (optional.has_value()) {
@@ -79,14 +77,14 @@ namespace libformat {
         }
     }
 
-    template <formattable T>
+    template <typename T>
     void format(State& state, cst::Default_argument<T> const& argument)
     {
         format(state, " = ");
         format(state, argument.variant);
     }
 
-    template <formattable T>
+    template <typename T>
     void format_separated(
         State& state, std::vector<T> const& vector, std::string_view const delimiter)
     {
@@ -100,32 +98,41 @@ namespace libformat {
         });
     }
 
-    template <formattable T>
+    template <typename T>
     void format_comma_separated(State& state, std::vector<T> const& vector)
     {
         format_separated(state, vector, ", ");
     }
-} // namespace libformat
+
+} // namespace ki::format
 
 template <>
-struct std::formatter<libformat::Newline> {
-    static constexpr auto parse(auto& context)
+struct std::formatter<ki::format::Newline> {
+    static constexpr auto parse(auto& ctx)
     {
-        return context.begin();
+        return ctx.begin();
     }
 
-    static auto format(libformat::Newline const& newline, auto& context)
+    static auto format(ki::format::Newline const& newline, auto& ctx)
     {
-        auto out = context.out();
-        utl::times(newline.lines, [&] { *out++ = '\n'; });
+        auto out = ctx.out();
 
+        auto write_n = [&out](std::size_t n, char c) {
+            for (std::size_t i = 0; i != n; ++i) {
+                *out++ = c;
+            }
+        };
+
+        write_n(newline.lines, '\n');
         if (newline.use_spaces) {
-            utl::times(newline.indentation * newline.tab_size, [&] { *out++ = ' '; });
+            write_n(newline.indentation * newline.tab_size, ' ');
         }
         else {
-            utl::times(newline.indentation, [&] { *out++ = '\t'; });
+            write_n(newline.indentation, '\t');
         }
 
         return out;
     }
 };
+
+#endif // KIELI_LIBFORMAT_INTERNALS

@@ -1,20 +1,13 @@
-#include <libutl/utilities.hpp>
-#include <libcompiler/compiler.hpp>
+#ifndef KIELI_LANGUAGE_SERVER_SERVER
+#define KIELI_LANGUAGE_SERVER_SERVER
+
 #include <iosfwd>
 
-namespace kieli::lsp {
-
-    struct Server {
-        Database           db;
-        std::optional<int> exit_code;
-        bool               is_initialized {};
-    };
-
-    // If `message` describes a request, returns a reply that should be sent to the client.
-    [[nodiscard]] auto handle_client_message(Server& server, std::string_view message)
-        -> std::optional<std::string>;
+namespace ki::lsp {
 
     // Run a language server with the given I/O streams.
     [[nodiscard]] auto run_server(bool debug, std::istream& in, std::ostream& out) -> int;
 
-} // namespace kieli::lsp
+} // namespace ki::lsp
+
+#endif // KIELI_LANGUAGE_SERVER_SERVER

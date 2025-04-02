@@ -1,75 +1,99 @@
-#pragma once
+#ifndef KIELI_LIBFORMAT_FORMAT
+#define KIELI_LIBFORMAT_FORMAT
 
 #include <libutl/utilities.hpp>
-#include <libcompiler/tree_fwd.hpp>
+#include <libutl/string_pool.hpp>
+#include <libcompiler/cst/cst.hpp>
 
-namespace kieli {
-    enum struct Format_function_body { leave_as_is, normalize_to_block, normalize_to_equals_sign };
+namespace ki::format {
 
-    struct Format_options {
-        std::size_t          tab_size                        = 4;
-        bool                 use_spaces                      = true;
-        std::size_t          empty_lines_between_definitions = 1;
-        Format_function_body function_body                   = Format_function_body::leave_as_is;
+    enum struct Function_body : std::uint8_t {
+        Leave_as_is,
+        Normalize_to_block,
+        Normalize_to_equals_sign
     };
 
-    auto format_module(CST::Module const& module, Format_options const& options) -> std::string;
+    struct Options {
+        std::size_t   tab_size                        = 4;
+        bool          use_spaces                      = true;
+        std::size_t   empty_lines_between_definitions = 1;
+        Function_body function_body                   = Function_body::Leave_as_is;
+    };
+
+    auto format_module(
+        cst::Module const& module, utl::String_pool const& pool, Options const& options)
+        -> std::string;
 
     void format(
-        cst::Arena const&      arena,
-        Format_options const&  options,
-        cst::Definition const& definition,
-        std::string&           output);
+        utl::String_pool const& pool,
+        cst::Arena const&       arena,
+        Options const&          options,
+        cst::Definition const&  definition,
+        std::string&            output);
 
     void format(
-        cst::Arena const&      arena,
-        Format_options const&  options,
-        cst::Expression const& expression,
-        std::string&           output);
+        utl::String_pool const& pool,
+        cst::Arena const&       arena,
+        Options const&          options,
+        cst::Expression const&  expression,
+        std::string&            output);
 
     void format(
-        cst::Arena const&     arena,
-        Format_options const& options,
-        cst::Pattern const&   pattern,
-        std::string&          output);
+        utl::String_pool const& pool,
+        cst::Arena const&       arena,
+        Options const&          options,
+        cst::Pattern const&     pattern,
+        std::string&            output);
 
     void format(
-        cst::Arena const&     arena,
-        Format_options const& options,
-        cst::Type const&      type,
-        std::string&          output);
+        utl::String_pool const& pool,
+        cst::Arena const&       arena,
+        Options const&          options,
+        cst::Type const&        type,
+        std::string&            output);
 
     void format(
-        cst::Arena const&     arena,
-        Format_options const& options,
-        cst::Expression_id    expression_id,
-        std::string&          output);
+        utl::String_pool const& pool,
+        cst::Arena const&       arena,
+        Options const&          options,
+        cst::Expression_id      expression_id,
+        std::string&            output);
 
     void format(
-        cst::Arena const&     arena,
-        Format_options const& options,
-        cst::Pattern_id       pattern_id,
-        std::string&          output);
+        utl::String_pool const& pool,
+        cst::Arena const&       arena,
+        Options const&          options,
+        cst::Pattern_id         pattern_id,
+        std::string&            output);
 
     void format(
-        cst::Arena const&     arena,
-        Format_options const& options,
-        cst::Type_id          type_id,
-        std::string&          output);
+        utl::String_pool const& pool,
+        cst::Arena const&       arena,
+        Options const&          options,
+        cst::Type_id            type_id,
+        std::string&            output);
 
     template <typename T>
     concept formattable = requires(
-        cst::Arena const arena, Format_options const options, T const object, std::string output) {
-        { kieli::format(arena, options, object, output) } -> std::same_as<void>;
+        utl::String_pool const pool,
+        cst::Arena const       arena,
+        Options const          options,
+        T const                object,
+        std::string            output) {
+        { ki::format::format(pool, arena, options, object, output) } -> std::same_as<void>;
     };
 
     auto to_string(
+        utl::String_pool const  pool,
         cst::Arena const&       arena,
-        Format_options const&   options,
+        Options const&          options,
         formattable auto const& object) -> std::string
     {
         std::string output;
-        kieli::format(arena, options, object, output);
+        ki::format::format(pool, arena, options, object, output);
         return output;
     }
-} // namespace kieli
+
+} // namespace ki::format
+
+#endif // KIELI_LIBFORMAT_FORMAT

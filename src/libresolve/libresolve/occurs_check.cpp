@@ -1,24 +1,24 @@
 #include <libutl/utilities.hpp>
 #include <libresolve/resolve.hpp>
 
-using namespace libresolve;
+using namespace ki::resolve;
 
 namespace {
     struct Occurs_check_visitor {
         hir::Arena const&     arena;
         hir::Type_variable_id id;
 
-        auto recurse(hir::Type_id type_id) const -> bool
+        [[nodiscard]] auto recurse(hir::Type_id type_id) const -> bool
         {
-            return occurs_check(arena, id, arena.types[type_id]);
+            return occurs_check(arena, id, arena.type[type_id]);
         }
 
-        auto recurse(hir::Type type) const -> bool
+        [[nodiscard]] auto recurse(hir::Type type) const -> bool
         {
             return recurse(type.id);
         }
 
-        auto recurse() const
+        [[nodiscard]] auto recurse() const
         {
             return [*this](hir::Type type) -> bool { return recurse(type); };
         }
@@ -30,7 +30,7 @@ namespace {
 
         auto operator()(hir::type::Array const& array) const -> bool
         {
-            return recurse(array.element_type) or recurse(arena.expressions[array.length].type);
+            return recurse(array.element_type) or recurse(arena.expr[array.length].type);
         }
 
         auto operator()(hir::type::Slice const& slice) const -> bool
@@ -59,14 +59,13 @@ namespace {
             return std::ranges::any_of(tuple.types, recurse());
         }
 
-        auto operator()(hir::type::Enumeration const& enumeration) const -> bool
+        auto operator()(hir::type::Enumeration const&) const -> bool
         {
-            (void)enumeration;
             cpputil::todo(); // recurse on template arguments
         }
 
         auto operator()(utl::one_of<
-                        hir::Error,
+                        ki::Error,
                         hir::type::Integer,
                         hir::type::Floating,
                         hir::type::Character,
@@ -79,8 +78,8 @@ namespace {
     };
 } // namespace
 
-auto libresolve::occurs_check(
+auto ki::resolve::occurs_check(
     hir::Arena const& arena, hir::Type_variable_id id, hir::Type_variant const& type) -> bool
 {
-    return std::visit(Occurs_check_visitor { arena, id }, type);
+    return std::visit(Occurs_check_visitor { .arena = arena, .id = id }, type);
 }

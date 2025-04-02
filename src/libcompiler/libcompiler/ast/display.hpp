@@ -1,13 +1,20 @@
+#ifndef KIELI_LIBCOMPILER_AST_DISPLAY
+#define KIELI_LIBCOMPILER_AST_DISPLAY
+
 #include <libcompiler/ast/ast.hpp>
 
-namespace kieli::ast {
-    auto display(Arena const& arena, definition::Function const& function) -> std::string;
-    auto display(Arena const& arena, definition::Enumeration const& enumeration) -> std::string;
-    auto display(Arena const& arena, definition::Alias const& alias) -> std::string;
-    auto display(Arena const& arena, definition::Concept const& concept_) -> std::string;
-    auto display(Arena const& arena, definition::Submodule const& submodule) -> std::string;
-    auto display(Arena const& arena, Definition const& definition) -> std::string;
-    auto display(Arena const& arena, Expression const& expression) -> std::string;
-    auto display(Arena const& arena, Pattern const& pattern) -> std::string;
-    auto display(Arena const& arena, Type const& type) -> std::string;
-} // namespace kieli::ast
+namespace ki::ast {
+
+    auto display(Arena const&, utl::String_pool const&, Function const&) -> std::string;
+    auto display(Arena const&, utl::String_pool const&, Enumeration const&) -> std::string;
+    auto display(Arena const&, utl::String_pool const&, Alias const&) -> std::string;
+    auto display(Arena const&, utl::String_pool const&, Concept const&) -> std::string;
+    auto display(Arena const&, utl::String_pool const&, Submodule const&) -> std::string;
+    auto display(Arena const&, utl::String_pool const&, Definition const&) -> std::string;
+    auto display(Arena const&, utl::String_pool const&, Expression const&) -> std::string;
+    auto display(Arena const&, utl::String_pool const&, Pattern const&) -> std::string;
+    auto display(Arena const&, utl::String_pool const&, Type const&) -> std::string;
+
+} // namespace ki::ast
+
+#endif // KIELI_LIBCOMPILER_AST_DISPLAY
