@@ -1,6 +1,8 @@
 #include <libutl/utilities.hpp>
+#include <libcompiler/lsp.hpp>
 #include <liblex/lex.hpp>
 
+using namespace ki;
 using namespace ki::lex;
 
 namespace {
@@ -89,7 +91,7 @@ namespace {
     void advance(State& state, std::size_t const distance = 1)
     {
         for (std::size_t i = 0; i != distance; ++i) {
-            state.position.advance_with(state.text.at(state.offset++));
+            state.position = lsp::advance(state.position, state.text.at(state.offset++));
         }
     }
 
@@ -213,7 +215,7 @@ namespace {
 
     auto extract_numeric(State& state) -> Type
     {
-        bool const has_preceding_dot = state.offset != 0 && state.text.at(state.offset - 1) == '.';
+        bool const has_preceding_dot = state.offset != 0 and state.text.at(state.offset - 1) == '.';
         consume(state, is_name);
         if (not has_preceding_dot and try_consume(state, '.')) {
             consume(state, is_name);
@@ -260,14 +262,14 @@ auto ki::lex::state(std::string_view text) -> State
     return State { .position = {}, .offset = 0, .text = text };
 }
 
-auto ki::lex::next(State& state) -> ki::Token
+auto ki::lex::next(State& state) -> Token
 {
     skip_comments_and_whitespace(state);
 
     if (is_finished(state)) {
-        return ki::Token {
-            .type  = Token_type::End_of_input,
-            .range = ki::Range::for_position(state.position),
+        return Token {
+            .type  = Type::End_of_input,
+            .range = lsp::to_range(state.position),
             .view  = utl::View { .offset = state.offset, .length = 0 },
         };
     }
@@ -276,9 +278,9 @@ auto ki::lex::next(State& state) -> ki::Token
     auto const offset   = state.offset;
     auto const type     = extract_token(state);
 
-    return ki::Token {
+    return Token {
         .type  = type,
-        .range = ki::Range(position, state.position),
+        .range = lsp::Range(position, state.position),
         .view  = utl::View { .offset = offset, .length = state.offset - offset },
     };
 }

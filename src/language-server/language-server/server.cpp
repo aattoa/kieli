@@ -7,17 +7,17 @@
 #include <language-server/server.hpp>
 
 // TODO: remove
-#include <libcompiler/cst/cst.hpp>
 #include <libparse/parse.hpp>
 #include <libformat/format.hpp>
 #include <libresolve/resolve.hpp>
 
+using namespace ki;
 using namespace ki::lsp;
 
 namespace {
 
     struct Server {
-        ki::Database       db;
+        db::Database       db;
         std::optional<int> exit_code;
         bool               is_initialized {};
     };
@@ -25,12 +25,12 @@ namespace {
     template <typename T>
     using Result = std::expected<T, std::string>;
 
-    void placeholder_analyze_document(ki::Database& db, ki::Document_id doc_id)
+    void placeholder_analyze_document(db::Database& db, db::Document_id doc_id)
     {
         db.documents[doc_id].diagnostics.clear();
-        auto ctx = ki::resolve::context(db);
-        auto env = ki::resolve::collect_document(ctx, doc_id);
-        ki::resolve::resolve_environment(ctx, env);
+        auto ctx = res::context(db);
+        auto env = res::collect_document(ctx, doc_id);
+        res::resolve_environment(ctx, env);
     }
 
     auto maybe_markdown_content(std::optional<std::string> markdown) -> Json
@@ -38,38 +38,40 @@ namespace {
         return std::move(markdown).transform(markdown_content_to_json).value_or(Json {});
     }
 
-    auto handle_hover(ki::Database& db, Json::Object const& params) -> Result<Json>
+    auto handle_hover(db::Database& db, Json::Object const& params) -> Result<Json>
     {
-        auto const cursor = character_location_from_json(db, params);
+        auto const cursor = position_params_from_json(db, params);
         return maybe_markdown_content(std::format("Position: {}", cursor.position));
     }
 
-    auto handle_formatting(ki::Database& db, Json::Object params) -> Result<Json>
+    auto handle_formatting(db::Database& db, Json::Object params) -> Result<Json>
     {
         auto const id = document_id_from_json(db, as<Json::Object>(at(params, "textDocument")));
         auto const options = format_options_from_json(as<Json::Object>(at(params, "options")));
 
-        db.documents[id].diagnostics.clear();
-        auto const cst = ki::parse::parse(db, id);
+        auto& document = db.documents[id];
+
+        document.diagnostics.clear();
+        auto const cst = par::parse(db, id);
 
         Json::Array edits;
         for (auto const& definition : cst.definitions) {
             std::string new_text;
-            ki::format::format(db.string_pool, cst.arena, options, definition, new_text);
-            if (new_text == ki::text_range(db.documents[id].text, definition.range)) {
+            fmt::format(db.string_pool, document.cst, options, definition, new_text);
+            if (new_text == db::text_range(document.text, document.cst.ranges[definition.range])) {
                 // Avoid sending redundant edits when nothing changed.
                 // text_range takes linear time, but it's fine for now.
                 continue;
             }
             edits.emplace_back(Json::Object {
-                { "range", range_to_json(definition.range) },
+                { "range", range_to_json(document.cst.ranges[definition.range]) },
                 { "newText", Json { std::move(new_text) } },
             });
         }
         return Json { std::move(edits) };
     }
 
-    auto handle_pull_diagnostics(ki::Database& db, Json::Object params) -> Result<Json>
+    auto handle_pull_diagnostics(db::Database& db, Json::Object params) -> Result<Json>
     {
         auto const id = document_id_from_json(db, as<Json::Object>(at(params, "textDocument")));
 
@@ -83,7 +85,7 @@ namespace {
         } };
     }
 
-    auto handle_semantic_tokens(ki::Database const& db, Json::Object params) -> Json
+    auto handle_semantic_tokens(db::Database const& db, Json::Object params) -> Json
     {
         auto id   = document_id_from_json(db, as<Json::Object>(at(params, "textDocument")));
         auto data = semantic_tokens_to_json(db.documents[id].semantic_tokens);
@@ -150,7 +152,7 @@ namespace {
         if (not std::exchange(server.is_initialized, false)) {
             std::println(stderr, "Received shutdown request while uninitialized");
         }
-        server.db = ki::Database {}; // Reset the compilation database.
+        server.db = db::Database {}; // Reset the compilation database.
         return Json {};
     }
 
@@ -174,22 +176,22 @@ namespace {
         return std::unexpected(std::format("Unsupported request method: {}", method));
     }
 
-    auto handle_open(ki::Database& db, Json::Object params) -> Result<void>
+    auto handle_open(db::Database& db, Json::Object params) -> Result<void>
     {
         auto document = document_item_from_json(as<Json::Object>(at(params, "textDocument")));
         if (document.language == "kieli") {
             auto const id
-                = ki::client_open_document(db, std::move(document.path), std::move(document.text));
+                = db::client_open_document(db, std::move(document.path), std::move(document.text));
             placeholder_analyze_document(db, id);
             return {};
         }
         return std::unexpected(std::format("Unsupported language: '{}'", document.language));
     }
 
-    auto handle_close(ki::Database& db, Json::Object params) -> Result<void>
+    auto handle_close(db::Database& db, Json::Object params) -> Result<void>
     {
         auto const id = document_id_from_json(db, as<Json::Object>(at(params, "textDocument")));
-        ki::client_close_document(db, id);
+        db::client_close_document(db, id);
         return {};
     }
 
@@ -199,14 +201,14 @@ namespace {
         auto new_text = as<Json::String>(at(change, "text"));
         if (auto field = maybe_at(change, "range")) {
             auto range = range_from_json(as<Json::Object>(std::move(field).value()));
-            ki::edit_text(text, range, new_text);
+            db::edit_text(text, range, new_text);
         }
         else {
             text = std::move(new_text);
         }
     }
 
-    auto handle_change(ki::Database& db, Json::Object params) -> Result<void>
+    auto handle_change(db::Database& db, Json::Object params) -> Result<void>
     {
         auto const id = document_id_from_json(db, as<Json::Object>(at(params, "textDocument")));
         for (Json change : as<Json::Array>(at(params, "contentChanges"))) {

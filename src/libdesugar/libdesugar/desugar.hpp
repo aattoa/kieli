@@ -2,33 +2,33 @@
 #define KIELI_LIBDESUGAR_DESUGAR
 
 #include <libutl/utilities.hpp>
-#include <libcompiler/compiler.hpp>
-#include <libcompiler/cst/cst.hpp>
-#include <libcompiler/ast/ast.hpp>
+#include <libcompiler/db.hpp>
 
-namespace ki::desugar {
+namespace ki::des {
 
     struct Context {
-        Database&         db;
+        db::Database&     db;
+        db::Document_id   doc_id;
         cst::Arena const& cst;
-        ast::Arena&       ast;
-        Document_id       doc_id;
+        ast::Arena        ast;
     };
 
-    auto desugar_definition(Context ctx, cst::Definition const& definition) -> ast::Definition;
+    auto context(db::Database& db, db::Document_id doc_id) -> Context;
 
-    auto desugar_function(Context ctx, cst::Function const& function) -> ast::Function;
+    auto desugar_definition(Context& ctx, cst::Definition const& definition) -> ast::Definition;
 
-    auto desugar_struct(Context ctx, cst::Struct const& structure) -> ast::Enumeration;
+    auto desugar_function(Context& ctx, cst::Function const& function) -> ast::Function;
 
-    auto desugar_enum(Context ctx, cst::Enum const& enumeration) -> ast::Enumeration;
+    auto desugar_struct(Context& ctx, cst::Struct const& structure) -> ast::Enumeration;
 
-    auto desugar_alias(Context ctx, cst::Alias const& alias) -> ast::Alias;
+    auto desugar_enum(Context& ctx, cst::Enum const& enumeration) -> ast::Enumeration;
 
-    auto desugar_concept(Context ctx, cst::Concept const& concept_) -> ast::Concept;
+    auto desugar_alias(Context& ctx, cst::Alias const& alias) -> ast::Alias;
 
-    auto desugar_impl(Context ctx, cst::Impl const& impl) -> ast::Impl;
+    auto desugar_concept(Context& ctx, cst::Concept const& concept_) -> ast::Concept;
 
-} // namespace ki::desugar
+    auto desugar_impl(Context& ctx, cst::Impl const& impl) -> ast::Impl;
+
+} // namespace ki::des
 
 #endif // KIELI_LIBDESUGAR_DESUGAR

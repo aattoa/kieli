@@ -3,7 +3,7 @@
 
 #include <libutl/utilities.hpp>
 
-namespace utl {
+namespace ki::utl {
 
     class Disjoint_set {
         std::vector<std::size_t> m_parents;
@@ -25,6 +25,6 @@ namespace utl {
         [[nodiscard]] auto find_without_compressing(std::size_t x) const -> std::size_t;
     };
 
-} // namespace utl
+} // namespace ki::utl
 
 #endif // KIELI_LIBUTL_DISJOINT_SET

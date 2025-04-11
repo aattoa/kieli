@@ -2,81 +2,78 @@
 #define KIELI_LIBPARSE_INTERNALS
 
 #include <liblex/lex.hpp>
-#include <libcompiler/cst/cst.hpp>
+#include <libcompiler/db.hpp>
 
-namespace ki::parse {
+namespace ki::par {
 
-    using ki::Token;
-    using Semantic = ki::Semantic_token_type;
-    namespace cst  = ki::cst;
-    namespace lex  = ki::lex;
+    using Semantic = lsp::Semantic_token_type;
 
     struct Failure : std::exception {
         [[nodiscard]] auto what() const noexcept -> char const* override;
     };
 
     struct Context {
-        Database&                   db;
-        cst::Arena&                 arena;
-        Document_id                 doc_id;
-        lex::State                  lex_state;
-        std::optional<Token>        next_token;
-        std::optional<Position>     previous_token_end;
-        std::vector<Semantic_token> semantic_tokens;
-        std::size_t                 previous_path_semantic_offset {};
-        utl::String_id              plus_id;
-        utl::String_id              asterisk_id;
+        db::Database&                    db;
+        cst::Arena                       arena;
+        db::Document_id                  doc_id;
+        lex::State                       lex_state;
+        std::optional<lex::Token>        next_token;
+        std::optional<lsp::Position>     previous_token_end;
+        std::vector<lsp::Semantic_token> semantic_tokens;
+        std::size_t                      previous_path_semantic_offset {};
+        utl::String_id                   plus_id;
+        utl::String_id                   asterisk_id;
     };
 
     // Create a parse context.
-    [[nodiscard]] auto context(Database& db, cst::Arena& arena, Document_id doc_id) -> Context;
+    [[nodiscard]] auto context(db::Database& db, db::Document_id doc_id) -> Context;
 
     // Check whether the current token is the end-of-input token.
     [[nodiscard]] auto is_finished(Context& ctx) -> bool;
 
     // Inspect the current token without consuming it.
-    [[nodiscard]] auto peek(Context& ctx) -> Token;
+    [[nodiscard]] auto peek(Context& ctx) -> lex::Token;
 
     // Consume the current token.
-    [[nodiscard]] auto extract(Context& ctx) -> Token;
+    [[nodiscard]] auto extract(Context& ctx) -> lex::Token;
 
     // Consume the current token if it matches `type`.
-    [[nodiscard]] auto try_extract(Context& ctx, lex::Type type) -> std::optional<Token>;
+    [[nodiscard]] auto try_extract(Context& ctx, lex::Type type) -> std::optional<lex::Token>;
 
     // Consume the current token if it matches `type`, otherwise emit an error.
-    [[nodiscard]] auto require_extract(Context& ctx, lex::Type type) -> Token;
+    [[nodiscard]] auto require_extract(Context& ctx, lex::Type type) -> lex::Token;
 
-    // Source view from `range` up to (but not including) the current token.
-    [[nodiscard]] auto up_to_current(Context const& ctx, Range range) -> Range;
+    // Source range from `range` up to (but not including) the current token.
+    [[nodiscard]] auto up_to_current(Context& ctx, lsp::Range range) -> cst::Range_id;
 
     // Add a token range to the CST arena, and return its id.
-    [[nodiscard]] auto token(Context& ctx, Token const& token) -> cst::Range_id;
+    [[nodiscard]] auto token(Context& ctx, lex::Token const& token) -> cst::Range_id;
 
     // Add a semantic token corresponding to `range` to the current document.
-    void add_semantic_token(Context& ctx, Range range, Semantic type);
+    void add_semantic_token(Context& ctx, lsp::Range range, Semantic type);
 
     // Add a keyword semantic token corresponding to `range` to the current document.
-    void add_keyword(Context& ctx, Range range);
+    void add_keyword(Context& ctx, lsp::Range range);
 
     // Add a punctuation semantic token corresponding to `token` to the current document.
-    void add_punctuation(Context& ctx, Range range);
+    void add_punctuation(Context& ctx, lsp::Range range);
 
     // Set the previously parsed path head's semantic type to `type`.
     void set_previous_path_head_semantic_type(Context& ctx, Semantic type);
 
     // Emit an error that describes an expectation failure:
     // Encountered `error_range` where `description` was expected.
-    [[noreturn]] void error_expected(Context& ctx, Range range, std::string_view description);
+    [[noreturn]] void error_expected(Context& ctx, lsp::Range range, std::string_view description);
 
     // Emit an error that describes an expectation failure:
     // Encountered the current token where `description` was expected.
     [[noreturn]] void error_expected(Context& ctx, std::string_view description);
 
     // Create an identifier from a token.
-    [[nodiscard]] auto identifier(Context& ctx, Token const& token) -> utl::String_id;
+    [[nodiscard]] auto identifier(Context& ctx, lex::Token const& token) -> utl::String_id;
 
     // Create a name from a token.
-    [[nodiscard]] auto name(Context& ctx, Token const& token) -> Name;
+    [[nodiscard]] auto name(Context& ctx, lex::Token const& token) -> db::Name;
 
     // Check whether `type` is a recovery point.
     [[nodiscard]] auto is_recovery_point(lex::Type type) -> bool;
@@ -122,7 +119,7 @@ namespace ki::parse {
         -> decltype(parser(ctx))::value_type
     {
         if (auto result = parser(ctx)) {
-            return std::move(result.value());
+            return std::move(result).value();
         }
         error_expected(ctx, description);
     }
@@ -141,7 +138,7 @@ namespace ki::parse {
     auto parse_surrounded(Context& ctx)
         -> std::optional<cst::Surrounded<typename decltype(parser(ctx))::value_type>>
     {
-        return try_extract(ctx, open_type).transform([&](Token const& open) {
+        return try_extract(ctx, open_type).transform([&](lex::Token const& open) {
             add_punctuation(ctx, open.range);
             auto value = require<parser>(ctx, description.view());
             auto close = require_extract(ctx, close_type);
@@ -173,7 +170,7 @@ namespace ki::parse {
     {
         cst::Separated<typename decltype(parser(ctx))::value_type> sequence;
         if (auto first_element = parser(ctx)) {
-            sequence.elements.push_back(std::move(first_element.value()));
+            sequence.elements.push_back(std::move(first_element).value());
             while (auto const separator = try_extract(ctx, separator_type)) {
                 add_punctuation(ctx, separator.value().range);
                 sequence.separator_tokens.push_back(token(ctx, separator.value()));
@@ -204,14 +201,14 @@ namespace ki::parse {
     constexpr auto parse_comma_separated_one_or_more
         = parse_separated_one_or_more<parser, description, lex::Type::Comma>;
 
-    template <lex::Type type, std::derived_from<Name> Name>
+    template <lex::Type type, std::derived_from<db::Name> Name>
     auto parse_name(Context& ctx) -> std::optional<Name>
     {
         return try_extract(ctx, type).transform(
-            [&](Token const& token) { return Name { name(ctx, token) }; });
+            [&](lex::Token const& token) { return Name { name(ctx, token) }; });
     }
 
-    template <lex::Type type, std::derived_from<Name> Name>
+    template <lex::Type type, std::derived_from<db::Name> Name>
     auto extract_name(Context& ctx, std::string_view const description) -> Name
     {
         if (auto name = parse_name<type, Name>(ctx)) {
@@ -220,16 +217,16 @@ namespace ki::parse {
         error_expected(ctx, description);
     }
 
-    constexpr auto parse_lower_name   = parse_name<lex::Type::Lower_name, Lower>;
-    constexpr auto parse_upper_name   = parse_name<lex::Type::Upper_name, Upper>;
-    constexpr auto extract_lower_name = extract_name<lex::Type::Lower_name, Lower>;
-    constexpr auto extract_upper_name = extract_name<lex::Type::Upper_name, Upper>;
+    constexpr auto parse_lower_name   = parse_name<lex::Type::Lower_name, db::Lower>;
+    constexpr auto parse_upper_name   = parse_name<lex::Type::Upper_name, db::Upper>;
+    constexpr auto extract_lower_name = extract_name<lex::Type::Lower_name, db::Lower>;
+    constexpr auto extract_upper_name = extract_name<lex::Type::Upper_name, db::Upper>;
 
-    auto parse_string(Context& ctx, Token const& literal) -> std::optional<String>;
-    auto parse_integer(Context& ctx, Token const& literal) -> std::optional<Integer>;
-    auto parse_floating(Context& ctx, Token const& literal) -> std::optional<Floating>;
-    auto parse_boolean(Context& ctx, Token const& literal) -> std::optional<Boolean>;
+    auto parse_string(Context& ctx, lex::Token const& literal) -> std::optional<db::String>;
+    auto parse_integer(Context& ctx, lex::Token const& literal) -> std::optional<db::Integer>;
+    auto parse_floating(Context& ctx, lex::Token const& literal) -> std::optional<db::Floating>;
+    auto parse_boolean(Context& ctx, lex::Token const& literal) -> std::optional<db::Boolean>;
 
-} // namespace ki::parse
+} // namespace ki::par
 
 #endif // KIELI_LIBPARSE_INTERNALS

@@ -1,6 +1,8 @@
 #include <libutl/utilities.hpp>
 #include <cppunittest/unittest.hpp>
 
+using namespace ki;
+
 namespace {
     struct Move_only {
         int value;

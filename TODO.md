@@ -1,8 +1,5 @@
 # Kieli TODO
 
-## liblex
-- Single-character operator tokens, glue in the parser?
-
 ## libparse
 - Accept trailing commas
 - Test definition parsing

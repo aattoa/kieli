@@ -4,7 +4,7 @@
 #include <libutl/utilities.hpp>
 #include <cpputil/num.hpp>
 
-namespace utl {
+namespace ki::utl {
 
     // A type that models `vector_index` can be used as the index type of `Index_vector`.
     template <typename Index>
@@ -95,6 +95,6 @@ namespace utl {
         }
     };
 
-} // namespace utl
+} // namespace ki::utl
 
 #endif // KIELI_LIBUTL_INDEX_VECTOR

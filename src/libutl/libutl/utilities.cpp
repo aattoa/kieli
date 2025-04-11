@@ -4,7 +4,7 @@
 #include <libutl/mailbox.hpp>
 #include <libutl/string_pool.hpp>
 
-auto utl::View::string(std::string_view string) const -> std::string_view
+auto ki::utl::View::string(std::string_view string) const -> std::string_view
 {
     return string.substr(offset, length);
 }

@@ -1,18 +1,17 @@
 #include <libutl/utilities.hpp>
 #include <libdesugar/internals.hpp>
 
-using namespace ki::desugar;
+using namespace ki;
+using namespace ki::des;
 
 namespace {
-    struct Type_desugaring_visitor {
-        Context          ctx;
-        cst::Type const& this_type;
+    struct Visitor {
+        Context& ctx;
 
         auto operator()(cst::type::Paren const& paren) const -> ast::Type_variant
         {
-            cst::Type const&        type = ctx.cst.type[paren.type.value];
-            Type_desugaring_visitor visitor { .ctx = ctx, .this_type = type };
-            return std::visit(visitor, type.variant);
+            cst::Type const& type = ctx.cst.types[paren.type.value];
+            return std::visit(Visitor { .ctx = ctx }, type.variant);
         }
 
         auto operator()(cst::Path const& path) const -> ast::Type_variant
@@ -68,8 +67,8 @@ namespace {
         {
             return ast::type::Reference {
                 .referenced_type = desugar(ctx, reference.referenced_type),
-                .mutability      = desugar_mutability(
-                    reference.mutability, ctx.cst.range[reference.ampersand_token]),
+                .mutability      = desugar_opt_mut(
+                    ctx, reference.mutability, ctx.cst.ranges[reference.ampersand_token]),
             };
         }
 
@@ -78,7 +77,7 @@ namespace {
             return ast::type::Pointer {
                 .pointee_type = desugar(ctx, pointer.pointee_type),
                 .mutability
-                = desugar_mutability(pointer.mutability, ctx.cst.range[pointer.asterisk_token]),
+                = desugar_opt_mut(ctx, pointer.mutability, ctx.cst.ranges[pointer.asterisk_token]),
             };
         }
 
@@ -89,8 +88,10 @@ namespace {
     };
 } // namespace
 
-auto ki::desugar::desugar(Context const ctx, cst::Type const& type) -> ast::Type
+auto ki::des::desugar(Context& ctx, cst::Type const& type) -> ast::Type
 {
-    Type_desugaring_visitor visitor { .ctx = ctx, .this_type = type };
-    return { .variant = std::visit(visitor, type.variant), .range = type.range };
+    return ast::Type {
+        .variant = std::visit(Visitor { .ctx = ctx }, type.variant),
+        .range   = ctx.cst.ranges[type.range],
+    };
 }

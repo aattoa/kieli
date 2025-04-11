@@ -1,13 +1,12 @@
 #ifndef KIELI_LIBPARSE_PARSE
 #define KIELI_LIBPARSE_PARSE
 
-#include <libcompiler/compiler.hpp>
-#include <libcompiler/cst/cst.hpp>
+#include <libcompiler/db.hpp>
 
-namespace ki::parse {
+namespace ki::par {
 
-    auto parse(Database& db, Document_id doc_id) -> cst::Module;
+    auto parse(db::Database& db, db::Document_id doc_id) -> cst::Module;
 
-} // namespace ki::parse
+} // namespace ki::par
 
 #endif // KIELI_LIBPARSE_PARSE

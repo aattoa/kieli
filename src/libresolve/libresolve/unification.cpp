@@ -1,7 +1,8 @@
 #include <libutl/utilities.hpp>
 #include <libresolve/resolve.hpp>
 
-using namespace ki::resolve;
+using namespace ki;
+using namespace ki::res;
 
 namespace {
     enum struct Goal : std::uint8_t { Equality, Subtype };
@@ -27,7 +28,7 @@ namespace {
         [[nodiscard]] auto solution(hir::Mutability_variable_id var_id, hir::Mutability mut) const
             -> Result
         {
-            set_solution(ctx, state, state.mut_vars[var_id], ctx.hir.mut[mut.id]);
+            set_solution(ctx, state, state.mut_vars[var_id], ctx.hir.mutabilities[mut.id]);
             return Result::Ok;
         }
 
@@ -41,16 +42,17 @@ namespace {
                 .current_super = super,
                 .goal          = goal,
             };
-            return std::visit(visitor, ctx.hir.mut[sub.id], ctx.hir.mut[super.id]);
+            return std::visit(
+                visitor, ctx.hir.mutabilities[sub.id], ctx.hir.mutabilities[super.id]);
         }
 
-        auto operator()(ki::Mutability const sub, ki::Mutability const super) const -> Result
+        auto operator()(db::Mutability const sub, db::Mutability const super) const -> Result
         {
-            return result((sub == super) or (sub == ki::Mutability::Mut and goal == Goal::Subtype));
+            return result((sub == super) or (sub == db::Mutability::Mut and goal == Goal::Subtype));
         }
 
-        auto operator()(hir::mutability::Variable const sub, hir::mutability::Variable const super)
-            const -> Result
+        auto operator()(hir::mut::Variable const sub, hir::mut::Variable const super) const
+            -> Result
         {
             if (sub.id != super.id) {
                 state.mut_var_set.merge(sub.id.get(), super.id.get());
@@ -58,19 +60,18 @@ namespace {
             return Result::Ok;
         }
 
-        auto operator()(hir::mutability::Variable const variable, auto const&) const -> Result
+        auto operator()(hir::mut::Variable const variable, auto const&) const -> Result
         {
             return solution(variable.id, current_super);
         }
 
-        auto operator()(auto const&, hir::mutability::Variable const variable) const -> Result
+        auto operator()(auto const&, hir::mut::Variable const variable) const -> Result
         {
             return solution(variable.id, current_sub);
         }
 
         auto operator()(
-            hir::mutability::Parameterized const sub,
-            hir::mutability::Parameterized const super) const -> Result
+            hir::mut::Parameterized const sub, hir::mut::Parameterized const super) const -> Result
         {
             return result(sub.tag.get() == super.tag.get());
         }
@@ -112,9 +113,9 @@ namespace {
             return std::visit(visitor, sub, super);
         }
 
-        [[nodiscard]] auto unify(hir::Type const sub, hir::Type const super) const -> Result
+        [[nodiscard]] auto unify(hir::Type sub, hir::Type super) const -> Result
         {
-            return unify(ctx.hir.type[sub.id], ctx.hir.type[super.id]);
+            return unify(ctx.hir.types[sub.id], ctx.hir.types[super.id]);
         }
 
         [[nodiscard]] auto unify(hir::Mutability const sub, hir::Mutability const super) const
@@ -197,8 +198,8 @@ namespace {
         {
             return bind(unify(sub.element_type, super.element_type), [&] {
                 return unify(
-                    hir::expression_type(ctx.hir.expr[sub.length]),
-                    hir::expression_type(ctx.hir.expr[super.length]));
+                    hir::expression_type(ctx.hir.expressions[sub.length]),
+                    hir::expression_type(ctx.hir.expressions[super.length]));
             });
         }
 
@@ -238,21 +239,21 @@ namespace {
             return result(sub.id == super.id);
         }
 
-        auto operator()(ki::Error, ki::Error) const -> Result
+        auto operator()(db::Error, db::Error) const -> Result
         {
             return Result::Ok;
         }
 
         template <typename T>
             requires(not std::is_same_v<T, hir::type::Variable>)
-        auto operator()(ki::Error, T const&) const -> Result
+        auto operator()(db::Error, T const&) const -> Result
         {
             return Result::Ok;
         }
 
         template <typename T>
             requires(not std::is_same_v<T, hir::type::Variable>)
-        auto operator()(T const&, ki::Error) const -> Result
+        auto operator()(T const&, db::Error) const -> Result
         {
             return Result::Ok;
         }
@@ -264,10 +265,10 @@ namespace {
     };
 } // namespace
 
-void ki::resolve::require_subtype_relationship(
+void ki::res::require_subtype_relationship(
     Context&                 ctx,
     Inference_state&         state,
-    ki::Range const          range,
+    lsp::Range const         range,
     hir::Type_variant const& sub,
     hir::Type_variant const& super)
 {
@@ -288,6 +289,6 @@ void ki::resolve::require_subtype_relationship(
             = result == Result::Recursive ? "Recursive type variable solution" : "Could not unify";
 
         auto message = std::format("{} {} ~> {}", description, left, right);
-        ki::add_error(ctx.db, state.doc_id, range, std::move(message));
+        db::add_error(ctx.db, state.doc_id, range, std::move(message));
     }
 }

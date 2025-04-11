@@ -5,7 +5,7 @@
 #include <libutl/string_pool.hpp>
 #include <libcompiler/cst/cst.hpp>
 
-namespace ki::format {
+namespace ki::fmt {
 
     enum struct Function_body : std::uint8_t {
         Leave_as_is,
@@ -21,8 +21,10 @@ namespace ki::format {
     };
 
     auto format_module(
-        cst::Module const& module, utl::String_pool const& pool, Options const& options)
-        -> std::string;
+        utl::String_pool const& pool,
+        cst::Arena const&       arena,
+        Options const&          options,
+        cst::Module const&      module) -> std::string;
 
     void format(
         utl::String_pool const& pool,
@@ -80,7 +82,7 @@ namespace ki::format {
         Options const          options,
         T const                object,
         std::string            output) {
-        { ki::format::format(pool, arena, options, object, output) } -> std::same_as<void>;
+        { ki::fmt::format(pool, arena, options, object, output) } -> std::same_as<void>;
     };
 
     auto to_string(
@@ -90,10 +92,10 @@ namespace ki::format {
         formattable auto const& object) -> std::string
     {
         std::string output;
-        ki::format::format(pool, arena, options, object, output);
+        ki::fmt::format(pool, arena, options, object, output);
         return output;
     }
 
-} // namespace ki::format
+} // namespace ki::fmt
 
 #endif // KIELI_LIBFORMAT_FORMAT

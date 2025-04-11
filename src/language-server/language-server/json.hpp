@@ -3,7 +3,7 @@
 
 #include <libutl/utilities.hpp>
 #include <cpputil/json.hpp>
-#include <libcompiler/compiler.hpp>
+#include <libcompiler/db.hpp>
 #include <libformat/format.hpp>
 
 namespace ki::lsp {
@@ -40,7 +40,7 @@ namespace ki::lsp {
     // Thrown when the JSON sent by the client is syntactically correct but invalid in some way.
     struct Bad_client_json : std::exception {
         std::string message;
-        explicit Bad_client_json(std::string message) noexcept;
+        explicit Bad_client_json(std::string message);
         [[nodiscard]] auto what() const noexcept -> char const* override;
     };
 
@@ -56,23 +56,20 @@ namespace ki::lsp {
     auto range_from_json(Json::Object object) -> Range;
     auto range_to_json(Range range) -> Json;
 
-    auto document_id_from_json(Database const& db, Json::Object object) -> Document_id;
-    auto document_id_to_json(Database const& db, Document_id document_id) -> Json;
+    auto document_id_from_json(db::Database const& db, Json::Object object) -> db::Document_id;
+    auto document_id_to_json(db::Database const& db, db::Document_id document_id) -> Json;
 
-    auto location_from_json(Database const& db, Json::Object object) -> Location;
-    auto location_to_json(Database const& db, Location location) -> Json;
-
-    auto character_location_from_json(Database const& db, Json::Object object)
-        -> Character_location;
-    auto character_location_to_json(Database const& db, Character_location location) -> Json;
+    auto location_from_json(db::Database const& db, Json::Object object) -> Location;
+    auto location_to_json(db::Database const& db, Location location) -> Json;
 
     auto severity_to_json(Severity severity) -> Json;
-    auto diagnostic_to_json(Database const& db, Diagnostic const& diagnostic) -> Json;
     auto markdown_content_to_json(std::string markdown) -> Json;
     auto semantic_tokens_to_json(std::span<Semantic_token const> tokens) -> Json;
+    auto diagnostic_to_json(db::Database const& db, Diagnostic const& diagnostic) -> Json;
 
     auto document_item_from_json(Json::Object object) -> Document_item;
-    auto format_options_from_json(Json::Object object) -> format::Options;
+    auto format_options_from_json(Json::Object object) -> fmt::Options;
+    auto position_params_from_json(db::Database const& db, Json::Object object) -> Position_params;
 
     // Throws `Bad_client_json` if `json` is not `T`.
     template <typename T>

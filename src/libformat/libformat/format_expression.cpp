@@ -1,13 +1,14 @@
 #include <libutl/utilities.hpp>
 #include <libformat/internals.hpp>
 
-using namespace ki::format;
+using namespace ki;
+using namespace ki::fmt;
 
 namespace {
     struct Expression_format_visitor {
         State& state;
 
-        void format_indented_block_body(cst::expression::Block const& block)
+        void format_indented_block_body(cst::expr::Block const& block)
         {
             format(state, "{{");
             indent(state, [&] {
@@ -24,7 +25,7 @@ namespace {
             format(state, "{}}}", newline(state));
         }
 
-        void format_regular_block(cst::expression::Block const& block)
+        void format_regular_block(cst::expr::Block const& block)
         {
             if (block.side_effects.empty()) {
                 if (block.result_expression.has_value()) {
@@ -41,20 +42,20 @@ namespace {
             }
         }
 
-        auto as_block(cst::Expression_id const id) -> cst::expression::Block const&
+        auto as_block(cst::Expression_id const id) -> cst::expr::Block const&
         {
-            auto const&       expression = state.arena.expr[id];
-            auto const* const block      = std::get_if<cst::expression::Block>(&expression.variant);
+            auto const&       expression = state.arena.expressions[id];
+            auto const* const block      = std::get_if<cst::expr::Block>(&expression.variant);
             cpputil::always_assert(block != nullptr);
             return *block;
         }
 
-        void operator()(utl::one_of<ki::Integer, ki::Floating, ki::Boolean> auto const literal)
+        void operator()(utl::one_of<db::Integer, db::Floating, db::Boolean> auto const literal)
         {
             format(state, "{}", literal.value);
         }
 
-        void operator()(ki::String const string)
+        void operator()(db::String const string)
         {
             format(state, "{:?}", state.pool.get(string.id));
         }
@@ -69,39 +70,39 @@ namespace {
             format(state, path);
         }
 
-        void operator()(cst::expression::Block const& block)
+        void operator()(cst::expr::Block const& block)
         {
             format_regular_block(block);
         }
 
-        void operator()(cst::expression::Paren const& paren)
+        void operator()(cst::expr::Paren const& paren)
         {
             format(state, "(");
             format(state, paren.expression.value);
             format(state, ")");
         }
 
-        void operator()(cst::expression::Tuple const& tuple)
+        void operator()(cst::expr::Tuple const& tuple)
         {
             format(state, "(");
             format_comma_separated(state, tuple.fields.value.elements);
             format(state, ")");
         }
 
-        void operator()(cst::expression::Infix_call const& call)
+        void operator()(cst::expr::Infix_call const& call)
         {
             format(state, call.left);
             format(state, " {} ", state.pool.get(call.op));
             format(state, call.right);
         }
 
-        void operator()(cst::expression::Function_call const& call)
+        void operator()(cst::expr::Function_call const& call)
         {
             format(state, call.invocable);
             format(state, call.arguments);
         }
 
-        void operator()(cst::expression::Tuple_init const& structure)
+        void operator()(cst::expr::Tuple_init const& structure)
         {
             format(state, structure.path);
             format(state, "(");
@@ -109,7 +110,7 @@ namespace {
             format(state, ")");
         }
 
-        void operator()(cst::expression::Struct_init const& structure)
+        void operator()(cst::expr::Struct_init const& structure)
         {
             format(state, structure.path);
             format(state, " {{ ");
@@ -117,7 +118,7 @@ namespace {
             format(state, " }}");
         }
 
-        void operator()(cst::expression::Method_call const& call)
+        void operator()(cst::expr::Method_call const& call)
         {
             format(state, call.base_expression);
             format(state, ".{}", state.pool.get(call.method_name.id));
@@ -125,18 +126,18 @@ namespace {
             format(state, call.function_arguments);
         }
 
-        void operator()(cst::expression::Match const& match)
+        void operator()(cst::expr::Match const& match)
         {
             format(state, "match ");
             format(state, match.scrutinee);
             format(state, " {{");
             indent(state, [&] {
-                for (auto const& match_case : match.cases.value) {
+                for (auto const& arm : match.arms.value) {
                     format(state, "{}", newline(state));
-                    format(state, match_case.pattern);
+                    format(state, arm.pattern);
                     format(state, " -> ");
-                    format(state, match_case.handler);
-                    if (match_case.semicolon_token.has_value()) {
+                    format(state, arm.handler);
+                    if (arm.semicolon_token.has_value()) {
                         format(state, ";");
                     }
                 }
@@ -144,20 +145,20 @@ namespace {
             format(state, "{}}}", newline(state));
         }
 
-        void operator()(cst::expression::Sizeof const& sizeof_)
+        void operator()(cst::expr::Sizeof const& sizeof_)
         {
             format(state, "sizeof(");
             format(state, sizeof_.type.value);
             format(state, ")");
         }
 
-        void operator()(cst::expression::Type_alias const& alias)
+        void operator()(cst::expr::Type_alias const& alias)
         {
             format(state, "alias {} = ", state.pool.get(alias.name.id));
             format(state, alias.type);
         }
 
-        void operator()(cst::expression::Let const& let)
+        void operator()(cst::expr::Let const& let)
         {
             format(state, "let ");
             format(state, let.pattern);
@@ -166,26 +167,26 @@ namespace {
             format(state, let.initializer);
         }
 
-        void operator()(cst::expression::Array const& array)
+        void operator()(cst::expr::Array const& array)
         {
             format(state, "[");
             format_comma_separated(state, array.elements.value.elements);
             format(state, "]");
         }
 
-        void operator()(cst::expression::Tuple_field const& field)
+        void operator()(cst::expr::Tuple_field const& field)
         {
             format(state, field.base_expression);
             format(state, ".{}", field.field_index);
         }
 
-        void operator()(cst::expression::Struct_field const& field)
+        void operator()(cst::expr::Struct_field const& field)
         {
             format(state, field.base_expression);
             format(state, ".{}", state.pool.get(field.name.id));
         }
 
-        void operator()(cst::expression::Array_index const& index)
+        void operator()(cst::expr::Array_index const& index)
         {
             format(state, index.base_expression);
             format(state, ".[");
@@ -193,27 +194,27 @@ namespace {
             format(state, "]");
         }
 
-        void operator()(cst::expression::Addressof const& reference)
+        void operator()(cst::expr::Addressof const& reference)
         {
             format(state, "&");
             format_mutability_with_whitespace(state, reference.mutability);
-            format(state, reference.place_expression);
+            format(state, reference.expression);
         }
 
-        void operator()(cst::expression::Dereference const& dereference)
+        void operator()(cst::expr::Deref const& dereference)
         {
             format(state, "*");
-            format(state, dereference.reference_expression);
+            format(state, dereference.expression);
         }
 
-        void operator()(cst::expression::Ascription const& ascription)
+        void operator()(cst::expr::Ascription const& ascription)
         {
             format(state, ascription.base_expression);
             format(state, ": ");
             format(state, ascription.type);
         }
 
-        void operator()(cst::expression::For_loop const& loop)
+        void operator()(cst::expr::For_loop const& loop)
         {
             format(state, "for ");
             format(state, loop.iterator);
@@ -223,7 +224,7 @@ namespace {
             format_regular_block(as_block(loop.body));
         }
 
-        void operator()(cst::expression::While_loop const& loop)
+        void operator()(cst::expr::While_loop const& loop)
         {
             format(state, "while ");
             format(state, loop.condition);
@@ -231,24 +232,24 @@ namespace {
             format_regular_block(as_block(loop.body));
         }
 
-        void operator()(cst::expression::Loop const& loop)
+        void operator()(cst::expr::Loop const& loop)
         {
             format(state, "loop ");
             format_regular_block(as_block(loop.body));
         }
 
-        void operator()(cst::expression::Ret const& ret)
+        void operator()(cst::expr::Return const& ret)
         {
-            if (ret.returned_expression.has_value()) {
+            if (ret.expression.has_value()) {
                 format(state, "ret ");
-                format(state, ret.returned_expression.value());
+                format(state, ret.expression.value());
             }
             else {
                 format(state, "ret");
             }
         }
 
-        void operator()(cst::expression::Conditional const& conditional)
+        void operator()(cst::expr::Conditional const& conditional)
         {
             format(state, "{} ", conditional.is_elif ? "elif" : "if");
             format(state, conditional.condition);
@@ -257,8 +258,8 @@ namespace {
             if (not conditional.false_branch.has_value()) {
                 return;
             }
-            if (auto const* const else_conditional = std::get_if<cst::expression::Conditional>(
-                    &state.arena.expr[conditional.false_branch.value().body].variant)) {
+            if (auto const* const else_conditional = std::get_if<cst::expr::Conditional>(
+                    &state.arena.expressions[conditional.false_branch.value().body].variant)) {
                 if (else_conditional->is_elif) {
                     format(state, "{}", newline(state));
                     format(state, conditional.false_branch.value().body);
@@ -269,7 +270,7 @@ namespace {
             format_indented_block_body(as_block(conditional.false_branch.value().body));
         }
 
-        void operator()(cst::expression::Break const& break_)
+        void operator()(cst::expr::Break const& break_)
         {
             if (break_.result.has_value()) {
                 format(state, "break ");
@@ -280,25 +281,25 @@ namespace {
             }
         }
 
-        void operator()(cst::expression::Defer const& defer)
+        void operator()(cst::expr::Defer const& defer)
         {
             format(state, "defer ");
-            format(state, defer.effect_expression);
+            format(state, defer.expression);
         }
 
-        void operator()(cst::expression::Continue const&)
+        void operator()(cst::expr::Continue const&)
         {
             format(state, "continue");
         }
 
-        void operator()(ki::Error)
+        void operator()(db::Error)
         {
             cpputil::todo();
         }
     };
 } // namespace
 
-void ki::format::format(State& state, cst::Expression const& expression)
+void ki::fmt::format(State& state, cst::Expression const& expression)
 {
     std::visit(Expression_format_visitor { state }, expression.variant);
 }

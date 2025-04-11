@@ -1,7 +1,8 @@
 #include <libutl/utilities.hpp>
 #include <libparse/internals.hpp>
 
-using namespace ki::parse;
+using namespace ki;
+using namespace ki::par;
 
 namespace {
     auto extract_definition_sequence(Context& ctx) -> cst::Surrounded<std::vector<cst::Definition>>
@@ -11,7 +12,7 @@ namespace {
 
         std::vector<cst::Definition> definitions;
         while (auto definition = parse_definition(ctx)) {
-            definitions.push_back(std::move(definition.value()));
+            definitions.push_back(std::move(definition).value());
         }
 
         auto const close = require_extract(ctx, lex::Type::Brace_close);
@@ -23,7 +24,7 @@ namespace {
         };
     }
 
-    auto extract_function_signature(Context& ctx, Token const& fn_keyword)
+    auto extract_function_signature(Context& ctx, lex::Token const& fn_keyword)
         -> cst::Function_signature
     {
         add_keyword(ctx, fn_keyword.range);
@@ -39,14 +40,14 @@ namespace {
 
         return cst::Function_signature {
             .template_parameters = std::move(template_parameters),
-            .function_parameters = std::move(function_parameters.value()),
+            .function_parameters = std::move(function_parameters).value(),
             .return_type         = parse_type_annotation(ctx),
             .name                = name,
             .fn_token            = token(ctx, fn_keyword),
         };
     }
 
-    auto extract_function(Context& ctx, Token const& fn_keyword) -> cst::Definition_variant
+    auto extract_function(Context& ctx, lex::Token const& fn_keyword) -> cst::Definition_variant
     {
         auto signature   = extract_function_signature(ctx, fn_keyword);
         auto equals_sign = try_extract(ctx, lex::Type::Equals);
@@ -75,7 +76,7 @@ namespace {
 
     auto parse_field(Context& ctx) -> std::optional<cst::Field>
     {
-        return parse_lower_name(ctx).transform([&](ki::Lower const& name) {
+        return parse_lower_name(ctx).transform([&](db::Lower const& name) {
             add_semantic_token(ctx, name.range, Semantic::Property);
             return cst::Field {
                 .name  = name,
@@ -95,17 +96,17 @@ namespace {
             "one or more types">;
 
         if (auto fields = parse_struct_constructor(ctx)) {
-            return cst::Struct_constructor { .fields = std::move(fields.value()) };
+            return cst::Struct_constructor { .fields = std::move(fields).value() };
         }
         if (auto types = parse_tuple_constructor(ctx)) {
-            return cst::Tuple_constructor { .types = std::move(types.value()) };
+            return cst::Tuple_constructor { .types = std::move(types).value() };
         }
         return cst::Unit_constructor {};
     }
 
     auto parse_constructor(Context& ctx) -> std::optional<cst::Constructor>
     {
-        return parse_upper_name(ctx).transform([&](ki::Upper const& name) {
+        return parse_upper_name(ctx).transform([&](db::Upper const& name) {
             add_semantic_token(ctx, name.range, Semantic::Constructor);
             return cst::Constructor {
                 .name = name,
@@ -114,7 +115,8 @@ namespace {
         });
     }
 
-    auto extract_structure(Context& ctx, Token const& struct_keyword) -> cst::Definition_variant
+    auto extract_structure(Context& ctx, lex::Token const& struct_keyword)
+        -> cst::Definition_variant
     {
         add_keyword(ctx, struct_keyword.range);
         auto const name = extract_upper_name(ctx, "a struct name");
@@ -127,7 +129,8 @@ namespace {
         };
     }
 
-    auto extract_enumeration(Context& ctx, Token const& enum_keyword) -> cst::Definition_variant
+    auto extract_enumeration(Context& ctx, lex::Token const& enum_keyword)
+        -> cst::Definition_variant
     {
         static constexpr auto extract_constructors = require<
             parse_separated_one_or_more<parse_constructor, "an enum constructor", lex::Type::Pipe>>;
@@ -149,7 +152,8 @@ namespace {
         };
     }
 
-    auto extract_type_signature(Context& ctx, Token const& alias_keyword) -> cst::Type_signature
+    auto extract_type_signature(Context& ctx, lex::Token const& alias_keyword)
+        -> cst::Type_signature
     {
         add_keyword(ctx, alias_keyword.range);
         auto const name = extract_upper_name(ctx, "an alias name");
@@ -170,7 +174,7 @@ namespace {
         return signature;
     }
 
-    auto extract_concept(Context& ctx, Token const& concept_keyword) -> cst::Definition_variant
+    auto extract_concept(Context& ctx, lex::Token const& concept_keyword) -> cst::Definition_variant
     {
         add_keyword(ctx, concept_keyword.range);
         auto const name = extract_upper_name(ctx, "a concept name");
@@ -189,7 +193,7 @@ namespace {
                 requirements.emplace_back(extract_type_signature(ctx, alias_keyword.value()));
             }
             else {
-                Token const close_brace = require_extract(ctx, lex::Type::Brace_close);
+                auto const close_brace = require_extract(ctx, lex::Type::Brace_close);
                 add_punctuation(ctx, close_brace.range);
                 return cst::Concept {
                     .template_parameters = std::move(template_parameters),
@@ -203,7 +207,7 @@ namespace {
         }
     }
 
-    auto extract_alias(Context& ctx, Token const& alias_keyword) -> cst::Definition_variant
+    auto extract_alias(Context& ctx, lex::Token const& alias_keyword) -> cst::Definition_variant
     {
         add_keyword(ctx, alias_keyword.range);
         auto const name = extract_upper_name(ctx, "an alias name");
@@ -222,7 +226,8 @@ namespace {
         };
     }
 
-    auto extract_implementation(Context& ctx, Token const& impl_keyword) -> cst::Definition_variant
+    auto extract_implementation(Context& ctx, lex::Token const& impl_keyword)
+        -> cst::Definition_variant
     {
         add_keyword(ctx, impl_keyword.range);
         auto template_parameters = parse_template_parameters(ctx);
@@ -237,7 +242,8 @@ namespace {
         };
     }
 
-    auto extract_submodule(Context& ctx, Token const& module_keyword) -> cst::Definition_variant
+    auto extract_submodule(Context& ctx, lex::Token const& module_keyword)
+        -> cst::Definition_variant
     {
         add_keyword(ctx, module_keyword.range);
         auto const name = extract_lower_name(ctx, "a module name");
@@ -265,13 +271,12 @@ namespace {
     }
 } // namespace
 
-auto ki::parse::parse_definition(Context& ctx) -> std::optional<cst::Definition>
+auto ki::par::parse_definition(Context& ctx) -> std::optional<cst::Definition>
 {
-    ki::Range const anchor_range = peek(ctx).range;
+    auto const anchor_range = peek(ctx).range;
     return dispatch_parse_definition(ctx).transform([&](cst::Definition_variant&& variant) {
         return cst::Definition {
             .variant = std::move(variant),
-            .doc_id  = ctx.doc_id,
             .range   = up_to_current(ctx, anchor_range),
         };
     });

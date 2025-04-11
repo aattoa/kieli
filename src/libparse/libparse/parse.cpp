@@ -2,13 +2,14 @@
 #include <libparse/parse.hpp>
 #include <libparse/internals.hpp>
 
-using namespace ki::parse;
+using namespace ki;
+using namespace ki::par;
 
 namespace {
     template <typename Default, std::invocable<Context&> auto parse_argument>
     auto parse_default_argument(Context& ctx) -> std::optional<Default>
     {
-        return try_extract(ctx, lex::Type::Equals).transform([&](Token const& equals) {
+        return try_extract(ctx, lex::Type::Equals).transform([&](lex::Token const& equals) {
             add_semantic_token(ctx, equals.range, Semantic::Operator_name);
             if (auto const underscore = try_extract(ctx, lex::Type::Underscore)) {
                 return Default {
@@ -30,11 +31,11 @@ namespace {
     constexpr auto parse_mutability_parameter_default_argument
         = parse_default_argument<cst::Mutability_parameter_default_argument, parse_mutability>;
 
-    auto extract_template_value_or_mutability_parameter(Context& ctx, ki::Lower const name)
+    auto extract_template_value_or_mutability_parameter(Context& ctx, db::Lower const name)
         -> cst::Template_parameter_variant
     {
         add_semantic_token(ctx, name.range, Semantic::Parameter);
-        Token const colon = require_extract(ctx, lex::Type::Colon);
+        auto const colon = require_extract(ctx, lex::Type::Colon);
         add_punctuation(ctx, colon.range);
         if (auto const mut_keyword = try_extract(ctx, lex::Type::Mut)) {
             add_keyword(ctx, mut_keyword.value().range);
@@ -58,7 +59,7 @@ namespace {
         error_expected(ctx, "'mut' or a type");
     }
 
-    auto extract_template_type_parameter(Context& ctx, ki::Upper const name)
+    auto extract_template_type_parameter(Context& ctx, db::Upper const name)
         -> cst::Template_parameter_variant
     {
         add_semantic_token(ctx, name.range, Semantic::Type_parameter);
@@ -90,7 +91,7 @@ namespace {
         });
     }
 
-    auto extract_import(Context& ctx, Token const& import_keyword) -> cst::Import
+    auto extract_import(Context& ctx, lex::Token const& import_keyword) -> cst::Import
     {
         static constexpr auto parse_segments = parse_separated_one_or_more<
             parse_lower_name,
@@ -112,19 +113,20 @@ namespace {
         return path;
     }
 
-    auto root_range(cst::Arena const& arena, cst::Path_root const& root) -> std::optional<ki::Range>
+    auto root_range(cst::Arena const& arena, cst::Path_root const& root)
+        -> std::optional<cst::Range_id>
     {
         if (auto const* const global = std::get_if<cst::Path_root_global>(&root)) {
-            return arena.range[global->global_token];
+            return global->global_token;
         }
         if (auto const* const type_id = std::get_if<cst::Type_id>(&root)) {
-            return arena.type[*type_id].range;
+            return arena.types[*type_id].range;
         }
         return std::nullopt;
     }
 } // namespace
 
-auto ki::parse::parse_simple_path_root(Context& ctx) -> std::optional<cst::Path_root>
+auto ki::par::parse_simple_path_root(Context& ctx) -> std::optional<cst::Path_root>
 {
     switch (peek(ctx).type) {
     case lex::Type::Lower_name:
@@ -134,20 +136,20 @@ auto ki::parse::parse_simple_path_root(Context& ctx) -> std::optional<cst::Path_
     }
 }
 
-auto ki::parse::parse_simple_path(Context& ctx) -> std::optional<cst::Path>
+auto ki::par::parse_simple_path(Context& ctx) -> std::optional<cst::Path>
 {
     return parse_simple_path_root(ctx).transform(
         [&](cst::Path_root const root) { return extract_path(ctx, root); });
 }
 
-auto ki::parse::parse_complex_path(Context& ctx) -> std::optional<cst::Path>
+auto ki::par::parse_complex_path(Context& ctx) -> std::optional<cst::Path>
 {
     return parse_simple_path_root(ctx)
         .or_else([&] { return std::optional<cst::Path_root>(parse_type_root(ctx)); })
         .transform([&](cst::Path_root const root) { return extract_path(ctx, root); });
 }
 
-auto ki::parse::parse_mutability(Context& ctx) -> std::optional<cst::Mutability>
+auto ki::par::parse_mutability(Context& ctx) -> std::optional<cst::Mutability>
 {
     if (auto mut_keyword = try_extract(ctx, lex::Type::Mut)) {
         add_keyword(ctx, mut_keyword.value().range);
@@ -158,30 +160,31 @@ auto ki::parse::parse_mutability(Context& ctx) -> std::optional<cst::Mutability>
                     .name = extract_lower_name(ctx, "a mutability parameter name"),
                     .question_mark_token = token(ctx,question_mark.value()),
                 },
-                .range = up_to_current(ctx,mut_keyword.value().range),
-                .mut_or_immut_token = token(ctx,mut_keyword.value()),
+                .range              = up_to_current(ctx, mut_keyword.value().range),
+                .mut_or_immut_token = token(ctx, mut_keyword.value()),
             };
         }
         return cst::Mutability {
-            .variant            = Mutability::Mut,
-            .range              = mut_keyword.value().range,
+            .variant            = db::Mutability::Mut,
+            .range              = token(ctx, mut_keyword.value()),
             .mut_or_immut_token = token(ctx, mut_keyword.value()),
         };
     }
     if (auto immut_keyword = try_extract(ctx, lex::Type::Immut)) {
         add_keyword(ctx, immut_keyword.value().range);
+        auto const range = token(ctx, immut_keyword.value());
         return cst::Mutability {
-            .variant            = Mutability::Immut,
-            .range              = immut_keyword.value().range,
-            .mut_or_immut_token = token(ctx, immut_keyword.value()),
+            .variant            = db::Mutability::Immut,
+            .range              = range,
+            .mut_or_immut_token = range,
         };
     }
     return std::nullopt;
 }
 
-auto ki::parse::parse_type_annotation(Context& ctx) -> std::optional<cst::Type_annotation>
+auto ki::par::parse_type_annotation(Context& ctx) -> std::optional<cst::Type_annotation>
 {
-    return try_extract(ctx, lex::Type::Colon).transform([&](Token const& colon) {
+    return try_extract(ctx, lex::Type::Colon).transform([&](lex::Token const& colon) {
         add_punctuation(ctx, colon.range);
         return cst::Type_annotation {
             .type        = require<parse_type>(ctx, "a type"),
@@ -190,14 +193,14 @@ auto ki::parse::parse_type_annotation(Context& ctx) -> std::optional<cst::Type_a
     });
 }
 
-auto ki::parse::parse_template_parameters(Context& ctx) -> std::optional<cst::Template_parameters>
+auto ki::par::parse_template_parameters(Context& ctx) -> std::optional<cst::Template_parameters>
 {
     return parse_bracketed<
         parse_comma_separated_one_or_more<parse_template_parameter, "a template parameter">,
         "a bracketed list of template parameters">(ctx);
 }
 
-auto ki::parse::parse_template_parameter(Context& ctx) -> std::optional<cst::Template_parameter>
+auto ki::par::parse_template_parameter(Context& ctx) -> std::optional<cst::Template_parameter>
 {
     auto const anchor_range = peek(ctx).range;
     return dispatch_parse_template_parameter(ctx).transform(
@@ -209,7 +212,7 @@ auto ki::parse::parse_template_parameter(Context& ctx) -> std::optional<cst::Tem
         });
 }
 
-auto ki::parse::parse_template_argument(Context& ctx) -> std::optional<cst::Template_argument>
+auto ki::par::parse_template_argument(Context& ctx) -> std::optional<cst::Template_argument>
 {
     if (auto const underscore = try_extract(ctx, lex::Type::Underscore)) {
         add_semantic_token(ctx, underscore.value().range, Semantic::Variable);
@@ -223,30 +226,31 @@ auto ki::parse::parse_template_argument(Context& ctx) -> std::optional<cst::Temp
     }
     if (auto const immut_keyword = try_extract(ctx, lex::Type::Immut)) {
         add_keyword(ctx, immut_keyword.value().range);
+        auto const range = token(ctx, immut_keyword.value());
         return cst::Template_argument { cst::Mutability {
-            .variant            = Mutability::Immut,
-            .range              = immut_keyword->range,
-            .mut_or_immut_token = token(ctx, immut_keyword.value()),
+            .variant            = db::Mutability::Immut,
+            .range              = range,
+            .mut_or_immut_token = range,
         } };
     }
     return parse_mutability(ctx).transform(utl::make<cst::Template_argument>);
 }
 
-auto ki::parse::parse_template_arguments(Context& ctx) -> std::optional<cst::Template_arguments>
+auto ki::par::parse_template_arguments(Context& ctx) -> std::optional<cst::Template_arguments>
 {
     static constexpr auto extract
         = extract_comma_separated_zero_or_more<parse_template_argument, "a template argument">;
     return parse_bracketed<pretend_parse<extract>, "">(ctx);
 }
 
-auto ki::parse::parse_function_parameters(Context& ctx) -> std::optional<cst::Function_parameters>
+auto ki::par::parse_function_parameters(Context& ctx) -> std::optional<cst::Function_parameters>
 {
     static constexpr auto extract
         = extract_comma_separated_zero_or_more<parse_function_parameter, "a function parameter">;
     return parse_parenthesized<pretend_parse<extract>, "">(ctx);
 }
 
-auto ki::parse::parse_function_parameter(Context& ctx) -> std::optional<cst::Function_parameter>
+auto ki::par::parse_function_parameter(Context& ctx) -> std::optional<cst::Function_parameter>
 {
     return parse_pattern(ctx).transform([&](cst::Pattern_id const pattern) {
         return cst::Function_parameter {
@@ -257,21 +261,21 @@ auto ki::parse::parse_function_parameter(Context& ctx) -> std::optional<cst::Fun
     });
 }
 
-auto ki::parse::parse_function_arguments(Context& ctx) -> std::optional<cst::Function_arguments>
+auto ki::par::parse_function_arguments(Context& ctx) -> std::optional<cst::Function_arguments>
 {
     static constexpr auto extract
         = extract_comma_separated_zero_or_more<parse_expression, "a function argument">;
     return parse_parenthesized<pretend_parse<extract>, "">(ctx);
 }
 
-auto ki::parse::extract_path(Context& ctx, cst::Path_root const root) -> cst::Path
+auto ki::par::extract_path(Context& ctx, cst::Path_root const root) -> cst::Path
 {
     auto anchor_range               = peek(ctx).range;
     auto segments                   = std::vector<cst::Path_segment> {};
     auto head_semantic_token_offset = 0UZ;
 
     auto extract_segment = [&](std::optional<cst::Range_id> const double_colon_token_id) {
-        Token const token          = extract(ctx);
+        auto const token           = extract(ctx);
         head_semantic_token_offset = ctx.semantic_tokens.size();
         if (token.type == lex::Type::Upper_name) {
             add_semantic_token(ctx, token.range, Semantic::Type);
@@ -305,24 +309,27 @@ auto ki::parse::extract_path(Context& ctx, cst::Path_root const root) -> cst::Pa
         set_previous_path_head_semantic_type(ctx, Semantic::Function);
     }
 
+    auto range = root_range(ctx.arena, root)
+                     .transform([&](auto id) { return ctx.arena.ranges[id]; })
+                     .value_or(anchor_range);
+
     return cst::Path {
         .root     = root,
         .segments = std::move(segments),
-        .range    = up_to_current(ctx, root_range(ctx.arena, root).value_or(anchor_range)),
+        .range    = up_to_current(ctx, range),
     };
 }
 
-auto ki::parse::extract_concept_references(Context& ctx) -> cst::Separated<cst::Path>
+auto ki::par::extract_concept_references(Context& ctx) -> cst::Separated<cst::Path>
 {
     return require<
         parse_separated_one_or_more<parse_concept_path, "a concept path", lex::Type::Plus>>(
         ctx, "one or more '+'-separated concept paths");
 }
 
-auto ki::parse::parse(Database& db, Document_id const id) -> cst::Module
+auto ki::par::parse(db::Database& db, db::Document_id const id) -> cst::Module
 {
-    auto arena = cst::Arena {};
-    auto ctx   = context(db, arena, id);
+    auto ctx = context(db, id);
 
     std::vector<cst::Import> imports;
     while (auto const import_token = try_extract(ctx, lex::Type::Import)) {
@@ -345,12 +352,11 @@ auto ki::parse::parse(Database& db, Document_id const id) -> cst::Module
         }
     }
 
+    db.documents[id].cst             = std::move(ctx.arena);
     db.documents[id].semantic_tokens = std::move(ctx.semantic_tokens);
 
     return cst::Module {
         .imports     = std::move(imports),
         .definitions = std::move(definitions),
-        .arena       = std::move(arena),
-        .doc_id      = id,
     };
 }

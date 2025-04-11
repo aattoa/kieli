@@ -5,9 +5,7 @@
 #include <libformat/format.hpp>
 #include <libcompiler/cst/cst.hpp>
 
-namespace ki::format {
-
-    namespace cst = ki::cst;
+namespace ki::fmt {
 
     struct Newline {
         std::size_t indentation {};
@@ -17,11 +15,11 @@ namespace ki::format {
     };
 
     struct State {
-        utl::String_pool const&    pool;
-        cst::Arena const&          arena;
-        ki::format::Options const& options;
-        std::size_t                indentation {};
-        std::string&               output;
+        utl::String_pool const& pool;
+        cst::Arena const&       arena;
+        Options const&          options;
+        std::size_t             indentation {};
+        std::string&            output;
     };
 
     auto newline(State const& state, std::size_t lines = 1) noexcept -> Newline;
@@ -44,7 +42,7 @@ namespace ki::format {
     void format(State&, cst::Wildcard const&);
     void format(State&, cst::Path const&);
     void format(State&, cst::Mutability const&);
-    void format(State&, cst::pattern::Field const&);
+    void format(State&, cst::patt::Field const&);
     void format(State&, cst::Struct_field_init const&);
     void format(State&, cst::Field const&);
     void format(State&, cst::Template_arguments const&);
@@ -104,16 +102,16 @@ namespace ki::format {
         format_separated(state, vector, ", ");
     }
 
-} // namespace ki::format
+} // namespace ki::fmt
 
 template <>
-struct std::formatter<ki::format::Newline> {
+struct std::formatter<ki::fmt::Newline> {
     static constexpr auto parse(auto& ctx)
     {
         return ctx.begin();
     }
 
-    static auto format(ki::format::Newline const& newline, auto& ctx)
+    static auto format(ki::fmt::Newline const& newline, auto& ctx)
     {
         auto out = ctx.out();
 

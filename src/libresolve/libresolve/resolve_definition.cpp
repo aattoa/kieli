@@ -1,28 +1,35 @@
 #include <libutl/utilities.hpp>
 #include <libresolve/resolve.hpp>
 
-using namespace ki::resolve;
+using namespace ki;
+using namespace ki::res;
 
 namespace {
     auto resolve_function_parameter(
         Context&                       ctx,
         Inference_state&               state,
-        hir::Scope_id                  scope_id,
+        Scope_id                       scope_id,
         hir::Environment_id            env_id,
         ast::Function_parameter const& parameter) -> hir::Function_parameter
     {
-        ast::Arena& ast = ctx.documents.at(state.doc_id).ast;
+        ast::Arena& ast = ctx.db.documents[state.doc_id].ast;
 
-        auto pattern = resolve_pattern(ctx, state, scope_id, env_id, ast.patt[parameter.pattern]);
-        auto type    = resolve_type(ctx, state, scope_id, env_id, ast.type[parameter.type]);
+        auto pattern
+            = resolve_pattern(ctx, state, scope_id, env_id, ast.patterns[parameter.pattern]);
+        auto type = resolve_type(ctx, state, scope_id, env_id, ast.types[parameter.type]);
 
         require_subtype_relationship(
-            ctx, state, pattern.range, ctx.hir.type[pattern.type], ctx.hir.type[type.id]);
+            ctx, state, pattern.range, ctx.hir.types[pattern.type], ctx.hir.types[type.id]);
 
         auto const resolve_default = [&](ast::Expression_id const argument) {
-            auto expression = resolve_expression(ctx, state, scope_id, env_id, ast.expr[argument]);
+            auto expression
+                = resolve_expression(ctx, state, scope_id, env_id, ast.expressions[argument]);
             require_subtype_relationship(
-                ctx, state, expression.range, ctx.hir.type[expression.type], ctx.hir.type[type.id]);
+                ctx,
+                state,
+                expression.range,
+                ctx.hir.types[expression.type],
+                ctx.hir.types[type.id]);
             return expression;
         };
 
@@ -33,14 +40,15 @@ namespace {
         };
     }
 
-    auto resolve_signature(
+    void resolve_signature(
         Context&                       ctx,
+        hir::Function_id const         fun_id,
         hir::Environment_id const      env_id,
-        ki::Document_id const          doc_id,
-        ast::Function_signature const& signature) -> hir::Function_signature
+        db::Document_id const          doc_id,
+        ast::Function_signature const& signature)
     {
-        auto state    = make_inference_state(doc_id);
-        auto scope_id = ctx.info.scopes.push(make_scope(doc_id));
+        auto state    = inference_state(doc_id);
+        auto scope_id = ctx.scopes.push(make_scope(doc_id));
 
         auto template_parameters = resolve_template_parameters(
             ctx, state, scope_id, env_id, signature.template_parameters);
@@ -56,63 +64,62 @@ namespace {
 
         auto const return_type = resolve_type(ctx, state, scope_id, env_id, signature.return_type);
 
-        auto const id = ctx.hir.type.push(hir::type::Function {
+        auto const id = ctx.hir.types.push(hir::type::Function {
             .parameter_types = std::move(parameter_types),
             .return_type     = return_type,
         });
 
         ensure_no_unsolved_variables(ctx, state);
 
-        return hir::Function_signature {
+        ctx.scope_map.insert_or_assign(fun_id, scope_id);
+        ctx.hir.functions[fun_id].signature = hir::Function_signature {
             .template_paramters = std::move(template_parameters),
             .parameters         = std::move(parameters),
             .return_type        = return_type,
-            .function_type {
-                .id    = id,
-                .range = signature.name.range,
-            },
-            .name     = signature.name,
-            .scope_id = scope_id,
+            .function_type      = hir::Type { .id = id, .range = signature.name.range },
+            .name               = signature.name,
         };
     }
 } // namespace
 
-auto ki::resolve::resolve_function_body(Context& ctx, Function_info& info) -> hir::Expression&
+auto ki::res::resolve_function_body(Context& ctx, hir::Function_id id) -> hir::Expression&
 {
-    if (not info.body.has_value()) {
-        Inference_state state {
-            .type_vars    = {},
-            .type_var_set = {},
-            .mut_vars     = {},
-            .mut_var_set  = {},
-            .doc_id       = info.doc_id,
-        };
+    hir::Function_info& info = ctx.hir.functions[id];
 
-        hir::Function_signature& signature = resolve_function_signature(ctx, info);
-        info.body = resolve_expression(ctx, state, signature.scope_id, info.env_id, info.ast.body);
+    if (not info.body.has_value()) {
+        auto state = inference_state(info.doc_id);
+
+        hir::Function_signature& signature = resolve_function_signature(ctx, id);
+
+        auto const it = ctx.scope_map.find(id);
+        cpputil::always_assert(it != ctx.scope_map.end());
+        info.body = resolve_expression(ctx, state, it->second, info.env_id, info.ast.body);
+        ctx.scope_map.erase(it);
 
         require_subtype_relationship(
             ctx,
             state,
             info.body.value().range,
-            ctx.hir.type[info.body.value().type],
-            ctx.hir.type[signature.return_type.id]);
+            ctx.hir.types[info.body.value().type],
+            ctx.hir.types[signature.return_type.id]);
         ensure_no_unsolved_variables(ctx, state);
     }
     return info.body.value();
 }
 
-auto ki::resolve::resolve_function_signature(Context& ctx, Function_info& info)
+auto ki::res::resolve_function_signature(Context& ctx, hir::Function_id id)
     -> hir::Function_signature&
 {
+    hir::Function_info& info = ctx.hir.functions[id];
     if (not info.signature.has_value()) {
-        info.signature = resolve_signature(ctx, info.env_id, info.doc_id, info.ast.signature);
+        resolve_signature(ctx, id, info.env_id, info.doc_id, info.ast.signature);
     }
     return info.signature.value();
 }
 
-auto ki::resolve::resolve_enumeration(Context& ctx, Enumeration_info& info) -> hir::Enumeration&
+auto ki::res::resolve_enumeration(Context& ctx, hir::Enumeration_id id) -> hir::Enumeration&
 {
+    hir::Enumeration_info& info = ctx.hir.enumerations[id];
     if (not info.hir.has_value()) {
         (void)ctx;
         cpputil::todo();
@@ -120,8 +127,9 @@ auto ki::resolve::resolve_enumeration(Context& ctx, Enumeration_info& info) -> h
     return info.hir.value();
 }
 
-auto ki::resolve::resolve_concept(Context& ctx, Concept_info& info) -> hir::Concept&
+auto ki::res::resolve_concept(Context& ctx, hir::Concept_id id) -> hir::Concept&
 {
+    hir::Concept_info& info = ctx.hir.concepts[id];
     if (not info.hir.has_value()) {
         (void)ctx;
         cpputil::todo();
@@ -129,8 +137,9 @@ auto ki::resolve::resolve_concept(Context& ctx, Concept_info& info) -> hir::Conc
     return info.hir.value();
 }
 
-auto ki::resolve::resolve_alias(Context& ctx, Alias_info& info) -> hir::Alias&
+auto ki::res::resolve_alias(Context& ctx, hir::Alias_id id) -> hir::Alias&
 {
+    hir::Alias_info& info = ctx.hir.aliases[id];
     if (not info.hir.has_value()) {
         (void)ctx;
         cpputil::todo();

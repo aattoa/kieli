@@ -2,7 +2,8 @@
 #include <libformat/internals.hpp>
 #include <libformat/format.hpp>
 
-using namespace ki::format;
+using namespace ki;
+using namespace ki::fmt;
 
 // TODO: collapse string literals, expand integer literals, insert digit separators
 
@@ -61,10 +62,10 @@ namespace {
         void operator()(cst::Function const& function) const
         {
             format_function_signature(state, function.signature);
-            cst::Expression const& body = state.arena.expr[function.body];
+            cst::Expression const& body = state.arena.expressions[function.body];
 
             switch (state.options.function_body) {
-            case ki::format::Function_body::Leave_as_is:
+            case Function_body::Leave_as_is:
             {
                 if (function.equals_sign_token.has_value()) {
                     format(state, " = ");
@@ -76,9 +77,9 @@ namespace {
                 }
                 return;
             }
-            case ki::format::Function_body::Normalize_to_equals_sign:
+            case Function_body::Normalize_to_equals_sign:
             {
-                if (auto const* const block = std::get_if<cst::expression::Block>(&body.variant)) {
+                if (auto const* const block = std::get_if<cst::expr::Block>(&body.variant)) {
                     if (block->result_expression.has_value() and block->side_effects.empty()) {
                         format(state, " = ");
                         format(state, block->result_expression.value());
@@ -94,9 +95,9 @@ namespace {
                 }
                 return;
             }
-            case ki::format::Function_body::Normalize_to_block:
+            case Function_body::Normalize_to_block:
             {
-                if (std::holds_alternative<cst::expression::Block>(body.variant)) {
+                if (std::holds_alternative<cst::expr::Block>(body.variant)) {
                     format(state, " ");
                     format(state, function.body);
                 }
@@ -196,25 +197,27 @@ namespace {
     };
 } // namespace
 
-void ki::format::format(State& state, cst::Definition const& definition)
+void ki::fmt::format(State& state, cst::Definition const& definition)
 {
     std::visit(Definition_format_visitor { state }, definition.variant);
 }
 
-auto ki::format::format_module(
-    cst::Module const& module, utl::String_pool const& pool, ki::format::Options const& options)
-    -> std::string
+auto ki::fmt::format_module(
+    utl::String_pool const& pool,
+    cst::Arena const&       arena,
+    Options const&          options,
+    cst::Module const&      module) -> std::string
 {
     std::string output;
 
-    State state { .pool = pool, .arena = module.arena, .options = options, .output = output };
+    State state { .pool = pool, .arena = arena, .options = options, .output = output };
     format_definitions(state, module.definitions);
 
     output.push_back('\n');
     return output;
 }
 
-void ki::format::format(
+void ki::fmt::format(
     utl::String_pool const& pool,
     cst::Arena const&       arena,
     Options const&          options,
@@ -225,7 +228,7 @@ void ki::format::format(
     format(state, definition);
 }
 
-void ki::format::format(
+void ki::fmt::format(
     utl::String_pool const& pool,
     cst::Arena const&       arena,
     Options const&          options,
@@ -236,7 +239,7 @@ void ki::format::format(
     format(state, expression);
 }
 
-void ki::format::format(
+void ki::fmt::format(
     utl::String_pool const& pool,
     cst::Arena const&       arena,
     Options const&          options,
@@ -247,7 +250,7 @@ void ki::format::format(
     format(state, pattern);
 }
 
-void ki::format::format(
+void ki::fmt::format(
     utl::String_pool const& pool,
     cst::Arena const&       arena,
     Options const&          options,
@@ -258,32 +261,32 @@ void ki::format::format(
     format(state, type);
 }
 
-void ki::format::format(
+void ki::fmt::format(
     utl::String_pool const& pool,
     cst::Arena const&       arena,
     Options const&          options,
     cst::Expression_id      expression_id,
     std::string&            output)
 {
-    format(pool, arena, options, arena.expr[expression_id], output);
+    format(pool, arena, options, arena.expressions[expression_id], output);
 }
 
-void ki::format::format(
+void ki::fmt::format(
     utl::String_pool const& pool,
     cst::Arena const&       arena,
     Options const&          options,
     cst::Pattern_id         pattern_id,
     std::string&            output)
 {
-    ki::format::format(pool, arena, options, arena.patt[pattern_id], output);
+    format(pool, arena, options, arena.patterns[pattern_id], output);
 }
 
-void ki::format::format(
+void ki::fmt::format(
     utl::String_pool const& pool,
     cst::Arena const&       arena,
     Options const&          options,
     cst::Type_id            type_id,
     std::string&            output)
 {
-    format(pool, arena, options, arena.type[type_id], output);
+    format(pool, arena, options, arena.types[type_id], output);
 }

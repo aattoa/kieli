@@ -3,7 +3,7 @@
 
 #include <libutl/utilities.hpp>
 
-namespace utl {
+namespace ki::utl {
 
     // Thread-safe queue.
     template <typename T>
@@ -39,6 +39,6 @@ namespace utl {
         }
     };
 
-} // namespace utl
+} // namespace ki::utl
 
 #endif // KIELI_LIBUTL_MAILBOX

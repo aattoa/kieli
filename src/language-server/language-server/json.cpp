@@ -1,9 +1,7 @@
 #include <libutl/utilities.hpp>
 #include <language-server/json.hpp>
 
-ki::lsp::Bad_client_json::Bad_client_json(std::string message) noexcept
-    : message(std::move(message))
-{}
+ki::lsp::Bad_client_json::Bad_client_json(std::string message) : message(std::move(message)) {}
 
 auto ki::lsp::Bad_client_json::what() const noexcept -> char const*
 {
@@ -56,8 +54,8 @@ auto ki::lsp::position_from_json(Json::Object object) -> Position
 auto ki::lsp::position_to_json(Position const position) -> Json
 {
     return Json { Json::Object {
-        { "line", Json { static_cast<Json::Number>(position.line) } },
-        { "character", Json { static_cast<Json::Number>(position.column) } },
+        { "line", Json { cpputil::num::safe_cast<Json::Number>(position.line) } },
+        { "character", Json { cpputil::num::safe_cast<Json::Number>(position.column) } },
     } };
 }
 
@@ -77,28 +75,28 @@ auto ki::lsp::range_to_json(Range const range) -> Json
     } };
 }
 
-auto ki::lsp::document_id_from_json(Database const& db, Json::Object object) -> Document_id
+auto ki::lsp::document_id_from_json(db::Database const& db, Json::Object object) -> db::Document_id
 {
     auto path = path_from_json(as<Json::String>(at(object, "uri")));
     if (auto const it = db.paths.find(path); it != db.paths.end()) {
         return it->second;
     }
     auto message = std::format("Referenced an unopened document: '{}'", path.c_str());
-    throw ki::lsp::Bad_client_json(std::move(message));
+    throw lsp::Bad_client_json(std::move(message));
 }
 
-auto ki::lsp::document_id_to_json(Database const& db, Document_id const id) -> Json
+auto ki::lsp::document_id_to_json(db::Database const& db, db::Document_id const id) -> Json
 {
     return Json { Json::Object { { "uri", path_to_json(document_path(db, id)) } } };
 }
 
-auto ki::lsp::location_from_json(Database const& db, Json::Object object) -> Location
+auto ki::lsp::location_from_json(db::Database const& db, Json::Object object) -> Location
 {
     Range range = range_from_json(as<Json::Object>(at(object, "range")));
     return Location { .doc_id = document_id_from_json(db, std::move(object)), .range = range };
 }
 
-auto ki::lsp::location_to_json(Database const& db, Location const location) -> Json
+auto ki::lsp::location_to_json(db::Database const& db, Location const location) -> Json
 {
     return Json { Json::Object {
         { "uri", path_to_json(document_path(db, location.doc_id)) },
@@ -106,22 +104,13 @@ auto ki::lsp::location_to_json(Database const& db, Location const location) -> J
     } };
 }
 
-auto ki::lsp::character_location_from_json(Database const& db, Json::Object object)
-    -> Character_location
+auto ki::lsp::position_params_from_json(db::Database const& db, Json::Object object)
+    -> Position_params
 {
-    return Character_location {
+    return Position_params {
         .doc_id   = document_id_from_json(db, as<Json::Object>(at(object, "textDocument"))),
         .position = position_from_json(as<Json::Object>(at(object, "position"))),
     };
-}
-
-auto ki::lsp::character_location_to_json(Database const& db, Character_location const location)
-    -> Json
-{
-    return Json { Json::Object {
-        { "textDocument", document_id_to_json(db, location.doc_id) },
-        { "position", position_to_json(location.position) },
-    } };
 }
 
 auto ki::lsp::severity_to_json(Severity severity) -> Json
@@ -135,7 +124,7 @@ auto ki::lsp::severity_to_json(Severity severity) -> Json
     }
 }
 
-auto ki::lsp::diagnostic_to_json(Database const& db, Diagnostic const& diagnostic) -> Json
+auto ki::lsp::diagnostic_to_json(db::Database const& db, Diagnostic const& diagnostic) -> Json
 {
     auto const info_to_json = [&](Diagnostic_related const& info) {
         return Json { Json::Object {
@@ -165,9 +154,9 @@ auto ki::lsp::document_item_from_json(Json::Object object) -> Document_item
     };
 }
 
-auto ki::lsp::format_options_from_json(Json::Object object) -> format::Options
+auto ki::lsp::format_options_from_json(Json::Object object) -> fmt::Options
 {
-    return format::Options {
+    return fmt::Options {
         .tab_size   = as_unsigned(at(object, "tabSize")),
         .use_spaces = as<Json::Boolean>(at(object, "insertSpaces")),
     };
@@ -191,7 +180,7 @@ auto ki::lsp::semantic_tokens_to_json(std::span<Semantic_token const> const toke
 
     static constexpr auto to_num = [](auto n) { return cpputil::num::safe_cast<Json::Number>(n); };
 
-    ki::Position prev;
+    lsp::Position prev;
     for (Semantic_token const& token : tokens) {
         assert(token.length != 0);
         assert(prev.line <= token.position.line);

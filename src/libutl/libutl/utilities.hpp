@@ -45,7 +45,7 @@
 // the standard reserves literal operators that do not begin with an underscore.
 using namespace std::literals; // NOLINT(*-global-names-in-headers)
 
-namespace utl {
+namespace ki::utl {
 
     template <typename T, typename... Ts>
     concept one_of = std::disjunction_v<std::is_same<T, Ts>...>;
@@ -109,6 +109,6 @@ namespace utl {
         return std::ranges::to<std::vector>(std::views::as_rvalue(array));
     }
 
-} // namespace utl
+} // namespace ki::utl
 
 #endif // KIELI_LIBUTL_UTILITIES

@@ -1,5 +1,5 @@
 #include <libutl/utilities.hpp>
-#include <devmain/history.hpp>
+#include <devmain/repl.hpp>
 #include <cpputil/input.hpp>
 #include <cpputil/io.hpp>
 
@@ -57,7 +57,7 @@ namespace {
     thread_local std::string previous_history_line;
 } // namespace
 
-void ki::add_to_history(char const* const line)
+void ki::repl::add_history_line(char const* const line)
 {
     if (not line or previous_history_line == line) {
         return;
@@ -67,7 +67,7 @@ void ki::add_to_history(char const* const line)
     previous_history_line = line;
 }
 
-void ki::read_history_file_to_active_history()
+void ki::repl::read_history_file()
 {
     auto const path = history_file_path();
     if (not path.has_value() or not is_valid_history_file_path(path.value())) {

@@ -2,6 +2,8 @@
 #include <libutl/index_vector.hpp>
 #include <cppunittest/unittest.hpp>
 
+using namespace ki;
+
 namespace {
     struct Index : utl::Vector_index<Index> {
         using Vector_index::Vector_index;

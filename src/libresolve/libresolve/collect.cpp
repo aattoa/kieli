@@ -3,21 +3,22 @@
 #include <libdesugar/desugar.hpp>
 #include <libresolve/resolve.hpp>
 
-using namespace ki::resolve;
+using namespace ki;
+using namespace ki::res;
 
 namespace {
     struct Collector {
-        Context&             ctx;
-        ki::desugar::Context des_ctx;
-        ki::Document_id      doc_id;
-        hir::Environment_id  env_id;
+        Context&            ctx;
+        des::Context        des_ctx;
+        db::Document_id     doc_id;
+        hir::Environment_id env_id;
 
-        void operator()(cst::Function& cst) const
+        void operator()(cst::Function& cst)
         {
             auto name = cst.signature.name;
-            auto ast  = ki::desugar::desugar_function(des_ctx, cst);
+            auto ast  = des::desugar_function(des_ctx, cst);
 
-            auto const id = ctx.info.functions.push(Function_info {
+            auto const id = ctx.hir.functions.push(hir::Function_info {
                 .cst       = std::move(cst),
                 .ast       = std::move(ast),
                 .signature = std::nullopt,
@@ -27,18 +28,18 @@ namespace {
                 .name      = name,
             });
 
-            auto& env = ctx.info.environments[env_id];
+            auto& env = ctx.hir.environments[env_id];
             env.in_order.emplace_back(id);
             env.lower_map.emplace_back(
-                name.id, Lower_info { .name = name, .doc_id = doc_id, .variant = id });
+                name.id, hir::Lower_info { .name = name, .doc_id = doc_id, .variant = id });
         }
 
-        void operator()(cst::Struct& cst) const
+        void operator()(cst::Struct& cst)
         {
             auto name = cst.name;
-            auto ast  = ki::desugar::desugar_struct(des_ctx, cst);
+            auto ast  = des::desugar_struct(des_ctx, cst);
 
-            auto const id = ctx.info.enumerations.push(Enumeration_info {
+            auto const id = ctx.hir.enumerations.push(hir::Enumeration_info {
                 .cst    = std::move(cst),
                 .ast    = std::move(ast),
                 .hir    = std::nullopt,
@@ -47,18 +48,18 @@ namespace {
                 .name   = name,
             });
 
-            auto& env = ctx.info.environments[env_id];
+            auto& env = ctx.hir.environments[env_id];
             env.in_order.emplace_back(id);
             env.upper_map.emplace_back(
-                name.id, Upper_info { .name = name, .doc_id = env.doc_id, .variant = id });
+                name.id, hir::Upper_info { .name = name, .doc_id = env.doc_id, .variant = id });
         }
 
-        void operator()(cst::Enum& cst) const
+        void operator()(cst::Enum& cst)
         {
             auto name = cst.name;
-            auto ast  = ki::desugar::desugar_enum(des_ctx, cst);
+            auto ast  = des::desugar_enum(des_ctx, cst);
 
-            auto const id = ctx.info.enumerations.push(Enumeration_info {
+            auto const id = ctx.hir.enumerations.push(hir::Enumeration_info {
                 .cst    = std::move(cst),
                 .ast    = std::move(ast),
                 .hir    = std::nullopt,
@@ -67,18 +68,18 @@ namespace {
                 .name   = name,
             });
 
-            auto& env = ctx.info.environments[env_id];
+            auto& env = ctx.hir.environments[env_id];
             env.in_order.emplace_back(id);
             env.upper_map.emplace_back(
-                name.id, Upper_info { .name = name, .doc_id = env.doc_id, .variant = id });
+                name.id, hir::Upper_info { .name = name, .doc_id = env.doc_id, .variant = id });
         }
 
-        void operator()(cst::Alias& cst) const
+        void operator()(cst::Alias& cst)
         {
             auto name = cst.name;
-            auto ast  = ki::desugar::desugar_alias(des_ctx, cst);
+            auto ast  = des::desugar_alias(des_ctx, cst);
 
-            auto const id = ctx.info.aliases.push(Alias_info {
+            auto const id = ctx.hir.aliases.push(hir::Alias_info {
                 .cst    = std::move(cst),
                 .ast    = std::move(ast),
                 .hir    = std::nullopt,
@@ -87,18 +88,18 @@ namespace {
                 .name   = name,
             });
 
-            auto& env = ctx.info.environments[env_id];
+            auto& env = ctx.hir.environments[env_id];
             env.in_order.emplace_back(id);
             env.upper_map.emplace_back(
-                name.id, Upper_info { .name = name, .doc_id = env.doc_id, .variant = id });
+                name.id, hir::Upper_info { .name = name, .doc_id = env.doc_id, .variant = id });
         }
 
-        void operator()(cst::Concept& cst) const
+        void operator()(cst::Concept& cst)
         {
             auto name = cst.name;
-            auto ast  = ki::desugar::desugar_concept(des_ctx, cst);
+            auto ast  = des::desugar_concept(des_ctx, cst);
 
-            auto const id = ctx.info.concepts.push(Concept_info {
+            auto const id = ctx.hir.concepts.push(hir::Concept_info {
                 .cst    = std::move(cst),
                 .ast    = std::move(ast),
                 .hir    = std::nullopt,
@@ -107,30 +108,29 @@ namespace {
                 .name   = name,
             });
 
-            auto& env = ctx.info.environments[env_id];
+            auto& env = ctx.hir.environments[env_id];
             env.in_order.emplace_back(id);
             env.upper_map.emplace_back(
-                name.id, Upper_info { .name = name, .doc_id = env.doc_id, .variant = id });
+                name.id, hir::Upper_info { .name = name, .doc_id = env.doc_id, .variant = id });
         }
 
-        void operator()(cst::Impl&) const
+        void operator()(cst::Impl&)
         {
             cpputil::todo();
         }
 
-        void operator()(cst::Submodule&) const
+        void operator()(cst::Submodule&)
         {
             cpputil::todo();
         }
     };
 } // namespace
 
-auto ki::resolve::collect_document(Context& ctx, ki::Document_id doc_id) -> hir::Environment_id
+auto ki::res::collect_document(Context& ctx, db::Document_id doc_id) -> hir::Environment_id
 {
-    auto cst  = ki::parse::parse(ctx.db, doc_id);
-    auto info = Document_info { .cst = std::move(cst.arena), .ast = {} };
+    auto module = par::parse(ctx.db, doc_id);
 
-    auto env_id = ctx.info.environments.push(Environment {
+    auto env_id = ctx.hir.environments.push(hir::Environment {
         .upper_map = {},
         .lower_map = {},
         .in_order  = {},
@@ -138,23 +138,18 @@ auto ki::resolve::collect_document(Context& ctx, ki::Document_id doc_id) -> hir:
         .doc_id    = doc_id,
     });
 
-    ki::desugar::Context des_ctx {
-        .db     = ctx.db,
-        .cst    = info.cst,
-        .ast    = info.ast,
-        .doc_id = doc_id,
-    };
     Collector collector {
         .ctx     = ctx,
-        .des_ctx = des_ctx,
+        .des_ctx = des::context(ctx.db, doc_id),
         .doc_id  = doc_id,
         .env_id  = env_id,
     };
 
-    for (cst::Definition& definition : cst.definitions) {
+    for (cst::Definition& definition : module.definitions) {
         std::visit(collector, definition.variant);
     }
 
-    ctx.documents.insert_or_assign(doc_id, std::move(info));
+    ctx.db.documents[doc_id].ast = std::move(collector.des_ctx.ast);
+
     return env_id;
 }

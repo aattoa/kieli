@@ -2,10 +2,7 @@
 #define KIELI_LIBCOMPILER_CST
 
 #include <libutl/utilities.hpp>
-#include <libutl/index_vector.hpp>
 #include <libcompiler/compiler.hpp>
-#include <libcompiler/tree_fwd.hpp>
-#include <libcompiler/token/token.hpp>
 
 /*
 
@@ -53,17 +50,17 @@ namespace ki::cst {
     };
 
     struct Parameterized_mutability {
-        Lower    name;
-        Range_id question_mark_token;
+        db::Lower name;
+        Range_id  question_mark_token;
     };
 
-    struct Mutability_variant : std::variant<Mutability, Parameterized_mutability> {
+    struct Mutability_variant : std::variant<db::Mutability, Parameterized_mutability> {
         using variant::variant;
     };
 
     struct Mutability {
         Mutability_variant variant;
-        Range              range;
+        Range_id           range;
         Range_id           mut_or_immut_token;
     };
 
@@ -75,7 +72,7 @@ namespace ki::cst {
 
     struct Path_segment {
         std::optional<Template_arguments> template_arguments;
-        Name                              name;
+        db::Name                          name;
         std::optional<Range_id>           leading_double_colon_token;
     };
 
@@ -88,7 +85,7 @@ namespace ki::cst {
     struct Path {
         Path_root                 root;
         std::vector<Path_segment> segments;
-        Range                     range;
+        Range_id                  range;
 
         [[nodiscard]] auto head() const -> Path_segment const&;
         [[nodiscard]] auto is_unqualified() const noexcept -> bool;
@@ -114,20 +111,20 @@ namespace ki::cst {
     using Function_arguments  = Surrounded<Separated<Expression_id>>;
 
     struct Template_type_parameter {
-        Upper                                          name;
+        db::Upper                                      name;
         std::optional<Range_id>                        colon_token;
         Separated<Path>                                concepts;
         std::optional<Type_parameter_default_argument> default_argument;
     };
 
     struct Template_value_parameter {
-        Lower                                           name;
+        db::Lower                                       name;
         Type_annotation                                 type_annotation;
         std::optional<Value_parameter_default_argument> default_argument;
     };
 
     struct Template_mutability_parameter {
-        Lower                                                name;
+        db::Lower                                            name;
         Range_id                                             colon_token;
         Range_id                                             mut_token;
         std::optional<Mutability_parameter_default_argument> default_argument;
@@ -143,7 +140,7 @@ namespace ki::cst {
 
     struct Template_parameter {
         Template_parameter_variant variant;
-        Range                      range;
+        Range_id                   range;
     };
 
     using Template_parameters = Surrounded<Separated<Template_parameter>>;
@@ -154,18 +151,18 @@ namespace ki::cst {
     };
 
     struct Struct_field_init {
-        Lower                              name;
+        db::Lower                          name;
         std::optional<Struct_field_equals> equals;
     };
 
-    struct Match_case {
+    struct Match_arm {
         Pattern_id              pattern;
         Expression_id           handler;
         Range_id                arrow_token;
         std::optional<Range_id> semicolon_token;
     };
 
-    namespace expression {
+    namespace expr {
         struct Paren {
             Surrounded<Expression_id> expression;
         };
@@ -214,7 +211,7 @@ namespace ki::cst {
 
         struct Struct_field {
             Expression_id base_expression;
-            Lower         name;
+            db::Lower     name;
             Range_id      dot_token;
         };
 
@@ -235,7 +232,7 @@ namespace ki::cst {
             Function_arguments                function_arguments;
             std::optional<Template_arguments> template_arguments;
             Expression_id                     base_expression;
-            Lower                             method_name;
+            db::Lower                         method_name;
         };
 
         struct False_branch {
@@ -252,9 +249,9 @@ namespace ki::cst {
         };
 
         struct Match {
-            Surrounded<std::vector<Match_case>> cases;
-            Expression_id                       scrutinee;
-            Range_id                            match_token;
+            Surrounded<std::vector<Match_arm>> arms;
+            Expression_id                      scrutinee;
+            Range_id                           match_token;
         };
 
         struct Ascription {
@@ -272,10 +269,10 @@ namespace ki::cst {
         };
 
         struct Type_alias {
-            Upper    name;
-            Type_id  type;
-            Range_id alias_token;
-            Range_id equals_sign_token;
+            db::Upper name;
+            Type_id   type;
+            Range_id  alias_token;
+            Range_id  equals_sign_token;
         };
 
         struct Loop {
@@ -306,8 +303,8 @@ namespace ki::cst {
             Range_id                     break_token;
         };
 
-        struct Ret {
-            std::optional<Expression_id> returned_expression;
+        struct Return {
+            std::optional<Expression_id> expression;
             Range_id                     ret_token;
         };
 
@@ -318,72 +315,72 @@ namespace ki::cst {
 
         struct Addressof {
             std::optional<Mutability> mutability;
-            Expression_id             place_expression;
+            Expression_id             expression;
             Range_id                  ampersand_token;
         };
 
-        struct Dereference {
-            Expression_id reference_expression;
+        struct Deref {
+            Expression_id expression;
             Range_id      asterisk_token;
         };
 
         struct Defer {
-            Expression_id effect_expression;
+            Expression_id expression;
             Range_id      defer_token;
         };
-    } // namespace expression
+    } // namespace expr
 
     struct Expression_variant
         : std::variant<
-              Error,
-              Integer,
-              Floating,
-              Boolean,
-              String,
-              Wildcard,
+              db::Error,
+              db::Integer,
+              db::Floating,
+              db::Boolean,
+              db::String,
               Path,
-              expression::Paren,
-              expression::Array,
-              expression::Tuple,
-              expression::Block,
-              expression::Function_call,
-              expression::Tuple_init,
-              expression::Struct_init,
-              expression::Infix_call,
-              expression::Struct_field,
-              expression::Tuple_field,
-              expression::Array_index,
-              expression::Method_call,
-              expression::Conditional,
-              expression::Match,
-              expression::Ascription,
-              expression::Let,
-              expression::Type_alias,
-              expression::Loop,
-              expression::While_loop,
-              expression::For_loop,
-              expression::Continue,
-              expression::Break,
-              expression::Ret,
-              expression::Sizeof,
-              expression::Addressof,
-              expression::Dereference,
-              expression::Defer> {
+              Wildcard,
+              expr::Paren,
+              expr::Array,
+              expr::Tuple,
+              expr::Block,
+              expr::Function_call,
+              expr::Tuple_init,
+              expr::Struct_init,
+              expr::Infix_call,
+              expr::Struct_field,
+              expr::Tuple_field,
+              expr::Array_index,
+              expr::Method_call,
+              expr::Conditional,
+              expr::Match,
+              expr::Ascription,
+              expr::Let,
+              expr::Type_alias,
+              expr::Loop,
+              expr::While_loop,
+              expr::For_loop,
+              expr::Continue,
+              expr::Break,
+              expr::Return,
+              expr::Sizeof,
+              expr::Addressof,
+              expr::Deref,
+              expr::Defer> {
         using variant::variant;
     };
 
     struct Expression {
         Expression_variant variant;
-        Range              range;
+        Range_id           range;
     };
 
-    namespace pattern {
+    namespace patt {
         struct Paren {
             Surrounded<Pattern_id> pattern;
         };
 
         struct Name {
-            Lower                     name;
+            db::Lower                 name;
             std::optional<Mutability> mutability;
         };
 
@@ -393,7 +390,7 @@ namespace ki::cst {
         };
 
         struct Field {
-            Lower                 name;
+            db::Lower             name;
             std::optional<Equals> equals;
         };
 
@@ -418,7 +415,7 @@ namespace ki::cst {
         };
 
         struct Abbreviated_constructor {
-            Upper            name;
+            db::Upper        name;
             Constructor_body body;
             Range_id         double_colon_token;
         };
@@ -440,29 +437,29 @@ namespace ki::cst {
             Expression_id guard_expression;
             Range_id      if_token;
         };
-    } // namespace pattern
+    } // namespace patt
 
     struct Pattern_variant
         : std::variant<
-              Integer,
-              Floating,
-              Boolean,
-              String,
+              db::Integer,
+              db::Floating,
+              db::Boolean,
+              db::String,
               Wildcard,
-              pattern::Paren,
-              pattern::Name,
-              pattern::Constructor,
-              pattern::Abbreviated_constructor,
-              pattern::Tuple,
-              pattern::Top_level_tuple,
-              pattern::Slice,
-              pattern::Guarded> {
+              patt::Paren,
+              patt::Name,
+              patt::Constructor,
+              patt::Abbreviated_constructor,
+              patt::Tuple,
+              patt::Top_level_tuple,
+              patt::Slice,
+              patt::Guarded> {
         using variant::variant;
     };
 
     struct Pattern {
         Pattern_variant variant;
-        Range           range;
+        Range_id        range;
     };
 
     namespace type {
@@ -538,21 +535,21 @@ namespace ki::cst {
 
     struct Type {
         Type_variant variant;
-        Range        range;
+        Range_id     range;
     };
 
     struct Function_signature {
         std::optional<Template_parameters> template_parameters;
         Function_parameters                function_parameters;
         std::optional<Type_annotation>     return_type;
-        Lower                              name;
+        db::Lower                          name;
         Range_id                           fn_token;
     };
 
     struct Type_signature {
         std::optional<Template_parameters> template_parameters;
         Separated<Path>                    concepts;
-        Upper                              name;
+        db::Upper                          name;
         std::optional<Range_id>            concepts_colon_token;
         Range_id                           alias_token;
     };
@@ -567,9 +564,9 @@ namespace ki::cst {
     };
 
     struct Field {
-        Lower           name;
+        db::Lower       name;
         Type_annotation type;
-        Range           range;
+        Range_id        range;
     };
 
     struct Struct_constructor {
@@ -588,28 +585,28 @@ namespace ki::cst {
     };
 
     struct Constructor {
-        Upper            name;
+        db::Upper        name;
         Constructor_body body;
     };
 
     struct Struct {
         std::optional<Template_parameters> template_parameters;
         Constructor_body                   body;
-        Upper                              name;
+        db::Upper                          name;
         Range_id                           struct_token;
     };
 
     struct Enum {
         std::optional<Template_parameters> template_parameters;
         Separated<Constructor>             constructors;
-        Upper                              name;
+        db::Upper                          name;
         Range_id                           enum_token;
         Range_id                           equals_sign_token;
     };
 
     struct Alias {
         std::optional<Template_parameters> template_parameters;
-        Upper                              name;
+        db::Upper                          name;
         Type_id                            type;
         Range_id                           alias_token;
         Range_id                           equals_sign_token;
@@ -618,7 +615,7 @@ namespace ki::cst {
     struct Concept {
         std::optional<Template_parameters> template_parameters;
         std::vector<Concept_requirement>   requirements;
-        Upper                              name;
+        db::Upper                          name;
         Range_id                           concept_token;
         Range_id                           open_brace_token;
         Range_id                           close_brace_token;
@@ -634,7 +631,7 @@ namespace ki::cst {
     struct Submodule {
         std::optional<Template_parameters>  template_parameters;
         Surrounded<std::vector<Definition>> definitions;
-        Lower                               name;
+        db::Lower                           name;
         Range_id                            module_token;
     };
 
@@ -645,27 +642,24 @@ namespace ki::cst {
 
     struct Definition {
         Definition_variant variant;
-        Document_id        doc_id;
-        Range              range;
+        Range_id           range;
     };
 
     struct Arena {
-        utl::Index_vector<Expression_id, Expression> expr;
-        utl::Index_vector<Type_id, Type>             type;
-        utl::Index_vector<Pattern_id, Pattern>       patt;
-        utl::Index_vector<Range_id, Range>           range;
+        utl::Index_vector<Expression_id, Expression> expressions;
+        utl::Index_vector<Type_id, Type>             types;
+        utl::Index_vector<Pattern_id, Pattern>       patterns;
+        utl::Index_vector<Range_id, lsp::Range>      ranges;
     };
 
     struct Import {
-        Separated<Lower> segments;
-        Range_id         import_token;
+        Separated<db::Lower> segments;
+        Range_id             import_token;
     };
 
     struct Module {
         std::vector<cst::Import>     imports;
         std::vector<cst::Definition> definitions;
-        cst::Arena                   arena;
-        Document_id                  doc_id;
     };
 
 } // namespace ki::cst

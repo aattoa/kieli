@@ -1,7 +1,8 @@
 #include <libutl/utilities.hpp>
 #include <libformat/internals.hpp>
 
-using namespace ki::format;
+using namespace ki;
+using namespace ki::fmt;
 
 namespace {
     struct Type_format_visitor {
@@ -89,7 +90,7 @@ namespace {
     };
 } // namespace
 
-void ki::format::format(State& state, cst::Type const& type)
+void ki::fmt::format(State& state, cst::Type const& type)
 {
     std::visit(Type_format_visitor { state }, type.variant);
 }

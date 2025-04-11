@@ -2,6 +2,8 @@
 #include <libutl/mailbox.hpp>
 #include <cppunittest/unittest.hpp>
 
+using namespace ki;
+
 UNITTEST("mailbox")
 {
     utl::Mailbox<std::string> mailbox;

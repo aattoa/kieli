@@ -4,9 +4,13 @@
 #include <libutl/utilities.hpp>
 #include <libutl/index_vector.hpp>
 #include <libutl/disjoint_set.hpp>
-#include <libresolve/module.hpp>
+#include <libcompiler/db.hpp>
 
-namespace ki::resolve {
+namespace ki::res {
+
+    struct Scope_id : utl::Vector_index<Scope_id, std::uint32_t> {
+        using Vector_index::Vector_index;
+    };
 
     struct Constants {
         hir::Type_id       type_i8;
@@ -32,14 +36,14 @@ namespace ki::resolve {
         hir::Type_variable_kind kind {};
         hir::Type_variable_id   var_id;
         hir::Type_id            type_id;
-        Range                   origin;
+        lsp::Range              origin;
         bool                    is_solved {};
     };
 
     struct Mutability_variable_data {
         hir::Mutability_variable_id var_id;
         hir::Mutability_id          mut_id;
-        Range                       origin;
+        lsp::Range                  origin;
         bool                        is_solved {};
     };
 
@@ -52,7 +56,7 @@ namespace ki::resolve {
         utl::Disjoint_set    type_var_set;
         Mutability_variables mut_vars;
         utl::Disjoint_set    mut_var_set;
-        Document_id          doc_id;
+        db::Document_id      doc_id;
     };
 
     struct Tags {
@@ -60,40 +64,43 @@ namespace ki::resolve {
         std::size_t current_local_variable_tag {};
     };
 
-    struct Document_info {
-        cst::Arena cst;
-        ast::Arena ast;
+    struct Scope {
+        hir::Identifier_map<hir::Variable_bind>   variables;
+        hir::Identifier_map<hir::Type_bind>       types;
+        hir::Identifier_map<hir::Mutability_bind> mutabilities;
+        db::Document_id                           doc_id;
+        std::optional<Scope_id>                   parent_id;
     };
 
-    using Document_info_map
-        = std::unordered_map<Document_id, Document_info, utl::Hash_vector_index>;
+    using Scope_map   = std::unordered_map<hir::Function_id, Scope_id, utl::Hash_vector_index>;
+    using Scope_arena = utl::Index_arena<Scope_id, Scope>;
 
     struct Context {
-        Database&         db;
-        hir::Arena        hir;
-        Info_arena        info;
-        Tags              tags;
-        Constants         constants;
-        Document_info_map documents;
+        db::Database& db;
+        hir::Arena    hir;
+        Tags          tags;
+        Constants     constants;
+        Scope_arena   scopes;
+        Scope_map     scope_map;
     };
 
-    auto context(Database& db) -> Context;
+    auto context(db::Database& db) -> Context;
 
     auto make_constants(hir::Arena& arena) -> Constants;
 
-    auto make_inference_state(Document_id doc_id) -> Inference_state;
+    auto inference_state(db::Document_id doc_id) -> Inference_state;
 
     auto fresh_template_parameter_tag(Tags& tags) -> hir::Template_parameter_tag;
 
     auto fresh_local_variable_tag(Tags& tags) -> hir::Local_variable_tag;
 
-    auto fresh_general_type_variable(Inference_state& state, hir::Arena& arena, Range origin)
+    auto fresh_general_type_variable(Inference_state& state, hir::Arena& arena, lsp::Range origin)
         -> hir::Type;
 
-    auto fresh_integral_type_variable(Inference_state& state, hir::Arena& arena, Range origin)
+    auto fresh_integral_type_variable(Inference_state& state, hir::Arena& arena, lsp::Range origin)
         -> hir::Type;
 
-    auto fresh_mutability_variable(Inference_state& state, hir::Arena& arena, Range origin)
+    auto fresh_mutability_variable(Inference_state& state, hir::Arena& arena, lsp::Range origin)
         -> hir::Mutability;
 
     void flatten_type(Context& ctx, Inference_state& state, hir::Type_variant& type);
@@ -112,80 +119,80 @@ namespace ki::resolve {
 
     void ensure_no_unsolved_variables(Context& ctx, Inference_state& state);
 
-    auto collect_document(Context& ctx, Document_id doc_id) -> hir::Environment_id;
+    auto collect_document(Context& ctx, db::Document_id doc_id) -> hir::Environment_id;
 
     void resolve_environment(Context& ctx, hir::Environment_id env_id);
 
-    auto resolve_enumeration(Context& ctx, Enumeration_info& info) -> hir::Enumeration&;
+    auto resolve_enumeration(Context& ctx, hir::Enumeration_id id) -> hir::Enumeration&;
 
-    auto resolve_concept(Context& ctx, Concept_info& info) -> hir::Concept&;
+    auto resolve_concept(Context& ctx, hir::Concept_id id) -> hir::Concept&;
 
-    auto resolve_alias(Context& ctx, Alias_info& info) -> hir::Alias&;
+    auto resolve_alias(Context& ctx, hir::Alias_id id) -> hir::Alias&;
 
-    auto resolve_function_body(Context& ctx, Function_info& info) -> hir::Expression&;
+    auto resolve_function_body(Context& ctx, hir::Function_id id) -> hir::Expression&;
 
-    auto resolve_function_signature(Context& ctx, Function_info& info) -> hir::Function_signature&;
+    auto resolve_function_signature(Context& ctx, hir::Function_id id) -> hir::Function_signature&;
 
     // Resolve template parameters and register them in the given scope.
     auto resolve_template_parameters(
         Context&                        ctx,
         Inference_state&                state,
-        hir::Scope_id                   scope_id,
+        Scope_id                        scope_id,
         hir::Environment_id             env_id,
         ast::Template_parameters const& parameters) -> std::vector<hir::Template_parameter>;
 
     auto resolve_template_arguments(
         Context&                                    ctx,
         Inference_state&                            state,
-        hir::Scope_id                               scope_id,
+        Scope_id                                    scope_id,
         hir::Environment_id                         env_id,
         std::vector<hir::Template_parameter> const& parameters,
         std::vector<ast::Template_argument> const&  arguments)
         -> std::vector<hir::Template_argument>;
 
-    auto resolve_mutability(Context& ctx, hir::Scope_id scope_id, ast::Mutability const& mutability)
+    auto resolve_mutability(Context& ctx, Scope_id scope_id, ast::Mutability const& mutability)
         -> hir::Mutability;
 
     auto resolve_expression(
         Context&               ctx,
         Inference_state&       state,
-        hir::Scope_id          scope_id,
+        Scope_id               scope_id,
         hir::Environment_id    env_id,
         ast::Expression const& expression) -> hir::Expression;
 
     auto resolve_pattern(
         Context&            ctx,
         Inference_state&    state,
-        hir::Scope_id       scope_id,
+        Scope_id            scope_id,
         hir::Environment_id env_id,
         ast::Pattern const& pattern) -> hir::Pattern;
 
     auto resolve_type(
         Context&            ctx,
         Inference_state&    state,
-        hir::Scope_id       scope_id,
+        Scope_id            scope_id,
         hir::Environment_id env_id,
         ast::Type const&    type) -> hir::Type;
 
     auto resolve_concept_reference(
         Context&            ctx,
         Inference_state&    state,
-        hir::Scope_id       scope_id,
+        Scope_id            scope_id,
         hir::Environment_id env_id,
         ast::Path const&    path) -> hir::Concept_id;
 
-    void bind_mutability(Scope& scope, Mutability_bind bind);
-    void bind_variable(Scope& scope, Variable_bind bind);
-    void bind_type(Scope& scope, Type_bind bind);
+    void bind_mutability(Scope& scope, hir::Mutability_bind bind);
+    void bind_variable(Scope& scope, hir::Variable_bind bind);
+    void bind_type(Scope& scope, hir::Type_bind bind);
 
     // Emit warnings for any unused bindings.
-    void report_unused(Database& db, Scope& scope);
+    void report_unused(db::Database& db, Scope& scope);
 
-    auto find_mutability(Context& ctx, hir::Scope_id scope_id, utl::String_id string_id)
-        -> Mutability_bind*;
-    auto find_variable(Context& ctx, hir::Scope_id scope_id, utl::String_id string_id)
-        -> Variable_bind*;
-    auto find_type(Context& ctx, hir::Scope_id scope_id, utl::String_id string_id) -> Type_bind*;
+    auto find_mutability(Context& ctx, Scope_id scope_id, utl::String_id string_id)
+        -> hir::Mutability_bind*;
+    auto find_variable(Context& ctx, Scope_id scope_id, utl::String_id string_id)
+        -> hir::Variable_bind*;
+    auto find_type(Context& ctx, Scope_id scope_id, utl::String_id string_id) -> hir::Type_bind*;
 
     // Check whether a type variable with `tag` occurs in `type`.
     auto occurs_check(
@@ -195,36 +202,39 @@ namespace ki::resolve {
     void require_subtype_relationship(
         Context&                 ctx,
         Inference_state&         state,
-        Range                    range,
+        lsp::Range               range,
         hir::Type_variant const& sub,
         hir::Type_variant const& super);
 
     // Get the HIR representation of the error type with `range`.
-    auto error_type(Constants const& constants, Range range) -> hir::Type;
+    auto error_type(Constants const& constants, lsp::Range range) -> hir::Type;
 
     // Get the HIR representation of an error expression with `range`.
-    auto error_expression(Constants const& constants, Range range) -> hir::Expression;
+    auto error_expression(Constants const& constants, lsp::Range range) -> hir::Expression;
 
     // Get the HIR representation of a unit tuple expression with `range`.
-    auto unit_expression(Constants const& constants, Range range) -> hir::Expression;
+    auto unit_expression(Constants const& constants, lsp::Range range) -> hir::Expression;
+
+    // Create an empty scope with no parent.
+    auto make_scope(db::Document_id doc_id) -> Scope;
 
     // Invoke `callback` with a temporary `Scope_id`.
-    auto scope(Context& ctx, Scope scope, std::invocable<hir::Scope_id> auto const& callback)
+    auto scope(Context& ctx, Scope scope, std::invocable<Scope_id> auto const& callback)
     {
-        auto scope_id = ctx.info.scopes.push(std::move(scope));
+        auto scope_id = ctx.scopes.push(std::move(scope));
         auto result   = std::invoke(callback, scope_id);
-        ctx.info.scopes.kill(scope_id);
+        ctx.scopes.kill(scope_id);
         return result;
     }
 
-    template <std::invocable<hir::Scope_id> Callback>
-    auto child_scope(Context& ctx, hir::Scope_id const parent_id, Callback const& callback)
+    template <std::invocable<Scope_id> Callback>
+    auto child_scope(Context& ctx, Scope_id const parent_id, Callback const& callback)
     {
         Scope child {
             .variables    = {},
             .types        = {},
             .mutabilities = {},
-            .doc_id       = ctx.info.scopes.index_vector[parent_id].doc_id,
+            .doc_id       = ctx.scopes.index_vector[parent_id].doc_id,
             .parent_id    = parent_id,
         };
         return scope(ctx, std::move(child), callback);
@@ -232,6 +242,6 @@ namespace ki::resolve {
 
     void debug_display_environment(Context const& ctx, hir::Environment_id env_id);
 
-} // namespace ki::resolve
+} // namespace ki::res
 
 #endif // KIELI_LIBRESOLVE_RESOLVE

@@ -1,15 +1,19 @@
-#ifndef KIELI_LIBCOMPILER_TREE_FWD
-#define KIELI_LIBCOMPILER_TREE_FWD
+#ifndef KIELI_LIBCOMPILER_FWD
+#define KIELI_LIBCOMPILER_FWD
 
 #include <libutl/utilities.hpp>
 #include <libutl/index_vector.hpp>
 
-#define DEFINE_INDEX(name)                      \
-    struct name : utl::Vector_index<name> {     \
-        using Vector_index<name>::Vector_index; \
+#define DEFINE_INDEX(name)                                 \
+    struct name : utl::Vector_index<name, std::uint32_t> { \
+        using Vector_index::Vector_index;                  \
     }
 
 // NOLINTBEGIN(bugprone-forward-declaration-namespace)
+
+namespace ki::db {
+    DEFINE_INDEX(Document_id);
+} // namespace ki::db
 
 namespace ki::cst {
     struct Arena;
@@ -51,11 +55,10 @@ namespace ki::hir {
     DEFINE_INDEX(Constructor_id);
     DEFINE_INDEX(Type_variable_id);
     DEFINE_INDEX(Mutability_variable_id);
-    DEFINE_INDEX(Scope_id);
 } // namespace ki::hir
 
 // NOLINTEND(bugprone-forward-declaration-namespace)
 
 #undef DEFINE_INDEX
 
-#endif // KIELI_LIBCOMPILER_TREE_FWD
+#endif // KIELI_LIBCOMPILER_FWD

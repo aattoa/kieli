@@ -2,9 +2,7 @@
 #define KIELI_LIBCOMPILER_AST
 
 #include <libutl/utilities.hpp>
-#include <libutl/index_vector.hpp>
 #include <libcompiler/compiler.hpp>
-#include <libcompiler/tree_fwd.hpp>
 
 /*
 
@@ -23,20 +21,20 @@
 namespace ki::ast {
 
     struct Wildcard {
-        Range range;
+        lsp::Range range;
     };
 
     struct Parameterized_mutability {
-        Lower name;
+        db::Lower name;
     };
 
-    struct Mutability_variant : std::variant<Mutability, Parameterized_mutability> {
+    struct Mutability_variant : std::variant<db::Mutability, Parameterized_mutability> {
         using variant::variant;
     };
 
     struct Mutability {
         Mutability_variant variant;
-        Range              range;
+        lsp::Range         range;
     };
 
     struct Template_argument : std::variant<Type_id, Expression_id, Mutability, Wildcard> {
@@ -45,7 +43,7 @@ namespace ki::ast {
 
     struct Path_segment {
         std::optional<std::vector<Template_argument>> template_arguments;
-        Name                                          name;
+        db::Name                                      name;
     };
 
     struct Path_root_global {};
@@ -62,21 +60,21 @@ namespace ki::ast {
 
     struct Template_type_parameter {
         using Default = std::variant<Type_id, Wildcard>;
-        Upper                  name;
+        db::Upper              name;
         std::vector<Path>      concepts;
         std::optional<Default> default_argument;
     };
 
     struct Template_value_parameter {
         using Default = std::variant<Expression_id, Wildcard>;
-        Lower                  name;
+        db::Lower              name;
         Type_id                type;
         std::optional<Default> default_argument;
     };
 
     struct Template_mutability_parameter {
         using Default = std::variant<Mutability, Wildcard>;
-        Lower                  name;
+        db::Lower              name;
         std::optional<Default> default_argument;
     };
 
@@ -90,7 +88,7 @@ namespace ki::ast {
 
     struct Template_parameter {
         Template_parameter_variant variant;
-        Range                      range;
+        lsp::Range                 range;
     };
 
     using Template_parameters = std::optional<std::vector<Template_parameter>>;
@@ -102,11 +100,11 @@ namespace ki::ast {
     };
 
     struct Struct_field_initializer {
-        Lower         name;
+        db::Lower     name;
         Expression_id expression;
     };
 
-    struct Match_case {
+    struct Match_arm {
         Pattern_id    pattern;
         Expression_id expression;
     };
@@ -117,7 +115,7 @@ namespace ki::ast {
     auto describe_loop_source(Loop_source source) -> std::string_view;
     auto describe_conditional_source(Conditional_source source) -> std::string_view;
 
-    namespace expression {
+    namespace expr {
         struct Array {
             std::vector<Expression> elements;
         };
@@ -151,7 +149,7 @@ namespace ki::ast {
             Expression_id  left;
             Expression_id  right;
             utl::String_id op;
-            Range          op_range;
+            lsp::Range     op_range;
         };
 
         struct Tuple_initializer {
@@ -166,13 +164,13 @@ namespace ki::ast {
 
         struct Struct_field {
             Expression_id base_expression;
-            Lower         field_name;
+            db::Lower     field_name;
         };
 
         struct Tuple_field {
             Expression_id base_expression;
             std::size_t   field_index {};
-            Range         field_index_range;
+            lsp::Range    field_index_range;
         };
 
         struct Array_index {
@@ -184,7 +182,7 @@ namespace ki::ast {
             std::vector<Expression_id>                    function_arguments;
             std::optional<std::vector<Template_argument>> template_arguments;
             Expression_id                                 base_expression;
-            Lower                                         method_name;
+            db::Lower                                     method_name;
         };
 
         struct Conditional {
@@ -196,8 +194,8 @@ namespace ki::ast {
         };
 
         struct Match {
-            std::vector<Match_case> cases;
-            Expression_id           scrutinee;
+            std::vector<Match_arm> arms;
+            Expression_id          scrutinee;
         };
 
         struct Type_ascription {
@@ -212,12 +210,12 @@ namespace ki::ast {
         };
 
         struct Type_alias {
-            Upper   name;
-            Type_id type;
+            db::Upper name;
+            Type_id   type;
         };
 
-        struct Ret {
-            Expression_id returned_expression;
+        struct Return {
+            Expression_id expression;
         };
 
         struct Sizeof {
@@ -226,67 +224,67 @@ namespace ki::ast {
 
         struct Addressof {
             Mutability    mutability;
-            Expression_id place_expression;
+            Expression_id expression;
         };
 
-        struct Dereference {
-            Expression_id reference_expression;
+        struct Deref {
+            Expression_id expression;
         };
 
         struct Defer {
-            Expression_id effect_expression;
+            Expression_id expression;
         };
-    } // namespace expression
+    } // namespace expr
 
     struct Expression_variant
         : std::variant<
-              Error,
-              Wildcard,
-              Integer,
-              Floating,
-              Boolean,
-              String,
+              db::Error,
+              db::Integer,
+              db::Floating,
+              db::Boolean,
+              db::String,
               Path,
-              expression::Array,
-              expression::Tuple,
-              expression::Loop,
-              expression::Break,
-              expression::Continue,
-              expression::Block,
-              expression::Function_call,
-              expression::Tuple_initializer,
-              expression::Struct_initializer,
-              expression::Infix_call,
-              expression::Struct_field,
-              expression::Tuple_field,
-              expression::Array_index,
-              expression::Method_call,
-              expression::Conditional,
-              expression::Match,
-              expression::Type_ascription,
-              expression::Let,
-              expression::Type_alias,
-              expression::Ret,
-              expression::Sizeof,
-              expression::Addressof,
-              expression::Dereference,
-              expression::Defer> {
+              Wildcard,
+              expr::Array,
+              expr::Tuple,
+              expr::Loop,
+              expr::Break,
+              expr::Continue,
+              expr::Block,
+              expr::Function_call,
+              expr::Tuple_initializer,
+              expr::Struct_initializer,
+              expr::Infix_call,
+              expr::Struct_field,
+              expr::Tuple_field,
+              expr::Array_index,
+              expr::Method_call,
+              expr::Conditional,
+              expr::Match,
+              expr::Type_ascription,
+              expr::Let,
+              expr::Type_alias,
+              expr::Return,
+              expr::Sizeof,
+              expr::Addressof,
+              expr::Deref,
+              expr::Defer> {
         using variant::variant;
     };
 
     struct Expression {
         Expression_variant variant;
-        Range              range;
+        lsp::Range         range;
     };
 
-    namespace pattern {
+    namespace patt {
         struct Name {
-            Lower      name;
+            db::Lower  name;
             Mutability mutability;
         };
 
         struct Field {
-            Lower                     name;
+            db::Lower                 name;
             std::optional<Pattern_id> pattern;
         };
 
@@ -311,7 +309,7 @@ namespace ki::ast {
         };
 
         struct Abbreviated_constructor {
-            Upper            name;
+            db::Upper        name;
             Constructor_body body;
         };
 
@@ -327,27 +325,27 @@ namespace ki::ast {
             Pattern_id guarded_pattern;
             Expression guard_expression;
         };
-    } // namespace pattern
+    } // namespace patt
 
     struct Pattern_variant
         : std::variant<
-              Integer,
-              Floating,
-              Boolean,
-              String,
+              db::Integer,
+              db::Floating,
+              db::Boolean,
+              db::String,
               Wildcard,
-              pattern::Name,
-              pattern::Constructor,
-              pattern::Abbreviated_constructor,
-              pattern::Tuple,
-              pattern::Slice,
-              pattern::Guarded> {
+              patt::Name,
+              patt::Constructor,
+              patt::Abbreviated_constructor,
+              patt::Tuple,
+              patt::Slice,
+              patt::Guarded> {
         using variant::variant;
     };
 
     struct Pattern {
         Pattern_variant variant;
-        Range           range;
+        lsp::Range      range;
     };
 
     namespace type {
@@ -392,7 +390,7 @@ namespace ki::ast {
 
     struct Type_variant
         : std::variant<
-              Error,
+              db::Error,
               Wildcard,
               Path,
               type::Never,
@@ -409,19 +407,19 @@ namespace ki::ast {
 
     struct Type {
         Type_variant variant;
-        Range        range;
+        lsp::Range   range;
     };
 
     struct Function_signature {
         Template_parameters             template_parameters;
         std::vector<Function_parameter> function_parameters;
         Type                            return_type;
-        Lower                           name;
+        db::Lower                       name;
     };
 
     struct Type_signature {
         std::vector<Path> concepts;
-        Upper             name;
+        db::Upper         name;
     };
 
     struct Function {
@@ -430,9 +428,9 @@ namespace ki::ast {
     };
 
     struct Field {
-        Lower name;
-        Type  type;
-        Range range;
+        db::Lower  name;
+        Type       type;
+        lsp::Range range;
     };
 
     struct Struct_constructor {
@@ -451,18 +449,18 @@ namespace ki::ast {
     };
 
     struct Constructor {
-        Upper            name;
+        db::Upper        name;
         Constructor_body body;
     };
 
     struct Enumeration {
         std::vector<Constructor> constructors;
-        Upper                    name;
+        db::Upper                name;
         Template_parameters      template_parameters;
     };
 
     struct Alias {
-        Upper               name;
+        db::Upper           name;
         Type                type;
         Template_parameters template_parameters;
     };
@@ -470,7 +468,7 @@ namespace ki::ast {
     struct Concept {
         std::vector<Function_signature> function_signatures;
         std::vector<Type_signature>     type_signatures;
-        Upper                           name;
+        db::Upper                       name;
         Template_parameters             template_parameters;
     };
 
@@ -482,7 +480,7 @@ namespace ki::ast {
 
     struct Submodule {
         std::vector<Definition> definitions;
-        Lower                   name;
+        db::Lower               name;
         Template_parameters     template_parameters;
     };
 
@@ -493,14 +491,13 @@ namespace ki::ast {
 
     struct Definition {
         Definition_variant variant;
-        Document_id        document_id;
-        Range              range;
+        lsp::Range         range;
     };
 
     struct Arena {
-        utl::Index_vector<Expression_id, Expression> expr;
-        utl::Index_vector<Pattern_id, Pattern>       patt;
-        utl::Index_vector<Type_id, Type>             type;
+        utl::Index_vector<Expression_id, Expression> expressions;
+        utl::Index_vector<Pattern_id, Pattern>       patterns;
+        utl::Index_vector<Type_id, Type>             types;
     };
 
 } // namespace ki::ast

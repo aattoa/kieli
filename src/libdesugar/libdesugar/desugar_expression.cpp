@@ -1,67 +1,66 @@
 #include <libutl/utilities.hpp>
 #include <libdesugar/internals.hpp>
 
-using namespace ki::desugar;
+using namespace ki;
+using namespace ki::des;
 
 namespace {
-    auto constant_loop_condition_diagnostic(ki::Range range, bool condition) -> ki::Diagnostic
+    auto constant_loop_condition_diagnostic(lsp::Range range, bool condition) -> lsp::Diagnostic
     {
-        return ki::Diagnostic {
+        return lsp::Diagnostic {
             .message  = condition ? "Use `loop` instead of `while true`" : "Loop will never run",
             .range    = range,
-            .severity = condition ? ki::Severity::Information : ki::Severity::Warning,
+            .severity = condition ? lsp::Severity::Information : lsp::Severity::Warning,
             .related_info = {},
         };
     }
 
     auto duplicate_fields_error(
-        Context ctx, std::string_view name, ki::Range first, ki::Range second) -> ki::Diagnostic
+        Context& ctx, std::string_view name, lsp::Range first, lsp::Range second) -> lsp::Diagnostic
     {
-        return ki::Diagnostic {
+        lsp::Diagnostic_related related {
+            .message = "First specified here",
+            .location { .doc_id = ctx.doc_id, .range = first },
+        };
+        return lsp::Diagnostic {
             .message      = std::format("Duplicate initializer for struct member {}", name),
             .range        = second,
-            .severity     = ki::Severity::Error,
-            .related_info = utl::to_vector({
-                ki::Diagnostic_related {
-                    .message = "First specified here",
-                    .location { .doc_id = ctx.doc_id, .range = first },
-                },
-            }),
+            .severity     = lsp::Severity::Error,
+            .related_info = utl::to_vector({ std::move(related) }),
         };
     }
 
-    auto check_has_duplicate_fields(
-        Context const ctx, cst::expression::Struct_init const& structure) -> bool
+    auto check_has_duplicate_fields(Context& ctx, cst::expr::Struct_init const& structure) -> bool
     {
         auto const& fields = structure.fields.value.elements;
         for (auto it = fields.begin(); it != fields.end(); ++it) {
             auto const duplicate = std::ranges::find(
                 it + 1, fields.end(), it->name.id, [](auto const& field) { return field.name.id; });
             if (duplicate != fields.end()) {
-                ki::Diagnostic diagnostic = duplicate_fields_error(
+                lsp::Diagnostic diagnostic = duplicate_fields_error(
                     ctx,
                     ctx.db.string_pool.get(it->name.id),
                     it->name.range,
                     duplicate->name.range);
-                ki::add_diagnostic(ctx.db, ctx.doc_id, std::move(diagnostic));
+                db::add_diagnostic(ctx.db, ctx.doc_id, std::move(diagnostic));
                 return true;
             }
         }
         return false;
     }
 
-    auto break_expression(Context const ctx, ki::Range const range) -> ast::Expression_id
+    auto break_expression(Context& ctx, lsp::Range const range) -> ast::Expression_id
     {
-        return ctx.ast.expr.push(
-            ast::expression::Break { ctx.ast.expr.push(unit_value(range)) }, range);
+        return ctx.ast.expressions.push(
+            ast::expr::Break { ctx.ast.expressions.push(unit_value(range)) }, range);
     }
 
-    struct Expression_desugaring_visitor {
-        Context                ctx;
-        cst::Expression const& this_expression;
+    struct Visitor {
+        Context&      ctx;
+        cst::Range_id range_id;
 
         auto operator()(
-            utl::one_of<ki::Integer, ki::Floating, ki::Boolean, ki::String, ki::Error> auto const&
+            utl::one_of<db::Integer, db::Floating, db::Boolean, db::String, db::Error> auto const&
                 passthrough) const -> ast::Expression_variant
         {
             return passthrough;
@@ -74,38 +73,36 @@ namespace {
 
         auto operator()(cst::Wildcard const& wildcard) const -> ast::Expression_variant
         {
-            return ast::Wildcard { .range = ctx.cst.range[wildcard.underscore_token] };
+            return ast::Wildcard { .range = ctx.cst.ranges[wildcard.underscore_token] };
         }
 
-        auto operator()(cst::expression::Paren const& paren) const -> ast::Expression_variant
+        auto operator()(cst::expr::Paren const& paren) const -> ast::Expression_variant
         {
-            cst::Expression const&        expr = ctx.cst.expr[paren.expression.value];
-            Expression_desugaring_visitor visitor { .ctx = ctx, .this_expression = expr };
-            return std::visit(visitor, expr.variant);
+            cst::Expression const& expr = ctx.cst.expressions[paren.expression.value];
+            return std::visit(Visitor { .ctx = ctx, .range_id = expr.range }, expr.variant);
         }
 
-        auto operator()(cst::expression::Array const& literal) const -> ast::Expression_variant
+        auto operator()(cst::expr::Array const& literal) const -> ast::Expression_variant
         {
-            return ast::expression::Array { std::ranges::to<std::vector>(
+            return ast::expr::Array { std::ranges::to<std::vector>(
                 std::views::transform(literal.elements.value.elements, deref_desugar(ctx))) };
         }
 
-        auto operator()(cst::expression::Tuple const& tuple) const -> ast::Expression_variant
+        auto operator()(cst::expr::Tuple const& tuple) const -> ast::Expression_variant
         {
-            return ast::expression::Tuple { std::ranges::to<std::vector>(
+            return ast::expr::Tuple { std::ranges::to<std::vector>(
                 std::views::transform(tuple.fields.value.elements, deref_desugar(ctx))) };
         }
 
-        auto operator()(cst::expression::Conditional const& conditional) const
-            -> ast::Expression_variant
+        auto operator()(cst::expr::Conditional const& conditional) const -> ast::Expression_variant
         {
             ast::Expression_id const false_branch
                 = conditional.false_branch.has_value()
                     ? desugar(ctx, conditional.false_branch->body)
-                    : ctx.ast.expr.push(unit_value(this_expression.range));
+                    : ctx.ast.expressions.push(unit_value(ctx.cst.ranges[range_id]));
 
-            if (auto const* const let
-                = std::get_if<cst::expression::Let>(&ctx.cst.expr[conditional.condition].variant)) {
+            if (auto const* const let = std::get_if<cst::expr::Let>(
+                    &ctx.cst.expressions[conditional.condition].variant)) {
                 /*
                     if let a = b { c } else { d }
 
@@ -120,24 +117,24 @@ namespace {
                 auto initializer = desugar(ctx, let->initializer);
 
                 if (let->type.has_value()) {
-                    initializer = ctx.ast.expr.push(ast::Expression {
-                        .variant = ast::expression::Type_ascription {
-                            .expression    = initializer,
-                            .type = desugar(ctx, let->type.value()),
+                    initializer = ctx.ast.expressions.push(ast::Expression {
+                        .variant = ast::expr::Type_ascription {
+                            .expression = initializer,
+                            .type       = desugar(ctx, let->type.value()),
                         },
-                        .range = ctx.cst.expr[let->initializer].range,
+                        .range = ctx.cst.ranges[ctx.cst.expressions[let->initializer].range],
                     });
                 }
 
-                return ast::expression::Match {
-                    .cases = utl::to_vector({
-                        ast::Match_case {
+                return ast::expr::Match {
+                    .arms = utl::to_vector({
+                        ast::Match_arm {
                             .pattern    = desugar(ctx, let->pattern),
                             .expression = desugar(ctx, conditional.true_branch),
                         },
-                        ast::Match_case {
-                            .pattern
-                            = ctx.ast.patt.push(wildcard_pattern(ctx.cst.patt[let->pattern].range)),
+                        ast::Match_arm {
+                            .pattern    = ctx.ast.patterns.push(wildcard_pattern(
+                                ctx.cst.ranges[ctx.cst.patterns[let->pattern].range])),
                             .expression = false_branch,
                         },
                     }),
@@ -148,18 +145,18 @@ namespace {
 
             ast::Expression condition = deref_desugar(ctx, conditional.condition);
 
-            if (std::holds_alternative<ki::Boolean>(condition.variant)) {
-                ki::Diagnostic diagnostic {
+            if (std::holds_alternative<db::Boolean>(condition.variant)) {
+                lsp::Diagnostic diagnostic {
                     .message      = "Constant condition",
                     .range        = condition.range,
-                    .severity     = ki::Severity::Information,
+                    .severity     = lsp::Severity::Information,
                     .related_info = {},
                 };
-                ki::add_diagnostic(ctx.db, ctx.doc_id, std::move(diagnostic));
+                db::add_diagnostic(ctx.db, ctx.doc_id, std::move(diagnostic));
             }
 
-            return ast::expression::Conditional {
-                .condition    = ctx.ast.expr.push(std::move(condition)),
+            return ast::expr::Conditional {
+                .condition    = ctx.ast.expressions.push(std::move(condition)),
                 .true_branch  = desugar(ctx, conditional.true_branch),
                 .false_branch = false_branch,
                 .source
@@ -168,22 +165,22 @@ namespace {
             };
         }
 
-        auto operator()(cst::expression::Match const& match) const -> ast::Expression_variant
+        auto operator()(cst::expr::Match const& match) const -> ast::Expression_variant
         {
-            auto const desugar_case = [&](cst::Match_case const& match_case) {
-                return ast::Match_case {
-                    .pattern    = desugar(ctx, match_case.pattern),
-                    .expression = desugar(ctx, match_case.handler),
+            auto const desugar_arm = [&](cst::Match_arm const& arm) {
+                return ast::Match_arm {
+                    .pattern    = desugar(ctx, arm.pattern),
+                    .expression = desugar(ctx, arm.handler),
                 };
             };
-            return ast::expression::Match {
-                .cases = std::views::transform(match.cases.value, desugar_case)
-                       | std::ranges::to<std::vector>(),
+            return ast::expr::Match {
+                .arms = std::views::transform(match.arms.value, desugar_arm)
+                      | std::ranges::to<std::vector>(),
                 .scrutinee = desugar(ctx, match.scrutinee),
             };
         }
 
-        auto operator()(cst::expression::Block const& block) const -> ast::Expression_variant
+        auto operator()(cst::expr::Block const& block) const -> ast::Expression_variant
         {
             auto desugar_effect
                 = [&](auto const& effect) { return deref_desugar(ctx, effect.expression); };
@@ -199,16 +196,16 @@ namespace {
             ast::Expression_id const result = //
                 block.result_expression.has_value()
                     ? desugar(ctx, block.result_expression.value())
-                    : ctx.ast.expr.push(unit_value(ctx.cst.range[unit_token]));
+                    : ctx.ast.expressions.push(unit_value(ctx.cst.ranges[unit_token]));
 
-            return ast::expression::Block {
+            return ast::expr::Block {
                 .side_effects = std::move(side_effects),
                 .result       = result,
             };
         }
 
         [[nodiscard]] auto desugar_while_let_loop(
-            cst::expression::While_loop const& loop, cst::expression::Let const& let) const
+            cst::expr::While_loop const& loop, cst::expr::Let const& let) const
             -> ast::Expression_variant
         {
             /*
@@ -227,38 +224,38 @@ namespace {
             auto initializer = desugar(ctx, let.initializer);
 
             if (let.type.has_value()) {
-                initializer = ctx.ast.expr.push(ast::Expression {
-                    .variant = ast::expression::Type_ascription {
-                        .expression    = initializer,
-                        .type = desugar(ctx, let.type.value()),
+                initializer = ctx.ast.expressions.push(ast::Expression {
+                    .variant = ast::expr::Type_ascription {
+                        .expression = initializer,
+                        .type       = desugar(ctx, let.type.value()),
                     },
-                    .range = ctx.cst.expr[let.initializer].range,
+                    .range = ctx.cst.ranges[ctx.cst.expressions[let.initializer].range],
                 });
             }
 
-            auto cases = utl::to_vector({
-                ast::Match_case {
+            auto arms = utl::to_vector({
+                ast::Match_arm {
                     .pattern    = desugar(ctx, let.pattern),
                     .expression = desugar(ctx, loop.body),
                 },
-                ast::Match_case {
-                    .pattern    = ctx.ast.patt.push(wildcard_pattern(this_expression.range)),
-                    .expression = break_expression(ctx, this_expression.range),
+                ast::Match_arm {
+                    .pattern    = ctx.ast.patterns.push(wildcard_pattern(ctx.cst.ranges[range_id])),
+                    .expression = break_expression(ctx, ctx.cst.ranges[range_id]),
                 },
             });
 
-            return ast::expression::Loop {
-                .body = ctx.ast.expr.push(
-                    ast::expression::Match {
-                        .cases     = std::move(cases),
+            return ast::expr::Loop {
+                .body = ctx.ast.expressions.push(
+                    ast::expr::Match {
+                        .arms      = std::move(arms),
                         .scrutinee = initializer,
                     },
-                    ctx.cst.expr[loop.body].range),
+                    ctx.cst.ranges[ctx.cst.expressions[loop.body].range]),
                 .source = ast::Loop_source::While_loop,
             };
         }
 
-        [[nodiscard]] auto desugar_while_loop(cst::expression::While_loop const& loop) const
+        [[nodiscard]] auto desugar_while_loop(cst::expr::While_loop const& loop) const
             -> ast::Expression_variant
         {
             /*
@@ -269,108 +266,106 @@ namespace {
                 loop { if a { b } else { break } }
             */
             ast::Expression condition = deref_desugar(ctx, loop.condition);
-            if (auto const* const boolean = std::get_if<ki::Boolean>(&condition.variant)) {
-                ki::add_diagnostic(
-                    ctx.db,
-                    ctx.doc_id,
-                    constant_loop_condition_diagnostic(condition.range, boolean->value));
+            if (auto const* const boolean = std::get_if<db::Boolean>(&condition.variant)) {
+                auto diag = constant_loop_condition_diagnostic(condition.range, boolean->value);
+                db::add_diagnostic(ctx.db, ctx.doc_id, std::move(diag));
             }
-            return ast::expression::Loop {
-                .body = ctx.ast.expr.push(
-                    ast::expression::Conditional {
-                        .condition                 = ctx.ast.expr.push(std::move(condition)),
-                        .true_branch               = desugar(ctx, loop.body),
-                        .false_branch              = break_expression(ctx, this_expression.range),
-                        .source                    = ast::Conditional_source::While,
+            return ast::expr::Loop {
+                .body = ctx.ast.expressions.push(
+                    ast::expr::Conditional {
+                        .condition    = ctx.ast.expressions.push(std::move(condition)),
+                        .true_branch  = desugar(ctx, loop.body),
+                        .false_branch = break_expression(ctx, ctx.cst.ranges[range_id]),
+                        .source       = ast::Conditional_source::While,
                         .has_explicit_false_branch = true,
                     },
-                    ctx.cst.expr[loop.body].range),
+                    ctx.cst.ranges[ctx.cst.expressions[loop.body].range]),
                 .source = ast::Loop_source::While_loop,
             };
         }
 
-        auto operator()(cst::expression::While_loop const& loop) const -> ast::Expression_variant
+        auto operator()(cst::expr::While_loop const& loop) const -> ast::Expression_variant
         {
             if (auto const* const let
-                = std::get_if<cst::expression::Let>(&ctx.cst.expr[loop.condition].variant)) {
+                = std::get_if<cst::expr::Let>(&ctx.cst.expressions[loop.condition].variant)) {
                 return desugar_while_let_loop(loop, *let);
             }
             return desugar_while_loop(loop);
         }
 
-        auto operator()(cst::expression::Loop const& loop) const -> ast::Expression_variant
+        auto operator()(cst::expr::Loop const& loop) const -> ast::Expression_variant
         {
-            return ast::expression::Loop {
+            return ast::expr::Loop {
                 .body   = desugar(ctx, loop.body),
                 .source = ast::Loop_source::Plain_loop,
             };
         }
 
-        auto operator()(cst::expression::Function_call const& call) const -> ast::Expression_variant
+        auto operator()(cst::expr::Function_call const& call) const -> ast::Expression_variant
         {
-            return ast::expression::Function_call {
+            return ast::expr::Function_call {
                 .arguments = desugar(ctx, call.arguments.value.elements),
                 .invocable = desugar(ctx, call.invocable),
             };
         }
 
-        auto operator()(cst::expression::Tuple_init const& init) const -> ast::Expression_variant
+        auto operator()(cst::expr::Tuple_init const& init) const -> ast::Expression_variant
         {
-            return ast::expression::Tuple_initializer {
+            return ast::expr::Tuple_initializer {
                 .constructor_path = desugar(ctx, init.path),
                 .initializers     = desugar(ctx, init.fields),
             };
         }
 
-        auto operator()(cst::expression::Struct_init const& init) const -> ast::Expression_variant
+        auto operator()(cst::expr::Struct_init const& init) const -> ast::Expression_variant
         {
             if (check_has_duplicate_fields(ctx, init)) {
-                return ki::Error {};
+                return db::Error {};
             }
-            return ast::expression::Struct_initializer {
+            return ast::expr::Struct_initializer {
                 .constructor_path = desugar(ctx, init.path),
                 .initializers     = desugar(ctx, init.fields),
             };
         }
 
-        auto operator()(cst::expression::Infix_call const& call) const -> ast::Expression_variant
+        auto operator()(cst::expr::Infix_call const& call) const -> ast::Expression_variant
         {
-            return ast::expression::Infix_call {
+            return ast::expr::Infix_call {
                 .left     = desugar(ctx, call.left),
                 .right    = desugar(ctx, call.right),
                 .op       = call.op,
-                .op_range = ctx.cst.range[call.op_token],
+                .op_range = ctx.cst.ranges[call.op_token],
             };
         }
 
-        auto operator()(cst::expression::Struct_field const& field) const -> ast::Expression_variant
+        auto operator()(cst::expr::Struct_field const& field) const -> ast::Expression_variant
         {
-            return ast::expression::Struct_field {
+            return ast::expr::Struct_field {
                 .base_expression = desugar(ctx, field.base_expression),
                 .field_name      = field.name,
             };
         }
 
-        auto operator()(cst::expression::Tuple_field const& field) const -> ast::Expression_variant
+        auto operator()(cst::expr::Tuple_field const& field) const -> ast::Expression_variant
         {
-            return ast::expression::Tuple_field {
+            return ast::expr::Tuple_field {
                 .base_expression   = desugar(ctx, field.base_expression),
                 .field_index       = field.field_index,
-                .field_index_range = ctx.cst.range[field.field_index_token],
+                .field_index_range = ctx.cst.ranges[field.field_index_token],
             };
         }
 
-        auto operator()(cst::expression::Array_index const& field) const -> ast::Expression_variant
+        auto operator()(cst::expr::Array_index const& field) const -> ast::Expression_variant
         {
-            return ast::expression::Array_index {
+            return ast::expr::Array_index {
                 .base_expression  = desugar(ctx, field.base_expression),
                 .index_expression = desugar(ctx, field.index_expression),
             };
         }
 
-        auto operator()(cst::expression::Method_call const& call) const -> ast::Expression_variant
+        auto operator()(cst::expr::Method_call const& call) const -> ast::Expression_variant
         {
-            return ast::expression::Method_call {
+            return ast::expr::Method_call {
                 .function_arguments = desugar(ctx, call.function_arguments.value.elements),
                 .template_arguments = call.template_arguments.transform(desugar(ctx)),
                 .base_expression    = desugar(ctx, call.base_expression),
@@ -378,97 +373,93 @@ namespace {
             };
         }
 
-        auto operator()(cst::expression::Ascription const& ascription) const
-            -> ast::Expression_variant
+        auto operator()(cst::expr::Ascription const& ascription) const -> ast::Expression_variant
         {
-            return ast::expression::Type_ascription {
+            return ast::expr::Type_ascription {
                 .expression = desugar(ctx, ascription.base_expression),
                 .type       = desugar(ctx, ascription.type),
             };
         }
 
-        auto operator()(cst::expression::Let const& let) const -> ast::Expression_variant
+        auto operator()(cst::expr::Let const& let) const -> ast::Expression_variant
         {
-            return ast::expression::Let {
+            return ast::expr::Let {
                 .pattern     = desugar(ctx, let.pattern),
                 .initializer = desugar(ctx, let.initializer),
                 .type        = let.type.has_value()
                                  ? desugar(ctx, let.type.value())
-                                 : ctx.ast.type.push(wildcard_type(this_expression.range)),
+                                 : ctx.ast.types.push(wildcard_type(ctx.cst.ranges[range_id])),
             };
         }
 
-        auto operator()(cst::expression::Type_alias const& alias) const -> ast::Expression_variant
+        auto operator()(cst::expr::Type_alias const& alias) const -> ast::Expression_variant
         {
-            return ast::expression::Type_alias {
+            return ast::expr::Type_alias {
                 .name = alias.name,
                 .type = desugar(ctx, alias.type),
             };
         }
 
-        auto operator()(cst::expression::Ret const& ret) const -> ast::Expression_variant
+        auto operator()(cst::expr::Return const& ret) const -> ast::Expression_variant
         {
-            return ast::expression::Ret {
-                ret.returned_expression.has_value()
-                    ? desugar(ctx, ret.returned_expression.value())
-                    : ctx.ast.expr.push(unit_value(this_expression.range)),
+            return ast::expr::Return {
+                ret.expression.has_value()
+                    ? desugar(ctx, ret.expression.value())
+                    : ctx.ast.expressions.push(unit_value(ctx.cst.ranges[range_id])),
             };
         }
 
-        auto operator()(cst::expression::Break const& break_expression) const
-            -> ast::Expression_variant
+        auto operator()(cst::expr::Break const& break_expression) const -> ast::Expression_variant
         {
-            return ast::expression::Break {
+            return ast::expr::Break {
                 break_expression.result.has_value()
                     ? desugar(ctx, break_expression.result.value())
-                    : ctx.ast.expr.push(unit_value(this_expression.range)),
+                    : ctx.ast.expressions.push(unit_value(ctx.cst.ranges[range_id])),
             };
         }
 
-        auto operator()(cst::expression::Continue const&) const -> ast::Expression_variant
+        auto operator()(cst::expr::Continue const&) const -> ast::Expression_variant
         {
-            return ast::expression::Continue {};
+            return ast::expr::Continue {};
         }
 
-        auto operator()(cst::expression::Sizeof const& sizeof_) const -> ast::Expression_variant
+        auto operator()(cst::expr::Sizeof const& sizeof_) const -> ast::Expression_variant
         {
-            return ast::expression::Sizeof { desugar(ctx, sizeof_.type.value) };
+            return ast::expr::Sizeof { desugar(ctx, sizeof_.type.value) };
         }
 
-        auto operator()(cst::expression::Addressof const& addressof) const
-            -> ast::Expression_variant
+        auto operator()(cst::expr::Addressof const& addressof) const -> ast::Expression_variant
         {
-            return ast::expression::Addressof {
-                .mutability = desugar_mutability(
-                    addressof.mutability, ctx.cst.range[addressof.ampersand_token]),
-                .place_expression = desugar(ctx, addressof.place_expression),
+            return ast::expr::Addressof {
+                .mutability = desugar_opt_mut(
+                    ctx, addressof.mutability, ctx.cst.ranges[addressof.ampersand_token]),
+                .expression = desugar(ctx, addressof.expression),
             };
         }
 
-        auto operator()(cst::expression::Dereference const& dereference) const
-            -> ast::Expression_variant
+        auto operator()(cst::expr::Deref const& dereference) const -> ast::Expression_variant
         {
-            return ast::expression::Dereference {
-                .reference_expression = desugar(ctx, dereference.reference_expression),
-            };
+            return ast::expr::Deref { desugar(ctx, dereference.expression) };
         }
 
-        auto operator()(cst::expression::Defer const& defer) const -> ast::Expression_variant
+        auto operator()(cst::expr::Defer const& defer) const -> ast::Expression_variant
         {
-            return ast::expression::Defer { desugar(ctx, defer.effect_expression) };
+            return ast::expr::Defer { desugar(ctx, defer.expression) };
         }
 
-        auto operator()(cst::expression::For_loop const&) const -> ast::Expression_variant
+        auto operator()(cst::expr::For_loop const&) const -> ast::Expression_variant
         {
-            ki::add_error(
-                ctx.db, ctx.doc_id, this_expression.range, "For loops are not supported yet");
-            return ki::Error {};
+            db::add_error(
+                ctx.db, ctx.doc_id, ctx.cst.ranges[range_id], "For loops are not supported yet");
+            return db::Error {};
         }
     };
 } // namespace
 
-auto ki::desugar::desugar(Context const ctx, cst::Expression const& expression) -> ast::Expression
+auto ki::des::desugar(Context& ctx, cst::Expression const& expr) -> ast::Expression
 {
-    Expression_desugaring_visitor visitor { .ctx = ctx, .this_expression = expression };
-    return { .variant = std::visit(visitor, expression.variant), .range = expression.range };
+    return ast::Expression {
+        .variant = std::visit(Visitor { .ctx = ctx, .range_id = expr.range }, expr.variant),
+        .range   = ctx.cst.ranges[expr.range],
+    };
 }

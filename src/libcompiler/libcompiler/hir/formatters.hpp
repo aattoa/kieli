@@ -97,42 +97,42 @@ namespace ki::hir::dtl {
             std::format_to(out, "_");
         }
 
-        void operator()(utl::one_of<ki::Integer, ki::Floating, ki::Boolean> auto literal)
+        void operator()(utl::one_of<db::Integer, db::Floating, db::Boolean> auto literal)
         {
             std::format_to(out, "{}", literal.value);
         }
 
-        void operator()(ki::String const& literal) const
+        void operator()(db::String const& literal) const
         {
             std::format_to(out, "{:?}", pool.get(literal.id));
         }
 
-        void operator()(expression::Array_literal const& literal) const
+        void operator()(expr::Array_literal const& literal) const
         {
             std::format_to(out, "[{}]", wrap(literal.elements));
         }
 
-        void operator()(expression::Tuple const& tuple) const
+        void operator()(expr::Tuple const& tuple) const
         {
             std::format_to(out, "({})", wrap(tuple.fields));
         }
 
-        void operator()(expression::Loop const& loop) const
+        void operator()(expr::Loop const& loop) const
         {
             std::format_to(out, "loop {}", wrap(loop.body));
         }
 
-        void operator()(expression::Break const& break_) const
+        void operator()(expr::Break const& break_) const
         {
             std::format_to(out, "break {}", wrap(break_.result));
         }
 
-        void operator()(expression::Continue const&) const
+        void operator()(expr::Continue const&) const
         {
             std::format_to(out, "continue");
         }
 
-        void operator()(expression::Block const& block) const
+        void operator()(expr::Block const& block) const
         {
             std::format_to(out, "{{");
             for (Expression const& side_effect : block.side_effects) {
@@ -141,64 +141,62 @@ namespace ki::hir::dtl {
             std::format_to(out, " {} }}", wrap(block.result));
         }
 
-        void operator()(expression::Let const& let) const
+        void operator()(expr::Let const& let) const
         {
             std::format_to(
                 out, "let {}: {} = {}", wrap(let.pattern), wrap(let.type), wrap(let.initializer));
         }
 
-        void operator()(expression::Match const& match) const
+        void operator()(expr::Match const& match) const
         {
-            std::format_to(out, "match {} {{", wrap(match.expression));
-            for (auto const& match_case : match.cases) {
-                std::format_to(
-                    out, " {} -> {}", wrap(match_case.pattern), wrap(match_case.expression));
+            std::format_to(out, "match {} {{", wrap(match.scrutinee));
+            for (auto const& arm : match.arms) {
+                std::format_to(out, " {} -> {}", wrap(arm.pattern), wrap(arm.expression));
             }
             std::format_to(out, " }}");
         }
 
-        void operator()(expression::Variable_reference const& variable) const
+        void operator()(expr::Variable_reference const& variable) const
         {
             std::format_to(out, "{}", pool.get(variable.name.id));
         }
 
-        void operator()(expression::Function_reference const& reference) const
+        void operator()(expr::Function_reference const& reference) const
         {
             std::format_to(out, "{}", pool.get(reference.name.id));
         }
 
-        void operator()(expression::Indirect_call const& call) const
+        void operator()(expr::Indirect_call const& call) const
         {
             std::format_to(out, "{}({})", wrap(call.invocable), wrap(call.arguments));
         }
 
-        void operator()(expression::Direct_call const& call) const
+        void operator()(expr::Direct_call const& call) const
         {
             std::format_to(out, "{}({})", pool.get(call.function_name.id), wrap(call.arguments));
         }
 
-        void operator()(expression::Sizeof const& sizeof_) const
+        void operator()(expr::Sizeof const& sizeof_) const
         {
             std::format_to(out, "sizeof({})", wrap(sizeof_.inspected_type));
         }
 
-        void operator()(expression::Addressof const& addressof) const
+        void operator()(expr::Addressof const& addressof) const
         {
-            std::format_to(
-                out, "(&{} {})", wrap(addressof.mutability), wrap(addressof.place_expression));
+            std::format_to(out, "(&{} {})", wrap(addressof.mutability), wrap(addressof.expression));
         }
 
-        void operator()(expression::Dereference const& dereference) const
+        void operator()(expr::Deref const& dereference) const
         {
-            std::format_to(out, "(*{})", wrap(dereference.reference_expression));
+            std::format_to(out, "(*{})", wrap(dereference.expression));
         }
 
-        void operator()(expression::Defer const& defer) const
+        void operator()(expr::Defer const& defer) const
         {
-            std::format_to(out, "defer {}", wrap(defer.effect_expression));
+            std::format_to(out, "defer {}", wrap(defer.expression));
         }
 
-        void operator()(Error const&) const
+        void operator()(db::Error const&) const
         {
             std::format_to(out, "ERROR-EXPRESSION");
         }
@@ -215,12 +213,12 @@ namespace ki::hir::dtl {
             return With_arena { std::cref(pool), std::cref(arena), std::cref(x) };
         }
 
-        void operator()(utl::one_of<ki::Integer, ki::Floating, ki::Boolean> auto literal)
+        void operator()(utl::one_of<db::Integer, db::Floating, db::Boolean> auto literal)
         {
             std::format_to(out, "{}", literal.value);
         }
 
-        void operator()(ki::String const& literal) const
+        void operator()(db::String const& literal) const
         {
             std::format_to(out, "{:?}", pool.get(literal.id));
         }
@@ -230,22 +228,22 @@ namespace ki::hir::dtl {
             std::format_to(out, "_");
         }
 
-        void operator()(pattern::Tuple const& tuple) const
+        void operator()(patt::Tuple const& tuple) const
         {
             std::format_to(out, "({})", wrap(tuple.field_patterns));
         }
 
-        void operator()(pattern::Slice const& slice) const
+        void operator()(patt::Slice const& slice) const
         {
             std::format_to(out, "[{}]", wrap(slice.patterns));
         }
 
-        void operator()(pattern::Name const& name) const
+        void operator()(patt::Name const& name) const
         {
             std::format_to(out, "{} {}", wrap(name.mutability), pool.get(name.identifier));
         }
 
-        void operator()(pattern::Guarded const& guarded) const
+        void operator()(patt::Guarded const& guarded) const
         {
             std::format_to(
                 out, "{} if {}", wrap(guarded.guarded_pattern), wrap(guarded.guard_expression));
@@ -339,7 +337,7 @@ namespace ki::hir::dtl {
             std::format_to(out, "?{}", variable.id.get());
         }
 
-        void operator()(Error const&) const
+        void operator()(db::Error const&) const
         {
             std::format_to(out, "ERROR-TYPE");
         }
@@ -359,7 +357,7 @@ LIBRESOLVE_DEFINE_FORMATTER(ki::hir::Expression_variant)
 
 LIBRESOLVE_DEFINE_FORMATTER(ki::hir::Expression_id)
 {
-    return std::format_to(ctx.out(), "{}", value.wrap(value.arena.get().expr[value.get()]));
+    return std::format_to(ctx.out(), "{}", value.wrap(value.arena.get().expressions[value.get()]));
 }
 
 LIBRESOLVE_DEFINE_FORMATTER(ki::hir::Expression)
@@ -381,7 +379,7 @@ LIBRESOLVE_DEFINE_FORMATTER(ki::hir::Pattern_variant)
 
 LIBRESOLVE_DEFINE_FORMATTER(ki::hir::Pattern_id)
 {
-    return std::format_to(ctx.out(), "{}", value.wrap(value.arena.get().patt[value.get()]));
+    return std::format_to(ctx.out(), "{}", value.wrap(value.arena.get().patterns[value.get()]));
 }
 
 LIBRESOLVE_DEFINE_FORMATTER(ki::hir::Pattern)
@@ -403,7 +401,7 @@ LIBRESOLVE_DEFINE_FORMATTER(ki::hir::Type_variant)
 
 LIBRESOLVE_DEFINE_FORMATTER(ki::hir::Type_id)
 {
-    return std::format_to(ctx.out(), "{}", value.wrap(value.arena.get().type[value.get()]));
+    return std::format_to(ctx.out(), "{}", value.wrap(value.arena.get().types[value.get()]));
 }
 
 LIBRESOLVE_DEFINE_FORMATTER(ki::hir::Type)
@@ -413,17 +411,17 @@ LIBRESOLVE_DEFINE_FORMATTER(ki::hir::Type)
 
 LIBRESOLVE_DEFINE_FORMATTER(ki::hir::Mutability_variant)
 {
-    auto const visitor = utl::Overload {
-        [&](ki::Error) {
+    auto const visitor = ki::utl::Overload {
+        [&](ki::db::Error) {
             return std::format_to(ctx.out(), "mut?ERROR"); //
         },
-        [&](ki::Mutability concrete) {
-            return std::format_to(ctx.out(), "{}", ki::mutability_string(concrete));
+        [&](ki::db::Mutability concrete) {
+            return std::format_to(ctx.out(), "{}", ki::db::mutability_string(concrete));
         },
-        [&](ki::hir::mutability::Parameterized const& parameterized) {
+        [&](ki::hir::mut::Parameterized const& parameterized) {
             return std::format_to(ctx.out(), "mut?{}", parameterized.tag.get());
         },
-        [&](ki::hir::mutability::Variable const& variable) {
+        [&](ki::hir::mut::Variable const& variable) {
             return std::format_to(ctx.out(), "?mut{}", variable.id.get());
         },
     };
@@ -432,7 +430,7 @@ LIBRESOLVE_DEFINE_FORMATTER(ki::hir::Mutability_variant)
 
 LIBRESOLVE_DEFINE_FORMATTER(ki::hir::Mutability_id)
 {
-    return std::format_to(ctx.out(), "{}", value.wrap(value.arena.get().mut[value.get()]));
+    return std::format_to(ctx.out(), "{}", value.wrap(value.arena.get().mutabilities[value.get()]));
 }
 
 LIBRESOLVE_DEFINE_FORMATTER(ki::hir::Mutability)

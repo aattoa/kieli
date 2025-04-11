@@ -1,16 +1,17 @@
 #include <libutl/utilities.hpp>
 #include <libresolve/resolve.hpp>
 
-using namespace ki::resolve;
+using namespace ki;
+using namespace ki::res;
 
 namespace {
-    struct Occurs_check_visitor {
+    struct Visitor {
         hir::Arena const&     arena;
         hir::Type_variable_id id;
 
         [[nodiscard]] auto recurse(hir::Type_id type_id) const -> bool
         {
-            return occurs_check(arena, id, arena.type[type_id]);
+            return occurs_check(arena, id, arena.types[type_id]);
         }
 
         [[nodiscard]] auto recurse(hir::Type type) const -> bool
@@ -30,7 +31,7 @@ namespace {
 
         auto operator()(hir::type::Array const& array) const -> bool
         {
-            return recurse(array.element_type) or recurse(arena.expr[array.length].type);
+            return recurse(array.element_type) or recurse(arena.expressions[array.length].type);
         }
 
         auto operator()(hir::type::Slice const& slice) const -> bool
@@ -65,7 +66,7 @@ namespace {
         }
 
         auto operator()(utl::one_of<
-                        ki::Error,
+                        db::Error,
                         hir::type::Integer,
                         hir::type::Floating,
                         hir::type::Character,
@@ -78,8 +79,8 @@ namespace {
     };
 } // namespace
 
-auto ki::resolve::occurs_check(
+auto ki::res::occurs_check(
     hir::Arena const& arena, hir::Type_variable_id id, hir::Type_variant const& type) -> bool
 {
-    return std::visit(Occurs_check_visitor { .arena = arena, .id = id }, type);
+    return std::visit(Visitor { .arena = arena, .id = id }, type);
 }

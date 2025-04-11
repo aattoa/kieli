@@ -2,7 +2,7 @@
 #include <cppunittest/unittest.hpp>
 #include "test_interface.hpp"
 
-static constexpr auto parse = ki::parse::test_parse_expression;
+static constexpr auto parse = ki::par::test_parse_expression;
 
 #define TEST(name) UNITTEST("parse expression: " name)
 #define CHECK_SIMPLE_PARSE(string) CHECK_EQUAL(parse(string), (string))

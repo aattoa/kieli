@@ -2,9 +2,9 @@
 #define KIELI_LIBCOMPILER_HIR
 
 #include <libutl/utilities.hpp>
-#include <libutl/string_pool.hpp>
-#include <libutl/index_vector.hpp>
 #include <libcompiler/compiler.hpp>
+#include <libcompiler/cst/cst.hpp>
+#include <libcompiler/ast/ast.hpp>
 
 namespace ki::hir {
 
@@ -24,20 +24,20 @@ namespace ki::hir {
 
     struct Mutability {
         Mutability_id id;
-        Range         range;
+        lsp::Range    range;
     };
 
     struct Type {
-        Type_id id;
-        Range   range;
+        Type_id    id;
+        lsp::Range range;
     };
 
-    struct Match_case {
+    struct Match_arm {
         Pattern_id    pattern;
         Expression_id expression;
     };
 
-    namespace pattern {
+    namespace patt {
         struct Tuple {
             std::vector<Pattern> field_patterns;
         };
@@ -56,29 +56,29 @@ namespace ki::hir {
             Pattern_id    guarded_pattern;
             Expression_id guard_expression;
         };
-    } // namespace pattern
+    } // namespace patt
 
     struct Pattern_variant
         : std::variant<
-              Integer,
-              Floating,
-              Boolean,
-              String,
+              db::Integer,
+              db::Floating,
+              db::Boolean,
+              db::String,
               Wildcard,
-              pattern::Tuple,
-              pattern::Slice,
-              pattern::Name,
-              pattern::Guarded> {
+              patt::Tuple,
+              patt::Slice,
+              patt::Name,
+              patt::Guarded> {
         using variant::variant;
     };
 
     struct Pattern {
         Pattern_variant variant;
         Type_id         type;
-        Range           range;
+        lsp::Range      range;
     };
 
-    namespace expression {
+    namespace expr {
         struct Array_literal {
             std::vector<Expression> elements;
         };
@@ -109,17 +109,17 @@ namespace ki::hir {
         };
 
         struct Match {
-            std::vector<Match_case> cases;
-            Expression_id           expression;
+            std::vector<Match_arm> arms;
+            Expression_id          scrutinee;
         };
 
         struct Variable_reference {
-            Lower              name;
+            db::Lower          name;
             Local_variable_tag tag;
         };
 
         struct Function_reference {
-            Lower       name;
+            db::Lower   name;
             Function_id id;
         };
 
@@ -129,7 +129,7 @@ namespace ki::hir {
         };
 
         struct Direct_call {
-            Lower                      function_name;
+            db::Lower                  function_name;
             Function_id                function_id;
             std::vector<Expression_id> arguments;
         };
@@ -140,42 +140,42 @@ namespace ki::hir {
 
         struct Addressof {
             Mutability    mutability;
-            Expression_id place_expression;
+            Expression_id expression;
         };
 
-        struct Dereference {
-            Expression_id reference_expression;
+        struct Deref {
+            Expression_id expression;
         };
 
         struct Defer {
-            Expression_id effect_expression;
+            Expression_id expression;
         };
-    } // namespace expression
+    } // namespace expr
 
     struct Expression_variant
         : std::variant<
-              Error,
+              db::Error,
+              db::Integer,
+              db::Floating,
+              db::Boolean,
+              db::String,
               Wildcard,
-              Integer,
-              Floating,
-              Boolean,
-              String,
-              expression::Array_literal,
-              expression::Tuple,
-              expression::Loop,
-              expression::Break,
-              expression::Continue,
-              expression::Block,
-              expression::Let,
-              expression::Match,
-              expression::Variable_reference,
-              expression::Function_reference,
-              expression::Indirect_call,
-              expression::Direct_call,
-              expression::Sizeof,
-              expression::Addressof,
-              expression::Dereference,
-              expression::Defer> {
+              expr::Array_literal,
+              expr::Tuple,
+              expr::Loop,
+              expr::Break,
+              expr::Continue,
+              expr::Block,
+              expr::Let,
+              expr::Match,
+              expr::Variable_reference,
+              expr::Function_reference,
+              expr::Indirect_call,
+              expr::Direct_call,
+              expr::Sizeof,
+              expr::Addressof,
+              expr::Deref,
+              expr::Defer> {
         using variant::variant;
     };
 
@@ -183,7 +183,7 @@ namespace ki::hir {
         Expression_variant  variant;
         Type_id             type;
         Expression_category category;
-        Range               range;
+        lsp::Range          range;
     };
 
     namespace type {
@@ -216,7 +216,7 @@ namespace ki::hir {
         };
 
         struct Enumeration {
-            Upper          name;
+            db::Upper      name;
             Enumeration_id id;
         };
 
@@ -242,7 +242,7 @@ namespace ki::hir {
 
     struct Type_variant
         : std::variant<
-              Error,
+              db::Error,
               type::Integer,
               type::Floating,
               type::Character,
@@ -260,7 +260,7 @@ namespace ki::hir {
         using variant::variant;
     };
 
-    namespace mutability {
+    namespace mut {
         struct Parameterized {
             Template_parameter_tag tag;
         };
@@ -268,10 +268,10 @@ namespace ki::hir {
         struct Variable {
             Mutability_variable_id id;
         };
-    } // namespace mutability
+    } // namespace mut
 
     struct Mutability_variant
-        : std::variant<Error, ki::Mutability, mutability::Parameterized, mutability::Variable> {
+        : std::variant<db::Error, db::Mutability, mut::Parameterized, mut::Variable> {
         using variant::variant;
     };
 
@@ -282,19 +282,19 @@ namespace ki::hir {
     struct Template_type_parameter {
         using Default = std::variant<Type, Wildcard>;
         std::vector<Concept_id> concept_ids;
-        Upper                   name;
+        db::Upper               name;
         std::optional<Default>  default_argument;
     };
 
     struct Template_mutability_parameter {
         using Default = std::variant<Mutability, Wildcard>;
-        Lower                  name;
+        db::Lower              name;
         std::optional<Default> default_argument;
     };
 
     struct Template_value_parameter {
-        Type  type;
-        Lower name;
+        Type      type;
+        db::Lower name;
     };
 
     struct Template_parameter_variant
@@ -308,7 +308,7 @@ namespace ki::hir {
     struct Template_parameter {
         Template_parameter_variant variant;
         Template_parameter_tag     tag;
-        Range                      range;
+        lsp::Range                 range;
     };
 
     struct Function_parameter {
@@ -322,8 +322,7 @@ namespace ki::hir {
         std::vector<Function_parameter> parameters;
         Type                            return_type;
         Type                            function_type;
-        Lower                           name;
-        Scope_id                        scope_id;
+        db::Lower                       name;
     };
 
     struct Enumeration {
@@ -331,8 +330,8 @@ namespace ki::hir {
     };
 
     struct Alias {
-        Upper name;
-        Type  type;
+        db::Upper name;
+        Type      type;
     };
 
     struct Concept {
@@ -343,21 +342,123 @@ namespace ki::hir {
         Environment_id environment;
     };
 
+    struct Lower_info {
+        using Variant = std::variant<Function_id, Module_id>;
+        db::Lower       name;
+        db::Document_id doc_id;
+        Variant         variant;
+    };
+
+    struct Upper_info {
+        using Variant = std::variant<Enumeration_id, Concept_id, Alias_id>;
+        db::Upper       name;
+        db::Document_id doc_id;
+        Variant         variant;
+    };
+
+    struct Definition_variant
+        : std::variant<Function_id, Module_id, Enumeration_id, Concept_id, Alias_id> {
+        using variant::variant;
+    };
+
+    struct Variable_bind {
+        db::Lower          name;
+        Type_id            type;
+        Mutability         mutability;
+        Local_variable_tag tag;
+        bool               unused = true;
+    };
+
+    struct Type_bind {
+        db::Upper name;
+        Type_id   type;
+        bool      unused = true;
+    };
+
+    struct Mutability_bind {
+        db::Lower  name;
+        Mutability mutability;
+        bool       unused = true;
+    };
+
+    struct Function_info {
+        cst::Function                     cst;
+        ast::Function                     ast;
+        std::optional<Function_signature> signature;
+        std::optional<Expression>         body;
+        Environment_id                    env_id;
+        db::Document_id                   doc_id;
+        db::Lower                         name;
+    };
+
+    struct Enumeration_info {
+        std::variant<cst::Struct, cst::Enum> cst; // TODO: improve
+        ast::Enumeration                     ast;
+        std::optional<Enumeration>           hir;
+        Environment_id                       env_id;
+        db::Document_id                      doc_id;
+        db::Upper                            name;
+    };
+
+    struct Concept_info {
+        cst::Concept           cst;
+        ast::Concept           ast;
+        std::optional<Concept> hir;
+        Environment_id         env_id;
+        db::Document_id        doc_id;
+        db::Upper              name;
+    };
+
+    struct Alias_info {
+        cst::Alias           cst;
+        ast::Alias           ast;
+        std::optional<Alias> hir;
+        Environment_id       env_id;
+        db::Document_id      doc_id;
+        db::Upper            name;
+    };
+
+    struct Module_info {
+        cst::Submodule  cst;
+        ast::Submodule  ast;
+        Module          hir;
+        Environment_id  env_id;
+        db::Document_id doc_id;
+        db::Lower       name;
+    };
+
+    template <typename T>
+    using Identifier_map = std::vector<std::pair<utl::String_id, T>>;
+
+    struct Environment {
+        Identifier_map<Upper_info>      upper_map;
+        Identifier_map<Lower_info>      lower_map;
+        std::vector<Definition_variant> in_order;
+        std::optional<Environment_id>   parent_id;
+        db::Document_id                 doc_id;
+    };
+
     struct Arena {
-        utl::Index_vector<Expression_id, Expression>         expr;
-        utl::Index_vector<Type_id, Type_variant>             type;
-        utl::Index_vector<Pattern_id, Pattern>               patt;
-        utl::Index_vector<Mutability_id, Mutability_variant> mut;
+        utl::Index_vector<Expression_id, Expression>         expressions;
+        utl::Index_vector<Pattern_id, Pattern>               patterns;
+        utl::Index_vector<Type_id, Type_variant>             types;
+        utl::Index_vector<Mutability_id, Mutability_variant> mutabilities;
+        utl::Index_vector<Module_id, Module_info>            modules;
+        utl::Index_vector<Function_id, Function_info>        functions;
+        utl::Index_vector<Enumeration_id, Enumeration_info>  enumerations;
+        utl::Index_vector<Concept_id, Concept_info>          concepts;
+        utl::Index_vector<Alias_id, Alias_info>              aliases;
+        utl::Index_vector<Environment_id, Environment>       environments;
     };
 
     // Get the name of a built-in integer type.
     auto integer_name(type::Integer type) -> std::string_view;
 
     // Get the type of an expression.
-    auto expression_type(Expression const& expression) -> hir::Type;
+    auto expression_type(Expression const& expression) -> Type;
 
     // Get the type of a pattern.
-    auto pattern_type(Pattern const& pattern) -> hir::Type;
+    auto pattern_type(Pattern const& pattern) -> Type;
 
     void format(Arena const&, utl::String_pool const&, Pattern const&, std::string&);
     void format(Arena const&, utl::String_pool const&, Expression const&, std::string&);

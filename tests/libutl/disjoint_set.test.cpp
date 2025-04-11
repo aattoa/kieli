@@ -2,6 +2,8 @@
 #include <libutl/disjoint_set.hpp>
 #include <cppunittest/unittest.hpp>
 
+using namespace ki;
+
 namespace {
     auto in_same_set(utl::Disjoint_set& set, std::size_t const x, std::size_t const y) -> bool
     {

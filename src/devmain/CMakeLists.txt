@@ -1,9 +1,9 @@
 add_executable(devmain)
 
 target_sources(devmain
-    PRIVATE devmain/history.cpp
-    PRIVATE devmain/history.hpp
-    PRIVATE devmain/main.cpp)
+    PRIVATE devmain/main.cpp
+    PRIVATE devmain/repl.cpp
+    PRIVATE devmain/repl.hpp)
 
 target_include_directories(devmain
     PRIVATE ${PROJECT_SOURCE_DIR}/src/devmain)

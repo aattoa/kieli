@@ -5,50 +5,50 @@
 #include <libresolve/resolve.hpp>
 #include <libformat/format.hpp>
 #include <libcompiler/ast/display.hpp>
-#include <devmain/history.hpp>
+#include <devmain/repl.hpp>
 #include <cpputil/input.hpp>
 
+using namespace ki;
+
 namespace {
-    void debug_lex(ki::Database& db, ki::Document_id id)
+    void debug_lex(db::Database& db, db::Document_id id)
     {
-        auto state = ki::lex::state(db.documents[id].text);
-        auto token = ki::lex::next(state);
-        while (token.type != ki::Token_type::End_of_input) {
-            std::print("{} ", ki::token_type_string(token.type));
-            token = ki::lex::next(state);
+        auto state = lex::state(db.documents[id].text);
+        auto token = lex::next(state);
+        while (token.type != lex::Type::End_of_input) {
+            std::print("{} ", lex::token_type_string(token.type));
+            token = lex::next(state);
         }
         std::println("");
     }
 
-    void debug_parse(ki::Database& db, ki::Document_id id)
+    void debug_parse(db::Database& db, db::Document_id id)
     {
-        auto cst = ki::parse::parse(db, id);
-        auto mod = ki::format::format_module(cst, db.string_pool, ki::format::Options {});
-        std::print("{}", mod);
+        auto text = fmt::format_module(
+            db.string_pool, db.documents[id].cst, fmt::Options {}, par::parse(db, id));
+        std::print("{}", text);
     }
 
-    void debug_desugar(ki::Database& db, ki::Document_id id)
+    void debug_desugar(db::Database& db, db::Document_id id)
     {
-        auto ast = ki::ast::Arena {};
-        auto cst = ki::parse::parse(db, id);
-
-        ki::desugar::Context ctx { .db = db, .cst = cst.arena, .ast = ast, .doc_id = id };
-        for (ki::cst::Definition const& definition : cst.definitions) {
-            auto def = ki::desugar::desugar_definition(ctx, definition);
-            std::println("{}", ki::ast::display(ast, db.string_pool, def));
+        auto mod = par::parse(db, id);
+        auto ctx = des::context(db, id);
+        for (auto const& cst : mod.definitions) {
+            auto ast = des::desugar_definition(ctx, cst);
+            std::println("{}", ast::display(ctx.ast, db.string_pool, ast));
         }
     }
 
-    void debug_resolve(ki::Database& db, ki::Document_id id)
+    void debug_resolve(db::Database& db, db::Document_id id)
     {
-        auto ctx = ki::resolve::context(db);
-        auto env = ki::resolve::collect_document(ctx, id);
-        ki::resolve::resolve_environment(ctx, env);
-        ki::resolve::debug_display_environment(ctx, env);
+        auto ctx = res::context(db);
+        auto env = res::collect_document(ctx, id);
+        res::resolve_environment(ctx, env);
+        res::debug_display_environment(ctx, env);
     }
 
     auto choose_debug_repl_callback(std::string_view const name)
-        -> void (*)(ki::Database&, ki::Document_id)
+        -> void (*)(db::Database&, db::Document_id)
     {
         // clang-format off
         if (name == "lex") return debug_lex;
@@ -69,9 +69,9 @@ namespace {
         }
     }
 
-    void run_debug_repl(void (&callback)(ki::Database&, ki::Document_id))
+    void run_debug_repl(void (&callback)(db::Database&, db::Document_id))
     {
-        ki::read_history_file_to_active_history();
+        repl::read_history_file();
 
         while (auto input = cpputil::input::read_line(">>> ")) {
             if (input == "q") {
@@ -80,12 +80,12 @@ namespace {
             if (input.value().find_first_not_of(' ') == std::string::npos) {
                 continue;
             }
-            ki::add_to_history(input.value().c_str());
+            repl::add_history_line(input.value().c_str());
 
-            auto db = ki::database({ .root_path = std::filesystem::current_path() });
-            auto id = ki::test_document(db, std::move(input).value());
+            auto db = db::database({ .root_path = std::filesystem::current_path() });
+            auto id = db::test_document(db, std::move(input).value());
             wrap_exceptions([&] { callback(db, id); });
-            ki::print_diagnostics(stderr, db, id);
+            db::print_diagnostics(stderr, db, id);
         }
     }
 
@@ -101,10 +101,10 @@ namespace {
 
     auto dump(std::string_view filename, auto const& callback) -> int
     {
-        ki::Database db;
-        if (auto id = ki::read_document(db, filename)) {
+        db::Database db;
+        if (auto id = db::read_document(db, filename)) {
             wrap_exceptions([&] { callback(db, id.value()); });
-            ki::print_diagnostics(stderr, db, id.value());
+            db::print_diagnostics(stderr, db, id.value());
             return EXIT_SUCCESS;
         }
         else {
@@ -112,7 +112,7 @@ namespace {
                 stderr,
                 "Error: Failed to read '{}': {}",
                 filename,
-                ki::describe_read_failure(id.error()));
+                db::describe_read_failure(id.error()));
             return EXIT_FAILURE;
         }
     }

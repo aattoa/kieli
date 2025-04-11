@@ -2,19 +2,21 @@
 #include <liblex/lex.hpp>
 #include <cppunittest/unittest.hpp>
 
+using namespace ki;
+
 namespace {
     auto tokens(std::string_view const document) -> std::string
     {
-        auto state  = ki::lex::state(document);
+        auto state  = lex::state(document);
         auto output = std::string {};
 
         for (;;) {
-            auto token = ki::lex::next(state);
-            if (token.type == ki::Token_type::End_of_input) {
+            auto token = lex::next(state);
+            if (token.type == lex::Type::End_of_input) {
                 return output;
             }
 
-            auto type = ki::token_type_string(token.type);
+            auto type = lex::token_type_string(token.type);
             auto text = token.view.string(document);
 
             if (text == type) {

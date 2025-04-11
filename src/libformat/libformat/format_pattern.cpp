@@ -1,23 +1,24 @@
 #include <libutl/utilities.hpp>
 #include <libformat/internals.hpp>
 
-using namespace ki::format;
+using namespace ki;
+using namespace ki::fmt;
 
 namespace {
-    void format_constructor_body(State& state, cst::pattern::Constructor_body const& body)
+    void format_constructor_body(State& state, cst::patt::Constructor_body const& body)
     {
         auto const visitor = utl::Overload {
-            [&](cst::pattern::Struct_constructor const& constructor) {
+            [&](cst::patt::Struct_constructor const& constructor) {
                 format(state, " {{ ");
                 format_comma_separated(state, constructor.fields.value.elements);
                 format(state, " }}");
             },
-            [&](cst::pattern::Tuple_constructor const& constructor) {
+            [&](cst::patt::Tuple_constructor const& constructor) {
                 format(state, "(");
                 format(state, constructor.pattern.value);
                 format(state, ")");
             },
-            [](cst::pattern::Unit_constructor const&) {},
+            [](cst::patt::Unit_constructor const&) {},
         };
         std::visit(visitor, body);
     }
@@ -25,31 +26,31 @@ namespace {
     struct Pattern_format_visitor {
         State& state;
 
-        void operator()(utl::one_of<ki::Integer, ki::Floating, ki::Boolean> auto const literal)
+        void operator()(utl::one_of<db::Integer, db::Floating, db::Boolean> auto const literal)
         {
             format(state, "{}", literal.value);
         }
 
-        void operator()(ki::String const string)
+        void operator()(db::String const string)
         {
             format(state, "{:?}", state.pool.get(string.id));
         }
 
-        void operator()(cst::pattern::Paren const& paren)
+        void operator()(cst::patt::Paren const& paren)
         {
             format(state, "(");
             format(state, paren.pattern.value);
             format(state, ")");
         }
 
-        void operator()(cst::pattern::Tuple const& tuple)
+        void operator()(cst::patt::Tuple const& tuple)
         {
             format(state, "(");
             format_comma_separated(state, tuple.patterns.value.elements);
             format(state, ")");
         }
 
-        void operator()(cst::pattern::Slice const& slice)
+        void operator()(cst::patt::Slice const& slice)
         {
             format(state, "[");
             format_comma_separated(state, slice.patterns.value.elements);
@@ -61,39 +62,39 @@ namespace {
             format(state, wildcard);
         }
 
-        void operator()(cst::pattern::Name const& name)
+        void operator()(cst::patt::Name const& name)
         {
             format_mutability_with_whitespace(state, name.mutability);
             format(state, "{}", state.pool.get(name.name.id));
         }
 
-        void operator()(cst::pattern::Guarded const& guarded)
+        void operator()(cst::patt::Guarded const& guarded)
         {
             format(state, guarded.guarded_pattern);
             format(state, " if ");
             format(state, guarded.guard_expression);
         }
 
-        void operator()(cst::pattern::Constructor const& constructor)
+        void operator()(cst::patt::Constructor const& constructor)
         {
             format(state, constructor.path);
             format_constructor_body(state, constructor.body);
         }
 
-        void operator()(cst::pattern::Abbreviated_constructor const& constructor)
+        void operator()(cst::patt::Abbreviated_constructor const& constructor)
         {
             format(state, "::{}", state.pool.get(constructor.name.id));
             format_constructor_body(state, constructor.body);
         }
 
-        void operator()(cst::pattern::Top_level_tuple const& tuple)
+        void operator()(cst::patt::Top_level_tuple const& tuple)
         {
             format_comma_separated(state, tuple.patterns.elements);
         }
     };
 } // namespace
 
-void ki::format::format(State& state, cst::Pattern const& pattern)
+void ki::fmt::format(State& state, cst::Pattern const& pattern)
 {
     std::visit(Pattern_format_visitor { state }, pattern.variant);
 }

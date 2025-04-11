@@ -2,15 +2,13 @@
 #define KIELI_LIBLEX_LEX
 
 #include <libutl/utilities.hpp>
-#include <libcompiler/compiler.hpp>
-#include <libcompiler/token/token.hpp>
+#include <libcompiler/lsp.hpp>
+#include <liblex/token.hpp>
 
 namespace ki::lex {
 
-    using Type = Token_type;
-
     struct State {
-        Position         position;
+        lsp::Position    position;
         std::uint32_t    offset {};
         std::string_view text;
     };
