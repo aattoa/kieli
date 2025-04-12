@@ -18,6 +18,13 @@
             "inherits": "dev-base",
             "cacheVariables": {
                 "CMAKE_BUILD_TYPE": "Debug",
+                "CMAKE_CXX_FLAGS": "-stdlib=libc++"
+            }
+        },
+        {
+            "name": "sanitize",
+            "inherits": "debug",
+            "cacheVariables": {
                 "CMAKE_CXX_FLAGS": "-stdlib=libc++ -Og -fsanitize=undefined -fsanitize=address"
             }
         },
