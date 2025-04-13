@@ -18,6 +18,7 @@ namespace {
 
     struct Server {
         db::Database       db;
+        res::Context       ctx = res::context();
         std::optional<int> exit_code;
         bool               is_initialized {};
     };
@@ -25,39 +26,38 @@ namespace {
     template <typename T>
     using Result = std::expected<T, std::string>;
 
-    void placeholder_analyze_document(db::Database& db, db::Document_id doc_id)
+    void analyze_document(Server& server, db::Document_id doc_id)
     {
-        db.documents[doc_id].diagnostics.clear();
-        auto ctx = res::context(db);
-        auto env = res::collect_document(ctx, doc_id);
-        res::resolve_environment(ctx, env);
+        // Reset document info from previous analysis.
+        server.db.documents[doc_id].info = {};
+        // Reset the resolution context.
+        server.ctx = res::context();
+        // Collect definitions from the document.
+        auto env_id = res::collect_document(server.db, server.ctx, doc_id);
+        // Resolve every definition in the document.
+        res::resolve_environment(server.db, server.ctx, env_id);
     }
 
-    auto maybe_markdown_content(std::optional<std::string> markdown) -> Json
+    auto handle_hover(Server& server, Json::Object params) -> Result<Json>
     {
-        return std::move(markdown).transform(markdown_content_to_json).value_or(Json {});
+        auto cursor = position_params_from_json(server.db, std::move(params));
+        return markdown_content_to_json(std::format("Position: {}", cursor.position));
     }
 
-    auto handle_hover(db::Database& db, Json::Object const& params) -> Result<Json>
+    auto handle_formatting(Server& server, Json::Object params) -> Result<Json>
     {
-        auto const cursor = position_params_from_json(db, params);
-        return maybe_markdown_content(std::format("Position: {}", cursor.position));
-    }
+        auto id = document_id_from_json(server.db, as<Json::Object>(at(params, "textDocument")));
+        auto options = format_options_from_json(as<Json::Object>(at(params, "options")));
 
-    auto handle_formatting(db::Database& db, Json::Object params) -> Result<Json>
-    {
-        auto const id = document_id_from_json(db, as<Json::Object>(at(params, "textDocument")));
-        auto const options = format_options_from_json(as<Json::Object>(at(params, "options")));
+        auto& document = server.db.documents[id];
 
-        auto& document = db.documents[id];
-
-        document.diagnostics.clear();
-        auto const cst = par::parse(db, id);
+        document.info.diagnostics.clear();
+        auto const cst = par::parse(server.db, id);
 
         Json::Array edits;
         for (auto const& definition : cst.definitions) {
             std::string new_text;
-            fmt::format(db.string_pool, document.cst, options, definition, new_text);
+            fmt::format(server.db.string_pool, document.cst, options, definition, new_text);
             if (new_text == db::text_range(document.text, document.cst.ranges[definition.range])) {
                 // Avoid sending redundant edits when nothing changed.
                 // text_range takes linear time, but it's fine for now.
@@ -71,13 +71,14 @@ namespace {
         return Json { std::move(edits) };
     }
 
-    auto handle_pull_diagnostics(db::Database& db, Json::Object params) -> Result<Json>
+    auto handle_pull_diagnostics(Server& server, Json::Object params) -> Result<Json>
     {
-        auto const id = document_id_from_json(db, as<Json::Object>(at(params, "textDocument")));
+        auto id = document_id_from_json(server.db, as<Json::Object>(at(params, "textDocument")));
 
-        auto items = db.documents[id].diagnostics
-                   | std::views::transform(std::bind_front(diagnostic_to_json, std::cref(db)))
-                   | std::ranges::to<Json::Array>();
+        auto items
+            = server.db.documents[id].info.diagnostics
+            | std::views::transform(std::bind_front(diagnostic_to_json, std::cref(server.db)))
+            | std::ranges::to<Json::Array>();
 
         return Json { Json::Object {
             { "kind", Json { "full" } },
@@ -88,7 +89,7 @@ namespace {
     auto handle_semantic_tokens(db::Database const& db, Json::Object params) -> Json
     {
         auto id   = document_id_from_json(db, as<Json::Object>(at(params, "textDocument")));
-        auto data = semantic_tokens_to_json(db.documents[id].semantic_tokens);
+        auto data = semantic_tokens_to_json(db.documents[id].info.semantic_tokens);
         return Json { Json::Object { { "data", std::move(data) } } };
     }
 
@@ -162,13 +163,13 @@ namespace {
             return handle_semantic_tokens(server.db, as<Json::Object>(std::move(params)));
         }
         if (method == "textDocument/hover") {
-            return handle_hover(server.db, as<Json::Object>(std::move(params)));
+            return handle_hover(server, as<Json::Object>(std::move(params)));
         }
         if (method == "textDocument/formatting") {
-            return handle_formatting(server.db, as<Json::Object>(std::move(params)));
+            return handle_formatting(server, as<Json::Object>(std::move(params)));
         }
         if (method == "textDocument/diagnostic") {
-            return handle_pull_diagnostics(server.db, as<Json::Object>(std::move(params)));
+            return handle_pull_diagnostics(server, as<Json::Object>(std::move(params)));
         }
         if (method == "shutdown") {
             return handle_shutdown(server);
@@ -176,22 +177,22 @@ namespace {
         return std::unexpected(std::format("Unsupported request method: {}", method));
     }
 
-    auto handle_open(db::Database& db, Json::Object params) -> Result<void>
+    auto handle_open(Server& server, Json::Object params) -> Result<void>
     {
         auto document = document_item_from_json(as<Json::Object>(at(params, "textDocument")));
         if (document.language == "kieli") {
-            auto const id
-                = db::client_open_document(db, std::move(document.path), std::move(document.text));
-            placeholder_analyze_document(db, id);
+            auto const id = db::client_open_document(
+                server.db, std::move(document.path), std::move(document.text));
+            analyze_document(server, id);
             return {};
         }
         return std::unexpected(std::format("Unsupported language: '{}'", document.language));
     }
 
-    auto handle_close(db::Database& db, Json::Object params) -> Result<void>
+    auto handle_close(Server& server, Json::Object params) -> Result<void>
     {
-        auto const id = document_id_from_json(db, as<Json::Object>(at(params, "textDocument")));
-        db::client_close_document(db, id);
+        auto id = document_id_from_json(server.db, as<Json::Object>(at(params, "textDocument")));
+        db::client_close_document(server.db, id);
         return {};
     }
 
@@ -208,26 +209,26 @@ namespace {
         }
     }
 
-    auto handle_change(db::Database& db, Json::Object params) -> Result<void>
+    auto handle_change(Server& server, Json::Object params) -> Result<void>
     {
-        auto const id = document_id_from_json(db, as<Json::Object>(at(params, "textDocument")));
+        auto id = document_id_from_json(server.db, as<Json::Object>(at(params, "textDocument")));
         for (Json change : as<Json::Array>(at(params, "contentChanges"))) {
-            apply_content_change(db.documents[id].text, as<Json::Object>(std::move(change)));
+            apply_content_change(server.db.documents[id].text, as<Json::Object>(std::move(change)));
         }
-        placeholder_analyze_document(db, id);
+        analyze_document(server, id);
         return {};
     }
 
     auto handle_notification(Server& server, std::string_view method, Json params) -> Result<void>
     {
         if (method == "textDocument/didChange") {
-            return handle_change(server.db, as<Json::Object>(std::move(params)));
+            return handle_change(server, as<Json::Object>(std::move(params)));
         }
         if (method == "textDocument/didOpen") {
-            return handle_open(server.db, as<Json::Object>(std::move(params)));
+            return handle_open(server, as<Json::Object>(std::move(params)));
         }
         if (method == "textDocument/didClose") {
-            return handle_close(server.db, as<Json::Object>(std::move(params)));
+            return handle_close(server, as<Json::Object>(std::move(params)));
         }
         if (method == "initialized") {
             return {};

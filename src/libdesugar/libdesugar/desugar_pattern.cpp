@@ -71,8 +71,8 @@ namespace {
         auto operator()(cst::patt::Guarded const& guarded) const -> ast::Pattern_variant
         {
             return ast::patt::Guarded {
-                .guarded_pattern  = desugar(ctx, guarded.guarded_pattern),
-                .guard_expression = deref_desugar(ctx, guarded.guard_expression),
+                .pattern = desugar(ctx, guarded.pattern),
+                .guard   = deref_desugar(ctx, guarded.guard),
             };
         }
     };

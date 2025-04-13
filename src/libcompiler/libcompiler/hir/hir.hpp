@@ -53,8 +53,8 @@ namespace ki::hir {
         };
 
         struct Guarded {
-            Pattern_id    guarded_pattern;
-            Expression_id guard_expression;
+            Pattern_id    pattern;
+            Expression_id guard;
         };
     } // namespace patt
 

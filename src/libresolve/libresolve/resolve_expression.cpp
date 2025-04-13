@@ -6,6 +6,7 @@ using namespace ki::res;
 
 namespace {
     struct Visitor {
+        db::Database&       db;
         Context&            ctx;
         Inference_state&    state;
         Scope_id            scope_id;
@@ -14,12 +15,12 @@ namespace {
 
         auto ast() -> ast::Arena&
         {
-            return ctx.db.documents[state.doc_id].ast;
+            return db.documents[state.doc_id].ast;
         }
 
         auto error(lsp::Range const range, std::string message) -> hir::Expression
         {
-            db::add_error(ctx.db, state.doc_id, range, std::move(message));
+            db::add_error(db, state.doc_id, range, std::move(message));
             return error_expression(ctx.constants, this_range);
         }
 
@@ -31,7 +32,7 @@ namespace {
         auto recurse()
         {
             return [&](ast::Expression const& expression) -> hir::Expression {
-                return resolve_expression(ctx, state, scope_id, env_id, expression);
+                return resolve_expression(db, ctx, state, scope_id, env_id, expression);
             };
         }
 
@@ -95,7 +96,7 @@ namespace {
                         .range    = this_range,
                     };
                 }
-                auto const name = ctx.db.string_pool.get(path.head().name.id);
+                auto const name = db.string_pool.get(path.head().name.id);
                 return error(this_range, std::format("Undeclared identifier: {}", name));
             }
             return unsupported();
@@ -109,6 +110,7 @@ namespace {
             for (ast::Expression const& element : array.elements) {
                 elements.push_back(recurse(element));
                 require_subtype_relationship(
+                    db,
                     ctx,
                     state,
                     element.range,
@@ -169,8 +171,9 @@ namespace {
         {
             return child_scope(ctx, scope_id, [&](Scope_id scope_id) {
                 auto const resolve_effect = [&](ast::Expression const& expression) {
-                    auto effect = resolve_expression(ctx, state, scope_id, env_id, expression);
+                    auto effect = resolve_expression(db, ctx, state, scope_id, env_id, expression);
                     require_subtype_relationship(
+                        db,
                         ctx,
                         state,
                         effect.range,
@@ -183,12 +186,12 @@ namespace {
                                   | std::ranges::to<std::vector>();
 
                 auto result = resolve_expression(
-                    ctx, state, scope_id, env_id, ast().expressions[block.result]);
+                    db, ctx, state, scope_id, env_id, ast().expressions[block.result]);
 
                 auto const result_type  = result.type;
                 auto const result_range = result.range;
 
-                report_unused(ctx.db, ctx.scopes.index_vector[scope_id]);
+                report_unused(db, ctx.scopes.index_vector[scope_id]);
                 return hir::Expression {
                     .variant = hir::expr::Block {
                         .side_effects = std::move(side_effects),
@@ -252,9 +255,10 @@ namespace {
             auto result_type = fresh_general_type_variable(state, ctx.hir, this_range);
 
             auto const resolve_arm = [&](ast::Match_arm const& arm) {
-                auto pattern
-                    = resolve_pattern(ctx, state, scope_id, env_id, ast().patterns[arm.pattern]);
+                auto pattern = resolve_pattern(
+                    db, ctx, state, scope_id, env_id, ast().patterns[arm.pattern]);
                 require_subtype_relationship(
+                    db,
                     ctx,
                     state,
                     scrutinee.range,
@@ -262,6 +266,7 @@ namespace {
                     ctx.hir.types[pattern.type]);
                 auto expression = recurse(ast().expressions[arm.expression]);
                 require_subtype_relationship(
+                    db,
                     ctx,
                     state,
                     expression.range,
@@ -288,8 +293,9 @@ namespace {
         {
             auto expression = recurse(ast().expressions[ascription.expression]);
             auto ascribed
-                = resolve_type(ctx, state, scope_id, env_id, ast().types[ascription.type]);
+                = resolve_type(db, ctx, state, scope_id, env_id, ast().types[ascription.type]);
             require_subtype_relationship(
+                db,
                 ctx,
                 state,
                 expression.range,
@@ -302,13 +308,14 @@ namespace {
         {
             hir::Expression initializer = recurse(ast().expressions[let.initializer]);
 
-            auto type = resolve_type(ctx, state, scope_id, env_id, ast().types[let.type]);
+            auto type = resolve_type(db, ctx, state, scope_id, env_id, ast().types[let.type]);
             auto pattern
-                = resolve_pattern(ctx, state, scope_id, env_id, ast().patterns[let.pattern]);
+                = resolve_pattern(db, ctx, state, scope_id, env_id, ast().patterns[let.pattern]);
 
             require_subtype_relationship(
-                ctx, state, pattern.range, ctx.hir.types[pattern.type], ctx.hir.types[type.id]);
+                db, ctx, state, pattern.range, ctx.hir.types[pattern.type], ctx.hir.types[type.id]);
             require_subtype_relationship(
+                db,
                 ctx,
                 state,
                 initializer.range,
@@ -329,7 +336,7 @@ namespace {
 
         auto operator()(ast::expr::Type_alias const& alias) -> hir::Expression
         {
-            auto const type = resolve_type(ctx, state, scope_id, env_id, ast().types[alias.type]);
+            auto type = resolve_type(db, ctx, state, scope_id, env_id, ast().types[alias.type]);
             bind_type(
                 ctx.scopes.index_vector[scope_id],
                 hir::Type_bind { .name = alias.name, .type = type.id });
@@ -343,7 +350,7 @@ namespace {
 
         auto operator()(ast::expr::Sizeof const& sizeof_) -> hir::Expression
         {
-            auto const type = resolve_type(ctx, state, scope_id, env_id, ast().types[sizeof_.type]);
+            auto type = resolve_type(db, ctx, state, scope_id, env_id, ast().types[sizeof_.type]);
             return {
                 .variant  = hir::expr::Sizeof { type },
                 .type     = fresh_integral_type_variable(state, ctx.hir, this_range).id,
@@ -354,9 +361,9 @@ namespace {
 
         auto operator()(ast::expr::Addressof const& addressof) -> hir::Expression
         {
-            hir::Expression    place_expression = recurse(ast().expressions[addressof.expression]);
-            hir::Type_id const referenced_type  = place_expression.type;
-            hir::Mutability    mutability = resolve_mutability(ctx, scope_id, addressof.mutability);
+            auto place_expression = recurse(ast().expressions[addressof.expression]);
+            auto referenced_type  = place_expression.type;
+            auto mutability       = resolve_mutability(db, ctx, scope_id, addressof.mutability);
             if (place_expression.category != hir::Expression_category::Place) {
                 return error(
                     place_expression.range,
@@ -384,6 +391,7 @@ namespace {
             auto ref_expr = recurse(ast().expressions[dereference.expression]);
 
             require_subtype_relationship(
+                db,
                 ctx,
                 state,
                 ref_expr.range,
@@ -428,6 +436,7 @@ namespace {
 } // namespace
 
 auto ki::res::resolve_expression(
+    db::Database&             db,
     Context&                  ctx,
     Inference_state&          state,
     Scope_id const            scope_id,
@@ -435,6 +444,7 @@ auto ki::res::resolve_expression(
     ast::Expression const&    expression) -> hir::Expression
 {
     Visitor visitor {
+        .db         = db,
         .ctx        = ctx,
         .state      = state,
         .scope_id   = scope_id,

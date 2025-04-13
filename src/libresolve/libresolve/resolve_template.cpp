@@ -6,6 +6,7 @@ using namespace ki::res;
 
 namespace {
     struct Visitor {
+        db::Database&               db;
         Context&                    ctx;
         Inference_state&            state;
         Scope_id                    scope_id;
@@ -14,7 +15,7 @@ namespace {
 
         auto ast() -> ast::Arena&
         {
-            return ctx.db.documents[state.doc_id].ast;
+            return db.documents[state.doc_id].ast;
         }
 
         template <typename Default>
@@ -26,10 +27,10 @@ namespace {
                         return hir::Wildcard {}; //
                     },
                     [&](ast::Type_id const type) -> hir::Type {
-                        return resolve_type(ctx, state, scope_id, env_id, ast().types[type]);
+                        return resolve_type(db, ctx, state, scope_id, env_id, ast().types[type]);
                     },
                     [&](ast::Mutability const& mutability) {
-                        return resolve_mutability(ctx, scope_id, mutability);
+                        return resolve_mutability(db, ctx, scope_id, mutability);
                     },
                 };
                 return std::visit<Default>(visitor, argument);
@@ -49,7 +50,7 @@ namespace {
                     }),
                 });
             auto const resolve_concept = [&](ast::Path const& concept_path) {
-                return resolve_concept_reference(ctx, state, scope_id, env_id, concept_path);
+                return resolve_concept_reference(db, ctx, state, scope_id, env_id, concept_path);
             };
             return hir::Template_type_parameter {
                 .concept_ids = std::ranges::to<std::vector>(
@@ -81,7 +82,7 @@ namespace {
             -> hir::Template_parameter_variant
         {
             db::add_error(
-                ctx.db,
+                db,
                 state.doc_id,
                 parameter.name.range,
                 "Template value parameters are not supported yet");
@@ -94,6 +95,7 @@ namespace {
 } // namespace
 
 auto ki::res::resolve_template_parameters(
+    db::Database&                   db,
     Context&                        ctx,
     Inference_state&                state,
     Scope_id const                  scope_id,
@@ -105,6 +107,7 @@ auto ki::res::resolve_template_parameters(
         return hir::Template_parameter {
             .variant = std::visit(
                 Visitor {
+                    .db       = db,
                     .ctx      = ctx,
                     .state    = state,
                     .scope_id = scope_id,
@@ -121,6 +124,7 @@ auto ki::res::resolve_template_parameters(
 }
 
 auto ki::res::resolve_template_arguments(
+    db::Database&                               db,
     Context&                                    ctx,
     Inference_state&                            state,
     Scope_id const                              scope_id,
@@ -128,6 +132,7 @@ auto ki::res::resolve_template_arguments(
     std::vector<hir::Template_parameter> const& parameters,
     std::vector<ast::Template_argument> const&  arguments) -> std::vector<hir::Template_argument>
 {
+    (void)db;
     (void)ctx;
     (void)state;
     (void)scope_id;

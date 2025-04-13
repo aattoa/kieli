@@ -245,8 +245,7 @@ namespace ki::hir::dtl {
 
         void operator()(patt::Guarded const& guarded) const
         {
-            std::format_to(
-                out, "{} if {}", wrap(guarded.guarded_pattern), wrap(guarded.guard_expression));
+            std::format_to(out, "{} if {}", wrap(guarded.pattern), wrap(guarded.guard));
         }
     };
 

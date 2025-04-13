@@ -61,7 +61,7 @@ namespace ki::cst {
     struct Mutability {
         Mutability_variant variant;
         Range_id           range;
-        Range_id           mut_or_immut_token;
+        Range_id           keyword_token;
     };
 
     struct Template_argument : std::variant<Type_id, Expression_id, Mutability, Wildcard> {
@@ -237,14 +237,14 @@ namespace ki::cst {
 
         struct False_branch {
             Expression_id body;
-            Range_id      else_or_elif_token;
+            Range_id      keyword_token;
         };
 
         struct Conditional {
             Expression_id               condition;
             Expression_id               true_branch;
             std::optional<False_branch> false_branch;
-            Range_id                    if_or_elif_token;
+            Range_id                    keyword_token;
             bool                        is_elif {};
         };
 
@@ -433,8 +433,8 @@ namespace ki::cst {
         };
 
         struct Guarded {
-            Pattern_id    guarded_pattern;
-            Expression_id guard_expression;
+            Pattern_id    pattern;
+            Expression_id guard;
             Range_id      if_token;
         };
     } // namespace patt

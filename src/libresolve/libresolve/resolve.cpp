@@ -2,12 +2,11 @@
 #include <libresolve/resolve.hpp>
 #include <libcompiler/ast/display.hpp>
 
-auto ki::res::context(db::Database& db) -> Context
+auto ki::res::context() -> Context
 {
     auto hir       = hir::Arena {};
     auto constants = make_constants(hir);
     return Context {
-        .db        = db,
         .hir       = std::move(hir),
         .tags      = {},
         .constants = constants,
@@ -111,27 +110,29 @@ void ki::res::flatten_type(Context& ctx, Inference_state& state, hir::Type_varia
     }
 }
 
-void ki::res::set_solution(
-    Context& ctx, Inference_state& state, Type_variable_data& data, hir::Type_variant solution)
+void ki::res::set_type_solution(
+    db::Database&       db,
+    Context&            ctx,
+    Inference_state&    state,
+    Type_variable_data& data,
+    hir::Type_variant   solution)
 {
-    auto const          index     = state.type_var_set.find(data.var_id.get());
-    Type_variable_data& repr_data = state.type_vars.underlying.at(index);
-    hir::Type_variant&  repr_type = ctx.hir.types[repr_data.type_id];
+    auto& repr_data = state.type_vars.underlying.at(state.type_var_set.find(data.var_id.get()));
+    auto& repr_type = ctx.hir.types[repr_data.type_id];
     if (repr_data.is_solved) {
-        require_subtype_relationship(ctx, state, data.origin, solution, repr_type);
+        require_subtype_relationship(db, ctx, state, data.origin, solution, repr_type);
     }
     repr_type           = std::move(solution);
     repr_data.is_solved = true;
 }
 
-void ki::res::set_solution(
+void ki::res::set_mut_solution(
     Context&                  ctx,
     Inference_state&          state,
     Mutability_variable_data& data,
     hir::Mutability_variant   solution)
 {
-    Mutability_variable_data& repr
-        = state.mut_vars.underlying.at(state.mut_var_set.find(data.var_id.get()));
+    auto& repr = state.mut_vars.underlying.at(state.mut_var_set.find(data.var_id.get()));
     cpputil::always_assert(not std::exchange(repr.is_solved, true));
     ctx.hir.mutabilities[repr.mut_id] = std::move(solution);
 }
@@ -180,30 +181,32 @@ auto ki::res::fresh_mutability_variable(
     return hir::Mutability { .id = mut_id, .range = origin };
 }
 
-void ki::res::ensure_no_unsolved_variables(Context& ctx, Inference_state& state)
+void ki::res::ensure_no_unsolved_variables(db::Database& db, Context& ctx, Inference_state& state)
 {
     for (Mutability_variable_data& data : state.mut_vars.underlying) {
         if (not data.is_solved) {
-            set_solution(ctx, state, data, db::Mutability::Immut);
+            set_mut_solution(ctx, state, data, db::Mutability::Immut);
         }
     }
     for (Type_variable_data& data : state.type_vars.underlying) {
         flatten_type(ctx, state, ctx.hir.types[data.type_id]);
         if (not data.is_solved) {
             auto message = std::format("Unsolved type variable: ?{}", data.var_id.get());
-            add_error(ctx.db, state.doc_id, data.origin, std::move(message));
-            set_solution(ctx, state, data, db::Error {});
+            db::add_error(db, state.doc_id, data.origin, std::move(message));
+            set_type_solution(db, ctx, state, data, db::Error {});
         }
     }
 }
 
 auto ki::res::resolve_concept_reference(
+    db::Database&       db,
     Context&            ctx,
     Inference_state&    state,
     Scope_id            scope_id,
     hir::Environment_id env_id,
     ast::Path const&    path) -> hir::Concept_id
 {
+    (void)db;
     (void)ctx;
     (void)state;
     (void)scope_id;
@@ -212,64 +215,65 @@ auto ki::res::resolve_concept_reference(
     cpputil::todo();
 }
 
-void ki::res::resolve_environment(Context& ctx, hir::Environment_id id)
+void ki::res::resolve_environment(db::Database& db, Context& ctx, hir::Environment_id id)
 {
     auto const visitor = utl::Overload {
-        [&](hir::Function_id id) { resolve_function_body(ctx, id); },
-        [&](hir::Enumeration_id id) { resolve_enumeration(ctx, id); },
-        [&](hir::Concept_id id) { resolve_concept(ctx, id); },
-        [&](hir::Alias_id id) { resolve_alias(ctx, id); },
-        [&](hir::Module_id id) { resolve_environment(ctx, ctx.hir.modules[id].env_id); },
+        [&](hir::Function_id id) { resolve_function_body(db, ctx, id); },
+        [&](hir::Enumeration_id id) { resolve_enumeration(db, ctx, id); },
+        [&](hir::Concept_id id) { resolve_concept(db, ctx, id); },
+        [&](hir::Alias_id id) { resolve_alias(db, ctx, id); },
+        [&](hir::Module_id id) { resolve_environment(db, ctx, ctx.hir.modules[id].env_id); },
     };
     for (auto const& definition : ctx.hir.environments[id].in_order) {
         std::visit(visitor, definition);
     }
 }
 
-void ki::res::debug_display_environment(Context const& ctx, hir::Environment_id const env_id)
+void ki::res::debug_display_environment(
+    db::Database const& db, Context const& ctx, hir::Environment_id const env_id)
 {
     auto const& env = ctx.hir.environments[env_id];
-    auto const& ast = ctx.db.documents[env.doc_id].ast;
+    auto const& ast = db.documents[env.doc_id].ast;
 
     auto const visitor = utl::Overload {
         [&](hir::Function_id const& id) {
             auto const& function = ctx.hir.functions[id];
             std::println(
                 "function {}\nresolved: {}\nast: {}",
-                ctx.db.string_pool.get(function.name.id),
+                db.string_pool.get(function.name.id),
                 function.signature.has_value(),
-                ast::display(ast, ctx.db.string_pool, function.ast));
+                ast::display(ast, db.string_pool, function.ast));
         },
         [&](hir::Module_id const& id) {
             auto const& module = ctx.hir.modules[id];
             std::println(
                 "module {}\nast: {}",
-                ctx.db.string_pool.get(module.name.id),
-                ast::display(ast, ctx.db.string_pool, module.ast));
+                db.string_pool.get(module.name.id),
+                ast::display(ast, db.string_pool, module.ast));
         },
         [&](hir::Enumeration_id const& id) {
             auto const& enumeration = ctx.hir.enumerations[id];
             std::println(
                 "enumeration {}\nresolved: {}\nast: {}",
-                ctx.db.string_pool.get(enumeration.name.id),
+                db.string_pool.get(enumeration.name.id),
                 enumeration.hir.has_value(),
-                ast::display(ast, ctx.db.string_pool, enumeration.ast));
+                ast::display(ast, db.string_pool, enumeration.ast));
         },
         [&](hir::Concept_id const& id) {
             auto const& concept_ = ctx.hir.concepts[id];
             std::println(
                 "concept {}\nresolved: {}\nast: {}",
-                ctx.db.string_pool.get(concept_.name.id),
+                db.string_pool.get(concept_.name.id),
                 concept_.hir.has_value(),
-                ast::display(ast, ctx.db.string_pool, concept_.ast));
+                ast::display(ast, db.string_pool, concept_.ast));
         },
         [&](hir::Alias_id const& id) {
             auto const& alias = ctx.hir.aliases[id];
             std::println(
                 "alias {}\nresolved: {}\nast: {}",
-                ctx.db.string_pool.get(alias.name.id),
+                db.string_pool.get(alias.name.id),
                 alias.hir.has_value(),
-                ast::display(ast, ctx.db.string_pool, alias.ast));
+                ast::display(ast, db.string_pool, alias.ast));
         },
     };
 

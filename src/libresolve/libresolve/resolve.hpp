@@ -76,15 +76,14 @@ namespace ki::res {
     using Scope_arena = utl::Index_arena<Scope_id, Scope>;
 
     struct Context {
-        db::Database& db;
-        hir::Arena    hir;
-        Tags          tags;
-        Constants     constants;
-        Scope_arena   scopes;
-        Scope_map     scope_map;
+        hir::Arena  hir;
+        Tags        tags;
+        Constants   constants;
+        Scope_arena scopes;
+        Scope_map   scope_map;
     };
 
-    auto context(db::Database& db) -> Context;
+    auto context() -> Context;
 
     auto make_constants(hir::Arena& arena) -> Constants;
 
@@ -105,36 +104,42 @@ namespace ki::res {
 
     void flatten_type(Context& ctx, Inference_state& state, hir::Type_variant& type);
 
-    void set_solution(
+    void set_type_solution(
+        db::Database&       db,
         Context&            ctx,
         Inference_state&    state,
         Type_variable_data& variable_data,
         hir::Type_variant   solution);
 
-    void set_solution(
+    void set_mut_solution(
         Context&                  ctx,
         Inference_state&          state,
         Mutability_variable_data& variable_data,
         hir::Mutability_variant   solution);
 
-    void ensure_no_unsolved_variables(Context& ctx, Inference_state& state);
+    void ensure_no_unsolved_variables(db::Database& db, Context& ctx, Inference_state& state);
 
-    auto collect_document(Context& ctx, db::Document_id doc_id) -> hir::Environment_id;
+    auto collect_document(db::Database& db, Context& ctx, db::Document_id doc_id)
+        -> hir::Environment_id;
 
-    void resolve_environment(Context& ctx, hir::Environment_id env_id);
+    void resolve_environment(db::Database& db, Context& ctx, hir::Environment_id env_id);
 
-    auto resolve_enumeration(Context& ctx, hir::Enumeration_id id) -> hir::Enumeration&;
+    auto resolve_enumeration(db::Database& db, Context& ctx, hir::Enumeration_id id)
+        -> hir::Enumeration&;
 
-    auto resolve_concept(Context& ctx, hir::Concept_id id) -> hir::Concept&;
+    auto resolve_concept(db::Database& db, Context& ctx, hir::Concept_id id) -> hir::Concept&;
 
-    auto resolve_alias(Context& ctx, hir::Alias_id id) -> hir::Alias&;
+    auto resolve_alias(db::Database& db, Context& ctx, hir::Alias_id id) -> hir::Alias&;
 
-    auto resolve_function_body(Context& ctx, hir::Function_id id) -> hir::Expression&;
+    auto resolve_function_body(db::Database& db, Context& ctx, hir::Function_id id)
+        -> hir::Expression&;
 
-    auto resolve_function_signature(Context& ctx, hir::Function_id id) -> hir::Function_signature&;
+    auto resolve_function_signature(db::Database& db, Context& ctx, hir::Function_id id)
+        -> hir::Function_signature&;
 
     // Resolve template parameters and register them in the given scope.
     auto resolve_template_parameters(
+        db::Database&                   db,
         Context&                        ctx,
         Inference_state&                state,
         Scope_id                        scope_id,
@@ -142,6 +147,7 @@ namespace ki::res {
         ast::Template_parameters const& parameters) -> std::vector<hir::Template_parameter>;
 
     auto resolve_template_arguments(
+        db::Database&                               db,
         Context&                                    ctx,
         Inference_state&                            state,
         Scope_id                                    scope_id,
@@ -150,10 +156,12 @@ namespace ki::res {
         std::vector<ast::Template_argument> const&  arguments)
         -> std::vector<hir::Template_argument>;
 
-    auto resolve_mutability(Context& ctx, Scope_id scope_id, ast::Mutability const& mutability)
+    auto resolve_mutability(
+        db::Database& db, Context& ctx, Scope_id scope_id, ast::Mutability const& mutability)
         -> hir::Mutability;
 
     auto resolve_expression(
+        db::Database&          db,
         Context&               ctx,
         Inference_state&       state,
         Scope_id               scope_id,
@@ -161,6 +169,7 @@ namespace ki::res {
         ast::Expression const& expression) -> hir::Expression;
 
     auto resolve_pattern(
+        db::Database&       db,
         Context&            ctx,
         Inference_state&    state,
         Scope_id            scope_id,
@@ -168,6 +177,7 @@ namespace ki::res {
         ast::Pattern const& pattern) -> hir::Pattern;
 
     auto resolve_type(
+        db::Database&       db,
         Context&            ctx,
         Inference_state&    state,
         Scope_id            scope_id,
@@ -175,6 +185,7 @@ namespace ki::res {
         ast::Type const&    type) -> hir::Type;
 
     auto resolve_concept_reference(
+        db::Database&       db,
         Context&            ctx,
         Inference_state&    state,
         Scope_id            scope_id,
@@ -200,6 +211,7 @@ namespace ki::res {
 
     // Require that `sub` is equal to or a subtype of `super`.
     void require_subtype_relationship(
+        db::Database&            db,
         Context&                 ctx,
         Inference_state&         state,
         lsp::Range               range,
@@ -240,7 +252,8 @@ namespace ki::res {
         return scope(ctx, std::move(child), callback);
     }
 
-    void debug_display_environment(Context const& ctx, hir::Environment_id env_id);
+    void debug_display_environment(
+        db::Database const& db, Context const& ctx, hir::Environment_id env_id);
 
 } // namespace ki::res
 

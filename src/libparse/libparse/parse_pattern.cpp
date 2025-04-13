@@ -147,9 +147,9 @@ namespace {
                     auto range = ctx.arena.ranges.push(
                         lsp::Range(anchor_range.start, if_keyword.value().range.stop));
                     return cst::patt::Guarded {
-                        .guarded_pattern  = ctx.arena.patterns.push(std::move(variant), range),
-                        .guard_expression = std::move(guard),
-                        .if_token         = token(ctx, if_keyword.value()),
+                        .pattern  = ctx.arena.patterns.push(std::move(variant), range),
+                        .guard    = std::move(guard),
+                        .if_token = token(ctx, if_keyword.value()),
                     };
                 }
                 return variant;

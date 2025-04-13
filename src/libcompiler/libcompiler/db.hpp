@@ -13,18 +13,22 @@
 namespace ki::db {
 
     // If a document is owned by a client, the server will not attempt to read it from disk.
-    enum struct Document_ownership : std::uint8_t { Server, Client };
+    enum struct Ownership : std::uint8_t { Server, Client };
+
+    // Information collected during analysis.
+    struct Document_info {
+        std::vector<lsp::Diagnostic>     diagnostics;
+        std::vector<lsp::Semantic_token> semantic_tokens;
+    };
 
     // In-memory representation of a text document.
     struct Document {
-        std::string                      text;
-        std::vector<lsp::Diagnostic>     diagnostics;
-        std::vector<lsp::Semantic_token> semantic_tokens;
-        std::filesystem::file_time_type  time;
-        Document_ownership               ownership {};
-        std::size_t                      revision {};
-        cst::Arena                       cst;
-        ast::Arena                       ast;
+        Document_info info;
+        std::string   text;
+        Ownership     ownership {};
+        std::size_t   revision {};
+        cst::Arena    cst;
+        ast::Arena    ast;
     };
 
     // Description of a project.
@@ -49,7 +53,7 @@ namespace ki::db {
     [[nodiscard]] auto database(Manifest manifest) -> Database;
 
     // Create a new document.
-    [[nodiscard]] auto document(std::string text, Document_ownership ownership) -> Document;
+    [[nodiscard]] auto document(std::string text, Ownership ownership) -> Document;
 
     // Find the `path` corresponding to the document identified by `doc_id`.
     [[nodiscard]] auto document_path(Database const& db, Document_id doc_id)

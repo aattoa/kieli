@@ -13,16 +13,10 @@ namespace {
         default:                    cpputil::unreachable();
         }
     }
-
-    auto mutability_error(Context& ctx, db::Document_id doc_id, db::Lower name) -> hir::Mutability
-    {
-        auto message = std::format("No mutability '{}' in scope", ctx.db.string_pool.get(name.id));
-        db::add_error(ctx.db, doc_id, name.range, std::move(message));
-        return hir::Mutability { .id = ctx.constants.mut_error, .range = name.range };
-    }
 } // namespace
 
-auto ki::res::resolve_mutability(Context& ctx, Scope_id const scope_id, ast::Mutability const& mut)
+auto ki::res::resolve_mutability(
+    db::Database& db, Context& ctx, Scope_id scope_id, ast::Mutability const& mut)
     -> hir::Mutability
 {
     auto const visitor = utl::Overload {
@@ -32,10 +26,21 @@ auto ki::res::resolve_mutability(Context& ctx, Scope_id const scope_id, ast::Mut
                 .range = mut.range,
             };
         },
-        [&](ast::Parameterized_mutability const& parameterized) {
-            auto const* const bound  = find_mutability(ctx, scope_id, parameterized.name.id);
-            auto const        doc_id = ctx.scopes.index_vector[scope_id].doc_id;
-            return bound ? bound->mutability : mutability_error(ctx, doc_id, parameterized.name);
+        [&](ast::Parameterized_mutability const& mut) {
+            if (auto const* const bound = find_mutability(ctx, scope_id, mut.name.id)) {
+                return bound->mutability;
+            }
+
+            db::add_error(
+                db,
+                ctx.scopes.index_vector[scope_id].doc_id,
+                mut.name.range,
+                std::format("No mutability '{}' in scope", db.string_pool.get(mut.name.id)));
+
+            return hir::Mutability {
+                .id    = ctx.constants.mut_error,
+                .range = mut.name.range,
+            };
         },
     };
     return std::visit(visitor, mut.variant);

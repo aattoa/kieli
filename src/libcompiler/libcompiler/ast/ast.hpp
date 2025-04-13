@@ -322,8 +322,8 @@ namespace ki::ast {
         };
 
         struct Guarded {
-            Pattern_id guarded_pattern;
-            Expression guard_expression;
+            Pattern_id pattern;
+            Expression guard;
         };
     } // namespace patt
 

@@ -6,6 +6,7 @@ using namespace ki::res;
 
 namespace {
     struct Visitor {
+        db::Database&       db;
         Context&            ctx;
         Inference_state&    state;
         Scope_id            scope_id;
@@ -14,13 +15,13 @@ namespace {
 
         auto ast() -> ast::Arena&
         {
-            return ctx.db.documents[state.doc_id].ast;
+            return db.documents[state.doc_id].ast;
         }
 
         auto recurse()
         {
             return [&](ast::Pattern const& pattern) -> hir::Pattern {
-                return resolve_pattern(ctx, state, scope_id, env_id, pattern);
+                return resolve_pattern(db, ctx, state, scope_id, env_id, pattern);
             };
         }
 
@@ -74,7 +75,7 @@ namespace {
         auto operator()(ast::patt::Name const& pattern) -> hir::Pattern
         {
             auto const tag  = fresh_local_variable_tag(ctx.tags);
-            auto const mut  = resolve_mutability(ctx, scope_id, pattern.mutability);
+            auto const mut  = resolve_mutability(db, ctx, scope_id, pattern.mutability);
             auto const type = fresh_general_type_variable(state, ctx.hir, pattern.name.range);
 
             bind_variable(
@@ -131,6 +132,7 @@ namespace {
 
             for (hir::Pattern const& pattern : patterns) {
                 require_subtype_relationship(
+                    db,
                     ctx,
                     state,
                     pattern.range,
@@ -147,10 +149,11 @@ namespace {
 
         auto operator()(ast::patt::Guarded const& guarded) -> hir::Pattern
         {
-            auto pattern = recurse(ast().patterns[guarded.guarded_pattern]);
-            auto guard = resolve_expression(ctx, state, scope_id, env_id, guarded.guard_expression);
+            auto pattern = recurse(ast().patterns[guarded.pattern]);
+            auto guard   = resolve_expression(db, ctx, state, scope_id, env_id, guarded.guard);
 
             require_subtype_relationship(
+                db,
                 ctx,
                 state,
                 guard.range,
@@ -159,8 +162,8 @@ namespace {
 
             return {
                 .variant = hir::patt::Guarded {
-                    .guarded_pattern  = ctx.hir.patterns.push(std::move(pattern)),
-                    .guard_expression = ctx.hir.expressions.push(std::move(guard)),
+                    .pattern = ctx.hir.patterns.push(std::move(pattern)),
+                    .guard   = ctx.hir.expressions.push(std::move(guard)),
                 },
                 .type  = pattern.type,
                 .range = this_range,
@@ -170,13 +173,15 @@ namespace {
 } // namespace
 
 auto ki::res::resolve_pattern(
-    Context&                  ctx,
-    Inference_state&          state,
-    Scope_id const            scope_id,
-    hir::Environment_id const env_id,
-    ast::Pattern const&       pattern) -> hir::Pattern
+    db::Database&       db,
+    Context&            ctx,
+    Inference_state&    state,
+    Scope_id            scope_id,
+    hir::Environment_id env_id,
+    ast::Pattern const& pattern) -> hir::Pattern
 {
     Visitor visitor {
+        .db         = db,
         .ctx        = ctx,
         .state      = state,
         .scope_id   = scope_id,

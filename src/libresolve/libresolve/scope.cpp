@@ -47,7 +47,7 @@ namespace {
         auto diagnostics = std::views::values(bindings)  //
                          | std::views::filter(is_unused) //
                          | std::views::transform(warn);
-        std::ranges::copy(diagnostics, std::back_inserter(db.documents[doc_id].diagnostics));
+        std::ranges::copy(diagnostics, std::back_inserter(db.documents[doc_id].info.diagnostics));
     }
 } // namespace
 

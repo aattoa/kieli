@@ -41,10 +41,10 @@ namespace {
 
     void debug_resolve(db::Database& db, db::Document_id id)
     {
-        auto ctx = res::context(db);
-        auto env = res::collect_document(ctx, id);
-        res::resolve_environment(ctx, env);
-        res::debug_display_environment(ctx, env);
+        auto ctx = res::context();
+        auto env = res::collect_document(db, ctx, id);
+        res::resolve_environment(db, ctx, env);
+        res::debug_display_environment(db, ctx, env);
     }
 
     auto choose_debug_repl_callback(std::string_view const name)

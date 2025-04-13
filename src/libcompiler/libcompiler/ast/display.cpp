@@ -613,8 +613,8 @@ namespace {
         void operator()(patt::Guarded const& guarded)
         {
             write_line(state, "guarded");
-            display_node(state, Last::No, "guarded pattern", guarded.guarded_pattern);
-            display_node(state, Last::Yes, "guard expression", guarded.guard_expression);
+            display_node(state, Last::No, "guarded pattern", guarded.pattern);
+            display_node(state, Last::Yes, "guard expression", guarded.guard);
         }
     };
 

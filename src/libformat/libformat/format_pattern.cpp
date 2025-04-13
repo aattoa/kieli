@@ -70,9 +70,9 @@ namespace {
 
         void operator()(cst::patt::Guarded const& guarded)
         {
-            format(state, guarded.guarded_pattern);
+            format(state, guarded.pattern);
             format(state, " if ");
-            format(state, guarded.guard_expression);
+            format(state, guarded.guard);
         }
 
         void operator()(cst::patt::Constructor const& constructor)

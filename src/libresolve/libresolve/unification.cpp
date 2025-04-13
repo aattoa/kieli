@@ -28,7 +28,7 @@ namespace {
         [[nodiscard]] auto solution(hir::Mutability_variable_id var_id, hir::Mutability mut) const
             -> Result
         {
-            set_solution(ctx, state, state.mut_vars[var_id], ctx.hir.mutabilities[mut.id]);
+            set_mut_solution(ctx, state, state.mut_vars[var_id], ctx.hir.mutabilities[mut.id]);
             return Result::Ok;
         }
 
@@ -83,6 +83,7 @@ namespace {
     };
 
     struct Type_visitor {
+        db::Database&            db;
         Context&                 ctx;
         Inference_state&         state;
         hir::Type_variant const& current_sub;
@@ -96,7 +97,7 @@ namespace {
                 return Result::Recursive;
             }
             flatten_type(ctx, state, type);
-            set_solution(ctx, state, state.type_vars[id], std::move(type));
+            set_type_solution(db, ctx, state, state.type_vars[id], std::move(type));
             return Result::Ok;
         }
 
@@ -104,6 +105,7 @@ namespace {
             -> Result
         {
             Type_visitor visitor {
+                .db            = db,
                 .ctx           = ctx,
                 .state         = state,
                 .current_sub   = sub,
@@ -266,6 +268,7 @@ namespace {
 } // namespace
 
 void ki::res::require_subtype_relationship(
+    db::Database&            db,
     Context&                 ctx,
     Inference_state&         state,
     lsp::Range const         range,
@@ -273,6 +276,7 @@ void ki::res::require_subtype_relationship(
     hir::Type_variant const& super)
 {
     Type_visitor visitor {
+        .db            = db,
         .ctx           = ctx,
         .state         = state,
         .current_sub   = sub,
@@ -282,13 +286,13 @@ void ki::res::require_subtype_relationship(
     auto const result = visitor.unify(sub, super);
 
     if (result != Result::Ok) {
-        auto const left  = hir::to_string(ctx.hir, ctx.db.string_pool, sub);
-        auto const right = hir::to_string(ctx.hir, ctx.db.string_pool, super);
+        auto const left  = hir::to_string(ctx.hir, db.string_pool, sub);
+        auto const right = hir::to_string(ctx.hir, db.string_pool, super);
 
         char const* const description
             = result == Result::Recursive ? "Recursive type variable solution" : "Could not unify";
 
         auto message = std::format("{} {} ~> {}", description, left, right);
-        db::add_error(ctx.db, state.doc_id, range, std::move(message));
+        db::add_error(db, state.doc_id, range, std::move(message));
     }
 }

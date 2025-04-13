@@ -160,23 +160,23 @@ auto ki::par::parse_mutability(Context& ctx) -> std::optional<cst::Mutability>
                     .name = extract_lower_name(ctx, "a mutability parameter name"),
                     .question_mark_token = token(ctx,question_mark.value()),
                 },
-                .range              = up_to_current(ctx, mut_keyword.value().range),
-                .mut_or_immut_token = token(ctx, mut_keyword.value()),
+                .range         = up_to_current(ctx, mut_keyword.value().range),
+                .keyword_token = token(ctx, mut_keyword.value()),
             };
         }
         return cst::Mutability {
-            .variant            = db::Mutability::Mut,
-            .range              = token(ctx, mut_keyword.value()),
-            .mut_or_immut_token = token(ctx, mut_keyword.value()),
+            .variant       = db::Mutability::Mut,
+            .range         = token(ctx, mut_keyword.value()),
+            .keyword_token = token(ctx, mut_keyword.value()),
         };
     }
     if (auto immut_keyword = try_extract(ctx, lex::Type::Immut)) {
         add_keyword(ctx, immut_keyword.value().range);
         auto const range = token(ctx, immut_keyword.value());
         return cst::Mutability {
-            .variant            = db::Mutability::Immut,
-            .range              = range,
-            .mut_or_immut_token = range,
+            .variant       = db::Mutability::Immut,
+            .range         = range,
+            .keyword_token = range,
         };
     }
     return std::nullopt;
@@ -228,9 +228,9 @@ auto ki::par::parse_template_argument(Context& ctx) -> std::optional<cst::Templa
         add_keyword(ctx, immut_keyword.value().range);
         auto const range = token(ctx, immut_keyword.value());
         return cst::Template_argument { cst::Mutability {
-            .variant            = db::Mutability::Immut,
-            .range              = range,
-            .mut_or_immut_token = range,
+            .variant       = db::Mutability::Immut,
+            .range         = range,
+            .keyword_token = range,
         } };
     }
     return parse_mutability(ctx).transform(utl::make<cst::Template_argument>);
@@ -343,7 +343,7 @@ auto ki::par::parse(db::Database& db, db::Document_id const id) -> cst::Module
                 definitions.push_back(std::move(definition).value());
             }
             else {
-                add_error(db, id, peek(ctx).range, "Expected a definition");
+                db::add_error(db, id, peek(ctx).range, "Expected a definition");
                 skip_to_next_recovery_point(ctx);
             }
         }
@@ -352,8 +352,8 @@ auto ki::par::parse(db::Database& db, db::Document_id const id) -> cst::Module
         }
     }
 
-    db.documents[id].cst             = std::move(ctx.arena);
-    db.documents[id].semantic_tokens = std::move(ctx.semantic_tokens);
+    db.documents[id].cst                  = std::move(ctx.arena);
+    db.documents[id].info.semantic_tokens = std::move(ctx.semantic_tokens);
 
     return cst::Module {
         .imports     = std::move(imports),

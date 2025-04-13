@@ -126,9 +126,10 @@ namespace {
     };
 } // namespace
 
-auto ki::res::collect_document(Context& ctx, db::Document_id doc_id) -> hir::Environment_id
+auto ki::res::collect_document(db::Database& db, Context& ctx, db::Document_id doc_id)
+    -> hir::Environment_id
 {
-    auto module = par::parse(ctx.db, doc_id);
+    auto module = par::parse(db, doc_id);
 
     auto env_id = ctx.hir.environments.push(hir::Environment {
         .upper_map = {},
@@ -140,7 +141,7 @@ auto ki::res::collect_document(Context& ctx, db::Document_id doc_id) -> hir::Env
 
     Collector collector {
         .ctx     = ctx,
-        .des_ctx = des::context(ctx.db, doc_id),
+        .des_ctx = des::context(db, doc_id),
         .doc_id  = doc_id,
         .env_id  = env_id,
     };
@@ -149,7 +150,7 @@ auto ki::res::collect_document(Context& ctx, db::Document_id doc_id) -> hir::Env
         std::visit(collector, definition.variant);
     }
 
-    ctx.db.documents[doc_id].ast = std::move(collector.des_ctx.ast);
+    db.documents[doc_id].ast = std::move(collector.des_ctx.ast);
 
     return env_id;
 }

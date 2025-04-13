@@ -6,27 +6,28 @@ using namespace ki::res;
 
 namespace {
     struct Visitor {
+        db::Database&       db;
         Context&            ctx;
         Inference_state&    state;
         Scope_id            scope_id;
         hir::Environment_id env_id;
-        ast::Type const&    this_type;
+        lsp::Range          this_range;
 
         auto ast() -> ast::Arena&
         {
-            return ctx.db.documents[state.doc_id].ast;
+            return db.documents[state.doc_id].ast;
         }
 
         auto unsupported() -> hir::Type
         {
-            db::add_error(ctx.db, state.doc_id, this_type.range, "Unsupported type");
-            return error_type(ctx.constants, this_type.range);
+            db::add_error(db, state.doc_id, this_range, "Unsupported type");
+            return error_type(ctx.constants, this_range);
         }
 
         auto recurse()
         {
             return [&](ast::Type const& type) -> hir::Type {
-                return resolve_type(ctx, state, scope_id, env_id, type);
+                return resolve_type(db, ctx, state, scope_id, env_id, type);
             };
         }
 
@@ -37,7 +38,7 @@ namespace {
 
         auto operator()(ast::Wildcard const&) -> hir::Type
         {
-            return fresh_general_type_variable(state, ctx.hir, this_type.range);
+            return fresh_general_type_variable(state, ctx.hir, this_range);
         }
 
         auto operator()(ast::type::Never const&) -> hir::Type
@@ -50,7 +51,7 @@ namespace {
             if (path.is_unqualified()) {
                 if (auto* bind = find_type(ctx, scope_id, path.head().name.id)) {
                     bind->unused = false;
-                    return { .id = bind->type, .range = this_type.range };
+                    return { .id = bind->type, .range = this_range };
                 }
             }
             return unsupported();
@@ -60,24 +61,24 @@ namespace {
         {
             hir::type::Tuple type { std::ranges::to<std::vector>(
                 std::views::transform(tuple.field_types, recurse())) };
-            return { .id = ctx.hir.types.push(std::move(type)), .range = this_type.range };
+            return { .id = ctx.hir.types.push(std::move(type)), .range = this_range };
         }
 
         auto operator()(ast::type::Array const& array) -> hir::Type
         {
-            auto length
-                = resolve_expression(ctx, state, scope_id, env_id, ast().expressions[array.length]);
+            auto length = resolve_expression(
+                db, ctx, state, scope_id, env_id, ast().expressions[array.length]);
             hir::type::Array type {
                 .element_type = recurse(ast().types[array.element_type]),
                 .length       = ctx.hir.expressions.push(std::move(length)),
             };
-            return { .id = ctx.hir.types.push(std::move(type)), .range = this_type.range };
+            return { .id = ctx.hir.types.push(std::move(type)), .range = this_range };
         }
 
         auto operator()(ast::type::Slice const& slice) -> hir::Type
         {
             hir::type::Slice type { recurse(ast().types[slice.element_type]) };
-            return { .id = ctx.hir.types.push(std::move(type)), .range = this_type.range };
+            return { .id = ctx.hir.types.push(std::move(type)), .range = this_range };
         }
 
         auto operator()(ast::type::Function const& function) -> hir::Type
@@ -87,15 +88,15 @@ namespace {
                                  | std::ranges::to<std::vector>(),
                 .return_type = recurse(ast().types[function.return_type]),
             };
-            return { .id = ctx.hir.types.push(std::move(type)), .range = this_type.range };
+            return { .id = ctx.hir.types.push(std::move(type)), .range = this_range };
         }
 
         auto operator()(ast::type::Typeof const& typeof_) -> hir::Type
         {
             return child_scope(ctx, scope_id, [&](Scope_id scope_id) {
                 auto expression = resolve_expression(
-                    ctx, state, scope_id, env_id, ast().expressions[typeof_.expression]);
-                return hir::Type { .id = expression.type, .range = this_type.range };
+                    db, ctx, state, scope_id, env_id, ast().expressions[typeof_.expression]);
+                return hir::Type { .id = expression.type, .range = this_range };
             });
         }
 
@@ -103,18 +104,18 @@ namespace {
         {
             hir::type::Reference type {
                 .referenced_type = recurse(ast().types[reference.referenced_type]),
-                .mutability      = resolve_mutability(ctx, scope_id, reference.mutability),
+                .mutability      = resolve_mutability(db, ctx, scope_id, reference.mutability),
             };
-            return { .id = ctx.hir.types.push(std::move(type)), .range = this_type.range };
+            return { .id = ctx.hir.types.push(std::move(type)), .range = this_range };
         }
 
         auto operator()(ast::type::Pointer const& pointer) -> hir::Type
         {
             hir::type::Pointer type {
                 .pointee_type = recurse(ast().types[pointer.pointee_type]),
-                .mutability   = resolve_mutability(ctx, scope_id, pointer.mutability),
+                .mutability   = resolve_mutability(db, ctx, scope_id, pointer.mutability),
             };
-            return { .id = ctx.hir.types.push(std::move(type)), .range = this_type.range };
+            return { .id = ctx.hir.types.push(std::move(type)), .range = this_range };
         }
 
         auto operator()(ast::type::Impl const&) -> hir::Type
@@ -122,14 +123,15 @@ namespace {
             return unsupported();
         }
 
-        auto operator()(db::Error const&) -> hir::Type
+        auto operator()(db::Error const&) const -> hir::Type
         {
-            return error_type(ctx.constants, this_type.range);
+            return error_type(ctx.constants, this_range);
         }
     };
 } // namespace
 
 auto ki::res::resolve_type(
+    db::Database&             db,
     Context&                  ctx,
     Inference_state&          state,
     Scope_id const            scope_id,
@@ -137,11 +139,12 @@ auto ki::res::resolve_type(
     ast::Type const&          type) -> hir::Type
 {
     Visitor visitor {
-        .ctx       = ctx,
-        .state     = state,
-        .scope_id  = scope_id,
-        .env_id    = env_id,
-        .this_type = type,
+        .db         = db,
+        .ctx        = ctx,
+        .state      = state,
+        .scope_id   = scope_id,
+        .env_id     = env_id,
+        .this_range = type.range,
     };
     return std::visit(visitor, type.variant);
 }

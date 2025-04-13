@@ -106,7 +106,7 @@ auto ki::par::require_extract(Context& ctx, lex::Type type) -> lex::Token
 void ki::par::error_expected(Context& ctx, lsp::Range range, std::string_view desc)
 {
     auto found = token_description(peek(ctx).type);
-    add_error(ctx.db, ctx.doc_id, range, std::format("Expected {}, but found {}", desc, found));
+    db::add_error(ctx.db, ctx.doc_id, range, std::format("Expected {}, but found {}", desc, found));
     throw Failure {};
 }
 
@@ -175,7 +175,7 @@ auto ki::par::parse_integer(Context& ctx, lex::Token const& literal) -> std::opt
     if (auto const integer = parse_impl<decltype(db::Integer::value)>(string)) {
         return db::Integer { integer.value() };
     }
-    add_error(ctx.db, ctx.doc_id, literal.range, "Invalid integer literal");
+    db::add_error(ctx.db, ctx.doc_id, literal.range, "Invalid integer literal");
     return std::nullopt;
 }
 
@@ -188,7 +188,7 @@ auto ki::par::parse_floating(Context& ctx, lex::Token const& literal) -> std::op
     // if (auto const floating = parse_impl<double>(string)) {
     //     return Floating { floating.value() };
     // }
-    // add_error(ctx.db, ctx.doc_id, literal.range, "Invalid floating point literal");
+    // db::add_error(ctx.db, ctx.doc_id, literal.range, "Invalid floating point literal");
     // return std::nullopt;
 
     try {
@@ -196,11 +196,11 @@ auto ki::par::parse_floating(Context& ctx, lex::Token const& literal) -> std::op
         return db::Floating { std::stod(std::string(string)) };
     }
     catch (std::out_of_range const&) {
-        add_error(ctx.db, ctx.doc_id, literal.range, "Floating point literal is too large");
+        db::add_error(ctx.db, ctx.doc_id, literal.range, "Floating point literal is too large");
         return std::nullopt;
     }
     catch (std::invalid_argument const&) {
-        add_error(ctx.db, ctx.doc_id, literal.range, "Invalid floating point literal");
+        db::add_error(ctx.db, ctx.doc_id, literal.range, "Invalid floating point literal");
         return std::nullopt;
     }
 }

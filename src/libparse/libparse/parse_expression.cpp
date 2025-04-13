@@ -126,23 +126,23 @@ namespace {
             false_branch = cst::expr::False_branch {
                 .body = ctx.arena.expressions.push(
                     std::move(elif_conditional), up_to_current(ctx, elif_keyword.value().range)),
-                .else_or_elif_token = token(ctx, elif_keyword.value()),
+                .keyword_token = token(ctx, elif_keyword.value()),
             };
         }
         else if (auto const else_keyword = try_extract(ctx, lex::Type::Else)) {
             add_keyword(ctx, else_keyword.value().range);
             false_branch = cst::expr::False_branch {
-                .body = require<parse_block_expression>(ctx, "an else-block expression"),
-                .else_or_elif_token = token(ctx, else_keyword.value()),
+                .body          = require<parse_block_expression>(ctx, "an else-block expression"),
+                .keyword_token = token(ctx, else_keyword.value()),
             };
         }
 
         return cst::expr::Conditional {
-            .condition        = condition,
-            .true_branch      = true_branch,
-            .false_branch     = false_branch,
-            .if_or_elif_token = token(ctx, if_or_elif_keyword),
-            .is_elif          = if_or_elif_keyword.type == lex::Type::Elif,
+            .condition     = condition,
+            .true_branch   = true_branch,
+            .false_branch  = false_branch,
+            .keyword_token = token(ctx, if_or_elif_keyword),
+            .is_elif       = if_or_elif_keyword.type == lex::Type::Elif,
         };
     }
 

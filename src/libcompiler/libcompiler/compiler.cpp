@@ -78,17 +78,15 @@ auto ki::db::database(Manifest manifest) -> Database
     };
 }
 
-auto ki::db::document(std::string text, Document_ownership ownership) -> Document
+auto ki::db::document(std::string text, Ownership ownership) -> Document
 {
     return Document {
-        .text            = std::move(text),
-        .diagnostics     = {},
-        .semantic_tokens = {},
-        .time            = {},
-        .ownership       = ownership,
-        .revision        = {},
-        .cst             = {},
-        .ast             = {},
+        .info      = {},
+        .text      = std::move(text),
+        .ownership = ownership,
+        .revision  = {},
+        .cst       = {},
+        .ast       = {},
     };
 }
 
@@ -113,19 +111,19 @@ auto ki::db::set_document(Database& db, std::filesystem::path path, Document doc
 auto ki::db::client_open_document(Database& db, std::filesystem::path path, std::string text)
     -> Document_id
 {
-    return set_document(db, std::move(path), document(std::move(text), Document_ownership::Client));
+    return set_document(db, std::move(path), document(std::move(text), Ownership::Client));
 }
 
 void ki::db::client_close_document(Database& db, Document_id const id)
 {
-    if (db.documents[id].ownership == Document_ownership::Client) {
+    if (db.documents[id].ownership == Ownership::Client) {
         db.documents[id] = Document {};
     }
 }
 
 auto ki::db::test_document(Database& db, std::string text) -> Document_id
 {
-    return set_document(db, "[test]", document(std::move(text), Document_ownership::Server));
+    return set_document(db, "[test]", document(std::move(text), Ownership::Server));
 }
 
 auto ki::db::read_file(std::filesystem::path const& path)
@@ -147,17 +145,7 @@ auto ki::db::read_document(Database& db, std::filesystem::path path)
     -> std::expected<Document_id, Read_failure>
 {
     return read_file(path).transform([&](std::string text) {
-        Document document {
-            .text            = std::move(text),
-            .diagnostics     = {},
-            .semantic_tokens = {},
-            .time            = std::filesystem::last_write_time(path),
-            .ownership       = Document_ownership::Server,
-            .revision        = {},
-            .cst             = {},
-            .ast             = {},
-        };
-        return set_document(db, std::move(path), std::move(document));
+        return set_document(db, std::move(path), document(std::move(text), Ownership::Server));
     });
 }
 
@@ -202,7 +190,7 @@ void ki::db::edit_text(std::string& text, lsp::Range range, std::string_view new
 
 void ki::db::add_diagnostic(Database& db, Document_id doc_id, lsp::Diagnostic diagnostic)
 {
-    db.documents[doc_id].diagnostics.push_back(std::move(diagnostic));
+    db.documents[doc_id].info.diagnostics.push_back(std::move(diagnostic));
 }
 
 void ki::db::add_error(Database& db, Document_id doc_id, lsp::Range range, std::string message)
@@ -212,7 +200,7 @@ void ki::db::add_error(Database& db, Document_id doc_id, lsp::Range range, std::
 
 void ki::db::print_diagnostics(std::FILE* stream, Database const& db, Document_id doc_id)
 {
-    for (lsp::Diagnostic const& diag : db.documents[doc_id].diagnostics) {
+    for (lsp::Diagnostic const& diag : db.documents[doc_id].info.diagnostics) {
         std::println(stream, "{} {}: {}", severity_string(diag.severity), diag.range, diag.message);
     }
 }
