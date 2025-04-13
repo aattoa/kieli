@@ -4,6 +4,7 @@
 
 ## Currently supported features
 
+- Inlay type hints
 - Diagnostics (errors, warnings, hints)
 - Document formatting
 - Syntax highlighting

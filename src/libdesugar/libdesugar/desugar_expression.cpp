@@ -386,9 +386,7 @@ namespace {
             return ast::expr::Let {
                 .pattern     = desugar(ctx, let.pattern),
                 .initializer = desugar(ctx, let.initializer),
-                .type        = let.type.has_value()
-                                 ? desugar(ctx, let.type.value())
-                                 : ctx.ast.types.push(wildcard_type(ctx.cst.ranges[range_id])),
+                .type        = let.type.transform(desugar(ctx)),
             };
         }
 

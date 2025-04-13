@@ -104,7 +104,7 @@ namespace ki::hir {
 
         struct Let {
             Pattern_id    pattern;
-            Type          type;
+            Type_id       type;
             Expression_id initializer;
         };
 

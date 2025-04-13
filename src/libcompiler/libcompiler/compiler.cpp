@@ -188,6 +188,13 @@ void ki::db::edit_text(std::string& text, lsp::Range range, std::string_view new
     text.replace(offset, where.size(), new_text);
 }
 
+void ki::db::add_type_hint(
+    Database& db, Document_id doc_id, lsp::Position position, hir::Type_id type)
+{
+    // TODO: check if inlay hints have been enabled.
+    db.documents[doc_id].info.type_hints.emplace_back(position, type);
+}
+
 void ki::db::add_diagnostic(Database& db, Document_id doc_id, lsp::Diagnostic diagnostic)
 {
     db.documents[doc_id].info.diagnostics.push_back(std::move(diagnostic));

@@ -38,7 +38,9 @@ namespace {
 
         auto operator()(ast::Wildcard const&) -> hir::Type
         {
-            return fresh_general_type_variable(state, ctx.hir, this_range);
+            auto type = fresh_general_type_variable(state, ctx.hir, this_range);
+            db::add_type_hint(db, state.doc_id, this_range.stop, type.id);
+            return type;
         }
 
         auto operator()(ast::type::Never const&) -> hir::Type

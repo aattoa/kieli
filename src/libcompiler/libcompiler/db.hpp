@@ -15,10 +15,17 @@ namespace ki::db {
     // If a document is owned by a client, the server will not attempt to read it from disk.
     enum struct Ownership : std::uint8_t { Server, Client };
 
+    // Inlay type hint.
+    struct Type_hint {
+        lsp::Position position;
+        hir::Type_id  type;
+    };
+
     // Information collected during analysis.
     struct Document_info {
         std::vector<lsp::Diagnostic>     diagnostics;
         std::vector<lsp::Semantic_token> semantic_tokens;
+        std::vector<Type_hint>           type_hints;
     };
 
     // In-memory representation of a text document.
@@ -89,6 +96,9 @@ namespace ki::db {
 
     // Replace `range` in `text` with `new_text`.
     void edit_text(std::string& text, lsp::Range range, std::string_view new_text);
+
+    // Add a type hint to the document identified by `doc_id`.
+    void add_type_hint(Database& db, Document_id doc_id, lsp::Position position, hir::Type_id type);
 
     // Add `diagnostic` to the document identified by `doc_id`.
     void add_diagnostic(Database& db, Document_id doc_id, lsp::Diagnostic diagnostic);

@@ -45,10 +45,6 @@ Some errors are also caught at this stage, such as duplicate struct fields.
 
 `let y: &I32 = &x` → `let immut y: &immut I32 = &immut x`
 
-## Implicit wildcard let type annotation
-
-`let x = 0` → `let x: _ = 0`
-
 ## Implicit unit else
 
 `if x { y }` → `if x { y } else { () }`

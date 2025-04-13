@@ -204,9 +204,9 @@ namespace ki::ast {
         };
 
         struct Let {
-            Pattern_id    pattern;
-            Expression_id initializer;
-            Type_id       type;
+            Pattern_id             pattern;
+            Expression_id          initializer;
+            std::optional<Type_id> type;
         };
 
         struct Type_alias {

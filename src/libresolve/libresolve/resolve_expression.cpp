@@ -306,26 +306,37 @@ namespace {
 
         auto operator()(ast::expr::Let const& let) -> hir::Expression
         {
-            hir::Expression initializer = recurse(ast().expressions[let.initializer]);
-
-            auto type = resolve_type(db, ctx, state, scope_id, env_id, ast().types[let.type]);
+            auto initializer = recurse(ast().expressions[let.initializer]);
             auto pattern
                 = resolve_pattern(db, ctx, state, scope_id, env_id, ast().patterns[let.pattern]);
 
-            require_subtype_relationship(
-                db, ctx, state, pattern.range, ctx.hir.types[pattern.type], ctx.hir.types[type.id]);
+            if (let.type.has_value()) {
+                auto type
+                    = resolve_type(db, ctx, state, scope_id, env_id, ast().types[let.type.value()]);
+                require_subtype_relationship(
+                    db,
+                    ctx,
+                    state,
+                    pattern.range,
+                    ctx.hir.types[pattern.type],
+                    ctx.hir.types[type.id]);
+            }
+            else {
+                db::add_type_hint(db, state.doc_id, pattern.range.stop, pattern.type);
+            }
+
             require_subtype_relationship(
                 db,
                 ctx,
                 state,
                 initializer.range,
                 ctx.hir.types[initializer.type],
-                ctx.hir.types[type.id]);
+                ctx.hir.types[pattern.type]);
 
             return {
                 .variant  = hir::expr::Let {
-                    .pattern     = ctx.hir.patterns.push(std::move(pattern)),
-                    .type        = type,
+                    .pattern     =  ctx.hir.patterns.push(std::move(pattern)),
+                    .type        =  initializer.type,
                     .initializer = ctx.hir.expressions.push(std::move(initializer)),
                 },
                 .type     = ctx.constants.type_unit,
@@ -420,9 +431,11 @@ namespace {
 
         auto operator()(ast::Wildcard const&) -> hir::Expression
         {
+            auto type = fresh_general_type_variable(state, ctx.hir, this_range);
+            db::add_type_hint(db, state.doc_id, this_range.stop, type.id);
             return {
                 .variant  = hir::Wildcard {},
-                .type     = fresh_general_type_variable(state, ctx.hir, this_range).id,
+                .type     = type.id,
                 .category = hir::Expression_category::Value,
                 .range    = this_range,
             };

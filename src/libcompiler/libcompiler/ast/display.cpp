@@ -514,7 +514,9 @@ namespace {
         void operator()(expr::Let const& let)
         {
             write_line(state, "let binding");
-            display_node(state, Last::No, "type", let.type);
+            if (let.type.has_value()) {
+                display_node(state, Last::No, "type", let.type.value());
+            }
             display_node(state, Last::No, "pattern", let.pattern);
             display_node(state, Last::Yes, "initializer", let.initializer);
         }

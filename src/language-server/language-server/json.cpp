@@ -82,7 +82,7 @@ auto ki::lsp::document_id_from_json(db::Database const& db, Json::Object object)
         return it->second;
     }
     auto message = std::format("Referenced an unopened document: '{}'", path.c_str());
-    throw lsp::Bad_client_json(std::move(message));
+    throw Bad_client_json(std::move(message));
 }
 
 auto ki::lsp::document_id_to_json(db::Database const& db, db::Document_id const id) -> Json
@@ -180,7 +180,7 @@ auto ki::lsp::semantic_tokens_to_json(std::span<Semantic_token const> const toke
 
     static constexpr auto to_num = [](auto n) { return cpputil::num::safe_cast<Json::Number>(n); };
 
-    lsp::Position prev;
+    Position prev;
     for (Semantic_token const& token : tokens) {
         assert(token.length != 0);
         assert(prev.line <= token.position.line);

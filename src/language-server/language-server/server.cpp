@@ -52,6 +52,7 @@ namespace {
         auto& document = server.db.documents[id];
 
         document.info.diagnostics.clear();
+        document.info.semantic_tokens.clear();
         auto const cst = par::parse(server.db, id);
 
         Json::Array edits;
@@ -84,6 +85,33 @@ namespace {
             { "kind", Json { "full" } },
             { "items", Json { std::move(items) } },
         } };
+    }
+
+    auto type_hint_to_json(Server& server, db::Type_hint hint) -> Json
+    {
+        std::string label = hir::to_string(
+            server.ctx.hir, server.db.string_pool, server.ctx.hir.types[hint.type]);
+        label.insert(0, ": "sv);
+        return Json { Json::Object {
+            { "position", position_to_json(hint.position) },
+            { "label", Json { std::move(label) } },
+            { "kind", Json { 1 } }, // Type hint
+        } };
+    }
+
+    auto handle_inlay_hints(Server& server, Json::Object params) -> Result<Json>
+    {
+        auto id    = document_id_from_json(server.db, as<Json::Object>(at(params, "textDocument")));
+        auto range = range_from_json(as<Json::Object>(at(params, "range")));
+
+        auto hints = server.db.documents[id].info.type_hints
+                   | std::views::filter(
+                         [=](db::Type_hint hint) { return range_contains(range, hint.position); })
+                   | std::views::transform(
+                         [&](db::Type_hint hint) { return type_hint_to_json(server, hint); })
+                   | std::ranges::to<Json::Array>();
+
+        return Json { std::move(hints) };
     }
 
     auto handle_semantic_tokens(db::Database const& db, Json::Object params) -> Json
@@ -142,6 +170,10 @@ namespace {
                         { "legend", std::move(semantic_tokens_legend) },
                         { "full", Json { true } },
                     } } },
+                  { "inlayHintProvider",
+                    Json { Json::Object {
+                        { "resolveProvider", Json { false } },
+                    } } },
                   { "hoverProvider", Json { true } },
                   { "documentFormattingProvider", Json { true } },
               } } },
@@ -170,6 +202,9 @@ namespace {
         }
         if (method == "textDocument/diagnostic") {
             return handle_pull_diagnostics(server, as<Json::Object>(std::move(params)));
+        }
+        if (method == "textDocument/inlayHint") {
+            return handle_inlay_hints(server, as<Json::Object>(std::move(params)));
         }
         if (method == "shutdown") {
             return handle_shutdown(server);
