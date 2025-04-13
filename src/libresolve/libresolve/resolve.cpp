@@ -191,9 +191,14 @@ void ki::res::ensure_no_unsolved_variables(db::Database& db, Context& ctx, Infer
     for (Type_variable_data& data : state.type_vars.underlying) {
         flatten_type(ctx, state, ctx.hir.types[data.type_id]);
         if (not data.is_solved) {
-            auto message = std::format("Unsolved type variable: ?{}", data.var_id.get());
-            db::add_error(db, state.doc_id, data.origin, std::move(message));
-            set_type_solution(db, ctx, state, data, db::Error {});
+            if (data.kind == hir::Type_variable_kind::Integral) {
+                set_type_solution(db, ctx, state, data, hir::type::Integer::I32);
+            }
+            else {
+                auto message = std::format("Unsolved type variable: ?{}", data.var_id.get());
+                db::add_error(db, state.doc_id, data.origin, std::move(message));
+                set_type_solution(db, ctx, state, data, db::Error {});
+            }
         }
     }
 }
