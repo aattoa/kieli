@@ -207,7 +207,7 @@ auto ki::par::parse_floating(Context& ctx, lex::Token const& literal) -> std::op
 
 auto ki::par::parse_boolean(Context& ctx, lex::Token const& literal) -> std::optional<db::Boolean>
 {
-    add_keyword(ctx, literal.range);
+    add_semantic_token(ctx, literal.range, Semantic::Number);
 
     // The value of the boolean literal can be deduced from the token width.
     // This looks brittle but is perfectly fine.
@@ -257,6 +257,9 @@ auto ki::par::is_recovery_point(lex::Type type) -> bool
 void ki::par::skip_to_next_recovery_point(Context& ctx)
 {
     while (not is_recovery_point(peek(ctx).type)) {
-        (void)extract(ctx);
+        auto token = extract(ctx);
+        if (auto semantic = lex::recovery_semantic_token(token.type)) {
+            add_semantic_token(ctx, token.range, semantic.value());
+        }
     }
 }
