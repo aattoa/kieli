@@ -19,7 +19,7 @@ TEST("literals")
     CHECK_SIMPLE_PARSE("\"\\n\"");
     CHECK_SIMPLE_PARSE("\"\"");
     CHECK_SIMPLE_PARSE("\"hello\"");
-    CHECK_EQUAL(parse("\"hello,\tworld!\n\""), R"("hello,\tworld!\n")");
+    CHECK_EQUAL(parse("\"hello,\tworld!\\n\""), R"("hello,\tworld!\n")");
 }
 
 TEST("parenthesized")

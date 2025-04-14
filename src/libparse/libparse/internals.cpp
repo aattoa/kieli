@@ -128,10 +128,7 @@ auto ki::par::token(Context& ctx, lex::Token const& token) -> cst::Range_id
 
 void ki::par::add_semantic_token(Context& ctx, lsp::Range range, Semantic type)
 {
-    if (lsp::is_multiline(range)) {
-        cpputil::always_assert(type == Semantic::String);
-        return; // TODO
-    }
+    cpputil::always_assert(not lsp::is_multiline(range));
     cpputil::always_assert(range.start.column < range.stop.column);
     ctx.semantic_tokens.push_back(lsp::Semantic_token {
         .position = range.start,

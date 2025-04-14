@@ -200,14 +200,18 @@ namespace {
     {
         cpputil::always_assert(extract_current(state) == '"');
         while (not is_finished(state)) {
-            switch (extract_current(state)) {
-            case '"': return Type::String;
-            case '\\':
+            if (current(state) == '\n') [[unlikely]] {
+                return Type::Unterminated_string;
+            }
+            char const character = extract_current(state);
+            if (character == '"') {
+                return Type::String;
+            }
+            if (character == '\\') {
                 if (is_finished(state)) [[unlikely]] {
                     return Type::Unterminated_string;
                 }
                 advance(state);
-            default: continue;
             }
         }
         return Type::Unterminated_string;
