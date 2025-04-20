@@ -15,7 +15,7 @@ namespace {
 
         auto ast() -> ast::Arena&
         {
-            return db.documents[state.doc_id].ast;
+            return db.documents[state.doc_id].arena.ast;
         }
 
         template <typename Default>

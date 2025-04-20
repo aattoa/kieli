@@ -18,7 +18,6 @@ namespace {
 
     struct Server {
         db::Database       db;
-        res::Context       ctx = res::context();
         std::optional<int> exit_code;
         bool               is_initialized {};
     };
@@ -28,14 +27,13 @@ namespace {
 
     void analyze_document(Server& server, db::Document_id doc_id)
     {
-        // Reset document info from previous analysis.
         server.db.documents[doc_id].info = {};
-        // Reset the resolution context.
-        server.ctx = res::context();
-        // Collect definitions from the document.
-        auto env_id = res::collect_document(server.db, server.ctx, doc_id);
-        // Resolve every definition in the document.
-        res::resolve_environment(server.db, server.ctx, env_id);
+
+        auto ctx    = res::context();
+        auto env_id = res::collect_document(server.db, ctx, doc_id);
+        res::resolve_environment(server.db, ctx, env_id);
+
+        server.db.documents[doc_id].arena.hir = std::move(ctx.hir);
     }
 
     auto handle_hover(Server& server, Json::Object params) -> Result<Json>
@@ -58,14 +56,15 @@ namespace {
         Json::Array edits;
         for (auto const& definition : cst.definitions) {
             std::string new_text;
-            fmt::format(server.db.string_pool, document.cst, options, definition, new_text);
-            if (new_text == db::text_range(document.text, document.cst.ranges[definition.range])) {
+            fmt::format(server.db.string_pool, document.arena.cst, options, definition, new_text);
+            auto text = db::text_range(document.text, document.arena.cst.ranges[definition.range]);
+            if (new_text == text) {
                 // Avoid sending redundant edits when nothing changed.
                 // text_range takes linear time, but it's fine for now.
                 continue;
             }
             edits.emplace_back(Json::Object {
-                { "range", range_to_json(document.cst.ranges[definition.range]) },
+                { "range", range_to_json(document.arena.cst.ranges[definition.range]) },
                 { "newText", Json { std::move(new_text) } },
             });
         }
@@ -76,26 +75,15 @@ namespace {
     {
         auto id = document_id_from_json(server.db, as<Json::Object>(at(params, "textDocument")));
 
-        auto items
-            = server.db.documents[id].info.diagnostics
-            | std::views::transform(std::bind_front(diagnostic_to_json, std::cref(server.db)))
-            | std::ranges::to<Json::Array>();
+        auto items = server.db.documents[id].info.diagnostics
+                   | std::views::transform([&](lsp::Diagnostic const& diagnostic) {
+                         return diagnostic_to_json(server.db, diagnostic);
+                     })
+                   | std::ranges::to<Json::Array>();
 
         return Json { Json::Object {
             { "kind", Json { "full" } },
             { "items", Json { std::move(items) } },
-        } };
-    }
-
-    auto type_hint_to_json(Server& server, db::Type_hint hint) -> Json
-    {
-        std::string label = hir::to_string(
-            server.ctx.hir, server.db.string_pool, server.ctx.hir.types[hint.type]);
-        label.insert(0, ": "sv);
-        return Json { Json::Object {
-            { "position", position_to_json(hint.position) },
-            { "label", Json { std::move(label) } },
-            { "kind", Json { 1 } }, // Type hint
         } };
     }
 
@@ -108,7 +96,7 @@ namespace {
                    | std::views::filter(
                          [=](db::Type_hint hint) { return range_contains(range, hint.position); })
                    | std::views::transform(
-                         [&](db::Type_hint hint) { return type_hint_to_json(server, hint); })
+                         [&](db::Type_hint hint) { return type_hint_to_json(server.db, hint); })
                    | std::ranges::to<Json::Array>();
 
         return Json { std::move(hints) };

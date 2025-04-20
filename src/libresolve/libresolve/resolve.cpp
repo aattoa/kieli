@@ -233,7 +233,7 @@ void ki::res::debug_display_environment(
     db::Database const& db, Context const& ctx, hir::Environment_id const env_id)
 {
     auto const& env = ctx.hir.environments[env_id];
-    auto const& ast = db.documents[env.doc_id].ast;
+    auto const& ast = db.documents[env.doc_id].arena.ast;
 
     auto const visitor = utl::Overload {
         [&](hir::Function_id const& id) {

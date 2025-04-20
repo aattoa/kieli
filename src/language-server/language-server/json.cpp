@@ -144,6 +144,18 @@ auto ki::lsp::diagnostic_to_json(db::Database const& db, Diagnostic const& diagn
     } };
 }
 
+auto ki::lsp::type_hint_to_json(db::Database const& db, db::Type_hint hint) -> Json
+{
+    auto const& hir   = db.documents[hint.doc_id].arena.hir;
+    std::string label = hir::to_string(hir, db.string_pool, hir.types[hint.type]);
+    label.insert(0, ": "sv);
+    return Json { Json::Object {
+        { "position", position_to_json(hint.position) },
+        { "label", Json { std::move(label) } },
+        { "kind", Json { 1 } }, // Type hint
+    } };
+}
+
 auto ki::lsp::document_item_from_json(Json::Object object) -> Document_item
 {
     return Document_item {

@@ -352,7 +352,7 @@ auto ki::par::parse(db::Database& db, db::Document_id const id) -> cst::Module
         }
     }
 
-    db.documents[id].cst                  = std::move(ctx.arena);
+    db.documents[id].arena.cst            = std::move(ctx.arena);
     db.documents[id].info.semantic_tokens = std::move(ctx.semantic_tokens);
 
     return cst::Module {

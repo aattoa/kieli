@@ -25,7 +25,7 @@ namespace {
     void debug_parse(db::Database& db, db::Document_id id)
     {
         auto text = fmt::format_module(
-            db.string_pool, db.documents[id].cst, fmt::Options {}, par::parse(db, id));
+            db.string_pool, db.documents[id].arena.cst, fmt::Options {}, par::parse(db, id));
         std::print("{}", text);
     }
 

@@ -83,10 +83,9 @@ auto ki::db::document(std::string text, Ownership ownership) -> Document
     return Document {
         .info      = {},
         .text      = std::move(text),
+        .arena     = {},
         .ownership = ownership,
         .revision  = {},
-        .cst       = {},
-        .ast       = {},
     };
 }
 
@@ -192,7 +191,7 @@ void ki::db::add_type_hint(
     Database& db, Document_id doc_id, lsp::Position position, hir::Type_id type)
 {
     // TODO: check if inlay hints have been enabled.
-    db.documents[doc_id].info.type_hints.emplace_back(position, type);
+    db.documents[doc_id].info.type_hints.emplace_back(position, doc_id, type);
 }
 
 void ki::db::add_diagnostic(Database& db, Document_id doc_id, lsp::Diagnostic diagnostic)

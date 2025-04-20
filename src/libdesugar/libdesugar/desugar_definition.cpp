@@ -215,7 +215,7 @@ auto ki::des::context(db::Database& db, db::Document_id doc_id) -> Context
     return Context {
         .db     = db,
         .doc_id = doc_id,
-        .cst    = db.documents[doc_id].cst,
+        .cst    = db.documents[doc_id].arena.cst,
         .ast    = ast::Arena {},
     };
 }

@@ -13,7 +13,7 @@ namespace {
         hir::Environment_id            env_id,
         ast::Function_parameter const& parameter) -> hir::Function_parameter
     {
-        ast::Arena& ast = db.documents[state.doc_id].ast;
+        ast::Arena& ast = db.documents[state.doc_id].arena.ast;
 
         auto pattern
             = resolve_pattern(db, ctx, state, scope_id, env_id, ast.patterns[parameter.pattern]);

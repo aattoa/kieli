@@ -18,7 +18,15 @@ namespace ki::db {
     // Inlay type hint.
     struct Type_hint {
         lsp::Position position;
+        Document_id   doc_id;
         hir::Type_id  type;
+    };
+
+    // Arenas necessary for semantic analysis.
+    struct Arena {
+        cst::Arena cst;
+        ast::Arena ast;
+        hir::Arena hir;
     };
 
     // Information collected during analysis.
@@ -32,10 +40,9 @@ namespace ki::db {
     struct Document {
         Document_info info;
         std::string   text;
+        Arena         arena;
         Ownership     ownership {};
         std::size_t   revision {};
-        cst::Arena    cst;
-        ast::Arena    ast;
     };
 
     // Description of a project.

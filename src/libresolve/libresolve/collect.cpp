@@ -150,7 +150,7 @@ auto ki::res::collect_document(db::Database& db, Context& ctx, db::Document_id d
         std::visit(collector, definition.variant);
     }
 
-    db.documents[doc_id].ast = std::move(collector.des_ctx.ast);
+    db.documents[doc_id].arena.ast = std::move(collector.des_ctx.ast);
 
     return env_id;
 }
