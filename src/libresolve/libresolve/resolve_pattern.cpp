@@ -74,27 +74,22 @@ namespace {
 
         auto operator()(ast::patt::Name const& pattern) -> hir::Pattern
         {
-            auto const tag  = fresh_local_variable_tag(ctx.tags);
             auto const mut  = resolve_mutability(db, ctx, scope_id, pattern.mutability);
             auto const type = fresh_general_type_variable(state, ctx.hir, pattern.name.range);
 
-            bind_variable(
-                ctx.scopes.index_vector[scope_id],
-                hir::Variable_bind {
-                    .name       = pattern.name,
-                    .type       = type.id,
-                    .mutability = mut,
-                    .tag        = tag,
-                });
-
-            hir::patt::Name variant {
-                .mutability   = mut,
-                .identifier   = pattern.name.id,
-                .variable_tag = tag,
+            hir::Local_variable variable {
+                .name    = pattern.name,
+                .mut_id  = mut.id,
+                .type_id = type.id,
+                .unused  = true,
             };
 
             return {
-                .variant = std::move(variant),
+                .variant = hir::patt::Name {
+                    .name_id = pattern.name.id,
+                    .mut_id  = mut.id,
+                    .var_id  = bind_local_variable(db, ctx, scope_id, pattern.name, variable),
+                },
                 .type    = type.id,
                 .range   = this_range,
             };

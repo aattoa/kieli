@@ -30,7 +30,7 @@ namespace {
 
             auto& env = ctx.hir.environments[env_id];
             env.in_order.emplace_back(id);
-            env.lower_map.emplace_back(
+            env.lower_map.insert_or_assign(
                 name.id, hir::Lower_info { .name = name, .doc_id = doc_id, .variant = id });
         }
 
@@ -50,7 +50,7 @@ namespace {
 
             auto& env = ctx.hir.environments[env_id];
             env.in_order.emplace_back(id);
-            env.upper_map.emplace_back(
+            env.upper_map.insert_or_assign(
                 name.id, hir::Upper_info { .name = name, .doc_id = env.doc_id, .variant = id });
         }
 
@@ -70,7 +70,7 @@ namespace {
 
             auto& env = ctx.hir.environments[env_id];
             env.in_order.emplace_back(id);
-            env.upper_map.emplace_back(
+            env.upper_map.insert_or_assign(
                 name.id, hir::Upper_info { .name = name, .doc_id = env.doc_id, .variant = id });
         }
 
@@ -90,7 +90,7 @@ namespace {
 
             auto& env = ctx.hir.environments[env_id];
             env.in_order.emplace_back(id);
-            env.upper_map.emplace_back(
+            env.upper_map.insert_or_assign(
                 name.id, hir::Upper_info { .name = name, .doc_id = env.doc_id, .variant = id });
         }
 
@@ -110,7 +110,7 @@ namespace {
 
             auto& env = ctx.hir.environments[env_id];
             env.in_order.emplace_back(id);
-            env.upper_map.emplace_back(
+            env.upper_map.insert_or_assign(
                 name.id, hir::Upper_info { .name = name, .doc_id = env.doc_id, .variant = id });
         }
 

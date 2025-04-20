@@ -55,6 +55,9 @@ namespace ki::hir {
     DEFINE_INDEX(Constructor_id);
     DEFINE_INDEX(Type_variable_id);
     DEFINE_INDEX(Mutability_variable_id);
+    DEFINE_INDEX(Local_variable_id);
+    DEFINE_INDEX(Local_mutability_id);
+    DEFINE_INDEX(Local_type_id);
 } // namespace ki::hir
 
 // NOLINTEND(bugprone-forward-declaration-namespace)

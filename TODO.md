@@ -12,10 +12,9 @@
 ## libresolve
 - Inject built in types
 - Unique zero-sized type for each function, coerce to function pointer type
-- Scope stack, scope id
-- Generate logs for rollback
+- Unification rollback logs?
 - Attribute `linear` means type has to be explicitly dropped with a function marked `drop`
-- Interned HIR
+- Handle duplicate definitions
 
 ## libcompiler
 - Document paths should always be absolute

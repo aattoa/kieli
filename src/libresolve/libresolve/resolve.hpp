@@ -60,16 +60,15 @@ namespace ki::res {
     };
 
     struct Tags {
-        std::size_t current_template_parameter_tag {};
-        std::size_t current_local_variable_tag {};
+        std::uint32_t current_template_parameter_tag {};
     };
 
     struct Scope {
-        hir::Identifier_map<hir::Variable_bind>   variables;
-        hir::Identifier_map<hir::Type_bind>       types;
-        hir::Identifier_map<hir::Mutability_bind> mutabilities;
-        db::Document_id                           doc_id;
-        std::optional<Scope_id>                   parent_id;
+        hir::Identifier_map<hir::Local_variable_id>   variables;
+        hir::Identifier_map<hir::Local_type_id>       types;
+        hir::Identifier_map<hir::Local_mutability_id> mutabilities;
+        db::Document_id                               doc_id;
+        std::optional<Scope_id>                       parent_id;
     };
 
     using Scope_map   = std::unordered_map<hir::Function_id, Scope_id, utl::Hash_vector_index>;
@@ -90,8 +89,6 @@ namespace ki::res {
     auto inference_state(db::Document_id doc_id) -> Inference_state;
 
     auto fresh_template_parameter_tag(Tags& tags) -> hir::Template_parameter_tag;
-
-    auto fresh_local_variable_tag(Tags& tags) -> hir::Local_variable_tag;
 
     auto fresh_general_type_variable(Inference_state& state, hir::Arena& arena, lsp::Range origin)
         -> hir::Type;
@@ -192,18 +189,35 @@ namespace ki::res {
         hir::Environment_id env_id,
         ast::Path const&    path) -> hir::Concept_id;
 
-    void bind_mutability(Scope& scope, hir::Mutability_bind bind);
-    void bind_variable(Scope& scope, hir::Variable_bind bind);
-    void bind_type(Scope& scope, hir::Type_bind bind);
+    auto bind_local_variable(
+        db::Database&       db,
+        Context&            ctx,
+        Scope_id            scope_id,
+        db::Lower           name,
+        hir::Local_variable variable) -> hir::Local_variable_id;
+
+    auto bind_local_mutability(
+        db::Database&         db,
+        Context&              ctx,
+        Scope_id              scope_id,
+        db::Lower             name,
+        hir::Local_mutability mutability) -> hir::Local_mutability_id;
+
+    auto bind_local_type(
+        db::Database& db, Context& ctx, Scope_id scope_id, db::Upper name, hir::Local_type type)
+        -> hir::Local_type_id;
+
+    auto find_local_mutability(Context& ctx, Scope_id scope_id, utl::String_id string_id)
+        -> std::optional<hir::Local_mutability_id>;
+
+    auto find_local_variable(Context& ctx, Scope_id scope_id, utl::String_id string_id)
+        -> std::optional<hir::Local_variable_id>;
+
+    auto find_local_type(Context& ctx, Scope_id scope_id, utl::String_id string_id)
+        -> std::optional<hir::Local_type_id>;
 
     // Emit warnings for any unused bindings.
-    void report_unused(db::Database& db, Scope& scope);
-
-    auto find_mutability(Context& ctx, Scope_id scope_id, utl::String_id string_id)
-        -> hir::Mutability_bind*;
-    auto find_variable(Context& ctx, Scope_id scope_id, utl::String_id string_id)
-        -> hir::Variable_bind*;
-    auto find_type(Context& ctx, Scope_id scope_id, utl::String_id string_id) -> hir::Type_bind*;
+    void report_unused(db::Database& db, Context& ctx, Scope_id scope_id);
 
     // Check whether a type variable with `tag` occurs in `type`.
     auto occurs_check(

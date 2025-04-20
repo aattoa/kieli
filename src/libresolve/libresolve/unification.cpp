@@ -73,7 +73,7 @@ namespace {
         auto operator()(
             hir::mut::Parameterized const sub, hir::mut::Parameterized const super) const -> Result
         {
-            return result(sub.tag.get() == super.tag.get());
+            return result(sub.tag.value == super.tag.value);
         }
 
         auto operator()(auto const&, auto const&) const -> Result
@@ -188,7 +188,7 @@ namespace {
         auto operator()(hir::type::Parameterized const& sub, hir::type::Parameterized const& super)
             const -> Result
         {
-            return result(sub.tag.get() == super.tag.get());
+            return result(sub.tag.value == super.tag.value);
         }
 
         auto operator()(hir::type::Tuple const& sub, hir::type::Tuple const& super) const -> Result

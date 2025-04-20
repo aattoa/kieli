@@ -5,90 +5,129 @@ using namespace ki;
 using namespace ki::res;
 
 namespace {
-    template <typename Bind>
-    void do_bind(hir::Identifier_map<Bind>& bindings, Bind bind)
+    auto is_unused(db::Database& db, auto const& local) -> bool
     {
-        // Easy way to implement variable shadowing
-        auto const it = std::ranges::find(bindings, bind.name.id, utl::first);
-        bindings.emplace(it, bind.name.id, std::move(bind));
+        return local.unused and not db.string_pool.get(local.name.id).starts_with('_');
     }
 
-    template <typename T, hir::Identifier_map<T> Scope::* bindings>
-    auto do_find(Context& ctx, Scope_id scope_id, utl::String_id string_id) -> T*
+    void do_report_unused_bindings(
+        db::Database& db, db::Document_id doc_id, auto& locals, auto& map)
     {
-        for (;;) {
-            Scope& scope = ctx.scopes.index_vector[scope_id];
-            if (auto const it = std::ranges::find(scope.*bindings, string_id, utl::first);
-                it != (scope.*bindings).end()) {
-                return std::addressof(it->second);
+        for (auto const& [_, id] : map) {
+            if (not is_unused(db, locals[id])) {
+                continue;
             }
-            else if (scope.parent_id.has_value()) {
-                scope_id = scope.parent_id.value();
-            }
-            else {
-                return nullptr;
-            }
+            auto message = std::format(
+                "Unused binding: {0}. If this is intentional, prefix it with an underscore: _{0}",
+                db.string_pool.get(locals[id].name.id));
+            db::add_diagnostic(db, doc_id, lsp::warning(locals[id].name.range, std::move(message)));
         }
     }
 
-    template <typename Binding>
-    void do_report_unused_bindings(
-        db::Database& db, db::Document_id doc_id, hir::Identifier_map<Binding> const& bindings)
+    template <typename T, hir::Identifier_map<T> Scope::* map>
+    auto do_find_local(Context& ctx, auto& locals, Scope_id scope_id, utl::String_id string_id)
+        -> std::optional<T>
     {
-        auto const is_unused = [&db](Binding const& binding) {
-            return binding.unused and not db.string_pool.get(binding.name.id).starts_with('_');
+        for (;;) {
+            Scope& scope = ctx.scopes.index_vector[scope_id];
+            if (auto it = (scope.*map).find(string_id); it != (scope.*map).end()) {
+                locals[it->second].unused = false;
+                return it->second;
+            }
+            if (not scope.parent_id.has_value()) {
+                return std::nullopt;
+            }
+            scope_id = scope.parent_id.value();
+        }
+    }
+
+    void warn_shadowed(db::Database& db, db::Name shadowed, db::Name name, db::Document_id doc_id)
+    {
+        lsp::Diagnostic_related related {
+            .message  = "This binding is shadowed",
+            .location = lsp::Location { .doc_id = doc_id, .range = shadowed.range },
         };
-        auto const warn = [&db](Binding const& binding) {
-            std::string_view const name = db.string_pool.get(binding.name.id);
-            return lsp::warning(
-                binding.name.range,
-                std::format("Unused binding: {}. If this is intentional, use _{}", name, name));
+        lsp::Diagnostic warning {
+            .message  = std::format("'{}' shadows an unused binding", db.string_pool.get(name.id)),
+            .range    = name.range,
+            .severity = lsp::Severity::Warning,
+            .related_info = utl::to_vector({ std::move(related) }),
         };
-        auto diagnostics = std::views::values(bindings)  //
-                         | std::views::filter(is_unused) //
-                         | std::views::transform(warn);
-        std::ranges::copy(diagnostics, std::back_inserter(db.documents[doc_id].info.diagnostics));
+        db::add_diagnostic(db, doc_id, std::move(warning));
+    }
+
+    auto do_bind_local(
+        db::Database&   db,
+        db::Document_id doc_id,
+        auto&           locals,
+        auto&           map,
+        db::Name        name,
+        auto            local)
+    {
+        if (auto it = map.find(name.id); it != map.end()) {
+            if (auto const& shadowed = locals[it->second]; shadowed.unused) {
+                warn_shadowed(db, shadowed.name, name, doc_id);
+            }
+        }
+        auto id = locals.push(std::move(local));
+        map.insert_or_assign(name.id, id);
+        return id;
     }
 } // namespace
 
-void ki::res::bind_mutability(Scope& scope, hir::Mutability_bind const binding)
+auto ki::res::bind_local_mutability(
+    db::Database& db, Context& ctx, Scope_id scope_id, db::Lower name, hir::Local_mutability mut)
+    -> hir::Local_mutability_id
 {
-    do_bind(scope.mutabilities, binding);
+    Scope& scope = ctx.scopes.index_vector[scope_id];
+    return do_bind_local(
+        db, scope.doc_id, ctx.hir.local_mutabilities, scope.mutabilities, name, std::move(mut));
 }
 
-void ki::res::bind_variable(Scope& scope, hir::Variable_bind const binding)
+auto ki::res::bind_local_variable(
+    db::Database& db, Context& ctx, Scope_id scope_id, db::Lower name, hir::Local_variable var)
+    -> hir::Local_variable_id
 {
-    do_bind(scope.variables, binding);
+    Scope& scope = ctx.scopes.index_vector[scope_id];
+    return do_bind_local(
+        db, scope.doc_id, ctx.hir.local_variables, scope.variables, name, std::move(var));
 }
 
-void ki::res::bind_type(Scope& scope, hir::Type_bind const binding)
+auto ki::res::bind_local_type(
+    db::Database& db, Context& ctx, Scope_id scope_id, db::Upper name, hir::Local_type type)
+    -> hir::Local_type_id
 {
-    do_bind(scope.types, binding);
+    Scope& scope = ctx.scopes.index_vector[scope_id];
+    return do_bind_local(db, scope.doc_id, ctx.hir.local_types, scope.types, name, std::move(type));
 }
 
-auto ki::res::find_mutability(Context& ctx, Scope_id scope_id, utl::String_id string_id)
-    -> hir::Mutability_bind*
+auto ki::res::find_local_variable(Context& ctx, Scope_id scope_id, utl::String_id string_id)
+    -> std::optional<hir::Local_variable_id>
 {
-    return do_find<hir::Mutability_bind, &Scope::mutabilities>(ctx, scope_id, string_id);
+    return do_find_local<hir::Local_variable_id, &Scope::variables>(
+        ctx, ctx.hir.local_variables, scope_id, string_id);
 }
 
-auto ki::res::find_variable(Context& ctx, Scope_id scope_id, utl::String_id string_id)
-    -> hir::Variable_bind*
+auto ki::res::find_local_mutability(Context& ctx, Scope_id scope_id, utl::String_id string_id)
+    -> std::optional<hir::Local_mutability_id>
 {
-    return do_find<hir::Variable_bind, &Scope::variables>(ctx, scope_id, string_id);
+    return do_find_local<hir::Local_mutability_id, &Scope::mutabilities>(
+        ctx, ctx.hir.local_mutabilities, scope_id, string_id);
 }
 
-auto ki::res::find_type(Context& ctx, Scope_id scope_id, utl::String_id string_id)
-    -> hir::Type_bind*
+auto ki::res::find_local_type(Context& ctx, Scope_id scope_id, utl::String_id string_id)
+    -> std::optional<hir::Local_type_id>
 {
-    return do_find<hir::Type_bind, &Scope::types>(ctx, scope_id, string_id);
+    return do_find_local<hir::Local_type_id, &Scope::types>(
+        ctx, ctx.hir.local_types, scope_id, string_id);
 }
 
-void ki::res::report_unused(db::Database& db, Scope& scope)
+void ki::res::report_unused(db::Database& db, Context& ctx, Scope_id scope_id)
 {
-    do_report_unused_bindings(db, scope.doc_id, scope.types);
-    do_report_unused_bindings(db, scope.doc_id, scope.variables);
-    do_report_unused_bindings(db, scope.doc_id, scope.mutabilities);
+    Scope& scope = ctx.scopes.index_vector[scope_id];
+    do_report_unused_bindings(db, scope.doc_id, ctx.hir.local_types, scope.types);
+    do_report_unused_bindings(db, scope.doc_id, ctx.hir.local_variables, scope.variables);
+    do_report_unused_bindings(db, scope.doc_id, ctx.hir.local_mutabilities, scope.mutabilities);
 }
 
 auto ki::res::make_scope(db::Document_id doc_id) -> Scope

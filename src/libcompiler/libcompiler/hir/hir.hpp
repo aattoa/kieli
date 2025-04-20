@@ -12,12 +12,8 @@ namespace ki::hir {
 
     enum struct Expression_category : std::uint8_t { Place, Value };
 
-    struct Template_parameter_tag : utl::Vector_index<Template_parameter_tag> {
-        using Vector_index::Vector_index;
-    };
-
-    struct Local_variable_tag : utl::Vector_index<Local_variable_tag> {
-        using Vector_index::Vector_index;
+    struct Template_parameter_tag {
+        std::uint32_t value {};
     };
 
     struct Wildcard {};
@@ -47,9 +43,9 @@ namespace ki::hir {
         };
 
         struct Name {
-            Mutability         mutability;
-            utl::String_id     identifier;
-            Local_variable_tag variable_tag;
+            utl::String_id    name_id;
+            Mutability_id     mut_id;
+            Local_variable_id var_id;
         };
 
         struct Guarded {
@@ -114,12 +110,10 @@ namespace ki::hir {
         };
 
         struct Variable_reference {
-            db::Lower          name;
-            Local_variable_tag tag;
+            Local_variable_id id;
         };
 
         struct Function_reference {
-            db::Lower   name;
             Function_id id;
         };
 
@@ -361,24 +355,23 @@ namespace ki::hir {
         using variant::variant;
     };
 
-    struct Variable_bind {
-        db::Lower          name;
-        Type_id            type;
-        Mutability         mutability;
-        Local_variable_tag tag;
-        bool               unused = true;
+    struct Local_variable {
+        db::Lower     name;
+        Mutability_id mut_id;
+        Type_id       type_id;
+        bool          unused = true;
     };
 
-    struct Type_bind {
+    struct Local_mutability {
+        db::Lower     name;
+        Mutability_id mut_id;
+        bool          unused = true;
+    };
+
+    struct Local_type {
         db::Upper name;
-        Type_id   type;
+        Type_id   type_id;
         bool      unused = true;
-    };
-
-    struct Mutability_bind {
-        db::Lower  name;
-        Mutability mutability;
-        bool       unused = true;
     };
 
     struct Function_info {
@@ -428,7 +421,7 @@ namespace ki::hir {
     };
 
     template <typename T>
-    using Identifier_map = std::vector<std::pair<utl::String_id, T>>;
+    using Identifier_map = std::unordered_map<utl::String_id, T, utl::Hash_vector_index>;
 
     struct Environment {
         Identifier_map<Upper_info>      upper_map;
@@ -439,16 +432,19 @@ namespace ki::hir {
     };
 
     struct Arena {
-        utl::Index_vector<Expression_id, Expression>         expressions;
-        utl::Index_vector<Pattern_id, Pattern>               patterns;
-        utl::Index_vector<Type_id, Type_variant>             types;
-        utl::Index_vector<Mutability_id, Mutability_variant> mutabilities;
-        utl::Index_vector<Module_id, Module_info>            modules;
-        utl::Index_vector<Function_id, Function_info>        functions;
-        utl::Index_vector<Enumeration_id, Enumeration_info>  enumerations;
-        utl::Index_vector<Concept_id, Concept_info>          concepts;
-        utl::Index_vector<Alias_id, Alias_info>              aliases;
-        utl::Index_vector<Environment_id, Environment>       environments;
+        utl::Index_vector<Expression_id, Expression>             expressions;
+        utl::Index_vector<Pattern_id, Pattern>                   patterns;
+        utl::Index_vector<Type_id, Type_variant>                 types;
+        utl::Index_vector<Mutability_id, Mutability_variant>     mutabilities;
+        utl::Index_vector<Module_id, Module_info>                modules;
+        utl::Index_vector<Function_id, Function_info>            functions;
+        utl::Index_vector<Enumeration_id, Enumeration_info>      enumerations;
+        utl::Index_vector<Concept_id, Concept_info>              concepts;
+        utl::Index_vector<Alias_id, Alias_info>                  aliases;
+        utl::Index_vector<Environment_id, Environment>           environments;
+        utl::Index_vector<Local_variable_id, Local_variable>     local_variables;
+        utl::Index_vector<Local_mutability_id, Local_mutability> local_mutabilities;
+        utl::Index_vector<Local_type_id, Local_type>             local_types;
     };
 
     // Get the name of a built-in integer type.

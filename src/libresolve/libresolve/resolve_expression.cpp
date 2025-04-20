@@ -84,19 +84,15 @@ namespace {
         auto operator()(ast::Path const& path) -> hir::Expression
         {
             if (path.is_unqualified()) {
-                if (auto* bind = find_variable(ctx, scope_id, path.head().name.id)) {
-                    bind->unused = false;
+                if (auto var_id = find_local_variable(ctx, scope_id, path.head().name.id)) {
                     return {
-                        .variant = hir::expr::Variable_reference {
-                            .name = bind->name,
-                            .tag  = bind->tag,
-                        },
-                        .type     = bind->type,
+                        .variant  = hir::expr::Variable_reference { .id = var_id.value() },
+                        .type     = ctx.hir.local_variables[var_id.value()].type_id,
                         .category = hir::Expression_category::Place,
                         .range    = this_range,
                     };
                 }
-                auto const name = db.string_pool.get(path.head().name.id);
+                auto name = db.string_pool.get(path.head().name.id);
                 return error(this_range, std::format("Undeclared identifier: {}", name));
             }
             return unsupported();
@@ -191,7 +187,7 @@ namespace {
                 auto const result_type  = result.type;
                 auto const result_range = result.range;
 
-                report_unused(db, ctx.scopes.index_vector[scope_id]);
+                report_unused(db, ctx, scope_id);
                 return hir::Expression {
                     .variant = hir::expr::Block {
                         .side_effects = std::move(side_effects),
@@ -348,9 +344,14 @@ namespace {
         auto operator()(ast::expr::Type_alias const& alias) -> hir::Expression
         {
             auto type = resolve_type(db, ctx, state, scope_id, env_id, ast().types[alias.type]);
-            bind_type(
-                ctx.scopes.index_vector[scope_id],
-                hir::Type_bind { .name = alias.name, .type = type.id });
+
+            hir::Local_type local_type {
+                .name    = alias.name,
+                .type_id = type.id,
+                .unused  = true,
+            };
+
+            bind_local_type(db, ctx, scope_id, alias.name, std::move(local_type));
             return unit_expression(ctx.constants, this_range);
         }
 

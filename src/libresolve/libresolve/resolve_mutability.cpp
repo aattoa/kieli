@@ -27,8 +27,11 @@ auto ki::res::resolve_mutability(
             };
         },
         [&](ast::Parameterized_mutability const& mut) {
-            if (auto const* const bound = find_mutability(ctx, scope_id, mut.name.id)) {
-                return bound->mutability;
+            if (auto id = find_local_mutability(ctx, scope_id, mut.name.id)) {
+                return hir::Mutability {
+                    .id    = ctx.hir.local_mutabilities[id.value()].mut_id,
+                    .range = mut.name.range,
+                };
             }
 
             db::add_error(

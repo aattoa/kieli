@@ -40,15 +40,17 @@ namespace {
         auto operator()(ast::Template_type_parameter const& parameter)
             -> hir::Template_parameter_variant
         {
-            bind_type(
-                ctx.scopes.index_vector[scope_id],
-                hir::Type_bind {
-                    .name = parameter.name,
-                    .type = ctx.hir.types.push(hir::type::Parameterized {
-                        .tag = tag,
-                        .id  = parameter.name.id,
-                    }),
-                });
+            hir::Local_type local {
+                .name    = parameter.name,
+                .type_id = ctx.hir.types.push(hir::type::Parameterized {
+                    .tag = tag,
+                    .id  = parameter.name.id,
+                }),
+                .unused  = true,
+            };
+
+            bind_local_type(db, ctx, scope_id, parameter.name, std::move(local));
+
             auto const resolve_concept = [&](ast::Path const& concept_path) {
                 return resolve_concept_reference(db, ctx, state, scope_id, env_id, concept_path);
             };
@@ -64,13 +66,13 @@ namespace {
         auto operator()(ast::Template_mutability_parameter const& parameter)
             -> hir::Template_parameter_variant
         {
-            hir::Mutability mutability {
-                .id    = ctx.hir.mutabilities.push(hir::mut::Parameterized { tag }),
-                .range = parameter.name.range,
+            hir::Local_mutability local {
+                .name   = parameter.name,
+                .mut_id = ctx.hir.mutabilities.push(hir::mut::Parameterized { tag }),
+                .unused = true,
             };
-            bind_mutability(
-                ctx.scopes.index_vector[scope_id],
-                hir::Mutability_bind { .name = parameter.name, .mutability = mutability });
+            bind_local_mutability(db, ctx, scope_id, parameter.name, std::move(local));
+
             return hir::Template_mutability_parameter {
                 .name             = parameter.name,
                 .default_argument = parameter.default_argument.transform(

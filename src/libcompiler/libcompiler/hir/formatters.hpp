@@ -158,12 +158,12 @@ namespace ki::hir::dtl {
 
         void operator()(expr::Variable_reference const& variable) const
         {
-            std::format_to(out, "{}", pool.get(variable.name.id));
+            std::format_to(out, "{}", pool.get(arena.local_variables[variable.id].name.id));
         }
 
         void operator()(expr::Function_reference const& reference) const
         {
-            std::format_to(out, "{}", pool.get(reference.name.id));
+            std::format_to(out, "{}", pool.get(arena.functions[reference.id].name.id));
         }
 
         void operator()(expr::Indirect_call const& call) const
@@ -240,7 +240,7 @@ namespace ki::hir::dtl {
 
         void operator()(patt::Name const& name) const
         {
-            std::format_to(out, "{} {}", wrap(name.mutability), pool.get(name.identifier));
+            std::format_to(out, "{} {}", wrap(name.mut_id), pool.get(name.name_id));
         }
 
         void operator()(patt::Guarded const& guarded) const
@@ -418,7 +418,7 @@ LIBRESOLVE_DEFINE_FORMATTER(ki::hir::Mutability_variant)
             return std::format_to(ctx.out(), "{}", ki::db::mutability_string(concrete));
         },
         [&](ki::hir::mut::Parameterized const& parameterized) {
-            return std::format_to(ctx.out(), "mut?{}", parameterized.tag.get());
+            return std::format_to(ctx.out(), "mut?{}", parameterized.tag.value);
         },
         [&](ki::hir::mut::Variable const& variable) {
             return std::format_to(ctx.out(), "?mut{}", variable.id.get());

@@ -54,11 +54,6 @@ auto ki::res::fresh_template_parameter_tag(Tags& tags) -> hir::Template_paramete
     return hir::Template_parameter_tag { ++tags.current_template_parameter_tag };
 }
 
-auto ki::res::fresh_local_variable_tag(Tags& tags) -> hir::Local_variable_tag
-{
-    return hir::Local_variable_tag { ++tags.current_local_variable_tag };
-}
-
 auto ki::res::error_type(Constants const& constants, lsp::Range range) -> hir::Type
 {
     return hir::Type { .id = constants.type_error, .range = range };
