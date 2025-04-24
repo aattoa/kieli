@@ -71,6 +71,7 @@ namespace {
         }
         auto id = locals.push(std::move(local));
         map.insert_or_assign(name.id, id);
+        db::add_reference(db, doc_id, lsp::write(name.range), id);
         return id;
     }
 } // namespace

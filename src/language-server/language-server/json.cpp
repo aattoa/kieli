@@ -113,6 +113,14 @@ auto ki::lsp::position_params_from_json(db::Database const& db, Json::Object obj
     };
 }
 
+auto ki::lsp::range_params_from_json(db::Database const& db, Json::Object object) -> Range_params
+{
+    return Range_params {
+        .doc_id = document_id_from_json(db, as<Json::Object>(at(object, "textDocument"))),
+        .range  = range_from_json(as<Json::Object>(at(object, "range"))),
+    };
+}
+
 auto ki::lsp::severity_to_json(Severity severity) -> Json
 {
     switch (severity) {
@@ -154,6 +162,24 @@ auto ki::lsp::type_hint_to_json(db::Database const& db, db::Type_hint hint) -> J
     object.try_emplace("label", std::move(label));
     object.try_emplace("kind", 1); // Type hint
     return Json { std::move(object) };
+}
+
+auto ki::lsp::reference_to_json(Reference reference) -> Json
+{
+    Json::Object object;
+    object.try_emplace("range", range_to_json(reference.range));
+    object.try_emplace("kind", reference_kind_to_json(reference.kind));
+    return Json { std::move(object) };
+}
+
+auto ki::lsp::reference_kind_to_json(Reference_kind kind) -> Json
+{
+    switch (kind) {
+    case Reference_kind::Text:  return Json { Json::Number { 1 } };
+    case Reference_kind::Read:  return Json { Json::Number { 2 } };
+    case Reference_kind::Write: return Json { Json::Number { 3 } };
+    }
+    cpputil::unreachable();
 }
 
 auto ki::lsp::document_item_from_json(Json::Object object) -> Document_item

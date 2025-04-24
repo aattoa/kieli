@@ -33,6 +33,23 @@ namespace {
         server.db.documents[doc_id].arena.hir = std::move(ctx.hir);
     }
 
+    auto find_reference(std::span<db::Symbol_reference const> references, Position position)
+        -> std::optional<hir::Symbol>
+    {
+        // TODO: binary search
+        auto const it = std::ranges::find_if(references, [=](db::Symbol_reference sym) {
+            return range_contains(sym.reference.range, position);
+        });
+        return it != references.end() ? std::optional(it->symbol) : std::nullopt;
+    }
+
+    auto symbol_references(std::span<db::Symbol_reference const> references, hir::Symbol symbol)
+    {
+        return references
+             | std::views::filter([=](db::Symbol_reference ref) { return ref.symbol == symbol; })
+             | std::views::transform([](db::Symbol_reference ref) { return ref.reference; });
+    }
+
     auto handle_formatting(Server& server, Json::Object params) -> Result<Json>
     {
         auto id = document_id_from_json(server.db, as<Json::Object>(at(params, "textDocument")));
@@ -101,6 +118,56 @@ namespace {
         return Json { std::move(result) };
     }
 
+    auto handle_highlight(Server const& server, Json::Object params) -> Json
+    {
+        auto const [doc_id, position] = position_params_from_json(server.db, std::move(params));
+        auto const& references        = server.db.documents[doc_id].info.references;
+
+        if (auto const symbol = find_reference(references, position)) {
+            auto highlights = symbol_references(references, symbol.value())
+                            | std::views::transform(reference_to_json)
+                            | std::ranges::to<Json::Array>();
+            return Json { std::move(highlights) };
+        }
+
+        return Json {};
+    }
+
+    auto handle_references(Server const& server, Json::Object params) -> Json
+    {
+        auto const [doc_id, position] = position_params_from_json(server.db, std::move(params));
+        auto const& references        = server.db.documents[doc_id].info.references;
+
+        if (auto const symbol = find_reference(references, position)) {
+            auto locations
+                = symbol_references(references, symbol.value())
+                | std::views::transform([&](Reference ref) {
+                      return location_to_json(server.db, { .doc_id = doc_id, .range = ref.range });
+                  })
+                | std::ranges::to<Json::Array>();
+            return Json { std::move(locations) };
+        }
+
+        return Json {};
+    }
+
+    auto handle_definition(Server const& server, Json::Object params) -> Json
+    {
+        auto const [doc_id, position] = position_params_from_json(server.db, std::move(params));
+        auto const& references        = server.db.documents[doc_id].info.references;
+
+        if (auto const symbol = find_reference(references, position)) {
+            auto locations = symbol_references(references, symbol.value());
+
+            auto it = std::ranges::find(locations, Reference_kind::Write, &Reference::kind);
+            if (it != locations.end()) {
+                return location_to_json(server.db, { .doc_id = doc_id, .range = (*it).range });
+            }
+        }
+
+        return Json {};
+    }
+
     auto handle_initialize() -> Json
     {
         // https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#textDocumentSyncKind
@@ -147,10 +214,10 @@ namespace {
                   { "legend", std::move(semantic_tokens_legend) },
                   { "full", Json { true } },
               } } },
-            { "inlayHintProvider",
-              Json { Json::Object {
-                  { "resolveProvider", Json { false } },
-              } } },
+            { "inlayHintProvider", Json { Json::Object {} } },
+            { "definitionProvider", Json { true } },
+            { "referencesProvider", Json { true } },
+            { "documentHighlightProvider", Json { true } },
             { "documentFormattingProvider", Json { true } },
         } };
 
@@ -176,11 +243,20 @@ namespace {
         if (method == "textDocument/semanticTokens/full") {
             return handle_semantic_tokens(server, as<Json::Object>(std::move(params)));
         }
+        if (method == "textDocument/documentHighlight") {
+            return handle_highlight(server, as<Json::Object>(std::move(params)));
+        }
         if (method == "textDocument/diagnostic") {
             return handle_pull_diagnostics(server, as<Json::Object>(std::move(params)));
         }
         if (method == "textDocument/inlayHint") {
             return handle_inlay_hints(server, as<Json::Object>(std::move(params)));
+        }
+        if (method == "textDocument/definition") {
+            return handle_definition(server, as<Json::Object>(std::move(params)));
+        }
+        if (method == "textDocument/references") {
+            return handle_references(server, as<Json::Object>(std::move(params)));
         }
         if (method == "textDocument/formatting") {
             return handle_formatting(server, as<Json::Object>(std::move(params)));

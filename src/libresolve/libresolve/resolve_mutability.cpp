@@ -10,8 +10,8 @@ namespace {
         switch (mut) {
         case db::Mutability::Mut:   return constants.mut_yes;
         case db::Mutability::Immut: return constants.mut_no;
-        default:                    cpputil::unreachable();
         }
+        cpputil::unreachable();
     }
 } // namespace
 
@@ -28,6 +28,8 @@ auto ki::res::resolve_mutability(
         },
         [&](ast::Parameterized_mutability const& mut) {
             if (auto id = find_local_mutability(ctx, scope_id, mut.name.id)) {
+                db::add_reference(db, ctx.doc_id, lsp::read(mut.name.range), id.value());
+
                 return hir::Mutability {
                     .id    = ctx.hir.local_mutabilities[id.value()].mut_id,
                     .range = mut.name.range,

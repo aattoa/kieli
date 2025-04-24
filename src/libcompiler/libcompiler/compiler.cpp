@@ -64,8 +64,18 @@ auto ki::lsp::severity_string(Severity severity) -> std::string_view
     case Severity::Warning:     return "Warning";
     case Severity::Hint:        return "Hint";
     case Severity::Information: return "Info";
-    default:                    cpputil::unreachable();
     }
+    cpputil::unreachable();
+}
+
+auto ki::lsp::read(Range range) noexcept -> Reference
+{
+    return Reference { .range = range, .kind = Reference_kind::Read };
+}
+
+auto ki::lsp::write(Range range) noexcept -> Reference
+{
+    return Reference { .range = range, .kind = Reference_kind::Write };
 }
 
 auto ki::db::database(Manifest manifest) -> Database
@@ -154,8 +164,8 @@ auto ki::db::describe_read_failure(Read_failure failure) -> std::string_view
     case Read_failure::Does_not_exist: return "does not exist";
     case Read_failure::Failed_to_open: return "failed to open";
     case Read_failure::Failed_to_read: return "failed to read";
-    default:                           cpputil::unreachable();
     }
+    cpputil::unreachable();
 }
 
 auto ki::db::text_range(std::string_view text, lsp::Range range) -> std::string_view
@@ -188,10 +198,16 @@ void ki::db::edit_text(std::string& text, lsp::Range range, std::string_view new
 }
 
 void ki::db::add_type_hint(
-    Database& db, Document_id doc_id, lsp::Position position, hir::Type_id type)
+    Database& db, Document_id doc_id, lsp::Position position, hir::Type_id type_id)
 {
-    // TODO: check if inlay hints have been enabled.
-    db.documents[doc_id].info.type_hints.emplace_back(position, doc_id, type);
+    // TODO: check if enabled.
+    db.documents[doc_id].info.type_hints.emplace_back(position, doc_id, type_id);
+}
+
+void ki::db::add_reference(Database& db, Document_id doc_id, lsp::Reference ref, hir::Symbol symbol)
+{
+    // TODO: check if enabled.
+    db.documents[doc_id].info.references.emplace_back(ref, symbol);
 }
 
 void ki::db::add_diagnostic(Database& db, Document_id doc_id, lsp::Diagnostic diagnostic)

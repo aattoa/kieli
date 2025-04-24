@@ -22,6 +22,7 @@ namespace {
             }
             else {
                 env.map.insert({ name.id, symbol });
+                db::add_reference(db, ctx.doc_id, lsp::write(name.range), symbol);
             }
             env.in_order.push_back(symbol);
         }

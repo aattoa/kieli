@@ -19,7 +19,13 @@ namespace ki::db {
     struct Type_hint {
         lsp::Position position;
         Document_id   doc_id;
-        hir::Type_id  type;
+        hir::Type_id  type_id;
+    };
+
+    // A reference to a symbol. Used to determine the symbol at a particular position.
+    struct Symbol_reference {
+        lsp::Reference reference;
+        hir::Symbol    symbol;
     };
 
     // Arenas necessary for semantic analysis.
@@ -34,6 +40,7 @@ namespace ki::db {
         std::vector<lsp::Diagnostic>     diagnostics;
         std::vector<lsp::Semantic_token> semantic_tokens;
         std::vector<Type_hint>           type_hints;
+        std::vector<Symbol_reference>    references;
     };
 
     // In-memory representation of a text document.
@@ -105,7 +112,10 @@ namespace ki::db {
     void edit_text(std::string& text, lsp::Range range, std::string_view new_text);
 
     // Add a type hint to the document identified by `doc_id`.
-    void add_type_hint(Database& db, Document_id doc_id, lsp::Position position, hir::Type_id type);
+    void add_type_hint(Database& db, Document_id doc_id, lsp::Position pos, hir::Type_id type_id);
+
+    // Add a symbol reference to the document identified by `doc_id`.
+    void add_reference(Database& db, Document_id doc_id, lsp::Reference ref, hir::Symbol symbol);
 
     // Add `diagnostic` to the document identified by `doc_id`.
     void add_diagnostic(Database& db, Document_id doc_id, lsp::Diagnostic diagnostic);

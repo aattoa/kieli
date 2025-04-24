@@ -18,7 +18,9 @@ namespace ki::db {
 
     struct Lower : Name {};
 
-    struct Error {};
+    struct Error {
+        auto operator==(Error const&) const -> bool = default;
+    };
 
     struct Integer {
         std::int64_t value {};

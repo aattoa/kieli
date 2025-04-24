@@ -44,6 +44,7 @@ namespace {
         }
         auto& map = ctx.hir.environments[env_id].map;
         if (auto const it = map.find(segment.name.id); it != map.end()) {
+            db::add_reference(db, ctx.doc_id, lsp::read(segment.name.range), it->second);
             return it->second;
         }
         return std::nullopt;
@@ -131,6 +132,7 @@ auto ki::res::resolve_path(
 
             if (path.segments.size() == 1) {
                 if (auto local = find_local(ctx, scope_id, front)) {
+                    db::add_reference(db, ctx.doc_id, lsp::read(front.range), local.value());
                     return local.value();
                 }
             }

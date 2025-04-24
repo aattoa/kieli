@@ -78,10 +78,25 @@ namespace ki::lsp {
         Semantic_token_type type {};
     };
 
+    // https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#documentHighlightKind
+    enum struct Reference_kind : std::uint8_t { Text, Read, Write };
+
+    // https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#documentHighlight
+    struct Reference {
+        Range          range;
+        Reference_kind kind {};
+    };
+
     // https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#textDocumentPositionParams
     struct Position_params {
         db::Document_id doc_id;
         Position        position;
+    };
+
+    // Common structure that works for InlayHintParams and CodeActionParams.
+    struct Range_params {
+        db::Document_id doc_id;
+        Range           range;
     };
 
     // Advance `position` with `character`.
@@ -107,6 +122,12 @@ namespace ki::lsp {
 
     // Capitalized severity description.
     [[nodiscard]] auto severity_string(Severity severity) -> std::string_view;
+
+    // Construct a read reference.
+    [[nodiscard]] auto read(Range range) noexcept -> Reference;
+
+    // Construct a write reference.
+    [[nodiscard]] auto write(Range range) noexcept -> Reference;
 
 } // namespace ki::lsp
 

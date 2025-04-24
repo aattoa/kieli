@@ -67,10 +67,13 @@ namespace ki::lsp {
     auto semantic_tokens_to_json(std::span<Semantic_token const> tokens) -> Json;
     auto diagnostic_to_json(db::Database const& db, Diagnostic const& diagnostic) -> Json;
     auto type_hint_to_json(db::Database const& db, db::Type_hint hint) -> Json;
+    auto reference_to_json(Reference reference) -> Json;
+    auto reference_kind_to_json(Reference_kind kind) -> Json;
 
     auto document_item_from_json(Json::Object object) -> Document_item;
     auto format_options_from_json(Json::Object object) -> fmt::Options;
     auto position_params_from_json(db::Database const& db, Json::Object object) -> Position_params;
+    auto range_params_from_json(db::Database const& db, Json::Object object) -> Range_params;
 
     // Throws `Bad_client_json` if `json` is not `T`.
     template <typename T>
