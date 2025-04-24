@@ -283,7 +283,7 @@ void ki::res::require_subtype_relationship(
         .current_super = super,
         .goal          = Goal::Subtype,
     };
-    auto const result = visitor.unify(sub, super);
+    Result result = visitor.unify(sub, super);
 
     if (result != Result::Ok) {
         auto const left  = hir::to_string(ctx.hir, db.string_pool, sub);
@@ -293,6 +293,6 @@ void ki::res::require_subtype_relationship(
             = result == Result::Recursive ? "Recursive type variable solution" : "Could not unify";
 
         auto message = std::format("{} {} ~> {}", description, left, right);
-        db::add_error(db, state.doc_id, range, std::move(message));
+        db::add_error(db, ctx.doc_id, range, std::move(message));
     }
 }

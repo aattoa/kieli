@@ -15,12 +15,12 @@ namespace {
 
         auto ast() -> ast::Arena&
         {
-            return db.documents[state.doc_id].arena.ast;
+            return db.documents[ctx.doc_id].arena.ast;
         }
 
         auto unsupported() -> hir::Type
         {
-            db::add_error(db, state.doc_id, this_range, "Unsupported type");
+            db::add_error(db, ctx.doc_id, this_range, "Unsupported type");
             return error_type(ctx.constants, this_range);
         }
 
@@ -39,7 +39,7 @@ namespace {
         auto operator()(ast::Wildcard const&) -> hir::Type
         {
             auto type = fresh_general_type_variable(state, ctx.hir, this_range);
-            db::add_type_hint(db, state.doc_id, this_range.stop, type.id);
+            db::add_type_hint(db, ctx.doc_id, this_range.stop, type.id);
             return type;
         }
 
@@ -50,12 +50,23 @@ namespace {
 
         auto operator()(ast::Path const& path) -> hir::Type
         {
-            if (path.is_unqualified()) {
-                if (auto const id = find_local_type(ctx, scope_id, path.head().name.id)) {
-                    return { .id = ctx.hir.local_types[id.value()].type_id, .range = this_range };
-                }
+            hir::Symbol symbol = resolve_path(db, ctx, state, scope_id, env_id, path);
+            if (auto const* local_id = std::get_if<hir::Local_type_id>(&symbol)) {
+                return { .id = ctx.hir.local_types[*local_id].type_id, .range = this_range };
             }
-            return unsupported();
+            if (auto const* enum_id = std::get_if<hir::Enumeration_id>(&symbol)) {
+                return { .id = ctx.hir.enumerations[*enum_id].type_id, .range = this_range };
+            }
+            if (auto const* alias_id = std::get_if<hir::Alias_id>(&symbol)) {
+                return { .id = resolve_alias(db, ctx, *alias_id).type.id, .range = this_range };
+            }
+            if (std::holds_alternative<db::Error>(symbol)) {
+                return error_type(ctx.constants, this_range);
+            }
+            auto kind    = hir::describe_symbol_kind(symbol);
+            auto message = std::format("Expected a type, but found {}", kind);
+            db::add_error(db, ctx.doc_id, this_range, std::move(message));
+            return error_type(ctx.constants, this_range);
         }
 
         auto operator()(ast::type::Tuple const& tuple) -> hir::Type
@@ -97,7 +108,7 @@ namespace {
             return child_scope(ctx, scope_id, [&](Scope_id scope_id) {
                 auto expression = resolve_expression(
                     db, ctx, state, scope_id, env_id, ast().expressions[typeof_.expression]);
-                db::add_type_hint(db, state.doc_id, expression.range.stop, expression.type);
+                db::add_type_hint(db, ctx.doc_id, expression.range.stop, expression.type);
                 return hir::Type { .id = expression.type, .range = this_range };
             });
         }

@@ -18,19 +18,19 @@ namespace {
                 continue;
             }
             auto message = std::format(
-                "Unused binding: {0}. If this is intentional, prefix it with an underscore: _{0}",
+                "'{0}' is unused. If this is intentional, prefix it with an underscore: '_{0}'",
                 db.string_pool.get(locals[id].name.id));
             db::add_diagnostic(db, doc_id, lsp::warning(locals[id].name.range, std::move(message)));
         }
     }
 
     template <typename T, hir::Identifier_map<T> Scope::* map>
-    auto do_find_local(Context& ctx, auto& locals, Scope_id scope_id, utl::String_id string_id)
+    auto do_find_local(Context& ctx, auto& locals, Scope_id scope_id, utl::String_id name_id)
         -> std::optional<T>
     {
         for (;;) {
             Scope& scope = ctx.scopes.index_vector[scope_id];
-            if (auto it = (scope.*map).find(string_id); it != (scope.*map).end()) {
+            if (auto it = (scope.*map).find(name_id); it != (scope.*map).end()) {
                 locals[it->second].unused = false;
                 return it->second;
             }
@@ -101,25 +101,25 @@ auto ki::res::bind_local_type(
     return do_bind_local(db, scope.doc_id, ctx.hir.local_types, scope.types, name, std::move(type));
 }
 
-auto ki::res::find_local_variable(Context& ctx, Scope_id scope_id, utl::String_id string_id)
+auto ki::res::find_local_variable(Context& ctx, Scope_id scope_id, utl::String_id name_id)
     -> std::optional<hir::Local_variable_id>
 {
     return do_find_local<hir::Local_variable_id, &Scope::variables>(
-        ctx, ctx.hir.local_variables, scope_id, string_id);
+        ctx, ctx.hir.local_variables, scope_id, name_id);
 }
 
-auto ki::res::find_local_mutability(Context& ctx, Scope_id scope_id, utl::String_id string_id)
+auto ki::res::find_local_mutability(Context& ctx, Scope_id scope_id, utl::String_id name_id)
     -> std::optional<hir::Local_mutability_id>
 {
     return do_find_local<hir::Local_mutability_id, &Scope::mutabilities>(
-        ctx, ctx.hir.local_mutabilities, scope_id, string_id);
+        ctx, ctx.hir.local_mutabilities, scope_id, name_id);
 }
 
-auto ki::res::find_local_type(Context& ctx, Scope_id scope_id, utl::String_id string_id)
+auto ki::res::find_local_type(Context& ctx, Scope_id scope_id, utl::String_id name_id)
     -> std::optional<hir::Local_type_id>
 {
     return do_find_local<hir::Local_type_id, &Scope::types>(
-        ctx, ctx.hir.local_types, scope_id, string_id);
+        ctx, ctx.hir.local_types, scope_id, name_id);
 }
 
 void ki::res::report_unused(db::Database& db, Context& ctx, Scope_id scope_id)

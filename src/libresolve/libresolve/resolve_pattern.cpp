@@ -15,7 +15,7 @@ namespace {
 
         auto ast() -> ast::Arena&
         {
-            return db.documents[state.doc_id].arena.ast;
+            return db.documents[ctx.doc_id].arena.ast;
         }
 
         auto recurse()

@@ -332,29 +332,6 @@ namespace ki::hir {
         // TODO
     };
 
-    struct Module {
-        Environment_id environment;
-    };
-
-    struct Lower_info {
-        using Variant = std::variant<Function_id, Module_id>;
-        db::Lower       name;
-        db::Document_id doc_id;
-        Variant         variant;
-    };
-
-    struct Upper_info {
-        using Variant = std::variant<Enumeration_id, Concept_id, Alias_id>;
-        db::Upper       name;
-        db::Document_id doc_id;
-        Variant         variant;
-    };
-
-    struct Definition_variant
-        : std::variant<Function_id, Module_id, Enumeration_id, Concept_id, Alias_id> {
-        using variant::variant;
-    };
-
     struct Local_variable {
         db::Lower     name;
         Mutability_id mut_id;
@@ -388,6 +365,7 @@ namespace ki::hir {
         std::variant<cst::Struct, cst::Enum> cst; // TODO: improve
         ast::Enumeration                     ast;
         std::optional<Enumeration>           hir;
+        Type_id                              type_id;
         Environment_id                       env_id;
         db::Document_id                      doc_id;
         db::Upper                            name;
@@ -412,9 +390,7 @@ namespace ki::hir {
     };
 
     struct Module_info {
-        cst::Submodule  cst;
-        ast::Submodule  ast;
-        Module          hir;
+        Environment_id  mod_env_id;
         Environment_id  env_id;
         db::Document_id doc_id;
         db::Lower       name;
@@ -423,12 +399,28 @@ namespace ki::hir {
     template <typename T>
     using Identifier_map = std::unordered_map<utl::String_id, T, utl::Hash_vector_index>;
 
+    struct Symbol
+        : std::variant<
+              db::Error,
+              Function_id,
+              Enumeration_id,
+              Concept_id,
+              Alias_id,
+              Module_id,
+              Local_variable_id,
+              Local_mutability_id,
+              Local_type_id> {
+        using variant::variant;
+
+        auto operator==(Symbol const&) const -> bool = default;
+    };
+
     struct Environment {
-        Identifier_map<Upper_info>      upper_map;
-        Identifier_map<Lower_info>      lower_map;
-        std::vector<Definition_variant> in_order;
-        std::optional<Environment_id>   parent_id;
-        db::Document_id                 doc_id;
+        Identifier_map<Symbol>        map;
+        std::vector<Symbol>           in_order;
+        std::optional<Environment_id> parent_id;
+        std::optional<utl::String_id> name_id;
+        db::Document_id               doc_id;
     };
 
     struct Arena {
@@ -447,6 +439,9 @@ namespace ki::hir {
         utl::Index_vector<Local_type_id, Local_type>             local_types;
     };
 
+    // Get a human readable description of the symbol kind.
+    auto describe_symbol_kind(Symbol symbol) -> std::string_view;
+
     // Get the name of a built-in integer type.
     auto integer_name(type::Integer type) -> std::string_view;
 
@@ -459,8 +454,10 @@ namespace ki::hir {
     void format(Arena const&, utl::String_pool const&, Pattern const&, std::string&);
     void format(Arena const&, utl::String_pool const&, Expression const&, std::string&);
     void format(Arena const&, utl::String_pool const&, Type const&, std::string&);
+    void format(Arena const&, utl::String_pool const&, Type_id const&, std::string&);
     void format(Arena const&, utl::String_pool const&, Type_variant const&, std::string&);
     void format(Arena const&, utl::String_pool const&, Mutability const&, std::string&);
+    void format(Arena const&, utl::String_pool const&, Mutability_id const&, std::string&);
     void format(Arena const&, utl::String_pool const&, Mutability_variant const&, std::string&);
 
     auto to_string(Arena const& arena, utl::String_pool const& pool, auto const& x) -> std::string

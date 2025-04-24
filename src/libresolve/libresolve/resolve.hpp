@@ -56,7 +56,6 @@ namespace ki::res {
         utl::Disjoint_set    type_var_set;
         Mutability_variables mut_vars;
         utl::Disjoint_set    mut_var_set;
-        db::Document_id      doc_id;
     };
 
     struct Tags {
@@ -75,18 +74,17 @@ namespace ki::res {
     using Scope_arena = utl::Index_arena<Scope_id, Scope>;
 
     struct Context {
-        hir::Arena  hir;
-        Tags        tags;
-        Constants   constants;
-        Scope_arena scopes;
-        Scope_map   scope_map;
+        hir::Arena      hir;
+        Tags            tags;
+        Constants       constants;
+        Scope_arena     scopes;
+        Scope_map       scope_map;
+        db::Document_id doc_id;
     };
 
-    auto context() -> Context;
+    auto context(db::Document_id doc_id) -> Context;
 
     auto make_constants(hir::Arena& arena) -> Constants;
-
-    auto inference_state(db::Document_id doc_id) -> Inference_state;
 
     auto fresh_template_parameter_tag(Tags& tags) -> hir::Template_parameter_tag;
 
@@ -157,6 +155,14 @@ namespace ki::res {
         db::Database& db, Context& ctx, Scope_id scope_id, ast::Mutability const& mutability)
         -> hir::Mutability;
 
+    auto resolve_path(
+        db::Database&       db,
+        Context&            ctx,
+        Inference_state&    state,
+        Scope_id            scope_id,
+        hir::Environment_id env_id,
+        ast::Path const&    path) -> hir::Symbol;
+
     auto resolve_expression(
         db::Database&          db,
         Context&               ctx,
@@ -181,14 +187,6 @@ namespace ki::res {
         hir::Environment_id env_id,
         ast::Type const&    type) -> hir::Type;
 
-    auto resolve_concept_reference(
-        db::Database&       db,
-        Context&            ctx,
-        Inference_state&    state,
-        Scope_id            scope_id,
-        hir::Environment_id env_id,
-        ast::Path const&    path) -> hir::Concept_id;
-
     auto bind_local_variable(
         db::Database&       db,
         Context&            ctx,
@@ -207,13 +205,13 @@ namespace ki::res {
         db::Database& db, Context& ctx, Scope_id scope_id, db::Upper name, hir::Local_type type)
         -> hir::Local_type_id;
 
-    auto find_local_mutability(Context& ctx, Scope_id scope_id, utl::String_id string_id)
+    auto find_local_mutability(Context& ctx, Scope_id scope_id, utl::String_id name_id)
         -> std::optional<hir::Local_mutability_id>;
 
-    auto find_local_variable(Context& ctx, Scope_id scope_id, utl::String_id string_id)
+    auto find_local_variable(Context& ctx, Scope_id scope_id, utl::String_id name_id)
         -> std::optional<hir::Local_variable_id>;
 
-    auto find_local_type(Context& ctx, Scope_id scope_id, utl::String_id string_id)
+    auto find_local_type(Context& ctx, Scope_id scope_id, utl::String_id name_id)
         -> std::optional<hir::Local_type_id>;
 
     // Emit warnings for any unused bindings.

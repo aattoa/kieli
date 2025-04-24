@@ -15,7 +15,7 @@ namespace {
 
         auto ast() -> ast::Arena&
         {
-            return db.documents[state.doc_id].arena.ast;
+            return db.documents[ctx.doc_id].arena.ast;
         }
 
         template <typename Default>
@@ -48,15 +48,18 @@ namespace {
                 }),
                 .unused  = true,
             };
-
             bind_local_type(db, ctx, scope_id, parameter.name, std::move(local));
 
-            auto const resolve_concept = [&](ast::Path const& concept_path) {
-                return resolve_concept_reference(db, ctx, state, scope_id, env_id, concept_path);
-            };
+            if (not parameter.concepts.empty()) {
+                db::add_error(
+                    db,
+                    ctx.doc_id,
+                    parameter.concepts.front().head().name.range,
+                    "Concept requirements are not supported yet");
+            }
+
             return hir::Template_type_parameter {
-                .concept_ids = std::ranges::to<std::vector>(
-                    std::views::transform(parameter.concepts, resolve_concept)),
+                .concept_ids      = {},
                 .name             = parameter.name,
                 .default_argument = parameter.default_argument.transform(
                     resolve_default_argument<hir::Template_type_parameter::Default>()),
@@ -85,7 +88,7 @@ namespace {
         {
             db::add_error(
                 db,
-                state.doc_id,
+                ctx.doc_id,
                 parameter.name.range,
                 "Template value parameters are not supported yet");
             return hir::Template_value_parameter {

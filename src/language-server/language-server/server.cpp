@@ -29,7 +29,7 @@ namespace {
     {
         server.db.documents[doc_id].info = {};
 
-        auto ctx    = res::context();
+        auto ctx    = res::context(doc_id);
         auto env_id = res::collect_document(server.db, ctx, doc_id);
         res::resolve_environment(server.db, ctx, env_id);
 

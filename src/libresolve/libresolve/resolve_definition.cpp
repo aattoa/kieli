@@ -13,7 +13,7 @@ namespace {
         hir::Environment_id            env_id,
         ast::Function_parameter const& parameter) -> hir::Function_parameter
     {
-        ast::Arena& ast = db.documents[state.doc_id].arena.ast;
+        ast::Arena& ast = db.documents[ctx.doc_id].arena.ast;
 
         auto pattern
             = resolve_pattern(db, ctx, state, scope_id, env_id, ast.patterns[parameter.pattern]);
@@ -50,7 +50,7 @@ namespace {
         db::Document_id const          doc_id,
         ast::Function_signature const& signature)
     {
-        auto state    = inference_state(doc_id);
+        auto state    = Inference_state {};
         auto scope_id = ctx.scopes.push(make_scope(doc_id));
 
         auto template_parameters = resolve_template_parameters(
@@ -67,7 +67,7 @@ namespace {
 
         auto return_type = resolve_type(db, ctx, state, scope_id, env_id, signature.return_type);
 
-        auto const id = ctx.hir.types.push(hir::type::Function {
+        auto const type_id = ctx.hir.types.push(hir::type::Function {
             .parameter_types = std::move(parameter_types),
             .return_type     = return_type,
         });
@@ -79,7 +79,7 @@ namespace {
             .template_paramters = std::move(template_parameters),
             .parameters         = std::move(parameters),
             .return_type        = return_type,
-            .function_type      = hir::Type { .id = id, .range = signature.name.range },
+            .function_type      = hir::Type { .id = type_id, .range = signature.name.range },
             .name               = signature.name,
         };
     }
@@ -91,7 +91,7 @@ auto ki::res::resolve_function_body(db::Database& db, Context& ctx, hir::Functio
     hir::Function_info& info = ctx.hir.functions[id];
 
     if (not info.body.has_value()) {
-        auto state = inference_state(info.doc_id);
+        auto state = Inference_state {};
 
         hir::Function_signature& signature = resolve_function_signature(db, ctx, id);
 
@@ -149,9 +149,12 @@ auto ki::res::resolve_alias(db::Database& db, Context& ctx, hir::Alias_id id) ->
 {
     hir::Alias_info& info = ctx.hir.aliases[id];
     if (not info.hir.has_value()) {
-        (void)db;
-        (void)ctx;
-        cpputil::todo();
+        info.hir = scope(ctx, make_scope(ctx.doc_id), [&](Scope_id scope_id) {
+            auto state = Inference_state {};
+            auto type  = resolve_type(db, ctx, state, scope_id, info.env_id, info.ast.type);
+            ensure_no_unsolved_variables(db, ctx, state);
+            return hir::Alias { .name = info.name, .type = type };
+        });
     }
     return info.hir.value();
 }

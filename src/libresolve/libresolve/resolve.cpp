@@ -2,7 +2,7 @@
 #include <libresolve/resolve.hpp>
 #include <libcompiler/ast/display.hpp>
 
-auto ki::res::context() -> Context
+auto ki::res::context(db::Document_id doc_id) -> Context
 {
     auto hir       = hir::Arena {};
     auto constants = make_constants(hir);
@@ -12,6 +12,7 @@ auto ki::res::context() -> Context
         .constants = constants,
         .scopes    = {},
         .scope_map = {},
+        .doc_id    = doc_id,
     };
 }
 
@@ -35,17 +36,6 @@ auto ki::res::make_constants(hir::Arena& arena) -> Constants
         .mut_yes        = arena.mutabilities.push(db::Mutability::Mut),
         .mut_no         = arena.mutabilities.push(db::Mutability::Immut),
         .mut_error      = arena.mutabilities.push(db::Error {}),
-    };
-}
-
-auto ki::res::inference_state(db::Document_id doc_id) -> Inference_state
-{
-    return Inference_state {
-        .type_vars    = {},
-        .type_var_set = {},
-        .mut_vars     = {},
-        .mut_var_set  = {},
-        .doc_id       = doc_id,
     };
 }
 
@@ -191,28 +181,11 @@ void ki::res::ensure_no_unsolved_variables(db::Database& db, Context& ctx, Infer
             }
             else {
                 auto message = std::format("Unsolved type variable: ?{}", data.var_id.get());
-                db::add_error(db, state.doc_id, data.origin, std::move(message));
+                db::add_error(db, ctx.doc_id, data.origin, std::move(message));
                 set_type_solution(db, ctx, state, data, db::Error {});
             }
         }
     }
-}
-
-auto ki::res::resolve_concept_reference(
-    db::Database&       db,
-    Context&            ctx,
-    Inference_state&    state,
-    Scope_id            scope_id,
-    hir::Environment_id env_id,
-    ast::Path const&    path) -> hir::Concept_id
-{
-    (void)db;
-    (void)ctx;
-    (void)state;
-    (void)scope_id;
-    (void)env_id;
-    (void)path;
-    cpputil::todo();
 }
 
 void ki::res::resolve_environment(db::Database& db, Context& ctx, hir::Environment_id id)
@@ -222,7 +195,8 @@ void ki::res::resolve_environment(db::Database& db, Context& ctx, hir::Environme
         [&](hir::Enumeration_id id) { resolve_enumeration(db, ctx, id); },
         [&](hir::Concept_id id) { resolve_concept(db, ctx, id); },
         [&](hir::Alias_id id) { resolve_alias(db, ctx, id); },
-        [&](hir::Module_id id) { resolve_environment(db, ctx, ctx.hir.modules[id].env_id); },
+        [&](hir::Module_id id) { resolve_environment(db, ctx, ctx.hir.modules[id].mod_env_id); },
+        [](auto) { cpputil::unreachable(); },
     };
     for (auto const& definition : ctx.hir.environments[id].in_order) {
         std::visit(visitor, definition);
@@ -246,10 +220,7 @@ void ki::res::debug_display_environment(
         },
         [&](hir::Module_id const& id) {
             auto const& module = ctx.hir.modules[id];
-            std::println(
-                "module {}\nast: {}",
-                db.string_pool.get(module.name.id),
-                ast::display(ast, db.string_pool, module.ast));
+            std::println("module {}", db.string_pool.get(module.name.id));
         },
         [&](hir::Enumeration_id const& id) {
             auto const& enumeration = ctx.hir.enumerations[id];
@@ -275,6 +246,7 @@ void ki::res::debug_display_environment(
                 alias.hir.has_value(),
                 ast::display(ast, db.string_pool, alias.ast));
         },
+        [](auto) { cpputil::unreachable(); },
     };
 
     for (auto const& definition : env.in_order) {

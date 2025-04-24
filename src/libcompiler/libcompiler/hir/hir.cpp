@@ -1,6 +1,24 @@
 #include <libcompiler/hir/hir.hpp>
 #include <libcompiler/hir/formatters.hpp>
 
+static_assert(std::is_trivially_copyable_v<ki::hir::Symbol>);
+
+auto ki::hir::describe_symbol_kind(Symbol symbol) -> std::string_view
+{
+    auto const visitor = utl::Overload {
+        [](db::Error) { return "an error"; },
+        [](Function_id) { return "a function"; },
+        [](Enumeration_id) { return "an enumeration"; },
+        [](Concept_id) { return "a concept"; },
+        [](Alias_id) { return "a type alias"; },
+        [](Module_id) { return "a module"; },
+        [](Local_variable_id) { return "a local variable binding"; },
+        [](Local_mutability_id) { return "a local mutability binding"; },
+        [](Local_type_id) { return "a local type binding"; },
+    };
+    return std::visit(visitor, symbol);
+}
+
 auto ki::hir::integer_name(type::Integer const type) -> std::string_view
 {
     switch (type) {
@@ -12,8 +30,8 @@ auto ki::hir::integer_name(type::Integer const type) -> std::string_view
     case type::Integer::U16: return "U16";
     case type::Integer::U32: return "U32";
     case type::Integer::U64: return "U64";
-    default:                 cpputil::unreachable();
     }
+    cpputil::unreachable();
 }
 
 auto ki::hir::expression_type(Expression const& expression) -> Type
@@ -44,8 +62,10 @@ auto ki::hir::pattern_type(Pattern const& pattern) -> Type
 DEFINE_HIR_FORMAT_TO(Expression);
 DEFINE_HIR_FORMAT_TO(Pattern);
 DEFINE_HIR_FORMAT_TO(Type);
+DEFINE_HIR_FORMAT_TO(Type_id);
 DEFINE_HIR_FORMAT_TO(Type_variant);
 DEFINE_HIR_FORMAT_TO(Mutability);
+DEFINE_HIR_FORMAT_TO(Mutability_id);
 DEFINE_HIR_FORMAT_TO(Mutability_variant);
 
 #undef DEFINE_HIR_FORMAT_TO

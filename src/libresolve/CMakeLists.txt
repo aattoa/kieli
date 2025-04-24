@@ -8,6 +8,7 @@ target_sources(libresolve
     PRIVATE libresolve/resolve_definition.cpp
     PRIVATE libresolve/resolve_expression.cpp
     PRIVATE libresolve/resolve_mutability.cpp
+    PRIVATE libresolve/resolve_path.cpp
     PRIVATE libresolve/resolve_pattern.cpp
     PRIVATE libresolve/resolve_template.cpp
     PRIVATE libresolve/resolve_type.cpp

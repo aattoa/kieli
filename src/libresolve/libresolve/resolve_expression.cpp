@@ -15,12 +15,12 @@ namespace {
 
         auto ast() -> ast::Arena&
         {
-            return db.documents[state.doc_id].arena.ast;
+            return db.documents[ctx.doc_id].arena.ast;
         }
 
         auto error(lsp::Range const range, std::string message) -> hir::Expression
         {
-            db::add_error(db, state.doc_id, range, std::move(message));
+            db::add_error(db, ctx.doc_id, range, std::move(message));
             return error_expression(ctx.constants, this_range);
         }
 
@@ -83,19 +83,29 @@ namespace {
 
         auto operator()(ast::Path const& path) -> hir::Expression
         {
-            if (path.is_unqualified()) {
-                if (auto var_id = find_local_variable(ctx, scope_id, path.head().name.id)) {
-                    return {
-                        .variant  = hir::expr::Variable_reference { .id = var_id.value() },
-                        .type     = ctx.hir.local_variables[var_id.value()].type_id,
-                        .category = hir::Expression_category::Place,
-                        .range    = this_range,
-                    };
-                }
-                auto name = db.string_pool.get(path.head().name.id);
-                return error(this_range, std::format("Undeclared identifier: {}", name));
+            hir::Symbol symbol = resolve_path(db, ctx, state, scope_id, env_id, path);
+            if (auto const* local_id = std::get_if<hir::Local_variable_id>(&symbol)) {
+                return {
+                    .variant  = hir::expr::Variable_reference { .id = *local_id },
+                    .type     = ctx.hir.local_variables[*local_id].type_id,
+                    .category = hir::Expression_category::Place,
+                    .range    = this_range,
+                };
             }
-            return unsupported();
+            if (auto const* fun_id = std::get_if<hir::Function_id>(&symbol)) {
+                return {
+                    .variant  = hir::expr::Function_reference { .id = *fun_id },
+                    .type     = resolve_function_signature(db, ctx, *fun_id).function_type.id,
+                    .category = ki::hir::Expression_category::Value,
+                    .range    = this_range,
+                };
+            }
+            if (std::holds_alternative<db::Error>(symbol)) {
+                return error_expression(ctx.constants, this_range);
+            }
+            auto kind    = hir::describe_symbol_kind(symbol);
+            auto message = std::format("Expected an expression, but found {}", kind);
+            return error(this_range, std::move(message));
         }
 
         auto operator()(ast::expr::Array const& array) -> hir::Expression
@@ -318,7 +328,7 @@ namespace {
                     ctx.hir.types[type.id]);
             }
             else {
-                db::add_type_hint(db, state.doc_id, pattern.range.stop, pattern.type);
+                db::add_type_hint(db, ctx.doc_id, pattern.range.stop, pattern.type);
             }
 
             require_subtype_relationship(
@@ -433,7 +443,7 @@ namespace {
         auto operator()(ast::Wildcard const&) -> hir::Expression
         {
             auto type = fresh_general_type_variable(state, ctx.hir, this_range);
-            db::add_type_hint(db, state.doc_id, this_range.stop, type.id);
+            db::add_type_hint(db, ctx.doc_id, this_range.stop, type.id);
             return {
                 .variant  = hir::Wildcard {},
                 .type     = type.id,

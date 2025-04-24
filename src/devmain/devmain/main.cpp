@@ -41,7 +41,7 @@ namespace {
 
     void debug_resolve(db::Database& db, db::Document_id id)
     {
-        auto ctx = res::context();
+        auto ctx = res::context(id);
         auto env = res::collect_document(db, ctx, id);
         res::resolve_environment(db, ctx, env);
         res::debug_display_environment(db, ctx, env);
