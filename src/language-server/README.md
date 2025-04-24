@@ -5,6 +5,7 @@
 ## Currently supported features
 
 - Go to definition
+- Hover documentation
 - Find and highlight references
 - Inlay type hints
 - Diagnostics (errors, warnings, hints)

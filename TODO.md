@@ -22,8 +22,8 @@
 
 ## Language server
 - Semantic tokens for escape sequences
-- Semantic token deltas
 - Handle command line properly
+- Avoid collecting type hints (etc.) when the client does not support them
 - Split executable into communication thread and analysis thread, actor mailboxes
 
 ## Build process

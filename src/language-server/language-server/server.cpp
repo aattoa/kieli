@@ -168,6 +168,16 @@ namespace {
         return Json {};
     }
 
+    auto handle_hover(Server const& server, Json::Object params) -> Result<Json>
+    {
+        auto const [doc_id, position] = position_params_from_json(server.db, std::move(params));
+        return find_reference(server.db.documents[doc_id].info.references, position)
+            .transform([&](hir::Symbol symbol) {
+                return markdown_content_to_json(symbol_documentation(server.db, doc_id, symbol));
+            })
+            .value_or(Json {});
+    }
+
     auto handle_initialize() -> Json
     {
         // https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#textDocumentSyncKind
@@ -215,6 +225,7 @@ namespace {
                   { "full", Json { true } },
               } } },
             { "inlayHintProvider", Json { Json::Object {} } },
+            { "hoverProvider", Json { true } },
             { "definitionProvider", Json { true } },
             { "referencesProvider", Json { true } },
             { "documentHighlightProvider", Json { true } },
@@ -257,6 +268,9 @@ namespace {
         }
         if (method == "textDocument/references") {
             return handle_references(server, as<Json::Object>(std::move(params)));
+        }
+        if (method == "textDocument/hover") {
+            return handle_hover(server, as<Json::Object>(std::move(params)));
         }
         if (method == "textDocument/formatting") {
             return handle_formatting(server, as<Json::Object>(std::move(params)));
@@ -444,7 +458,7 @@ namespace {
         }
     }
 
-    auto handle_client_message(Server& server, std::string_view const message)
+    auto handle_client_message(Server& server, std::string_view message)
         -> std::optional<std::string>
     {
         std::optional<Json> reply;

@@ -1,6 +1,7 @@
 add_executable(language-server)
 
 target_sources(language-server
+    PRIVATE language-server/documentation.cpp
     PRIVATE language-server/json.cpp
     PRIVATE language-server/json.hpp
     PRIVATE language-server/main.cpp
