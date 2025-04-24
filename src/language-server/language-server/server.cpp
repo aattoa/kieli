@@ -2,20 +2,17 @@
 #include <cpputil/json/decode.hpp>
 #include <cpputil/json/encode.hpp>
 #include <cpputil/json/format.hpp>
-#include <language-server/rpc.hpp>
 #include <language-server/json.hpp>
+#include <language-server/rpc.hpp>
 #include <language-server/server.hpp>
-
-// TODO: remove
-#include <libparse/parse.hpp>
 #include <libformat/format.hpp>
+#include <libparse/parse.hpp>
 #include <libresolve/resolve.hpp>
 
 using namespace ki;
 using namespace ki::lsp;
 
 namespace {
-
     struct Server {
         db::Database       db;
         std::optional<int> exit_code;
@@ -36,19 +33,12 @@ namespace {
         server.db.documents[doc_id].arena.hir = std::move(ctx.hir);
     }
 
-    auto handle_hover(Server& server, Json::Object params) -> Result<Json>
-    {
-        auto cursor = position_params_from_json(server.db, std::move(params));
-        return markdown_content_to_json(std::format("Position: {}", cursor.position));
-    }
-
     auto handle_formatting(Server& server, Json::Object params) -> Result<Json>
     {
         auto id = document_id_from_json(server.db, as<Json::Object>(at(params, "textDocument")));
         auto options = format_options_from_json(as<Json::Object>(at(params, "options")));
 
         auto& document = server.db.documents[id];
-
         document.info.diagnostics.clear();
         document.info.semantic_tokens.clear();
         auto const cst = par::parse(server.db, id);
@@ -63,36 +53,35 @@ namespace {
                 // text_range takes linear time, but it's fine for now.
                 continue;
             }
-            edits.emplace_back(Json::Object {
-                { "range", range_to_json(document.arena.cst.ranges[definition.range]) },
-                { "newText", Json { std::move(new_text) } },
-            });
+            Json::Object edit;
+            edit.try_emplace("range", range_to_json(document.arena.cst.ranges[definition.range]));
+            edit.try_emplace("newText", std::move(new_text));
+            edits.emplace_back(std::move(edit));
         }
         return Json { std::move(edits) };
     }
 
-    auto handle_pull_diagnostics(Server& server, Json::Object params) -> Result<Json>
+    auto handle_pull_diagnostics(Server const& server, Json::Object params) -> Result<Json>
     {
         auto id = document_id_from_json(server.db, as<Json::Object>(at(params, "textDocument")));
 
         auto items = server.db.documents[id].info.diagnostics
-                   | std::views::transform([&](lsp::Diagnostic const& diagnostic) {
+                   | std::views::transform([&](Diagnostic const& diagnostic) {
                          return diagnostic_to_json(server.db, diagnostic);
                      })
                    | std::ranges::to<Json::Array>();
 
-        return Json { Json::Object {
-            { "kind", Json { "full" } },
-            { "items", Json { std::move(items) } },
-        } };
+        Json::Object result;
+        result.try_emplace("kind", "full");
+        result.try_emplace("items", std::move(items));
+        return Json { std::move(result) };
     }
 
-    auto handle_inlay_hints(Server& server, Json::Object params) -> Result<Json>
+    auto handle_inlay_hints(Server const& server, Json::Object params) -> Result<Json>
     {
-        auto id    = document_id_from_json(server.db, as<Json::Object>(at(params, "textDocument")));
-        auto range = range_from_json(as<Json::Object>(at(params, "range")));
+        auto const [doc_id, range] = range_params_from_json(server.db, std::move(params));
 
-        auto hints = server.db.documents[id].info.type_hints
+        auto hints = server.db.documents[doc_id].info.type_hints
                    | std::views::filter(
                          [=](db::Type_hint hint) { return range_contains(range, hint.position); })
                    | std::views::transform(
@@ -102,11 +91,14 @@ namespace {
         return Json { std::move(hints) };
     }
 
-    auto handle_semantic_tokens(db::Database const& db, Json::Object params) -> Json
+    auto handle_semantic_tokens(Server const& server, Json::Object params) -> Json
     {
-        auto id   = document_id_from_json(db, as<Json::Object>(at(params, "textDocument")));
-        auto data = semantic_tokens_to_json(db.documents[id].info.semantic_tokens);
-        return Json { Json::Object { { "data", std::move(data) } } };
+        auto id   = document_id_from_json(server.db, as<Json::Object>(at(params, "textDocument")));
+        auto data = semantic_tokens_to_json(server.db.documents[id].info.semantic_tokens);
+
+        Json::Object result;
+        result.try_emplace("data", std::move(data));
+        return Json { std::move(result) };
     }
 
     auto handle_initialize() -> Json
@@ -139,32 +131,34 @@ namespace {
             { "tokenModifiers", Json { Json::Array {} } },
         } };
 
-        // https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#initializeResult
-        return Json { Json::Object {
-            { "capabilities",
+        Json capabilities { Json::Object {
+            { "textDocumentSync",
               Json { Json::Object {
-                  { "textDocumentSync",
-                    Json { Json::Object {
-                        { "openClose", Json { true } },
-                        { "change", Json { incremental_sync } },
-                    } } },
-                  { "diagnosticProvider",
-                    Json { Json::Object {
-                        { "interFileDependencies", Json { true } },
-                        { "workspaceDiagnostics", Json { false } },
-                    } } },
-                  { "semanticTokensProvider",
-                    Json { Json::Object {
-                        { "legend", std::move(semantic_tokens_legend) },
-                        { "full", Json { true } },
-                    } } },
-                  { "inlayHintProvider",
-                    Json { Json::Object {
-                        { "resolveProvider", Json { false } },
-                    } } },
-                  { "hoverProvider", Json { true } },
-                  { "documentFormattingProvider", Json { true } },
+                  { "openClose", Json { true } },
+                  { "change", Json { incremental_sync } },
               } } },
+            { "diagnosticProvider",
+              Json { Json::Object {
+                  { "interFileDependencies", Json { true } },
+                  { "workspaceDiagnostics", Json { false } },
+              } } },
+            { "semanticTokensProvider",
+              Json { Json::Object {
+                  { "legend", std::move(semantic_tokens_legend) },
+                  { "full", Json { true } },
+              } } },
+            { "inlayHintProvider",
+              Json { Json::Object {
+                  { "resolveProvider", Json { false } },
+              } } },
+            { "documentFormattingProvider", Json { true } },
+        } };
+
+        Json info { Json::Object { { "name", Json { "kieli-language-server" } } } };
+
+        return Json { Json::Object {
+            { "capabilities", std::move(capabilities) },
+            { "serverInfo", std::move(info) },
         } };
     }
 
@@ -180,19 +174,16 @@ namespace {
     auto handle_request(Server& server, std::string_view const method, Json params) -> Result<Json>
     {
         if (method == "textDocument/semanticTokens/full") {
-            return handle_semantic_tokens(server.db, as<Json::Object>(std::move(params)));
-        }
-        if (method == "textDocument/hover") {
-            return handle_hover(server, as<Json::Object>(std::move(params)));
-        }
-        if (method == "textDocument/formatting") {
-            return handle_formatting(server, as<Json::Object>(std::move(params)));
+            return handle_semantic_tokens(server, as<Json::Object>(std::move(params)));
         }
         if (method == "textDocument/diagnostic") {
             return handle_pull_diagnostics(server, as<Json::Object>(std::move(params)));
         }
         if (method == "textDocument/inlayHint") {
             return handle_inlay_hints(server, as<Json::Object>(std::move(params)));
+        }
+        if (method == "textDocument/formatting") {
+            return handle_formatting(server, as<Json::Object>(std::move(params)));
         }
         if (method == "shutdown") {
             return handle_shutdown(server);
@@ -338,12 +329,12 @@ namespace {
                     return std::nullopt;
                 }
             }
-            catch (Bad_client_json const& bad_json) {
+            catch (Bad_json const& bad_json) {
                 return invalid_params_error_response(
                     bad_json.message, std::move(id).value_or(Json {}));
             }
         }
-        catch (Bad_client_json const& bad_json) {
+        catch (Bad_json const& bad_json) {
             return invalid_request_error_response(
                 bad_json.message, std::move(id).value_or(Json {}));
         }
@@ -391,7 +382,6 @@ namespace {
 
         return reply.transform(cpputil::json::encode<Json_config>);
     }
-
 } // namespace
 
 auto ki::lsp::run_server(bool const debug, std::istream& in, std::ostream& out) -> int

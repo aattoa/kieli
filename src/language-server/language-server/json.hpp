@@ -38,9 +38,9 @@ namespace ki::lsp {
     };
 
     // Thrown when the JSON sent by the client is syntactically correct but invalid in some way.
-    struct Bad_client_json : std::exception {
+    struct Bad_json : std::exception {
         std::string message;
-        explicit Bad_client_json(std::string message);
+        explicit Bad_json(std::string message);
         [[nodiscard]] auto what() const noexcept -> char const* override;
     };
 
@@ -79,7 +79,7 @@ namespace ki::lsp {
         if (T* const ptr = std::get_if<T>(&json.variant)) {
             return std::move(*ptr);
         }
-        throw Bad_client_json("Value has unexpected type");
+        throw Bad_json("Value has unexpected type");
     }
 
     // Throws `Bad_client_json` if `json` is not a non-negative integer.

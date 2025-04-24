@@ -1,33 +1,33 @@
 #include <libutl/utilities.hpp>
 #include <language-server/json.hpp>
 
-ki::lsp::Bad_client_json::Bad_client_json(std::string message) : message(std::move(message)) {}
+ki::lsp::Bad_json::Bad_json(std::string message) : message(std::move(message)) {}
 
-auto ki::lsp::Bad_client_json::what() const noexcept -> char const*
+auto ki::lsp::Bad_json::what() const noexcept -> char const*
 {
     return message.c_str();
 }
 
-auto ki::lsp::error_response(Error_code const code, Json::String message, Json id) -> Json
+auto ki::lsp::error_response(Error_code code, Json::String message, Json id) -> Json
 {
-    auto error = Json { Json::Object {
-        { "code", Json { std::to_underlying(code) } },
-        { "message", Json { std::move(message) } },
-    } };
-    return Json { Json::Object {
-        { "jsonrpc", Json { "2.0" } },
-        { "error", std::move(error) },
-        { "id", std::move(id) },
-    } };
+    Json::Object error;
+    error.try_emplace("code", std::to_underlying(code));
+    error.try_emplace("message", std::move(message));
+
+    Json::Object object;
+    object.try_emplace("jsonrpc", "2.0");
+    object.try_emplace("error", std::move(error));
+    object.try_emplace("id", std::move(id));
+    return Json { std::move(object) };
 }
 
 auto ki::lsp::success_response(Json result, Json id) -> Json
 {
-    return Json { Json::Object {
-        { "jsonrpc", Json { "2.0" } },
-        { "result", std::move(result) },
-        { "id", std::move(id) },
-    } };
+    Json::Object object;
+    object.try_emplace("jsonrpc", "2.0");
+    object.try_emplace("result", std::move(result));
+    object.try_emplace("id", std::move(id));
+    return Json { std::move(object) };
 }
 
 auto ki::lsp::path_from_json(Json::String const& uri) -> std::filesystem::path
@@ -35,7 +35,7 @@ auto ki::lsp::path_from_json(Json::String const& uri) -> std::filesystem::path
     if (uri.starts_with("file://")) {
         return uri.substr("file://"sv.size());
     }
-    throw Bad_client_json { std::format("URI with unsupported scheme: '{}'", uri) };
+    throw Bad_json(std::format("URI with unsupported scheme: '{}'", uri));
 }
 
 auto ki::lsp::path_to_json(std::filesystem::path const& path) -> Json
@@ -51,28 +51,27 @@ auto ki::lsp::position_from_json(Json::Object object) -> Position
     };
 }
 
-auto ki::lsp::position_to_json(Position const position) -> Json
+auto ki::lsp::position_to_json(Position position) -> Json
 {
-    return Json { Json::Object {
-        { "line", Json { cpputil::num::safe_cast<Json::Number>(position.line) } },
-        { "character", Json { cpputil::num::safe_cast<Json::Number>(position.column) } },
-    } };
+    Json::Object result;
+    result.try_emplace("line", cpputil::num::safe_cast<Json::Number>(position.line));
+    result.try_emplace("character", cpputil::num::safe_cast<Json::Number>(position.column));
+    return Json { std::move(result) };
 }
 
 auto ki::lsp::range_from_json(Json::Object object) -> Range
 {
-    return Range {
-        position_from_json(as<Json::Object>(at(object, "start"))),
-        position_from_json(as<Json::Object>(at(object, "end"))),
-    };
+    auto start = position_from_json(as<Json::Object>(at(object, "start")));
+    auto end   = position_from_json(as<Json::Object>(at(object, "end")));
+    return Range(start, end);
 }
 
-auto ki::lsp::range_to_json(Range const range) -> Json
+auto ki::lsp::range_to_json(Range range) -> Json
 {
-    return Json { Json::Object {
-        { "start", position_to_json(range.start) },
-        { "end", position_to_json(range.stop) },
-    } };
+    Json::Object result;
+    result.try_emplace("start", position_to_json(range.start));
+    result.try_emplace("end", position_to_json(range.stop));
+    return Json { std::move(result) };
 }
 
 auto ki::lsp::document_id_from_json(db::Database const& db, Json::Object object) -> db::Document_id
@@ -81,27 +80,28 @@ auto ki::lsp::document_id_from_json(db::Database const& db, Json::Object object)
     if (auto const it = db.paths.find(path); it != db.paths.end()) {
         return it->second;
     }
-    auto message = std::format("Referenced an unopened document: '{}'", path.c_str());
-    throw Bad_client_json(std::move(message));
+    throw Bad_json(std::format("Referenced an unopened document: '{}'", path.c_str()));
 }
 
-auto ki::lsp::document_id_to_json(db::Database const& db, db::Document_id const id) -> Json
+auto ki::lsp::document_id_to_json(db::Database const& db, db::Document_id id) -> Json
 {
-    return Json { Json::Object { { "uri", path_to_json(document_path(db, id)) } } };
+    Json::Object object;
+    object.try_emplace("uri", path_to_json(document_path(db, id)));
+    return Json { std::move(object) };
 }
 
 auto ki::lsp::location_from_json(db::Database const& db, Json::Object object) -> Location
 {
-    Range range = range_from_json(as<Json::Object>(at(object, "range")));
+    auto range = range_from_json(as<Json::Object>(at(object, "range")));
     return Location { .doc_id = document_id_from_json(db, std::move(object)), .range = range };
 }
 
-auto ki::lsp::location_to_json(db::Database const& db, Location const location) -> Json
+auto ki::lsp::location_to_json(db::Database const& db, Location location) -> Json
 {
-    return Json { Json::Object {
-        { "uri", path_to_json(document_path(db, location.doc_id)) },
-        { "range", range_to_json(location.range) },
-    } };
+    Json::Object object;
+    object.try_emplace("uri", path_to_json(document_path(db, location.doc_id)));
+    object.try_emplace("range", range_to_json(location.range));
+    return Json { std::move(object) };
 }
 
 auto ki::lsp::position_params_from_json(db::Database const& db, Json::Object object)
@@ -120,40 +120,40 @@ auto ki::lsp::severity_to_json(Severity severity) -> Json
     case Severity::Warning:     return Json { Json::Number { 2 } };
     case Severity::Information: return Json { Json::Number { 3 } };
     case Severity::Hint:        return Json { Json::Number { 4 } };
-    default:                    cpputil::unreachable();
     }
+    cpputil::unreachable();
 }
 
 auto ki::lsp::diagnostic_to_json(db::Database const& db, Diagnostic const& diagnostic) -> Json
 {
     auto const info_to_json = [&](Diagnostic_related const& info) {
-        return Json { Json::Object {
-            { "location", location_to_json(db, info.location) },
-            { "message", Json { info.message } },
-        } };
+        Json::Object object;
+        object.try_emplace("location", location_to_json(db, info.location));
+        object.try_emplace("message", info.message);
+        return Json { std::move(object) };
     };
 
     auto related = std::ranges::to<Json::Array>(
         std::views::transform(diagnostic.related_info, info_to_json));
 
-    return Json { Json::Object {
-        { "range", range_to_json(diagnostic.range) },
-        { "severity", severity_to_json(diagnostic.severity) },
-        { "message", Json { diagnostic.message } },
-        { "relatedInformation", Json { std::move(related) } },
-    } };
+    Json::Object object;
+    object.try_emplace("range", range_to_json(diagnostic.range));
+    object.try_emplace("severity", severity_to_json(diagnostic.severity));
+    object.try_emplace("message", diagnostic.message);
+    object.try_emplace("relatedInformation", std::move(related));
+    return Json { std::move(object) };
 }
 
 auto ki::lsp::type_hint_to_json(db::Database const& db, db::Type_hint hint) -> Json
 {
-    auto const& hir   = db.documents[hint.doc_id].arena.hir;
-    std::string label = hir::to_string(hir, db.string_pool, hir.types[hint.type]);
-    label.insert(0, ": "sv);
-    return Json { Json::Object {
-        { "position", position_to_json(hint.position) },
-        { "label", Json { std::move(label) } },
-        { "kind", Json { 1 } }, // Type hint
-    } };
+    std::string label = ": ";
+    hir::format(db.documents[hint.doc_id].arena.hir, db.string_pool, hint.type_id, label);
+
+    Json::Object object;
+    object.try_emplace("position", position_to_json(hint.position));
+    object.try_emplace("label", std::move(label));
+    object.try_emplace("kind", 1); // Type hint
+    return Json { std::move(object) };
 }
 
 auto ki::lsp::document_item_from_json(Json::Object object) -> Document_item
@@ -176,21 +176,21 @@ auto ki::lsp::format_options_from_json(Json::Object object) -> fmt::Options
 
 auto ki::lsp::markdown_content_to_json(std::string markdown) -> Json
 {
-    return Json { Json::Object {
-        { "contents",
-          Json { Json::Object {
-              { "kind", Json { "markdown" } },
-              { "value", Json { std::move(markdown) } },
-          } } },
-    } };
+    Json::Object contents;
+    contents.try_emplace("kind", "markdown");
+    contents.try_emplace("value", std::move(markdown));
+
+    Json::Object object;
+    object.try_emplace("contents", std::move(contents));
+    return Json { std::move(object) };
 }
 
-auto ki::lsp::semantic_tokens_to_json(std::span<Semantic_token const> const tokens) -> Json
+auto ki::lsp::semantic_tokens_to_json(std::span<Semantic_token const> tokens) -> Json
 {
+    static constexpr auto to_num = [](auto n) { return cpputil::num::safe_cast<Json::Number>(n); };
+
     Json::Array array;
     array.reserve(tokens.size() * 5); // Each token is represented by five integers.
-
-    static constexpr auto to_num = [](auto n) { return cpputil::num::safe_cast<Json::Number>(n); };
 
     Position prev;
     for (Semantic_token const& token : tokens) {
@@ -213,22 +213,22 @@ auto ki::lsp::semantic_tokens_to_json(std::span<Semantic_token const> const toke
 
 auto ki::lsp::as_unsigned(Json json) -> std::uint32_t
 {
-    if (auto const number = as<Json::Number>(std::move(json)); number >= 0) {
+    if (auto number = as<Json::Number>(std::move(json)); number >= 0) {
         return cpputil::num::safe_cast<std::uint32_t>(number);
     }
-    throw Bad_client_json(std::format("Unexpected negative integer"));
+    throw Bad_json(std::format("Unexpected negative integer"));
 }
 
-auto ki::lsp::at(Json::Object& object, char const* const key) -> Json
+auto ki::lsp::at(Json::Object& object, char const* key) -> Json
 {
     cpputil::always_assert(key != nullptr);
     if (auto const it = object.find(key); it != object.end()) {
         return std::move(it->second);
     }
-    throw Bad_client_json(std::format("Key not present: '{}'", key));
+    throw Bad_json(std::format("Key not present: '{}'", key));
 }
 
-auto ki::lsp::maybe_at(Json::Object& object, char const* const key) -> std::optional<Json>
+auto ki::lsp::maybe_at(Json::Object& object, char const* key) -> std::optional<Json>
 {
     cpputil::always_assert(key != nullptr);
     auto const it = object.find(key);
