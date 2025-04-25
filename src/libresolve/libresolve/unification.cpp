@@ -18,6 +18,17 @@ namespace {
         return result != Result::Ok ? result : std::invoke(std::move(callback));
     }
 
+    void merge_variable_kinds(hir::Type_variable_kind& lhs, hir::Type_variable_kind& rhs)
+    {
+        // TODO: handle concept requirements
+        if (lhs == hir::Type_variable_kind::Integral) {
+            rhs = hir::Type_variable_kind::Integral;
+        }
+        else if (rhs == hir::Type_variable_kind::Integral) {
+            lhs = hir::Type_variable_kind::Integral;
+        }
+    }
+
     struct Mutability_visitor {
         Context&               ctx;
         Inference_state&       state;
@@ -147,25 +158,38 @@ namespace {
             return Result::Ok;
         }
 
-        auto operator()(hir::type::Variable const sub, hir::type::Variable const super) const
-            -> Result
+        auto operator()(hir::type::Variable sub, hir::type::Variable super) const -> Result
         {
-            // TODO: handle integrals
             if (sub.id != super.id) {
+                merge_variable_kinds(state.type_vars[sub.id].kind, state.type_vars[super.id].kind);
                 state.type_var_set.merge(sub.id.get(), super.id.get());
             }
             return Result::Ok;
         }
 
-        auto operator()(hir::type::Variable const sub, auto const&) const -> Result
+        auto operator()(hir::type::Variable sub, hir::type::Integer) const -> Result
         {
-            // TODO: handle integrals
             return solution(sub.id, current_super);
         }
 
-        auto operator()(auto const&, hir::type::Variable const super) const -> Result
+        auto operator()(hir::type::Integer, hir::type::Variable super) const -> Result
         {
-            // TODO: handle integrals
+            return solution(super.id, current_sub);
+        }
+
+        auto operator()(hir::type::Variable sub, auto const&) const -> Result
+        {
+            if (state.type_vars[sub.id].kind == hir::Type_variable_kind::Integral) {
+                return Result::Mismatch;
+            }
+            return solution(sub.id, current_super);
+        }
+
+        auto operator()(auto const&, hir::type::Variable super) const -> Result
+        {
+            if (state.type_vars[super.id].kind == hir::Type_variable_kind::Integral) {
+                return Result::Mismatch;
+            }
             return solution(super.id, current_sub);
         }
 
