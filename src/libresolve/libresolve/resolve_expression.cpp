@@ -184,7 +184,7 @@ namespace {
                         state,
                         effect.range,
                         ctx.hir.types[effect.type_id],
-                        ctx.hir.types[ctx.constants.type_unit]);
+                        hir::type::Tuple {});
                     return effect;
                 };
 
@@ -211,9 +211,98 @@ namespace {
             });
         }
 
-        auto operator()(ast::expr::Function_call const&) -> hir::Expression
+        auto operator()(ast::expr::Function_call const& call) -> hir::Expression
         {
-            return unsupported();
+            auto invocable = recurse(ast().expressions[call.invocable]);
+
+            if (auto const* ref = std::get_if<hir::expr::Function_reference>(&invocable.variant)) {
+                auto& signature = resolve_function_signature(db, ctx, ref->id);
+
+                if (signature.parameters.size() != call.arguments.size()) {
+                    auto message = std::format(
+                        "'{}' has {} parameters, but {} arguments were supplied",
+                        db.string_pool.get(signature.name.id),
+                        signature.parameters.size(),
+                        call.arguments.size());
+                    return error(this_range, std::move(message));
+                }
+
+                std::vector<hir::Expression_id> arguments;
+                arguments.reserve(signature.parameters.size());
+
+                for (std::size_t i = 0; i != signature.parameters.size(); ++i) {
+                    auto const& parameter = signature.parameters.at(i);
+                    auto        argument  = recurse(ast().expressions[call.arguments.at(i)]);
+
+                    require_subtype_relationship(
+                        db,
+                        ctx,
+                        state,
+                        argument.range,
+                        ctx.hir.types[argument.type_id],
+                        ctx.hir.types[parameter.type.id]);
+                    arguments.push_back(ctx.hir.expressions.push(std::move(argument)));
+                }
+
+                return {
+                    .variant  = hir::expr::Function_call {
+                        .invocable = ctx.hir.expressions.push(std::move(invocable)),
+                        .arguments = std::move(arguments),
+                    },
+                    .type_id  = signature.return_type.id,
+                    .category = hir::Expression_category::Value,
+                    .range    = this_range,
+                };
+            }
+
+            std::vector<hir::Expression_id> arguments;
+            arguments.reserve(call.arguments.size());
+
+            std::vector<hir::Type> parameter_types;
+            parameter_types.reserve(call.arguments.size());
+
+            auto result_type = fresh_general_type_variable(state, ctx.hir, this_range);
+
+            for (auto const& arg_id : call.arguments) {
+                auto range = ast().expressions[arg_id].range;
+                parameter_types.push_back(fresh_general_type_variable(state, ctx.hir, range));
+            }
+
+            // Unify the invocable type with a synthetic function type.
+            // The real parameter types can be captured this way.
+            // This greatly improves argument type mismatch error messages.
+            require_subtype_relationship(
+                db,
+                ctx,
+                state,
+                this_range,
+                ctx.hir.types[invocable.type_id],
+                hir::type::Function {
+                    .parameter_types = parameter_types,
+                    .return_type     = result_type,
+                });
+
+            for (auto const& [type, arg_id] : std::views::zip(parameter_types, call.arguments)) {
+                auto argument = recurse(ast().expressions[arg_id]);
+                require_subtype_relationship(
+                    db,
+                    ctx,
+                    state,
+                    argument.range,
+                    ctx.hir.types[argument.type_id],
+                    ctx.hir.types[type.id]);
+                arguments.push_back(ctx.hir.expressions.push(std::move(argument)));
+            }
+
+            return {
+                .variant  = hir::expr::Function_call {
+                    .invocable = ctx.hir.expressions.push(std::move(invocable)),
+                    .arguments = std::move(arguments),
+                },
+                .type_id  = result_type.id,
+                .category = hir::Expression_category::Value,
+                .range    = this_range,
+            };
         }
 
         auto operator()(ast::expr::Tuple_init const&) -> hir::Expression
