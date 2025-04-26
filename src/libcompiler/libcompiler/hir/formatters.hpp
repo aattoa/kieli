@@ -235,6 +235,12 @@ namespace ki::hir::dtl {
 
         void operator()(patt::Name const& name) const
         {
+            if (auto const* mut = std::get_if<db::Mutability>(&arena.mutabilities[name.mut_id])) {
+                if (*mut == db::Mutability::Immut) {
+                    std::format_to(out, "{}", pool.get(name.name_id));
+                    return;
+                }
+            }
             std::format_to(out, "{} {}", wrap(name.mut_id), pool.get(name.name_id));
         }
 

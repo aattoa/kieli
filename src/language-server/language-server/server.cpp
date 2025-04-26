@@ -97,11 +97,11 @@ namespace {
     {
         auto const [doc_id, range] = range_params_from_json(server.db, std::move(params));
 
-        auto hints = server.db.documents[doc_id].info.type_hints
+        auto hints = server.db.documents[doc_id].info.inlay_hints
                    | std::views::filter(
-                         [=](db::Type_hint hint) { return range_contains(range, hint.position); })
+                         [=](db::Inlay_hint hint) { return range_contains(range, hint.position); })
                    | std::views::transform(
-                         [&](db::Type_hint hint) { return type_hint_to_json(server.db, hint); })
+                         [&](db::Inlay_hint hint) { return inlay_hint_to_json(server.db, hint); })
                    | std::ranges::to<Json::Array>();
 
         return Json { std::move(hints) };

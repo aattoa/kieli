@@ -15,11 +15,11 @@ namespace ki::db {
     // If a document is owned by a client, the server will not attempt to read it from disk.
     enum struct Ownership : std::uint8_t { Server, Client };
 
-    // Inlay type hint.
-    struct Type_hint {
-        lsp::Position position;
-        Document_id   doc_id;
-        hir::Type_id  type_id;
+    // Inlay type or parameter hint.
+    struct Inlay_hint {
+        lsp::Position                               position;
+        Document_id                                 doc_id;
+        std::variant<hir::Type_id, hir::Pattern_id> variant;
     };
 
     // A reference to a symbol. Used to determine the symbol at a particular position.
@@ -39,7 +39,7 @@ namespace ki::db {
     struct Document_info {
         std::vector<lsp::Diagnostic>     diagnostics;
         std::vector<lsp::Semantic_token> semantic_tokens;
-        std::vector<Type_hint>           type_hints;
+        std::vector<Inlay_hint>          inlay_hints;
         std::vector<Symbol_reference>    references;
     };
 
@@ -113,6 +113,9 @@ namespace ki::db {
 
     // Add a type hint to the document identified by `doc_id`.
     void add_type_hint(Database& db, Document_id doc_id, lsp::Position pos, hir::Type_id type_id);
+
+    // Add a parameter hint to the document identified by `doc_id`.
+    void add_param_hint(Database& db, Document_id doc_id, lsp::Position pos, hir::Pattern_id param);
 
     // Add a symbol reference to the document identified by `doc_id`.
     void add_reference(Database& db, Document_id doc_id, lsp::Reference ref, hir::Symbol symbol);

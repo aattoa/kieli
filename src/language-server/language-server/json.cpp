@@ -178,16 +178,35 @@ auto ki::lsp::diagnostic_to_json(db::Database const& db, Diagnostic const& diagn
     return Json { std::move(object) };
 }
 
-auto ki::lsp::type_hint_to_json(db::Database const& db, db::Type_hint hint) -> Json
+auto ki::lsp::inlay_hint_to_json(db::Database const& db, db::Inlay_hint hint) -> Json
 {
-    std::string label = ": ";
-    hir::format(db.documents[hint.doc_id].arena.hir, db.string_pool, hint.type_id, label);
+    auto const& hir = db.documents[hint.doc_id].arena.hir;
 
-    Json::Object object;
-    object.try_emplace("position", position_to_json(hint.position));
-    object.try_emplace("label", std::move(label));
-    object.try_emplace("kind", 1); // Type hint
-    return Json { std::move(object) };
+    auto const visitor = utl::Overload {
+        [&](hir::Type_id type_id) -> Json {
+            std::string label = ": ";
+            hir::format(hir, db.string_pool, type_id, label);
+
+            Json::Object object;
+            object.try_emplace("position", position_to_json(hint.position));
+            object.try_emplace("label", std::move(label));
+            object.try_emplace("kind", 1); // Type hint
+            return Json { std::move(object) };
+        },
+        [&](hir::Pattern_id patt_id) -> Json {
+            std::string label = hir::to_string(hir, db.string_pool, hir.patterns[patt_id]);
+            label.append(" =");
+
+            Json::Object object;
+            object.try_emplace("position", position_to_json(hint.position));
+            object.try_emplace("label", std::move(label));
+            object.try_emplace("kind", 2); // Parameter hint
+            object.try_emplace("paddingRight", true);
+            return Json { std::move(object) };
+        },
+    };
+
+    return std::visit(visitor, hint.variant);
 }
 
 auto ki::lsp::reference_to_json(Reference reference) -> Json

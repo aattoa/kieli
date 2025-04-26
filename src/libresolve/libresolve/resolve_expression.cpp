@@ -242,6 +242,8 @@ namespace {
                         ctx.hir.types[argument.type_id],
                         ctx.hir.types[parameter.type.id]);
                     arguments.push_back(ctx.hir.expressions.push(std::move(argument)));
+
+                    db::add_param_hint(db, ctx.doc_id, argument.range.start, parameter.pattern_id);
                 }
 
                 return {
