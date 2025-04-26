@@ -20,7 +20,7 @@ namespace {
         auto type = resolve_type(db, ctx, state, scope_id, env_id, ast.types[parameter.type]);
 
         require_subtype_relationship(
-            db, ctx, state, pattern.range, ctx.hir.types[pattern.type], ctx.hir.types[type.id]);
+            db, ctx, state, pattern.range, ctx.hir.types[pattern.type_id], ctx.hir.types[type.id]);
 
         auto const resolve_default = [&](ast::Expression_id const argument) {
             auto expression
@@ -30,13 +30,13 @@ namespace {
                 ctx,
                 state,
                 expression.range,
-                ctx.hir.types[expression.type],
+                ctx.hir.types[expression.type_id],
                 ctx.hir.types[type.id]);
-            return expression;
+            return ctx.hir.expressions.push(std::move(expression));
         };
 
         return hir::Function_parameter {
-            .pattern          = std::move(pattern),
+            .pattern_id       = ctx.hir.patterns.push(std::move(pattern)),
             .type             = type,
             .default_argument = parameter.default_argument.transform(resolve_default),
         };
@@ -98,6 +98,7 @@ auto ki::res::resolve_function_body(db::Database& db, Context& ctx, hir::Functio
         auto const it = ctx.scope_map.find(id);
         cpputil::always_assert(it != ctx.scope_map.end());
         info.body = resolve_expression(db, ctx, state, it->second, info.env_id, info.ast.body);
+        report_unused(db, ctx, it->second);
         ctx.scope_map.erase(it);
 
         require_subtype_relationship(
@@ -105,7 +106,7 @@ auto ki::res::resolve_function_body(db::Database& db, Context& ctx, hir::Functio
             ctx,
             state,
             info.body.value().range,
-            ctx.hir.types[info.body.value().type],
+            ctx.hir.types[info.body.value().type_id],
             ctx.hir.types[signature.return_type.id]);
         ensure_no_unsolved_variables(db, ctx, state);
     }

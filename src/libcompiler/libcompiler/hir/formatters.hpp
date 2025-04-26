@@ -107,7 +107,7 @@ namespace ki::hir::dtl {
             std::format_to(out, "{:?}", pool.get(literal.id));
         }
 
-        void operator()(expr::Array_literal const& literal) const
+        void operator()(expr::Array const& literal) const
         {
             std::format_to(out, "[{}]", wrap(literal.elements));
         }
@@ -135,7 +135,7 @@ namespace ki::hir::dtl {
         void operator()(expr::Block const& block) const
         {
             std::format_to(out, "{{");
-            for (Expression const& side_effect : block.side_effects) {
+            for (Expression const& side_effect : block.effects) {
                 std::format_to(out, " {};", wrap(side_effect));
             }
             std::format_to(out, " {} }}", wrap(block.result));
@@ -166,14 +166,9 @@ namespace ki::hir::dtl {
             std::format_to(out, "{}", pool.get(arena.functions[reference.id].name.id));
         }
 
-        void operator()(expr::Indirect_call const& call) const
+        void operator()(expr::Function_call const& call) const
         {
             std::format_to(out, "{}({})", wrap(call.invocable), wrap(call.arguments));
-        }
-
-        void operator()(expr::Direct_call const& call) const
-        {
-            std::format_to(out, "{}({})", pool.get(call.function_name.id), wrap(call.arguments));
         }
 
         void operator()(expr::Sizeof const& sizeof_) const
@@ -361,8 +356,7 @@ LIBRESOLVE_DEFINE_FORMATTER(ki::hir::Expression_id)
 
 LIBRESOLVE_DEFINE_FORMATTER(ki::hir::Expression)
 {
-    return std::format_to(
-        ctx.out(), "({}: {})", value.wrap(value->variant), value.wrap(value->type));
+    return std::format_to(ctx.out(), "{}", value.wrap(value->variant));
 }
 
 LIBRESOLVE_DEFINE_FORMATTER(ki::hir::Pattern_variant)
@@ -383,8 +377,7 @@ LIBRESOLVE_DEFINE_FORMATTER(ki::hir::Pattern_id)
 
 LIBRESOLVE_DEFINE_FORMATTER(ki::hir::Pattern)
 {
-    return std::format_to(
-        ctx.out(), "({}: {})", value.wrap(value->variant), value.wrap(value->type));
+    return std::format_to(ctx.out(), "{}", value.wrap(value->variant));
 }
 
 LIBRESOLVE_DEFINE_FORMATTER(ki::hir::Type_variant)
@@ -439,7 +432,7 @@ LIBRESOLVE_DEFINE_FORMATTER(ki::hir::Mutability)
 
 LIBRESOLVE_DEFINE_FORMATTER(ki::hir::Function_parameter)
 {
-    std::format_to(ctx.out(), "{}: {}", value.wrap(value->pattern), value.wrap(value->type));
+    std::format_to(ctx.out(), "{}: {}", value.wrap(value->pattern_id), value.wrap(value->type.id));
     if (value->default_argument.has_value()) {
         std::format_to(ctx.out(), " = {}", value.wrap(value->default_argument.value()));
     }

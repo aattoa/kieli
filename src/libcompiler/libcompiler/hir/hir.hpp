@@ -6,6 +6,14 @@
 #include <libcompiler/cst/cst.hpp>
 #include <libcompiler/ast/ast.hpp>
 
+/*
+
+   The High-level Intermediate Representation (HIR) is a fully typed representation of a program's
+   syntax. It contains abstract information concerning generics, type variables, and other details
+   relevant to the type-system. It is produced by resolving the AST.
+
+*/
+
 namespace ki::hir {
 
     enum struct Type_variable_kind : std::uint8_t { General, Integral };
@@ -70,12 +78,12 @@ namespace ki::hir {
 
     struct Pattern {
         Pattern_variant variant;
-        Type_id         type;
+        Type_id         type_id;
         lsp::Range      range;
     };
 
     namespace expr {
-        struct Array_literal {
+        struct Array {
             std::vector<Expression> elements;
         };
 
@@ -94,7 +102,7 @@ namespace ki::hir {
         struct Continue {};
 
         struct Block {
-            std::vector<Expression> side_effects;
+            std::vector<Expression> effects;
             Expression_id           result;
         };
 
@@ -117,14 +125,8 @@ namespace ki::hir {
             Function_id id;
         };
 
-        struct Indirect_call {
+        struct Function_call {
             Expression_id              invocable;
-            std::vector<Expression_id> arguments;
-        };
-
-        struct Direct_call {
-            db::Lower                  function_name;
-            Function_id                function_id;
             std::vector<Expression_id> arguments;
         };
 
@@ -154,7 +156,7 @@ namespace ki::hir {
               db::Boolean,
               db::String,
               Wildcard,
-              expr::Array_literal,
+              expr::Array,
               expr::Tuple,
               expr::Loop,
               expr::Break,
@@ -164,8 +166,7 @@ namespace ki::hir {
               expr::Match,
               expr::Variable_reference,
               expr::Function_reference,
-              expr::Indirect_call,
-              expr::Direct_call,
+              expr::Function_call,
               expr::Sizeof,
               expr::Addressof,
               expr::Deref,
@@ -175,7 +176,7 @@ namespace ki::hir {
 
     struct Expression {
         Expression_variant  variant;
-        Type_id             type;
+        Type_id             type_id;
         Expression_category category;
         lsp::Range          range;
     };
@@ -306,9 +307,9 @@ namespace ki::hir {
     };
 
     struct Function_parameter {
-        Pattern                   pattern;
-        Type                      type;
-        std::optional<Expression> default_argument;
+        Pattern_id                   pattern_id;
+        Type                         type;
+        std::optional<Expression_id> default_argument;
     };
 
     struct Function_signature {

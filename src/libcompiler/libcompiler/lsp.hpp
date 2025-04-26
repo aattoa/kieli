@@ -87,18 +87,6 @@ namespace ki::lsp {
         Reference_kind kind {};
     };
 
-    // https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#textDocumentPositionParams
-    struct Position_params {
-        db::Document_id doc_id;
-        Position        position;
-    };
-
-    // Common structure that works for InlayHintParams and CodeActionParams.
-    struct Range_params {
-        db::Document_id doc_id;
-        Range           range;
-    };
-
     // Advance `position` with `character`.
     [[nodiscard]] auto advance(Position position, char character) noexcept -> Position;
 

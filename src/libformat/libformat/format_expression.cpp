@@ -12,14 +12,14 @@ namespace {
         {
             format(state, "{{");
             indent(state, [&] {
-                for (auto const& side_effect : block.side_effects) {
+                for (auto const& side_effect : block.effects) {
                     format(state, "{}", newline(state));
                     format(state, side_effect.expression);
                     format(state, ";");
                 }
-                if (block.result_expression.has_value()) {
+                if (block.result.has_value()) {
                     format(state, "{}", newline(state));
-                    format(state, block.result_expression.value());
+                    format(state, block.result.value());
                 }
             });
             format(state, "{}}}", newline(state));
@@ -27,10 +27,10 @@ namespace {
 
         void format_regular_block(cst::expr::Block const& block)
         {
-            if (block.side_effects.empty()) {
-                if (block.result_expression.has_value()) {
+            if (block.effects.empty()) {
+                if (block.result.has_value()) {
                     format(state, "{{ ");
-                    format(state, block.result_expression.value());
+                    format(state, block.result.value());
                     format(state, " }}");
                 }
                 else {
@@ -92,7 +92,7 @@ namespace {
         void operator()(cst::expr::Infix_call const& call)
         {
             format(state, call.left);
-            format(state, " {} ", state.pool.get(call.op));
+            format(state, " {} ", state.pool.get(call.op.id));
             format(state, call.right);
         }
 

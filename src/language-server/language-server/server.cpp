@@ -34,13 +34,13 @@ namespace {
     }
 
     auto find_reference(std::span<db::Symbol_reference const> references, Position position)
-        -> std::optional<hir::Symbol>
+        -> std::optional<db::Symbol_reference>
     {
         // TODO: binary search
         auto const it = std::ranges::find_if(references, [=](db::Symbol_reference sym) {
             return range_contains(sym.reference.range, position);
         });
-        return it != references.end() ? std::optional(it->symbol) : std::nullopt;
+        return it != references.end() ? std::optional(*it) : std::nullopt;
     }
 
     auto symbol_references(std::span<db::Symbol_reference const> references, hir::Symbol symbol)
@@ -50,15 +50,14 @@ namespace {
              | std::views::transform([](db::Symbol_reference ref) { return ref.reference; });
     }
 
-    auto handle_formatting(Server& server, Json::Object params) -> Result<Json>
+    auto handle_formatting(Server& server, Json params) -> Result<Json>
     {
-        auto id = document_id_from_json(server.db, as<Json::Object>(at(params, "textDocument")));
-        auto options = format_options_from_json(as<Json::Object>(at(params, "options")));
+        auto const [doc_id, options] = formatting_params_from_json(server.db, std::move(params));
 
-        auto& document = server.db.documents[id];
+        auto& document = server.db.documents[doc_id];
         document.info.diagnostics.clear();
         document.info.semantic_tokens.clear();
-        auto const cst = par::parse(server.db, id);
+        auto const cst = par::parse(server.db, doc_id);
 
         Json::Array edits;
         for (auto const& definition : cst.definitions) {
@@ -80,7 +79,7 @@ namespace {
 
     auto handle_pull_diagnostics(Server const& server, Json::Object params) -> Result<Json>
     {
-        auto id = document_id_from_json(server.db, as<Json::Object>(at(params, "textDocument")));
+        auto id = document_identifier_from_json(server.db, at(params, "textDocument"));
 
         auto items = server.db.documents[id].info.diagnostics
                    | std::views::transform([&](Diagnostic const& diagnostic) {
@@ -94,7 +93,7 @@ namespace {
         return Json { std::move(result) };
     }
 
-    auto handle_inlay_hints(Server const& server, Json::Object params) -> Result<Json>
+    auto handle_inlay_hints(Server const& server, Json params) -> Result<Json>
     {
         auto const [doc_id, range] = range_params_from_json(server.db, std::move(params));
 
@@ -108,23 +107,23 @@ namespace {
         return Json { std::move(hints) };
     }
 
-    auto handle_semantic_tokens(Server const& server, Json::Object params) -> Json
+    auto handle_semantic_tokens(Server const& server, Json params) -> Json
     {
-        auto id   = document_id_from_json(server.db, as<Json::Object>(at(params, "textDocument")));
-        auto data = semantic_tokens_to_json(server.db.documents[id].info.semantic_tokens);
+        auto doc_id = document_identifier_params_from_json(server.db, std::move(params));
+        auto data   = semantic_tokens_to_json(server.db.documents[doc_id].info.semantic_tokens);
 
         Json::Object result;
         result.try_emplace("data", std::move(data));
         return Json { std::move(result) };
     }
 
-    auto handle_highlight(Server const& server, Json::Object params) -> Json
+    auto handle_highlight(Server const& server, Json params) -> Json
     {
         auto const [doc_id, position] = position_params_from_json(server.db, std::move(params));
         auto const& references        = server.db.documents[doc_id].info.references;
 
-        if (auto const symbol = find_reference(references, position)) {
-            auto highlights = symbol_references(references, symbol.value())
+        if (auto ref = find_reference(references, position)) {
+            auto highlights = symbol_references(references, ref.value().symbol)
                             | std::views::transform(reference_to_json)
                             | std::ranges::to<Json::Array>();
             return Json { std::move(highlights) };
@@ -133,31 +132,32 @@ namespace {
         return Json {};
     }
 
-    auto handle_references(Server const& server, Json::Object params) -> Json
+    auto handle_references(Server const& server, Json params) -> Json
     {
         auto const [doc_id, position] = position_params_from_json(server.db, std::move(params));
         auto const& references        = server.db.documents[doc_id].info.references;
 
-        if (auto const symbol = find_reference(references, position)) {
-            auto locations
-                = symbol_references(references, symbol.value())
-                | std::views::transform([&](Reference ref) {
-                      return location_to_json(server.db, { .doc_id = doc_id, .range = ref.range });
-                  })
-                | std::ranges::to<Json::Array>();
+        auto const make_location = [&](Reference reference) {
+            return location_to_json(server.db, { .doc_id = doc_id, .range = reference.range });
+        };
+
+        if (auto ref = find_reference(references, position)) {
+            auto locations = symbol_references(references, ref.value().symbol)
+                           | std::views::transform(make_location) //
+                           | std::ranges::to<Json::Array>();
             return Json { std::move(locations) };
         }
 
         return Json {};
     }
 
-    auto handle_definition(Server const& server, Json::Object params) -> Json
+    auto handle_definition(Server const& server, Json params) -> Json
     {
         auto const [doc_id, position] = position_params_from_json(server.db, std::move(params));
         auto const& references        = server.db.documents[doc_id].info.references;
 
-        if (auto const symbol = find_reference(references, position)) {
-            auto locations = symbol_references(references, symbol.value());
+        if (auto ref = find_reference(references, position)) {
+            auto locations = symbol_references(references, ref.value().symbol);
 
             auto it = std::ranges::find(locations, Reference_kind::Write, &Reference::kind);
             if (it != locations.end()) {
@@ -168,12 +168,13 @@ namespace {
         return Json {};
     }
 
-    auto handle_hover(Server const& server, Json::Object params) -> Result<Json>
+    auto handle_hover(Server const& server, Json params) -> Result<Json>
     {
         auto const [doc_id, position] = position_params_from_json(server.db, std::move(params));
         return find_reference(server.db.documents[doc_id].info.references, position)
-            .transform([&](hir::Symbol symbol) {
-                return markdown_content_to_json(symbol_documentation(server.db, doc_id, symbol));
+            .transform([&](db::Symbol_reference ref) {
+                return markdown_content_to_json(
+                    symbol_documentation(server.db, doc_id, ref.symbol));
             })
             .value_or(Json {});
     }
@@ -252,28 +253,28 @@ namespace {
     auto handle_request(Server& server, std::string_view const method, Json params) -> Result<Json>
     {
         if (method == "textDocument/semanticTokens/full") {
-            return handle_semantic_tokens(server, as<Json::Object>(std::move(params)));
+            return handle_semantic_tokens(server, std::move(params));
         }
         if (method == "textDocument/documentHighlight") {
-            return handle_highlight(server, as<Json::Object>(std::move(params)));
+            return handle_highlight(server, std::move(params));
         }
         if (method == "textDocument/diagnostic") {
             return handle_pull_diagnostics(server, as<Json::Object>(std::move(params)));
         }
         if (method == "textDocument/inlayHint") {
-            return handle_inlay_hints(server, as<Json::Object>(std::move(params)));
+            return handle_inlay_hints(server, std::move(params));
         }
         if (method == "textDocument/definition") {
-            return handle_definition(server, as<Json::Object>(std::move(params)));
+            return handle_definition(server, std::move(params));
         }
         if (method == "textDocument/references") {
-            return handle_references(server, as<Json::Object>(std::move(params)));
+            return handle_references(server, std::move(params));
         }
         if (method == "textDocument/hover") {
-            return handle_hover(server, as<Json::Object>(std::move(params)));
+            return handle_hover(server, std::move(params));
         }
         if (method == "textDocument/formatting") {
-            return handle_formatting(server, as<Json::Object>(std::move(params)));
+            return handle_formatting(server, std::move(params));
         }
         if (method == "shutdown") {
             return handle_shutdown(server);
@@ -281,9 +282,10 @@ namespace {
         return std::unexpected(std::format("Unsupported request method: {}", method));
     }
 
-    auto handle_open(Server& server, Json::Object params) -> Result<void>
+    auto handle_open(Server& server, Json params) -> Result<void>
     {
-        auto document = document_item_from_json(as<Json::Object>(at(params, "textDocument")));
+        auto object   = as<Json::Object>(std::move(params));
+        auto document = document_item_from_json(at(object, "textDocument"));
         if (document.language == "kieli") {
             auto const id = db::client_open_document(
                 server.db, std::move(document.path), std::move(document.text));
@@ -293,19 +295,20 @@ namespace {
         return std::unexpected(std::format("Unsupported language: '{}'", document.language));
     }
 
-    auto handle_close(Server& server, Json::Object params) -> Result<void>
+    auto handle_close(Server& server, Json params) -> Result<void>
     {
-        auto id = document_id_from_json(server.db, as<Json::Object>(at(params, "textDocument")));
+        auto id = document_identifier_params_from_json(server.db, std::move(params));
         db::client_close_document(server.db, id);
         return {};
     }
 
     // https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#textDocumentContentChangeEvent
-    void apply_content_change(std::string& text, Json::Object change)
+    void apply_content_change(std::string& text, Json object)
     {
+        auto change   = as<Json::Object>(std::move(object));
         auto new_text = as<Json::String>(at(change, "text"));
         if (auto field = maybe_at(change, "range")) {
-            auto range = range_from_json(as<Json::Object>(std::move(field).value()));
+            auto range = range_from_json(std::move(field).value());
             db::edit_text(text, range, new_text);
         }
         else {
@@ -313,26 +316,27 @@ namespace {
         }
     }
 
-    auto handle_change(Server& server, Json::Object params) -> Result<void>
+    auto handle_change(Server& server, Json params) -> Result<void>
     {
-        auto id = document_id_from_json(server.db, as<Json::Object>(at(params, "textDocument")));
-        for (Json change : as<Json::Array>(at(params, "contentChanges"))) {
-            apply_content_change(server.db.documents[id].text, as<Json::Object>(std::move(change)));
+        auto object = as<Json::Object>(std::move(params));
+        auto doc_id = document_identifier_from_json(server.db, at(object, "textDocument"));
+        for (Json change : as<Json::Array>(at(object, "contentChanges"))) {
+            apply_content_change(server.db.documents[doc_id].text, std::move(change));
         }
-        analyze_document(server, id);
+        analyze_document(server, doc_id);
         return {};
     }
 
     auto handle_notification(Server& server, std::string_view method, Json params) -> Result<void>
     {
         if (method == "textDocument/didChange") {
-            return handle_change(server, as<Json::Object>(std::move(params)));
+            return handle_change(server, std::move(params));
         }
         if (method == "textDocument/didOpen") {
-            return handle_open(server, as<Json::Object>(std::move(params)));
+            return handle_open(server, std::move(params));
         }
         if (method == "textDocument/didClose") {
-            return handle_close(server, as<Json::Object>(std::move(params)));
+            return handle_close(server, std::move(params));
         }
         if (method == "initialized") {
             return {};

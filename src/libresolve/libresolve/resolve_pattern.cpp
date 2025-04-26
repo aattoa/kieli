@@ -33,14 +33,14 @@ namespace {
         auto operator()(db::Integer const& integer) -> hir::Pattern
         {
             auto type = fresh_integral_type_variable(state, ctx.hir, this_range);
-            return { .variant = integer, .type = type.id, .range = this_range };
+            return { .variant = integer, .type_id = type.id, .range = this_range };
         }
 
         auto operator()(db::Floating const& floating) -> hir::Pattern
         {
             return {
                 .variant = floating,
-                .type    = ctx.constants.type_floating,
+                .type_id = ctx.constants.type_floating,
                 .range   = this_range,
             };
         }
@@ -49,7 +49,7 @@ namespace {
         {
             return {
                 .variant = boolean,
-                .type    = ctx.constants.type_boolean,
+                .type_id = ctx.constants.type_boolean,
                 .range   = this_range,
             };
         }
@@ -58,7 +58,7 @@ namespace {
         {
             return {
                 .variant = string,
-                .type    = ctx.constants.type_string,
+                .type_id = ctx.constants.type_string,
                 .range   = this_range,
             };
         }
@@ -67,7 +67,7 @@ namespace {
         {
             return {
                 .variant = hir::Wildcard {},
-                .type    = fresh_general_type_variable(state, ctx.hir, this_range).id,
+                .type_id = fresh_general_type_variable(state, ctx.hir, this_range).id,
                 .range   = this_range,
             };
         }
@@ -90,7 +90,7 @@ namespace {
                     .mut_id  = mut.id,
                     .var_id  = bind_local_variable(db, ctx, scope_id, pattern.name, variable),
                 },
-                .type    = type.id,
+                .type_id    = type.id,
                 .range   = this_range,
             };
         }
@@ -113,7 +113,7 @@ namespace {
                        | std::ranges::to<std::vector>();
             return {
                 .variant = hir::patt::Tuple { std::move(patterns) },
-                .type    = ctx.hir.types.push(hir::type::Tuple { std::move(types) }),
+                .type_id = ctx.hir.types.push(hir::type::Tuple { std::move(types) }),
                 .range   = this_range,
             };
         }
@@ -131,13 +131,13 @@ namespace {
                     ctx,
                     state,
                     pattern.range,
-                    ctx.hir.types[pattern.type],
+                    ctx.hir.types[pattern.type_id],
                     ctx.hir.types[element_type.id]);
             }
 
             return {
                 .variant = hir::patt::Slice { std::move(patterns) },
-                .type    = ctx.hir.types.push(hir::type::Slice { element_type }),
+                .type_id = ctx.hir.types.push(hir::type::Slice { element_type }),
                 .range   = this_range,
             };
         }
@@ -152,7 +152,7 @@ namespace {
                 ctx,
                 state,
                 guard.range,
-                ctx.hir.types[guard.type],
+                ctx.hir.types[guard.type_id],
                 ctx.hir.types[ctx.constants.type_boolean]);
 
             return {
@@ -160,8 +160,8 @@ namespace {
                     .pattern = ctx.hir.patterns.push(std::move(pattern)),
                     .guard   = ctx.hir.expressions.push(std::move(guard)),
                 },
-                .type  = pattern.type,
-                .range = this_range,
+                .type_id = pattern.type_id,
+                .range   = this_range,
             };
         }
     };

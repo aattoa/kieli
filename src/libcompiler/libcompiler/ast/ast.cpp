@@ -18,8 +18,8 @@ auto ki::ast::describe_loop_source(Loop_source const source) -> std::string_view
     case Loop_source::Plain_loop: return "plain loop";
     case Loop_source::While_loop: return "while loop";
     case Loop_source::For_loop:   return "for loop";
-    default:                      cpputil::unreachable();
     }
+    cpputil::unreachable();
 }
 
 auto ki::ast::describe_conditional_source(Conditional_source const source) -> std::string_view
@@ -28,6 +28,6 @@ auto ki::ast::describe_conditional_source(Conditional_source const source) -> st
     case Conditional_source::If:    return "if expression";
     case Conditional_source::Elif:  return "elif expression";
     case Conditional_source::While: return "while loop body";
-    default:                        cpputil::unreachable();
     }
+    cpputil::unreachable();
 }

@@ -108,8 +108,8 @@ namespace {
             return child_scope(ctx, scope_id, [&](Scope_id scope_id) {
                 auto expression = resolve_expression(
                     db, ctx, state, scope_id, env_id, ast().expressions[typeof_.expression]);
-                db::add_type_hint(db, ctx.doc_id, expression.range.stop, expression.type);
-                return hir::Type { .id = expression.type, .range = this_range };
+                db::add_type_hint(db, ctx.doc_id, expression.range.stop, expression.type_id);
+                return hir::Type { .id = expression.type_id, .range = this_range };
             });
         }
 

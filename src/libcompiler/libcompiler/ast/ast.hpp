@@ -136,7 +136,7 @@ namespace ki::ast {
         };
 
         struct Block {
-            std::vector<Expression> side_effects;
+            std::vector<Expression> effects;
             Expression_id           result;
         };
 
@@ -146,20 +146,19 @@ namespace ki::ast {
         };
 
         struct Infix_call {
-            Expression_id  left;
-            Expression_id  right;
-            utl::String_id op;
-            lsp::Range     op_range;
+            Expression_id left;
+            Expression_id right;
+            db::Name      op;
         };
 
-        struct Tuple_initializer {
-            Path                       constructor_path;
-            std::vector<Expression_id> initializers;
+        struct Tuple_init {
+            Path                       path;
+            std::vector<Expression_id> fields;
         };
 
-        struct Struct_initializer {
-            Path                                  constructor_path;
-            std::vector<Struct_field_initializer> initializers;
+        struct Struct_init {
+            Path                                  path;
+            std::vector<Struct_field_initializer> fields;
         };
 
         struct Struct_field {
@@ -198,7 +197,7 @@ namespace ki::ast {
             Expression_id          scrutinee;
         };
 
-        struct Type_ascription {
+        struct Ascription {
             Expression_id expression;
             Type_id       type;
         };
@@ -252,8 +251,8 @@ namespace ki::ast {
               expr::Continue,
               expr::Block,
               expr::Function_call,
-              expr::Tuple_initializer,
-              expr::Struct_initializer,
+              expr::Tuple_init,
+              expr::Struct_init,
               expr::Infix_call,
               expr::Struct_field,
               expr::Tuple_field,
@@ -261,7 +260,7 @@ namespace ki::ast {
               expr::Method_call,
               expr::Conditional,
               expr::Match,
-              expr::Type_ascription,
+              expr::Ascription,
               expr::Let,
               expr::Type_alias,
               expr::Return,

@@ -11,9 +11,9 @@
 using namespace ki;
 
 namespace {
-    void debug_lex(db::Database& db, db::Document_id id)
+    void debug_lex(db::Database& db, db::Document_id doc_id)
     {
-        auto state = lex::state(db.documents[id].text);
+        auto state = lex::state(db.documents[doc_id].text);
         auto token = lex::next(state);
         while (token.type != lex::Type::End_of_input) {
             std::print("{} ", lex::token_type_string(token.type));
@@ -22,32 +22,35 @@ namespace {
         std::println("");
     }
 
-    void debug_parse(db::Database& db, db::Document_id id)
+    void debug_parse(db::Database& db, db::Document_id doc_id)
     {
         auto text = fmt::format_module(
-            db.string_pool, db.documents[id].arena.cst, fmt::Options {}, par::parse(db, id));
+            db.string_pool,
+            db.documents[doc_id].arena.cst,
+            fmt::Options {},
+            par::parse(db, doc_id));
         std::print("{}", text);
     }
 
-    void debug_desugar(db::Database& db, db::Document_id id)
+    void debug_desugar(db::Database& db, db::Document_id doc_id)
     {
-        auto mod = par::parse(db, id);
-        auto ctx = des::context(db, id);
+        auto mod = par::parse(db, doc_id);
+        auto ctx = des::context(db, doc_id);
         for (auto const& cst : mod.definitions) {
             auto ast = des::desugar_definition(ctx, cst);
             std::println("{}", ast::display(ctx.ast, db.string_pool, ast));
         }
     }
 
-    void debug_resolve(db::Database& db, db::Document_id id)
+    void debug_resolve(db::Database& db, db::Document_id doc_id)
     {
-        auto ctx = res::context(id);
-        auto env = res::collect_document(db, ctx, id);
+        auto ctx = res::context(doc_id);
+        auto env = res::collect_document(db, ctx, doc_id);
         res::resolve_environment(db, ctx, env);
         res::debug_display_environment(db, ctx, env);
     }
 
-    auto choose_debug_repl_callback(std::string_view const name)
+    auto choose_debug_repl_callback(std::string_view name)
         -> void (*)(db::Database&, db::Document_id)
     {
         // clang-format off
@@ -57,16 +60,6 @@ namespace {
         if (name == "res") return debug_resolve;
         return nullptr;
         // clang-format on
-    }
-
-    void wrap_exceptions(std::invocable auto const& callback)
-    {
-        try {
-            std::invoke(callback);
-        }
-        catch (std::exception const& exception) {
-            std::print(stderr, "Error: {}\n\n", exception.what());
-        }
     }
 
     void run_debug_repl(void (&callback)(db::Database&, db::Document_id))
@@ -82,16 +75,23 @@ namespace {
             }
             repl::add_history_line(input.value().c_str());
 
-            auto db = db::database({ .root_path = std::filesystem::current_path() });
-            auto id = db::test_document(db, std::move(input).value());
-            wrap_exceptions([&] { callback(db, id); });
-            db::print_diagnostics(stderr, db, id);
+            auto db     = db::database({ .root_path = std::filesystem::current_path() });
+            auto doc_id = db::test_document(db, std::move(input).value());
+
+            try {
+                callback(db, doc_id);
+            }
+            catch (std::exception const& exception) {
+                std::print(stderr, "Error: {}\n\n", exception.what());
+            }
+
+            db::print_diagnostics(stderr, db, doc_id);
         }
     }
 
     auto choose_and_run_repl(std::string_view name) -> int
     {
-        if (auto* const callback = choose_debug_repl_callback(name)) {
+        if (auto* callback = choose_debug_repl_callback(name)) {
             run_debug_repl(*callback);
             return EXIT_SUCCESS;
         }
@@ -102,9 +102,14 @@ namespace {
     auto dump(std::string_view filename, auto const& callback) -> int
     {
         db::Database db;
-        if (auto id = db::read_document(db, filename)) {
-            wrap_exceptions([&] { callback(db, id.value()); });
-            db::print_diagnostics(stderr, db, id.value());
+        if (auto doc_id = db::read_document(db, filename)) {
+            try {
+                callback(db, doc_id.value());
+            }
+            catch (std::exception const& exception) {
+                std::print(stderr, "Error: {}\n\n", exception.what());
+            }
+            db::print_diagnostics(stderr, db, doc_id.value());
             return EXIT_SUCCESS;
         }
         else {
@@ -112,7 +117,7 @@ namespace {
                 stderr,
                 "Error: Failed to read '{}': {}",
                 filename,
-                db::describe_read_failure(id.error()));
+                db::describe_read_failure(doc_id.error()));
             return EXIT_FAILURE;
         }
     }

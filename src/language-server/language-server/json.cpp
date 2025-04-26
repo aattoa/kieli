@@ -30,7 +30,12 @@ auto ki::lsp::success_response(Json result, Json id) -> Json
     return Json { std::move(object) };
 }
 
-auto ki::lsp::path_from_json(Json::String const& uri) -> std::filesystem::path
+auto ki::lsp::path_to_uri(std::filesystem::path const& path) -> std::string
+{
+    return std::format("file://{}", path.c_str());
+}
+
+auto ki::lsp::path_from_uri(std::string_view uri) -> std::filesystem::path
 {
     if (uri.starts_with("file://")) {
         return uri.substr("file://"sv.size());
@@ -38,13 +43,9 @@ auto ki::lsp::path_from_json(Json::String const& uri) -> std::filesystem::path
     throw Bad_json(std::format("URI with unsupported scheme: '{}'", uri));
 }
 
-auto ki::lsp::path_to_json(std::filesystem::path const& path) -> Json
+auto ki::lsp::position_from_json(Json json) -> Position
 {
-    return Json { std::format("file://{}", path.c_str()) };
-}
-
-auto ki::lsp::position_from_json(Json::Object object) -> Position
-{
+    auto object = as<Json::Object>(std::move(json));
     return Position {
         .line   = as_unsigned(at(object, "line")),
         .column = as_unsigned(at(object, "character")),
@@ -59,10 +60,11 @@ auto ki::lsp::position_to_json(Position position) -> Json
     return Json { std::move(result) };
 }
 
-auto ki::lsp::range_from_json(Json::Object object) -> Range
+auto ki::lsp::range_from_json(Json json) -> Range
 {
-    auto start = position_from_json(as<Json::Object>(at(object, "start")));
-    auto end   = position_from_json(as<Json::Object>(at(object, "end")));
+    auto object = as<Json::Object>(std::move(json));
+    auto start  = position_from_json(at(object, "start"));
+    auto end    = position_from_json(at(object, "end"));
     return Range(start, end);
 }
 
@@ -74,51 +76,64 @@ auto ki::lsp::range_to_json(Range range) -> Json
     return Json { std::move(result) };
 }
 
-auto ki::lsp::document_id_from_json(db::Database const& db, Json::Object object) -> db::Document_id
+auto ki::lsp::document_identifier_from_json(db::Database const& db, Json json) -> db::Document_id
 {
-    auto path = path_from_json(as<Json::String>(at(object, "uri")));
+    auto object = as<Json::Object>(std::move(json));
+    auto path   = path_from_uri(as<Json::String>(at(object, "uri")));
     if (auto const it = db.paths.find(path); it != db.paths.end()) {
         return it->second;
     }
     throw Bad_json(std::format("Referenced an unopened document: '{}'", path.c_str()));
 }
 
-auto ki::lsp::document_id_to_json(db::Database const& db, db::Document_id id) -> Json
+auto ki::lsp::document_identifier_to_json(db::Database const& db, db::Document_id id) -> Json
 {
     Json::Object object;
-    object.try_emplace("uri", path_to_json(document_path(db, id)));
+    object.try_emplace("uri", path_to_uri(document_path(db, id)));
     return Json { std::move(object) };
 }
 
-auto ki::lsp::location_from_json(db::Database const& db, Json::Object object) -> Location
+auto ki::lsp::location_from_json(db::Database const& db, Json json) -> Location
 {
-    auto range = range_from_json(as<Json::Object>(at(object, "range")));
-    return Location { .doc_id = document_id_from_json(db, std::move(object)), .range = range };
+    auto object = as<Json::Object>(std::move(json));
+    auto range  = range_from_json(at(object, "range"));
+    return Location {
+        .doc_id = document_identifier_from_json(db, Json { std::move(object) }),
+        .range  = range,
+    };
 }
 
 auto ki::lsp::location_to_json(db::Database const& db, Location location) -> Json
 {
     Json::Object object;
-    object.try_emplace("uri", path_to_json(document_path(db, location.doc_id)));
+    object.try_emplace("uri", path_to_uri(document_path(db, location.doc_id)));
     object.try_emplace("range", range_to_json(location.range));
     return Json { std::move(object) };
 }
 
-auto ki::lsp::position_params_from_json(db::Database const& db, Json::Object object)
-    -> Position_params
+auto ki::lsp::position_params_from_json(db::Database const& db, Json json) -> Position_params
 {
+    auto object = as<Json::Object>(std::move(json));
     return Position_params {
-        .doc_id   = document_id_from_json(db, as<Json::Object>(at(object, "textDocument"))),
-        .position = position_from_json(as<Json::Object>(at(object, "position"))),
+        .doc_id   = document_identifier_from_json(db, at(object, "textDocument")),
+        .position = position_from_json(at(object, "position")),
     };
 }
 
-auto ki::lsp::range_params_from_json(db::Database const& db, Json::Object object) -> Range_params
+auto ki::lsp::range_params_from_json(db::Database const& db, Json json) -> Range_params
 {
+    auto object = as<Json::Object>(std::move(json));
     return Range_params {
-        .doc_id = document_id_from_json(db, as<Json::Object>(at(object, "textDocument"))),
-        .range  = range_from_json(as<Json::Object>(at(object, "range"))),
+        .doc_id = document_identifier_from_json(db, at(object, "textDocument")),
+        .range  = range_from_json(at(object, "range")),
     };
+}
+
+auto ki::lsp::document_identifier_params_from_json(db::Database const& db, Json json)
+    -> db::Document_id
+{
+    auto object = as<Json::Object>(std::move(json));
+    return document_identifier_from_json(db, at(object, "textDocument"));
 }
 
 auto ki::lsp::severity_to_json(Severity severity) -> Json
@@ -134,15 +149,16 @@ auto ki::lsp::severity_to_json(Severity severity) -> Json
 
 auto ki::lsp::diagnostic_to_json(db::Database const& db, Diagnostic const& diagnostic) -> Json
 {
-    auto const info_to_json = [&](Diagnostic_related const& info) {
+    auto info_to_json = [&](Diagnostic_related const& info) {
         Json::Object object;
         object.try_emplace("location", location_to_json(db, info.location));
         object.try_emplace("message", info.message);
         return Json { std::move(object) };
     };
 
-    auto related = std::ranges::to<Json::Array>(
-        std::views::transform(diagnostic.related_info, info_to_json));
+    auto related = diagnostic.related_info             //
+                 | std::views::transform(info_to_json) //
+                 | std::ranges::to<Json::Array>();
 
     Json::Object object;
     object.try_emplace("range", range_to_json(diagnostic.range));
@@ -182,21 +198,40 @@ auto ki::lsp::reference_kind_to_json(Reference_kind kind) -> Json
     cpputil::unreachable();
 }
 
-auto ki::lsp::document_item_from_json(Json::Object object) -> Document_item
+auto ki::lsp::text_edit_to_json(Range range, std::string new_text) -> Json
 {
+    Json::Object edit;
+    edit.try_emplace("range", range_to_json(range));
+    edit.try_emplace("newText", std::move(new_text));
+    return Json { std::move(edit) };
+}
+
+auto ki::lsp::document_item_from_json(Json json) -> Document_item
+{
+    auto object = as<Json::Object>(std::move(json));
     return Document_item {
-        .path     = path_from_json(as<Json::String>(at(object, "uri"))),
+        .path     = path_from_uri(as<Json::String>(at(object, "uri"))),
         .text     = as<Json::String>(at(object, "text")),
         .language = as<Json::String>(at(object, "languageId")),
         .version  = as_unsigned(at(object, "version")),
     };
 }
 
-auto ki::lsp::format_options_from_json(Json::Object object) -> fmt::Options
+auto ki::lsp::format_options_from_json(Json json) -> fmt::Options
 {
+    auto object = as<Json::Object>(std::move(json));
     return fmt::Options {
         .tab_size   = as_unsigned(at(object, "tabSize")),
         .use_spaces = as<Json::Boolean>(at(object, "insertSpaces")),
+    };
+}
+
+auto ki::lsp::formatting_params_from_json(db::Database const& db, Json json) -> Formatting_params
+{
+    auto object = as<Json::Object>(std::move(json));
+    return Formatting_params {
+        .doc_id  = document_identifier_from_json(db, at(object, "textDocument")),
+        .options = format_options_from_json(at(object, "options")),
     };
 }
 

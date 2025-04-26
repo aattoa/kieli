@@ -292,8 +292,8 @@ namespace {
         auto const brace_close = require_extract(ctx, lex::Type::Brace_close);
         add_punctuation(ctx, brace_close.range);
         return cst::expr::Block {
-            .side_effects      = std::move(side_effects),
-            .result_expression = std::move(result_expression),
+            .effects           = std::move(side_effects),
+            .result            = std::move(result_expression),
             .open_brace_token  = token(ctx, brace_open),
             .close_brace_token = token(ctx, brace_close),
         };
@@ -526,14 +526,13 @@ namespace {
                 }
                 (void)extract(ctx); // Skip the infix operator
                 if (auto const rhs = parse_infix_chain(ctx, level + 1)) {
-                    cst::expr::Infix_call call {
-                        .left     = expression,
-                        .right    = rhs.value(),
-                        .op       = id.value(),
-                        .op_token = token(ctx, op),
-                    };
                     expression = ctx.arena.expressions.push(
-                        std::move(call), ctx.arena.ranges.push(op.range));
+                        cst::expr::Infix_call {
+                            .left  = expression,
+                            .right = rhs.value(),
+                            .op    = db::Name { .id = id.value(), .range = op.range },
+                        },
+                        ctx.arena.ranges.push(op.range));
                 }
                 else {
                     error_expected(ctx, "an operand");

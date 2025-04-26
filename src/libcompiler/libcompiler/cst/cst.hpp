@@ -181,8 +181,8 @@ namespace ki::cst {
                 Range_id      trailing_semicolon_token;
             };
 
-            std::vector<Side_effect>     side_effects;
-            std::optional<Expression_id> result_expression;
+            std::vector<Side_effect>     effects;
+            std::optional<Expression_id> result;
             Range_id                     open_brace_token;
             Range_id                     close_brace_token;
         };
@@ -203,10 +203,9 @@ namespace ki::cst {
         };
 
         struct Infix_call {
-            Expression_id  left;
-            Expression_id  right;
-            utl::String_id op;
-            Range_id       op_token;
+            Expression_id left;
+            Expression_id right;
+            db::Name      op;
         };
 
         struct Struct_field {

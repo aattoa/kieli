@@ -31,7 +31,7 @@ namespace {
 
         auto operator()(hir::type::Array const& array) const -> bool
         {
-            return recurse(array.element_type) or recurse(arena.expressions[array.length].type);
+            return recurse(array.element_type) or recurse(arena.expressions[array.length].type_id);
         }
 
         auto operator()(hir::type::Slice const& slice) const -> bool

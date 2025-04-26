@@ -139,7 +139,7 @@ auto ki::par::parse_simple_path_root(Context& ctx) -> std::optional<cst::Path_ro
 auto ki::par::parse_simple_path(Context& ctx) -> std::optional<cst::Path>
 {
     return parse_simple_path_root(ctx).transform(
-        [&](cst::Path_root const root) { return extract_path(ctx, root); });
+        [&](cst::Path_root const& root) { return extract_path(ctx, root); });
 }
 
 auto ki::par::parse_complex_path(Context& ctx) -> std::optional<cst::Path>
@@ -324,7 +324,7 @@ auto ki::par::extract_concept_references(Context& ctx) -> cst::Separated<cst::Pa
 {
     return require<
         parse_separated_one_or_more<parse_concept_path, "a concept path", lex::Type::Plus>>(
-        ctx, "one or more '+'-separated concept paths");
+        ctx, "one or more concept paths separated by '+'");
 }
 
 auto ki::par::parse(db::Database& db, db::Document_id const id) -> cst::Module

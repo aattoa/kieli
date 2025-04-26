@@ -36,12 +36,12 @@ auto ki::hir::integer_name(type::Integer const type) -> std::string_view
 
 auto ki::hir::expression_type(Expression const& expression) -> Type
 {
-    return Type { .id = expression.type, .range = expression.range };
+    return Type { .id = expression.type_id, .range = expression.range };
 }
 
 auto ki::hir::pattern_type(Pattern const& pattern) -> Type
 {
-    return Type { .id = pattern.type, .range = pattern.range };
+    return Type { .id = pattern.type_id, .range = pattern.range };
 }
 
 #define DEFINE_HIR_FORMAT_TO(...)                                     \

@@ -344,11 +344,6 @@ namespace {
         display_vector_node(state, Last::Yes, "definitions", submodule.definitions);
     }
 
-    void do_display(Display_state& state, utl::String_id const id)
-    {
-        write_line(state, "identifier {}", state.pool.get(id));
-    }
-
     void display_literal(Display_state& state, db::Integer const& integer)
     {
         write_line(state, "integer literal {}", integer.value);
@@ -421,7 +416,7 @@ namespace {
         void operator()(expr::Block const& block)
         {
             write_line(state, "block");
-            display_vector_node(state, Last::No, "side effects", block.side_effects);
+            display_vector_node(state, Last::No, "side effects", block.effects);
             display_node(state, Last::Yes, "result", block.result);
         }
 
@@ -432,18 +427,18 @@ namespace {
             display_vector_node(state, Last::Yes, "arguments", call.arguments);
         }
 
-        void operator()(expr::Tuple_initializer const& initializer)
+        void operator()(expr::Tuple_init const& initializer)
         {
             write_line(state, "tuple initializer");
-            display_node(state, Last::No, "constructor path", initializer.constructor_path);
-            display_vector_node(state, Last::Yes, "field initializers", initializer.initializers);
+            display_node(state, Last::No, "constructor path", initializer.path);
+            display_vector_node(state, Last::Yes, "field initializers", initializer.fields);
         }
 
-        void operator()(expr::Struct_initializer const& initializer)
+        void operator()(expr::Struct_init const& initializer)
         {
             write_line(state, "struct initializer");
-            display_node(state, Last::No, "constructor path", initializer.constructor_path);
-            display_vector_node(state, Last::Yes, "field initializers", initializer.initializers);
+            display_node(state, Last::No, "constructor path", initializer.path);
+            display_vector_node(state, Last::Yes, "field initializers", initializer.fields);
         }
 
         void operator()(expr::Infix_call const& application)
@@ -504,7 +499,7 @@ namespace {
             display_vector_node(state, Last::Yes, "arms", match.arms);
         }
 
-        void operator()(expr::Type_ascription const& ascription)
+        void operator()(expr::Ascription const& ascription)
         {
             write_line(state, "type ascription");
             display_node(state, Last::No, "expression", ascription.expression);

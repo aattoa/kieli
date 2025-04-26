@@ -37,6 +37,24 @@ namespace ki::lsp {
         std::size_t           version {};
     };
 
+    // https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#textDocumentPositionParams
+    struct Position_params {
+        db::Document_id doc_id;
+        Position        position;
+    };
+
+    // Common structure that works for InlayHintParams and CodeActionParams.
+    struct Range_params {
+        db::Document_id doc_id;
+        Range           range;
+    };
+
+    // https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#documentFormattingParams
+    struct Formatting_params {
+        db::Document_id doc_id;
+        fmt::Options    options;
+    };
+
     // Thrown when the JSON sent by the client is syntactically correct but invalid in some way.
     struct Bad_json : std::exception {
         std::string message;
@@ -47,35 +65,38 @@ namespace ki::lsp {
     auto error_response(Error_code code, Json::String message, Json id) -> Json;
     auto success_response(Json result, Json id) -> Json;
 
-    auto path_from_json(Json::String const& uri) -> std::filesystem::path;
-    auto path_to_json(std::filesystem::path const& path) -> Json;
+    auto path_from_uri(std::string_view uri) -> std::filesystem::path;
+    auto path_to_uri(std::filesystem::path const& path) -> std::string;
 
-    auto position_from_json(Json::Object object) -> Position;
+    auto position_from_json(Json json) -> Position;
     auto position_to_json(Position position) -> Json;
 
-    auto range_from_json(Json::Object object) -> Range;
+    auto range_from_json(Json json) -> Range;
     auto range_to_json(Range range) -> Json;
 
-    auto document_id_from_json(db::Database const& db, Json::Object object) -> db::Document_id;
-    auto document_id_to_json(db::Database const& db, db::Document_id document_id) -> Json;
+    auto document_identifier_from_json(db::Database const& db, Json json) -> db::Document_id;
+    auto document_identifier_to_json(db::Database const& db, db::Document_id document_id) -> Json;
 
-    auto location_from_json(db::Database const& db, Json::Object object) -> Location;
+    auto location_from_json(db::Database const& db, Json json) -> Location;
     auto location_to_json(db::Database const& db, Location location) -> Json;
 
     auto severity_to_json(Severity severity) -> Json;
     auto markdown_content_to_json(std::string markdown) -> Json;
     auto semantic_tokens_to_json(std::span<Semantic_token const> tokens) -> Json;
     auto diagnostic_to_json(db::Database const& db, Diagnostic const& diagnostic) -> Json;
-    auto type_hint_to_json(db::Database const& db, db::Type_hint hint) -> Json;
+    auto inlay_hint_to_json(db::Database const& db, db::Inlay_hint hint) -> Json;
     auto reference_to_json(Reference reference) -> Json;
     auto reference_kind_to_json(Reference_kind kind) -> Json;
+    auto text_edit_to_json(Range range, std::string new_text) -> Json;
 
-    auto document_item_from_json(Json::Object object) -> Document_item;
-    auto format_options_from_json(Json::Object object) -> fmt::Options;
-    auto position_params_from_json(db::Database const& db, Json::Object object) -> Position_params;
-    auto range_params_from_json(db::Database const& db, Json::Object object) -> Range_params;
+    auto document_item_from_json(Json json) -> Document_item;
+    auto format_options_from_json(Json json) -> fmt::Options;
+    auto formatting_params_from_json(db::Database const& db, Json json) -> Formatting_params;
+    auto position_params_from_json(db::Database const& db, Json json) -> Position_params;
+    auto range_params_from_json(db::Database const& db, Json json) -> Range_params;
+    auto document_identifier_params_from_json(db::Database const& db, Json json) -> db::Document_id;
 
-    // Throws `Bad_client_json` if `json` is not `T`.
+    // Throws `Bad_json` if `json` is not `T`.
     template <typename T>
     auto as(Json json) -> T
     {
@@ -85,10 +106,10 @@ namespace ki::lsp {
         throw Bad_json("Value has unexpected type");
     }
 
-    // Throws `Bad_client_json` if `json` is not a non-negative integer.
+    // Throws `Bad_json` if `json` is not a non-negative integer.
     auto as_unsigned(Json json) -> std::uint32_t;
 
-    // If `object` contains `key`, moves out the value. Otherwise throws `Bad_client_json`.
+    // If `object` contains `key`, moves out the value. Otherwise throws `Bad_json`.
     auto at(Json::Object& object, char const* key) -> Json;
 
     // If `object` contains `key`, moves out the value. Otherwise returns nullopt.

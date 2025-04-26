@@ -80,9 +80,9 @@ namespace {
             case Function_body::Normalize_to_equals_sign:
             {
                 if (auto const* const block = std::get_if<cst::expr::Block>(&body.variant)) {
-                    if (block->result_expression.has_value() and block->side_effects.empty()) {
+                    if (block->result.has_value() and block->effects.empty()) {
                         format(state, " = ");
-                        format(state, block->result_expression.value());
+                        format(state, block->result.value());
                     }
                     else {
                         format(state, " ");

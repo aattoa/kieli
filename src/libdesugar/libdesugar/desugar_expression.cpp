@@ -118,7 +118,7 @@ namespace {
 
                 if (let->type.has_value()) {
                     initializer = ctx.ast.expressions.push(ast::Expression {
-                        .variant = ast::expr::Type_ascription {
+                        .variant = ast::expr::Ascription {
                             .expression = initializer,
                             .type       = desugar(ctx, let->type.value()),
                         },
@@ -185,22 +185,22 @@ namespace {
             auto desugar_effect
                 = [&](auto const& effect) { return deref_desugar(ctx, effect.expression); };
 
-            auto side_effects = std::views::transform(block.side_effects, desugar_effect)
+            auto side_effects = std::views::transform(block.effects, desugar_effect)
                               | std::ranges::to<std::vector>();
 
             cst::Range_id const unit_token = //
-                block.side_effects.empty()   //
+                block.effects.empty()        //
                     ? block.close_brace_token
-                    : block.side_effects.back().trailing_semicolon_token;
+                    : block.effects.back().trailing_semicolon_token;
 
             ast::Expression_id const result = //
-                block.result_expression.has_value()
-                    ? desugar(ctx, block.result_expression.value())
+                block.result.has_value()
+                    ? desugar(ctx, block.result.value())
                     : ctx.ast.expressions.push(unit_value(ctx.cst.ranges[unit_token]));
 
             return ast::expr::Block {
-                .side_effects = std::move(side_effects),
-                .result       = result,
+                .effects = std::move(side_effects),
+                .result  = result,
             };
         }
 
@@ -225,7 +225,7 @@ namespace {
 
             if (let.type.has_value()) {
                 initializer = ctx.ast.expressions.push(ast::Expression {
-                    .variant = ast::expr::Type_ascription {
+                    .variant = ast::expr::Ascription {
                         .expression = initializer,
                         .type       = desugar(ctx, let.type.value()),
                     },
@@ -311,9 +311,9 @@ namespace {
 
         auto operator()(cst::expr::Tuple_init const& init) const -> ast::Expression_variant
         {
-            return ast::expr::Tuple_initializer {
-                .constructor_path = desugar(ctx, init.path),
-                .initializers     = desugar(ctx, init.fields),
+            return ast::expr::Tuple_init {
+                .path   = desugar(ctx, init.path),
+                .fields = desugar(ctx, init.fields),
             };
         }
 
@@ -322,19 +322,18 @@ namespace {
             if (check_has_duplicate_fields(ctx, init)) {
                 return db::Error {};
             }
-            return ast::expr::Struct_initializer {
-                .constructor_path = desugar(ctx, init.path),
-                .initializers     = desugar(ctx, init.fields),
+            return ast::expr::Struct_init {
+                .path   = desugar(ctx, init.path),
+                .fields = desugar(ctx, init.fields),
             };
         }
 
         auto operator()(cst::expr::Infix_call const& call) const -> ast::Expression_variant
         {
             return ast::expr::Infix_call {
-                .left     = desugar(ctx, call.left),
-                .right    = desugar(ctx, call.right),
-                .op       = call.op,
-                .op_range = ctx.cst.ranges[call.op_token],
+                .left  = desugar(ctx, call.left),
+                .right = desugar(ctx, call.right),
+                .op    = call.op,
             };
         }
 
@@ -375,7 +374,7 @@ namespace {
 
         auto operator()(cst::expr::Ascription const& ascription) const -> ast::Expression_variant
         {
-            return ast::expr::Type_ascription {
+            return ast::expr::Ascription {
                 .expression = desugar(ctx, ascription.base_expression),
                 .type       = desugar(ctx, ascription.type),
             };
@@ -407,11 +406,11 @@ namespace {
             };
         }
 
-        auto operator()(cst::expr::Break const& break_expression) const -> ast::Expression_variant
+        auto operator()(cst::expr::Break const& break_) const -> ast::Expression_variant
         {
             return ast::expr::Break {
-                break_expression.result.has_value()
-                    ? desugar(ctx, break_expression.result.value())
+                break_.result.has_value()
+                    ? desugar(ctx, break_.result.value())
                     : ctx.ast.expressions.push(unit_value(ctx.cst.ranges[range_id])),
             };
         }
@@ -445,10 +444,13 @@ namespace {
             return ast::expr::Defer { desugar(ctx, defer.expression) };
         }
 
-        auto operator()(cst::expr::For_loop const&) const -> ast::Expression_variant
+        auto operator()(cst::expr::For_loop const& loop) const -> ast::Expression_variant
         {
             db::add_error(
-                ctx.db, ctx.doc_id, ctx.cst.ranges[range_id], "For loops are not supported yet");
+                ctx.db,
+                ctx.doc_id,
+                ctx.cst.ranges[loop.for_token],
+                "For loops are not supported yet");
             return db::Error {};
         }
     };

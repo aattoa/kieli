@@ -53,7 +53,7 @@ auto ki::res::error_expression(Constants const& constants, lsp::Range range) -> 
 {
     return hir::Expression {
         .variant  = db::Error {},
-        .type     = constants.type_error,
+        .type_id  = constants.type_error,
         .category = hir::Expression_category::Place,
         .range    = range,
     };
@@ -63,7 +63,7 @@ auto ki::res::unit_expression(Constants const& constants, lsp::Range range) -> h
 {
     return hir::Expression {
         .variant  = hir::expr::Tuple {},
-        .type     = constants.type_unit,
+        .type_id  = constants.type_unit,
         .category = hir::Expression_category::Value,
         .range    = range,
     };
