@@ -49,6 +49,13 @@ namespace ki::lsp {
         Range           range;
     };
 
+    // https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#renameParams
+    struct Rename_params {
+        db::Document_id doc_id;
+        Position        position;
+        std::string     new_text;
+    };
+
     // https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#documentFormattingParams
     struct Formatting_params {
         db::Document_id doc_id;
@@ -94,6 +101,7 @@ namespace ki::lsp {
     auto formatting_params_from_json(db::Database const& db, Json json) -> Formatting_params;
     auto position_params_from_json(db::Database const& db, Json json) -> Position_params;
     auto range_params_from_json(db::Database const& db, Json json) -> Range_params;
+    auto rename_params_from_json(db::Database const& db, Json json) -> Rename_params;
     auto document_identifier_params_from_json(db::Database const& db, Json json) -> db::Document_id;
 
     // Throws `Bad_json` if `json` is not `T`.

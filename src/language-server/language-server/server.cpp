@@ -179,6 +179,43 @@ namespace {
             .value_or(Json {});
     }
 
+    auto handle_prepare_rename(Server const& server, Json params) -> Result<Json>
+    {
+        auto const [doc_id, position] = position_params_from_json(server.db, std::move(params));
+        auto const& references        = server.db.documents[doc_id].info.references;
+        if (auto ref = find_reference(references, position)) {
+            Json::Object object;
+            object.try_emplace("range", range_to_json(ref.value().reference.range));
+            return Json { std::move(object) };
+        }
+        return Json {};
+    }
+
+    auto handle_rename(Server const& server, Json params) -> Result<Json>
+    {
+        auto const [doc_id, position, text] = rename_params_from_json(server.db, std::move(params));
+        auto const& references              = server.db.documents[doc_id].info.references;
+
+        auto make_edit = [&](Reference ref) { return text_edit_to_json(ref.range, text); };
+
+        if (auto ref = find_reference(references, position)) {
+            auto uri   = path_to_uri(db::document_path(server.db, doc_id));
+            auto edits = symbol_references(references, ref.value().symbol)
+                       | std::views::transform(make_edit) //
+                       | std::ranges::to<Json::Array>();
+
+            Json::Object changes;
+            changes.try_emplace(std::move(uri), std::move(edits));
+
+            Json::Object workspace_edit;
+            workspace_edit.try_emplace("changes", std::move(changes));
+
+            return Json { std::move(workspace_edit) };
+        }
+
+        return Json {};
+    }
+
     auto handle_initialize() -> Json
     {
         // https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#textDocumentSyncKind
@@ -224,6 +261,10 @@ namespace {
               Json { Json::Object {
                   { "legend", std::move(semantic_tokens_legend) },
                   { "full", Json { true } },
+              } } },
+            { "renameProvider",
+              Json { Json::Object {
+                  { "prepareProvider", Json { true } },
               } } },
             { "inlayHintProvider", Json { Json::Object {} } },
             { "hoverProvider", Json { true } },
@@ -272,6 +313,12 @@ namespace {
         }
         if (method == "textDocument/hover") {
             return handle_hover(server, std::move(params));
+        }
+        if (method == "textDocument/prepareRename") {
+            return handle_prepare_rename(server, std::move(params));
+        }
+        if (method == "textDocument/rename") {
+            return handle_rename(server, std::move(params));
         }
         if (method == "textDocument/formatting") {
             return handle_formatting(server, std::move(params));

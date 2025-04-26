@@ -129,6 +129,16 @@ auto ki::lsp::range_params_from_json(db::Database const& db, Json json) -> Range
     };
 }
 
+auto ki::lsp::rename_params_from_json(db::Database const& db, Json json) -> Rename_params
+{
+    auto object = as<Json::Object>(std::move(json));
+    return Rename_params {
+        .doc_id   = document_identifier_from_json(db, at(object, "textDocument")),
+        .position = position_from_json(at(object, "position")),
+        .new_text = as<Json::String>(at(object, "newName")),
+    };
+}
+
 auto ki::lsp::document_identifier_params_from_json(db::Database const& db, Json json)
     -> db::Document_id
 {
