@@ -251,9 +251,55 @@ namespace {
             return unsupported();
         }
 
-        auto operator()(ast::expr::Conditional const&) -> hir::Expression
+        auto operator()(ast::expr::Conditional const& conditional) -> hir::Expression
         {
-            return unsupported();
+            auto condition    = recurse(ast().expressions[conditional.condition]);
+            auto true_branch  = recurse(ast().expressions[conditional.true_branch]);
+            auto false_branch = recurse(ast().expressions[conditional.false_branch]);
+
+            require_subtype_relationship(
+                db,
+                ctx,
+                state,
+                condition.range,
+                ctx.hir.types[condition.type_id],
+                hir::type::Boolean {});
+
+            require_subtype_relationship(
+                db,
+                ctx,
+                state,
+                true_branch.range,
+                ctx.hir.types[true_branch.type_id],
+                ctx.hir.types[false_branch.type_id]);
+
+            auto result_type = false_branch.type_id;
+
+            auto arm = [&](bool boolean, hir::Expression branch) {
+                return hir::Match_arm {
+                    .pattern    = ctx.hir.patterns.push(hir::Pattern {
+                           .variant = db::Boolean { boolean },
+                           .type_id = ctx.constants.type_boolean,
+                           .range   = condition.range,
+                    }),
+                    .expression = ctx.hir.expressions.push(std::move(branch)),
+                };
+            };
+
+            hir::expr::Match match {
+                .arms      = utl::to_vector({
+                    arm(true, std::move(true_branch)),
+                    arm(false, std::move(false_branch)),
+                }),
+                .scrutinee = ctx.hir.expressions.push(std::move(condition)),
+            };
+
+            return {
+                .variant  = std::move(match),
+                .type_id  = result_type,
+                .category = hir::Expression_category::Value,
+                .range    = this_range,
+            };
         }
 
         auto operator()(ast::expr::Match const& match) -> hir::Expression
