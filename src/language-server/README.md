@@ -7,7 +7,8 @@
 - Go to definition
 - Hover documentation
 - Find and highlight references
-- Inlay type hints
+- Intelligent rename
+- Inlay type and parameter hints
 - Diagnostics (errors, warnings, hints)
 - Document formatting
 - Syntax highlighting
