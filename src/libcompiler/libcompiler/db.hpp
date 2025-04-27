@@ -18,7 +18,6 @@ namespace ki::db {
     // Inlay type or parameter hint.
     struct Inlay_hint {
         lsp::Position                               position;
-        Document_id                                 doc_id;
         std::variant<hir::Type_id, hir::Pattern_id> variant;
     };
 

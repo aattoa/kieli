@@ -200,13 +200,13 @@ void ki::db::edit_text(std::string& text, lsp::Range range, std::string_view new
 void ki::db::add_type_hint(
     Database& db, Document_id doc_id, lsp::Position position, hir::Type_id type_id)
 {
-    db.documents[doc_id].info.inlay_hints.emplace_back(position, doc_id, type_id);
+    db.documents[doc_id].info.inlay_hints.emplace_back(position, type_id);
 }
 
 void ki::db::add_param_hint(
     Database& db, Document_id doc_id, lsp::Position position, hir::Pattern_id param)
 {
-    db.documents[doc_id].info.inlay_hints.emplace_back(position, doc_id, param);
+    db.documents[doc_id].info.inlay_hints.emplace_back(position, param);
 }
 
 void ki::db::add_reference(Database& db, Document_id doc_id, lsp::Reference ref, hir::Symbol symbol)

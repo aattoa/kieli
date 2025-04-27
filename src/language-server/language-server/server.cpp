@@ -16,11 +16,25 @@ namespace {
     struct Server {
         db::Database       db;
         std::optional<int> exit_code;
+        std::istream&      input;
+        std::ostream&      output;
         bool               is_initialized {};
+        bool               debug {};
     };
 
     template <typename T>
     using Result = std::expected<T, std::string>;
+
+    void publish_diagnostics(Server const& server, db::Document_id doc_id)
+    {
+        auto message = cpputil::json::encode(make_notification(
+            Json::String("textDocument/publishDiagnostics"),
+            diagnostic_params_to_json(server.db, doc_id)));
+        if (server.debug) {
+            std::println(stderr, "[debug] <-- {}", message);
+        }
+        rpc::write_message(server.output, message);
+    }
 
     void analyze_document(Server& server, db::Document_id doc_id)
     {
@@ -77,22 +91,6 @@ namespace {
         return Json { std::move(edits) };
     }
 
-    auto handle_pull_diagnostics(Server const& server, Json::Object params) -> Result<Json>
-    {
-        auto id = document_identifier_from_json(server.db, at(params, "textDocument"));
-
-        auto items = server.db.documents[id].info.diagnostics
-                   | std::views::transform([&](Diagnostic const& diagnostic) {
-                         return diagnostic_to_json(server.db, diagnostic);
-                     })
-                   | std::ranges::to<Json::Array>();
-
-        Json::Object result;
-        result.try_emplace("kind", "full");
-        result.try_emplace("items", std::move(items));
-        return Json { std::move(result) };
-    }
-
     auto handle_inlay_hints(Server const& server, Json params) -> Result<Json>
     {
         auto const [doc_id, range] = range_params_from_json(server.db, std::move(params));
@@ -101,7 +99,7 @@ namespace {
                    | std::views::filter(
                          [=](db::Inlay_hint hint) { return range_contains(range, hint.position); })
                    | std::views::transform(
-                         [&](db::Inlay_hint hint) { return inlay_hint_to_json(server.db, hint); })
+                         [&](db::Inlay_hint hint) { return hint_to_json(server.db, doc_id, hint); })
                    | std::ranges::to<Json::Array>();
 
         return Json { std::move(hints) };
@@ -252,11 +250,6 @@ namespace {
                   { "openClose", Json { true } },
                   { "change", Json { incremental_sync } },
               } } },
-            { "diagnosticProvider",
-              Json { Json::Object {
-                  { "interFileDependencies", Json { true } },
-                  { "workspaceDiagnostics", Json { false } },
-              } } },
             { "semanticTokensProvider",
               Json { Json::Object {
                   { "legend", std::move(semantic_tokens_legend) },
@@ -299,9 +292,6 @@ namespace {
         if (method == "textDocument/documentHighlight") {
             return handle_highlight(server, std::move(params));
         }
-        if (method == "textDocument/diagnostic") {
-            return handle_pull_diagnostics(server, as<Json::Object>(std::move(params)));
-        }
         if (method == "textDocument/inlayHint") {
             return handle_inlay_hints(server, std::move(params));
         }
@@ -334,9 +324,10 @@ namespace {
         auto object   = as<Json::Object>(std::move(params));
         auto document = document_item_from_json(at(object, "textDocument"));
         if (document.language == "kieli") {
-            auto const id = db::client_open_document(
+            auto doc_id = db::client_open_document(
                 server.db, std::move(document.path), std::move(document.text));
-            analyze_document(server, id);
+            analyze_document(server, doc_id);
+            publish_diagnostics(server, doc_id);
             return {};
         }
         return std::unexpected(std::format("Unsupported language: '{}'", document.language));
@@ -344,8 +335,8 @@ namespace {
 
     auto handle_close(Server& server, Json params) -> Result<void>
     {
-        auto id = document_identifier_params_from_json(server.db, std::move(params));
-        db::client_close_document(server.db, id);
+        auto doc_id = document_identifier_params_from_json(server.db, std::move(params));
+        db::client_close_document(server.db, doc_id);
         return {};
     }
 
@@ -371,6 +362,7 @@ namespace {
             apply_content_change(server.db.documents[doc_id].text, std::move(change));
         }
         analyze_document(server, doc_id);
+        publish_diagnostics(server, doc_id);
         return {};
     }
 
@@ -527,22 +519,29 @@ namespace {
 
 auto ki::lsp::run_server(bool const debug, std::istream& in, std::ostream& out) -> int
 {
-    Server server;
+    Server server {
+        .db             = db::Database {},
+        .exit_code      = std::nullopt,
+        .input          = in,
+        .output         = out,
+        .is_initialized = false,
+        .debug          = debug,
+    };
 
     if (debug) {
         std::println(stderr, "[debug] Started server.");
     }
 
     while (not server.exit_code.has_value()) {
-        if (auto const message = rpc::read_message(in)) {
+        if (auto const message = rpc::read_message(server.input)) {
             if (debug) {
                 std::println(stderr, "[debug] --> {}", message.value());
             }
             if (auto const reply = handle_client_message(server, message.value())) {
-                if (debug) {
+                if (server.debug) {
                     std::println(stderr, "[debug] <-- {}", reply.value());
                 }
-                rpc::write_message(out, reply.value());
+                rpc::write_message(server.output, reply.value());
             }
         }
         else {

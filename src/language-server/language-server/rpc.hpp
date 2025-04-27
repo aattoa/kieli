@@ -2,7 +2,6 @@
 #define KIELI_LANGUAGE_SERVER_RPC
 
 #include <libutl/utilities.hpp>
-#include <cpputil/json.hpp>
 #include <iosfwd>
 
 namespace ki::lsp::rpc {

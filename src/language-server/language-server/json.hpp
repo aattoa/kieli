@@ -82,7 +82,7 @@ namespace ki::lsp {
     auto range_to_json(Range range) -> Json;
 
     auto document_identifier_from_json(db::Database const& db, Json json) -> db::Document_id;
-    auto document_identifier_to_json(db::Database const& db, db::Document_id document_id) -> Json;
+    auto document_identifier_to_json(db::Database const& db, db::Document_id doc_id) -> Json;
 
     auto location_from_json(db::Database const& db, Json json) -> Location;
     auto location_to_json(db::Database const& db, Location location) -> Json;
@@ -91,7 +91,8 @@ namespace ki::lsp {
     auto markdown_content_to_json(std::string markdown) -> Json;
     auto semantic_tokens_to_json(std::span<Semantic_token const> tokens) -> Json;
     auto diagnostic_to_json(db::Database const& db, Diagnostic const& diagnostic) -> Json;
-    auto inlay_hint_to_json(db::Database const& db, db::Inlay_hint hint) -> Json;
+    auto diagnostic_params_to_json(db::Database const& db, db::Document_id doc_id) -> Json;
+    auto hint_to_json(db::Database const& db, db::Document_id doc_id, db::Inlay_hint hint) -> Json;
     auto reference_to_json(Reference reference) -> Json;
     auto reference_kind_to_json(Reference_kind kind) -> Json;
     auto text_edit_to_json(Range range, std::string new_text) -> Json;
@@ -103,6 +104,8 @@ namespace ki::lsp {
     auto range_params_from_json(db::Database const& db, Json json) -> Range_params;
     auto rename_params_from_json(db::Database const& db, Json json) -> Rename_params;
     auto document_identifier_params_from_json(db::Database const& db, Json json) -> db::Document_id;
+
+    auto make_notification(Json::String method, Json params) -> Json;
 
     // Throws `Bad_json` if `json` is not `T`.
     template <typename T>

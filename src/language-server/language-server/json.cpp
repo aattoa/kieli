@@ -86,10 +86,10 @@ auto ki::lsp::document_identifier_from_json(db::Database const& db, Json json) -
     throw Bad_json(std::format("Referenced an unopened document: '{}'", path.c_str()));
 }
 
-auto ki::lsp::document_identifier_to_json(db::Database const& db, db::Document_id id) -> Json
+auto ki::lsp::document_identifier_to_json(db::Database const& db, db::Document_id doc_id) -> Json
 {
     Json::Object object;
-    object.try_emplace("uri", path_to_uri(document_path(db, id)));
+    object.try_emplace("uri", path_to_uri(document_path(db, doc_id)));
     return Json { std::move(object) };
 }
 
@@ -178,9 +178,23 @@ auto ki::lsp::diagnostic_to_json(db::Database const& db, Diagnostic const& diagn
     return Json { std::move(object) };
 }
 
-auto ki::lsp::inlay_hint_to_json(db::Database const& db, db::Inlay_hint hint) -> Json
+auto ki::lsp::diagnostic_params_to_json(db::Database const& db, db::Document_id doc_id) -> Json
 {
-    auto const& hir = db.documents[hint.doc_id].arena.hir;
+    auto diagnostics = db.documents[doc_id].info.diagnostics
+                     | std::views::transform(
+                           [&](Diagnostic const& diag) { return diagnostic_to_json(db, diag); })
+                     | std::ranges::to<Json::Array>();
+
+    Json::Object params;
+    params.try_emplace("uri", path_to_uri(db::document_path(db, doc_id)));
+    params.try_emplace("diagnostics", std::move(diagnostics));
+    return Json { std::move(params) };
+}
+
+auto ki::lsp::hint_to_json(db::Database const& db, db::Document_id doc_id, db::Inlay_hint hint)
+    -> Json
+{
+    auto const& hir = db.documents[doc_id].arena.hir;
 
     auto const visitor = utl::Overload {
         [&](hir::Type_id type_id) -> Json {
@@ -299,6 +313,15 @@ auto ki::lsp::semantic_tokens_to_json(std::span<Semantic_token const> tokens) ->
     }
 
     return Json { std::move(array) };
+}
+
+auto ki::lsp::make_notification(Json::String method, Json params) -> Json
+{
+    Json::Object notification;
+    notification.try_emplace("jsonrpc", "2.0");
+    notification.try_emplace("method", std::move(method));
+    notification.try_emplace("params", std::move(params));
+    return Json { std::move(notification) };
 }
 
 auto ki::lsp::as_unsigned(Json json) -> std::uint32_t
