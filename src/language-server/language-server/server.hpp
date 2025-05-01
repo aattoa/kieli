@@ -11,7 +11,7 @@ namespace ki::lsp {
 
     // Get symbol documentation formatted as markdown.
     [[nodiscard]] auto symbol_documentation(
-        db::Database const& db, db::Document_id doc_id, hir::Symbol symbol) -> std::string;
+        db::Database const& db, db::Document_id doc_id, db::Symbol_id symbol_id) -> std::string;
 
 } // namespace ki::lsp
 

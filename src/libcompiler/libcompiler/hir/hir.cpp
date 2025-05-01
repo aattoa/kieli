@@ -1,24 +1,6 @@
 #include <libcompiler/hir/hir.hpp>
 #include <libcompiler/hir/formatters.hpp>
 
-static_assert(std::is_trivially_copyable_v<ki::hir::Symbol>);
-
-auto ki::hir::describe_symbol_kind(Symbol symbol) -> std::string_view
-{
-    auto const visitor = utl::Overload {
-        [](db::Error) { return "an error"; },
-        [](Function_id) { return "a function"; },
-        [](Enumeration_id) { return "an enumeration"; },
-        [](Concept_id) { return "a concept"; },
-        [](Alias_id) { return "a type alias"; },
-        [](Module_id) { return "a module"; },
-        [](Local_variable_id) { return "a local variable binding"; },
-        [](Local_mutability_id) { return "a local mutability binding"; },
-        [](Local_type_id) { return "a local type binding"; },
-    };
-    return std::visit(visitor, symbol);
-}
-
 auto ki::hir::integer_name(type::Integer const type) -> std::string_view
 {
     switch (type) {

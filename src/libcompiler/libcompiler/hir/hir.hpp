@@ -337,19 +337,16 @@ namespace ki::hir {
         db::Lower     name;
         Mutability_id mut_id;
         Type_id       type_id;
-        bool          unused = true;
     };
 
     struct Local_mutability {
         db::Lower     name;
         Mutability_id mut_id;
-        bool          unused = true;
     };
 
     struct Local_type {
         db::Upper name;
         Type_id   type_id;
-        bool      unused = true;
     };
 
     struct Function_info {
@@ -357,7 +354,7 @@ namespace ki::hir {
         ast::Function                     ast;
         std::optional<Function_signature> signature;
         std::optional<Expression>         body;
-        Environment_id                    env_id;
+        db::Environment_id                env_id;
         db::Document_id                   doc_id;
         db::Lower                         name;
     };
@@ -367,7 +364,7 @@ namespace ki::hir {
         ast::Enumeration                     ast;
         std::optional<Enumeration>           hir;
         Type_id                              type_id;
-        Environment_id                       env_id;
+        db::Environment_id                   env_id;
         db::Document_id                      doc_id;
         db::Upper                            name;
     };
@@ -376,7 +373,7 @@ namespace ki::hir {
         cst::Concept           cst;
         ast::Concept           ast;
         std::optional<Concept> hir;
-        Environment_id         env_id;
+        db::Environment_id     env_id;
         db::Document_id        doc_id;
         db::Upper              name;
     };
@@ -385,43 +382,16 @@ namespace ki::hir {
         cst::Alias           cst;
         ast::Alias           ast;
         std::optional<Alias> hir;
-        Environment_id       env_id;
+        db::Environment_id   env_id;
         db::Document_id      doc_id;
         db::Upper            name;
     };
 
     struct Module_info {
-        Environment_id  mod_env_id;
-        Environment_id  env_id;
-        db::Document_id doc_id;
-        db::Lower       name;
-    };
-
-    template <typename T>
-    using Identifier_map = std::unordered_map<utl::String_id, T, utl::Hash_vector_index>;
-
-    struct Symbol
-        : std::variant<
-              db::Error,
-              Function_id,
-              Enumeration_id,
-              Concept_id,
-              Alias_id,
-              Module_id,
-              Local_variable_id,
-              Local_mutability_id,
-              Local_type_id> {
-        using variant::variant;
-
-        auto operator==(Symbol const&) const -> bool = default;
-    };
-
-    struct Environment {
-        Identifier_map<Symbol>        map;
-        std::vector<Symbol>           in_order;
-        std::optional<Environment_id> parent_id;
-        std::optional<utl::String_id> name_id;
-        db::Document_id               doc_id;
+        db::Environment_id mod_env_id;
+        db::Environment_id env_id;
+        db::Document_id    doc_id;
+        db::Lower          name;
     };
 
     struct Arena {
@@ -434,14 +404,10 @@ namespace ki::hir {
         utl::Index_vector<Enumeration_id, Enumeration_info>      enumerations;
         utl::Index_vector<Concept_id, Concept_info>              concepts;
         utl::Index_vector<Alias_id, Alias_info>                  aliases;
-        utl::Index_vector<Environment_id, Environment>           environments;
         utl::Index_vector<Local_variable_id, Local_variable>     local_variables;
         utl::Index_vector<Local_mutability_id, Local_mutability> local_mutabilities;
         utl::Index_vector<Local_type_id, Local_type>             local_types;
     };
-
-    // Get a human readable description of the symbol kind.
-    auto describe_symbol_kind(Symbol symbol) -> std::string_view;
 
     // Get the name of a built-in integer type.
     auto integer_name(type::Integer type) -> std::string_view;

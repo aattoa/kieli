@@ -40,11 +40,17 @@ namespace {
     {
         server.db.documents[doc_id].info = {};
 
-        auto ctx    = res::context(doc_id);
-        auto env_id = res::collect_document(server.db, ctx, doc_id);
-        res::resolve_environment(server.db, ctx, env_id);
+        auto ctx        = res::context(doc_id);
+        auto symbol_ids = res::collect_document(server.db, ctx);
 
-        server.db.documents[doc_id].arena.hir = std::move(ctx.hir);
+        for (db::Symbol_id symbol_id : symbol_ids) {
+            res::resolve_symbol(server.db, ctx, symbol_id);
+        }
+        for (db::Symbol_id symbol_id : symbol_ids) {
+            res::warn_if_unused(server.db, ctx, symbol_id);
+        }
+
+        server.db.documents[doc_id].arena = std::move(ctx.arena);
     }
 
     auto find_reference(std::span<db::Symbol_reference const> references, Position position)
@@ -57,10 +63,10 @@ namespace {
         return it != references.end() ? std::optional(*it) : std::nullopt;
     }
 
-    auto symbol_references(std::span<db::Symbol_reference const> references, hir::Symbol symbol)
+    auto symbol_references(
+        std::span<db::Symbol_reference const> references, db::Symbol_id symbol_id)
     {
-        return references
-             | std::views::filter([=](db::Symbol_reference ref) { return ref.symbol == symbol; })
+        return std::views::filter(references, [=](auto ref) { return ref.symbol_id == symbol_id; })
              | std::views::transform([](db::Symbol_reference ref) { return ref.reference; });
     }
 
@@ -121,7 +127,7 @@ namespace {
         auto const& references        = server.db.documents[doc_id].info.references;
 
         if (auto ref = find_reference(references, position)) {
-            auto highlights = symbol_references(references, ref.value().symbol)
+            auto highlights = symbol_references(references, ref.value().symbol_id)
                             | std::views::transform(reference_to_json)
                             | std::ranges::to<Json::Array>();
             return Json { std::move(highlights) };
@@ -140,7 +146,7 @@ namespace {
         };
 
         if (auto ref = find_reference(references, position)) {
-            auto locations = symbol_references(references, ref.value().symbol)
+            auto locations = symbol_references(references, ref.value().symbol_id)
                            | std::views::transform(make_location) //
                            | std::ranges::to<Json::Array>();
             return Json { std::move(locations) };
@@ -155,7 +161,7 @@ namespace {
         auto const& references        = server.db.documents[doc_id].info.references;
 
         if (auto ref = find_reference(references, position)) {
-            auto locations = symbol_references(references, ref.value().symbol);
+            auto locations = symbol_references(references, ref.value().symbol_id);
 
             auto it = std::ranges::find(locations, Reference_kind::Write, &Reference::kind);
             if (it != locations.end()) {
@@ -172,7 +178,7 @@ namespace {
         return find_reference(server.db.documents[doc_id].info.references, position)
             .transform([&](db::Symbol_reference ref) {
                 return markdown_content_to_json(
-                    symbol_documentation(server.db, doc_id, ref.symbol));
+                    symbol_documentation(server.db, doc_id, ref.symbol_id));
             })
             .value_or(Json {});
     }
@@ -198,7 +204,7 @@ namespace {
 
         if (auto ref = find_reference(references, position)) {
             auto uri   = path_to_uri(db::document_path(server.db, doc_id));
-            auto edits = symbol_references(references, ref.value().symbol)
+            auto edits = symbol_references(references, ref.value().symbol_id)
                        | std::views::transform(make_edit) //
                        | std::ranges::to<Json::Array>();
 

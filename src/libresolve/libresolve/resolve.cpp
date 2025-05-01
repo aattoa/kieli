@@ -4,15 +4,26 @@
 
 auto ki::res::context(db::Document_id doc_id) -> Context
 {
-    auto hir       = hir::Arena {};
-    auto constants = make_constants(hir);
-    return Context {
-        .hir       = std::move(hir),
-        .tags      = {},
-        .constants = constants,
-        .scopes    = {},
-        .scope_map = {},
+    auto arena = db::Arena {};
+
+    auto constants = make_constants(arena.hir);
+
+    auto env_id = arena.environments.push(db::Environment {
+        .map       = {},
+        .parent_id = std::nullopt,
+        .name_id   = std::nullopt,
         .doc_id    = doc_id,
+        .kind      = db::Environment_kind::Root,
+    });
+
+    return Context {
+        .arena               = std::move(arena),
+        .tags                = {},
+        .constants           = constants,
+        .signature_scope_map = {},
+        .recycled_env_ids    = {},
+        .root_env_id         = env_id,
+        .doc_id              = doc_id,
     };
 }
 
@@ -69,13 +80,94 @@ auto ki::res::unit_expression(Constants const& constants, lsp::Range range) -> h
     };
 }
 
+auto ki::res::new_environment(Context& ctx, db::Environment env) -> db::Environment_id
+{
+    if (not ctx.recycled_env_ids.empty()) {
+        auto env_id = ctx.recycled_env_ids.back();
+        ctx.recycled_env_ids.pop_back();
+        ctx.arena.environments[env_id] = std::move(env);
+        return env_id;
+    }
+    return ctx.arena.environments.push(std::move(env));
+}
+
+auto ki::res::new_scope(Context& ctx, db::Environment_id parent_id) -> db::Environment_id
+{
+    return new_environment(
+        ctx,
+        db::Environment {
+            .map       = {},
+            .parent_id = parent_id,
+            .name_id   = {},
+            .doc_id    = ctx.doc_id,
+            .kind      = db::Environment_kind::Scope,
+        });
+}
+
+void ki::res::warn_if_unused(db::Database& db, Context& ctx, db::Symbol_id symbol_id)
+{
+    auto const& symbol = ctx.arena.symbols[symbol_id];
+    auto const  name   = db.string_pool.get(symbol.name.id);
+    if (symbol.use_count == 0 and not name.starts_with('_')) {
+        auto message = std::format(
+            "'{0}' is unused. If this is intentional, prefix it with an underscore: '_{0}'", name);
+        db::add_diagnostic(db, ctx.doc_id, lsp::warning(symbol.name.range, std::move(message)));
+    }
+}
+
+void ki::res::report_unused(db::Database& db, Context& ctx, db::Environment_id env_id)
+{
+    for (db::Symbol_id symbol_id : std::views::values(ctx.arena.environments[env_id].map)) {
+        warn_if_unused(db, ctx, symbol_id);
+    }
+}
+
+void ki::res::recycle_environment(Context& ctx, db::Environment_id env_id)
+{
+    ctx.recycled_env_ids.push_back(env_id);
+}
+
+auto ki::res::can_shadow(db::Symbol_variant variant) -> bool
+{
+    return std::holds_alternative<hir::Local_variable_id>(variant)
+        or std::holds_alternative<hir::Local_type_id>(variant);
+}
+
+auto ki::res::bind_symbol(
+    db::Database&      db,
+    Context&           ctx,
+    db::Environment_id env_id,
+    db::Name           name,
+    db::Symbol_variant variant) -> db::Symbol_id
+{
+    auto& env = ctx.arena.environments[env_id];
+
+    auto const symbol_id
+        = ctx.arena.symbols.push(db::Symbol { .variant = variant, .name = name, .use_count = 0 });
+
+    if (auto const it = env.map.find(name.id); it != env.map.end()) {
+        if (can_shadow(ctx.arena.symbols[it->second].variant)) {
+            warn_if_unused(db, ctx, it->second);
+        }
+        else {
+            auto message = std::format("Redefinition of '{}'", db.string_pool.get(name.id));
+            db::add_error(db, ctx.doc_id, name.range, std::move(message));
+            return symbol_id;
+        }
+    }
+
+    env.map.insert_or_assign(name.id, symbol_id);
+    db::add_reference(db, ctx.doc_id, lsp::write(name.range), symbol_id);
+    return symbol_id;
+}
+
 void ki::res::flatten_type(Context& ctx, Inference_state& state, hir::Type_variant& type)
 {
     if (auto const* const variable = std::get_if<hir::type::Variable>(&type)) {
         Type_variable_data& data = state.type_vars[variable->id];
         assert(variable->id == data.var_id);
         if (data.is_solved) {
-            type = ctx.hir.types[data.type_id];
+            type = ctx.arena.hir.types[data.type_id];
 
             data.is_solved = true;
             return;
@@ -85,7 +177,7 @@ void ki::res::flatten_type(Context& ctx, Inference_state& state, hir::Type_varia
             return;
         }
         Type_variable_data& repr_data = state.type_vars.underlying.at(index);
-        hir::Type_variant&  repr_type = ctx.hir.types[repr_data.type_id];
+        hir::Type_variant&  repr_type = ctx.arena.hir.types[repr_data.type_id];
         flatten_type(ctx, state, repr_type);
         if (repr_data.is_solved) {
             type           = repr_type;
@@ -103,7 +195,7 @@ void ki::res::set_type_solution(
     hir::Type_variant   solution)
 {
     auto& repr_data = state.type_vars.underlying.at(state.type_var_set.find(data.var_id.get()));
-    auto& repr_type = ctx.hir.types[repr_data.type_id];
+    auto& repr_type = ctx.arena.hir.types[repr_data.type_id];
     if (repr_data.is_solved) {
         require_subtype_relationship(db, ctx, state, data.origin, solution, repr_type);
     }
@@ -119,7 +211,7 @@ void ki::res::set_mut_solution(
 {
     auto& repr = state.mut_vars.underlying.at(state.mut_var_set.find(data.var_id.get()));
     cpputil::always_assert(not std::exchange(repr.is_solved, true));
-    ctx.hir.mutabilities[repr.mut_id] = std::move(solution);
+    ctx.arena.hir.mutabilities[repr.mut_id] = std::move(solution);
 }
 
 auto ki::res::fresh_general_type_variable(
@@ -174,7 +266,7 @@ void ki::res::ensure_no_unsolved_variables(db::Database& db, Context& ctx, Infer
         }
     }
     for (Type_variable_data& data : state.type_vars.underlying) {
-        flatten_type(ctx, state, ctx.hir.types[data.type_id]);
+        flatten_type(ctx, state, ctx.arena.hir.types[data.type_id]);
         if (not data.is_solved) {
             if (data.kind == hir::Type_variable_kind::Integral) {
                 set_type_solution(db, ctx, state, data, hir::type::Integer::I32);
@@ -188,68 +280,22 @@ void ki::res::ensure_no_unsolved_variables(db::Database& db, Context& ctx, Infer
     }
 }
 
-void ki::res::resolve_environment(db::Database& db, Context& ctx, hir::Environment_id id)
+void ki::res::resolve_symbol(db::Database& db, Context& ctx, db::Symbol_id symbol_id)
 {
     auto const visitor = utl::Overload {
         [&](hir::Function_id id) { resolve_function_body(db, ctx, id); },
         [&](hir::Enumeration_id id) { resolve_enumeration(db, ctx, id); },
         [&](hir::Concept_id id) { resolve_concept(db, ctx, id); },
         [&](hir::Alias_id id) { resolve_alias(db, ctx, id); },
-        [&](hir::Module_id id) { resolve_environment(db, ctx, ctx.hir.modules[id].mod_env_id); },
-        [](auto) { cpputil::unreachable(); },
+
+        [&](hir::Module_id) {
+            // Modules do not need to be separately resolved.
+        },
+
+        [](hir::Local_variable_id) { cpputil::unreachable(); },
+        [](hir::Local_type_id) { cpputil::unreachable(); },
+        [](hir::Local_mutability_id) { cpputil::unreachable(); },
+        [](db::Error) { cpputil::unreachable(); },
     };
-    for (auto const& definition : ctx.hir.environments[id].in_order) {
-        std::visit(visitor, definition);
-    }
-}
-
-void ki::res::debug_display_environment(
-    db::Database const& db, Context const& ctx, hir::Environment_id const env_id)
-{
-    auto const& env = ctx.hir.environments[env_id];
-    auto const& ast = db.documents[env.doc_id].arena.ast;
-
-    auto const visitor = utl::Overload {
-        [&](hir::Function_id const& id) {
-            auto const& function = ctx.hir.functions[id];
-            std::println(
-                "function {}\nresolved: {}\nast: {}",
-                db.string_pool.get(function.name.id),
-                function.signature.has_value(),
-                ast::display(ast, db.string_pool, function.ast));
-        },
-        [&](hir::Module_id const& id) {
-            auto const& module = ctx.hir.modules[id];
-            std::println("module {}", db.string_pool.get(module.name.id));
-        },
-        [&](hir::Enumeration_id const& id) {
-            auto const& enumeration = ctx.hir.enumerations[id];
-            std::println(
-                "enumeration {}\nresolved: {}\nast: {}",
-                db.string_pool.get(enumeration.name.id),
-                enumeration.hir.has_value(),
-                ast::display(ast, db.string_pool, enumeration.ast));
-        },
-        [&](hir::Concept_id const& id) {
-            auto const& concept_ = ctx.hir.concepts[id];
-            std::println(
-                "concept {}\nresolved: {}\nast: {}",
-                db.string_pool.get(concept_.name.id),
-                concept_.hir.has_value(),
-                ast::display(ast, db.string_pool, concept_.ast));
-        },
-        [&](hir::Alias_id const& id) {
-            auto const& alias = ctx.hir.aliases[id];
-            std::println(
-                "alias {}\nresolved: {}\nast: {}",
-                db.string_pool.get(alias.name.id),
-                alias.hir.has_value(),
-                ast::display(ast, db.string_pool, alias.ast));
-        },
-        [](auto) { cpputil::unreachable(); },
-    };
-
-    for (auto const& definition : env.in_order) {
-        std::visit(visitor, definition);
-    }
+    std::visit(visitor, ctx.arena.symbols[symbol_id].variant);
 }

@@ -42,26 +42,6 @@ namespace {
         }
     }
 
-    void debug_resolve(db::Database& db, db::Document_id doc_id)
-    {
-        auto ctx = res::context(doc_id);
-        auto env = res::collect_document(db, ctx, doc_id);
-        res::resolve_environment(db, ctx, env);
-        res::debug_display_environment(db, ctx, env);
-    }
-
-    auto choose_debug_repl_callback(std::string_view name)
-        -> void (*)(db::Database&, db::Document_id)
-    {
-        // clang-format off
-        if (name == "lex") return debug_lex;
-        if (name == "par") return debug_parse;
-        if (name == "des") return debug_desugar;
-        if (name == "res") return debug_resolve;
-        return nullptr;
-        // clang-format on
-    }
-
     void run_debug_repl(void (&callback)(db::Database&, db::Document_id))
     {
         repl::read_history_file();
@@ -91,8 +71,16 @@ namespace {
 
     auto choose_and_run_repl(std::string_view name) -> int
     {
-        if (auto* callback = choose_debug_repl_callback(name)) {
-            run_debug_repl(*callback);
+        if (name == "lex") {
+            run_debug_repl(debug_lex);
+            return EXIT_SUCCESS;
+        }
+        if (name == "par") {
+            run_debug_repl(debug_parse);
+            return EXIT_SUCCESS;
+        }
+        if (name == "des") {
+            run_debug_repl(debug_desugar);
             return EXIT_SUCCESS;
         }
         std::println(stderr, "Error: Unrecognized REPL name: '{}'", name);

@@ -64,30 +64,6 @@ namespace ki::utl {
         auto operator==(Index_vector const& other) const -> bool = default;
     };
 
-    template <vector_index Index, typename T, typename Allocator = std::allocator<T>>
-    struct Index_arena {
-        Index_vector<Index, T, Allocator> index_vector;
-        std::vector<Index>                free_indices;
-
-        void kill(Index const index)
-        {
-            free_indices.push_back(index);
-        }
-
-        template <typename... Args>
-        [[nodiscard]] constexpr auto push(Args&&... args) -> Index
-            requires std::is_constructible_v<T, Args...>
-        {
-            if (free_indices.empty()) {
-                return index_vector.push(std::forward<Args>(args)...);
-            }
-            Index const index = free_indices.back();
-            free_indices.pop_back();
-            index_vector[index] = T(std::forward<Args>(args)...);
-            return index;
-        }
-    };
-
     struct Hash_vector_index {
         static auto operator()(vector_index auto const& index) noexcept -> std::size_t
         {

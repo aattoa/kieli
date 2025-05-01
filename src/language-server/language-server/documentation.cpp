@@ -92,7 +92,8 @@ namespace {
 } // namespace
 
 auto ki::lsp::symbol_documentation(
-    db::Database const& db, db::Document_id doc_id, hir::Symbol symbol) -> std::string
+    db::Database const& db, db::Document_id doc_id, db::Symbol_id symbol_id) -> std::string
 {
-    return std::visit(Visitor { .db = db, .hir = db.documents[doc_id].arena.hir }, symbol);
+    auto const& arena = db.documents[doc_id].arena;
+    return std::visit(Visitor { .db = db, .hir = arena.hir }, arena.symbols[symbol_id].variant);
 }

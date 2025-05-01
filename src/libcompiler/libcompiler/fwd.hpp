@@ -12,7 +12,9 @@
 // NOLINTBEGIN(bugprone-forward-declaration-namespace)
 
 namespace ki::db {
+    DEFINE_INDEX(Symbol_id);
     DEFINE_INDEX(Document_id);
+    DEFINE_INDEX(Environment_id);
 } // namespace ki::db
 
 namespace ki::cst {
@@ -47,7 +49,6 @@ namespace ki::hir {
     DEFINE_INDEX(Type_id);
     DEFINE_INDEX(Mutability_id);
     DEFINE_INDEX(Module_id);
-    DEFINE_INDEX(Environment_id);
     DEFINE_INDEX(Function_id);
     DEFINE_INDEX(Enumeration_id);
     DEFINE_INDEX(Alias_id);

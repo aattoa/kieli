@@ -168,6 +168,22 @@ auto ki::db::describe_read_failure(Read_failure failure) -> std::string_view
     cpputil::unreachable();
 }
 
+auto ki::db::describe_symbol_kind(Symbol_variant variant) -> std::string_view
+{
+    auto const visitor = utl::Overload {
+        [](db::Error) { return "an error"; },
+        [](hir::Function_id) { return "a function"; },
+        [](hir::Enumeration_id) { return "an enumeration"; },
+        [](hir::Concept_id) { return "a concept"; },
+        [](hir::Alias_id) { return "a type alias"; },
+        [](hir::Module_id) { return "a module"; },
+        [](hir::Local_variable_id) { return "a local variable binding"; },
+        [](hir::Local_mutability_id) { return "a local mutability binding"; },
+        [](hir::Local_type_id) { return "a local type binding"; },
+    };
+    return std::visit(visitor, variant);
+}
+
 auto ki::db::text_range(std::string_view text, lsp::Range range) -> std::string_view
 {
     cpputil::always_assert(range.start <= range.stop);
@@ -209,9 +225,10 @@ void ki::db::add_param_hint(
     db.documents[doc_id].info.inlay_hints.emplace_back(position, param);
 }
 
-void ki::db::add_reference(Database& db, Document_id doc_id, lsp::Reference ref, hir::Symbol symbol)
+void ki::db::add_reference(
+    Database& db, Document_id doc_id, lsp::Reference ref, Symbol_id symbol_id)
 {
-    db.documents[doc_id].info.references.emplace_back(ref, symbol);
+    db.documents[doc_id].info.references.emplace_back(ref, symbol_id);
 }
 
 void ki::db::add_diagnostic(Database& db, Document_id doc_id, lsp::Diagnostic diagnostic)

@@ -9,14 +9,8 @@ namespace {
         db::Database&               db;
         Context&                    ctx;
         Inference_state&            state;
-        Scope_id                    scope_id;
-        hir::Environment_id         env_id;
+        db::Environment_id          env_id;
         hir::Template_parameter_tag tag;
-
-        auto ast() -> ast::Arena&
-        {
-            return db.documents[ctx.doc_id].arena.ast;
-        }
 
         template <typename Default>
         auto resolve_default_argument()
@@ -27,10 +21,10 @@ namespace {
                         return hir::Wildcard {}; //
                     },
                     [&](ast::Type_id const type) -> hir::Type {
-                        return resolve_type(db, ctx, state, scope_id, env_id, ast().types[type]);
+                        return resolve_type(db, ctx, state, env_id, ctx.arena.ast.types[type]);
                     },
                     [&](ast::Mutability const& mutability) {
-                        return resolve_mutability(db, ctx, scope_id, mutability);
+                        return resolve_mutability(db, ctx, env_id, mutability);
                     },
                 };
                 return std::visit<Default>(visitor, argument);
@@ -40,15 +34,14 @@ namespace {
         auto operator()(ast::Template_type_parameter const& parameter)
             -> hir::Template_parameter_variant
         {
-            hir::Local_type local {
+            auto const local_id = ctx.arena.hir.local_types.push(hir::Local_type {
                 .name    = parameter.name,
-                .type_id = ctx.hir.types.push(hir::type::Parameterized {
+                .type_id = ctx.arena.hir.types.push(hir::type::Parameterized {
                     .tag = tag,
                     .id  = parameter.name.id,
                 }),
-                .unused  = true,
-            };
-            bind_local_type(db, ctx, scope_id, parameter.name, std::move(local));
+            });
+            bind_symbol(db, ctx, env_id, parameter.name, local_id);
 
             if (not parameter.concepts.empty()) {
                 db::add_error(
@@ -69,13 +62,11 @@ namespace {
         auto operator()(ast::Template_mutability_parameter const& parameter)
             -> hir::Template_parameter_variant
         {
-            hir::Local_mutability local {
+            auto const local_id = ctx.arena.hir.local_mutabilities.push(hir::Local_mutability {
                 .name   = parameter.name,
-                .mut_id = ctx.hir.mutabilities.push(hir::mut::Parameterized { tag }),
-                .unused = true,
-            };
-            bind_local_mutability(db, ctx, scope_id, parameter.name, std::move(local));
-
+                .mut_id = ctx.arena.hir.mutabilities.push(hir::mut::Parameterized { tag }),
+            });
+            bind_symbol(db, ctx, env_id, parameter.name, local_id);
             return hir::Template_mutability_parameter {
                 .name             = parameter.name,
                 .default_argument = parameter.default_argument.transform(
@@ -103,8 +94,7 @@ auto ki::res::resolve_template_parameters(
     db::Database&                   db,
     Context&                        ctx,
     Inference_state&                state,
-    Scope_id const                  scope_id,
-    hir::Environment_id const       env_id,
+    db::Environment_id              env_id,
     ast::Template_parameters const& parameters) -> std::vector<hir::Template_parameter>
 {
     auto const resolve_parameter = [&](ast::Template_parameter const& parameter) {
@@ -112,12 +102,11 @@ auto ki::res::resolve_template_parameters(
         return hir::Template_parameter {
             .variant = std::visit(
                 Visitor {
-                    .db       = db,
-                    .ctx      = ctx,
-                    .state    = state,
-                    .scope_id = scope_id,
-                    .env_id   = env_id,
-                    .tag      = tag,
+                    .db     = db,
+                    .ctx    = ctx,
+                    .state  = state,
+                    .env_id = env_id,
+                    .tag    = tag,
                 },
                 parameter.variant),
             .tag   = tag,
@@ -132,15 +121,13 @@ auto ki::res::resolve_template_arguments(
     db::Database&                               db,
     Context&                                    ctx,
     Inference_state&                            state,
-    Scope_id const                              scope_id,
-    hir::Environment_id const                   env_id,
+    db::Environment_id                          env_id,
     std::vector<hir::Template_parameter> const& parameters,
     std::vector<ast::Template_argument> const&  arguments) -> std::vector<hir::Template_argument>
 {
     (void)db;
     (void)ctx;
     (void)state;
-    (void)scope_id;
     (void)env_id;
     (void)parameters;
     (void)arguments;

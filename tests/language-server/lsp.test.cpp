@@ -50,7 +50,7 @@ UNITTEST("document synchronization")
             "params": {
                 "textDocument": {
                     "uri": "file://test-uri",
-                    "text": "fn hello(): { 0.0 }",
+                    "text": "fn _hello(): { 0.0 }",
                     "languageId": "kieli",
                     "version": 0
                 }
@@ -70,8 +70,8 @@ UNITTEST("document synchronization")
                 },
                 "contentChanges": [{
                     "range": {
-                        "start": { "line": 0, "character": 11 },
-                        "end": { "line": 0, "character": 11 }
+                        "start": { "line": 0, "character": 12 },
+                        "end": { "line": 0, "character": 12 }
                     },
                     "text": " typeof(0.0)"
                 }]
@@ -106,8 +106,8 @@ UNITTEST("document synchronization")
                 "uri": "file://test-uri",
                 "diagnostics": [{
                     "range": {
-                        "start": { "line": 0, "character": 12 },
-                        "end": { "line": 0, "character": 13 }
+                        "start": { "line": 0, "character": 13 },
+                        "end": { "line": 0, "character": 14 }
                     },
                     "severity": 1,
                     "message": "Expected a type, but found an opening brace",

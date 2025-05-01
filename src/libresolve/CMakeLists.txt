@@ -12,7 +12,6 @@ target_sources(libresolve
     PRIVATE libresolve/resolve_pattern.cpp
     PRIVATE libresolve/resolve_template.cpp
     PRIVATE libresolve/resolve_type.cpp
-    PRIVATE libresolve/scope.cpp
     PRIVATE libresolve/unification.cpp)
 
 target_include_directories(libresolve

@@ -6,22 +6,16 @@ using namespace ki::res;
 
 namespace {
     struct Visitor {
-        db::Database&       db;
-        Context&            ctx;
-        Inference_state&    state;
-        Scope_id            scope_id;
-        hir::Environment_id env_id;
-        lsp::Range          this_range;
-
-        auto ast() -> ast::Arena&
-        {
-            return db.documents[ctx.doc_id].arena.ast;
-        }
+        db::Database&      db;
+        Context&           ctx;
+        Inference_state&   state;
+        db::Environment_id env_id;
+        lsp::Range         this_range;
 
         auto recurse()
         {
             return [&](ast::Pattern const& pattern) -> hir::Pattern {
-                return resolve_pattern(db, ctx, state, scope_id, env_id, pattern);
+                return resolve_pattern(db, ctx, state, env_id, pattern);
             };
         }
 
@@ -32,7 +26,7 @@ namespace {
 
         auto operator()(db::Integer const& integer) -> hir::Pattern
         {
-            auto type = fresh_integral_type_variable(state, ctx.hir, this_range);
+            auto type = fresh_integral_type_variable(state, ctx.arena.hir, this_range);
             return { .variant = integer, .type_id = type.id, .range = this_range };
         }
 
@@ -67,30 +61,30 @@ namespace {
         {
             return {
                 .variant = hir::Wildcard {},
-                .type_id = fresh_general_type_variable(state, ctx.hir, this_range).id,
+                .type_id = fresh_general_type_variable(state, ctx.arena.hir, this_range).id,
                 .range   = this_range,
             };
         }
 
         auto operator()(ast::patt::Name const& pattern) -> hir::Pattern
         {
-            auto const mut  = resolve_mutability(db, ctx, scope_id, pattern.mutability);
-            auto const type = fresh_general_type_variable(state, ctx.hir, pattern.name.range);
+            auto const mut  = resolve_mutability(db, ctx, env_id, pattern.mutability);
+            auto const type = fresh_general_type_variable(state, ctx.arena.hir, pattern.name.range);
 
-            hir::Local_variable variable {
+            auto const local_id = ctx.arena.hir.local_variables.push(hir::Local_variable {
                 .name    = pattern.name,
                 .mut_id  = mut.id,
                 .type_id = type.id,
-                .unused  = true,
-            };
+            });
+            bind_symbol(db, ctx, env_id, pattern.name, local_id);
 
             return {
                 .variant = hir::patt::Name {
                     .name_id = pattern.name.id,
                     .mut_id  = mut.id,
-                    .var_id  = bind_local_variable(db, ctx, scope_id, pattern.name, variable),
+                    .var_id  = local_id,
                 },
-                .type_id    = type.id,
+                .type_id = type.id,
                 .range   = this_range,
             };
         }
@@ -113,7 +107,7 @@ namespace {
                        | std::ranges::to<std::vector>();
             return {
                 .variant = hir::patt::Tuple { std::move(patterns) },
-                .type_id = ctx.hir.types.push(hir::type::Tuple { std::move(types) }),
+                .type_id = ctx.arena.hir.types.push(hir::type::Tuple { std::move(types) }),
                 .range   = this_range,
             };
         }
@@ -123,7 +117,7 @@ namespace {
             auto patterns = std::views::transform(slice.element_patterns, recurse())
                           | std::ranges::to<std::vector>();
 
-            auto const element_type = fresh_general_type_variable(state, ctx.hir, this_range);
+            auto const element_type = fresh_general_type_variable(state, ctx.arena.hir, this_range);
 
             for (hir::Pattern const& pattern : patterns) {
                 require_subtype_relationship(
@@ -131,34 +125,34 @@ namespace {
                     ctx,
                     state,
                     pattern.range,
-                    ctx.hir.types[pattern.type_id],
-                    ctx.hir.types[element_type.id]);
+                    ctx.arena.hir.types[pattern.type_id],
+                    ctx.arena.hir.types[element_type.id]);
             }
 
             return {
                 .variant = hir::patt::Slice { std::move(patterns) },
-                .type_id = ctx.hir.types.push(hir::type::Slice { element_type }),
+                .type_id = ctx.arena.hir.types.push(hir::type::Slice { element_type }),
                 .range   = this_range,
             };
         }
 
         auto operator()(ast::patt::Guarded const& guarded) -> hir::Pattern
         {
-            auto pattern = recurse(ast().patterns[guarded.pattern]);
-            auto guard   = resolve_expression(db, ctx, state, scope_id, env_id, guarded.guard);
+            auto pattern = recurse(ctx.arena.ast.patterns[guarded.pattern]);
+            auto guard   = resolve_expression(db, ctx, state, env_id, guarded.guard);
 
             require_subtype_relationship(
                 db,
                 ctx,
                 state,
                 guard.range,
-                ctx.hir.types[guard.type_id],
-                ctx.hir.types[ctx.constants.type_boolean]);
+                ctx.arena.hir.types[guard.type_id],
+                ctx.arena.hir.types[ctx.constants.type_boolean]);
 
             return {
                 .variant = hir::patt::Guarded {
-                    .pattern = ctx.hir.patterns.push(std::move(pattern)),
-                    .guard   = ctx.hir.expressions.push(std::move(guard)),
+                    .pattern = ctx.arena.hir.patterns.push(std::move(pattern)),
+                    .guard   = ctx.arena.hir.expressions.push(std::move(guard)),
                 },
                 .type_id = pattern.type_id,
                 .range   = this_range,
@@ -171,15 +165,13 @@ auto ki::res::resolve_pattern(
     db::Database&       db,
     Context&            ctx,
     Inference_state&    state,
-    Scope_id            scope_id,
-    hir::Environment_id env_id,
+    db::Environment_id  env_id,
     ast::Pattern const& pattern) -> hir::Pattern
 {
     Visitor visitor {
         .db         = db,
         .ctx        = ctx,
         .state      = state,
-        .scope_id   = scope_id,
         .env_id     = env_id,
         .this_range = pattern.range,
     };

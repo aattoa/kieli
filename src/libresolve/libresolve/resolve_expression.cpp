@@ -6,17 +6,11 @@ using namespace ki::res;
 
 namespace {
     struct Visitor {
-        db::Database&       db;
-        Context&            ctx;
-        Inference_state&    state;
-        Scope_id            scope_id;
-        hir::Environment_id env_id;
-        lsp::Range          this_range;
-
-        auto ast() -> ast::Arena&
-        {
-            return db.documents[ctx.doc_id].arena.ast;
-        }
+        db::Database&      db;
+        Context&           ctx;
+        Inference_state&   state;
+        db::Environment_id env_id;
+        lsp::Range         this_range;
 
         auto error(lsp::Range const range, std::string message) -> hir::Expression
         {
@@ -32,7 +26,7 @@ namespace {
         auto recurse()
         {
             return [&](ast::Expression const& expression) -> hir::Expression {
-                return resolve_expression(db, ctx, state, scope_id, env_id, expression);
+                return resolve_expression(db, ctx, state, env_id, expression);
             };
         }
 
@@ -45,7 +39,7 @@ namespace {
         {
             return {
                 .variant  = integer,
-                .type_id  = fresh_integral_type_variable(state, ctx.hir, this_range).id,
+                .type_id  = fresh_integral_type_variable(state, ctx.arena.hir, this_range).id,
                 .category = hir::Expression_category::Value,
                 .range    = this_range,
             };
@@ -83,16 +77,18 @@ namespace {
 
         auto operator()(ast::Path const& path) -> hir::Expression
         {
-            hir::Symbol symbol = resolve_path(db, ctx, state, scope_id, env_id, path);
-            if (auto const* local_id = std::get_if<hir::Local_variable_id>(&symbol)) {
+            db::Symbol_id symbol_id = resolve_path(db, ctx, state, env_id, path);
+            db::Symbol&   symbol    = ctx.arena.symbols[symbol_id];
+
+            if (auto const* local_id = std::get_if<hir::Local_variable_id>(&symbol.variant)) {
                 return {
                     .variant  = hir::expr::Variable_reference { .id = *local_id },
-                    .type_id  = ctx.hir.local_variables[*local_id].type_id,
+                    .type_id  = ctx.arena.hir.local_variables[*local_id].type_id,
                     .category = hir::Expression_category::Place,
                     .range    = this_range,
                 };
             }
-            if (auto const* fun_id = std::get_if<hir::Function_id>(&symbol)) {
+            if (auto const* fun_id = std::get_if<hir::Function_id>(&symbol.variant)) {
                 return {
                     .variant  = hir::expr::Function_reference { .id = *fun_id },
                     .type_id  = resolve_function_signature(db, ctx, *fun_id).function_type.id,
@@ -100,17 +96,18 @@ namespace {
                     .range    = this_range,
                 };
             }
-            if (std::holds_alternative<db::Error>(symbol)) {
+            if (std::holds_alternative<db::Error>(symbol.variant)) {
                 return error_expression(ctx.constants, this_range);
             }
-            auto kind    = hir::describe_symbol_kind(symbol);
+
+            auto kind    = db::describe_symbol_kind(symbol.variant);
             auto message = std::format("Expected an expression, but found {}", kind);
             return error(this_range, std::move(message));
         }
 
         auto operator()(ast::expr::Array const& array) -> hir::Expression
         {
-            auto const element_type = fresh_general_type_variable(state, ctx.hir, this_range);
+            auto const element_type = fresh_general_type_variable(state, ctx.arena.hir, this_range);
 
             std::vector<hir::Expression> elements;
             for (ast::Expression const& element : array.elements) {
@@ -120,18 +117,18 @@ namespace {
                     ctx,
                     state,
                     element.range,
-                    ctx.hir.types[elements.back().type_id],
-                    ctx.hir.types[element_type.id]);
+                    ctx.arena.hir.types[elements.back().type_id],
+                    ctx.arena.hir.types[element_type.id]);
             }
 
-            auto const length = ctx.hir.expressions.push(hir::Expression {
+            auto const length = ctx.arena.hir.expressions.push(hir::Expression {
                 .variant  = db::Integer { ssize(elements) },
                 .type_id  = ctx.constants.type_u64,
                 .category = hir::Expression_category::Value,
                 .range    = this_range,
             });
 
-            auto const type = ctx.hir.types.push(hir::type::Array {
+            auto const type = ctx.arena.hir.types.push(hir::type::Array {
                 .element_type = element_type,
                 .length       = length,
             });
@@ -152,7 +149,7 @@ namespace {
                        | std::ranges::to<std::vector>();
             return {
                 .variant  = hir::expr::Tuple { .fields = std::move(fields) },
-                .type_id  = ctx.hir.types.push(hir::type::Tuple { std::move(types) }),
+                .type_id  = ctx.arena.hir.types.push(hir::type::Tuple { std::move(types) }),
                 .category = hir::Expression_category::Value,
                 .range    = this_range,
             };
@@ -175,45 +172,47 @@ namespace {
 
         auto operator()(ast::expr::Block const& block) -> hir::Expression
         {
-            return child_scope(ctx, scope_id, [&](Scope_id scope_id) {
-                auto const resolve_effect = [&](ast::Expression const& expression) {
-                    auto effect = resolve_expression(db, ctx, state, scope_id, env_id, expression);
-                    require_subtype_relationship(
-                        db,
-                        ctx,
-                        state,
-                        effect.range,
-                        ctx.hir.types[effect.type_id],
-                        hir::type::Tuple {});
-                    return effect;
-                };
+            auto block_env_id = new_scope(ctx, env_id);
 
-                auto side_effects = block.effects //
-                                  | std::views::transform(resolve_effect)
-                                  | std::ranges::to<std::vector>();
+            auto const resolve_effect = [&](ast::Expression const& expression) {
+                auto effect = resolve_expression(db, ctx, state, block_env_id, expression);
+                require_subtype_relationship(
+                    db,
+                    ctx,
+                    state,
+                    effect.range,
+                    ctx.arena.hir.types[effect.type_id],
+                    hir::type::Tuple {});
+                return effect;
+            };
 
-                auto result = resolve_expression(
-                    db, ctx, state, scope_id, env_id, ast().expressions[block.result]);
+            auto side_effects = block.effects //
+                              | std::views::transform(resolve_effect)
+                              | std::ranges::to<std::vector>();
 
-                auto result_type  = result.type_id;
-                auto result_range = result.range;
+            auto result = resolve_expression(
+                db, ctx, state, block_env_id, ctx.arena.ast.expressions[block.result]);
 
-                report_unused(db, ctx, scope_id);
-                return hir::Expression {
+            auto result_type  = result.type_id;
+            auto result_range = result.range;
+
+            report_unused(db, ctx, block_env_id);
+            recycle_environment(ctx, block_env_id);
+
+            return hir::Expression {
                     .variant = hir::expr::Block {
                         .effects = std::move(side_effects),
-                        .result       = ctx.hir.expressions.push(std::move(result)),
+                        .result       = ctx.arena.hir.expressions.push(std::move(result)),
                     },
                     .type_id  = result_type,
                     .category = hir::Expression_category::Value,
                     .range    = result_range,
                 };
-            });
         }
 
         auto operator()(ast::expr::Function_call const& call) -> hir::Expression
         {
-            auto invocable = recurse(ast().expressions[call.invocable]);
+            auto invocable = recurse(ctx.arena.ast.expressions[call.invocable]);
 
             if (auto const* ref = std::get_if<hir::expr::Function_reference>(&invocable.variant)) {
                 auto& signature = resolve_function_signature(db, ctx, ref->id);
@@ -232,23 +231,23 @@ namespace {
 
                 for (std::size_t i = 0; i != signature.parameters.size(); ++i) {
                     auto const& parameter = signature.parameters.at(i);
-                    auto        argument  = recurse(ast().expressions[call.arguments.at(i)]);
+                    auto        argument = recurse(ctx.arena.ast.expressions[call.arguments.at(i)]);
 
                     require_subtype_relationship(
                         db,
                         ctx,
                         state,
                         argument.range,
-                        ctx.hir.types[argument.type_id],
-                        ctx.hir.types[parameter.type.id]);
-                    arguments.push_back(ctx.hir.expressions.push(std::move(argument)));
+                        ctx.arena.hir.types[argument.type_id],
+                        ctx.arena.hir.types[parameter.type.id]);
+                    arguments.push_back(ctx.arena.hir.expressions.push(std::move(argument)));
 
                     db::add_param_hint(db, ctx.doc_id, argument.range.start, parameter.pattern_id);
                 }
 
                 return {
                     .variant  = hir::expr::Function_call {
-                        .invocable = ctx.hir.expressions.push(std::move(invocable)),
+                        .invocable = ctx.arena.hir.expressions.push(std::move(invocable)),
                         .arguments = std::move(arguments),
                     },
                     .type_id  = signature.return_type.id,
@@ -263,11 +262,11 @@ namespace {
             std::vector<hir::Type> parameter_types;
             parameter_types.reserve(call.arguments.size());
 
-            auto result_type = fresh_general_type_variable(state, ctx.hir, this_range);
+            auto result_type = fresh_general_type_variable(state, ctx.arena.hir, this_range);
 
             for (auto const& arg_id : call.arguments) {
-                auto range = ast().expressions[arg_id].range;
-                parameter_types.push_back(fresh_general_type_variable(state, ctx.hir, range));
+                auto range = ctx.arena.ast.expressions[arg_id].range;
+                parameter_types.push_back(fresh_general_type_variable(state, ctx.arena.hir, range));
             }
 
             // Unify the invocable type with a synthetic function type.
@@ -278,27 +277,27 @@ namespace {
                 ctx,
                 state,
                 this_range,
-                ctx.hir.types[invocable.type_id],
+                ctx.arena.hir.types[invocable.type_id],
                 hir::type::Function {
                     .parameter_types = parameter_types,
                     .return_type     = result_type,
                 });
 
             for (auto const& [type, arg_id] : std::views::zip(parameter_types, call.arguments)) {
-                auto argument = recurse(ast().expressions[arg_id]);
+                auto argument = recurse(ctx.arena.ast.expressions[arg_id]);
                 require_subtype_relationship(
                     db,
                     ctx,
                     state,
                     argument.range,
-                    ctx.hir.types[argument.type_id],
-                    ctx.hir.types[type.id]);
-                arguments.push_back(ctx.hir.expressions.push(std::move(argument)));
+                    ctx.arena.hir.types[argument.type_id],
+                    ctx.arena.hir.types[type.id]);
+                arguments.push_back(ctx.arena.hir.expressions.push(std::move(argument)));
             }
 
             return {
                 .variant  = hir::expr::Function_call {
-                    .invocable = ctx.hir.expressions.push(std::move(invocable)),
+                    .invocable = ctx.arena.hir.expressions.push(std::move(invocable)),
                     .arguments = std::move(arguments),
                 },
                 .type_id  = result_type.id,
@@ -344,16 +343,16 @@ namespace {
 
         auto operator()(ast::expr::Conditional const& conditional) -> hir::Expression
         {
-            auto condition    = recurse(ast().expressions[conditional.condition]);
-            auto true_branch  = recurse(ast().expressions[conditional.true_branch]);
-            auto false_branch = recurse(ast().expressions[conditional.false_branch]);
+            auto condition    = recurse(ctx.arena.ast.expressions[conditional.condition]);
+            auto true_branch  = recurse(ctx.arena.ast.expressions[conditional.true_branch]);
+            auto false_branch = recurse(ctx.arena.ast.expressions[conditional.false_branch]);
 
             require_subtype_relationship(
                 db,
                 ctx,
                 state,
                 condition.range,
-                ctx.hir.types[condition.type_id],
+                ctx.arena.hir.types[condition.type_id],
                 hir::type::Boolean {});
 
             require_subtype_relationship(
@@ -361,19 +360,19 @@ namespace {
                 ctx,
                 state,
                 true_branch.range,
-                ctx.hir.types[true_branch.type_id],
-                ctx.hir.types[false_branch.type_id]);
+                ctx.arena.hir.types[true_branch.type_id],
+                ctx.arena.hir.types[false_branch.type_id]);
 
             auto result_type = false_branch.type_id;
 
             auto arm = [&](bool boolean, hir::Expression branch) {
                 return hir::Match_arm {
-                    .pattern    = ctx.hir.patterns.push(hir::Pattern {
+                    .pattern    = ctx.arena.hir.patterns.push(hir::Pattern {
                            .variant = db::Boolean { boolean },
                            .type_id = ctx.constants.type_boolean,
                            .range   = condition.range,
                     }),
-                    .expression = ctx.hir.expressions.push(std::move(branch)),
+                    .expression = ctx.arena.hir.expressions.push(std::move(branch)),
                 };
             };
 
@@ -382,7 +381,7 @@ namespace {
                     arm(true, std::move(true_branch)),
                     arm(false, std::move(false_branch)),
                 }),
-                .scrutinee = ctx.hir.expressions.push(std::move(condition)),
+                .scrutinee = ctx.arena.hir.expressions.push(std::move(condition)),
             };
 
             return {
@@ -395,37 +394,37 @@ namespace {
 
         auto operator()(ast::expr::Match const& match) -> hir::Expression
         {
-            auto scrutinee   = recurse(ast().expressions[match.scrutinee]);
-            auto result_type = fresh_general_type_variable(state, ctx.hir, this_range);
+            auto scrutinee   = recurse(ctx.arena.ast.expressions[match.scrutinee]);
+            auto result_type = fresh_general_type_variable(state, ctx.arena.hir, this_range);
 
             auto const resolve_arm = [&](ast::Match_arm const& arm) {
-                auto pattern = resolve_pattern(
-                    db, ctx, state, scope_id, env_id, ast().patterns[arm.pattern]);
+                auto pattern
+                    = resolve_pattern(db, ctx, state, env_id, ctx.arena.ast.patterns[arm.pattern]);
                 require_subtype_relationship(
                     db,
                     ctx,
                     state,
                     scrutinee.range,
-                    ctx.hir.types[scrutinee.type_id],
-                    ctx.hir.types[pattern.type_id]);
-                auto expression = recurse(ast().expressions[arm.expression]);
+                    ctx.arena.hir.types[scrutinee.type_id],
+                    ctx.arena.hir.types[pattern.type_id]);
+                auto expression = recurse(ctx.arena.ast.expressions[arm.expression]);
                 require_subtype_relationship(
                     db,
                     ctx,
                     state,
                     expression.range,
-                    ctx.hir.types[expression.type_id],
-                    ctx.hir.types[result_type.id]);
+                    ctx.arena.hir.types[expression.type_id],
+                    ctx.arena.hir.types[result_type.id]);
                 return hir::Match_arm {
-                    .pattern    = ctx.hir.patterns.push(std::move(pattern)),
-                    .expression = ctx.hir.expressions.push(std::move(expression)),
+                    .pattern    = ctx.arena.hir.patterns.push(std::move(pattern)),
+                    .expression = ctx.arena.hir.expressions.push(std::move(expression)),
                 };
             };
 
             return {
                 .variant = hir::expr::Match {
                     .arms = std::views::transform(match.arms, resolve_arm) | std::ranges::to<std::vector>(),
-                    .scrutinee = ctx.hir.expressions.push(std::move(scrutinee)),
+                    .scrutinee = ctx.arena.hir.expressions.push(std::move(scrutinee)),
                 },
                 .type_id  = result_type.id,
                 .category = hir::Expression_category::Value,
@@ -435,35 +434,35 @@ namespace {
 
         auto operator()(ast::expr::Ascription const& ascription) -> hir::Expression
         {
-            auto expression = recurse(ast().expressions[ascription.expression]);
+            auto expression = recurse(ctx.arena.ast.expressions[ascription.expression]);
             auto ascribed
-                = resolve_type(db, ctx, state, scope_id, env_id, ast().types[ascription.type]);
+                = resolve_type(db, ctx, state, env_id, ctx.arena.ast.types[ascription.type]);
             require_subtype_relationship(
                 db,
                 ctx,
                 state,
                 expression.range,
-                ctx.hir.types[expression.type_id],
-                ctx.hir.types[ascribed.id]);
+                ctx.arena.hir.types[expression.type_id],
+                ctx.arena.hir.types[ascribed.id]);
             return expression;
         }
 
         auto operator()(ast::expr::Let const& let) -> hir::Expression
         {
-            auto initializer = recurse(ast().expressions[let.initializer]);
+            auto initializer = recurse(ctx.arena.ast.expressions[let.initializer]);
             auto pattern
-                = resolve_pattern(db, ctx, state, scope_id, env_id, ast().patterns[let.pattern]);
+                = resolve_pattern(db, ctx, state, env_id, ctx.arena.ast.patterns[let.pattern]);
 
             if (let.type.has_value()) {
                 auto type
-                    = resolve_type(db, ctx, state, scope_id, env_id, ast().types[let.type.value()]);
+                    = resolve_type(db, ctx, state, env_id, ctx.arena.ast.types[let.type.value()]);
                 require_subtype_relationship(
                     db,
                     ctx,
                     state,
                     pattern.range,
-                    ctx.hir.types[pattern.type_id],
-                    ctx.hir.types[type.id]);
+                    ctx.arena.hir.types[pattern.type_id],
+                    ctx.arena.hir.types[type.id]);
             }
             else {
                 db::add_type_hint(db, ctx.doc_id, pattern.range.stop, pattern.type_id);
@@ -474,14 +473,14 @@ namespace {
                 ctx,
                 state,
                 initializer.range,
-                ctx.hir.types[initializer.type_id],
-                ctx.hir.types[pattern.type_id]);
+                ctx.arena.hir.types[initializer.type_id],
+                ctx.arena.hir.types[pattern.type_id]);
 
             return {
                 .variant  = hir::expr::Let {
-                    .pattern     =  ctx.hir.patterns.push(std::move(pattern)),
-                    .type        =  initializer.type_id,
-                    .initializer = ctx.hir.expressions.push(std::move(initializer)),
+                    .pattern     = ctx.arena.hir.patterns.push(std::move(pattern)),
+                    .type        = initializer.type_id,
+                    .initializer = ctx.arena.hir.expressions.push(std::move(initializer)),
                 },
                 .type_id  = ctx.constants.type_unit,
                 .category = hir::Expression_category::Value,
@@ -491,15 +490,12 @@ namespace {
 
         auto operator()(ast::expr::Type_alias const& alias) -> hir::Expression
         {
-            auto type = resolve_type(db, ctx, state, scope_id, env_id, ast().types[alias.type]);
-
-            hir::Local_type local_type {
+            auto const type = resolve_type(db, ctx, state, env_id, ctx.arena.ast.types[alias.type]);
+            auto const local_id = ctx.arena.hir.local_types.push(hir::Local_type {
                 .name    = alias.name,
                 .type_id = type.id,
-                .unused  = true,
-            };
-
-            bind_local_type(db, ctx, scope_id, alias.name, std::move(local_type));
+            });
+            bind_symbol(db, ctx, env_id, alias.name, local_id);
             return unit_expression(ctx.constants, this_range);
         }
 
@@ -510,10 +506,10 @@ namespace {
 
         auto operator()(ast::expr::Sizeof const& sizeof_) -> hir::Expression
         {
-            auto type = resolve_type(db, ctx, state, scope_id, env_id, ast().types[sizeof_.type]);
+            auto type = resolve_type(db, ctx, state, env_id, ctx.arena.ast.types[sizeof_.type]);
             return {
                 .variant  = hir::expr::Sizeof { type },
-                .type_id  = fresh_integral_type_variable(state, ctx.hir, this_range).id,
+                .type_id  = fresh_integral_type_variable(state, ctx.arena.hir, this_range).id,
                 .category = hir::Expression_category::Value,
                 .range    = this_range,
             };
@@ -521,9 +517,9 @@ namespace {
 
         auto operator()(ast::expr::Addressof const& addressof) -> hir::Expression
         {
-            auto place_expression = recurse(ast().expressions[addressof.expression]);
+            auto place_expression = recurse(ctx.arena.ast.expressions[addressof.expression]);
             auto referenced_type  = place_expression.type_id;
-            auto mutability       = resolve_mutability(db, ctx, scope_id, addressof.mutability);
+            auto mutability       = resolve_mutability(db, ctx, env_id, addressof.mutability);
             if (place_expression.category != hir::Expression_category::Place) {
                 return error(
                     place_expression.range,
@@ -533,10 +529,10 @@ namespace {
             return {
                 .variant = hir::expr::Addressof {
                     .mutability = mutability,
-                    .expression = ctx.hir.expressions.push(std::move(place_expression)),
+                    .expression = ctx.arena.hir.expressions.push(std::move(place_expression)),
                 },
-                .type_id = ctx.hir.types.push(hir::type::Reference {
-                    .referenced_type = { .id = referenced_type, .range = this_range },
+                .type_id = ctx.arena.hir.types.push(hir::type::Reference {
+                    .referenced_type = hir::Type { .id = referenced_type, .range = this_range },
                     .mutability      = mutability,
                 }),
                 .category = hir::Expression_category::Value,
@@ -546,21 +542,21 @@ namespace {
 
         auto operator()(ast::expr::Deref const& dereference) -> hir::Expression
         {
-            auto ref_type = fresh_general_type_variable(state, ctx.hir, this_range);
-            auto ref_mut  = fresh_mutability_variable(state, ctx.hir, this_range);
-            auto ref_expr = recurse(ast().expressions[dereference.expression]);
+            auto ref_type = fresh_general_type_variable(state, ctx.arena.hir, this_range);
+            auto ref_mut  = fresh_mutability_variable(state, ctx.arena.hir, this_range);
+            auto ref_expr = recurse(ctx.arena.ast.expressions[dereference.expression]);
 
             require_subtype_relationship(
                 db,
                 ctx,
                 state,
                 ref_expr.range,
-                ctx.hir.types[ref_expr.type_id],
+                ctx.arena.hir.types[ref_expr.type_id],
                 hir::type::Reference { .referenced_type = ref_type, .mutability = ref_mut });
 
             return {
-                .variant  = hir::expr::Deref { ctx.hir.expressions.push(std::move(ref_expr)) },
-                .type_id  = ref_type.id,
+                .variant = hir::expr::Deref { ctx.arena.hir.expressions.push(std::move(ref_expr)) },
+                .type_id = ref_type.id,
                 .category = hir::Expression_category::Place,
                 .range    = this_range,
             };
@@ -570,7 +566,7 @@ namespace {
         {
             return {
                 .variant = hir::expr::Defer {
-                    ctx.hir.expressions.push(recurse(ast().expressions[defer.expression])),
+                    ctx.arena.hir.expressions.push(recurse(ctx.arena.ast.expressions[defer.expression])),
                 },
                 .type_id  = ctx.constants.type_unit,
                 .category = hir::Expression_category::Value,
@@ -580,7 +576,7 @@ namespace {
 
         auto operator()(ast::Wildcard const&) -> hir::Expression
         {
-            auto type = fresh_general_type_variable(state, ctx.hir, this_range);
+            auto type = fresh_general_type_variable(state, ctx.arena.hir, this_range);
             db::add_type_hint(db, ctx.doc_id, this_range.stop, type.id);
             return {
                 .variant  = hir::Wildcard {},
@@ -599,19 +595,16 @@ namespace {
 } // namespace
 
 auto ki::res::resolve_expression(
-    db::Database&             db,
-    Context&                  ctx,
-    Inference_state&          state,
-    Scope_id const            scope_id,
-    hir::Environment_id const env_id,
-    ast::Expression const&    expression) -> hir::Expression
-
+    db::Database&          db,
+    Context&               ctx,
+    Inference_state&       state,
+    db::Environment_id     env_id,
+    ast::Expression const& expression) -> hir::Expression
 {
     Visitor visitor {
         .db         = db,
         .ctx        = ctx,
         .state      = state,
-        .scope_id   = scope_id,
         .env_id     = env_id,
         .this_range = expression.range,
     };

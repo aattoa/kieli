@@ -39,7 +39,8 @@ namespace {
         [[nodiscard]] auto solution(hir::Mutability_variable_id var_id, hir::Mutability mut) const
             -> Result
         {
-            set_mut_solution(ctx, state, state.mut_vars[var_id], ctx.hir.mutabilities[mut.id]);
+            set_mut_solution(
+                ctx, state, state.mut_vars[var_id], ctx.arena.hir.mutabilities[mut.id]);
             return Result::Ok;
         }
 
@@ -54,7 +55,7 @@ namespace {
                 .goal          = goal,
             };
             return std::visit(
-                visitor, ctx.hir.mutabilities[sub.id], ctx.hir.mutabilities[super.id]);
+                visitor, ctx.arena.hir.mutabilities[sub.id], ctx.arena.hir.mutabilities[super.id]);
         }
 
         auto operator()(db::Mutability const sub, db::Mutability const super) const -> Result
@@ -104,7 +105,7 @@ namespace {
         [[nodiscard]] auto solution(hir::Type_variable_id id, hir::Type_variant type) const
             -> Result
         {
-            if (occurs_check(ctx.hir, id, type)) {
+            if (occurs_check(ctx.arena.hir, id, type)) {
                 return Result::Recursive;
             }
             flatten_type(ctx, state, type);
@@ -128,7 +129,7 @@ namespace {
 
         [[nodiscard]] auto unify(hir::Type sub, hir::Type super) const -> Result
         {
-            return unify(ctx.hir.types[sub.id], ctx.hir.types[super.id]);
+            return unify(ctx.arena.hir.types[sub.id], ctx.arena.hir.types[super.id]);
         }
 
         [[nodiscard]] auto unify(hir::Mutability const sub, hir::Mutability const super) const
@@ -224,8 +225,8 @@ namespace {
         {
             return bind(unify(sub.element_type, super.element_type), [&] {
                 return unify(
-                    hir::expression_type(ctx.hir.expressions[sub.length]),
-                    hir::expression_type(ctx.hir.expressions[super.length]));
+                    hir::expression_type(ctx.arena.hir.expressions[sub.length]),
+                    hir::expression_type(ctx.arena.hir.expressions[super.length]));
             });
         }
 
@@ -310,8 +311,8 @@ void ki::res::require_subtype_relationship(
     Result result = visitor.unify(sub, super);
 
     if (result != Result::Ok) {
-        auto const left  = hir::to_string(ctx.hir, db.string_pool, sub);
-        auto const right = hir::to_string(ctx.hir, db.string_pool, super);
+        auto const left  = hir::to_string(ctx.arena.hir, db.string_pool, sub);
+        auto const right = hir::to_string(ctx.arena.hir, db.string_pool, super);
 
         char const* const description
             = result == Result::Recursive ? "Recursive type variable solution" : "Could not unify";

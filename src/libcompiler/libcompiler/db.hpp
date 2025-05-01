@@ -12,6 +12,39 @@
 
 namespace ki::db {
 
+    struct Symbol_variant
+        : std::variant<
+              Error,
+              hir::Function_id,
+              hir::Enumeration_id,
+              hir::Concept_id,
+              hir::Alias_id,
+              hir::Module_id,
+              hir::Local_variable_id,
+              hir::Local_mutability_id,
+              hir::Local_type_id> {
+        using variant::variant;
+        auto operator==(Symbol_variant const&) const -> bool = default;
+    };
+
+    struct Symbol {
+        Symbol_variant variant;
+        Name           name;
+        std::uint32_t  use_count {};
+    };
+
+    using Environment_map = std::unordered_map<utl::String_id, Symbol_id, utl::Hash_vector_index>;
+
+    enum struct Environment_kind : std::uint8_t { Root, Module, Scope };
+
+    struct Environment {
+        Environment_map               map;
+        std::optional<Environment_id> parent_id;
+        std::optional<utl::String_id> name_id;
+        Document_id                   doc_id;
+        Environment_kind              kind {};
+    };
+
     // If a document is owned by a client, the server will not attempt to read it from disk.
     enum struct Ownership : std::uint8_t { Server, Client };
 
@@ -24,7 +57,7 @@ namespace ki::db {
     // A reference to a symbol. Used to determine the symbol at a particular position.
     struct Symbol_reference {
         lsp::Reference reference;
-        hir::Symbol    symbol;
+        Symbol_id      symbol_id;
     };
 
     // Arenas necessary for semantic analysis.
@@ -32,6 +65,9 @@ namespace ki::db {
         cst::Arena cst;
         ast::Arena ast;
         hir::Arena hir;
+
+        utl::Index_vector<Environment_id, Environment> environments;
+        utl::Index_vector<Symbol_id, Symbol>           symbols;
     };
 
     // Information collected during analysis.
@@ -69,7 +105,7 @@ namespace ki::db {
     // Represents a file read failure.
     enum struct Read_failure : std::uint8_t { Does_not_exist, Failed_to_open, Failed_to_read };
 
-    // Create a database.
+    // Create a compiler database.
     [[nodiscard]] auto database(Manifest manifest) -> Database;
 
     // Create a new document.
@@ -104,6 +140,9 @@ namespace ki::db {
     // Describe a file read failure.
     [[nodiscard]] auto describe_read_failure(Read_failure failure) -> std::string_view;
 
+    // Describe the symbol kind.
+    [[nodiscard]] auto describe_symbol_kind(Symbol_variant variant) -> std::string_view;
+
     // Find the substring of `string` corresponding to `range`.
     [[nodiscard]] auto text_range(std::string_view text, lsp::Range range) -> std::string_view;
 
@@ -117,7 +156,7 @@ namespace ki::db {
     void add_param_hint(Database& db, Document_id doc_id, lsp::Position pos, hir::Pattern_id param);
 
     // Add a symbol reference to the document identified by `doc_id`.
-    void add_reference(Database& db, Document_id doc_id, lsp::Reference ref, hir::Symbol symbol);
+    void add_reference(Database& db, Document_id doc_id, lsp::Reference ref, Symbol_id symbol_id);
 
     // Add `diagnostic` to the document identified by `doc_id`.
     void add_diagnostic(Database& db, Document_id doc_id, lsp::Diagnostic diagnostic);
