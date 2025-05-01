@@ -225,6 +225,11 @@ void ki::db::add_param_hint(
     db.documents[doc_id].info.inlay_hints.emplace_back(position, param);
 }
 
+void ki::db::add_action(Database& db, Document_id doc_id, lsp::Range range, Action_variant variant)
+{
+    db.documents[doc_id].info.actions.emplace_back(variant, range);
+}
+
 void ki::db::add_reference(
     Database& db, Document_id doc_id, lsp::Reference ref, Symbol_id symbol_id)
 {

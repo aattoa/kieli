@@ -9,6 +9,7 @@
 - Find and highlight references
 - Intelligent rename
 - Inlay type and parameter hints
+- Code actions
 - Diagnostics (errors, warnings, hints)
 - Document formatting
 - Syntax highlighting

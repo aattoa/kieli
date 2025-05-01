@@ -112,6 +112,7 @@ void ki::res::warn_if_unused(db::Database& db, Context& ctx, db::Symbol_id symbo
         auto message = std::format(
             "'{0}' is unused. If this is intentional, prefix it with an underscore: '_{0}'", name);
         db::add_diagnostic(db, ctx.doc_id, lsp::warning(symbol.name.range, std::move(message)));
+        db::add_action(db, ctx.doc_id, symbol.name.range, db::Action_silence_unused { symbol_id });
     }
 }
 

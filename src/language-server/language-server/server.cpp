@@ -183,6 +183,23 @@ namespace {
             .value_or(Json {});
     }
 
+    auto handle_action(Server const& server, Json params) -> Result<Json>
+    {
+        auto const [doc_id, range] = range_params_from_json(server.db, std::move(params));
+
+        auto actions = server.db.documents[doc_id].info.actions
+                     | std::views::filter([&](db::Action const& action) {
+                           return range_contains(action.range, range.start)
+                               or range_contains(action.range, range.stop);
+                       })
+                     | std::views::transform([&](db::Action const& action) {
+                           return action_to_json(server.db, doc_id, action);
+                       })
+                     | std::ranges::to<Json::Array>();
+
+        return Json { std::move(actions) };
+    }
+
     auto handle_prepare_rename(Server const& server, Json params) -> Result<Json>
     {
         auto const [doc_id, position] = position_params_from_json(server.db, std::move(params));
@@ -200,7 +217,7 @@ namespace {
         auto const [doc_id, position, text] = rename_params_from_json(server.db, std::move(params));
         auto const& references              = server.db.documents[doc_id].info.references;
 
-        auto make_edit = [&](Reference ref) { return text_edit_to_json(ref.range, text); };
+        auto make_edit = [&](Reference ref) { return make_text_edit(ref.range, text); };
 
         if (auto ref = find_reference(references, position)) {
             auto uri   = path_to_uri(db::document_path(server.db, doc_id));
@@ -266,6 +283,7 @@ namespace {
                   { "prepareProvider", Json { true } },
               } } },
             { "inlayHintProvider", Json { Json::Object {} } },
+            { "codeActionProvider", Json { Json::Object {} } },
             { "hoverProvider", Json { true } },
             { "definitionProvider", Json { true } },
             { "referencesProvider", Json { true } },
@@ -309,6 +327,9 @@ namespace {
         }
         if (method == "textDocument/hover") {
             return handle_hover(server, std::move(params));
+        }
+        if (method == "textDocument/codeAction") {
+            return handle_action(server, std::move(params));
         }
         if (method == "textDocument/prepareRename") {
             return handle_prepare_rename(server, std::move(params));

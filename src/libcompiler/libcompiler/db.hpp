@@ -54,6 +54,21 @@ namespace ki::db {
         std::variant<hir::Type_id, hir::Pattern_id> variant;
     };
 
+    // Insert an underscore to silence an unused symbol warning.
+    struct Action_silence_unused {
+        Symbol_id symbol_id;
+    };
+
+    struct Action_variant : std::variant<Action_silence_unused> {
+        using variant::variant;
+    };
+
+    // A code action.
+    struct Action {
+        Action_variant variant;
+        lsp::Range     range;
+    };
+
     // A reference to a symbol. Used to determine the symbol at a particular position.
     struct Symbol_reference {
         lsp::Reference reference;
@@ -76,6 +91,7 @@ namespace ki::db {
         std::vector<lsp::Semantic_token> semantic_tokens;
         std::vector<Inlay_hint>          inlay_hints;
         std::vector<Symbol_reference>    references;
+        std::vector<Action>              actions;
     };
 
     // In-memory representation of a text document.
@@ -154,6 +170,9 @@ namespace ki::db {
 
     // Add a parameter hint to the document identified by `doc_id`.
     void add_param_hint(Database& db, Document_id doc_id, lsp::Position pos, hir::Pattern_id param);
+
+    // Add a code action to the document identified by `doc_id`.
+    void add_action(Database& db, Document_id doc_id, lsp::Range range, Action_variant variant);
 
     // Add a symbol reference to the document identified by `doc_id`.
     void add_reference(Database& db, Document_id doc_id, lsp::Reference ref, Symbol_id symbol_id);

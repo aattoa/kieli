@@ -219,8 +219,36 @@ auto ki::lsp::hint_to_json(db::Database const& db, db::Document_id doc_id, db::I
             return Json { std::move(object) };
         },
     };
-
     return std::visit(visitor, hint.variant);
+}
+
+auto ki::lsp::action_to_json(db::Database const& db, db::Document_id doc_id, db::Action action)
+    -> Json
+{
+    auto const visitor = utl::Overload {
+        [&](db::Action_silence_unused action) {
+            auto const& symbol = db.documents[doc_id].arena.symbols[action.symbol_id];
+            auto const  name   = db.string_pool.get(symbol.name.id);
+
+            assert(symbol.use_count == 0);
+
+            auto range = lsp::Range(symbol.name.range.start, symbol.name.range.start);
+            auto edit  = make_text_edit(range, "_");
+            auto uri   = path_to_uri(db::document_path(db, doc_id));
+
+            Json::Object changes;
+            changes.try_emplace(std::move(uri), utl::to_vector({ std::move(edit) }));
+
+            Json::Object workspace_edit;
+            workspace_edit.try_emplace("changes", std::move(changes));
+
+            Json::Object object;
+            object.try_emplace("title", std::format("Rename '{0}' to '_{0}'", name));
+            object.try_emplace("edit", std::move(workspace_edit));
+            return Json { std::move(object) };
+        },
+    };
+    return std::visit(visitor, action.variant);
 }
 
 auto ki::lsp::reference_to_json(Reference reference) -> Json
@@ -241,7 +269,7 @@ auto ki::lsp::reference_kind_to_json(Reference_kind kind) -> Json
     cpputil::unreachable();
 }
 
-auto ki::lsp::text_edit_to_json(Range range, std::string new_text) -> Json
+auto ki::lsp::make_text_edit(Range range, std::string new_text) -> Json
 {
     Json::Object edit;
     edit.try_emplace("range", range_to_json(range));
