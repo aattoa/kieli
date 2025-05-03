@@ -13,16 +13,16 @@ namespace {
         lsp::Range const       first,
         lsp::Range const       second) -> lsp::Diagnostic
     {
+        lsp::Diagnostic_related related {
+            .message  = "First defined here here",
+            .location = lsp::Location { .doc_id = ctx.doc_id, .range = first },
+        };
         return lsp::Diagnostic {
             .message      = std::format("Multiple definitions for {} {}", description, name),
             .range        = second,
             .severity     = lsp::Severity::Error,
-            .related_info = utl::to_vector({
-                lsp::Diagnostic_related {
-                    .message  = "First defined here here",
-                    .location = lsp::Location { .doc_id = ctx.doc_id, .range = first },
-                },
-            }),
+            .related_info = utl::to_vector({ std::move(related) }),
+            .tag          = lsp::Diagnostic_tag::None,
         };
     }
 

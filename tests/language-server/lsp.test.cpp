@@ -110,8 +110,7 @@ UNITTEST("document synchronization")
                         "end": { "line": 0, "character": 14 }
                     },
                     "severity": 1,
-                    "message": "Expected a type, but found an opening brace",
-                    "relatedInformation": []
+                    "message": "Expected a type, but found an opening brace"
                 }]
             }
         })"sv;

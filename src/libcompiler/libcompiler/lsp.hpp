@@ -42,12 +42,16 @@ namespace ki::lsp {
         Location    location;
     };
 
+    // https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#diagnosticTag
+    enum struct Diagnostic_tag : std::uint8_t { None, Unnecessary, Deprecated };
+
     // https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#diagnostic
     struct Diagnostic {
         std::string                     message;
         Range                           range;
         Severity                        severity {};
         std::vector<Diagnostic_related> related_info;
+        Diagnostic_tag                  tag {};
     };
 
     // https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#semanticTokenTypes

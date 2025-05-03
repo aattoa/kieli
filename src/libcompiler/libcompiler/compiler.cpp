@@ -44,6 +44,7 @@ auto ki::lsp::error(Range range, std::string message) -> Diagnostic
         .range        = range,
         .severity     = Severity::Error,
         .related_info = {},
+        .tag          = Diagnostic_tag::None,
     };
 }
 
@@ -54,6 +55,7 @@ auto ki::lsp::warning(Range range, std::string message) -> Diagnostic
         .range        = range,
         .severity     = Severity::Warning,
         .related_info = {},
+        .tag          = Diagnostic_tag::None,
     };
 }
 

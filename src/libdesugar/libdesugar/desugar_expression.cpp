@@ -5,13 +5,14 @@ using namespace ki;
 using namespace ki::des;
 
 namespace {
-    auto constant_loop_condition_diagnostic(lsp::Range range, bool condition) -> lsp::Diagnostic
+    auto constant_loop_condition_diagnostic(lsp::Range range, bool constant) -> lsp::Diagnostic
     {
         return lsp::Diagnostic {
-            .message  = condition ? "Use `loop` instead of `while true`" : "Loop will never run",
-            .range    = range,
-            .severity = condition ? lsp::Severity::Information : lsp::Severity::Warning,
+            .message      = constant ? "Use 'loop' instead of 'while true'" : "Loop will never run",
+            .range        = range,
+            .severity     = constant ? lsp::Severity::Information : lsp::Severity::Warning,
             .related_info = {},
+            .tag          = lsp::Diagnostic_tag::None,
         };
     }
 
@@ -27,6 +28,7 @@ namespace {
             .range        = second,
             .severity     = lsp::Severity::Error,
             .related_info = utl::to_vector({ std::move(related) }),
+            .tag          = lsp::Diagnostic_tag::None,
         };
     }
 
@@ -151,6 +153,7 @@ namespace {
                     .range        = condition.range,
                     .severity     = lsp::Severity::Information,
                     .related_info = {},
+                    .tag          = lsp::Diagnostic_tag::None,
                 };
                 db::add_diagnostic(ctx.db, ctx.doc_id, std::move(diagnostic));
             }

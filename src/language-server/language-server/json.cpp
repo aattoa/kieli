@@ -166,15 +166,31 @@ auto ki::lsp::diagnostic_to_json(db::Database const& db, Diagnostic const& diagn
         return Json { std::move(object) };
     };
 
-    auto related = diagnostic.related_info             //
-                 | std::views::transform(info_to_json) //
-                 | std::ranges::to<Json::Array>();
+    auto tag_to_json = [](Diagnostic_tag tag) {
+        switch (tag) {
+        case Diagnostic_tag::Unnecessary: return Json { 1 };
+        case Diagnostic_tag::Deprecated:  return Json { 2 };
+        case Diagnostic_tag::None:
+        };
+        cpputil::unreachable();
+    };
 
     Json::Object object;
     object.try_emplace("range", range_to_json(diagnostic.range));
     object.try_emplace("severity", severity_to_json(diagnostic.severity));
     object.try_emplace("message", diagnostic.message);
-    object.try_emplace("relatedInformation", std::move(related));
+
+    if (not diagnostic.related_info.empty()) {
+        auto info = diagnostic.related_info             //
+                  | std::views::transform(info_to_json) //
+                  | std::ranges::to<Json::Array>();
+        object.try_emplace("relatedInformation", std::move(info));
+    }
+
+    if (diagnostic.tag != Diagnostic_tag::None) {
+        object.try_emplace("tags", utl::to_vector({ tag_to_json(diagnostic.tag) }));
+    }
+
     return Json { std::move(object) };
 }
 
