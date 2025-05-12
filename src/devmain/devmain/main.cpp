@@ -62,10 +62,10 @@ namespace {
                 callback(db, doc_id);
             }
             catch (std::exception const& exception) {
-                std::print(stderr, "Error: {}\n\n", exception.what());
+                std::print(std::cerr, "Error: {}\n\n", exception.what());
             }
 
-            db::print_diagnostics(stderr, db, doc_id);
+            db::print_diagnostics(std::cerr, db, doc_id);
         }
     }
 
@@ -83,7 +83,7 @@ namespace {
             run_debug_repl(debug_desugar);
             return EXIT_SUCCESS;
         }
-        std::println(stderr, "Error: Unrecognized REPL name: '{}'", name);
+        std::println(std::cerr, "Error: Unrecognized REPL name: '{}'", name);
         return EXIT_FAILURE;
     }
 
@@ -95,14 +95,14 @@ namespace {
                 callback(db, doc_id.value());
             }
             catch (std::exception const& exception) {
-                std::print(stderr, "Error: {}\n\n", exception.what());
+                std::print(std::cerr, "Error: {}\n\n", exception.what());
             }
-            db::print_diagnostics(stderr, db, doc_id.value());
+            db::print_diagnostics(std::cerr, db, doc_id.value());
             return EXIT_SUCCESS;
         }
         else {
             std::println(
-                stderr,
+                std::cerr,
                 "Error: Failed to read '{}': {}",
                 filename,
                 db::describe_read_failure(doc_id.error()));
@@ -113,20 +113,19 @@ namespace {
     template <typename... Args>
     auto error(std::format_string<Args...> fmt, Args&&... args) -> int
     {
-        std::println(stderr, fmt, std::forward<Args>(args)...);
+        std::println(std::cerr, fmt, std::forward<Args>(args)...);
         return EXIT_FAILURE;
     }
 
     auto const help_string = R"(Valid options:
     --help, -h       Show this help text
     --version, -v    Show version information
-    --nocolor        Disable colored output
     cst [file]       Dump the CST for the given file
     ast [file]       Dump the AST for the given file
     repl [name]      Run the given REPL)";
 } // namespace
 
-auto main(int const argc, char const* const* const argv) -> int
+auto main(int argc, char const* const* argv) -> int
 {
     const char* program = *argv ? *argv : "kieli";
 
@@ -156,11 +155,11 @@ auto main(int const argc, char const* const* const argv) -> int
         return EXIT_SUCCESS;
     }
     catch (std::exception const& exception) {
-        std::println(stderr, "Error: Unhandled exception: {}", exception.what());
+        std::println(std::cerr, "Error: Unhandled exception: {}", exception.what());
         return EXIT_FAILURE;
     }
     catch (...) {
-        std::println(stderr, "Error: Caught unrecognized exception");
+        std::println(std::cerr, "Error: Caught unrecognized exception");
         throw;
     }
 }

@@ -106,8 +106,8 @@ namespace ki::db {
     // Description of a project.
     struct Manifest {
         std::filesystem::path root_path;
-        std::string           main_name      = "main";
-        std::string           file_extension = "kieli";
+        std::string           main_name = "main";
+        std::string           extension = "ki";
     };
 
     // Compiler database.
@@ -184,7 +184,7 @@ namespace ki::db {
     void add_error(Database& db, Document_id doc_id, lsp::Range range, std::string message);
 
     // Print diagnostics belonging to the document identified by `doc_id` to `stream`.
-    void print_diagnostics(std::FILE* stream, Database const& db, Document_id doc_id);
+    void print_diagnostics(std::ostream& stream, Database const& db, Document_id doc_id);
 
 } // namespace ki::db
 

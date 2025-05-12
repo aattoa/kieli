@@ -62,7 +62,7 @@ namespace {
 
         auto operator()(hir::type::Enumeration const&) const -> bool
         {
-            cpputil::todo(); // recurse on template arguments
+            return false; // TODO
         }
 
         auto operator()(utl::one_of<

@@ -1,7 +1,7 @@
 #ifndef KIELI_LANGUAGE_SERVER_SERVER
 #define KIELI_LANGUAGE_SERVER_SERVER
 
-#include <iosfwd>
+#include <libutl/utilities.hpp>
 #include <libcompiler/db.hpp>
 
 namespace ki::lsp {

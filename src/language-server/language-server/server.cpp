@@ -31,7 +31,7 @@ namespace {
             Json::String("textDocument/publishDiagnostics"),
             diagnostic_params_to_json(server.db, doc_id)));
         if (server.debug) {
-            std::println(stderr, "[debug] <-- {}", message);
+            std::println(std::cerr, "[debug] <-- {}", message);
         }
         rpc::write_message(server.output, message);
     }
@@ -302,7 +302,7 @@ namespace {
     auto handle_shutdown(Server& server) -> Json
     {
         if (not std::exchange(server.is_initialized, false)) {
-            std::println(stderr, "Received shutdown request while uninitialized");
+            std::println(std::cerr, "Received shutdown request while uninitialized");
         }
         server.db = db::Database {}; // Reset the compilation database.
         return Json {};
@@ -418,7 +418,7 @@ namespace {
     {
         if (method == "initialize") {
             if (std::exchange(server.is_initialized, true)) {
-                std::println(stderr, "Received duplicate initialize request");
+                std::println(std::cerr, "Received duplicate initialize request");
             }
             return success_response(handle_initialize(), id);
         }
@@ -442,11 +442,11 @@ namespace {
         else if (server.is_initialized) [[likely]] {
             auto const result = handle_notification(server, method, std::move(params));
             if (not result.has_value()) {
-                std::println(stderr, "Error while handling notification: {}", result.error());
+                std::println(std::cerr, "Error while handling notification: {}", result.error());
             }
         }
         else {
-            std::println(stderr, "Server is uninitialized, dropping notification: {}", method);
+            std::println(std::cerr, "Server is uninitialized, dropping notification: {}", method);
         }
     }
 
@@ -556,29 +556,29 @@ auto ki::lsp::run_server(bool const debug, std::istream& in, std::ostream& out) 
     };
 
     if (debug) {
-        std::println(stderr, "[debug] Started server.");
+        std::println(std::cerr, "[debug] Started server.");
     }
 
     while (not server.exit_code.has_value()) {
         if (auto const message = rpc::read_message(server.input)) {
             if (debug) {
-                std::println(stderr, "[debug] --> {}", message.value());
+                std::println(std::cerr, "[debug] --> {}", message.value());
             }
             if (auto const reply = handle_client_message(server, message.value())) {
                 if (server.debug) {
-                    std::println(stderr, "[debug] <-- {}", reply.value());
+                    std::println(std::cerr, "[debug] <-- {}", reply.value());
                 }
                 rpc::write_message(server.output, reply.value());
             }
         }
         else {
-            std::println(stderr, "Unable to read message, exiting.");
+            std::println(std::cerr, "Unable to read message, exiting.");
             return EXIT_FAILURE;
         }
     }
 
     if (debug) {
-        std::println(stderr, "[debug] Exiting normally.");
+        std::println(std::cerr, "[debug] Exiting normally.");
     }
 
     return server.exit_code.value();

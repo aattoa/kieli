@@ -17,15 +17,14 @@
             "name": "debug",
             "inherits": "dev-base",
             "cacheVariables": {
-                "CMAKE_BUILD_TYPE": "Debug",
-                "CMAKE_CXX_FLAGS": "-stdlib=libc++"
+                "CMAKE_BUILD_TYPE": "Debug"
             }
         },
         {
             "name": "sanitize",
             "inherits": "debug",
             "cacheVariables": {
-                "CMAKE_CXX_FLAGS": "-stdlib=libc++ -Og -fsanitize=undefined -fsanitize=address"
+                "CMAKE_CXX_FLAGS": "-Og -fsanitize=undefined -fsanitize=address"
             }
         },
         {
@@ -34,7 +33,7 @@
             "cacheVariables": {
                 "CMAKE_BUILD_TYPE": "Release",
                 "CMAKE_INTERPROCEDURAL_OPTIMIZATION": true,
-                "CMAKE_CXX_FLAGS": "-stdlib=libc++ -O3"
+                "CMAKE_CXX_FLAGS": "-O3"
             }
         }
     ]

@@ -19,6 +19,7 @@
 #include <filesystem>
 #include <format>
 #include <functional>
+#include <iostream>
 #include <limits>
 #include <memory>
 #include <mutex>
@@ -43,7 +44,7 @@
 // Literal operators are useless when not easily accessible, so it is best to
 // make them available everywhere. There is no risk of name collision because
 // the standard reserves literal operators that do not begin with an underscore.
-using namespace std::literals; // NOLINT(*-global-names-in-headers)
+using namespace std::literals; // NOLINT
 
 namespace ki::utl {
 

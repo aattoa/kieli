@@ -234,11 +234,11 @@ auto ki::des::desugar(Context& ctx, cst::Type_annotation const& annotation) -> a
 
 auto ki::des::desugar(Context& ctx, cst::Mutability const& mutability) -> ast::Mutability
 {
-    static constexpr auto visitor = utl::Overload {
+    auto const visitor = utl::Overload {
         [](cst::Parameterized_mutability const& parameterized) {
             return ast::Parameterized_mutability { parameterized.name };
         },
-        [](db::Mutability const concrete) { return concrete; },
+        [](db::Mutability concrete) { return concrete; },
     };
     return ast::Mutability {
         .variant = std::visit<ast::Mutability_variant>(visitor, mutability.variant),

@@ -5,8 +5,7 @@ target_sources(liblex
     PRIVATE liblex/lex.hpp
     PRIVATE liblex/token-x-macro-table.hpp
     PRIVATE liblex/token.cpp
-    PRIVATE liblex/token.hpp
-)
+    PRIVATE liblex/token.hpp)
 
 target_include_directories(liblex
     PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})

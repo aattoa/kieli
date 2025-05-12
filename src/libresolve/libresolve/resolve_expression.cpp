@@ -92,7 +92,7 @@ namespace {
                 return {
                     .variant  = hir::expr::Function_reference { .id = *fun_id },
                     .type_id  = resolve_function_signature(db, ctx, *fun_id).function_type.id,
-                    .category = ki::hir::Expression_category::Value,
+                    .category = hir::Expression_category::Value,
                     .range    = this_range,
                 };
             }
@@ -200,14 +200,14 @@ namespace {
             recycle_environment(ctx, block_env_id);
 
             return hir::Expression {
-                    .variant = hir::expr::Block {
-                        .effects = std::move(side_effects),
-                        .result       = ctx.arena.hir.expressions.push(std::move(result)),
-                    },
-                    .type_id  = result_type,
-                    .category = hir::Expression_category::Value,
-                    .range    = result_range,
-                };
+                .variant = hir::expr::Block {
+                    .effects = std::move(side_effects),
+                    .result  = ctx.arena.hir.expressions.push(std::move(result)),
+                },
+                .type_id  = result_type,
+                .category = hir::Expression_category::Value,
+                .range    = result_range,
+            };
         }
 
         auto operator()(ast::expr::Function_call const& call) -> hir::Expression
@@ -591,7 +591,6 @@ namespace {
             return error_expression(ctx.constants, this_range);
         }
     };
-
 } // namespace
 
 auto ki::res::resolve_expression(

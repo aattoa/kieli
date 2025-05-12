@@ -180,26 +180,12 @@ auto ki::par::parse_floating(Context& ctx, lex::Token const& literal) -> std::op
 {
     add_semantic_token(ctx, literal.range, Semantic::Number);
 
-    // TODO: when from_chars for floating points is supported:
-
-    // if (auto const floating = parse_impl<double>(string)) {
-    //     return Floating { floating.value() };
-    // }
-    // db::add_error(ctx.db, ctx.doc_id, literal.range, "Invalid floating point literal");
-    // return std::nullopt;
-
-    try {
-        auto const string = literal.view.string(ctx.db.documents[ctx.doc_id].text);
-        return db::Floating { std::stod(std::string(string)) };
+    auto const string = literal.view.string(ctx.db.documents[ctx.doc_id].text);
+    if (auto const floating = parse_impl<double>(string)) {
+        return db::Floating { floating.value() };
     }
-    catch (std::out_of_range const&) {
-        db::add_error(ctx.db, ctx.doc_id, literal.range, "Floating point literal is too large");
-        return std::nullopt;
-    }
-    catch (std::invalid_argument const&) {
-        db::add_error(ctx.db, ctx.doc_id, literal.range, "Invalid floating point literal");
-        return std::nullopt;
-    }
+    db::add_error(ctx.db, ctx.doc_id, literal.range, "Invalid floating point literal");
+    return std::nullopt;
 }
 
 auto ki::par::parse_boolean(Context& ctx, lex::Token const& literal) -> std::optional<db::Boolean>
