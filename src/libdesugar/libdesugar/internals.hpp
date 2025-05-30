@@ -15,8 +15,8 @@ namespace ki::des {
     auto desugar(Context&, cst::Type const&) -> ast::Type;
     auto desugar(Context&, cst::Function_signature const&) -> ast::Function_signature;
     auto desugar(Context&, cst::Function const&) -> ast::Function;
-    auto desugar(Context&, cst::Struct const&) -> ast::Enumeration;
-    auto desugar(Context&, cst::Enum const&) -> ast::Enumeration;
+    auto desugar(Context&, cst::Struct const&) -> ast::Struct;
+    auto desugar(Context&, cst::Enum const&) -> ast::Enum;
     auto desugar(Context&, cst::Alias const&) -> ast::Alias;
     auto desugar(Context&, cst::Concept const&) -> ast::Concept;
     auto desugar(Context&, cst::Impl const&) -> ast::Impl;
@@ -30,7 +30,7 @@ namespace ki::des {
     auto desugar(Context&, cst::Path const&) -> ast::Path;
     auto desugar(Context&, cst::Type_annotation const&) -> ast::Type_id;
     auto desugar(Context&, cst::Type_signature const&) -> ast::Type_signature;
-    auto desugar(Context&, cst::Struct_field_init const&) -> ast::Struct_field_initializer;
+    auto desugar(Context&, cst::Field_init const&) -> ast::Field_init;
     auto desugar(Context&, cst::patt::Field const&) -> ast::patt::Field;
     auto desugar(Context&, cst::patt::Constructor_body const&) -> ast::patt::Constructor_body;
     auto desugar(Context&, cst::Field const&) -> ast::Field;

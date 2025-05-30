@@ -72,7 +72,7 @@ namespace {
         {
             return ast::patt::Guarded {
                 .pattern = desugar(ctx, guarded.pattern),
-                .guard   = deref_desugar(ctx, guarded.guard),
+                .guard   = desugar(ctx, guarded.guard),
             };
         }
     };

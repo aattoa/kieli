@@ -16,7 +16,10 @@ namespace ki::db {
         : std::variant<
               Error,
               hir::Function_id,
+              hir::Structure_id,
               hir::Enumeration_id,
+              hir::Constructor_id,
+              hir::Field_id,
               hir::Concept_id,
               hir::Alias_id,
               hir::Module_id,
@@ -35,7 +38,7 @@ namespace ki::db {
 
     using Environment_map = std::unordered_map<utl::String_id, Symbol_id, utl::Hash_vector_index>;
 
-    enum struct Environment_kind : std::uint8_t { Root, Module, Scope };
+    enum struct Environment_kind : std::uint8_t { Root, Module, Scope, Type };
 
     struct Environment {
         Environment_map               map;
@@ -59,7 +62,13 @@ namespace ki::db {
         Symbol_id symbol_id;
     };
 
-    struct Action_variant : std::variant<Action_silence_unused> {
+    // Insert missing struct fields in a struct initializer.
+    struct Action_fill_in_struct_init {
+        std::vector<hir::Field_id>   field_ids;
+        std::optional<lsp::Position> final_field_end;
+    };
+
+    struct Action_variant : std::variant<Action_silence_unused, Action_fill_in_struct_init> {
         using variant::variant;
     };
 

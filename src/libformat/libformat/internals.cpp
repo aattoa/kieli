@@ -78,7 +78,7 @@ void ki::fmt::format(State& state, cst::patt::Field const& field)
     }
 }
 
-void ki::fmt::format(State& state, cst::Struct_field_init const& initializer)
+void ki::fmt::format(State& state, cst::Field_init const& initializer)
 {
     format(state, "{}", state.pool.get(initializer.name.id));
     if (initializer.equals.has_value()) {

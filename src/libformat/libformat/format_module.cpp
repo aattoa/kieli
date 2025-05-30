@@ -114,9 +114,9 @@ namespace {
 
         void operator()(cst::Struct const& structure)
         {
-            format(state, "struct {}", state.pool.get(structure.name.id));
+            format(state, "struct {}", state.pool.get(structure.constructor.name.id));
             format(state, structure.template_parameters);
-            format_constructor(state, structure.body);
+            format_constructor(state, structure.constructor.body);
         }
 
         void operator()(cst::Enum const& enumeration)

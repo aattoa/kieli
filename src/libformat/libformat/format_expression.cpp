@@ -102,14 +102,6 @@ namespace {
             format(state, call.arguments);
         }
 
-        void operator()(cst::expr::Tuple_init const& structure)
-        {
-            format(state, structure.path);
-            format(state, "(");
-            format_comma_separated(state, structure.fields.value.elements);
-            format(state, ")");
-        }
-
         void operator()(cst::expr::Struct_init const& structure)
         {
             format(state, structure.path);
@@ -120,8 +112,8 @@ namespace {
 
         void operator()(cst::expr::Method_call const& call)
         {
-            format(state, call.base_expression);
-            format(state, ".{}", state.pool.get(call.method_name.id));
+            format(state, call.expression);
+            format(state, ".{}", state.pool.get(call.name.id));
             format(state, call.template_arguments);
             format(state, call.function_arguments);
         }
@@ -176,21 +168,21 @@ namespace {
 
         void operator()(cst::expr::Tuple_field const& field)
         {
-            format(state, field.base_expression);
-            format(state, ".{}", field.field_index);
+            format(state, field.base);
+            format(state, ".{}", field.index);
         }
 
         void operator()(cst::expr::Struct_field const& field)
         {
-            format(state, field.base_expression);
+            format(state, field.base);
             format(state, ".{}", state.pool.get(field.name.id));
         }
 
         void operator()(cst::expr::Array_index const& index)
         {
-            format(state, index.base_expression);
+            format(state, index.base);
             format(state, ".[");
-            format(state, index.index_expression.value);
+            format(state, index.index.value);
             format(state, "]");
         }
 
@@ -209,7 +201,7 @@ namespace {
 
         void operator()(cst::expr::Ascription const& ascription)
         {
-            format(state, ascription.base_expression);
+            format(state, ascription.expression);
             format(state, ": ");
             format(state, ascription.type);
         }

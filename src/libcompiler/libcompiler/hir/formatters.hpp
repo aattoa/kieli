@@ -66,7 +66,8 @@ LIBRESOLVE_DECLARE_FORMATTER(ki::hir::Function_parameter);
 
 template <typename T>
     requires std::formattable<ki::hir::dtl::With_arena<T>, char>
-struct std::formatter<ki::hir::dtl::With_arena<std::vector<T>>> {
+struct std::formatter<ki::hir::dtl::With_arena<std::vector<T>>> // NOLINT(cert-dcl58-cpp)
+{
     static constexpr auto parse(auto& ctx)
     {
         return ctx.begin();
@@ -166,9 +167,35 @@ namespace ki::hir::dtl {
             std::format_to(out, "{}", pool.get(arena.functions[reference.id].name.id));
         }
 
+        void operator()(expr::Constructor_reference const& reference) const
+        {
+            std::format_to(out, "{}", pool.get(arena.constructors[reference.id].name.id));
+        }
+
         void operator()(expr::Function_call const& call) const
         {
             std::format_to(out, "{}({})", wrap(call.invocable), wrap(call.arguments));
+        }
+
+        void operator()(expr::Initializer const& init) const
+        {
+            std::format_to(out, "{}(..)", pool.get(arena.constructors[init.constructor].name.id));
+        }
+
+        void operator()(expr::Tuple_field const& field) const
+        {
+            std::format_to(out, "{}.{}", wrap(field.base), field.index);
+        }
+
+        void operator()(expr::Struct_field const& field) const
+        {
+            std::format_to(
+                out, "{}.{}", wrap(field.base), pool.get(arena.fields[field.id].name.id));
+        }
+
+        void operator()(expr::Return const& ret) const
+        {
+            std::format_to(out, "ret {}", wrap(ret.result));
         }
 
         void operator()(expr::Sizeof const& sizeof_) const
@@ -315,6 +342,11 @@ namespace ki::hir::dtl {
         {
             std::format_to(
                 out, "fn({}): {}", wrap(function.parameter_types), wrap(function.return_type));
+        }
+
+        void operator()(type::Structure const& structure) const
+        {
+            std::format_to(out, "{}", pool.get(structure.name.id));
         }
 
         void operator()(type::Enumeration const& enumeration) const

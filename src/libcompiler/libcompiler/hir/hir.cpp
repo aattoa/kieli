@@ -26,6 +26,16 @@ auto ki::hir::pattern_type(Pattern const& pattern) -> Type
     return Type { .id = pattern.type_id, .range = pattern.range };
 }
 
+auto ki::hir::describe_constructor(Constructor_body const& body) -> std::string_view
+{
+    auto const visitor = utl::Overload {
+        [](hir::Unit_constructor const&) { return "unit"; },
+        [](hir::Tuple_constructor const&) { return "tuple"; },
+        [](hir::Struct_constructor const&) { return "struct"; },
+    };
+    return std::visit(visitor, body);
+}
+
 #define DEFINE_HIR_FORMAT_TO(...)                                     \
     void ki::hir::format(                                             \
         Arena const&            arena,                                \

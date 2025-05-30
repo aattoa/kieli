@@ -5,15 +5,6 @@ using namespace ki;
 using namespace ki::res;
 
 namespace {
-    auto error_symbol(Context& ctx, db::Name name) -> db::Symbol_id
-    {
-        return ctx.arena.symbols.push(db::Symbol {
-            .variant   = db::Error {},
-            .name      = name,
-            .use_count = 1,
-        });
-    }
-
     auto environment_name(db::Database& db, Context& ctx, db::Environment_id env_id) -> std::string
     {
         if (auto name_id = ctx.arena.environments[env_id].name_id) {
@@ -22,12 +13,15 @@ namespace {
         return "The root module";
     }
 
-    auto symbol_environment(Context& ctx, db::Symbol_id symbol_id)
+    auto symbol_environment(db::Database& db, Context& ctx, db::Symbol_id symbol_id)
         -> std::optional<db::Environment_id>
     {
         db::Symbol& symbol = ctx.arena.symbols[symbol_id];
         if (auto const* module_id = std::get_if<hir::Module_id>(&symbol.variant)) {
             return ctx.arena.hir.modules[*module_id].mod_env_id;
+        }
+        if (auto const* enum_id = std::get_if<hir::Enumeration_id>(&symbol.variant)) {
+            return resolve_enumeration(db, ctx, *enum_id).associated_env_id;
         }
         return std::nullopt; // TODO: associated modules
     }
@@ -38,7 +32,7 @@ namespace {
     {
         if (segment.template_arguments.has_value()) {
             db::add_error(db, ctx.doc_id, segment.name.range, "Template arguments are unsupported");
-            return error_symbol(ctx, segment.name);
+            return new_symbol(ctx, segment.name, db::Error {});
         }
         auto& map = ctx.arena.environments[env_id].map;
         if (auto const it = map.find(segment.name.id); it != map.end()) {
@@ -64,7 +58,7 @@ namespace {
                 if (segments.empty()) {
                     return symbol.value();
                 }
-                else if (auto next_env_id = symbol_environment(ctx, symbol.value())) {
+                else if (auto next_env_id = symbol_environment(db, ctx, symbol.value())) {
                     env_id = next_env_id.value();
                 }
                 else {
@@ -73,7 +67,7 @@ namespace {
                         db.string_pool.get(segment.name.id),
                         db::describe_symbol_kind(ctx.arena.symbols[symbol.value()].variant));
                     db::add_error(db, ctx.doc_id, segment.name.range, std::move(message));
-                    return error_symbol(ctx, segment.name);
+                    return new_symbol(ctx, segment.name, db::Error {});
                 }
             }
             else {
@@ -82,7 +76,7 @@ namespace {
                     environment_name(db, ctx, env_id),
                     db.string_pool.get(segment.name.id));
                 db::add_error(db, ctx.doc_id, segment.name.range, std::move(message));
-                return error_symbol(ctx, segment.name);
+                return new_symbol(ctx, segment.name, db::Error {});
             }
         }
     }
@@ -106,11 +100,11 @@ namespace {
 auto ki::res::resolve_path(
     db::Database&      db,
     Context&           ctx,
-    Inference_state&   state,
+    Block_state&       state,
     db::Environment_id env_id,
     ast::Path const&   path) -> db::Symbol_id
 {
-    (void)state; // Inference state will be needed for template argument resolution.
+    (void)state; // Block state will be needed for template argument resolution.
 
     auto const visitor = utl::Overload {
         [&](std::monostate) -> db::Symbol_id {
@@ -123,7 +117,7 @@ auto ki::res::resolve_path(
 
             auto message = std::format("Undeclared identifier: '{}'", db.string_pool.get(front.id));
             db::add_error(db, ctx.doc_id, front.range, std::move(message));
-            return error_symbol(ctx, front);
+            return new_symbol(ctx, front, db::Error {});
         },
         [&](ast::Path_root_global) -> db::Symbol_id {
             return lookup(db, ctx, ctx.root_env_id, path.segments);

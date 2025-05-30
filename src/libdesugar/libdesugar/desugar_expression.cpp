@@ -16,41 +16,6 @@ namespace {
         };
     }
 
-    auto duplicate_fields_error(
-        Context& ctx, std::string_view name, lsp::Range first, lsp::Range second) -> lsp::Diagnostic
-    {
-        lsp::Diagnostic_related related {
-            .message = "First specified here",
-            .location { .doc_id = ctx.doc_id, .range = first },
-        };
-        return lsp::Diagnostic {
-            .message      = std::format("Duplicate initializer for struct member {}", name),
-            .range        = second,
-            .severity     = lsp::Severity::Error,
-            .related_info = utl::to_vector({ std::move(related) }),
-            .tag          = lsp::Diagnostic_tag::None,
-        };
-    }
-
-    auto check_has_duplicate_fields(Context& ctx, cst::expr::Struct_init const& structure) -> bool
-    {
-        auto const& fields = structure.fields.value.elements;
-        for (auto it = fields.begin(); it != fields.end(); ++it) {
-            auto const duplicate = std::ranges::find(
-                it + 1, fields.end(), it->name.id, [](auto const& field) { return field.name.id; });
-            if (duplicate != fields.end()) {
-                lsp::Diagnostic diagnostic = duplicate_fields_error(
-                    ctx,
-                    ctx.db.string_pool.get(it->name.id),
-                    it->name.range,
-                    duplicate->name.range);
-                db::add_diagnostic(ctx.db, ctx.doc_id, std::move(diagnostic));
-                return true;
-            }
-        }
-        return false;
-    }
-
     auto break_expression(Context& ctx, lsp::Range const range) -> ast::Expression_id
     {
         return ctx.ast.expressions.push(
@@ -61,9 +26,12 @@ namespace {
         Context&      ctx;
         cst::Range_id range_id;
 
-        auto operator()(
-            utl::one_of<db::Integer, db::Floating, db::Boolean, db::String, db::Error> auto const&
-                passthrough) const -> ast::Expression_variant
+        auto operator()(utl::one_of< //
+                        db::Integer,
+                        db::Floating,
+                        db::Boolean,
+                        db::String,
+                        db::Error> auto const& passthrough) const -> ast::Expression_variant
         {
             return passthrough;
         }
@@ -312,19 +280,8 @@ namespace {
             };
         }
 
-        auto operator()(cst::expr::Tuple_init const& init) const -> ast::Expression_variant
-        {
-            return ast::expr::Tuple_init {
-                .path   = desugar(ctx, init.path),
-                .fields = desugar(ctx, init.fields),
-            };
-        }
-
         auto operator()(cst::expr::Struct_init const& init) const -> ast::Expression_variant
         {
-            if (check_has_duplicate_fields(ctx, init)) {
-                return db::Error {};
-            }
             return ast::expr::Struct_init {
                 .path   = desugar(ctx, init.path),
                 .fields = desugar(ctx, init.fields),
@@ -343,25 +300,25 @@ namespace {
         auto operator()(cst::expr::Struct_field const& field) const -> ast::Expression_variant
         {
             return ast::expr::Struct_field {
-                .base_expression = desugar(ctx, field.base_expression),
-                .field_name      = field.name,
+                .base = desugar(ctx, field.base),
+                .name = field.name,
             };
         }
 
         auto operator()(cst::expr::Tuple_field const& field) const -> ast::Expression_variant
         {
             return ast::expr::Tuple_field {
-                .base_expression   = desugar(ctx, field.base_expression),
-                .field_index       = field.field_index,
-                .field_index_range = ctx.cst.ranges[field.field_index_token],
+                .base        = desugar(ctx, field.base),
+                .index       = field.index,
+                .index_range = ctx.cst.ranges[field.index_token],
             };
         }
 
         auto operator()(cst::expr::Array_index const& field) const -> ast::Expression_variant
         {
             return ast::expr::Array_index {
-                .base_expression  = desugar(ctx, field.base_expression),
-                .index_expression = desugar(ctx, field.index_expression),
+                .base  = desugar(ctx, field.base),
+                .index = desugar(ctx, field.index),
             };
         }
 
@@ -370,15 +327,15 @@ namespace {
             return ast::expr::Method_call {
                 .function_arguments = desugar(ctx, call.function_arguments.value.elements),
                 .template_arguments = call.template_arguments.transform(desugar(ctx)),
-                .base_expression    = desugar(ctx, call.base_expression),
-                .method_name        = call.method_name,
+                .expression         = desugar(ctx, call.expression),
+                .name               = call.name,
             };
         }
 
         auto operator()(cst::expr::Ascription const& ascription) const -> ast::Expression_variant
         {
             return ast::expr::Ascription {
-                .expression = desugar(ctx, ascription.base_expression),
+                .expression = desugar(ctx, ascription.expression),
                 .type       = desugar(ctx, ascription.type),
             };
         }

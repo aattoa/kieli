@@ -125,9 +125,32 @@ namespace ki::hir {
             Function_id id;
         };
 
+        struct Constructor_reference {
+            Constructor_id id;
+        };
+
         struct Function_call {
             Expression_id              invocable;
             std::vector<Expression_id> arguments;
+        };
+
+        struct Initializer {
+            Constructor_id             constructor;
+            std::vector<Expression_id> arguments;
+        };
+
+        struct Tuple_field {
+            Expression_id base;
+            std::size_t   index {};
+        };
+
+        struct Struct_field {
+            Expression_id base;
+            Field_id      id;
+        };
+
+        struct Return {
+            Expression_id result;
         };
 
         struct Sizeof {
@@ -155,7 +178,6 @@ namespace ki::hir {
               db::Floating,
               db::Boolean,
               db::String,
-              Wildcard,
               expr::Array,
               expr::Tuple,
               expr::Loop,
@@ -166,7 +188,12 @@ namespace ki::hir {
               expr::Match,
               expr::Variable_reference,
               expr::Function_reference,
+              expr::Constructor_reference,
               expr::Function_call,
+              expr::Initializer,
+              expr::Tuple_field,
+              expr::Struct_field,
+              expr::Return,
               expr::Sizeof,
               expr::Addressof,
               expr::Deref,
@@ -210,6 +237,11 @@ namespace ki::hir {
             Type              return_type;
         };
 
+        struct Structure {
+            db::Upper    name;
+            Structure_id id;
+        };
+
         struct Enumeration {
             db::Upper      name;
             Enumeration_id id;
@@ -248,6 +280,7 @@ namespace ki::hir {
               type::Reference,
               type::Pointer,
               type::Function,
+              type::Structure,
               type::Enumeration,
               type::Tuple,
               type::Parameterized,
@@ -320,8 +353,29 @@ namespace ki::hir {
         db::Lower                       name;
     };
 
+    struct Struct_constructor {
+        std::unordered_map<utl::String_id, Field_id, utl::Hash_vector_index> fields;
+    };
+
+    struct Tuple_constructor {
+        std::vector<Type> types;
+        Type_id           function_type_id;
+    };
+
+    struct Unit_constructor {};
+
+    struct Constructor_body
+        : std::variant<Struct_constructor, Tuple_constructor, Unit_constructor> {
+        using variant::variant;
+    };
+
+    struct Structure {
+        Constructor_id     constructor_id;
+        db::Environment_id associated_env_id;
+    };
+
     struct Enumeration {
-        // TODO
+        db::Environment_id associated_env_id;
     };
 
     struct Alias {
@@ -359,14 +413,38 @@ namespace ki::hir {
         db::Lower                         name;
     };
 
+    struct Constructor_info {
+        Constructor_body body;
+        db::Upper        name;
+        Type_id          owner_type_id;
+        std::size_t      discriminant {};
+    };
+
+    struct Field_info {
+        db::Lower     name;
+        Type          type;
+        db::Symbol_id symbol_id;
+        std::size_t   field_index {};
+    };
+
+    struct Structure_info {
+        cst::Struct              cst;
+        ast::Struct              ast;
+        std::optional<Structure> hir;
+        Type_id                  type_id;
+        db::Environment_id       env_id;
+        db::Document_id          doc_id;
+        db::Upper                name;
+    };
+
     struct Enumeration_info {
-        std::variant<cst::Struct, cst::Enum> cst; // TODO: improve
-        ast::Enumeration                     ast;
-        std::optional<Enumeration>           hir;
-        Type_id                              type_id;
-        db::Environment_id                   env_id;
-        db::Document_id                      doc_id;
-        db::Upper                            name;
+        cst::Enum                  cst;
+        ast::Enum                  ast;
+        std::optional<Enumeration> hir;
+        Type_id                    type_id;
+        db::Environment_id         env_id;
+        db::Document_id            doc_id;
+        db::Upper                  name;
     };
 
     struct Concept_info {
@@ -401,7 +479,10 @@ namespace ki::hir {
         utl::Index_vector<Mutability_id, Mutability_variant>     mutabilities;
         utl::Index_vector<Module_id, Module_info>                modules;
         utl::Index_vector<Function_id, Function_info>            functions;
+        utl::Index_vector<Structure_id, Structure_info>          structures;
         utl::Index_vector<Enumeration_id, Enumeration_info>      enumerations;
+        utl::Index_vector<Constructor_id, Constructor_info>      constructors;
+        utl::Index_vector<Field_id, Field_info>                  fields;
         utl::Index_vector<Concept_id, Concept_info>              concepts;
         utl::Index_vector<Alias_id, Alias_info>                  aliases;
         utl::Index_vector<Local_variable_id, Local_variable>     local_variables;
@@ -417,6 +498,9 @@ namespace ki::hir {
 
     // Get the type of a pattern.
     auto pattern_type(Pattern const& pattern) -> Type;
+
+    // Get a one-word description of the constructor kind.
+    auto describe_constructor(Constructor_body const& body) -> std::string_view;
 
     void format(Arena const&, utl::String_pool const&, Pattern const&, std::string&);
     void format(Arena const&, utl::String_pool const&, Expression const&, std::string&);

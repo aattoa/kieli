@@ -43,7 +43,7 @@ namespace ki::fmt {
     void format(State&, cst::Path const&);
     void format(State&, cst::Mutability const&);
     void format(State&, cst::patt::Field const&);
-    void format(State&, cst::Struct_field_init const&);
+    void format(State&, cst::Field_init const&);
     void format(State&, cst::Field const&);
     void format(State&, cst::Template_arguments const&);
     void format(State&, cst::Template_parameter const&);

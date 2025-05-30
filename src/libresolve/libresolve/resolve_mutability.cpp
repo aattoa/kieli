@@ -33,7 +33,7 @@ auto ki::res::resolve_mutability(
             };
         },
         [&](ast::Parameterized_mutability const& mut) {
-            auto          state     = Inference_state {};
+            Block_state   state;
             db::Symbol_id symbol_id = resolve_path(db, ctx, state, env_id, make_path(mut.name));
             db::Symbol&   symbol    = ctx.arena.symbols[symbol_id];
 

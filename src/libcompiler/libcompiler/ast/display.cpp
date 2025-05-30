@@ -208,7 +208,7 @@ namespace {
         display_node(state, Last::Yes, "type", field.type);
     }
 
-    void do_display(Display_state& state, Struct_field_initializer const& field)
+    void do_display(Display_state& state, Field_init const& field)
     {
         write_line(state, "struct field initializer");
         display_node(state, Last::No, "name", field.name);
@@ -303,7 +303,14 @@ namespace {
         display_node(state, Last::Yes, "body", function.body);
     }
 
-    void do_display(Display_state& state, Enumeration const& enumeration)
+    void do_display(Display_state& state, Struct const& structure)
+    {
+        write_line(state, "structure");
+        display_template_parameters_node(state, Last::No, structure.template_parameters);
+        display_node(state, Last::Yes, "constructor", structure.constructor);
+    }
+
+    void do_display(Display_state& state, Enum const& enumeration)
     {
         write_line(state, "enumeration");
         display_node(state, Last::No, "name", enumeration.name);
@@ -427,13 +434,6 @@ namespace {
             display_vector_node(state, Last::Yes, "arguments", call.arguments);
         }
 
-        void operator()(expr::Tuple_init const& initializer)
-        {
-            write_line(state, "tuple initializer");
-            display_node(state, Last::No, "constructor path", initializer.path);
-            display_vector_node(state, Last::Yes, "field initializers", initializer.fields);
-        }
-
         void operator()(expr::Struct_init const& initializer)
         {
             write_line(state, "struct initializer");
@@ -452,30 +452,29 @@ namespace {
         void operator()(expr::Struct_field const& field)
         {
             write_line(state, "struct index");
-            display_node(state, Last::No, "base expression", field.base_expression);
-            display_node(state, Last::Yes, "field name", field.field_name);
+            display_node(state, Last::No, "base expression", field.base);
+            display_node(state, Last::Yes, "field name", field.name);
         }
 
         void operator()(expr::Tuple_field const& field)
         {
             write_line(state, "tuple index");
-            display_node(state, Last::No, "base expression", field.base_expression);
-            write_node(
-                state, Last::Yes, [&] { write_line(state, "field index {}", field.field_index); });
+            display_node(state, Last::No, "base expression", field.base);
+            write_node(state, Last::Yes, [&] { write_line(state, "field index {}", field.index); });
         }
 
         void operator()(expr::Array_index const& index)
         {
             write_line(state, "array index");
-            display_node(state, Last::No, "base expression", index.base_expression);
-            display_node(state, Last::Yes, "index expression", index.index_expression);
+            display_node(state, Last::No, "base expression", index.base);
+            display_node(state, Last::Yes, "index expression", index.index);
         }
 
         void operator()(expr::Method_call const& call)
         {
             write_line(state, "method call");
-            display_node(state, Last::No, "method name", call.method_name);
-            display_node(state, Last::No, "base expression", call.base_expression);
+            display_node(state, Last::No, "method name", call.name);
+            display_node(state, Last::No, "base expression", call.expression);
             if (call.template_arguments.has_value()) {
                 display_vector_node(
                     state, Last::No, "template arguments", call.template_arguments.value());
@@ -732,8 +731,8 @@ auto ki::ast::display(Arena const& arena, utl::String_pool const& pool, Function
     return display_string(arena, pool, function);
 }
 
-auto ki::ast::display(
-    Arena const& arena, utl::String_pool const& pool, Enumeration const& enumeration) -> std::string
+auto ki::ast::display(Arena const& arena, utl::String_pool const& pool, Enum const& enumeration)
+    -> std::string
 {
     return display_string(arena, pool, enumeration);
 }

@@ -66,9 +66,31 @@ namespace {
             return markdown;
         }
 
+        auto operator()(hir::Structure_id id)
+        {
+            return display_info("Structure", arena.hir.structures[id]);
+        }
+
         auto operator()(hir::Enumeration_id id)
         {
-            return display_info("Enum", arena.hir.enumerations[id]);
+            return display_info("Enumeration", arena.hir.enumerations[id]);
+        }
+
+        auto operator()(hir::Constructor_id id)
+        {
+            auto const& info = arena.hir.constructors[id];
+            return std::format(
+                "# Constructor `{}::{}`\n---\nDiscriminant: {}",
+                display(info.owner_type_id),
+                display(info.name.id),
+                info.discriminant);
+        }
+
+        auto operator()(hir::Field_id id)
+        {
+            auto const& info = arena.hir.fields[id];
+            return std::format(
+                "# Field `{}`\n---\nType: `{}`", display(info.name.id), display(info.type));
         }
 
         auto operator()(hir::Concept_id id)

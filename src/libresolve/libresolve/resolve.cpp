@@ -104,6 +104,11 @@ auto ki::res::new_scope(Context& ctx, db::Environment_id parent_id) -> db::Envir
         });
 }
 
+auto ki::res::new_symbol(Context& ctx, db::Name name, db::Symbol_variant variant) -> db::Symbol_id
+{
+    return ctx.arena.symbols.push(db::Symbol { .variant = variant, .name = name, .use_count = 0 });
+}
+
 void ki::res::warn_if_unused(db::Database& db, Context& ctx, db::Symbol_id symbol_id)
 {
     auto const& symbol = ctx.arena.symbols[symbol_id];
@@ -150,10 +155,8 @@ auto ki::res::bind_symbol(
     db::Name           name,
     db::Symbol_variant variant) -> db::Symbol_id
 {
-    auto& env = ctx.arena.environments[env_id];
-
-    auto const symbol_id
-        = ctx.arena.symbols.push(db::Symbol { .variant = variant, .name = name, .use_count = 0 });
+    auto&      env       = ctx.arena.environments[env_id];
+    auto const symbol_id = new_symbol(ctx, name, variant);
 
     if (auto const it = env.map.find(name.id); it != env.map.end()) {
         if (can_shadow(ctx.arena.symbols[it->second].variant)) {
@@ -171,22 +174,21 @@ auto ki::res::bind_symbol(
     return symbol_id;
 }
 
-void ki::res::flatten_type(Context& ctx, Inference_state& state, hir::Type_variant& type)
+void ki::res::flatten_type(Context& ctx, Block_state& state, hir::Type_variant& type)
 {
-    if (auto const* const variable = std::get_if<hir::type::Variable>(&type)) {
-        Type_variable_data& data = state.type_vars[variable->id];
+    if (auto const* variable = std::get_if<hir::type::Variable>(&type)) {
+        Type_variable_data& data = state.type_vars.at(variable->id.get());
         assert(variable->id == data.var_id);
         if (data.is_solved) {
-            type = ctx.arena.hir.types[data.type_id];
-
+            type           = ctx.arena.hir.types[data.type_id];
             data.is_solved = true;
             return;
         }
-        std::size_t const index = state.type_var_set.find(data.var_id.get());
+        std::size_t index = state.type_var_set.find(data.var_id.get());
         if (data.var_id.get() == index) {
             return;
         }
-        Type_variable_data& repr_data = state.type_vars.underlying.at(index);
+        Type_variable_data& repr_data = state.type_vars.at(index);
         hir::Type_variant&  repr_type = ctx.arena.hir.types[repr_data.type_id];
         flatten_type(ctx, state, repr_type);
         if (repr_data.is_solved) {
@@ -200,11 +202,11 @@ void ki::res::flatten_type(Context& ctx, Inference_state& state, hir::Type_varia
 void ki::res::set_type_solution(
     db::Database&       db,
     Context&            ctx,
-    Inference_state&    state,
+    Block_state&        state,
     Type_variable_data& data,
     hir::Type_variant   solution)
 {
-    auto& repr_data = state.type_vars.underlying.at(state.type_var_set.find(data.var_id.get()));
+    auto& repr_data = state.type_vars.at(state.type_var_set.find(data.var_id.get()));
     auto& repr_type = ctx.arena.hir.types[repr_data.type_id];
     if (repr_data.is_solved) {
         require_subtype_relationship(db, ctx, state, data.origin, solution, repr_type);
@@ -215,51 +217,51 @@ void ki::res::set_type_solution(
 
 void ki::res::set_mut_solution(
     Context&                  ctx,
-    Inference_state&          state,
+    Block_state&              state,
     Mutability_variable_data& data,
     hir::Mutability_variant   solution)
 {
-    auto& repr = state.mut_vars.underlying.at(state.mut_var_set.find(data.var_id.get()));
+    auto& repr = state.mut_vars.at(state.mut_var_set.find(data.var_id.get()));
     cpputil::always_assert(not std::exchange(repr.is_solved, true));
     ctx.arena.hir.mutabilities[repr.mut_id] = std::move(solution);
 }
 
-auto ki::res::fresh_general_type_variable(
-    Inference_state& state, hir::Arena& arena, lsp::Range origin) -> hir::Type
+auto ki::res::fresh_general_type_variable(Context& ctx, Block_state& state, lsp::Range origin)
+    -> hir::Type
 {
     auto const var_id  = hir::Type_variable_id { state.type_vars.size() };
-    auto const type_id = arena.types.push(hir::type::Variable { var_id });
-    state.type_vars.underlying.push_back(Type_variable_data {
+    auto const type_id = ctx.arena.hir.types.push(hir::type::Variable { var_id });
+    state.type_vars.push_back(Type_variable_data {
+        .var_id  = var_id,
+        .type_id = type_id,
+        .origin  = origin,
         .kind    = hir::Type_variable_kind::General,
-        .var_id  = var_id,
-        .type_id = type_id,
-        .origin  = origin,
     });
     (void)state.type_var_set.add();
     return hir::Type { .id = type_id, .range = origin };
 }
 
-auto ki::res::fresh_integral_type_variable(
-    Inference_state& state, hir::Arena& arena, lsp::Range origin) -> hir::Type
+auto ki::res::fresh_integral_type_variable(Context& ctx, Block_state& state, lsp::Range origin)
+    -> hir::Type
 {
     auto const var_id  = hir::Type_variable_id { state.type_vars.size() };
-    auto const type_id = arena.types.push(hir::type::Variable { var_id });
-    state.type_vars.underlying.push_back(Type_variable_data {
-        .kind    = hir::Type_variable_kind::Integral,
+    auto const type_id = ctx.arena.hir.types.push(hir::type::Variable { var_id });
+    state.type_vars.push_back(Type_variable_data {
         .var_id  = var_id,
         .type_id = type_id,
         .origin  = origin,
+        .kind    = hir::Type_variable_kind::Integral,
     });
     (void)state.type_var_set.add();
     return hir::Type { .id = type_id, .range = origin };
 }
 
-auto ki::res::fresh_mutability_variable(
-    Inference_state& state, hir::Arena& arena, lsp::Range origin) -> hir::Mutability
+auto ki::res::fresh_mutability_variable(Context& ctx, Block_state& state, lsp::Range origin)
+    -> hir::Mutability
 {
     auto const var_id = hir::Mutability_variable_id { state.mut_vars.size() };
-    auto const mut_id = arena.mutabilities.push(hir::mut::Variable { var_id });
-    state.mut_vars.underlying.push_back(Mutability_variable_data {
+    auto const mut_id = ctx.arena.hir.mutabilities.push(hir::mut::Variable { var_id });
+    state.mut_vars.push_back(Mutability_variable_data {
         .var_id = var_id,
         .mut_id = mut_id,
         .origin = origin,
@@ -268,14 +270,14 @@ auto ki::res::fresh_mutability_variable(
     return hir::Mutability { .id = mut_id, .range = origin };
 }
 
-void ki::res::ensure_no_unsolved_variables(db::Database& db, Context& ctx, Inference_state& state)
+void ki::res::ensure_no_unsolved_variables(db::Database& db, Context& ctx, Block_state& state)
 {
-    for (Mutability_variable_data& data : state.mut_vars.underlying) {
+    for (Mutability_variable_data& data : state.mut_vars) {
         if (not data.is_solved) {
             set_mut_solution(ctx, state, data, db::Mutability::Immut);
         }
     }
-    for (Type_variable_data& data : state.type_vars.underlying) {
+    for (Type_variable_data& data : state.type_vars) {
         flatten_type(ctx, state, ctx.arena.hir.types[data.type_id]);
         if (not data.is_solved) {
             if (data.kind == hir::Type_variable_kind::Integral) {
@@ -294,6 +296,7 @@ void ki::res::resolve_symbol(db::Database& db, Context& ctx, db::Symbol_id symbo
 {
     auto const visitor = utl::Overload {
         [&](hir::Function_id id) { resolve_function_body(db, ctx, id); },
+        [&](hir::Structure_id id) { resolve_structure(db, ctx, id); },
         [&](hir::Enumeration_id id) { resolve_enumeration(db, ctx, id); },
         [&](hir::Concept_id id) { resolve_concept(db, ctx, id); },
         [&](hir::Alias_id id) { resolve_alias(db, ctx, id); },
@@ -302,6 +305,8 @@ void ki::res::resolve_symbol(db::Database& db, Context& ctx, db::Symbol_id symbo
             // Modules do not need to be separately resolved.
         },
 
+        [](hir::Constructor_id) { cpputil::unreachable(); },
+        [](hir::Field_id) { cpputil::unreachable(); },
         [](hir::Local_variable_id) { cpputil::unreachable(); },
         [](hir::Local_type_id) { cpputil::unreachable(); },
         [](hir::Local_mutability_id) { cpputil::unreachable(); },

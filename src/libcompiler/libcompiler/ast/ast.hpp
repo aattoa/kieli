@@ -99,7 +99,7 @@ namespace ki::ast {
         std::optional<Expression_id> default_argument;
     };
 
-    struct Struct_field_initializer {
+    struct Field_init {
         db::Lower     name;
         Expression_id expression;
     };
@@ -151,37 +151,32 @@ namespace ki::ast {
             db::Name      op;
         };
 
-        struct Tuple_init {
-            Path                       path;
-            std::vector<Expression_id> fields;
-        };
-
         struct Struct_init {
-            Path                                  path;
-            std::vector<Struct_field_initializer> fields;
+            Path                    path;
+            std::vector<Field_init> fields;
         };
 
         struct Struct_field {
-            Expression_id base_expression;
-            db::Lower     field_name;
+            Expression_id base;
+            db::Lower     name;
         };
 
         struct Tuple_field {
-            Expression_id base_expression;
-            std::size_t   field_index {};
-            lsp::Range    field_index_range;
+            Expression_id base;
+            std::size_t   index {};
+            lsp::Range    index_range;
         };
 
         struct Array_index {
-            Expression_id base_expression;
-            Expression_id index_expression;
+            Expression_id base;
+            Expression_id index;
         };
 
         struct Method_call {
             std::vector<Expression_id>                    function_arguments;
             std::optional<std::vector<Template_argument>> template_arguments;
-            Expression_id                                 base_expression;
-            db::Lower                                     method_name;
+            Expression_id                                 expression;
+            db::Lower                                     name;
         };
 
         struct Conditional {
@@ -251,7 +246,6 @@ namespace ki::ast {
               expr::Continue,
               expr::Block,
               expr::Function_call,
-              expr::Tuple_init,
               expr::Struct_init,
               expr::Infix_call,
               expr::Struct_field,
@@ -321,8 +315,8 @@ namespace ki::ast {
         };
 
         struct Guarded {
-            Pattern_id pattern;
-            Expression guard;
+            Pattern_id    pattern;
+            Expression_id guard;
         };
     } // namespace patt
 
@@ -427,9 +421,8 @@ namespace ki::ast {
     };
 
     struct Field {
-        db::Lower  name;
-        Type       type;
-        lsp::Range range;
+        db::Lower name;
+        Type      type;
     };
 
     struct Struct_constructor {
@@ -452,7 +445,12 @@ namespace ki::ast {
         Constructor_body body;
     };
 
-    struct Enumeration {
+    struct Struct {
+        Constructor         constructor;
+        Template_parameters template_parameters;
+    };
+
+    struct Enum {
         std::vector<Constructor> constructors;
         db::Upper                name;
         Template_parameters      template_parameters;
@@ -484,7 +482,7 @@ namespace ki::ast {
     };
 
     struct Definition_variant
-        : std::variant<Function, Enumeration, Alias, Concept, Impl, Submodule> {
+        : std::variant<Function, Enum, Struct, Alias, Concept, Impl, Submodule> {
         using variant::variant;
     };
 

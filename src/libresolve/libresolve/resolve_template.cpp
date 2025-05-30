@@ -8,7 +8,7 @@ namespace {
     struct Visitor {
         db::Database&               db;
         Context&                    ctx;
-        Inference_state&            state;
+        Block_state&                state;
         db::Environment_id          env_id;
         hir::Template_parameter_tag tag;
 
@@ -93,7 +93,7 @@ namespace {
 auto ki::res::resolve_template_parameters(
     db::Database&                   db,
     Context&                        ctx,
-    Inference_state&                state,
+    Block_state&                    state,
     db::Environment_id              env_id,
     ast::Template_parameters const& parameters) -> std::vector<hir::Template_parameter>
 {
@@ -120,7 +120,7 @@ auto ki::res::resolve_template_parameters(
 auto ki::res::resolve_template_arguments(
     db::Database&                               db,
     Context&                                    ctx,
-    Inference_state&                            state,
+    Block_state&                                state,
     db::Environment_id                          env_id,
     std::vector<hir::Template_parameter> const& parameters,
     std::vector<ast::Template_argument> const&  arguments) -> std::vector<hir::Template_argument>

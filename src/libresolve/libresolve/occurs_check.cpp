@@ -60,6 +60,11 @@ namespace {
             return std::ranges::any_of(tuple.types, recurse());
         }
 
+        auto operator()(hir::type::Structure const&) const -> bool
+        {
+            return false; // TODO
+        }
+
         auto operator()(hir::type::Enumeration const&) const -> bool
         {
             return false; // TODO

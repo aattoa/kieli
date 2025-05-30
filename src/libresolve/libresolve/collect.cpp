@@ -39,11 +39,11 @@ namespace {
 
         void operator()(cst::Struct& cst)
         {
-            auto name = cst.name;
+            auto name = cst.constructor.name;
             auto ast  = des::desugar_struct(des_ctx, cst);
 
-            auto type_id = ctx.arena.hir.types.push(db::Error {}); // Overridden below
-            auto enum_id = ctx.arena.hir.enumerations.push(hir::Enumeration_info {
+            auto type_id   = ctx.arena.hir.types.push(db::Error {}); // Overwritten below
+            auto struct_id = ctx.arena.hir.structures.push(hir::Structure_info {
                 .cst     = std::move(cst),
                 .ast     = std::move(ast),
                 .hir     = std::nullopt,
@@ -53,9 +53,9 @@ namespace {
                 .name    = name,
             });
 
-            ctx.arena.hir.types[type_id] = hir::type::Enumeration { .name = name, .id = enum_id };
+            ctx.arena.hir.types[type_id] = hir::type::Structure { .name = name, .id = struct_id };
 
-            bind(name, enum_id);
+            bind(name, struct_id);
         }
 
         void operator()(cst::Enum& cst)
@@ -63,7 +63,7 @@ namespace {
             auto name = cst.name;
             auto ast  = des::desugar_enum(des_ctx, cst);
 
-            auto type_id = ctx.arena.hir.types.push(db::Error {}); // Overridden below
+            auto type_id = ctx.arena.hir.types.push(db::Error {}); // Overwritten below
             auto enum_id = ctx.arena.hir.enumerations.push(hir::Enumeration_info {
                 .cst     = std::move(cst),
                 .ast     = std::move(ast),

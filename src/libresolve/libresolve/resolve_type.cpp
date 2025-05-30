@@ -8,47 +8,38 @@ namespace {
     struct Visitor {
         db::Database&      db;
         Context&           ctx;
-        Inference_state&   state;
+        Block_state&       state;
         db::Environment_id env_id;
         lsp::Range         this_range;
 
-        auto unsupported() -> hir::Type
-        {
-            db::add_error(db, ctx.doc_id, this_range, "Unsupported type");
-            return error_type(ctx.constants, this_range);
-        }
-
-        auto recurse()
-        {
-            return [&](ast::Type const& type) -> hir::Type {
-                return resolve_type(db, ctx, state, env_id, type);
-            };
-        }
-
         auto recurse(ast::Type const& type) -> hir::Type
         {
-            return recurse()(type);
+            return resolve_type(db, ctx, state, env_id, type);
         }
 
         auto operator()(ast::Wildcard const&) -> hir::Type
         {
-            auto type = fresh_general_type_variable(state, ctx.arena.hir, this_range);
+            auto type = fresh_general_type_variable(ctx, state, this_range);
             db::add_type_hint(db, ctx.doc_id, this_range.stop, type.id);
             return type;
         }
 
         auto operator()(ast::type::Never const&) -> hir::Type
         {
-            return unsupported();
+            db::add_error(
+                db, ctx.doc_id, this_range, "Never-type resolution has not been implemented");
+            return error_type(ctx.constants, this_range);
         }
 
         auto operator()(ast::Path const& path) -> hir::Type
         {
-            db::Symbol_id symbol_id = resolve_path(db, ctx, state, env_id, path);
-            db::Symbol&   symbol    = ctx.arena.symbols[symbol_id];
+            db::Symbol& symbol = ctx.arena.symbols[resolve_path(db, ctx, state, env_id, path)];
 
             if (auto const* local_id = std::get_if<hir::Local_type_id>(&symbol.variant)) {
                 return { .id = ctx.arena.hir.local_types[*local_id].type_id, .range = this_range };
+            }
+            if (auto const* struct_id = std::get_if<hir::Structure_id>(&symbol.variant)) {
+                return { .id = ctx.arena.hir.structures[*struct_id].type_id, .range = this_range };
             }
             if (auto const* enum_id = std::get_if<hir::Enumeration_id>(&symbol.variant)) {
                 return { .id = ctx.arena.hir.enumerations[*enum_id].type_id, .range = this_range };
@@ -59,6 +50,7 @@ namespace {
             if (std::holds_alternative<db::Error>(symbol.variant)) {
                 return error_type(ctx.constants, this_range);
             }
+
             auto kind    = db::describe_symbol_kind(symbol.variant);
             auto message = std::format("Expected a type, but found {}", kind);
             db::add_error(db, ctx.doc_id, this_range, std::move(message));
@@ -67,8 +59,8 @@ namespace {
 
         auto operator()(ast::type::Tuple const& tuple) -> hir::Type
         {
-            hir::type::Tuple type { std::ranges::to<std::vector>(
-                std::views::transform(tuple.field_types, recurse())) };
+            hir::type::Tuple type { std::ranges::to<std::vector>(std::views::transform(
+                tuple.field_types, std::bind_front(&Visitor::recurse, this))) };
             return { .id = ctx.arena.hir.types.push(std::move(type)), .range = this_range };
         }
 
@@ -92,9 +84,9 @@ namespace {
         auto operator()(ast::type::Function const& function) -> hir::Type
         {
             hir::type::Function type {
-                .parameter_types = std::views::transform(function.parameter_types, recurse())
-                                 | std::ranges::to<std::vector>(),
-                .return_type = recurse(ctx.arena.ast.types[function.return_type]),
+                .parameter_types = std::ranges::to<std::vector>(std::views::transform(
+                    function.parameter_types, std::bind_front(&Visitor::recurse, this))),
+                .return_type     = recurse(ctx.arena.ast.types[function.return_type]),
             };
             return { .id = ctx.arena.hir.types.push(std::move(type)), .range = this_range };
         }
@@ -132,7 +124,9 @@ namespace {
 
         auto operator()(ast::type::Impl const&) -> hir::Type
         {
-            return unsupported();
+            db::add_error(
+                db, ctx.doc_id, this_range, "Impl-type resolution has not been implemented");
+            return error_type(ctx.constants, this_range);
         }
 
         auto operator()(db::Error const&) const -> hir::Type
@@ -145,7 +139,7 @@ namespace {
 auto ki::res::resolve_type(
     db::Database&            db,
     Context&                 ctx,
-    Inference_state&         state,
+    Block_state&             state,
     db::Environment_id const env_id,
     ast::Type const&         type) -> hir::Type
 {

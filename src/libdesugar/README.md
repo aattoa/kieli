@@ -7,15 +7,7 @@ The transformations are purely syntactic; no semantic analysis is performed.
 The purpose of desugaring is to simplify semantic analysis by reducing the number of syntax constructs.
 It also trivializes the implementation of future language features, as long as they can be expressed in terms of existing syntax.
 
-Some errors are also caught at this stage, such as duplicate struct fields.
-
 # List of transformations
-
-## Structure to single-constructor enumeration
-
-`struct Tag` → `enum Tag = Tag`
-
-`struct Point { x: I32, y: I32 }` → `enum Point = Point { x: I32, y: I32 }`
 
 ## While loop to plain loop
 

@@ -150,7 +150,7 @@ namespace ki::cst {
         Expression_id expression;
     };
 
-    struct Struct_field_init {
+    struct Field_init {
         db::Lower                          name;
         std::optional<Struct_field_equals> equals;
     };
@@ -192,14 +192,9 @@ namespace ki::cst {
             Expression_id      invocable;
         };
 
-        struct Tuple_init {
-            Path                                 path;
-            Surrounded<Separated<Expression_id>> fields;
-        };
-
         struct Struct_init {
-            Path                                     path;
-            Surrounded<Separated<Struct_field_init>> fields;
+            Path                              path;
+            Surrounded<Separated<Field_init>> fields;
         };
 
         struct Infix_call {
@@ -209,29 +204,29 @@ namespace ki::cst {
         };
 
         struct Struct_field {
-            Expression_id base_expression;
+            Expression_id base;
             db::Lower     name;
             Range_id      dot_token;
         };
 
         struct Tuple_field {
-            Expression_id base_expression;
-            std::uint16_t field_index {};
-            Range_id      field_index_token;
+            Expression_id base;
+            std::uint16_t index {};
+            Range_id      index_token;
             Range_id      dot_token;
         };
 
         struct Array_index {
-            Expression_id             base_expression;
-            Surrounded<Expression_id> index_expression;
+            Expression_id             base;
+            Surrounded<Expression_id> index;
             Range_id                  dot_token;
         };
 
         struct Method_call {
             Function_arguments                function_arguments;
             std::optional<Template_arguments> template_arguments;
-            Expression_id                     base_expression;
-            db::Lower                         method_name;
+            Expression_id                     expression;
+            db::Lower                         name;
         };
 
         struct False_branch {
@@ -254,7 +249,7 @@ namespace ki::cst {
         };
 
         struct Ascription {
-            Expression_id base_expression;
+            Expression_id expression;
             Range_id      colon_token;
             Type_id       type;
         };
@@ -343,7 +338,6 @@ namespace ki::cst {
               expr::Tuple,
               expr::Block,
               expr::Function_call,
-              expr::Tuple_init,
               expr::Struct_init,
               expr::Infix_call,
               expr::Struct_field,
@@ -590,8 +584,7 @@ namespace ki::cst {
 
     struct Struct {
         std::optional<Template_parameters> template_parameters;
-        Constructor_body                   body;
-        db::Upper                          name;
+        Constructor                        constructor;
         Range_id                           struct_token;
     };
 

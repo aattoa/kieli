@@ -27,6 +27,11 @@ auto ki::lsp::to_range(Position position) noexcept -> Range
     return Range(position, column_offset(position, 1));
 }
 
+auto ki::lsp::to_range_0(Position position) noexcept -> Range
+{
+    return Range(position, position);
+}
+
 auto ki::lsp::range_contains(Range range, Position position) noexcept -> bool
 {
     return range.start <= position and position < range.stop;
@@ -175,7 +180,10 @@ auto ki::db::describe_symbol_kind(Symbol_variant variant) -> std::string_view
     auto const visitor = utl::Overload {
         [](db::Error) { return "an error"; },
         [](hir::Function_id) { return "a function"; },
+        [](hir::Structure_id) { return "a structure"; },
         [](hir::Enumeration_id) { return "an enumeration"; },
+        [](hir::Constructor_id) { return "a constructor"; },
+        [](hir::Field_id) { return "a field"; },
         [](hir::Concept_id) { return "a concept"; },
         [](hir::Alias_id) { return "a type alias"; },
         [](hir::Module_id) { return "a module"; },
@@ -229,7 +237,7 @@ void ki::db::add_param_hint(
 
 void ki::db::add_action(Database& db, Document_id doc_id, lsp::Range range, Action_variant variant)
 {
-    db.documents[doc_id].info.actions.emplace_back(variant, range);
+    db.documents[doc_id].info.actions.emplace_back(std::move(variant), range);
 }
 
 void ki::db::add_reference(

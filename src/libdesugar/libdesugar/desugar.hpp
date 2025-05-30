@@ -19,9 +19,9 @@ namespace ki::des {
 
     auto desugar_function(Context& ctx, cst::Function const& function) -> ast::Function;
 
-    auto desugar_struct(Context& ctx, cst::Struct const& structure) -> ast::Enumeration;
+    auto desugar_struct(Context& ctx, cst::Struct const& structure) -> ast::Struct;
 
-    auto desugar_enum(Context& ctx, cst::Enum const& enumeration) -> ast::Enumeration;
+    auto desugar_enum(Context& ctx, cst::Enum const& enumeration) -> ast::Enum;
 
     auto desugar_alias(Context& ctx, cst::Alias const& alias) -> ast::Alias;
 

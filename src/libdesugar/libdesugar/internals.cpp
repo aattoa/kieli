@@ -171,8 +171,7 @@ auto ki::des::desugar(Context& ctx, cst::Type_signature const& signature) -> ast
     };
 }
 
-auto ki::des::desugar(Context& ctx, cst::Struct_field_init const& field)
-    -> ast::Struct_field_initializer
+auto ki::des::desugar(Context& ctx, cst::Field_init const& field) -> ast::Field_init
 {
     if (field.equals.has_value()) {
         return { .name = field.name, .expression = desugar(ctx, field.equals.value().expression) };

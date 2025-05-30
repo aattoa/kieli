@@ -123,9 +123,8 @@ namespace {
         add_semantic_token(ctx, name.range, Semantic::Structure);
         return cst::Struct {
             .template_parameters = parse_template_parameters(ctx),
-            .body                = extract_constructor_body(ctx),
-            .name                = name,
-            .struct_token        = token(ctx, struct_keyword),
+            .constructor = cst::Constructor { .name = name, .body = extract_constructor_body(ctx) },
+            .struct_token = token(ctx, struct_keyword),
         };
     }
 

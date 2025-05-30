@@ -21,7 +21,10 @@ Prerequisites:
 - A build system, such as GNU Make or Ninja
 - A C++23 compiler toolchain
 
-NOTE: At the time of writing, LLVM`>=18` is the only toolchain that supports C++23 well enough to build Kieli.
+Note that a relatively recent toolchain with good C++23 support is required for building Kieli. The following should work:
+
+- Compilers: `clang >= 18` or `gcc >= 15`
+- Standard library: `libstdc++ >= 15`
 
 Run the following commands to clone and build Kieli:
 

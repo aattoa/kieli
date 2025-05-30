@@ -9,7 +9,11 @@
 namespace ki::lsp {
 
     struct Json_config {
-        using Object  = std::unordered_map<std::string, cpputil::json::Basic_value<Json_config>>;
+        using Object = std::unordered_map<
+            std::string,
+            cpputil::json::Basic_value<Json_config>,
+            utl::Transparent_hash<std::string_view>,
+            std::equal_to<>>;
         using Array   = std::vector<cpputil::json::Basic_value<Json_config>>;
         using String  = std::string;
         using Number  = std::int32_t;
@@ -123,10 +127,10 @@ namespace ki::lsp {
     auto as_unsigned(Json json) -> std::uint32_t;
 
     // If `object` contains `key`, moves out the value. Otherwise throws `Bad_json`.
-    auto at(Json::Object& object, char const* key) -> Json;
+    auto at(Json::Object& object, std::string_view key) -> Json;
 
     // If `object` contains `key`, moves out the value. Otherwise returns nullopt.
-    auto maybe_at(Json::Object& object, char const* key) -> std::optional<Json>;
+    auto maybe_at(Json::Object& object, std::string_view key) -> std::optional<Json>;
 
 } // namespace ki::lsp
 

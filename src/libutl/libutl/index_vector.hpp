@@ -35,9 +35,9 @@ namespace ki::utl {
 
     // Wraps a `std::vector`. The subscript operator uses `Index` instead of `size_t`.
     template <vector_index Index, typename T, typename Allocator = std::allocator<T>>
-    struct [[nodiscard]] Index_vector {
+    class [[nodiscard]] Index_vector {
         std::vector<T, Allocator> underlying;
-
+    public:
         [[nodiscard]] constexpr auto operator[](this auto&& self, Index index) -> decltype(auto)
         {
             return std::forward_like<decltype(self)>(self.underlying.at(index.get()));
@@ -48,26 +48,14 @@ namespace ki::utl {
             requires std::is_constructible_v<T, Args...>
         {
             underlying.emplace_back(std::forward<Args>(args)...);
-            return Index(size() - 1);
+            return Index(underlying.size() - 1);
         }
-
-        [[nodiscard]] constexpr auto size() const noexcept -> std::size_t
-        {
-            return underlying.size();
-        }
-
-        [[nodiscard]] constexpr auto empty() const noexcept -> bool
-        {
-            return underlying.empty();
-        }
-
-        auto operator==(Index_vector const& other) const -> bool = default;
     };
 
     struct Hash_vector_index {
         static auto operator()(vector_index auto const& index) noexcept -> std::size_t
         {
-            return std::hash<std::size_t>()(index.get());
+            return index.get();
         }
     };
 

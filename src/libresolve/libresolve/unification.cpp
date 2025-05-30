@@ -31,7 +31,7 @@ namespace {
 
     struct Mutability_visitor {
         Context&               ctx;
-        Inference_state&       state;
+        Block_state&           state;
         hir::Mutability const& current_sub;
         hir::Mutability const& current_super;
         Goal                   goal {};
@@ -40,7 +40,7 @@ namespace {
             -> Result
         {
             set_mut_solution(
-                ctx, state, state.mut_vars[var_id], ctx.arena.hir.mutabilities[mut.id]);
+                ctx, state, state.mut_vars.at(var_id.get()), ctx.arena.hir.mutabilities[mut.id]);
             return Result::Ok;
         }
 
@@ -97,7 +97,7 @@ namespace {
     struct Type_visitor {
         db::Database&            db;
         Context&                 ctx;
-        Inference_state&         state;
+        Block_state&             state;
         hir::Type_variant const& current_sub;
         hir::Type_variant const& current_super;
         Goal                     goal {};
@@ -109,7 +109,7 @@ namespace {
                 return Result::Recursive;
             }
             flatten_type(ctx, state, type);
-            set_type_solution(db, ctx, state, state.type_vars[id], std::move(type));
+            set_type_solution(db, ctx, state, state.type_vars.at(id.get()), std::move(type));
             return Result::Ok;
         }
 
@@ -162,7 +162,8 @@ namespace {
         auto operator()(hir::type::Variable sub, hir::type::Variable super) const -> Result
         {
             if (sub.id != super.id) {
-                merge_variable_kinds(state.type_vars[sub.id].kind, state.type_vars[super.id].kind);
+                merge_variable_kinds(
+                    state.type_vars.at(sub.id.get()).kind, state.type_vars.at(super.id.get()).kind);
                 state.type_var_set.merge(sub.id.get(), super.id.get());
             }
             return Result::Ok;
@@ -180,7 +181,7 @@ namespace {
 
         auto operator()(hir::type::Variable sub, auto const&) const -> Result
         {
-            if (state.type_vars[sub.id].kind == hir::Type_variable_kind::Integral) {
+            if (state.type_vars.at(sub.id.get()).kind == hir::Type_variable_kind::Integral) {
                 return Result::Mismatch;
             }
             return solution(sub.id, current_super);
@@ -188,7 +189,7 @@ namespace {
 
         auto operator()(auto const&, hir::type::Variable super) const -> Result
         {
-            if (state.type_vars[super.id].kind == hir::Type_variable_kind::Integral) {
+            if (state.type_vars.at(super.id.get()).kind == hir::Type_variable_kind::Integral) {
                 return Result::Mismatch;
             }
             return solution(super.id, current_sub);
@@ -295,7 +296,7 @@ namespace {
 void ki::res::require_subtype_relationship(
     db::Database&            db,
     Context&                 ctx,
-    Inference_state&         state,
+    Block_state&             state,
     lsp::Range const         range,
     hir::Type_variant const& sub,
     hir::Type_variant const& super)

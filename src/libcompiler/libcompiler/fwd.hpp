@@ -50,10 +50,12 @@ namespace ki::hir {
     DEFINE_INDEX(Mutability_id);
     DEFINE_INDEX(Module_id);
     DEFINE_INDEX(Function_id);
+    DEFINE_INDEX(Structure_id);
     DEFINE_INDEX(Enumeration_id);
+    DEFINE_INDEX(Constructor_id);
+    DEFINE_INDEX(Field_id);
     DEFINE_INDEX(Alias_id);
     DEFINE_INDEX(Concept_id);
-    DEFINE_INDEX(Constructor_id);
     DEFINE_INDEX(Type_variable_id);
     DEFINE_INDEX(Mutability_variable_id);
     DEFINE_INDEX(Local_variable_id);

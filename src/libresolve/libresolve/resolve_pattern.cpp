@@ -8,25 +8,18 @@ namespace {
     struct Visitor {
         db::Database&      db;
         Context&           ctx;
-        Inference_state&   state;
+        Block_state&       state;
         db::Environment_id env_id;
         lsp::Range         this_range;
 
-        auto recurse()
-        {
-            return [&](ast::Pattern const& pattern) -> hir::Pattern {
-                return resolve_pattern(db, ctx, state, env_id, pattern);
-            };
-        }
-
         auto recurse(ast::Pattern const& pattern) -> hir::Pattern
         {
-            return recurse()(pattern);
+            return resolve_pattern(db, ctx, state, env_id, pattern);
         }
 
         auto operator()(db::Integer const& integer) -> hir::Pattern
         {
-            auto type = fresh_integral_type_variable(state, ctx.arena.hir, this_range);
+            auto type = fresh_integral_type_variable(ctx, state, this_range);
             return { .variant = integer, .type_id = type.id, .range = this_range };
         }
 
@@ -61,7 +54,7 @@ namespace {
         {
             return {
                 .variant = hir::Wildcard {},
-                .type_id = fresh_general_type_variable(state, ctx.arena.hir, this_range).id,
+                .type_id = fresh_general_type_variable(ctx, state, this_range).id,
                 .range   = this_range,
             };
         }
@@ -69,7 +62,7 @@ namespace {
         auto operator()(ast::patt::Name const& pattern) -> hir::Pattern
         {
             auto const mut  = resolve_mutability(db, ctx, env_id, pattern.mutability);
-            auto const type = fresh_general_type_variable(state, ctx.arena.hir, pattern.name.range);
+            auto const type = fresh_general_type_variable(ctx, state, pattern.name.range);
 
             auto const local_id = ctx.arena.hir.local_variables.push(hir::Local_variable {
                 .name    = pattern.name,
@@ -101,10 +94,13 @@ namespace {
 
         auto operator()(ast::patt::Tuple const& tuple) -> hir::Pattern
         {
-            auto patterns = std::views::transform(tuple.field_patterns, recurse())
+            auto patterns = tuple.field_patterns
+                          | std::views::transform(std::bind_front(&Visitor::recurse, this))
                           | std::ranges::to<std::vector>();
+
             auto types = std::views::transform(patterns, hir::pattern_type)
                        | std::ranges::to<std::vector>();
+
             return {
                 .variant = hir::patt::Tuple { std::move(patterns) },
                 .type_id = ctx.arena.hir.types.push(hir::type::Tuple { std::move(types) }),
@@ -114,10 +110,11 @@ namespace {
 
         auto operator()(ast::patt::Slice const& slice) -> hir::Pattern
         {
-            auto patterns = std::views::transform(slice.element_patterns, recurse())
+            auto patterns = slice.element_patterns
+                          | std::views::transform(std::bind_front(&Visitor::recurse, this))
                           | std::ranges::to<std::vector>();
 
-            auto const element_type = fresh_general_type_variable(state, ctx.arena.hir, this_range);
+            auto element_type = fresh_general_type_variable(ctx, state, this_range);
 
             for (hir::Pattern const& pattern : patterns) {
                 require_subtype_relationship(
@@ -138,8 +135,9 @@ namespace {
 
         auto operator()(ast::patt::Guarded const& guarded) -> hir::Pattern
         {
+            auto guard = resolve_expression(
+                db, ctx, state, env_id, ctx.arena.ast.expressions[guarded.guard]);
             auto pattern = recurse(ctx.arena.ast.patterns[guarded.pattern]);
-            auto guard   = resolve_expression(db, ctx, state, env_id, guarded.guard);
 
             require_subtype_relationship(
                 db,
@@ -164,7 +162,7 @@ namespace {
 auto ki::res::resolve_pattern(
     db::Database&       db,
     Context&            ctx,
-    Inference_state&    state,
+    Block_state&        state,
     db::Environment_id  env_id,
     ast::Pattern const& pattern) -> hir::Pattern
 {

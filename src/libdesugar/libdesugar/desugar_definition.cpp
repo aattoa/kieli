@@ -5,53 +5,11 @@
 using namespace ki;
 using namespace ki::des;
 
-namespace {
-    auto duplicate_fields_error(
-        Context&               ctx,
-        std::string_view const description,
-        std::string_view const name,
-        lsp::Range const       first,
-        lsp::Range const       second) -> lsp::Diagnostic
-    {
-        lsp::Diagnostic_related related {
-            .message  = "First defined here here",
-            .location = lsp::Location { .doc_id = ctx.doc_id, .range = first },
-        };
-        return lsp::Diagnostic {
-            .message      = std::format("Multiple definitions for {} {}", description, name),
-            .range        = second,
-            .severity     = lsp::Severity::Error,
-            .related_info = utl::to_vector({ std::move(related) }),
-            .tag          = lsp::Diagnostic_tag::None,
-        };
-    }
-
-    template <typename T>
-    void ensure_no_duplicates(
-        Context& ctx, std::string_view const description, std::vector<T> const& elements)
-    {
-        for (auto it = elements.begin(); it != elements.end(); ++it) {
-            auto const duplicate = std::ranges::find(
-                it + 1, elements.end(), it->name.id, [](auto const& elem) { return elem.name.id; });
-            if (duplicate != elements.end()) {
-                lsp::Diagnostic diagnostic = duplicate_fields_error(
-                    ctx,
-                    description,
-                    ctx.db.string_pool.get(it->name.id),
-                    it->name.range,
-                    duplicate->name.range);
-                db::add_diagnostic(ctx.db, ctx.doc_id, std::move(diagnostic));
-            }
-        }
-    }
-} // namespace
-
 auto ki::des::desugar(Context& ctx, cst::Field const& field) -> ast::Field
 {
     return ast::Field {
-        .name  = field.name,
-        .type  = deref_desugar(ctx, field.type.type),
-        .range = ctx.cst.ranges[field.range],
+        .name = field.name,
+        .type = deref_desugar(ctx, field.type.type),
     };
 };
 
@@ -59,7 +17,6 @@ auto ki::des::desugar(Context& ctx, cst::Constructor_body const& body) -> ast::C
 {
     auto const visitor = utl::Overload {
         [&](cst::Struct_constructor const& constructor) {
-            ensure_no_duplicates(ctx, "field", constructor.fields.value.elements);
             return ast::Struct_constructor { desugar(ctx, constructor.fields) };
         },
         [&](cst::Tuple_constructor const& constructor) {
@@ -86,22 +43,17 @@ auto ki::des::desugar(Context& ctx, cst::Function const& function) -> ast::Funct
     };
 }
 
-auto ki::des::desugar(Context& ctx, cst::Struct const& structure) -> ast::Enumeration
+auto ki::des::desugar(Context& ctx, cst::Struct const& structure) -> ast::Struct
 {
-    return ast::Enumeration {
-        .constructors { utl::to_vector({ ast::Constructor {
-            .name = structure.name,
-            .body = desugar(ctx, structure.body),
-        } }) },
-        .name                = structure.name,
+    return ast::Struct {
+        .constructor         = desugar(ctx, structure.constructor),
         .template_parameters = structure.template_parameters.transform(desugar(ctx)),
     };
 }
 
-auto ki::des::desugar(Context& ctx, cst::Enum const& enumeration) -> ast::Enumeration
+auto ki::des::desugar(Context& ctx, cst::Enum const& enumeration) -> ast::Enum
 {
-    ensure_no_duplicates(ctx, "constructor", enumeration.constructors.elements);
-    return ast::Enumeration {
+    return ast::Enum {
         .constructors        = desugar(ctx, enumeration.constructors),
         .name                = enumeration.name,
         .template_parameters = enumeration.template_parameters.transform(desugar(ctx)),
@@ -185,12 +137,12 @@ auto ki::des::desugar_function(Context& ctx, cst::Function const& function) -> a
     return desugar(ctx, function);
 }
 
-auto ki::des::desugar_struct(Context& ctx, cst::Struct const& structure) -> ast::Enumeration
+auto ki::des::desugar_struct(Context& ctx, cst::Struct const& structure) -> ast::Struct
 {
     return desugar(ctx, structure);
 }
 
-auto ki::des::desugar_enum(Context& ctx, cst::Enum const& enumeration) -> ast::Enumeration
+auto ki::des::desugar_enum(Context& ctx, cst::Enum const& enumeration) -> ast::Enum
 {
     return desugar(ctx, enumeration);
 }

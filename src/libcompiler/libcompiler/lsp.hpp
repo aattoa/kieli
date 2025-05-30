@@ -100,6 +100,9 @@ namespace ki::lsp {
     // Create a one-character range for `position`.
     [[nodiscard]] auto to_range(Position position) noexcept -> Range;
 
+    // Create a zero-width range for `position`.
+    [[nodiscard]] auto to_range_0(Position position) noexcept -> Range;
+
     // Check whether `position` is contained within `range`.
     [[nodiscard]] auto range_contains(Range range, Position position) noexcept -> bool;
 

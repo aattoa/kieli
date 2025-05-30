@@ -46,11 +46,11 @@ namespace {
         };
     }
 
-    auto parse_struct_field_initializer(Context& ctx) -> std::optional<cst::Struct_field_init>
+    auto parse_struct_field_init(Context& ctx) -> std::optional<cst::Field_init>
     {
         return parse_lower_name(ctx).transform([&](db::Lower const name) {
             add_semantic_token(ctx, name.range, Semantic::Property);
-            return cst::Struct_field_init {
+            return cst::Field_init {
                 .name = name,
                 .equals
                 = try_extract(ctx, lex::Type::Equals).transform([&](lex::Token const equals_sign) {
@@ -302,25 +302,14 @@ namespace {
     auto try_extract_initializer(Context& ctx, cst::Path&& path) -> cst::Expression_variant
     {
         static constexpr auto parse_braced_initializers = parse_braced<
-            parse_comma_separated_one_or_more<
-                parse_struct_field_initializer,
-                "a field initializer">,
-            "one or more field initializers">;
-        static constexpr auto parse_parenthesized_initializers = parse_parenthesized<
-            parse_comma_separated_one_or_more<parse_expression, "an expression">,
-            "one or more expressions">;
-
+            pretend_parse<extract_comma_separated_zero_or_more<
+                parse_struct_field_init,
+                "a field initializer">>,
+            "">;
         if (db::is_uppercase(ctx.db.string_pool.get(path.head().name.id))) {
             set_previous_path_head_semantic_type(ctx, Semantic::Constructor);
-
             if (auto initializers = parse_braced_initializers(ctx)) {
                 return cst::expr::Struct_init {
-                    .path   = std::move(path),
-                    .fields = std::move(initializers).value(),
-                };
-            }
-            if (auto initializers = parse_parenthesized_initializers(ctx)) {
-                return cst::expr::Tuple_init {
                     .path   = std::move(path),
                     .fields = std::move(initializers).value(),
                 };
@@ -403,17 +392,17 @@ namespace {
             return cst::expr::Method_call {
                 .function_arguments = std::move(arguments).value(),
                 .template_arguments = std::move(template_arguments),
-                .base_expression    = expression,
-                .method_name        = field_name,
+                .expression         = expression,
+                .name               = field_name,
             };
         }
         if (template_arguments.has_value()) {
             error_expected(ctx, "a parenthesized argument set");
         }
         return cst::expr::Struct_field {
-            .base_expression = expression,
-            .name            = field_name,
-            .dot_token       = dot_token,
+            .base      = expression,
+            .name      = field_name,
+            .dot_token = dot_token,
         };
     }
 
@@ -425,9 +414,9 @@ namespace {
         }
         if (auto const index = parse_bracketed<parse_expression, "an index expression">(ctx)) {
             return cst::expr::Array_index {
-                .base_expression  = base,
-                .index_expression = index.value(),
-                .dot_token        = dot_token,
+                .base      = base,
+                .index     = index.value(),
+                .dot_token = dot_token,
             };
         }
         if (auto const literal = try_extract(ctx, lex::Type::Integer)) {
@@ -435,10 +424,10 @@ namespace {
             if (auto const index = parse_integer(ctx, literal.value())) {
                 if (std::in_range<std::uint16_t>(index.value().value)) {
                     return cst::expr::Tuple_field {
-                        .base_expression   = base,
-                        .field_index       = static_cast<std::uint16_t>(index.value().value),
-                        .field_index_token = token(ctx, literal.value()),
-                        .dot_token         = dot_token,
+                        .base        = base,
+                        .index       = static_cast<std::uint16_t>(index.value().value),
+                        .index_token = token(ctx, literal.value()),
+                        .dot_token   = dot_token,
                     };
                 }
             }
@@ -466,9 +455,9 @@ namespace {
             while (auto const colon = try_extract(ctx, lex::Type::Colon)) {
                 expression = ctx.arena.expressions.push(
                     cst::expr::Ascription {
-                        .base_expression = expression,
-                        .colon_token     = token(ctx, colon.value()),
-                        .type            = require<parse_type>(ctx, "the ascribed type"),
+                        .expression  = expression,
+                        .colon_token = token(ctx, colon.value()),
+                        .type        = require<parse_type>(ctx, "the ascribed type"),
                     },
                     up_to_current(ctx, ctx.arena.ranges[ctx.arena.expressions[expression].range]));
             }

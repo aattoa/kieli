@@ -66,8 +66,9 @@ namespace {
     auto symbol_references(
         std::span<db::Symbol_reference const> references, db::Symbol_id symbol_id)
     {
-        return std::views::filter(references, [=](auto ref) { return ref.symbol_id == symbol_id; })
-             | std::views::transform([](db::Symbol_reference ref) { return ref.reference; });
+        return references
+             | std::views::filter([symbol_id](auto ref) { return ref.symbol_id == symbol_id; })
+             | std::views::transform([](auto ref) { return ref.reference; });
     }
 
     auto handle_formatting(Server& server, Json params) -> Result<Json>

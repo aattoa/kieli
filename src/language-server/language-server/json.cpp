@@ -1,6 +1,13 @@
 #include <libutl/utilities.hpp>
 #include <language-server/json.hpp>
 
+namespace {
+    auto integer_to_json(std::integral auto integer) -> ki::lsp::Json
+    {
+        return { cpputil::num::safe_cast<ki::lsp::Json::Number>(integer) };
+    };
+} // namespace
+
 ki::lsp::Bad_json::Bad_json(std::string message) : message(std::move(message)) {}
 
 auto ki::lsp::Bad_json::what() const noexcept -> char const*
@@ -55,8 +62,8 @@ auto ki::lsp::position_from_json(Json json) -> Position
 auto ki::lsp::position_to_json(Position position) -> Json
 {
     Json::Object result;
-    result.try_emplace("line", cpputil::num::safe_cast<Json::Number>(position.line));
-    result.try_emplace("character", cpputil::num::safe_cast<Json::Number>(position.column));
+    result.try_emplace("line", integer_to_json(position.line));
+    result.try_emplace("character", integer_to_json(position.column));
     return Json { std::move(result) };
 }
 
@@ -149,10 +156,10 @@ auto ki::lsp::document_identifier_params_from_json(db::Database const& db, Json 
 auto ki::lsp::severity_to_json(Severity severity) -> Json
 {
     switch (severity) {
-    case Severity::Error:       return Json { Json::Number { 1 } };
-    case Severity::Warning:     return Json { Json::Number { 2 } };
-    case Severity::Information: return Json { Json::Number { 3 } };
-    case Severity::Hint:        return Json { Json::Number { 4 } };
+    case Severity::Error:       return Json { 1 };
+    case Severity::Warning:     return Json { 2 };
+    case Severity::Information: return Json { 3 };
+    case Severity::Hint:        return Json { 4 };
     }
     cpputil::unreachable();
 }
@@ -170,7 +177,7 @@ auto ki::lsp::diagnostic_to_json(db::Database const& db, Diagnostic const& diagn
         switch (tag) {
         case Diagnostic_tag::Unnecessary: return Json { 1 };
         case Diagnostic_tag::Deprecated:  return Json { 2 };
-        case Diagnostic_tag::None:
+        case Diagnostic_tag::None:        ;
         };
         cpputil::unreachable();
     };
@@ -241,14 +248,16 @@ auto ki::lsp::hint_to_json(db::Database const& db, db::Document_id doc_id, db::I
 auto ki::lsp::action_to_json(db::Database const& db, db::Document_id doc_id, db::Action action)
     -> Json
 {
+    auto const& arena = db.documents[doc_id].arena;
+
     auto const visitor = utl::Overload {
-        [&](db::Action_silence_unused action) {
-            auto const& symbol = db.documents[doc_id].arena.symbols[action.symbol_id];
+        [&](db::Action_silence_unused silence) {
+            auto const& symbol = arena.symbols[silence.symbol_id];
             auto const  name   = db.string_pool.get(symbol.name.id);
 
             assert(symbol.use_count == 0);
 
-            auto range = lsp::Range(symbol.name.range.start, symbol.name.range.start);
+            auto range = to_range_0(symbol.name.range.start);
             auto edit  = make_text_edit(range, "_");
             auto uri   = path_to_uri(db::document_path(db, doc_id));
 
@@ -260,6 +269,37 @@ auto ki::lsp::action_to_json(db::Database const& db, db::Document_id doc_id, db:
 
             Json::Object object;
             object.try_emplace("title", std::format("Rename '{0}' to '_{0}'", name));
+            object.try_emplace("edit", std::move(workspace_edit));
+            return Json { std::move(object) };
+        },
+        [&](db::Action_fill_in_struct_init const& fill) {
+            Json::String text;
+
+            for (hir::Field_id field_id : fill.field_ids) {
+                auto const name = db.documents[doc_id].arena.hir.fields[field_id].name;
+                std::format_to(std::back_inserter(text), ", {} = _", db.string_pool.get(name.id));
+            }
+
+            if (not fill.final_field_end.has_value()) {
+                text.erase(0, 2); // Erase the first ", "
+            }
+
+            auto pos = Position {
+                .line   = action.range.stop.line,
+                .column = action.range.stop.column - 1,
+            };
+            auto range = to_range_0(fill.final_field_end.value_or(pos));
+            auto edit  = make_text_edit(range, std::move(text));
+            auto uri   = path_to_uri(db::document_path(db, doc_id));
+
+            Json::Object changes;
+            changes.try_emplace(std::move(uri), utl::to_vector({ std::move(edit) }));
+
+            Json::Object workspace_edit;
+            workspace_edit.try_emplace("changes", std::move(changes));
+
+            Json::Object object;
+            object.try_emplace("title", "Fill in missing struct fields");
             object.try_emplace("edit", std::move(workspace_edit));
             return Json { std::move(object) };
         },
@@ -278,9 +318,9 @@ auto ki::lsp::reference_to_json(Reference reference) -> Json
 auto ki::lsp::reference_kind_to_json(Reference_kind kind) -> Json
 {
     switch (kind) {
-    case Reference_kind::Text:  return Json { Json::Number { 1 } };
-    case Reference_kind::Read:  return Json { Json::Number { 2 } };
-    case Reference_kind::Write: return Json { Json::Number { 3 } };
+    case Reference_kind::Text:  return Json { 1 };
+    case Reference_kind::Read:  return Json { 2 };
+    case Reference_kind::Write: return Json { 3 };
     }
     cpputil::unreachable();
 }
@@ -335,8 +375,6 @@ auto ki::lsp::markdown_content_to_json(std::string markdown) -> Json
 
 auto ki::lsp::semantic_tokens_to_json(std::span<Semantic_token const> tokens) -> Json
 {
-    static constexpr auto to_num = [](auto n) { return cpputil::num::safe_cast<Json::Number>(n); };
-
     Json::Array array;
     array.reserve(tokens.size() * 5); // Each token is represented by five integers.
 
@@ -348,10 +386,10 @@ auto ki::lsp::semantic_tokens_to_json(std::span<Semantic_token const> tokens) ->
         if (token.position.line != prev.line) {
             prev.column = 0;
         }
-        array.emplace_back(to_num(token.position.line - prev.line));
-        array.emplace_back(to_num(token.position.column - prev.column));
-        array.emplace_back(to_num(token.length));
-        array.emplace_back(to_num(std::to_underlying(token.type)));
+        array.emplace_back(integer_to_json(token.position.line - prev.line));
+        array.emplace_back(integer_to_json(token.position.column - prev.column));
+        array.emplace_back(integer_to_json(token.length));
+        array.emplace_back(integer_to_json(std::to_underlying(token.type)));
         array.emplace_back(0); // Token modifiers bitmask
         prev = token.position;
     }
@@ -376,18 +414,16 @@ auto ki::lsp::as_unsigned(Json json) -> std::uint32_t
     throw Bad_json(std::format("Unexpected negative integer"));
 }
 
-auto ki::lsp::at(Json::Object& object, char const* key) -> Json
+auto ki::lsp::at(Json::Object& object, std::string_view key) -> Json
 {
-    cpputil::always_assert(key != nullptr);
     if (auto const it = object.find(key); it != object.end()) {
         return std::move(it->second);
     }
     throw Bad_json(std::format("Key not present: '{}'", key));
 }
 
-auto ki::lsp::maybe_at(Json::Object& object, char const* key) -> std::optional<Json>
+auto ki::lsp::maybe_at(Json::Object& object, std::string_view key) -> std::optional<Json>
 {
-    cpputil::always_assert(key != nullptr);
     auto const it = object.find(key);
     return it != object.end() ? std::optional(std::move(it->second)) : std::nullopt;
 }
