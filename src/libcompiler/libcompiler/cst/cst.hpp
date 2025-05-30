@@ -239,7 +239,6 @@ namespace ki::cst {
             Expression_id               true_branch;
             std::optional<False_branch> false_branch;
             Range_id                    keyword_token;
-            bool                        is_elif {};
         };
 
         struct Match {

@@ -127,11 +127,10 @@ namespace {
             }
 
             return ast::expr::Conditional {
-                .condition    = ctx.ast.expressions.push(std::move(condition)),
-                .true_branch  = desugar(ctx, conditional.true_branch),
-                .false_branch = false_branch,
-                .source
-                = conditional.is_elif ? ast::Conditional_source::Elif : ast::Conditional_source::If,
+                .condition                 = ctx.ast.expressions.push(std::move(condition)),
+                .true_branch               = desugar(ctx, conditional.true_branch),
+                .false_branch              = false_branch,
+                .source                    = ast::Conditional_source::If,
                 .has_explicit_false_branch = conditional.false_branch.has_value(),
             };
         }

@@ -110,7 +110,7 @@ namespace ki::ast {
     };
 
     enum struct Loop_source : std::uint8_t { Plain_loop, While_loop, For_loop };
-    enum struct Conditional_source : std::uint8_t { If, Elif, While };
+    enum struct Conditional_source : std::uint8_t { If, While };
 
     auto describe_loop_source(Loop_source source) -> std::string_view;
     auto describe_conditional_source(Conditional_source source) -> std::string_view;

@@ -3,7 +3,6 @@
 ## libparse
 - Accept trailing commas
 - Use matching parentheses for recovery
-- `else if` instead of `elif`
 
 ## libresolve
 - Unique zero-sized type for each function, coerce to function pointer type

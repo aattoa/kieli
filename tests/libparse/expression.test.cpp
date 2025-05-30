@@ -172,14 +172,14 @@ TEST("conditional")
         "    c\n"
         "}");
     CHECK_EQUAL(
-        parse("if a { b } elif c { d } elif e { f } else { g }"),
+        parse("if a { b } else if c { d } else if e { f } else { g }"),
         "if a {\n"
         "    b\n"
         "}\n"
-        "elif c {\n"
+        "else if c {\n"
         "    d\n"
         "}\n"
-        "elif e {\n"
+        "else if e {\n"
         "    f\n"
         "}\n"
         "else {\n"
@@ -199,11 +199,11 @@ TEST("conditional")
         "    d\n"
         "}");
     CHECK_EQUAL(
-        parse("if let a = b { c } elif let d = e { f } else { g }"),
+        parse("if let a = b { c } else if let d = e { f } else { g }"),
         "if let a = b {\n"
         "    c\n"
         "}\n"
-        "elif let d = e {\n"
+        "else if let d = e {\n"
         "    f\n"
         "}\n"
         "else {\n"

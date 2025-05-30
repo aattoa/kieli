@@ -26,7 +26,6 @@ auto ki::ast::describe_conditional_source(Conditional_source const source) -> st
 {
     switch (source) {
     case Conditional_source::If:    return "if expression";
-    case Conditional_source::Elif:  return "elif expression";
     case Conditional_source::While: return "while loop body";
     }
     cpputil::unreachable();

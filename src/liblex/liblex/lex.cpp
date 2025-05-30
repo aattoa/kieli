@@ -24,20 +24,15 @@ namespace {
     });
 
     constexpr auto keyword_token_map = std::to_array<std::pair<std::string_view, Type>>({
-        { "let", Type::Let },         { "mut", Type::Mut },
-        { "if", Type::If },           { "else", Type::Else },
-        { "elif", Type::Elif },       { "for", Type::For },
-        { "in", Type::In },           { "while", Type::While },
-        { "loop", Type::Loop },       { "continue", Type::Continue },
-        { "break", Type::Break },     { "match", Type::Match },
-        { "ret", Type::Ret },         { "fn", Type::Fn },
-        { "enum", Type::Enum },       { "struct", Type::Struct },
-        { "concept", Type::Concept }, { "impl", Type::Impl },
-        { "alias", Type::Alias },     { "import", Type::Import },
-        { "export", Type::Export },   { "module", Type::Module },
-        { "sizeof", Type::Sizeof },   { "typeof", Type::Typeof },
-        { "where", Type::Where },     { "immut", Type::Immut },
-        { "dyn", Type::Dyn },         { "macro", Type::Macro },
+        { "let", Type::Let },         { "mut", Type::Mut },       { "if", Type::If },
+        { "else", Type::Else },       { "for", Type::For },       { "in", Type::In },
+        { "while", Type::While },     { "loop", Type::Loop },     { "continue", Type::Continue },
+        { "break", Type::Break },     { "match", Type::Match },   { "ret", Type::Ret },
+        { "fn", Type::Fn },           { "enum", Type::Enum },     { "struct", Type::Struct },
+        { "concept", Type::Concept }, { "impl", Type::Impl },     { "alias", Type::Alias },
+        { "import", Type::Import },   { "export", Type::Export }, { "module", Type::Module },
+        { "sizeof", Type::Sizeof },   { "typeof", Type::Typeof }, { "where", Type::Where },
+        { "immut", Type::Immut },     { "dyn", Type::Dyn },       { "macro", Type::Macro },
         { "global", Type::Global },   { "defer", Type::Defer },
     });
 

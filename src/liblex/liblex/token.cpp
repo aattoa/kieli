@@ -64,7 +64,6 @@ auto ki::lex::recovery_semantic_token(Type const type) -> std::optional<lsp::Sem
     case Type::Immut:
     case Type::If:
     case Type::Else:
-    case Type::Elif:
     case Type::For:
     case Type::In:
     case Type::While:

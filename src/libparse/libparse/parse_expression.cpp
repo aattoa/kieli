@@ -110,39 +110,39 @@ namespace {
         }
     }
 
-    auto extract_conditional(Context& ctx, lex::Token const& if_or_elif_keyword)
-        -> cst::Expression_variant
+    auto extract_conditional(Context& ctx, lex::Token const& if_keyword) -> cst::Expression_variant
     {
-        add_keyword(ctx, if_or_elif_keyword.range);
+        add_keyword(ctx, if_keyword.range);
         auto const condition   = require<parse_expression>(ctx, "a condition");
         auto const true_branch = require<parse_block_expression>(ctx, "a block expression");
 
         std::optional<cst::expr::False_branch> false_branch;
 
-        if (auto const elif_keyword = try_extract(ctx, lex::Type::Elif)) {
-            add_keyword(ctx, elif_keyword.value().range);
-            auto elif_conditional = extract_conditional(ctx, elif_keyword.value());
-
-            false_branch = cst::expr::False_branch {
-                .body = ctx.arena.expressions.push(
-                    std::move(elif_conditional), up_to_current(ctx, elif_keyword.value().range)),
-                .keyword_token = token(ctx, elif_keyword.value()),
-            };
-        }
-        else if (auto const else_keyword = try_extract(ctx, lex::Type::Else)) {
+        if (auto const else_keyword = try_extract(ctx, lex::Type::Else)) {
             add_keyword(ctx, else_keyword.value().range);
-            false_branch = cst::expr::False_branch {
-                .body          = require<parse_block_expression>(ctx, "an else-block expression"),
-                .keyword_token = token(ctx, else_keyword.value()),
-            };
+
+            if (auto const second_if_keyword = try_extract(ctx, lex::Type::If)) {
+                add_keyword(ctx, second_if_keyword.value().range);
+                false_branch = cst::expr::False_branch {
+                    .body = ctx.arena.expressions.push(
+                        extract_conditional(ctx, second_if_keyword.value()),
+                        up_to_current(ctx, second_if_keyword.value().range)),
+                    .keyword_token = token(ctx, second_if_keyword.value()),
+                };
+            }
+            else {
+                false_branch = cst::expr::False_branch {
+                    .body = require<parse_block_expression>(ctx, "an else-block expression"),
+                    .keyword_token = token(ctx, else_keyword.value()),
+                };
+            }
         }
 
         return cst::expr::Conditional {
             .condition     = condition,
             .true_branch   = true_branch,
             .false_branch  = false_branch,
-            .keyword_token = token(ctx, if_or_elif_keyword),
-            .is_elif       = if_or_elif_keyword.type == lex::Type::Elif,
+            .keyword_token = token(ctx, if_keyword),
         };
     }
 

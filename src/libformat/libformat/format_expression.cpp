@@ -243,23 +243,21 @@ namespace {
 
         void operator()(cst::expr::Conditional const& conditional)
         {
-            format(state, "{} ", conditional.is_elif ? "elif" : "if");
+            format(state, "if ");
             format(state, conditional.condition);
             format(state, " ");
             format_indented_block_body(as_block(conditional.true_branch));
             if (not conditional.false_branch.has_value()) {
                 return;
             }
-            if (auto const* const else_conditional = std::get_if<cst::expr::Conditional>(
-                    &state.arena.expressions[conditional.false_branch.value().body].variant)) {
-                if (else_conditional->is_elif) {
-                    format(state, "{}", newline(state));
-                    format(state, conditional.false_branch.value().body);
-                    return;
-                }
-            }
             format(state, "{}else ", newline(state));
-            format_indented_block_body(as_block(conditional.false_branch.value().body));
+            if (auto const* block = std::get_if<cst::expr::Block>(
+                    &state.arena.expressions[conditional.false_branch.value().body].variant)) {
+                format_indented_block_body(*block);
+            }
+            else {
+                format(state, conditional.false_branch.value().body);
+            }
         }
 
         void operator()(cst::expr::Break const& break_)

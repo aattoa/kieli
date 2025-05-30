@@ -29,10 +29,10 @@ namespace {
     }
 
     constexpr auto keyword_strings = std::to_array<std::string_view>({
-        "let",    "mut",     "immut",    "if",    "else",   "elif",   "for",    "in",
-        "while",  "loop",    "continue", "break", "match",  "ret",    "fn",     "enum",
-        "struct", "concept", "impl",     "alias", "import", "export", "module", "sizeof",
-        "typeof", "where",   "dyn",      "macro", "global", "defer",
+        "let",     "mut",      "immut", "if",     "else",   "for",    "in",     "while",
+        "loop",    "continue", "break", "match",  "ret",    "fn",     "enum",   "struct",
+        "concept", "impl",     "alias", "import", "export", "module", "sizeof", "typeof",
+        "where",   "dyn",      "macro", "global", "defer",
     });
 
     constexpr auto punctuation_strings = std::to_array<std::string_view>({
