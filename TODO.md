@@ -10,6 +10,7 @@
 - Warn when last expression in block is defer
 - Lazily parse module when collecting, no Definition_variant
 - Move diagnostics from libdesugar
+- Collect semantic tokens for identifiers on path resolution
 
 ## Language server
 - Semantic tokens for escape sequences

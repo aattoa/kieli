@@ -375,7 +375,8 @@ namespace ki::hir {
     };
 
     struct Enumeration {
-        db::Environment_id associated_env_id;
+        std::vector<db::Symbol_id> constructor_ids;
+        db::Environment_id         associated_env_id;
     };
 
     struct Alias {

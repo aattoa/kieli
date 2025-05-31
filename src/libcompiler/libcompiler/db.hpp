@@ -101,6 +101,7 @@ namespace ki::db {
         std::vector<Inlay_hint>          inlay_hints;
         std::vector<Symbol_reference>    references;
         std::vector<Action>              actions;
+        std::optional<Environment_id>    root_env_id;
     };
 
     // In-memory representation of a text document.

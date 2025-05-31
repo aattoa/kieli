@@ -276,8 +276,8 @@ auto ki::lsp::action_to_json(db::Database const& db, db::Document_id doc_id, db:
             Json::String text;
 
             for (hir::Field_id field_id : fill.field_ids) {
-                auto const name = db.documents[doc_id].arena.hir.fields[field_id].name;
-                std::format_to(std::back_inserter(text), ", {} = _", db.string_pool.get(name.id));
+                auto const name = db.string_pool.get(arena.hir.fields[field_id].name.id);
+                std::format_to(std::back_inserter(text), ", {} = _", name);
             }
 
             if (not fill.final_field_end.has_value()) {
@@ -307,6 +307,78 @@ auto ki::lsp::action_to_json(db::Database const& db, db::Document_id doc_id, db:
     return std::visit(visitor, action.variant);
 }
 
+auto ki::lsp::symbol_to_json(
+    db::Database const& db, db::Document_id doc_id, db::Symbol_id symbol_id) -> Json
+{
+    auto const& arena  = db.documents[doc_id].arena;
+    auto const& symbol = arena.symbols[symbol_id];
+
+    Json::Object object;
+    object.try_emplace("name", Json::String(db.string_pool.get(symbol.name.id)));
+    object.try_emplace("kind", symbol_kind_to_json(symbol.variant));
+    object.try_emplace("range", range_to_json(symbol.name.range)); // TODO: full range
+    object.try_emplace("selectionRange", range_to_json(symbol.name.range));
+
+    auto const children_visitor = utl::Overload {
+        [&](hir::Structure_id id) {
+            return constructor_fields(
+                db, doc_id, arena.hir.structures[id].hir.value().constructor_id);
+        },
+        [&](hir::Enumeration_id enum_id) {
+            return arena.hir.enumerations[enum_id].hir.value().constructor_ids
+                 | std::views::transform(std::bind_front(symbol_to_json, std::cref(db), doc_id))
+                 | std::ranges::to<Json::Array>();
+        },
+        [&](hir::Constructor_id ctor_id) {
+            return constructor_fields(db, doc_id, ctor_id); //
+        },
+        [&](hir::Module_id id) {
+            return environment_symbols(db, doc_id, arena.hir.modules[id].mod_env_id);
+        },
+        [](auto) { return Json::Array(); },
+    };
+
+    auto const detail_visitor = utl::Overload {
+        [&](hir::Function_id id) {
+            auto const& signature = arena.hir.functions[id].signature.value();
+            return hir::to_string(arena.hir, db.string_pool, signature.function_type);
+        },
+        [&](hir::Field_id id) {
+            return hir::to_string(arena.hir, db.string_pool, arena.hir.fields[id].type);
+        },
+        [](auto) { return std::string(); },
+    };
+
+    if (auto children = std::visit(children_visitor, symbol.variant); not children.empty()) {
+        object.try_emplace("children", std::move(children));
+    }
+    if (auto detail = std::visit(detail_visitor, symbol.variant); not detail.empty()) {
+        object.try_emplace("detail", std::move(detail));
+    }
+
+    return Json { std::move(object) };
+}
+
+auto ki::lsp::symbol_kind_to_json(db::Symbol_variant variant) -> Json
+{
+    // https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#symbolKind
+    auto const visitor = utl::Overload {
+        [](db::Error) { return 0; },
+        [](hir::Function_id) { return 12; },
+        [](hir::Structure_id) { return 23; },
+        [](hir::Enumeration_id) { return 10; },
+        [](hir::Constructor_id) { return 9; },
+        [](hir::Field_id) { return 8; },
+        [](hir::Concept_id) { return 11; },
+        [](hir::Alias_id) { return 14; },
+        [](hir::Module_id) { return 2; },
+        [](hir::Local_variable_id) { return 13; },
+        [](hir::Local_mutability_id) { return 13; },
+        [](hir::Local_type_id) { return 14; },
+    };
+    return Json { std::visit(visitor, variant) };
+}
+
 auto ki::lsp::reference_to_json(Reference reference) -> Json
 {
     Json::Object object;
@@ -323,6 +395,32 @@ auto ki::lsp::reference_kind_to_json(Reference_kind kind) -> Json
     case Reference_kind::Write: return Json { 3 };
     }
     cpputil::unreachable();
+}
+
+auto ki::lsp::environment_symbols(
+    db::Database const& db, db::Document_id doc_id, db::Environment_id env_id) -> Json::Array
+{
+    return std::views::values(db.documents[doc_id].arena.environments[env_id].map)
+         | std::views::transform(std::bind_front(symbol_to_json, std::cref(db), doc_id))
+         | std::ranges::to<Json::Array>();
+}
+
+auto ki::lsp::constructor_fields(
+    db::Database const& db, db::Document_id doc_id, hir::Constructor_id ctor_id) -> Json::Array
+{
+    auto const& arena = db.documents[doc_id].arena;
+    auto const& ctor  = arena.hir.constructors[ctor_id];
+
+    if (auto const* body = std::get_if<hir::Struct_constructor>(&ctor.body)) {
+        auto field_to_json = [&](hir::Field_id field_id) {
+            return symbol_to_json(db, doc_id, arena.hir.fields[field_id].symbol_id);
+        };
+        return std::views::values(body->fields)     //
+             | std::views::transform(field_to_json) //
+             | std::ranges::to<Json::Array>();
+    }
+
+    return {};
 }
 
 auto ki::lsp::make_text_edit(Range range, std::string new_text) -> Json

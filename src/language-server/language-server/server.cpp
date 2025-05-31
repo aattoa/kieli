@@ -38,9 +38,17 @@ namespace {
 
     void analyze_document(Server& server, db::Document_id doc_id)
     {
-        server.db.documents[doc_id].info = {};
+        auto ctx = res::context(doc_id);
 
-        auto ctx        = res::context(doc_id);
+        server.db.documents[doc_id].info = {
+            .diagnostics     = {},
+            .semantic_tokens = {},
+            .inlay_hints     = {},
+            .references      = {},
+            .actions         = {},
+            .root_env_id     = ctx.root_env_id,
+        };
+
         auto symbol_ids = res::collect_document(server.db, ctx);
 
         for (db::Symbol_id symbol_id : symbol_ids) {
@@ -201,6 +209,13 @@ namespace {
         return Json { std::move(actions) };
     }
 
+    auto handle_symbols(Server const& server, Json params) -> Result<Json>
+    {
+        auto const doc_id = document_identifier_params_from_json(server.db, std::move(params));
+        auto const env_id = server.db.documents[doc_id].info.root_env_id.value();
+        return Json { environment_symbols(server.db, doc_id, env_id) };
+    }
+
     auto handle_prepare_rename(Server const& server, Json params) -> Result<Json>
     {
         auto const [doc_id, position] = position_params_from_json(server.db, std::move(params));
@@ -288,6 +303,7 @@ namespace {
             { "hoverProvider", Json { true } },
             { "definitionProvider", Json { true } },
             { "referencesProvider", Json { true } },
+            { "documentSymbolProvider", Json { true } },
             { "documentHighlightProvider", Json { true } },
             { "documentFormattingProvider", Json { true } },
         } };
@@ -331,6 +347,9 @@ namespace {
         }
         if (method == "textDocument/codeAction") {
             return handle_action(server, std::move(params));
+        }
+        if (method == "textDocument/documentSymbol") {
+            return handle_symbols(server, std::move(params));
         }
         if (method == "textDocument/prepareRename") {
             return handle_prepare_rename(server, std::move(params));

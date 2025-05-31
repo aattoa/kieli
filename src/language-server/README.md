@@ -11,5 +11,6 @@
 - Inlay type and parameter hints
 - Code actions
 - Diagnostics (errors, warnings, hints)
+- Document symbols
 - Document formatting
 - Syntax highlighting

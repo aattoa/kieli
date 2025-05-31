@@ -253,26 +253,32 @@ auto ki::res::resolve_enumeration(db::Database& db, Context& ctx, hir::Enumerati
         (void)template_parameters; // TODO
         ensure_no_unsolved_variables(db, ctx, parameters_state);
 
-        auto const associated_env_id = new_environment(
-            ctx,
-            db::Environment {
-                .map       = {},
-                .parent_id = info.env_id,
-                .name_id   = info.name.id,
-                .doc_id    = ctx.doc_id,
-                .kind      = db::Environment_kind::Type,
-            });
+        db::Environment associated_env {
+            .map       = {},
+            .parent_id = info.env_id,
+            .name_id   = info.name.id,
+            .doc_id    = ctx.doc_id,
+            .kind      = db::Environment_kind::Type,
+        };
+        auto const associated_env_id = new_environment(ctx, std::move(associated_env));
+
+        std::vector<db::Symbol_id> constructor_ids;
+        constructor_ids.reserve(info.ast.constructors.size());
 
         for (auto [discriminant, constructor] : std::views::enumerate(info.ast.constructors)) {
-            bind_symbol(
+            auto symbol_id = bind_symbol(
                 db,
                 ctx,
                 associated_env_id,
                 constructor.name,
                 resolve_constructor(db, ctx, ctor_env_id, info.type_id, constructor, discriminant));
+            constructor_ids.push_back(symbol_id);
         }
 
-        info.hir = hir::Enumeration { .associated_env_id = associated_env_id };
+        info.hir = hir::Enumeration {
+            .constructor_ids   = std::move(constructor_ids),
+            .associated_env_id = associated_env_id,
+        };
     }
     return info.hir.value();
 }
