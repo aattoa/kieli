@@ -23,7 +23,20 @@ namespace {
         if (auto const* enum_id = std::get_if<hir::Enumeration_id>(&symbol.variant)) {
             return resolve_enumeration(db, ctx, *enum_id).associated_env_id;
         }
-        return std::nullopt; // TODO: associated modules
+        if (auto const* struct_id = std::get_if<hir::Structure_id>(&symbol.variant)) {
+            return resolve_structure(db, ctx, *struct_id).associated_env_id;
+        }
+        if (auto const* alias_id = std::get_if<hir::Alias_id>(&symbol.variant)) {
+            auto const& alias   = resolve_alias(db, ctx, *alias_id);
+            auto const& variant = ctx.arena.hir.types[alias.type.id];
+            if (auto const* enumeration = std::get_if<hir::type::Enumeration>(&variant)) {
+                return resolve_enumeration(db, ctx, enumeration->id).associated_env_id;
+            }
+            if (auto const* structure = std::get_if<hir::type::Structure>(&variant)) {
+                return resolve_structure(db, ctx, structure->id).associated_env_id;
+            }
+        }
+        return std::nullopt;
     }
 
     auto apply_segment(
