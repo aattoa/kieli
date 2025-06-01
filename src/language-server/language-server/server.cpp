@@ -83,23 +83,23 @@ namespace {
     {
         auto const [doc_id, options] = formatting_params_from_json(server.db, std::move(params));
 
-        auto& document = server.db.documents[doc_id];
-        document.info.diagnostics.clear();
-        document.info.semantic_tokens.clear();
+        auto& doc = server.db.documents[doc_id];
+        doc.info.diagnostics.clear();
+        doc.info.semantic_tokens.clear();
         auto const cst = par::parse(server.db, doc_id);
 
         Json::Array edits;
         for (auto const& definition : cst.definitions) {
             std::string new_text;
-            fmt::format(server.db.string_pool, document.arena.cst, options, definition, new_text);
-            auto text = db::text_range(document.text, document.arena.cst.ranges[definition.range]);
+            fmt::format(server.db.string_pool, doc.arena.cst, options, definition, new_text);
+            auto text = db::text_range(doc.text, doc.arena.cst.ranges[definition.range]);
             if (new_text == text) {
                 // Avoid sending redundant edits when nothing changed.
                 // text_range takes linear time, but it's fine for now.
                 continue;
             }
             Json::Object edit;
-            edit.try_emplace("range", range_to_json(document.arena.cst.ranges[definition.range]));
+            edit.try_emplace("range", range_to_json(doc.arena.cst.ranges[definition.range]));
             edit.try_emplace("newText", std::move(new_text));
             edits.emplace_back(std::move(edit));
         }
@@ -135,14 +135,14 @@ namespace {
         auto const [doc_id, position] = position_params_from_json(server.db, std::move(params));
         auto const& references        = server.db.documents[doc_id].info.references;
 
-        if (auto ref = find_reference(references, position)) {
-            auto highlights = symbol_references(references, ref.value().symbol_id)
-                            | std::views::transform(reference_to_json)
-                            | std::ranges::to<Json::Array>();
-            return Json { std::move(highlights) };
-        }
-
-        return Json {};
+        return find_reference(references, position)
+            .transform([&](db::Symbol_reference ref) {
+                auto highlights = symbol_references(references, ref.symbol_id)
+                                | std::views::transform(reference_to_json)
+                                | std::ranges::to<Json::Array>();
+                return Json { std::move(highlights) };
+            })
+            .value_or(Json {});
     }
 
     auto handle_references(Server const& server, Json params) -> Json
@@ -150,35 +150,90 @@ namespace {
         auto const [doc_id, position] = position_params_from_json(server.db, std::move(params));
         auto const& references        = server.db.documents[doc_id].info.references;
 
-        auto const make_location = [&](Reference reference) {
-            return location_to_json(server.db, { .doc_id = doc_id, .range = reference.range });
+        auto const make_location = [&](Reference ref) {
+            return location_to_json(server.db, { .doc_id = doc_id, .range = ref.range });
         };
 
-        if (auto ref = find_reference(references, position)) {
-            auto locations = symbol_references(references, ref.value().symbol_id)
-                           | std::views::transform(make_location) //
-                           | std::ranges::to<Json::Array>();
-            return Json { std::move(locations) };
-        }
-
-        return Json {};
+        return find_reference(references, position)
+            .transform([&](db::Symbol_reference ref) {
+                auto locations = symbol_references(references, ref.symbol_id)
+                               | std::views::transform(make_location)
+                               | std::ranges::to<Json::Array>();
+                return Json { std::move(locations) };
+            })
+            .value_or(Json {});
     }
 
     auto handle_definition(Server const& server, Json params) -> Json
     {
         auto const [doc_id, position] = position_params_from_json(server.db, std::move(params));
+        auto const& doc               = server.db.documents[doc_id];
+
+        return find_reference(doc.info.references, position)
+            .transform([&](db::Symbol_reference ref) {
+                lsp::Range range = doc.arena.symbols[ref.symbol_id].name.range;
+                return location_to_json(server.db, { .doc_id = doc_id, .range = range });
+            })
+            .value_or(Json {});
+    }
+
+    auto symbol_type(db::Database const& db, db::Document_id doc_id, db::Symbol_id symbol_id)
+        -> std::optional<hir::Type_id>
+    {
+        auto const& arena = db.documents[doc_id].arena;
+
+        auto const visitor = utl::Overload {
+            [](db::Error) { return std::nullopt; },
+            [](hir::Concept_id) { return std::nullopt; },
+            [](hir::Module_id) { return std::nullopt; },
+            [](hir::Local_mutability_id) { return std::nullopt; },
+
+            [&](hir::Function_id id) {
+                return arena.hir.functions[id].signature.value().return_type.id;
+            },
+            [&](hir::Structure_id id) { return arena.hir.structures[id].type_id; },
+            [&](hir::Enumeration_id id) { return arena.hir.enumerations[id].type_id; },
+            [&](hir::Constructor_id id) { return arena.hir.constructors[id].owner_type_id; },
+            [&](hir::Field_id id) { return arena.hir.fields[id].type.id; },
+            [&](hir::Alias_id id) { return arena.hir.aliases[id].hir.value().type.id; },
+            [&](hir::Local_variable_id id) { return arena.hir.local_variables[id].type_id; },
+            [&](hir::Local_type_id id) { return arena.hir.local_types[id].type_id; },
+        };
+
+        return std::visit<std::optional<hir::Type_id>>(visitor, arena.symbols[symbol_id].variant);
+    }
+
+    auto type_definition(db::Database const& db, db::Document_id doc_id, hir::Type_id type_id)
+        -> std::optional<lsp::Range>
+    {
+        auto const& arena   = db.documents[doc_id].arena;
+        auto const& variant = arena.hir.types[type_id];
+
+        if (auto const* enumeration = std::get_if<hir::type::Enumeration>(&variant)) {
+            return arena.hir.enumerations[enumeration->id].name.range;
+        }
+        if (auto const* structure = std::get_if<hir::type::Structure>(&variant)) {
+            return arena.hir.structures[structure->id].name.range;
+        }
+        return std::nullopt;
+    }
+
+    auto handle_type_definition(Server const& server, Json params) -> Json
+    {
+        auto const [doc_id, position] = position_params_from_json(server.db, std::move(params));
         auto const& references        = server.db.documents[doc_id].info.references;
 
-        if (auto ref = find_reference(references, position)) {
-            auto locations = symbol_references(references, ref.value().symbol_id);
-
-            auto it = std::ranges::find(locations, Reference_kind::Write, &Reference::kind);
-            if (it != locations.end()) {
-                return location_to_json(server.db, { .doc_id = doc_id, .range = (*it).range });
-            }
-        }
-
-        return Json {};
+        return find_reference(references, position)
+            .and_then([&](db::Symbol_reference ref) {
+                return symbol_type(server.db, doc_id, ref.symbol_id);
+            })
+            .and_then([&](hir::Type_id type_id) {
+                return type_definition(server.db, doc_id, type_id); //
+            })
+            .transform([&](lsp::Range range) {
+                return location_to_json(server.db, { .doc_id = doc_id, .range = range });
+            })
+            .value_or(Json {});
     }
 
     auto handle_hover(Server const& server, Json params) -> Result<Json>
@@ -220,12 +275,14 @@ namespace {
     {
         auto const [doc_id, position] = position_params_from_json(server.db, std::move(params));
         auto const& references        = server.db.documents[doc_id].info.references;
-        if (auto ref = find_reference(references, position)) {
-            Json::Object object;
-            object.try_emplace("range", range_to_json(ref.value().reference.range));
-            return Json { std::move(object) };
-        }
-        return Json {};
+
+        return find_reference(references, position)
+            .transform([&](db::Symbol_reference ref) -> Json {
+                Json::Object object;
+                object.try_emplace("range", range_to_json(ref.reference.range));
+                return Json { std::move(object) };
+            })
+            .value_or(Json {});
     }
 
     auto handle_rename(Server const& server, Json params) -> Result<Json>
@@ -235,22 +292,22 @@ namespace {
 
         auto make_edit = [&](Reference ref) { return make_text_edit(ref.range, text); };
 
-        if (auto ref = find_reference(references, position)) {
-            auto uri   = path_to_uri(db::document_path(server.db, doc_id));
-            auto edits = symbol_references(references, ref.value().symbol_id)
-                       | std::views::transform(make_edit) //
-                       | std::ranges::to<Json::Array>();
+        return find_reference(references, position)
+            .transform([&](db::Symbol_reference ref) {
+                auto uri   = path_to_uri(db::document_path(server.db, doc_id));
+                auto edits = symbol_references(references, ref.symbol_id)
+                           | std::views::transform(make_edit) //
+                           | std::ranges::to<Json::Array>();
 
-            Json::Object changes;
-            changes.try_emplace(std::move(uri), std::move(edits));
+                Json::Object changes;
+                changes.try_emplace(std::move(uri), std::move(edits));
 
-            Json::Object workspace_edit;
-            workspace_edit.try_emplace("changes", std::move(changes));
+                Json::Object workspace_edit;
+                workspace_edit.try_emplace("changes", std::move(changes));
 
-            return Json { std::move(workspace_edit) };
-        }
-
-        return Json {};
+                return Json { std::move(workspace_edit) };
+            })
+            .value_or(Json {});
     }
 
     auto handle_initialize() -> Json
@@ -302,6 +359,7 @@ namespace {
             { "codeActionProvider", Json { Json::Object {} } },
             { "hoverProvider", Json { true } },
             { "definitionProvider", Json { true } },
+            { "typeDefinitionProvider", Json { true } },
             { "referencesProvider", Json { true } },
             { "documentSymbolProvider", Json { true } },
             { "documentHighlightProvider", Json { true } },
@@ -338,6 +396,9 @@ namespace {
         }
         if (method == "textDocument/definition") {
             return handle_definition(server, std::move(params));
+        }
+        if (method == "textDocument/typeDefinition") {
+            return handle_type_definition(server, std::move(params));
         }
         if (method == "textDocument/references") {
             return handle_references(server, std::move(params));

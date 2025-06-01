@@ -5,6 +5,7 @@
 ## Currently supported features
 
 - Go to definition
+- Go to type definition
 - Hover documentation
 - Find and highlight references
 - Intelligent rename
