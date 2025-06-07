@@ -97,17 +97,17 @@ namespace ki::res {
     void flatten_type(Context& ctx, Block_state& state, hir::Type_variant& type);
 
     void set_type_solution(
-        db::Database&       db,
-        Context&            ctx,
-        Block_state&        state,
-        Type_variable_data& variable_data,
-        hir::Type_variant   solution);
+        db::Database&         db,
+        Context&              ctx,
+        Block_state&          state,
+        hir::Type_variable_id var_id,
+        hir::Type_variant     solution);
 
     void set_mut_solution(
-        Context&                  ctx,
-        Block_state&              state,
-        Mutability_variable_data& variable_data,
-        hir::Mutability_variant   solution);
+        Context&                    ctx,
+        Block_state&                state,
+        hir::Mutability_variable_id var_id,
+        hir::Mutability_variant     solution);
 
     void ensure_no_unsolved_variables(db::Database& db, Context& ctx, Block_state& state);
 

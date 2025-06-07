@@ -36,16 +36,13 @@ namespace {
         hir::Mutability const& current_super;
         Goal                   goal {};
 
-        [[nodiscard]] auto solution(hir::Mutability_variable_id var_id, hir::Mutability mut) const
-            -> Result
+        auto solution(hir::Mutability_variable_id var_id, hir::Mutability mut) const -> Result
         {
-            set_mut_solution(
-                ctx, state, state.mut_vars.at(var_id.get()), ctx.arena.hir.mutabilities[mut.id]);
+            set_mut_solution(ctx, state, var_id, ctx.arena.hir.mutabilities[mut.id]);
             return Result::Ok;
         }
 
-        [[nodiscard]] auto unify(hir::Mutability const sub, hir::Mutability const super) const
-            -> Result
+        auto unify(hir::Mutability sub, hir::Mutability super) const -> Result
         {
             Mutability_visitor visitor {
                 .ctx           = ctx,
@@ -58,13 +55,22 @@ namespace {
                 visitor, ctx.arena.hir.mutabilities[sub.id], ctx.arena.hir.mutabilities[super.id]);
         }
 
-        auto operator()(db::Mutability const sub, db::Mutability const super) const -> Result
+        auto operator()(db::Mutability sub, db::Mutability super) const -> Result
         {
             return result((sub == super) or (sub == db::Mutability::Mut and goal == Goal::Subtype));
         }
 
-        auto operator()(hir::mut::Variable const sub, hir::mut::Variable const super) const
-            -> Result
+        auto operator()(db::Mutability sub, hir::mut::Parameterized) const -> Result
+        {
+            return result(sub == db::Mutability::Mut and goal == Goal::Subtype);
+        }
+
+        auto operator()(hir::mut::Parameterized, db::Mutability super) const -> Result
+        {
+            return result(super == db::Mutability::Immut and goal == Goal::Subtype);
+        }
+
+        auto operator()(hir::mut::Variable sub, hir::mut::Variable super) const -> Result
         {
             if (sub.id != super.id) {
                 state.mut_var_set.merge(sub.id.get(), super.id.get());
@@ -72,18 +78,17 @@ namespace {
             return Result::Ok;
         }
 
-        auto operator()(hir::mut::Variable const variable, auto const&) const -> Result
+        auto operator()(hir::mut::Variable variable, auto const&) const -> Result
         {
             return solution(variable.id, current_super);
         }
 
-        auto operator()(auto const&, hir::mut::Variable const variable) const -> Result
+        auto operator()(auto const&, hir::mut::Variable variable) const -> Result
         {
             return solution(variable.id, current_sub);
         }
 
-        auto operator()(
-            hir::mut::Parameterized const sub, hir::mut::Parameterized const super) const -> Result
+        auto operator()(hir::mut::Parameterized sub, hir::mut::Parameterized super) const -> Result
         {
             return result(sub.tag.value == super.tag.value);
         }
@@ -102,19 +107,17 @@ namespace {
         hir::Type_variant const& current_super;
         Goal                     goal {};
 
-        [[nodiscard]] auto solution(hir::Type_variable_id id, hir::Type_variant type) const
-            -> Result
+        auto solution(hir::Type_variable_id var_id, hir::Type_variant type) const -> Result
         {
-            if (occurs_check(ctx.arena.hir, id, type)) {
+            if (occurs_check(ctx.arena.hir, var_id, type)) {
                 return Result::Recursive;
             }
             flatten_type(ctx, state, type);
-            set_type_solution(db, ctx, state, state.type_vars.at(id.get()), std::move(type));
+            set_type_solution(db, ctx, state, var_id, std::move(type));
             return Result::Ok;
         }
 
-        [[nodiscard]] auto unify(hir::Type_variant const& sub, hir::Type_variant const& super) const
-            -> Result
+        auto unify(hir::Type_variant const& sub, hir::Type_variant const& super) const -> Result
         {
             Type_visitor visitor {
                 .db            = db,
@@ -127,13 +130,12 @@ namespace {
             return std::visit(visitor, sub, super);
         }
 
-        [[nodiscard]] auto unify(hir::Type sub, hir::Type super) const -> Result
+        auto unify(hir::Type sub, hir::Type super) const -> Result
         {
             return unify(ctx.arena.hir.types[sub.id], ctx.arena.hir.types[super.id]);
         }
 
-        [[nodiscard]] auto unify(hir::Mutability const sub, hir::Mutability const super) const
-            -> Result
+        auto unify(hir::Mutability const sub, hir::Mutability const super) const -> Result
         {
             Mutability_visitor visitor {
                 .ctx           = ctx,
@@ -145,8 +147,7 @@ namespace {
             return visitor.unify(sub, super);
         }
 
-        [[nodiscard]] auto unify(
-            std::span<hir::Type const> sub, std::span<hir::Type const> super) const -> Result
+        auto unify(std::span<hir::Type const> sub, std::span<hir::Type const> super) const -> Result
         {
             if (sub.size() != super.size()) {
                 return Result::Mismatch;
@@ -260,8 +261,8 @@ namespace {
             });
         }
 
-        auto operator()(
-            hir::type::Enumeration const& sub, hir::type::Enumeration const& super) const -> Result
+        template <utl::one_of<hir::type::Structure, hir::type::Enumeration> T>
+        auto operator()(T const& sub, T const& super) const -> Result
         {
             // TODO: visit template arguments
             return result(sub.id == super.id);

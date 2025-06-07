@@ -65,6 +65,7 @@ auto ki::res::error_expression(Constants const& constants, lsp::Range range) -> 
     return hir::Expression {
         .variant  = db::Error {},
         .type_id  = constants.type_error,
+        .mut_id   = constants.mut_yes,
         .category = hir::Expression_category::Place,
         .range    = range,
     };
@@ -75,6 +76,7 @@ auto ki::res::unit_expression(Constants const& constants, lsp::Range range) -> h
     return hir::Expression {
         .variant  = hir::expr::Tuple {},
         .type_id  = constants.type_unit,
+        .mut_id   = constants.mut_no,
         .category = hir::Expression_category::Value,
         .range    = range,
     };
@@ -200,28 +202,29 @@ void ki::res::flatten_type(Context& ctx, Block_state& state, hir::Type_variant& 
 }
 
 void ki::res::set_type_solution(
-    db::Database&       db,
-    Context&            ctx,
-    Block_state&        state,
-    Type_variable_data& data,
-    hir::Type_variant   solution)
+    db::Database&         db,
+    Context&              ctx,
+    Block_state&          state,
+    hir::Type_variable_id var_id,
+    hir::Type_variant     solution)
 {
-    auto& repr_data = state.type_vars.at(state.type_var_set.find(data.var_id.get()));
+    auto& repr_data = state.type_vars.at(state.type_var_set.find(var_id.get()));
     auto& repr_type = ctx.arena.hir.types[repr_data.type_id];
     if (repr_data.is_solved) {
-        require_subtype_relationship(db, ctx, state, data.origin, solution, repr_type);
+        require_subtype_relationship(
+            db, ctx, state, state.type_vars.at(var_id.get()).origin, solution, repr_type);
     }
     repr_type           = std::move(solution);
     repr_data.is_solved = true;
 }
 
 void ki::res::set_mut_solution(
-    Context&                  ctx,
-    Block_state&              state,
-    Mutability_variable_data& data,
-    hir::Mutability_variant   solution)
+    Context&                    ctx,
+    Block_state&                state,
+    hir::Mutability_variable_id var_id,
+    hir::Mutability_variant     solution)
 {
-    auto& repr = state.mut_vars.at(state.mut_var_set.find(data.var_id.get()));
+    auto& repr = state.mut_vars.at(state.mut_var_set.find(var_id.get()));
     cpputil::always_assert(not std::exchange(repr.is_solved, true));
     ctx.arena.hir.mutabilities[repr.mut_id] = std::move(solution);
 }
@@ -274,19 +277,19 @@ void ki::res::ensure_no_unsolved_variables(db::Database& db, Context& ctx, Block
 {
     for (Mutability_variable_data& data : state.mut_vars) {
         if (not data.is_solved) {
-            set_mut_solution(ctx, state, data, db::Mutability::Immut);
+            set_mut_solution(ctx, state, data.var_id, db::Mutability::Immut);
         }
     }
     for (Type_variable_data& data : state.type_vars) {
         flatten_type(ctx, state, ctx.arena.hir.types[data.type_id]);
         if (not data.is_solved) {
             if (data.kind == hir::Type_variable_kind::Integral) {
-                set_type_solution(db, ctx, state, data, hir::type::Integer::I32);
+                set_type_solution(db, ctx, state, data.var_id, hir::type::Integer::I32);
             }
             else {
                 auto message = std::format("Unsolved type variable: ?{}", data.var_id.get());
                 db::add_error(db, ctx.doc_id, data.origin, std::move(message));
-                set_type_solution(db, ctx, state, data, db::Error {});
+                set_type_solution(db, ctx, state, data.var_id, db::Error {});
             }
         }
     }

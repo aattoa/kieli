@@ -55,9 +55,10 @@ namespace {
 
         auto operator()(db::Integer const& integer) -> hir::Expression
         {
-            return {
+            return hir::Expression {
                 .variant  = integer,
                 .type_id  = fresh_integral_type_variable(ctx, state, this_range).id,
+                .mut_id   = ctx.constants.mut_no,
                 .category = hir::Expression_category::Value,
                 .range    = this_range,
             };
@@ -65,9 +66,10 @@ namespace {
 
         auto operator()(db::Floating const& floating) -> hir::Expression
         {
-            return {
+            return hir::Expression {
                 .variant  = floating,
                 .type_id  = ctx.constants.type_floating,
+                .mut_id   = ctx.constants.mut_no,
                 .category = hir::Expression_category::Value,
                 .range    = this_range,
             };
@@ -75,9 +77,10 @@ namespace {
 
         auto operator()(db::Boolean const& boolean) -> hir::Expression
         {
-            return {
+            return hir::Expression {
                 .variant  = boolean,
                 .type_id  = ctx.constants.type_boolean,
+                .mut_id   = ctx.constants.mut_no,
                 .category = hir::Expression_category::Value,
                 .range    = this_range,
             };
@@ -85,9 +88,10 @@ namespace {
 
         auto operator()(db::String const& string) -> hir::Expression
         {
-            return {
+            return hir::Expression {
                 .variant  = string,
                 .type_id  = ctx.constants.type_string,
+                .mut_id   = ctx.constants.mut_no,
                 .category = hir::Expression_category::Value,
                 .range    = this_range,
             };
@@ -101,18 +105,20 @@ namespace {
             }
 
             if (auto const* local_id = std::get_if<hir::Local_variable_id>(&symbol.variant)) {
-                return {
+                return hir::Expression {
                     .variant  = hir::expr::Variable_reference { .id = *local_id },
                     .type_id  = ctx.arena.hir.local_variables[*local_id].type_id,
+                    .mut_id   = ctx.arena.hir.local_variables[*local_id].mut_id,
                     .category = hir::Expression_category::Place,
                     .range    = this_range,
                 };
             }
 
             if (auto const* fun_id = std::get_if<hir::Function_id>(&symbol.variant)) {
-                return {
+                return hir::Expression {
                     .variant  = hir::expr::Function_reference { .id = *fun_id },
                     .type_id  = resolve_function_signature(db, ctx, *fun_id).function_type.id,
+                    .mut_id   = ctx.constants.mut_no,
                     .category = hir::Expression_category::Value,
                     .range    = this_range,
                 };
@@ -123,20 +129,22 @@ namespace {
 
                 auto const visitor = utl::Overload {
                     [&](hir::Unit_constructor const&) -> hir::Expression {
-                        return {
+                        return hir::Expression {
                             .variant  = hir::expr::Initializer {
                                 .constructor = ctor_id.value(),
                                 .arguments   = {},
                             },
                             .type_id  = ctor.owner_type_id,
+                            .mut_id   = ctx.constants.mut_no,
                             .category = hir::Expression_category::Value,
                             .range    = this_range,
                         };
                     },
                     [&](hir::Tuple_constructor const& tuple) -> hir::Expression {
-                        return {
+                        return hir::Expression {
                             .variant  = hir::expr::Constructor_reference { .id = ctor_id.value() },
                             .type_id  = tuple.function_type_id,
+                            .mut_id   = ctx.constants.mut_no,
                             .category = hir::Expression_category::Value,
                             .range    = this_range,
                         };
@@ -163,6 +171,8 @@ namespace {
             auto const element_type = fresh_general_type_variable(ctx, state, this_range);
 
             std::vector<hir::Expression> elements;
+            elements.reserve(array.elements.size());
+
             for (ast::Expression const& element : array.elements) {
                 elements.push_back(recurse(element));
                 require_subtype_relationship(
@@ -177,6 +187,7 @@ namespace {
             auto const length = ctx.arena.hir.expressions.push(hir::Expression {
                 .variant  = db::Integer { ssize(elements) },
                 .type_id  = ctx.constants.type_u64,
+                .mut_id   = ctx.constants.mut_no,
                 .category = hir::Expression_category::Value,
                 .range    = this_range,
             });
@@ -186,9 +197,10 @@ namespace {
                 .length       = length,
             });
 
-            return {
+            return hir::Expression {
                 .variant  = hir::expr::Array { std::move(elements) },
                 .type_id  = type_id,
+                .mut_id   = ctx.constants.mut_no,
                 .category = hir::Expression_category::Value,
                 .range    = this_range,
             };
@@ -200,9 +212,10 @@ namespace {
                 std::views::transform(tuple.fields, std::bind_front(&Visitor::recurse, this)));
             auto types = std::ranges::to<std::vector>( //
                 std::views::transform(fields, hir::expression_type));
-            return {
+            return hir::Expression {
                 .variant  = hir::expr::Tuple { std::move(fields) },
                 .type_id  = ctx.arena.hir.types.push(hir::type::Tuple { std::move(types) }),
+                .mut_id   = ctx.constants.mut_no,
                 .category = hir::Expression_category::Value,
                 .range    = this_range,
             };
@@ -218,9 +231,10 @@ namespace {
 
             state.loop_info = old_loop_info;
 
-            return {
+            return hir::Expression {
                 .variant  = hir::expr::Loop { ctx.arena.hir.expressions.push(std::move(body)) },
                 .type_id  = type_id.value_or(ctx.constants.type_unit),
+                .mut_id   = ctx.constants.mut_no,
                 .category = hir::Expression_category::Value,
                 .range    = this_range,
             };
@@ -247,9 +261,10 @@ namespace {
                 state.loop_info.value().result_type_id = result.type_id;
             }
 
-            return {
+            return hir::Expression {
                 .variant  = hir::expr::Break { ctx.arena.hir.expressions.push(std::move(result)) },
                 .type_id  = ctx.constants.type_unit,
+                .mut_id   = ctx.constants.mut_no,
                 .category = hir::Expression_category::Value,
                 .range    = this_range,
             };
@@ -260,9 +275,10 @@ namespace {
             if (not state.loop_info.has_value()) {
                 return error(this_range, "'continue' can not be used outside of a loop");
             }
-            return {
+            return hir::Expression {
                 .variant  = hir::expr::Continue {},
                 .type_id  = ctx.constants.type_unit,
+                .mut_id   = ctx.constants.mut_no,
                 .category = hir::Expression_category::Value,
                 .range    = this_range,
             };
@@ -303,6 +319,7 @@ namespace {
                     .result  = ctx.arena.hir.expressions.push(std::move(result)),
                 },
                 .type_id  = result_type,
+                .mut_id   = ctx.constants.mut_no,
                 .category = hir::Expression_category::Value,
                 .range    = result_range,
             };
@@ -327,9 +344,8 @@ namespace {
                 std::vector<hir::Expression_id> arguments;
                 arguments.reserve(signature.parameters.size());
 
-                for (std::size_t i = 0; i != signature.parameters.size(); ++i) {
-                    auto const& parameter = signature.parameters.at(i);
-                    auto        argument = recurse(ctx.arena.ast.expressions[call.arguments.at(i)]);
+                for (auto [param, arg_id] : std::views::zip(signature.parameters, call.arguments)) {
+                    auto argument = recurse(ctx.arena.ast.expressions[arg_id]);
 
                     require_subtype_relationship(
                         db,
@@ -337,18 +353,19 @@ namespace {
                         state,
                         argument.range,
                         ctx.arena.hir.types[argument.type_id],
-                        ctx.arena.hir.types[parameter.type.id]);
+                        ctx.arena.hir.types[param.type.id]);
                     arguments.push_back(ctx.arena.hir.expressions.push(std::move(argument)));
 
-                    db::add_param_hint(db, ctx.doc_id, argument.range.start, parameter.pattern_id);
+                    db::add_param_hint(db, ctx.doc_id, argument.range.start, param.pattern_id);
                 }
 
-                return {
+                return hir::Expression {
                     .variant  = hir::expr::Function_call {
                         .invocable = ctx.arena.hir.expressions.push(std::move(invocable)),
                         .arguments = std::move(arguments),
                     },
                     .type_id  = signature.return_type.id,
+                    .mut_id   = ctx.constants.mut_no,
                     .category = hir::Expression_category::Value,
                     .range    = this_range,
                 };
@@ -393,12 +410,13 @@ namespace {
                 arguments.push_back(ctx.arena.hir.expressions.push(std::move(argument)));
             }
 
-            return {
+            return hir::Expression {
                 .variant  = hir::expr::Function_call {
                     .invocable = ctx.arena.hir.expressions.push(std::move(invocable)),
                     .arguments = std::move(arguments),
                 },
                 .type_id  = result_type.id,
+                .mut_id   = ctx.constants.mut_no,
                 .category = hir::Expression_category::Value,
                 .range    = this_range,
             };
@@ -482,12 +500,13 @@ namespace {
                     arguments.at(field_index) = ctx.arena.hir.expressions.push(std::move(argument));
                 }
 
-                return {
+                return hir::Expression {
                     .variant  = hir::expr::Initializer {
                         .constructor = ctor_id.value(),
                         .arguments   = std::move(arguments),
                     },
                     .type_id  = ctor.owner_type_id,
+                    .mut_id   = ctx.constants.mut_no,
                     .category = hir::Expression_category::Value,
                     .range    = this_range,
                 };
@@ -551,7 +570,8 @@ namespace {
                                 .id   = it->second,
                             },
                             .type_id  = ctx.arena.hir.fields[it->second].type.id,
-                            .category = hir::Expression_category::Place,
+                            .mut_id   = base.mut_id,
+                            .category = base.category,
                             .range    = this_range,
                         };
                     }
@@ -575,7 +595,8 @@ namespace {
                             .index = field.index,
                         },
                         .type_id  = types[field.index].id,
-                        .category = hir::Expression_category::Place,
+                        .mut_id   = base.mut_id,
+                        .category = base.category,
                         .range    = this_range,
                     };
                 }
@@ -656,9 +677,10 @@ namespace {
                 .scrutinee = ctx.arena.hir.expressions.push(std::move(condition)),
             };
 
-            return {
+            return hir::Expression {
                 .variant  = std::move(match),
                 .type_id  = result_type,
+                .mut_id   = ctx.constants.mut_no,
                 .category = hir::Expression_category::Value,
                 .range    = this_range,
             };
@@ -693,12 +715,13 @@ namespace {
                 };
             };
 
-            return {
+            return hir::Expression {
                 .variant = hir::expr::Match {
                     .arms = std::ranges::to<std::vector>(std::views::transform(match.arms, resolve_arm)),
                     .scrutinee = ctx.arena.hir.expressions.push(std::move(scrutinee)),
                 },
                 .type_id  = result_type.id,
+                .mut_id   = ctx.constants.mut_no,
                 .category = hir::Expression_category::Value,
                 .range    = this_range,
             };
@@ -748,13 +771,14 @@ namespace {
                 ctx.arena.hir.types[initializer.type_id],
                 ctx.arena.hir.types[pattern.type_id]);
 
-            return {
+            return hir::Expression {
                 .variant  = hir::expr::Let {
                     .pattern     = ctx.arena.hir.patterns.push(std::move(pattern)),
                     .type        = initializer.type_id,
                     .initializer = ctx.arena.hir.expressions.push(std::move(initializer)),
                 },
                 .type_id  = ctx.constants.type_unit,
+                .mut_id   = ctx.constants.mut_no,
                 .category = hir::Expression_category::Value,
                 .range    = this_range,
             };
@@ -773,9 +797,10 @@ namespace {
         auto operator()(ast::expr::Return const& ret) -> hir::Expression
         {
             auto result = recurse(ctx.arena.ast.expressions[ret.expression]);
-            return {
+            return hir::Expression {
                 .variant  = hir::expr::Return { ctx.arena.hir.expressions.push(std::move(result)) },
                 .type_id  = ctx.constants.type_unit,
+                .mut_id   = ctx.constants.mut_no,
                 .category = hir::Expression_category::Value,
                 .range    = this_range,
             };
@@ -783,10 +808,12 @@ namespace {
 
         auto operator()(ast::expr::Sizeof const& sizeof_) -> hir::Expression
         {
-            auto type = resolve_type(db, ctx, state, env_id, ctx.arena.ast.types[sizeof_.type]);
-            return {
-                .variant  = hir::expr::Sizeof { type },
+            return hir::Expression {
+                .variant  = hir::expr::Sizeof {
+                    resolve_type(db, ctx, state, env_id, ctx.arena.ast.types[sizeof_.type]),
+                },
                 .type_id  = fresh_integral_type_variable(ctx, state, this_range).id,
+                .mut_id   = ctx.constants.mut_no,
                 .category = hir::Expression_category::Value,
                 .range    = this_range,
             };
@@ -794,27 +821,110 @@ namespace {
 
         auto operator()(ast::expr::Addressof const& addressof) -> hir::Expression
         {
-            auto place_expression = recurse(ctx.arena.ast.expressions[addressof.expression]);
-            auto referenced_type  = place_expression.type_id;
-            auto mutability       = resolve_mutability(db, ctx, env_id, addressof.mutability);
-            if (place_expression.category != hir::Expression_category::Place) {
-                return error(
-                    place_expression.range,
-                    "This expression does not identify a place in memory, "
-                    "so its address can not be taken");
+            auto place      = recurse(ctx.arena.ast.expressions[addressof.expression]);
+            auto place_type = hir::expression_type(place);
+            auto mutability = resolve_mutability(db, ctx, env_id, addressof.mutability);
+
+            if (place.category != hir::Expression_category::Place) {
+                return error(place.range, "This is a value expression and has no memory address");
             }
-            return {
-                .variant = hir::expr::Addressof {
-                    .mutability = mutability,
-                    .expression = ctx.arena.hir.expressions.push(std::move(place_expression)),
-                },
-                .type_id = ctx.arena.hir.types.push(hir::type::Reference {
-                    .referenced_type = hir::Type { .id = referenced_type, .range = this_range },
-                    .mutability      = mutability,
-                }),
-                .category = hir::Expression_category::Value,
-                .range    = this_range,
+
+            auto success = [&](hir::Mutability_id mut_id) {
+                return hir::Expression {
+                    .variant  = hir::expr::Addressof {
+                        .mutability = { .id = mut_id, .range = mutability.range },
+                        .expression = ctx.arena.hir.expressions.push(std::move(place)),
+                    },
+                    .type_id  = ctx.arena.hir.types.push(hir::type::Reference {
+                        .referenced_type = place_type,
+                        .mutability = { .id = mut_id, .range = mutability.range },
+                    }),
+                    .mut_id   = ctx.constants.mut_no,
+                    .category = hir::Expression_category::Value,
+                    .range    = this_range,
+                };
             };
+
+            auto solve = [&](hir::Mutability_variable_id var_id, hir::Mutability_variant solution) {
+                set_mut_solution(ctx, state, var_id, std::move(solution));
+                return success(mutability.id);
+            };
+
+            auto const visitor = utl::Overload {
+                [&](db::Error, auto const&) {
+                    // Place mutability is erroneous, use requested mutability.
+                    return success(mutability.id);
+                },
+                [&](auto const&, db::Error) {
+                    // Requested mutability is erroneous, use place mutability.
+                    return success(place.mut_id);
+                },
+                [&](db::Error, db::Error) { return success(mutability.id); },
+
+                [&](db::Mutability place_mut, db::Mutability requested_mut) {
+                    if (requested_mut == db::Mutability::Immut) {
+                        return success(mutability.id);
+                    }
+                    if (place_mut == db::Mutability::Immut) {
+                        return error(
+                            mutability.range,
+                            "Can not acquire a mutable reference to an immutable object");
+                    }
+                    return success(place.mut_id);
+                },
+                [&](db::Mutability place_mut, hir::mut::Parameterized const&) {
+                    if (place_mut == db::Mutability::Mut) {
+                        return success(mutability.id);
+                    }
+                    return error(
+                        mutability.range,
+                        "Can not acquire a reference of generic "
+                        "mutability to an immutable object");
+                },
+
+                [&](hir::mut::Parameterized const&, db::Mutability requested_mut) {
+                    if (requested_mut == db::Mutability::Immut) {
+                        return success(mutability.id);
+                    }
+                    return error(
+                        mutability.range,
+                        "Can not acquire a mutable reference "
+                        "to an object of generic mutability");
+                },
+                [&](hir::mut::Parameterized place_mut, hir::mut::Parameterized requested_mut) {
+                    if (place_mut.tag.value == requested_mut.tag.value) {
+                        return success(mutability.id);
+                    }
+                    return error(
+                        mutability.range,
+                        "Can not acquire a reference of generic mutability "
+                        "to an object of a different generic mutability");
+                },
+
+                [&](db::Mutability solution, hir::mut::Variable variable) {
+                    return solve(variable.id, solution);
+                },
+                [&](hir::mut::Parameterized solution, hir::mut::Variable variable) {
+                    return solve(variable.id, solution);
+                },
+                [&](hir::mut::Variable variable, db::Mutability solution) {
+                    if (solution == db::Mutability::Immut) {
+                        return success(mutability.id);
+                    }
+                    return solve(variable.id, solution);
+                },
+                [&](hir::mut::Variable variable, hir::mut::Parameterized solution) {
+                    return solve(variable.id, solution);
+                },
+                [&](hir::mut::Variable variable, hir::mut::Variable solution) {
+                    return solve(variable.id, solution);
+                },
+            };
+
+            return std::visit(
+                visitor,
+                ctx.arena.hir.mutabilities[place.mut_id],
+                ctx.arena.hir.mutabilities[mutability.id]);
         }
 
         auto operator()(ast::expr::Deref const& dereference) -> hir::Expression
@@ -831,9 +941,12 @@ namespace {
                 ctx.arena.hir.types[ref_expr.type_id],
                 hir::type::Reference { .referenced_type = ref_type, .mutability = ref_mut });
 
-            return {
-                .variant = hir::expr::Deref { ctx.arena.hir.expressions.push(std::move(ref_expr)) },
-                .type_id = ref_type.id,
+            return hir::Expression {
+                .variant  = hir::expr::Deref {
+                    ctx.arena.hir.expressions.push(std::move(ref_expr)),
+                },
+                .type_id  = ref_type.id,
+                .mut_id   = ref_mut.id,
                 .category = hir::Expression_category::Place,
                 .range    = this_range,
             };
@@ -841,11 +954,12 @@ namespace {
 
         auto operator()(ast::expr::Defer const& defer) -> hir::Expression
         {
-            return {
-                .variant = hir::expr::Defer {
+            return hir::Expression {
+                .variant  = hir::expr::Defer {
                     ctx.arena.hir.expressions.push(recurse(ctx.arena.ast.expressions[defer.expression])),
                 },
                 .type_id  = ctx.constants.type_unit,
+                .mut_id   = ctx.constants.mut_no,
                 .category = hir::Expression_category::Value,
                 .range    = this_range,
             };
@@ -855,9 +969,10 @@ namespace {
         {
             auto type = fresh_general_type_variable(ctx, state, this_range);
             db::add_type_hint(db, ctx.doc_id, this_range.stop, type.id);
-            return {
+            return hir::Expression {
                 .variant  = db::Error {},
                 .type_id  = type.id,
+                .mut_id   = ctx.constants.mut_yes,
                 .category = hir::Expression_category::Value,
                 .range    = this_range,
             };

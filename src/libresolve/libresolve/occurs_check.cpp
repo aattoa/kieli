@@ -9,19 +9,9 @@ namespace {
         hir::Arena const&     arena;
         hir::Type_variable_id id;
 
-        [[nodiscard]] auto recurse(hir::Type_id type_id) const -> bool
+        auto recurse(hir::Type_id type_id) const -> bool
         {
             return occurs_check(arena, id, arena.types[type_id]);
-        }
-
-        [[nodiscard]] auto recurse(hir::Type type) const -> bool
-        {
-            return recurse(type.id);
-        }
-
-        [[nodiscard]] auto recurse() const
-        {
-            return [*this](hir::Type type) -> bool { return recurse(type); };
         }
 
         auto operator()(hir::type::Variable const& variable) const -> bool
@@ -31,33 +21,36 @@ namespace {
 
         auto operator()(hir::type::Array const& array) const -> bool
         {
-            return recurse(array.element_type) or recurse(arena.expressions[array.length].type_id);
+            return recurse(array.element_type.id)
+                or recurse(arena.expressions[array.length].type_id);
         }
 
         auto operator()(hir::type::Slice const& slice) const -> bool
         {
-            return recurse(slice.element_type);
+            return recurse(slice.element_type.id);
         }
 
         auto operator()(hir::type::Reference const& reference) const -> bool
         {
-            return recurse(reference.referenced_type);
+            return recurse(reference.referenced_type.id);
         }
 
         auto operator()(hir::type::Pointer const& pointer) const -> bool
         {
-            return recurse(pointer.pointee_type);
+            return recurse(pointer.pointee_type.id);
         }
 
         auto operator()(hir::type::Function const& function) const -> bool
         {
-            return recurse(function.return_type)
-                or std::ranges::any_of(function.parameter_types, recurse());
+            return recurse(function.return_type.id)
+                or std::ranges::any_of(
+                       function.parameter_types, [&](hir::Type type) { return recurse(type.id); });
         }
 
         auto operator()(hir::type::Tuple const& tuple) const -> bool
         {
-            return std::ranges::any_of(tuple.types, recurse());
+            return std::ranges::any_of(
+                tuple.types, [&](hir::Type type) { return recurse(type.id); });
         }
 
         auto operator()(hir::type::Structure const&) const -> bool

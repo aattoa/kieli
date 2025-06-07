@@ -11,6 +11,7 @@
 - Lazily parse module when collecting, no Definition_variant
 - Move diagnostics from libdesugar
 - Collect semantic tokens for identifiers on path resolution
+- Provide a best-effort type when expression resolution fails
 
 ## Language server
 - Semantic tokens for escape sequences
@@ -18,7 +19,9 @@
 - Avoid collecting hints, actions, and references when the client does not support them
 - Option to display intermediate representations on hover
 - Thread pool, monitor client PID on main thread
-- Store completion position, on path resolution check if contained within segment range
+- Store edit position
+    - On path resolution, if contained within segment range, set completion environment
+    - On function call resolution, if contained within argument range, set signature help
 
 ## Attributes
 - `@linear`: Apply to type definition, require bindings to be explicitly dropped
@@ -54,3 +57,4 @@
 - Configure builds with `build.kieli`
 - Config instead of manifest
 - `fn drop[T](x: T) = @builtin`
+- Tree-sitter grammar

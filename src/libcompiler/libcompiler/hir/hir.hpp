@@ -204,6 +204,7 @@ namespace ki::hir {
     struct Expression {
         Expression_variant  variant;
         Type_id             type_id;
+        Mutability_id       mut_id;
         Expression_category category;
         lsp::Range          range;
     };
