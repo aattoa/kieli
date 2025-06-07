@@ -215,6 +215,12 @@ namespace {
         if (auto const* structure = std::get_if<hir::type::Structure>(&variant)) {
             return arena.hir.structures[structure->id].name.range;
         }
+        if (auto const* reference = std::get_if<hir::type::Reference>(&variant)) {
+            return type_definition(db, doc_id, reference->referenced_type.id);
+        }
+        if (auto const* pointer = std::get_if<hir::type::Pointer>(&variant)) {
+            return type_definition(db, doc_id, pointer->pointee_type.id);
+        }
         return std::nullopt;
     }
 
