@@ -222,7 +222,7 @@ auto ki::lsp::hint_to_json(db::Database const& db, db::Document_id doc_id, db::I
     auto const visitor = utl::Overload {
         [&](hir::Type_id type_id) -> Json {
             std::string label = ": ";
-            hir::format(hir, db.string_pool, type_id, label);
+            hir::format_to(label, hir, db.string_pool, type_id);
 
             Json::Object object;
             object.try_emplace("position", position_to_json(hint.position));
@@ -231,7 +231,7 @@ auto ki::lsp::hint_to_json(db::Database const& db, db::Document_id doc_id, db::I
             return Json { std::move(object) };
         },
         [&](hir::Pattern_id patt_id) -> Json {
-            std::string label = hir::to_string(hir, db.string_pool, hir.patterns[patt_id]);
+            std::string label = hir::to_string(hir, db.string_pool, patt_id);
             label.append(" =");
 
             Json::Object object;
@@ -276,8 +276,8 @@ auto ki::lsp::action_to_json(db::Database const& db, db::Document_id doc_id, db:
             Json::String text;
 
             for (hir::Field_id field_id : fill.field_ids) {
-                auto const name = db.string_pool.get(arena.hir.fields[field_id].name.id);
-                std::format_to(std::back_inserter(text), ", {} = _", name);
+                auto name = db.string_pool.get(arena.hir.fields[field_id].name.id);
+                text.append(", ").append(name).append(" = _");
             }
 
             if (not fill.final_field_end.has_value()) {
@@ -305,6 +305,59 @@ auto ki::lsp::action_to_json(db::Database const& db, db::Document_id doc_id, db:
         },
     };
     return std::visit(visitor, action.variant);
+}
+
+auto ki::lsp::signature_help_to_json(db::Database const& db, db::Document_id doc_id) -> Json
+{
+    auto const& doc = db.documents[doc_id];
+
+    if (not doc.info.signature_info.has_value()) {
+        return Json {};
+    }
+
+    auto const& [function_id, active_parameter] = doc.info.signature_info.value();
+    auto const& signature = doc.arena.hir.functions[function_id].signature.value();
+
+    // The signature label has to be formatted here because the parameter label offsets
+    // are needed in order for the client to be able to highlight the active parameter.
+
+    Json::String label = std::format("fn {}(", db.string_pool.get(signature.name.id));
+    Json::Array  parameters;
+
+    for (auto const& [pattern_id, type, default_argument] : signature.parameters) {
+        if (label.back() != '(') {
+            label.append(", ");
+        }
+
+        auto const start = cpputil::num::safe_cast<Json::Number>(label.size());
+
+        hir::format_to(label, doc.arena.hir, db.string_pool, pattern_id);
+        label.append(": ");
+        hir::format_to(label, doc.arena.hir, db.string_pool, type);
+
+        if (default_argument.has_value()) {
+            label.append(" = ");
+            hir::format_to(label, doc.arena.hir, db.string_pool, default_argument.value());
+        }
+
+        auto const end = cpputil::num::safe_cast<Json::Number>(label.size());
+
+        Json::Object parameter;
+        parameter.try_emplace("label", utl::to_vector({ Json { start }, Json { end } }));
+        parameters.emplace_back(std::move(parameter));
+    }
+
+    label.append("): ");
+    hir::format_to(label, doc.arena.hir, db.string_pool, signature.return_type);
+
+    Json::Object info;
+    info.try_emplace("label", std::move(label));
+    info.try_emplace("parameters", std::move(parameters));
+
+    Json::Object object;
+    object.try_emplace("signatures", utl::to_vector({ Json { std::move(info) } }));
+    object.try_emplace("activeParameter", cpputil::num::safe_cast<Json::Number>(active_parameter));
+    return Json { std::move(object) };
 }
 
 auto ki::lsp::symbol_to_json(

@@ -98,11 +98,11 @@ auto ki::db::database(Manifest manifest) -> Database
 auto ki::db::document(std::string text, Ownership ownership) -> Document
 {
     return Document {
-        .info      = {},
-        .text      = std::move(text),
-        .arena     = {},
-        .ownership = ownership,
-        .revision  = {},
+        .info          = Document_info {},
+        .text          = std::move(text),
+        .arena         = Arena {},
+        .ownership     = ownership,
+        .edit_position = std::nullopt,
     };
 }
 
@@ -178,7 +178,7 @@ auto ki::db::describe_read_failure(Read_failure failure) -> std::string_view
 auto ki::db::describe_symbol_kind(Symbol_variant variant) -> std::string_view
 {
     auto const visitor = utl::Overload {
-        [](db::Error) { return "an error"; },
+        [](Error) { return "an error"; },
         [](hir::Function_id) { return "a function"; },
         [](hir::Structure_id) { return "a structure"; },
         [](hir::Enumeration_id) { return "an enumeration"; },
@@ -221,6 +221,22 @@ void ki::db::edit_text(std::string& text, lsp::Range range, std::string_view new
     auto const where  = text_range(text, range);
     auto const offset = static_cast<std::size_t>(where.data() - text.data());
     text.replace(offset, where.size(), new_text);
+}
+
+void ki::db::add_signature_help(
+    Database&        db,
+    Document_id      doc_id,
+    lsp::Range       range,
+    hir::Function_id function_id,
+    std::size_t      parameter_index)
+{
+    Document& doc = db.documents[doc_id];
+    if (doc.edit_position.has_value() and lsp::range_contains(range, doc.edit_position.value())) {
+        doc.info.signature_info = Signature_info {
+            .function_id      = function_id,
+            .active_parameter = cpputil::num::safe_cast<std::uint32_t>(parameter_index),
+        };
+    }
 }
 
 void ki::db::add_type_hint(

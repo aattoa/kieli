@@ -7,6 +7,7 @@
 - Go to definition
 - Go to type definition
 - Hover documentation
+- Signature help
 - Find and highlight references
 - Intelligent rename
 - Inlay type and parameter hints

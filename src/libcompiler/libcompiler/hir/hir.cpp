@@ -37,11 +37,11 @@ auto ki::hir::describe_constructor(Constructor_body const& body) -> std::string_
 }
 
 #define DEFINE_HIR_FORMAT_TO(...)                                     \
-    void ki::hir::format(                                             \
+    void ki::hir::format_to(                                          \
+        std::string&            output,                               \
         Arena const&            arena,                                \
         utl::String_pool const& pool,                                 \
-        __VA_ARGS__ const&      object,                               \
-        std::string&            output)                               \
+        __VA_ARGS__ const&      object)                               \
     {                                                                 \
         dtl::With_arena<__VA_ARGS__> with_arena {                     \
             std::cref(pool),                                          \
@@ -52,7 +52,9 @@ auto ki::hir::describe_constructor(Constructor_body const& body) -> std::string_
     }
 
 DEFINE_HIR_FORMAT_TO(Expression);
+DEFINE_HIR_FORMAT_TO(Expression_id);
 DEFINE_HIR_FORMAT_TO(Pattern);
+DEFINE_HIR_FORMAT_TO(Pattern_id);
 DEFINE_HIR_FORMAT_TO(Type);
 DEFINE_HIR_FORMAT_TO(Type_id);
 DEFINE_HIR_FORMAT_TO(Type_variant);

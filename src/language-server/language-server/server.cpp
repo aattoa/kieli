@@ -47,6 +47,7 @@ namespace {
             .references      = {},
             .actions         = {},
             .root_env_id     = ctx.root_env_id,
+            .signature_info  = std::nullopt,
         };
 
         auto symbol_ids = res::collect_document(server.db, ctx);
@@ -162,6 +163,19 @@ namespace {
                 return Json { std::move(locations) };
             })
             .value_or(Json {});
+    }
+
+    auto handle_signature_help(Server& server, Json params) -> Json
+    {
+        auto const [doc_id, position] = position_params_from_json(server.db, std::move(params));
+
+        auto& doc = server.db.documents[doc_id];
+        if (position != doc.edit_position) {
+            doc.edit_position = position;
+            analyze_document(server, doc_id);
+        }
+
+        return signature_help_to_json(server.db, doc_id);
     }
 
     auto handle_definition(Server const& server, Json params) -> Json
@@ -361,6 +375,11 @@ namespace {
               Json { Json::Object {
                   { "prepareProvider", Json { true } },
               } } },
+            { "signatureHelpProvider",
+              Json { Json::Object {
+                  { "triggerCharacters", Json { Json::Array { Json { "(" }, Json { "," } } } },
+                  { "retriggerCharacters", Json { Json::Array { Json { " " } } } },
+              } } },
             { "inlayHintProvider", Json { Json::Object {} } },
             { "codeActionProvider", Json { Json::Object {} } },
             { "hoverProvider", Json { true } },
@@ -409,6 +428,9 @@ namespace {
         if (method == "textDocument/references") {
             return handle_references(server, std::move(params));
         }
+        if (method == "textDocument/signatureHelp") {
+            return handle_signature_help(server, std::move(params));
+        }
         if (method == "textDocument/hover") {
             return handle_hover(server, std::move(params));
         }
@@ -455,16 +477,21 @@ namespace {
     }
 
     // https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#textDocumentContentChangeEvent
-    void apply_content_change(std::string& text, Json object)
+    void apply_content_change(db::Document& document, Json object)
     {
         auto change   = as<Json::Object>(std::move(object));
         auto new_text = as<Json::String>(at(change, "text"));
         if (auto field = maybe_at(change, "range")) {
             auto range = range_from_json(std::move(field).value());
-            db::edit_text(text, range, new_text);
+            db::edit_text(document.text, range, new_text);
+
+            // If the change is small, assume the user just typed some characters.
+            if (not is_multiline(range) and new_text.size() < 5 and not new_text.contains('\n')) {
+                document.edit_position = column_offset(range.start, new_text.size());
+            }
         }
         else {
-            text = std::move(new_text);
+            document.text = std::move(new_text);
         }
     }
 
@@ -473,7 +500,7 @@ namespace {
         auto object = as<Json::Object>(std::move(params));
         auto doc_id = document_identifier_from_json(server.db, at(object, "textDocument"));
         for (Json change : as<Json::Array>(at(object, "contentChanges"))) {
-            apply_content_change(server.db.documents[doc_id].text, std::move(change));
+            apply_content_change(server.db.documents[doc_id], std::move(change));
         }
         analyze_document(server, doc_id);
         publish_diagnostics(server, doc_id);

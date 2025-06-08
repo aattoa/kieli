@@ -21,7 +21,6 @@
 - Thread pool, monitor client PID on main thread
 - Store edit position
     - On path resolution, if contained within segment range, set completion environment
-    - On function call resolution, if contained within argument range, set signature help
 
 ## Attributes
 - `@linear`: Apply to type definition, require bindings to be explicitly dropped

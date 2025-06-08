@@ -106,6 +106,7 @@ namespace ki::lsp {
     auto diagnostic_params_to_json(db::Database const& db, db::Document_id doc_id) -> Json;
     auto hint_to_json(db::Database const& db, db::Document_id doc_id, db::Inlay_hint hint) -> Json;
     auto action_to_json(db::Database const& db, db::Document_id doc_id, db::Action action) -> Json;
+    auto signature_help_to_json(db::Database const& db, db::Document_id doc_id) -> Json;
     auto symbol_to_json(db::Database const& db, db::Document_id doc_id, db::Symbol_id id) -> Json;
     auto symbol_kind_to_json(db::Symbol_variant variant) -> Json;
     auto reference_to_json(Reference reference) -> Json;

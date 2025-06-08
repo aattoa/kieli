@@ -78,6 +78,12 @@ namespace ki::db {
         lsp::Range     range;
     };
 
+    // Signature help information.
+    struct Signature_info {
+        hir::Function_id function_id;
+        std::uint32_t    active_parameter {};
+    };
+
     // A reference to a symbol. Used to determine the symbol at a particular position.
     struct Symbol_reference {
         lsp::Reference reference;
@@ -102,15 +108,16 @@ namespace ki::db {
         std::vector<Symbol_reference>    references;
         std::vector<Action>              actions;
         std::optional<Environment_id>    root_env_id;
+        std::optional<Signature_info>    signature_info;
     };
 
     // In-memory representation of a text document.
     struct Document {
-        Document_info info;
-        std::string   text;
-        Arena         arena;
-        Ownership     ownership {};
-        std::size_t   revision {};
+        Document_info                info;
+        std::string                  text;
+        Arena                        arena;
+        Ownership                    ownership {};
+        std::optional<lsp::Position> edit_position;
     };
 
     // Description of a project.
@@ -174,6 +181,14 @@ namespace ki::db {
 
     // Replace `range` in `text` with `new_text`.
     void edit_text(std::string& text, lsp::Range range, std::string_view new_text);
+
+    // Add signature help to the document identified by `doc_id`.
+    void add_signature_help(
+        Database&        db,
+        Document_id      doc_id,
+        lsp::Range       range,
+        hir::Function_id function_id,
+        std::size_t      parameter_index);
 
     // Add a type hint to the document identified by `doc_id`.
     void add_type_hint(Database& db, Document_id doc_id, lsp::Position pos, hir::Type_id type_id);

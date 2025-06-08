@@ -504,20 +504,22 @@ namespace ki::hir {
     // Get a one-word description of the constructor kind.
     auto describe_constructor(Constructor_body const& body) -> std::string_view;
 
-    void format(Arena const&, utl::String_pool const&, Pattern const&, std::string&);
-    void format(Arena const&, utl::String_pool const&, Expression const&, std::string&);
-    void format(Arena const&, utl::String_pool const&, Type const&, std::string&);
-    void format(Arena const&, utl::String_pool const&, Type_id const&, std::string&);
-    void format(Arena const&, utl::String_pool const&, Type_variant const&, std::string&);
-    void format(Arena const&, utl::String_pool const&, Mutability const&, std::string&);
-    void format(Arena const&, utl::String_pool const&, Mutability_id const&, std::string&);
-    void format(Arena const&, utl::String_pool const&, Mutability_variant const&, std::string&);
+    void format_to(std::string&, Arena const&, utl::String_pool const&, Expression const&);
+    void format_to(std::string&, Arena const&, utl::String_pool const&, Expression_id const&);
+    void format_to(std::string&, Arena const&, utl::String_pool const&, Pattern const&);
+    void format_to(std::string&, Arena const&, utl::String_pool const&, Pattern_id const&);
+    void format_to(std::string&, Arena const&, utl::String_pool const&, Type const&);
+    void format_to(std::string&, Arena const&, utl::String_pool const&, Type_id const&);
+    void format_to(std::string&, Arena const&, utl::String_pool const&, Type_variant const&);
+    void format_to(std::string&, Arena const&, utl::String_pool const&, Mutability const&);
+    void format_to(std::string&, Arena const&, utl::String_pool const&, Mutability_id const&);
+    void format_to(std::string&, Arena const&, utl::String_pool const&, Mutability_variant const&);
 
     auto to_string(Arena const& arena, utl::String_pool const& pool, auto const& x) -> std::string
-        requires requires(std::string output) { hir::format(arena, pool, x, output); }
+        requires requires(std::string output) { hir::format_to(output, arena, pool, x); }
     {
         std::string output;
-        hir::format(arena, pool, x, output);
+        hir::format_to(output, arena, pool, x);
         return output;
     };
 

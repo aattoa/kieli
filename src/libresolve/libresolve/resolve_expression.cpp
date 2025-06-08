@@ -344,19 +344,22 @@ namespace {
                 std::vector<hir::Expression_id> arguments;
                 arguments.reserve(signature.parameters.size());
 
-                for (auto [param, arg_id] : std::views::zip(signature.parameters, call.arguments)) {
-                    auto argument = recurse(ctx.arena.ast.expressions[arg_id]);
+                for (std::size_t index = 0; index != call.arguments.size(); ++index) {
+                    auto const& parameter = signature.parameters.at(index);
+                    auto const& argument  = ctx.arena.ast.expressions[call.arguments.at(index)];
 
+                    db::add_param_hint(db, ctx.doc_id, argument.range.start, parameter.pattern_id);
+                    db::add_signature_help(db, ctx.doc_id, argument.range, ref->id, index);
+
+                    auto expression = recurse(argument);
                     require_subtype_relationship(
                         db,
                         ctx,
                         state,
                         argument.range,
-                        ctx.arena.hir.types[argument.type_id],
-                        ctx.arena.hir.types[param.type.id]);
-                    arguments.push_back(ctx.arena.hir.expressions.push(std::move(argument)));
-
-                    db::add_param_hint(db, ctx.doc_id, argument.range.start, param.pattern_id);
+                        ctx.arena.hir.types[expression.type_id],
+                        ctx.arena.hir.types[parameter.type.id]);
+                    arguments.push_back(ctx.arena.hir.expressions.push(std::move(expression)));
                 }
 
                 return hir::Expression {
