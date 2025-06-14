@@ -77,7 +77,7 @@ namespace ki::cst {
     };
 
     struct Path_root_global {
-        Range_id global_token;
+        Range_id double_colon_token;
     };
 
     using Path_root = std::variant<std::monostate, Path_root_global, Type_id>;
@@ -406,12 +406,6 @@ namespace ki::cst {
             Constructor_body body;
         };
 
-        struct Abbreviated_constructor {
-            db::Upper        name;
-            Constructor_body body;
-            Range_id         double_colon_token;
-        };
-
         struct Tuple {
             Surrounded<Separated<Pattern_id>> patterns;
         };
@@ -441,7 +435,6 @@ namespace ki::cst {
               patt::Paren,
               patt::Name,
               patt::Constructor,
-              patt::Abbreviated_constructor,
               patt::Tuple,
               patt::Top_level_tuple,
               patt::Slice,

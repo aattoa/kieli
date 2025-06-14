@@ -301,11 +301,6 @@ namespace ki::ast {
             Constructor_body body;
         };
 
-        struct Abbreviated_constructor {
-            db::Upper        name;
-            Constructor_body body;
-        };
-
         struct Tuple {
             std::vector<Pattern> field_patterns;
         };
@@ -329,7 +324,6 @@ namespace ki::ast {
               Wildcard,
               patt::Name,
               patt::Constructor,
-              patt::Abbreviated_constructor,
               patt::Tuple,
               patt::Slice,
               patt::Guarded> {

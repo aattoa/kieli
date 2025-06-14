@@ -33,7 +33,7 @@ namespace {
         { "import", Type::Import },   { "export", Type::Export }, { "module", Type::Module },
         { "sizeof", Type::Sizeof },   { "typeof", Type::Typeof }, { "where", Type::Where },
         { "immut", Type::Immut },     { "dyn", Type::Dyn },       { "macro", Type::Macro },
-        { "global", Type::Global },   { "defer", Type::Defer },
+        { "defer", Type::Defer },
     });
 
     auto find_token(auto const& map, std::string_view const string) -> std::optional<Type>
@@ -68,7 +68,7 @@ namespace {
     constexpr auto is_alphabetic = satisfies_one_of<is_lowercase, is_uppercase>;
     constexpr auto is_name       = satisfies_one_of<is_alphabetic, is_digit, is_one_of<"_'">>;
     constexpr auto is_name_head  = satisfies_one_of<is_alphabetic, is_one_of<"_">>;
-    constexpr auto is_operator   = is_one_of<"+-*/.|<=>:!?#%&^~$@\\">;
+    constexpr auto is_operator   = is_one_of<"+-*/.|<=>:!?#%&^~$@\\'">;
 
     constexpr auto is_valid_character
         = satisfies_one_of<is_name, is_operator, is_whitespace, is_one_of<"(){}[],'\"">>;

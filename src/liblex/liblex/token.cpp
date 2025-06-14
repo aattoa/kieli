@@ -86,7 +86,6 @@ auto ki::lex::recovery_semantic_token(Type const type) -> std::optional<lsp::Sem
     case Type::Where:
     case Type::Dyn:
     case Type::Macro:
-    case Type::Global:
     case Type::Defer:                return Keyword;
     case Type::Invalid_character:
     case Type::Lambda:

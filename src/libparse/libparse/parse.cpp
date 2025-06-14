@@ -117,7 +117,7 @@ namespace {
         -> std::optional<cst::Range_id>
     {
         if (auto const* const global = std::get_if<cst::Path_root_global>(&root)) {
-            return global->global_token;
+            return global->double_colon_token;
         }
         if (auto const* const type_id = std::get_if<cst::Type_id>(&root)) {
             return arena.types[*type_id].range;
@@ -128,11 +128,11 @@ namespace {
 
 auto ki::par::parse_simple_path_root(Context& ctx) -> std::optional<cst::Path_root>
 {
-    switch (peek(ctx).type) {
+    switch (auto tok = peek(ctx); tok.type) {
     case lex::Type::Lower_name:
-    case lex::Type::Upper_name: return cst::Path_root {}; // Extract nothing
-    case lex::Type::Global:     return cst::Path_root_global { token(ctx, extract(ctx)) };
-    default:                    return std::nullopt;
+    case lex::Type::Upper_name:   return cst::Path_root {};
+    case lex::Type::Double_colon: return cst::Path_root_global { token(ctx, tok) };
+    default:                      return std::nullopt;
     }
 }
 

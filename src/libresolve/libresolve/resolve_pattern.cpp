@@ -90,11 +90,6 @@ namespace {
             cpputil::todo();
         }
 
-        auto operator()(ast::patt::Abbreviated_constructor const&) -> hir::Pattern
-        {
-            cpputil::todo();
-        }
-
         auto operator()(ast::patt::Tuple const& tuple) -> hir::Pattern
         {
             auto patterns = tuple.field_patterns

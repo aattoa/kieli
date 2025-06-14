@@ -41,12 +41,9 @@ void ki::fmt::format(State& state, cst::Type_annotation const& annotation)
 
 void ki::fmt::format(State& state, cst::Path const& path)
 {
-    auto const visitor = utl::Overload {
-        [&](std::monostate) {},
-        [&](cst::Path_root_global const&) { format(state, "global"); },
-        [&](cst::Type_id const type) { format(state, type); },
-    };
-    std::visit(visitor, path.root);
+    if (auto const* type = std::get_if<cst::Type_id>(&path.root)) {
+        format(state, *type);
+    }
     for (auto const& segment : path.segments) {
         if (segment.leading_double_colon_token.has_value()) {
             format(state, "::");

@@ -587,13 +587,6 @@ namespace {
             display_node(state, Last::Yes, "body", constructor.body);
         }
 
-        void operator()(patt::Abbreviated_constructor const& constructor)
-        {
-            write_line(state, "abbreviated constructor");
-            display_node(state, Last::No, "name", constructor.name);
-            display_node(state, Last::Yes, "body", constructor.body);
-        }
-
         void operator()(patt::Tuple const& tuple)
         {
             write_line(state, "tuple");

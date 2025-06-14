@@ -81,12 +81,6 @@ namespace {
             format_constructor_body(state, constructor.body);
         }
 
-        void operator()(cst::patt::Abbreviated_constructor const& constructor)
-        {
-            format(state, "::{}", state.pool.get(constructor.name.id));
-            format_constructor_body(state, constructor.body);
-        }
-
         void operator()(cst::patt::Top_level_tuple const& tuple)
         {
             format_comma_separated(state, tuple.patterns.elements);

@@ -59,15 +59,6 @@ namespace {
             };
         }
 
-        auto operator()(cst::patt::Abbreviated_constructor const& constructor) const
-            -> ast::Pattern_variant
-        {
-            return ast::patt::Abbreviated_constructor {
-                .name = constructor.name,
-                .body = desugar(ctx, constructor.body),
-            };
-        }
-
         auto operator()(cst::patt::Guarded const& guarded) const -> ast::Pattern_variant
         {
             return ast::patt::Guarded {

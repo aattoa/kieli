@@ -107,17 +107,6 @@ namespace {
         };
     };
 
-    auto extract_abbreviated_constructor(Context& ctx, lex::Token const& double_colon)
-        -> cst::Pattern_variant
-    {
-        add_punctuation(ctx, double_colon.range);
-        return cst::patt::Abbreviated_constructor {
-            .name               = extract_upper_name(ctx, "a constructor name"),
-            .body               = extract_constructor_body(ctx),
-            .double_colon_token = token(ctx, double_colon),
-        };
-    }
-
     auto dispatch_parse_pattern(Context& ctx) -> std::optional<cst::Pattern_variant>
     {
         switch (peek(ctx).type) {
@@ -132,7 +121,6 @@ namespace {
         case lex::Type::Mut:
         case lex::Type::Immut:        return extract_name(ctx);
         case lex::Type::Upper_name:   return extract_constructor_path(ctx);
-        case lex::Type::Double_colon: return extract_abbreviated_constructor(ctx, extract(ctx));
         default:                      return std::nullopt;
         }
     }
