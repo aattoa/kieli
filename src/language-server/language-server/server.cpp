@@ -48,6 +48,7 @@ namespace {
             .actions         = {},
             .root_env_id     = ctx.root_env_id,
             .signature_info  = std::nullopt,
+            .completion_info = std::nullopt,
         };
 
         auto symbol_ids = res::collect_document(server.db, ctx);
@@ -60,6 +61,15 @@ namespace {
         }
 
         server.db.documents[doc_id].arena = std::move(ctx.arena);
+    }
+
+    void update_edit_position(Server& server, db::Document_id doc_id, lsp::Position position)
+    {
+        auto& doc = server.db.documents[doc_id];
+        if (doc.edit_position != position) {
+            doc.edit_position = position;
+            analyze_document(server, doc_id);
+        }
     }
 
     auto find_reference(std::span<db::Symbol_reference const> references, Position position)
@@ -146,6 +156,16 @@ namespace {
             .value_or(Json {});
     }
 
+    auto handle_completion(Server& server, Json params) -> Json
+    {
+        auto const [doc_id, position] = position_params_from_json(server.db, std::move(params));
+        update_edit_position(server, doc_id, position);
+
+        return (server.db.documents[doc_id].info.completion_info)
+            .transform(std::bind_front(completion_list_to_json, std::cref(server.db), doc_id))
+            .value_or(Json {});
+    }
+
     auto handle_references(Server const& server, Json params) -> Json
     {
         auto const [doc_id, position] = position_params_from_json(server.db, std::move(params));
@@ -168,14 +188,11 @@ namespace {
     auto handle_signature_help(Server& server, Json params) -> Json
     {
         auto const [doc_id, position] = position_params_from_json(server.db, std::move(params));
+        update_edit_position(server, doc_id, position);
 
-        auto& doc = server.db.documents[doc_id];
-        if (position != doc.edit_position) {
-            doc.edit_position = position;
-            analyze_document(server, doc_id);
-        }
-
-        return signature_help_to_json(server.db, doc_id);
+        return (server.db.documents[doc_id].info.signature_info)
+            .transform(std::bind_front(signature_help_to_json, std::cref(server.db), doc_id))
+            .value_or(Json {});
     }
 
     auto handle_definition(Server const& server, Json params) -> Json
@@ -191,64 +208,17 @@ namespace {
             .value_or(Json {});
     }
 
-    auto symbol_type(db::Database const& db, db::Document_id doc_id, db::Symbol_id symbol_id)
-        -> std::optional<hir::Type_id>
-    {
-        auto const& arena = db.documents[doc_id].arena;
-
-        auto const visitor = utl::Overload {
-            [](db::Error) { return std::nullopt; },
-            [](hir::Concept_id) { return std::nullopt; },
-            [](hir::Module_id) { return std::nullopt; },
-            [](hir::Local_mutability_id) { return std::nullopt; },
-
-            [&](hir::Function_id id) {
-                return arena.hir.functions[id].signature.value().return_type.id;
-            },
-            [&](hir::Structure_id id) { return arena.hir.structures[id].type_id; },
-            [&](hir::Enumeration_id id) { return arena.hir.enumerations[id].type_id; },
-            [&](hir::Constructor_id id) { return arena.hir.constructors[id].owner_type_id; },
-            [&](hir::Field_id id) { return arena.hir.fields[id].type.id; },
-            [&](hir::Alias_id id) { return arena.hir.aliases[id].hir.value().type.id; },
-            [&](hir::Local_variable_id id) { return arena.hir.local_variables[id].type_id; },
-            [&](hir::Local_type_id id) { return arena.hir.local_types[id].type_id; },
-        };
-
-        return std::visit<std::optional<hir::Type_id>>(visitor, arena.symbols[symbol_id].variant);
-    }
-
-    auto type_definition(db::Database const& db, db::Document_id doc_id, hir::Type_id type_id)
-        -> std::optional<lsp::Range>
-    {
-        auto const& arena   = db.documents[doc_id].arena;
-        auto const& variant = arena.hir.types[type_id];
-
-        if (auto const* enumeration = std::get_if<hir::type::Enumeration>(&variant)) {
-            return arena.hir.enumerations[enumeration->id].name.range;
-        }
-        if (auto const* structure = std::get_if<hir::type::Structure>(&variant)) {
-            return arena.hir.structures[structure->id].name.range;
-        }
-        if (auto const* reference = std::get_if<hir::type::Reference>(&variant)) {
-            return type_definition(db, doc_id, reference->referenced_type.id);
-        }
-        if (auto const* pointer = std::get_if<hir::type::Pointer>(&variant)) {
-            return type_definition(db, doc_id, pointer->pointee_type.id);
-        }
-        return std::nullopt;
-    }
-
     auto handle_type_definition(Server const& server, Json params) -> Json
     {
         auto const [doc_id, position] = position_params_from_json(server.db, std::move(params));
-        auto const& references        = server.db.documents[doc_id].info.references;
+        auto const& doc               = server.db.documents[doc_id];
 
-        return find_reference(references, position)
+        return find_reference(doc.info.references, position)
             .and_then([&](db::Symbol_reference ref) {
-                return symbol_type(server.db, doc_id, ref.symbol_id);
+                return symbol_type(doc.arena, ref.symbol_id); //
             })
             .and_then([&](hir::Type_id type_id) {
-                return type_definition(server.db, doc_id, type_id); //
+                return type_definition(doc.arena, type_id); //
             })
             .transform([&](lsp::Range range) {
                 return location_to_json(server.db, { .doc_id = doc_id, .range = range });
@@ -261,8 +231,11 @@ namespace {
         auto const [doc_id, position] = position_params_from_json(server.db, std::move(params));
         return find_reference(server.db.documents[doc_id].info.references, position)
             .transform([&](db::Symbol_reference ref) {
-                return markdown_content_to_json(
-                    symbol_documentation(server.db, doc_id, ref.symbol_id));
+                std::string markdown = symbol_documentation(server.db, doc_id, ref.symbol_id);
+
+                Json::Object object;
+                object.try_emplace("contents", markdown_content_to_json(std::move(markdown)));
+                return Json { std::move(object) };
             })
             .value_or(Json {});
     }
@@ -380,6 +353,12 @@ namespace {
                   { "triggerCharacters", Json { Json::Array { Json { "(" }, Json { "," } } } },
                   { "retriggerCharacters", Json { Json::Array { Json { " " } } } },
               } } },
+            {
+                "completionProvider",
+                Json { Json::Object {
+                    { "triggerCharacters", Json { Json::Array { Json { "." }, Json { ":" } } } },
+                } },
+            },
             { "inlayHintProvider", Json { Json::Object {} } },
             { "codeActionProvider", Json { Json::Object {} } },
             { "hoverProvider", Json { true } },
@@ -415,6 +394,9 @@ namespace {
         }
         if (method == "textDocument/documentHighlight") {
             return handle_highlight(server, std::move(params));
+        }
+        if (method == "textDocument/completion") {
+            return handle_completion(server, std::move(params));
         }
         if (method == "textDocument/inlayHint") {
             return handle_inlay_hints(server, std::move(params));
@@ -479,6 +461,8 @@ namespace {
     // https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#textDocumentContentChangeEvent
     void apply_content_change(db::Document& document, Json object)
     {
+        document.edit_position = std::nullopt;
+
         auto change   = as<Json::Object>(std::move(object));
         auto new_text = as<Json::String>(at(change, "text"));
         if (auto field = maybe_at(change, "range")) {

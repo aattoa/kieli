@@ -132,15 +132,13 @@ namespace {
                     "Module template parameters are not supported yet");
             }
 
-            auto child_env_id = new_environment(
-                ctx,
-                db::Environment {
-                    .map       = {},
-                    .parent_id = env_id,
-                    .name_id   = module.name.id,
-                    .doc_id    = ctx.doc_id,
-                    .kind      = db::Environment_kind::Module,
-                });
+            auto child_env_id = ctx.arena.environments.push(db::Environment {
+                .map       = {},
+                .parent_id = env_id,
+                .name_id   = module.name.id,
+                .doc_id    = ctx.doc_id,
+                .kind      = db::Environment_kind::Module,
+            });
 
             auto module_id = ctx.arena.hir.modules.push(hir::Module_info {
                 .mod_env_id = child_env_id,

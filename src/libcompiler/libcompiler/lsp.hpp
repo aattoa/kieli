@@ -103,8 +103,11 @@ namespace ki::lsp {
     // Create a zero-width range for `position`.
     [[nodiscard]] auto to_range_0(Position position) noexcept -> Range;
 
-    // Check whether `position` is contained within `range`.
+    // Check whether `position` is contained within `range`, excluding the end.
     [[nodiscard]] auto range_contains(Range range, Position position) noexcept -> bool;
+
+    // Check whether `position` is contained within `range`, including the end.
+    [[nodiscard]] auto range_contains_inclusive(Range range, Position position) noexcept -> bool;
 
     // Check whether `range` occupies more than one line.
     [[nodiscard]] auto is_multiline(Range range) noexcept -> bool;
@@ -135,7 +138,7 @@ struct std::formatter<ki::lsp::Position> {
 
     static auto format(ki::lsp::Position const position, auto& ctx)
     {
-        return std::format_to(ctx.out(), "{}:{}", position.line, position.column);
+        return std::format_to(ctx.out(), "{}:{}", position.line + 1, position.column + 1);
     }
 };
 

@@ -1,11 +1,119 @@
 #include <libutl/utilities.hpp>
 #include <language-server/json.hpp>
+#include <language-server/server.hpp>
+
+using namespace ki;
 
 namespace {
-    auto integer_to_json(std::integral auto integer) -> ki::lsp::Json
+    auto integer_to_json(std::integral auto integer) -> lsp::Json
     {
-        return { cpputil::num::safe_cast<ki::lsp::Json::Number>(integer) };
+        return { cpputil::num::safe_cast<lsp::Json::Number>(integer) };
     };
+
+    auto ascii_to_lower(char c) noexcept -> char
+    {
+        return ('A' <= c and c <= 'Z') ? static_cast<char>(c + ('a' - 'A')) : c;
+    }
+
+    auto ascii_to_upper(char c) noexcept -> char
+    {
+        return ('a' <= c and c <= 'z') ? static_cast<char>(c - ('a' - 'A')) : c;
+    }
+
+    auto fuzzy_prefix_match(std::string_view prefix, std::string_view string) -> bool
+    {
+        return std::ranges::all_of(prefix, [&](char c) {
+            return string.contains(ascii_to_lower(c)) or string.contains(ascii_to_upper(c));
+        });
+    }
+
+    auto tuple_completions(
+        db::Database const&        db,
+        db::Arena const&           arena,
+        std::string_view           prefix,
+        std::span<hir::Type const> types) -> lsp::Json::Array
+    {
+        lsp::Json::Array items;
+        items.reserve(types.size());
+
+        (void)prefix; // TODO: filter?
+
+        for (auto const [index, type] : std::views::enumerate(types)) {
+            lsp::Json::Object item;
+
+            item.try_emplace("label", std::to_string(index));
+            item.try_emplace("kind", 5); // kind=field
+            item.try_emplace("detail", hir::to_string(arena.hir, db.string_pool, type));
+
+            items.emplace_back(std::move(item));
+        }
+
+        return items;
+    }
+
+    auto completion_items(
+        db::Database const&  db,
+        db::Document_id      doc_id,
+        std::string_view     prefix,
+        db::Field_completion completion) -> lsp::Json::Array
+    {
+        auto const& arena   = db.documents[doc_id].arena;
+        auto const& variant = arena.hir.types[completion.type_id];
+
+        if (auto const* type = std::get_if<hir::type::Structure>(&variant)) {
+            auto const& structure   = arena.hir.structures[type->id].hir.value();
+            auto const& constructor = arena.hir.constructors[structure.constructor_id];
+
+            if (auto const* body = std::get_if<hir::Struct_constructor>(&constructor.body)) {
+                lsp::Json::Array items;
+
+                for (auto const [name_id, field_id] : body->fields) {
+                    if (fuzzy_prefix_match(prefix, db.string_pool.get(name_id))) {
+                        items.push_back(lsp::completion_item_to_json(
+                            db, doc_id, arena.hir.fields[field_id].symbol_id));
+                    }
+                }
+
+                return items;
+            }
+            else if (auto const* body = std::get_if<hir::Tuple_constructor>(&constructor.body)) {
+                return tuple_completions(db, arena, prefix, body->types);
+            }
+        }
+        else if (auto const* tuple = std::get_if<hir::type::Tuple>(&variant)) {
+            return tuple_completions(db, arena, prefix, tuple->types);
+        }
+
+        return {};
+    }
+
+    auto completion_items(
+        db::Database const&        db,
+        db::Document_id            doc_id,
+        std::string_view           prefix,
+        db::Environment_completion completion) -> lsp::Json::Array
+    {
+        lsp::Json::Array items;
+
+        for (;;) {
+            auto const& env = db.documents[doc_id].arena.environments[completion.env_id];
+
+            for (auto const [name_id, symbol_id] : env.map) {
+                if (fuzzy_prefix_match(prefix, db.string_pool.get(name_id))) {
+                    items.push_back(lsp::completion_item_to_json(db, doc_id, symbol_id));
+                }
+            }
+
+            if (completion.mode == db::Completion_mode::Top and env.parent_id.has_value()) {
+                completion.env_id = env.parent_id.value();
+            }
+            else {
+                break;
+            }
+        }
+
+        return items;
+    }
 } // namespace
 
 ki::lsp::Bad_json::Bad_json(std::string message) : message(std::move(message)) {}
@@ -44,8 +152,9 @@ auto ki::lsp::path_to_uri(std::filesystem::path const& path) -> std::string
 
 auto ki::lsp::path_from_uri(std::string_view uri) -> std::filesystem::path
 {
-    if (uri.starts_with("file://")) {
-        return uri.substr("file://"sv.size());
+    auto const scheme = "file://"sv;
+    if (uri.starts_with(scheme)) {
+        return uri.substr(scheme.size());
     }
     throw Bad_json(std::format("URI with unsupported scheme: '{}'", uri));
 }
@@ -188,9 +297,8 @@ auto ki::lsp::diagnostic_to_json(db::Database const& db, Diagnostic const& diagn
     object.try_emplace("message", diagnostic.message);
 
     if (not diagnostic.related_info.empty()) {
-        auto info = diagnostic.related_info             //
-                  | std::views::transform(info_to_json) //
-                  | std::ranges::to<Json::Array>();
+        auto info = std::ranges::to<Json::Array>(
+            std::views::transform(diagnostic.related_info, info_to_json));
         object.try_emplace("relatedInformation", std::move(info));
     }
 
@@ -307,37 +415,32 @@ auto ki::lsp::action_to_json(db::Database const& db, db::Document_id doc_id, db:
     return std::visit(visitor, action.variant);
 }
 
-auto ki::lsp::signature_help_to_json(db::Database const& db, db::Document_id doc_id) -> Json
+auto ki::lsp::signature_help_to_json(
+    db::Database const& db, db::Document_id doc_id, db::Signature_info const& info) -> Json
 {
-    auto const& doc = db.documents[doc_id];
-
-    if (not doc.info.signature_info.has_value()) {
-        return Json {};
-    }
-
-    auto const& [function_id, active_parameter] = doc.info.signature_info.value();
-    auto const& signature = doc.arena.hir.functions[function_id].signature.value();
+    auto const& hir = db.documents[doc_id].arena.hir;
+    auto const& sig = hir.functions[info.function_id].signature.value();
 
     // The signature label has to be formatted here because the parameter label offsets
     // are needed in order for the client to be able to highlight the active parameter.
 
-    Json::String label = std::format("fn {}(", db.string_pool.get(signature.name.id));
+    Json::String label = std::format("fn {}(", db.string_pool.get(sig.name.id));
     Json::Array  parameters;
 
-    for (auto const& [pattern_id, type, default_argument] : signature.parameters) {
+    for (auto const& [pattern, type, default_argument] : sig.parameters) {
         if (label.back() != '(') {
             label.append(", ");
         }
 
         auto const start = cpputil::num::safe_cast<Json::Number>(label.size());
 
-        hir::format_to(label, doc.arena.hir, db.string_pool, pattern_id);
+        hir::format_to(label, hir, db.string_pool, pattern);
         label.append(": ");
-        hir::format_to(label, doc.arena.hir, db.string_pool, type);
+        hir::format_to(label, hir, db.string_pool, type);
 
         if (default_argument.has_value()) {
             label.append(" = ");
-            hir::format_to(label, doc.arena.hir, db.string_pool, default_argument.value());
+            hir::format_to(label, hir, db.string_pool, default_argument.value());
         }
 
         auto const end = cpputil::num::safe_cast<Json::Number>(label.size());
@@ -348,16 +451,57 @@ auto ki::lsp::signature_help_to_json(db::Database const& db, db::Document_id doc
     }
 
     label.append("): ");
-    hir::format_to(label, doc.arena.hir, db.string_pool, signature.return_type);
-
-    Json::Object info;
-    info.try_emplace("label", std::move(label));
-    info.try_emplace("parameters", std::move(parameters));
+    hir::format_to(label, hir, db.string_pool, sig.return_type);
 
     Json::Object object;
-    object.try_emplace("signatures", utl::to_vector({ Json { std::move(info) } }));
-    object.try_emplace("activeParameter", cpputil::num::safe_cast<Json::Number>(active_parameter));
-    return Json { std::move(object) };
+    object.try_emplace("label", std::move(label));
+    object.try_emplace("parameters", std::move(parameters));
+
+    Json::Object help;
+    help.try_emplace("signatures", utl::to_vector({ Json { std::move(object) } }));
+    help.try_emplace("activeParameter", cpputil::num::safe_cast<Json::Number>(info.active_param));
+    return Json { std::move(help) };
+}
+
+auto ki::lsp::completion_list_to_json(
+    db::Database const& db, db::Document_id doc_id, db::Completion_info const& info) -> Json
+{
+    cpputil::always_assert(not is_multiline(info.range));
+
+    auto const visitor = [&](auto completion) {
+        return completion_items(db, doc_id, info.prefix, std::move(completion));
+    };
+
+    Json::Object defaults;
+    defaults.try_emplace("editRange", range_to_json(info.range));
+
+    Json::Object list;
+    list.try_emplace("items", std::visit(visitor, info.variant));
+    list.try_emplace("itemDefaults", std::move(defaults));
+    list.try_emplace("isIncomplete", false);
+    return Json { std::move(list) };
+}
+
+auto ki::lsp::completion_item_to_json(
+    db::Database const& db, db::Document_id doc_id, db::Symbol_id symbol_id) -> Json
+{
+    auto const& arena  = db.documents[doc_id].arena;
+    auto const& symbol = arena.symbols[symbol_id];
+
+    Json::Object item;
+
+    item.try_emplace("label", Json::String(db.string_pool.get(symbol.name.id)));
+    item.try_emplace("kind", completion_item_kind_to_json(symbol.variant));
+
+    std::string markdown = symbol_documentation(db, doc_id, symbol_id);
+    item.try_emplace("documentation", markdown_content_to_json(std::move(markdown)));
+
+    if (auto const type = db::symbol_type(arena, symbol_id)) {
+        auto detail = hir::to_string(arena.hir, db.string_pool, type.value());
+        item.try_emplace("detail", std::move(detail));
+    }
+
+    return Json { std::move(item) };
 }
 
 auto ki::lsp::symbol_to_json(
@@ -428,6 +572,26 @@ auto ki::lsp::symbol_kind_to_json(db::Symbol_variant variant) -> Json
         [](hir::Local_variable_id) { return 13; },
         [](hir::Local_mutability_id) { return 13; },
         [](hir::Local_type_id) { return 14; },
+    };
+    return Json { std::visit(visitor, variant) };
+}
+
+auto ki::lsp::completion_item_kind_to_json(db::Symbol_variant variant) -> Json
+{
+    // https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#completionItemKind
+    auto const visitor = utl::Overload {
+        [](db::Error) { return 0; },
+        [](hir::Function_id) { return 3; },
+        [](hir::Structure_id) { return 22; },
+        [](hir::Enumeration_id) { return 13; },
+        [](hir::Constructor_id) { return 4; },
+        [](hir::Field_id) { return 5; },
+        [](hir::Concept_id) { return 8; },
+        [](hir::Alias_id) { return 21; },
+        [](hir::Module_id) { return 9; },
+        [](hir::Local_variable_id) { return 6; },
+        [](hir::Local_mutability_id) { return 6; },
+        [](hir::Local_type_id) { return 6; },
     };
     return Json { std::visit(visitor, variant) };
 }
@@ -515,12 +679,9 @@ auto ki::lsp::formatting_params_from_json(db::Database const& db, Json json) -> 
 
 auto ki::lsp::markdown_content_to_json(std::string markdown) -> Json
 {
-    Json::Object contents;
-    contents.try_emplace("kind", "markdown");
-    contents.try_emplace("value", std::move(markdown));
-
     Json::Object object;
-    object.try_emplace("contents", std::move(contents));
+    object.try_emplace("kind", "markdown");
+    object.try_emplace("value", std::move(markdown));
     return Json { std::move(object) };
 }
 

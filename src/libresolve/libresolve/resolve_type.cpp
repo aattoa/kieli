@@ -17,121 +17,116 @@ namespace {
             return resolve_type(db, ctx, state, env_id, type);
         }
 
-        auto operator()(ast::Wildcard const&) -> hir::Type
+        auto operator()(ast::Wildcard const&) -> hir::Type_id
         {
             auto type = fresh_general_type_variable(ctx, state, this_range);
             db::add_type_hint(db, ctx.doc_id, this_range.stop, type.id);
-            return type;
+            return type.id;
         }
 
-        auto operator()(ast::type::Never const&) -> hir::Type
+        auto operator()(ast::type::Never const&) -> hir::Type_id
         {
-            db::add_error(
-                db, ctx.doc_id, this_range, "Never-type resolution has not been implemented");
-            return error_type(ctx.constants, this_range);
+            db::add_error(db, ctx.doc_id, this_range, "'!' resolution has not been implemented");
+            return ctx.constants.type_error;
         }
 
-        auto operator()(ast::Path const& path) -> hir::Type
+        auto operator()(ast::Path const& path) -> hir::Type_id
         {
             db::Symbol& symbol = ctx.arena.symbols[resolve_path(db, ctx, state, env_id, path)];
 
             if (auto const* local_id = std::get_if<hir::Local_type_id>(&symbol.variant)) {
-                return { .id = ctx.arena.hir.local_types[*local_id].type_id, .range = this_range };
+                return ctx.arena.hir.local_types[*local_id].type_id;
             }
             if (auto const* struct_id = std::get_if<hir::Structure_id>(&symbol.variant)) {
-                return { .id = ctx.arena.hir.structures[*struct_id].type_id, .range = this_range };
+                return ctx.arena.hir.structures[*struct_id].type_id;
             }
             if (auto const* enum_id = std::get_if<hir::Enumeration_id>(&symbol.variant)) {
-                return { .id = ctx.arena.hir.enumerations[*enum_id].type_id, .range = this_range };
+                return ctx.arena.hir.enumerations[*enum_id].type_id;
             }
             if (auto const* alias_id = std::get_if<hir::Alias_id>(&symbol.variant)) {
-                return { .id = resolve_alias(db, ctx, *alias_id).type.id, .range = this_range };
+                return resolve_alias(db, ctx, *alias_id).type.id;
             }
             if (std::holds_alternative<db::Error>(symbol.variant)) {
-                return error_type(ctx.constants, this_range);
+                return ctx.constants.type_error;
             }
 
             auto kind    = db::describe_symbol_kind(symbol.variant);
             auto message = std::format("Expected a type, but found {}", kind);
             db::add_error(db, ctx.doc_id, this_range, std::move(message));
-            return error_type(ctx.constants, this_range);
+            return ctx.constants.type_error;
         }
 
-        auto operator()(ast::type::Tuple const& tuple) -> hir::Type
+        auto operator()(ast::type::Tuple const& tuple) -> hir::Type_id
         {
-            hir::type::Tuple type { std::ranges::to<std::vector>(std::views::transform(
-                tuple.field_types, std::bind_front(&Visitor::recurse, this))) };
-            return { .id = ctx.arena.hir.types.push(std::move(type)), .range = this_range };
+            return ctx.arena.hir.types.push(hir::type::Tuple {
+                .types = tuple.field_types
+                       | std::views::transform(std::bind_front(&Visitor::recurse, this))
+                       | std::ranges::to<std::vector>(),
+            });
         }
 
-        auto operator()(ast::type::Array const& array) -> hir::Type
+        auto operator()(ast::type::Array const& array) -> hir::Type_id
         {
             auto length = resolve_expression(
                 db, ctx, state, env_id, ctx.arena.ast.expressions[array.length]);
-            hir::type::Array type {
+            return ctx.arena.hir.types.push(hir::type::Array {
                 .element_type = recurse(ctx.arena.ast.types[array.element_type]),
                 .length       = ctx.arena.hir.expressions.push(std::move(length)),
-            };
-            return { .id = ctx.arena.hir.types.push(std::move(type)), .range = this_range };
+            });
         }
 
-        auto operator()(ast::type::Slice const& slice) -> hir::Type
+        auto operator()(ast::type::Slice const& slice) -> hir::Type_id
         {
-            hir::type::Slice type { recurse(ctx.arena.ast.types[slice.element_type]) };
-            return { .id = ctx.arena.hir.types.push(std::move(type)), .range = this_range };
+            return ctx.arena.hir.types.push(hir::type::Slice {
+                .element_type = recurse(ctx.arena.ast.types[slice.element_type]),
+            });
         }
 
-        auto operator()(ast::type::Function const& function) -> hir::Type
+        auto operator()(ast::type::Function const& function) -> hir::Type_id
         {
-            hir::type::Function type {
-                .parameter_types = std::ranges::to<std::vector>(std::views::transform(
-                    function.parameter_types, std::bind_front(&Visitor::recurse, this))),
-                .return_type     = recurse(ctx.arena.ast.types[function.return_type]),
-            };
-            return { .id = ctx.arena.hir.types.push(std::move(type)), .range = this_range };
+            return ctx.arena.hir.types.push(hir::type::Function {
+                .parameter_types = function.parameter_types
+                                 | std::views::transform(std::bind_front(&Visitor::recurse, this))
+                                 | std::ranges::to<std::vector>(),
+                .return_type = recurse(ctx.arena.ast.types[function.return_type]),
+            });
         }
 
-        auto operator()(ast::type::Typeof const& typeof_) -> hir::Type
+        auto operator()(ast::type::Typeof const& typeof_) -> hir::Type_id
         {
             auto typeof_env_id = new_scope(ctx, env_id);
             auto expression    = resolve_expression(
                 db, ctx, state, typeof_env_id, ctx.arena.ast.expressions[typeof_.expression]);
-
             report_unused(db, ctx, typeof_env_id);
-            recycle_environment(ctx, typeof_env_id);
-
             db::add_type_hint(db, ctx.doc_id, expression.range.stop, expression.type_id);
-            return hir::Type { .id = expression.type_id, .range = this_range };
+            return expression.type_id;
         }
 
-        auto operator()(ast::type::Reference const& reference) -> hir::Type
+        auto operator()(ast::type::Reference const& reference) -> hir::Type_id
         {
-            hir::type::Reference type {
+            return ctx.arena.hir.types.push(hir::type::Reference {
                 .referenced_type = recurse(ctx.arena.ast.types[reference.referenced_type]),
                 .mutability      = resolve_mutability(db, ctx, env_id, reference.mutability),
-            };
-            return { .id = ctx.arena.hir.types.push(std::move(type)), .range = this_range };
+            });
         }
 
-        auto operator()(ast::type::Pointer const& pointer) -> hir::Type
+        auto operator()(ast::type::Pointer const& pointer) -> hir::Type_id
         {
-            hir::type::Pointer type {
+            return ctx.arena.hir.types.push(hir::type::Pointer {
                 .pointee_type = recurse(ctx.arena.ast.types[pointer.pointee_type]),
                 .mutability   = resolve_mutability(db, ctx, env_id, pointer.mutability),
-            };
-            return { .id = ctx.arena.hir.types.push(std::move(type)), .range = this_range };
+            });
         }
 
-        auto operator()(ast::type::Impl const&) -> hir::Type
+        auto operator()(ast::type::Impl const&) -> hir::Type_id
         {
-            db::add_error(
-                db, ctx.doc_id, this_range, "Impl-type resolution has not been implemented");
-            return error_type(ctx.constants, this_range);
+            db::add_error(db, ctx.doc_id, this_range, "Impl resolution has not been implemented");
+            return ctx.constants.type_error;
         }
 
-        auto operator()(db::Error const&) const -> hir::Type
+        auto operator()(db::Error const&) const -> hir::Type_id
         {
-            return error_type(ctx.constants, this_range);
+            return ctx.constants.type_error;
         }
     };
 } // namespace
@@ -150,5 +145,5 @@ auto ki::res::resolve_type(
         .env_id     = env_id,
         .this_range = type.range,
     };
-    return std::visit(visitor, type.variant);
+    return hir::Type { .id = std::visit(visitor, type.variant), .range = type.range };
 }

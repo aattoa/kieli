@@ -61,10 +61,10 @@ namespace {
             return resolve_function_parameter(db, ctx, state, signature_env_id, parameter);
         };
 
-        auto parameters = std::views::transform(signature.function_parameters, resolve_parameter)
-                        | std::ranges::to<std::vector>();
-        auto parameter_types = std::views::transform(parameters, &hir::Function_parameter::type)
-                             | std::ranges::to<std::vector>();
+        auto parameters = std::ranges::to<std::vector>(
+            std::views::transform(signature.function_parameters, resolve_parameter));
+        auto parameter_types = std::ranges::to<std::vector>(
+            std::views::transform(parameters, &hir::Function_parameter::type));
 
         auto return_type = resolve_type(db, ctx, state, signature_env_id, signature.return_type);
 
@@ -171,7 +171,6 @@ auto ki::res::resolve_function_body(db::Database& db, Context& ctx, hir::Functio
         cpputil::always_assert(it != ctx.signature_scope_map.end());
         info.body = resolve_expression(db, ctx, state, it->second, info.ast.body);
         report_unused(db, ctx, it->second);
-        recycle_environment(ctx, it->second);
         ctx.signature_scope_map.erase(it);
 
         require_subtype_relationship(
@@ -201,14 +200,13 @@ auto ki::res::resolve_structure(db::Database& db, Context& ctx, hir::Structure_i
 {
     hir::Structure_info& info = ctx.arena.hir.structures[id];
     if (not info.hir.has_value()) {
-        db::Environment ctor_env {
+        auto const ctor_env_id = ctx.arena.environments.push(db::Environment {
             .map       = {},
             .parent_id = info.env_id,
             .name_id   = info.name.id,
             .doc_id    = ctx.doc_id,
             .kind      = db::Environment_kind::Type,
-        };
-        auto const ctor_env_id = new_environment(ctx, std::move(ctor_env));
+        });
 
         auto parameters_state    = Block_state {};
         auto template_parameters = resolve_template_parameters(
@@ -227,7 +225,7 @@ auto ki::res::resolve_structure(db::Database& db, Context& ctx, hir::Structure_i
         info.hir = hir::Structure {
             .constructor_id = resolve_constructor(
                 db, ctx, ctor_env_id, info.type_id, info.ast.constructor, /*discriminant=*/0),
-            .associated_env_id = new_environment(ctx, std::move(associated_env)),
+            .associated_env_id = ctx.arena.environments.push(std::move(associated_env)),
         };
     }
     return info.hir.value();
@@ -238,14 +236,13 @@ auto ki::res::resolve_enumeration(db::Database& db, Context& ctx, hir::Enumerati
 {
     hir::Enumeration_info& info = ctx.arena.hir.enumerations[id];
     if (not info.hir.has_value()) {
-        db::Environment ctor_env {
+        auto const ctor_env_id = ctx.arena.environments.push(db::Environment {
             .map       = {},
             .parent_id = info.env_id,
             .name_id   = info.name.id,
             .doc_id    = ctx.doc_id,
             .kind      = db::Environment_kind::Type,
-        };
-        auto const ctor_env_id = new_environment(ctx, std::move(ctor_env));
+        });
 
         auto parameters_state    = Block_state {};
         auto template_parameters = resolve_template_parameters(
@@ -253,14 +250,13 @@ auto ki::res::resolve_enumeration(db::Database& db, Context& ctx, hir::Enumerati
         (void)template_parameters; // TODO
         ensure_no_unsolved_variables(db, ctx, parameters_state);
 
-        db::Environment associated_env {
+        auto const associated_env_id = ctx.arena.environments.push(db::Environment {
             .map       = {},
             .parent_id = info.env_id,
             .name_id   = info.name.id,
             .doc_id    = ctx.doc_id,
             .kind      = db::Environment_kind::Type,
-        };
-        auto const associated_env_id = new_environment(ctx, std::move(associated_env));
+        });
 
         std::vector<db::Symbol_id> constructor_ids;
         constructor_ids.reserve(info.ast.constructors.size());

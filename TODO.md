@@ -9,6 +9,7 @@
 - Unification rollback logs?
 - Warn when last expression in block is defer
 - Lazily parse module when collecting, no Definition_variant
+- Do not store CST or AST when not necessary
 - Move diagnostics from libdesugar
 - Collect semantic tokens for identifiers on path resolution
 - Provide a best-effort type when expression resolution fails
@@ -19,8 +20,9 @@
 - Avoid collecting hints, actions, and references when the client does not support them
 - Option to display intermediate representations on hover
 - Thread pool, monitor client PID on main thread
-- Store edit position
-    - On path resolution, if contained within segment range, set completion environment
+- Check client capability `completionList.itemDefaults`
+- Snippet completions
+- Code completion tests
 
 ## Attributes
 - `@linear`: Apply to type definition, require bindings to be explicitly dropped
@@ -30,7 +32,8 @@
 - `@hide`: Apply to struct field
 - `@repr`: Apply to type definition ("kieli", "C")
 - `@extern`: Apply to function definition, specify calling convention
-- `@untagged`: Apply to enum definition, disallow match, require `@unsafe` for access
+- `@untagged`: Apply to enum definition, disallow match, access with `@unsafe let`
+- `@infix`: Apply to operator definition, specify precedence and associativity
 
 ## Builtins
 - `@here`
@@ -45,15 +48,15 @@
 - `kieli test`: Run all tests in the current project
 - `kieli init`: Initialize a project in the current directory
 - `kieli new`: Initialize a project in a new directory
-- `kieli run`: Run given file or project main executable
+- `kieli run`: Build and run given file or project main executable
 - `kieli dump-ast`: Dump the AST for given file
 
 ## Miscellaneous
 - Inline concepts
-- Range should store width only?
 - libtommath for arbitrary precision integers?
 - String interpolation
 - Configure builds with `build.kieli`
 - Config instead of manifest
-- `fn drop[T](x: T) = @builtin`
 - Tree-sitter grammar
+- `perf record`
+- Clean up HIR formatting

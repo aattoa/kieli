@@ -37,6 +37,11 @@ auto ki::lsp::range_contains(Range range, Position position) noexcept -> bool
     return range.start <= position and position < range.stop;
 }
 
+auto ki::lsp::range_contains_inclusive(Range range, Position position) noexcept -> bool
+{
+    return range.start <= position and position <= range.stop;
+}
+
 auto ki::lsp::is_multiline(Range range) noexcept -> bool
 {
     return range.start.line != range.stop.line;
@@ -204,6 +209,8 @@ auto ki::db::text_range(std::string_view text, lsp::Range range) -> std::string_
         cpputil::always_assert(begin != text.end());
         ++begin; // Skip the line feed
     }
+
+    cpputil::always_assert(range.start.column <= std::distance(begin, text.end()));
     begin += range.start.column;
 
     char const*   end = begin;
@@ -230,11 +237,24 @@ void ki::db::add_signature_help(
     hir::Function_id function_id,
     std::size_t      parameter_index)
 {
-    Document& doc = db.documents[doc_id];
-    if (doc.edit_position.has_value() and lsp::range_contains(range, doc.edit_position.value())) {
-        doc.info.signature_info = Signature_info {
-            .function_id      = function_id,
-            .active_parameter = cpputil::num::safe_cast<std::uint32_t>(parameter_index),
+    auto const edit_pos = db.documents[doc_id].edit_position;
+    if (edit_pos.has_value() and lsp::range_contains(range, edit_pos.value())) {
+        db.documents[doc_id].info.signature_info = Signature_info {
+            .function_id  = function_id,
+            .active_param = cpputil::num::safe_cast<std::uint32_t>(parameter_index),
+        };
+    }
+}
+
+void ki::db::add_completion(Database& db, Document_id doc_id, Name name, Completion_variant variant)
+{
+    auto const edit_pos = db.documents[doc_id].edit_position;
+    if (edit_pos.has_value() and lsp::range_contains_inclusive(name.range, edit_pos.value())) {
+        auto const prefix_length = edit_pos.value().column - name.range.start.column;
+        db.documents[doc_id].info.completion_info = Completion_info {
+            .prefix  = std::string(db.string_pool.get(name.id).substr(0, prefix_length)),
+            .range   = lsp::Range(name.range.start, edit_pos.value()),
+            .variant = std::move(variant),
         };
     }
 }
@@ -277,6 +297,49 @@ void ki::db::print_diagnostics(std::ostream& stream, Database const& db, Documen
     for (lsp::Diagnostic const& diag : db.documents[doc_id].info.diagnostics) {
         std::println(stream, "{} {}: {}", severity_string(diag.severity), diag.range, diag.message);
     }
+}
+
+auto ki::db::symbol_type(Arena const& arena, Symbol_id symbol_id) -> std::optional<hir::Type_id>
+{
+    auto const visitor = utl::Overload {
+        [](Error) { return std::nullopt; },
+        [](hir::Concept_id) { return std::nullopt; },
+        [](hir::Module_id) { return std::nullopt; },
+        [](hir::Local_mutability_id) { return std::nullopt; },
+
+        [&](hir::Function_id id) {
+            return arena.hir.functions[id].signature.value().function_type.id;
+        },
+        [&](hir::Structure_id id) { return arena.hir.structures[id].type_id; },
+        [&](hir::Enumeration_id id) { return arena.hir.enumerations[id].type_id; },
+        [&](hir::Constructor_id id) { return arena.hir.constructors[id].owner_type_id; },
+        [&](hir::Field_id id) { return arena.hir.fields[id].type.id; },
+        [&](hir::Alias_id id) { return arena.hir.aliases[id].hir.value().type.id; },
+        [&](hir::Local_variable_id id) { return arena.hir.local_variables[id].type_id; },
+        [&](hir::Local_type_id id) { return arena.hir.local_types[id].type_id; },
+    };
+    return std::visit<std::optional<hir::Type_id>>(visitor, arena.symbols[symbol_id].variant);
+}
+
+auto ki::db::type_definition(Arena const& arena, hir::Type_id type_id) -> std::optional<lsp::Range>
+{
+    auto const& variant = arena.hir.types[type_id];
+    if (auto const* enumeration = std::get_if<hir::type::Enumeration>(&variant)) {
+        return arena.hir.enumerations[enumeration->id].name.range;
+    }
+    if (auto const* structure = std::get_if<hir::type::Structure>(&variant)) {
+        return arena.hir.structures[structure->id].name.range;
+    }
+    if (auto const* reference = std::get_if<hir::type::Reference>(&variant)) {
+        return type_definition(arena, reference->referenced_type.id);
+    }
+    if (auto const* pointer = std::get_if<hir::type::Pointer>(&variant)) {
+        return type_definition(arena, pointer->pointee_type.id);
+    }
+    if (auto const* function = std::get_if<hir::type::Function>(&variant)) {
+        return type_definition(arena, function->return_type.id);
+    }
+    return std::nullopt;
 }
 
 auto ki::db::mutability_string(Mutability mutability) -> std::string_view

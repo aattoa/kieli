@@ -81,7 +81,32 @@ namespace ki::db {
     // Signature help information.
     struct Signature_info {
         hir::Function_id function_id;
-        std::uint32_t    active_parameter {};
+        std::uint32_t    active_param {};
+    };
+
+    // Environment completion mode.
+    enum struct Completion_mode : std::uint8_t { Path, Top };
+
+    // Provide completions for environment access.
+    struct Environment_completion {
+        Environment_id  env_id;
+        Completion_mode mode {};
+    };
+
+    // Provide completions for struct or tuple fields.
+    struct Field_completion {
+        hir::Type_id type_id;
+    };
+
+    struct Completion_variant : std::variant<Environment_completion, Field_completion> {
+        using variant::variant;
+    };
+
+    // Code completion information.
+    struct Completion_info {
+        std::string        prefix;
+        lsp::Range         range;
+        Completion_variant variant;
     };
 
     // A reference to a symbol. Used to determine the symbol at a particular position.
@@ -109,6 +134,7 @@ namespace ki::db {
         std::vector<Action>              actions;
         std::optional<Environment_id>    root_env_id;
         std::optional<Signature_info>    signature_info;
+        std::optional<Completion_info>   completion_info;
     };
 
     // In-memory representation of a text document.
@@ -177,6 +203,7 @@ namespace ki::db {
     [[nodiscard]] auto describe_symbol_kind(Symbol_variant variant) -> std::string_view;
 
     // Find the substring of `string` corresponding to `range`.
+    // Terminates program execution if the range is out of bounds.
     [[nodiscard]] auto text_range(std::string_view text, lsp::Range range) -> std::string_view;
 
     // Replace `range` in `text` with `new_text`.
@@ -189,6 +216,9 @@ namespace ki::db {
         lsp::Range       range,
         hir::Function_id function_id,
         std::size_t      parameter_index);
+
+    // Add code completion information to the document identified by `doc_id`.
+    void add_completion(Database& db, Document_id doc_id, Name name, Completion_variant variant);
 
     // Add a type hint to the document identified by `doc_id`.
     void add_type_hint(Database& db, Document_id doc_id, lsp::Position pos, hir::Type_id type_id);
@@ -210,6 +240,12 @@ namespace ki::db {
 
     // Print diagnostics belonging to the document identified by `doc_id` to `stream`.
     void print_diagnostics(std::ostream& stream, Database const& db, Document_id doc_id);
+
+    // Get the primary type associated with the given symbol.
+    auto symbol_type(Arena const& arena, Symbol_id symbol_id) -> std::optional<hir::Type_id>;
+
+    // Get the definition range of the given type.
+    auto type_definition(Arena const& arena, hir::Type_id type_id) -> std::optional<lsp::Range>;
 
 } // namespace ki::db
 

@@ -66,13 +66,12 @@ namespace ki::res {
 
     // Resolution context for a single document.
     struct Context {
-        db::Arena                       arena;
-        Tags                            tags;
-        Constants                       constants;
-        Signature_scope_map             signature_scope_map;
-        std::vector<db::Environment_id> recycled_env_ids;
-        db::Environment_id              root_env_id;
-        db::Document_id                 doc_id;
+        db::Arena           arena;
+        Constants           constants;
+        Signature_scope_map signature_scope_map;
+        db::Environment_id  root_env_id;
+        db::Document_id     doc_id;
+        Tags                tags;
     };
 
     // Create a resolution context for the given document.
@@ -104,6 +103,7 @@ namespace ki::res {
         hir::Type_variant     solution);
 
     void set_mut_solution(
+        db::Database&               db,
         Context&                    ctx,
         Block_state&                state,
         hir::Mutability_variable_id var_id,
@@ -195,17 +195,23 @@ namespace ki::res {
         hir::Type_variant const& sub,
         hir::Type_variant const& super);
 
+    // Require that `sub` is equal to or a submutability of `super`.
+    void require_submutability_relationship(
+        db::Database&                  db,
+        Context&                       ctx,
+        Block_state&                   state,
+        lsp::Range                     range,
+        hir::Mutability_variant const& sub,
+        hir::Mutability_variant const& super);
+
     // Get the HIR representation of the error type with `range`.
-    auto error_type(Constants const& constants, lsp::Range range) -> hir::Type;
+    auto error_type(Context const& ctx, lsp::Range range) -> hir::Type;
 
     // Get the HIR representation of an error expression with `range`.
-    auto error_expression(Constants const& constants, lsp::Range range) -> hir::Expression;
+    auto error_expression(Context const& ctx, lsp::Range range) -> hir::Expression;
 
     // Get the HIR representation of a unit tuple expression with `range`.
-    auto unit_expression(Constants const& constants, lsp::Range range) -> hir::Expression;
-
-    // Get a new or recycled id for the given environment.
-    auto new_environment(Context& ctx, db::Environment env) -> db::Environment_id;
+    auto unit_expression(Context const& ctx, lsp::Range range) -> hir::Expression;
 
     // Create a new local environment.
     auto new_scope(Context& ctx, db::Environment_id parent_id) -> db::Environment_id;
@@ -218,9 +224,6 @@ namespace ki::res {
 
     // Emit warnings for any unused bindings.
     void report_unused(db::Database& db, Context& ctx, db::Environment_id env_id);
-
-    // Mark the given environment as reusable.
-    void recycle_environment(Context& ctx, db::Environment_id env_id);
 
     // Check whether the given symbol can be shadowed in the same environment.
     auto can_shadow(db::Symbol_variant variant) -> bool;

@@ -30,25 +30,28 @@ namespace {
     }
 
     struct Mutability_visitor {
-        Context&               ctx;
-        Block_state&           state;
-        hir::Mutability const& current_sub;
-        hir::Mutability const& current_super;
-        Goal                   goal {};
+        db::Database&                  db;
+        Context&                       ctx;
+        Block_state&                   state;
+        hir::Mutability_variant const& current_sub;
+        hir::Mutability_variant const& current_super;
+        Goal                           goal {};
 
-        auto solution(hir::Mutability_variable_id var_id, hir::Mutability mut) const -> Result
+        auto solution(hir::Mutability_variable_id var_id, hir::Mutability_variant const& solution)
+            const -> Result
         {
-            set_mut_solution(ctx, state, var_id, ctx.arena.hir.mutabilities[mut.id]);
+            set_mut_solution(db, ctx, state, var_id, solution);
             return Result::Ok;
         }
 
         auto unify(hir::Mutability sub, hir::Mutability super) const -> Result
         {
             Mutability_visitor visitor {
+                .db            = db,
                 .ctx           = ctx,
                 .state         = state,
-                .current_sub   = sub,
-                .current_super = super,
+                .current_sub   = ctx.arena.hir.mutabilities[sub.id],
+                .current_super = ctx.arena.hir.mutabilities[super.id],
                 .goal          = goal,
             };
             return std::visit(
@@ -138,10 +141,11 @@ namespace {
         auto unify(hir::Mutability const sub, hir::Mutability const super) const -> Result
         {
             Mutability_visitor visitor {
+                .db            = db,
                 .ctx           = ctx,
                 .state         = state,
-                .current_sub   = sub,
-                .current_super = super,
+                .current_sub   = ctx.arena.hir.mutabilities[sub.id],
+                .current_super = ctx.arena.hir.mutabilities[super.id],
                 .goal          = goal,
             };
             return visitor.unify(sub, super);
@@ -319,7 +323,30 @@ void ki::res::require_subtype_relationship(
         char const* const description
             = result == Result::Recursive ? "Recursive type variable solution" : "Could not unify";
 
-        auto message = std::format("{} {} ~> {}", description, left, right);
-        db::add_error(db, ctx.doc_id, range, std::move(message));
+        db::add_error(db, ctx.doc_id, range, std::format("{} {} ~> {}", description, left, right));
+    }
+}
+
+void ki::res::require_submutability_relationship(
+    db::Database&                  db,
+    Context&                       ctx,
+    Block_state&                   state,
+    lsp::Range                     range,
+    hir::Mutability_variant const& sub,
+    hir::Mutability_variant const& super)
+{
+    Mutability_visitor visitor {
+        .db            = db,
+        .ctx           = ctx,
+        .state         = state,
+        .current_sub   = sub,
+        .current_super = super,
+        .goal          = Goal::Subtype,
+    };
+
+    if (std::visit(visitor, sub, super) != Result::Ok) {
+        auto const left  = hir::to_string(ctx.arena.hir, db.string_pool, sub);
+        auto const right = hir::to_string(ctx.arena.hir, db.string_pool, super);
+        db::add_error(db, ctx.doc_id, range, std::format("Could not unify {} ~> {}", left, right));
     }
 }

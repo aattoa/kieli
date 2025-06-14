@@ -27,7 +27,7 @@ namespace {
         auto error(lsp::Range range, std::string message) -> hir::Expression
         {
             db::add_error(db, ctx.doc_id, range, std::move(message));
-            return error_expression(ctx.constants, this_range);
+            return error_expression(ctx, this_range);
         }
 
         auto unknown_type_error(lsp::Range range) -> hir::Expression
@@ -39,7 +39,7 @@ namespace {
             -> hir::Expression
         {
             if (std::holds_alternative<db::Error>(ctx.arena.hir.types[base.type_id])) {
-                return error_expression(ctx.constants, this_range);
+                return error_expression(ctx, this_range);
             }
             if (std::holds_alternative<hir::type::Variable>(ctx.arena.hir.types[base.type_id])) {
                 return unknown_type_error(base.range);
@@ -101,7 +101,7 @@ namespace {
         {
             db::Symbol& symbol = ctx.arena.symbols[resolve_path(db, ctx, state, env_id, path)];
             if (std::holds_alternative<db::Error>(symbol.variant)) {
-                return error_expression(ctx.constants, this_range);
+                return error_expression(ctx, this_range);
             }
 
             if (auto const* local_id = std::get_if<hir::Local_variable_id>(&symbol.variant)) {
@@ -170,18 +170,19 @@ namespace {
         {
             auto const element_type = fresh_general_type_variable(ctx, state, this_range);
 
-            std::vector<hir::Expression> elements;
+            std::vector<hir::Expression_id> elements;
             elements.reserve(array.elements.size());
 
             for (ast::Expression const& element : array.elements) {
-                elements.push_back(recurse(element));
+                auto expression = recurse(element);
                 require_subtype_relationship(
                     db,
                     ctx,
                     state,
                     element.range,
-                    ctx.arena.hir.types[elements.back().type_id],
+                    ctx.arena.hir.types[expression.type_id],
                     ctx.arena.hir.types[element_type.id]);
+                elements.push_back(ctx.arena.hir.expressions.push(std::move(expression)));
             }
 
             auto const length = ctx.arena.hir.expressions.push(hir::Expression {
@@ -208,10 +209,22 @@ namespace {
 
         auto operator()(ast::expr::Tuple const& tuple) -> hir::Expression
         {
-            auto fields = std::ranges::to<std::vector>(
-                std::views::transform(tuple.fields, std::bind_front(&Visitor::recurse, this)));
-            auto types = std::ranges::to<std::vector>( //
-                std::views::transform(fields, hir::expression_type));
+            if (tuple.fields.empty()) {
+                return unit_expression(ctx, this_range);
+            }
+
+            std::vector<hir::Type>          types;
+            std::vector<hir::Expression_id> fields;
+
+            types.reserve(tuple.fields.size());
+            fields.reserve(tuple.fields.size());
+
+            for (ast::Expression const& field : tuple.fields) {
+                auto expression = recurse(field);
+                types.push_back(hir::expression_type(expression));
+                fields.push_back(ctx.arena.hir.expressions.push(std::move(expression)));
+            }
+
             return hir::Expression {
                 .variant  = hir::expr::Tuple { std::move(fields) },
                 .type_id  = ctx.arena.hir.types.push(hir::type::Tuple { std::move(types) }),
@@ -286,7 +299,7 @@ namespace {
 
         auto operator()(ast::expr::Block const& block) -> hir::Expression
         {
-            auto block_env_id = new_scope(ctx, env_id);
+            auto const block_env_id = new_scope(ctx, env_id);
 
             auto const resolve_effect = [&](ast::Expression const& expression) {
                 auto effect = resolve_expression(db, ctx, state, block_env_id, expression);
@@ -297,12 +310,11 @@ namespace {
                     effect.range,
                     ctx.arena.hir.types[effect.type_id],
                     hir::type::Tuple {});
-                return effect;
+                return ctx.arena.hir.expressions.push(std::move(effect));
             };
 
-            auto side_effects = block.effects //
-                              | std::views::transform(resolve_effect)
-                              | std::ranges::to<std::vector>();
+            auto side_effects = std::ranges::to<std::vector>(
+                std::views::transform(block.effects, resolve_effect));
 
             auto result = resolve_expression(
                 db, ctx, state, block_env_id, ctx.arena.ast.expressions[block.result]);
@@ -311,7 +323,6 @@ namespace {
             auto result_range = result.range;
 
             report_unused(db, ctx, block_env_id);
-            recycle_environment(ctx, block_env_id);
 
             return hir::Expression {
                 .variant = hir::expr::Block {
@@ -428,9 +439,8 @@ namespace {
         auto operator()(ast::expr::Struct_init const& init) -> hir::Expression
         {
             db::Symbol& symbol = ctx.arena.symbols[resolve_path(db, ctx, state, env_id, init.path)];
-
             if (std::holds_alternative<db::Error>(symbol.variant)) {
-                return error_expression(ctx.constants, this_range);
+                return error_expression(ctx, this_range);
             }
 
             auto const ctor_id = get_constructor_id(db, ctx, symbol);
@@ -456,6 +466,9 @@ namespace {
             std::unordered_map<std::size_t, hir::Expression> map;
 
             for (ast::Field_init const& field : init.fields) {
+                db::Field_completion completion { .type_id = ctor.owner_type_id };
+                db::add_completion(db, ctx.doc_id, field.name, completion);
+
                 if (auto const it = body->fields.find(field.name.id); it != body->fields.end()) {
                     hir::Field_info& info = ctx.arena.hir.fields[it->second];
                     db::add_reference(db, ctx.doc_id, lsp::read(field.name.range), info.symbol_id);
@@ -555,13 +568,16 @@ namespace {
 
             flatten_type(ctx, state, variant);
 
-            if (auto const* type = std::get_if<hir::type::Structure>(&variant)) {
-                auto const& structure = resolve_structure(db, ctx, type->id);
-                auto const& ctor      = ctx.arena.hir.constructors[structure.constructor_id];
+            db::Field_completion completion { .type_id = base.type_id };
+            db::add_completion(db, ctx.doc_id, field.name, completion);
 
-                if (auto const* constructor = std::get_if<hir::Struct_constructor>(&ctor.body)) {
-                    auto const it = constructor->fields.find(field.name.id);
-                    if (it != constructor->fields.end()) {
+            if (auto const* type = std::get_if<hir::type::Structure>(&variant)) {
+                auto const& structure   = resolve_structure(db, ctx, type->id);
+                auto const& constructor = ctx.arena.hir.constructors[structure.constructor_id];
+
+                if (auto const* body = std::get_if<hir::Struct_constructor>(&constructor.body)) {
+                    auto const it = body->fields.find(field.name.id);
+                    if (it != body->fields.end()) {
                         db::add_reference(
                             db,
                             ctx.doc_id,
@@ -794,7 +810,7 @@ namespace {
                 .type_id = resolve_type(db, ctx, state, env_id, ctx.arena.ast.types[alias.type]).id,
             });
             bind_symbol(db, ctx, env_id, alias.name, local_id);
-            return unit_expression(ctx.constants, this_range);
+            return unit_expression(ctx, this_range);
         }
 
         auto operator()(ast::expr::Return const& ret) -> hir::Expression
@@ -849,7 +865,7 @@ namespace {
             };
 
             auto solve = [&](hir::Mutability_variable_id var_id, hir::Mutability_variant solution) {
-                set_mut_solution(ctx, state, var_id, std::move(solution));
+                set_mut_solution(db, ctx, state, var_id, std::move(solution));
                 return success(mutability.id);
             };
 
@@ -983,7 +999,7 @@ namespace {
 
         auto operator()(db::Error const&) const -> hir::Expression
         {
-            return error_expression(ctx.constants, this_range);
+            return error_expression(ctx, this_range);
         }
     };
 } // namespace

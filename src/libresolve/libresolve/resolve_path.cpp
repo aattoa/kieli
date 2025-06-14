@@ -5,12 +5,36 @@ using namespace ki;
 using namespace ki::res;
 
 namespace {
+    void set_completion(
+        db::Database&       db,
+        db::Document_id     doc_id,
+        db::Environment_id  env_id,
+        db::Name            name,
+        db::Completion_mode mode)
+    {
+        db::Environment_completion completion { .env_id = env_id, .mode = mode };
+        db::add_completion(db, doc_id, name, completion);
+    }
+
     auto environment_name(db::Database& db, Context& ctx, db::Environment_id env_id) -> std::string
     {
         if (auto name_id = ctx.arena.environments[env_id].name_id) {
             return std::format("Module '{}'", db.string_pool.get(name_id.value()));
         }
         return "The root module";
+    }
+
+    auto type_associated_environment(db::Database& db, Context& ctx, hir::Type_id type_id)
+        -> std::optional<db::Environment_id>
+    {
+        auto const& variant = ctx.arena.hir.types[type_id];
+        if (auto const* enumeration = std::get_if<hir::type::Enumeration>(&variant)) {
+            return resolve_enumeration(db, ctx, enumeration->id).associated_env_id;
+        }
+        if (auto const* structure = std::get_if<hir::type::Structure>(&variant)) {
+            return resolve_structure(db, ctx, structure->id).associated_env_id;
+        }
+        return std::nullopt;
     }
 
     auto symbol_environment(db::Database& db, Context& ctx, db::Symbol_id symbol_id)
@@ -27,14 +51,8 @@ namespace {
             return resolve_structure(db, ctx, *struct_id).associated_env_id;
         }
         if (auto const* alias_id = std::get_if<hir::Alias_id>(&symbol.variant)) {
-            auto const& alias   = resolve_alias(db, ctx, *alias_id);
-            auto const& variant = ctx.arena.hir.types[alias.type.id];
-            if (auto const* enumeration = std::get_if<hir::type::Enumeration>(&variant)) {
-                return resolve_enumeration(db, ctx, enumeration->id).associated_env_id;
-            }
-            if (auto const* structure = std::get_if<hir::type::Structure>(&variant)) {
-                return resolve_structure(db, ctx, structure->id).associated_env_id;
-            }
+            auto const& alias = resolve_alias(db, ctx, *alias_id);
+            return type_associated_environment(db, ctx, alias.type.id);
         }
         return std::nullopt;
     }
@@ -59,20 +77,27 @@ namespace {
     auto lookup(
         db::Database&                      db,
         Context&                           ctx,
-        db::Environment_id                 env_id,
+        db::Environment_id                 site_env_id,
+        db::Environment_id                 lookup_env_id,
+        db::Completion_mode                mode,
         std::span<ast::Path_segment const> segments) -> db::Symbol_id
     {
-        cpputil::always_assert(not segments.empty());
         for (;;) {
+            cpputil::always_assert(not segments.empty());
+
             auto const& segment = segments.front();
             segments            = segments.subspan(1);
 
-            if (auto symbol = apply_segment(db, ctx, env_id, segment)) {
+            auto complete_env_id = mode == db::Completion_mode::Path ? lookup_env_id : site_env_id;
+            set_completion(db, ctx.doc_id, complete_env_id, segment.name, mode);
+            mode = db::Completion_mode::Path;
+
+            if (auto symbol = apply_segment(db, ctx, lookup_env_id, segment)) {
                 if (segments.empty()) {
                     return symbol.value();
                 }
                 else if (auto next_env_id = symbol_environment(db, ctx, symbol.value())) {
-                    env_id = next_env_id.value();
+                    lookup_env_id = next_env_id.value();
                 }
                 else {
                     auto message = std::format(
@@ -86,7 +111,7 @@ namespace {
             else {
                 auto message = std::format(
                     "{} does not contain '{}'",
-                    environment_name(db, ctx, env_id),
+                    environment_name(db, ctx, lookup_env_id),
                     db.string_pool.get(segment.name.id));
                 db::add_error(db, ctx.doc_id, segment.name.range, std::move(message));
                 return new_symbol(ctx, segment.name, db::Error {});
@@ -117,25 +142,46 @@ auto ki::res::resolve_path(
     db::Environment_id env_id,
     ast::Path const&   path) -> db::Symbol_id
 {
-    (void)state; // Block state will be needed for template argument resolution.
-
     auto const visitor = utl::Overload {
-        [&](std::monostate) -> db::Symbol_id {
+        [&](std::monostate) {
             cpputil::always_assert(not path.segments.empty());
             db::Name front = path.segments.front().name;
 
             if (auto start_env_id = find_starting_point(ctx, env_id, front)) {
-                return lookup(db, ctx, start_env_id.value(), path.segments);
+                return lookup(
+                    db, ctx, env_id, start_env_id.value(), db::Completion_mode::Top, path.segments);
             }
+            set_completion(db, ctx.doc_id, env_id, front, db::Completion_mode::Top);
 
             auto message = std::format("Undeclared identifier: '{}'", db.string_pool.get(front.id));
             db::add_error(db, ctx.doc_id, front.range, std::move(message));
             return new_symbol(ctx, front, db::Error {});
         },
-        [&](ast::Path_root_global) -> db::Symbol_id {
-            return lookup(db, ctx, ctx.root_env_id, path.segments);
+        [&](ast::Path_root_global) {
+            return lookup(
+                db, ctx, env_id, ctx.root_env_id, db::Completion_mode::Path, path.segments);
         },
-        [&](ast::Type_id) -> db::Symbol_id { cpputil::todo(); },
+        [&](ast::Type_id type_id) {
+            auto type = resolve_type(db, ctx, state, env_id, ctx.arena.ast.types[type_id]);
+
+            if (auto associated_env_id = type_associated_environment(db, ctx, type.id)) {
+                return lookup(
+                    db,
+                    ctx,
+                    env_id,
+                    associated_env_id.value(),
+                    db::Completion_mode::Path,
+                    path.segments);
+            }
+
+            auto message = std::format(
+                "'{}' has no associated environment",
+                hir::to_string(ctx.arena.hir, db.string_pool, type));
+            db::add_error(db, ctx.doc_id, type.range, std::move(message));
+
+            db::Name name { .id = db.string_pool.make("(ERROR)"sv), .range = type.range };
+            return new_symbol(ctx, name, db::Error {});
+        },
     };
 
     return std::visit(visitor, path.root);

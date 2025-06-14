@@ -43,7 +43,7 @@ namespace ki::hir {
 
     namespace patt {
         struct Tuple {
-            std::vector<Pattern> field_patterns;
+            std::vector<Pattern> patterns;
         };
 
         struct Slice {
@@ -84,11 +84,11 @@ namespace ki::hir {
 
     namespace expr {
         struct Array {
-            std::vector<Expression> elements;
+            std::vector<Expression_id> elements;
         };
 
         struct Tuple {
-            std::vector<Expression> fields;
+            std::vector<Expression_id> fields;
         };
 
         struct Loop {
@@ -102,8 +102,8 @@ namespace ki::hir {
         struct Continue {};
 
         struct Block {
-            std::vector<Expression> effects;
-            Expression_id           result;
+            std::vector<Expression_id> effects;
+            Expression_id              result;
         };
 
         struct Let {

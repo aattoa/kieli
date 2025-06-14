@@ -4,8 +4,6 @@
 #include <libutl/utilities.hpp>
 #include <libcompiler/hir/hir.hpp>
 
-// TODO: simplify
-
 namespace ki::hir::dtl {
     template <typename T>
     struct With_arena {
@@ -136,7 +134,7 @@ namespace ki::hir::dtl {
         void operator()(expr::Block const& block) const
         {
             std::format_to(out, "{{");
-            for (Expression const& side_effect : block.effects) {
+            for (Expression_id side_effect : block.effects) {
                 std::format_to(out, " {};", wrap(side_effect));
             }
             std::format_to(out, " {} }}", wrap(block.result));
@@ -252,7 +250,7 @@ namespace ki::hir::dtl {
 
         void operator()(patt::Tuple const& tuple) const
         {
-            std::format_to(out, "({})", wrap(tuple.field_patterns));
+            std::format_to(out, "({})", wrap(tuple.patterns));
         }
 
         void operator()(patt::Slice const& slice) const

@@ -18,12 +18,11 @@ auto ki::res::context(db::Document_id doc_id) -> Context
 
     return Context {
         .arena               = std::move(arena),
-        .tags                = {},
         .constants           = constants,
         .signature_scope_map = {},
-        .recycled_env_ids    = {},
         .root_env_id         = env_id,
         .doc_id              = doc_id,
+        .tags                = {},
     };
 }
 
@@ -55,55 +54,42 @@ auto ki::res::fresh_template_parameter_tag(Tags& tags) -> hir::Template_paramete
     return hir::Template_parameter_tag { ++tags.current_template_parameter_tag };
 }
 
-auto ki::res::error_type(Constants const& constants, lsp::Range range) -> hir::Type
+auto ki::res::error_type(Context const& ctx, lsp::Range range) -> hir::Type
 {
-    return hir::Type { .id = constants.type_error, .range = range };
+    return hir::Type { .id = ctx.constants.type_error, .range = range };
 }
 
-auto ki::res::error_expression(Constants const& constants, lsp::Range range) -> hir::Expression
+auto ki::res::error_expression(Context const& ctx, lsp::Range range) -> hir::Expression
 {
     return hir::Expression {
         .variant  = db::Error {},
-        .type_id  = constants.type_error,
-        .mut_id   = constants.mut_yes,
+        .type_id  = ctx.constants.type_error,
+        .mut_id   = ctx.constants.mut_yes,
         .category = hir::Expression_category::Place,
         .range    = range,
     };
 }
 
-auto ki::res::unit_expression(Constants const& constants, lsp::Range range) -> hir::Expression
+auto ki::res::unit_expression(Context const& ctx, lsp::Range range) -> hir::Expression
 {
     return hir::Expression {
         .variant  = hir::expr::Tuple {},
-        .type_id  = constants.type_unit,
-        .mut_id   = constants.mut_no,
+        .type_id  = ctx.constants.type_unit,
+        .mut_id   = ctx.constants.mut_no,
         .category = hir::Expression_category::Value,
         .range    = range,
     };
 }
 
-auto ki::res::new_environment(Context& ctx, db::Environment env) -> db::Environment_id
-{
-    if (not ctx.recycled_env_ids.empty()) {
-        auto env_id = ctx.recycled_env_ids.back();
-        ctx.recycled_env_ids.pop_back();
-        ctx.arena.environments[env_id] = std::move(env);
-        return env_id;
-    }
-    return ctx.arena.environments.push(std::move(env));
-}
-
 auto ki::res::new_scope(Context& ctx, db::Environment_id parent_id) -> db::Environment_id
 {
-    return new_environment(
-        ctx,
-        db::Environment {
-            .map       = {},
-            .parent_id = parent_id,
-            .name_id   = {},
-            .doc_id    = ctx.doc_id,
-            .kind      = db::Environment_kind::Scope,
-        });
+    return ctx.arena.environments.push(db::Environment {
+        .map       = {},
+        .parent_id = parent_id,
+        .name_id   = std::nullopt,
+        .doc_id    = ctx.doc_id,
+        .kind      = db::Environment_kind::Scope,
+    });
 }
 
 auto ki::res::new_symbol(Context& ctx, db::Name name, db::Symbol_variant variant) -> db::Symbol_id
@@ -137,11 +123,6 @@ void ki::res::report_unused(db::Database& db, Context& ctx, db::Environment_id e
     for (db::Symbol_id symbol_id : std::views::values(ctx.arena.environments[env_id].map)) {
         warn_if_unused(db, ctx, symbol_id);
     }
-}
-
-void ki::res::recycle_environment(Context& ctx, db::Environment_id env_id)
-{
-    ctx.recycled_env_ids.push_back(env_id);
 }
 
 auto ki::res::can_shadow(db::Symbol_variant variant) -> bool
@@ -219,14 +200,26 @@ void ki::res::set_type_solution(
 }
 
 void ki::res::set_mut_solution(
+    db::Database&               db,
     Context&                    ctx,
     Block_state&                state,
     hir::Mutability_variable_id var_id,
     hir::Mutability_variant     solution)
 {
     auto& repr = state.mut_vars.at(state.mut_var_set.find(var_id.get()));
-    cpputil::always_assert(not std::exchange(repr.is_solved, true));
+
+    if (repr.is_solved) {
+        require_submutability_relationship(
+            db,
+            ctx,
+            state,
+            state.mut_vars.at(var_id.get()).origin,
+            solution,
+            ctx.arena.hir.mutabilities[repr.mut_id]);
+    }
+
     ctx.arena.hir.mutabilities[repr.mut_id] = std::move(solution);
+    repr.is_solved                          = true;
 }
 
 auto ki::res::fresh_general_type_variable(Context& ctx, Block_state& state, lsp::Range origin)
@@ -277,7 +270,7 @@ void ki::res::ensure_no_unsolved_variables(db::Database& db, Context& ctx, Block
 {
     for (Mutability_variable_data& data : state.mut_vars) {
         if (not data.is_solved) {
-            set_mut_solution(ctx, state, data.var_id, db::Mutability::Immut);
+            set_mut_solution(db, ctx, state, data.var_id, db::Mutability::Immut);
         }
     }
     for (Type_variable_data& data : state.type_vars) {

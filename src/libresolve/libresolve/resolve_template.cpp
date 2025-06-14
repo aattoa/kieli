@@ -83,7 +83,7 @@ namespace {
                 parameter.name.range,
                 "Template value parameters are not supported yet");
             return hir::Template_value_parameter {
-                .type = error_type(ctx.constants, parameter.name.range),
+                .type = error_type(ctx, parameter.name.range),
                 .name = parameter.name,
             };
         }

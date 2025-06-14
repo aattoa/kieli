@@ -19,13 +19,16 @@ namespace {
 
         auto operator()(db::Integer const& integer) -> hir::Pattern
         {
-            auto type = fresh_integral_type_variable(ctx, state, this_range);
-            return { .variant = integer, .type_id = type.id, .range = this_range };
+            return hir::Pattern {
+                .variant = integer,
+                .type_id = fresh_integral_type_variable(ctx, state, this_range).id,
+                .range   = this_range,
+            };
         }
 
         auto operator()(db::Floating const& floating) -> hir::Pattern
         {
-            return {
+            return hir::Pattern {
                 .variant = floating,
                 .type_id = ctx.constants.type_floating,
                 .range   = this_range,
@@ -34,7 +37,7 @@ namespace {
 
         auto operator()(db::Boolean const& boolean) -> hir::Pattern
         {
-            return {
+            return hir::Pattern {
                 .variant = boolean,
                 .type_id = ctx.constants.type_boolean,
                 .range   = this_range,
@@ -43,7 +46,7 @@ namespace {
 
         auto operator()(db::String const& string) -> hir::Pattern
         {
-            return {
+            return hir::Pattern {
                 .variant = string,
                 .type_id = ctx.constants.type_string,
                 .range   = this_range,
@@ -52,7 +55,7 @@ namespace {
 
         auto operator()(ast::Wildcard const&) -> hir::Pattern
         {
-            return {
+            return hir::Pattern {
                 .variant = hir::Wildcard {},
                 .type_id = fresh_general_type_variable(ctx, state, this_range).id,
                 .range   = this_range,
@@ -71,7 +74,7 @@ namespace {
             });
             bind_symbol(db, ctx, env_id, pattern.name, local_id);
 
-            return {
+            return hir::Pattern {
                 .variant = hir::patt::Name {
                     .name_id = pattern.name.id,
                     .mut_id  = mut.id,
@@ -101,7 +104,7 @@ namespace {
             auto types = std::views::transform(patterns, hir::pattern_type)
                        | std::ranges::to<std::vector>();
 
-            return {
+            return hir::Pattern {
                 .variant = hir::patt::Tuple { std::move(patterns) },
                 .type_id = ctx.arena.hir.types.push(hir::type::Tuple { std::move(types) }),
                 .range   = this_range,
@@ -126,7 +129,7 @@ namespace {
                     ctx.arena.hir.types[element_type.id]);
             }
 
-            return {
+            return hir::Pattern {
                 .variant = hir::patt::Slice { std::move(patterns) },
                 .type_id = ctx.arena.hir.types.push(hir::type::Slice { element_type }),
                 .range   = this_range,
@@ -147,7 +150,7 @@ namespace {
                 ctx.arena.hir.types[guard.type_id],
                 ctx.arena.hir.types[ctx.constants.type_boolean]);
 
-            return {
+            return hir::Pattern {
                 .variant = hir::patt::Guarded {
                     .pattern = ctx.arena.hir.patterns.push(std::move(pattern)),
                     .guard   = ctx.arena.hir.expressions.push(std::move(guard)),

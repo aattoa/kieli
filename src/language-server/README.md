@@ -4,10 +4,11 @@
 
 ## Currently supported features
 
-- Go to definition
-- Go to type definition
+- Code completion
 - Hover documentation
 - Signature help
+- Go to definition
+- Go to type definition
 - Find and highlight references
 - Intelligent rename
 - Inlay type and parameter hints
