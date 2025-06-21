@@ -146,11 +146,17 @@ namespace ki::db {
         std::optional<lsp::Position> edit_position;
     };
 
-    // Description of a project.
-    struct Manifest {
-        std::filesystem::path root_path;
-        std::string           main_name = "main";
-        std::string           extension = "ki";
+    // Compiler configuration.
+    struct Configuration {
+        std::string main_name       = "main";
+        std::string extension       = "ki";
+        bool        diagnostics     = true;
+        bool        references      = false;
+        bool        semantic_tokens = false;
+        bool        inlay_hints     = false;
+        bool        code_actions    = false;
+        bool        signature_help  = false;
+        bool        code_completion = false;
     };
 
     // Compiler database.
@@ -158,14 +164,14 @@ namespace ki::db {
         utl::Index_vector<Document_id, Document>               documents;
         std::unordered_map<std::filesystem::path, Document_id> paths;
         utl::String_pool                                       string_pool;
-        Manifest                                               manifest;
+        Configuration                                          config;
     };
 
     // Represents a file read failure.
     enum struct Read_failure : std::uint8_t { Does_not_exist, Failed_to_open, Failed_to_read };
 
     // Create a compiler database.
-    [[nodiscard]] auto database(Manifest manifest) -> Database;
+    [[nodiscard]] auto database(Configuration config) -> Database;
 
     // Create a new document.
     [[nodiscard]] auto document(std::string text, Ownership ownership) -> Document;

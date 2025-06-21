@@ -42,32 +42,33 @@ namespace {
     {
         return parse_lower_name(ctx).transform([&](db::Lower const& name) {
             add_semantic_token(ctx, name.range, Semantic::Property);
-            return cst::patt::Field {
-                .name = name,
-                .equals
-                = try_extract(ctx, lex::Type::Equals).transform([&](lex::Token const& equals_sign) {
-                      add_punctuation(ctx, equals_sign.range);
-                      return cst::patt::Equals {
-                          .equals_sign_token = token(ctx, equals_sign),
-                          .pattern           = require<parse_pattern>(ctx, "a field pattern"),
-                      };
-                  }),
-            };
+            auto equals = try_extract(ctx, lex::Type::Equals).transform([&](lex::Token const& tok) {
+                add_punctuation(ctx, tok.range);
+                return cst::patt::Equals {
+                    .equals_sign_token = token(ctx, tok),
+                    .pattern           = require<parse_pattern>(ctx, "a pattern"),
+                };
+            });
+            return cst::patt::Field { .name = name, .equals = std::move(equals) };
         });
     }
 
     auto extract_constructor_body(Context& ctx) -> cst::patt::Constructor_body
     {
-        static constexpr auto parse_struct_fields
-            = parse_braced<parse_comma_separated_one_or_more<parse_field_pattern, "">, "">;
-        static constexpr auto parse_tuple_pattern
-            = parse_parenthesized<parse_top_level_pattern, "a pattern">;
+        static constexpr auto parse_struct_fields = parse_braced<
+            parse_comma_separated_one_or_more<parse_field_pattern, "">,
+            "one or more struct field patterns">;
+        static constexpr auto parse_tuple_pattern = parse_parenthesized<
+            parse_comma_separated_one_or_more<parse_pattern, "a pattern">,
+            "one or more tuple field patterns">;
+
+        set_previous_path_head_semantic_type(ctx, Semantic::Constructor);
 
         if (auto fields = parse_struct_fields(ctx)) {
             return cst::patt::Struct_constructor { .fields = std::move(fields).value() };
         }
-        if (auto pattern = parse_tuple_pattern(ctx)) {
-            return cst::patt::Tuple_constructor { .pattern = std::move(pattern).value() };
+        if (auto fields = parse_tuple_pattern(ctx)) {
+            return cst::patt::Tuple_constructor { .fields = std::move(fields).value() };
         }
         return cst::patt::Unit_constructor {};
     }

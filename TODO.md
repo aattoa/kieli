@@ -3,6 +3,10 @@
 ## libparse
 - Accept trailing commas
 - Use matching parentheses for recovery
+- Solve template type/value argument conflict
+
+## libdesugar
+- Pipe operator, replace wildcards with argument
 
 ## libresolve
 - Unique zero-sized type for each function, coerce to function pointer type
@@ -56,7 +60,6 @@
 - libtommath for arbitrary precision integers?
 - String interpolation
 - Configure builds with `build.kieli`
-- Config instead of manifest
 - Tree-sitter grammar
 - `perf record`
 - Clean up HIR formatting

@@ -128,13 +128,15 @@ auto ki::par::token(Context& ctx, lex::Token const& token) -> cst::Range_id
 
 void ki::par::add_semantic_token(Context& ctx, lsp::Range range, Semantic type)
 {
-    cpputil::always_assert(not lsp::is_multiline(range));
-    cpputil::always_assert(range.start.column < range.stop.column);
-    ctx.semantic_tokens.push_back(lsp::Semantic_token {
-        .position = range.start,
-        .length   = range.stop.column - range.start.column,
-        .type     = type,
-    });
+    if (ctx.db.config.semantic_tokens) {
+        cpputil::always_assert(not lsp::is_multiline(range));
+        cpputil::always_assert(range.start.column < range.stop.column);
+        ctx.semantic_tokens.push_back(lsp::Semantic_token {
+            .position = range.start,
+            .length   = range.stop.column - range.start.column,
+            .type     = type,
+        });
+    }
 }
 
 void ki::par::add_keyword(Context& ctx, lsp::Range range)
@@ -149,7 +151,9 @@ void ki::par::add_punctuation(Context& ctx, lsp::Range range)
 
 void ki::par::set_previous_path_head_semantic_type(Context& ctx, Semantic const type)
 {
-    ctx.semantic_tokens.at(ctx.previous_path_semantic_offset).type = type;
+    if (ctx.db.config.semantic_tokens) {
+        ctx.semantic_tokens.at(ctx.previous_path_semantic_offset).type = type;
+    }
 }
 
 auto ki::par::parse_string(Context& ctx, lex::Token const& literal) -> std::optional<db::String>

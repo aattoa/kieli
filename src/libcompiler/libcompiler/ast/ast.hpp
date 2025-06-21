@@ -20,6 +20,12 @@
 
 namespace ki::ast {
 
+    enum struct Loop_source : std::uint8_t { Plain_loop, While_loop, For_loop };
+    enum struct Conditional_source : std::uint8_t { If, While };
+
+    auto describe_loop_source(Loop_source source) -> std::string_view;
+    auto describe_conditional_source(Conditional_source source) -> std::string_view;
+
     struct Wildcard {
         lsp::Range range;
     };
@@ -109,19 +115,13 @@ namespace ki::ast {
         Expression_id expression;
     };
 
-    enum struct Loop_source : std::uint8_t { Plain_loop, While_loop, For_loop };
-    enum struct Conditional_source : std::uint8_t { If, While };
-
-    auto describe_loop_source(Loop_source source) -> std::string_view;
-    auto describe_conditional_source(Conditional_source source) -> std::string_view;
-
     namespace expr {
         struct Array {
-            std::vector<Expression> elements;
+            std::vector<Expression_id> elements;
         };
 
         struct Tuple {
-            std::vector<Expression> fields;
+            std::vector<Expression_id> fields;
         };
 
         struct Loop {
@@ -136,8 +136,8 @@ namespace ki::ast {
         };
 
         struct Block {
-            std::vector<Expression> effects;
-            Expression_id           result;
+            std::vector<Expression_id> effects;
+            Expression_id              result;
         };
 
         struct Function_call {
@@ -232,13 +232,13 @@ namespace ki::ast {
 
     struct Expression_variant
         : std::variant<
+              Wildcard,
               db::Error,
               db::Integer,
               db::Floating,
               db::Boolean,
               db::String,
               Path,
-              Wildcard,
               expr::Array,
               expr::Tuple,
               expr::Loop,
@@ -277,8 +277,8 @@ namespace ki::ast {
         };
 
         struct Field {
-            db::Lower                 name;
-            std::optional<Pattern_id> pattern;
+            db::Lower  name;
+            Pattern_id pattern;
         };
 
         struct Struct_constructor {
@@ -286,7 +286,7 @@ namespace ki::ast {
         };
 
         struct Tuple_constructor {
-            Pattern_id pattern;
+            std::vector<Pattern_id> fields;
         };
 
         struct Unit_constructor {};
@@ -302,11 +302,11 @@ namespace ki::ast {
         };
 
         struct Tuple {
-            std::vector<Pattern> field_patterns;
+            std::vector<Pattern_id> fields;
         };
 
         struct Slice {
-            std::vector<Pattern> element_patterns;
+            std::vector<Pattern_id> elements;
         };
 
         struct Guarded {
@@ -317,11 +317,11 @@ namespace ki::ast {
 
     struct Pattern_variant
         : std::variant<
+              Wildcard,
               db::Integer,
               db::Floating,
               db::Boolean,
               db::String,
-              Wildcard,
               patt::Name,
               patt::Constructor,
               patt::Tuple,

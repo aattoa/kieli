@@ -178,7 +178,7 @@ auto ki::des::desugar(Context& ctx, cst::Field_init const& field) -> ast::Field_
     }
     auto segment = ast::Path_segment { .template_arguments = std::nullopt, .name = field.name };
     auto path    = ast::Path { .root = {}, .segments = utl::to_vector({ std::move(segment) }) };
-    return {
+    return ast::Field_init {
         .name       = field.name,
         .expression = ctx.ast.expressions.push(std::move(path), field.name.range),
     };
@@ -186,11 +186,15 @@ auto ki::des::desugar(Context& ctx, cst::Field_init const& field) -> ast::Field_
 
 auto ki::des::desugar(Context& ctx, cst::patt::Field const& field) -> ast::patt::Field
 {
-    return ast::patt::Field {
-        .name    = field.name,
-        .pattern = field.equals.transform(
-            [&](cst::patt::Equals const& field) { return desugar(ctx, field.pattern); }),
-    };
+    auto const pattern = std::invoke([&] {
+        if (field.equals.has_value()) {
+            return desugar(ctx, field.equals.value().pattern);
+        }
+        ast::Mutability mutability { .variant = db::Mutability::Immut, .range = field.name.range };
+        ast::patt::Name name { .name = field.name, .mutability = mutability };
+        return ctx.ast.patterns.push(ast::Pattern { .variant = name, .range = field.name.range });
+    });
+    return ast::patt::Field { .name = field.name, .pattern = pattern };
 }
 
 auto ki::des::desugar(Context& ctx, cst::patt::Constructor_body const& body)
@@ -201,7 +205,7 @@ auto ki::des::desugar(Context& ctx, cst::patt::Constructor_body const& body)
             return ast::patt::Struct_constructor { .fields = desugar(ctx, constructor.fields) };
         },
         [&](cst::patt::Tuple_constructor const& constructor) {
-            return ast::patt::Tuple_constructor { .pattern = desugar(ctx, constructor.pattern) };
+            return ast::patt::Tuple_constructor { .fields = desugar(ctx, constructor.fields) };
         },
         [&](cst::patt::Unit_constructor const&) { return ast::patt::Unit_constructor {}; },
     };

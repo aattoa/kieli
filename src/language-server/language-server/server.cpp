@@ -644,8 +644,18 @@ namespace {
 
 auto ki::lsp::run_server(bool const debug, std::istream& in, std::ostream& out) -> int
 {
+    db::Configuration config {
+        .diagnostics     = true,
+        .references      = true,
+        .semantic_tokens = true,
+        .inlay_hints     = true,
+        .code_actions    = true,
+        .signature_help  = true,
+        .code_completion = true,
+    };
+
     Server server {
-        .db             = db::Database {},
+        .db             = db::database(std::move(config)),
         .exit_code      = std::nullopt,
         .input          = in,
         .output         = out,

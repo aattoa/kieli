@@ -14,8 +14,11 @@ namespace {
                 Visitor { .ctx = ctx }, ctx.cst.patterns[paren.pattern.value].variant);
         }
 
-        auto operator()(utl::one_of<db::Integer, db::Floating, db::Boolean, db::String> auto const&
-                            literal) const -> ast::Pattern_variant
+        auto operator()(utl::one_of< //
+                        db::Integer,
+                        db::Floating,
+                        db::Boolean,
+                        db::String> auto const& literal) const -> ast::Pattern_variant
         {
             return literal;
         }
@@ -35,20 +38,17 @@ namespace {
 
         auto operator()(cst::patt::Tuple const& tuple) const -> ast::Pattern_variant
         {
-            return ast::patt::Tuple { std::ranges::to<std::vector>(
-                std::views::transform(tuple.patterns.value.elements, deref_desugar(ctx))) };
+            return ast::patt::Tuple { .fields = desugar(ctx, tuple.fields) };
         }
 
         auto operator()(cst::patt::Top_level_tuple const& tuple) const -> ast::Pattern_variant
         {
-            return ast::patt::Tuple { std::ranges::to<std::vector>(
-                std::views::transform(tuple.patterns.elements, deref_desugar(ctx))) };
+            return ast::patt::Tuple { .fields = desugar(ctx, tuple.fields) };
         }
 
         auto operator()(cst::patt::Slice const& slice) const -> ast::Pattern_variant
         {
-            return ast::patt::Slice { std::ranges::to<std::vector>(
-                std::views::transform(slice.patterns.value.elements, deref_desugar(ctx))) };
+            return ast::patt::Slice { .elements = desugar(ctx, slice.elements) };
         }
 
         auto operator()(cst::patt::Constructor const& constructor) const -> ast::Pattern_variant

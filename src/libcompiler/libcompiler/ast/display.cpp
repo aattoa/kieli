@@ -27,9 +27,8 @@ namespace {
         state.output.push_back('\n');
     }
 
-    void write_node(Display_state& state, Last const last, std::invocable auto const& callback)
+    void write_indent(Display_state& state, Last last)
     {
-        std::size_t const previous_indent = state.indent.size();
         state.output.append(state.indent);
         if (last == Last::Yes) {
             state.output.append(state.unicode ? "└─ " : "+- ");
@@ -39,6 +38,12 @@ namespace {
             state.output.append(state.unicode ? "├─ " : "|- ");
             state.indent.append(state.unicode ? "│  " : "|  ");
         }
+    }
+
+    void write_node(Display_state& state, Last last, std::invocable auto const& callback)
+    {
+        std::size_t previous_indent = state.indent.size();
+        write_indent(state, last);
         std::invoke(callback);
         state.indent.resize(previous_indent);
     }
@@ -218,10 +223,8 @@ namespace {
     void do_display(Display_state& state, patt::Field const& field)
     {
         write_line(state, "field");
-        if (field.pattern.has_value()) {
-            display_node(state, Last::No, "pattern", field.pattern.value());
-        }
-        display_node(state, Last::Yes, "name", field.name);
+        display_node(state, Last::No, "name", field.name);
+        display_node(state, Last::Yes, "pattern", field.pattern);
     }
 
     void do_display(Display_state& state, Constructor_body const& body)
@@ -249,7 +252,7 @@ namespace {
             },
             [&](patt::Tuple_constructor const& constructor) {
                 write_line(state, "tuple constructor");
-                display_node(state, Last::Yes, "pattern", constructor.pattern);
+                display_vector_node(state, Last::Yes, "fields", constructor.fields);
             },
             [&](patt::Unit_constructor const&) { write_line(state, "unit constructor"); },
         };
@@ -590,13 +593,13 @@ namespace {
         void operator()(patt::Tuple const& tuple)
         {
             write_line(state, "tuple");
-            display_vector_node(state, Last::Yes, "field patterns", tuple.field_patterns);
+            display_vector_node(state, Last::Yes, "field patterns", tuple.fields);
         }
 
         void operator()(patt::Slice const& slice)
         {
             write_line(state, "slice");
-            display_vector_node(state, Last::Yes, "element patterns", slice.element_patterns);
+            display_vector_node(state, Last::Yes, "element patterns", slice.elements);
         }
 
         void operator()(patt::Guarded const& guarded)

@@ -173,16 +173,16 @@ namespace {
             std::vector<hir::Expression_id> elements;
             elements.reserve(array.elements.size());
 
-            for (ast::Expression const& element : array.elements) {
-                auto expression = recurse(element);
+            for (ast::Expression_id element_id : array.elements) {
+                hir::Expression element = recurse(ctx.arena.ast.expressions[element_id]);
                 require_subtype_relationship(
                     db,
                     ctx,
                     state,
                     element.range,
-                    ctx.arena.hir.types[expression.type_id],
+                    ctx.arena.hir.types[element.type_id],
                     ctx.arena.hir.types[element_type.id]);
-                elements.push_back(ctx.arena.hir.expressions.push(std::move(expression)));
+                elements.push_back(ctx.arena.hir.expressions.push(std::move(element)));
             }
 
             auto const length = ctx.arena.hir.expressions.push(hir::Expression {
@@ -219,10 +219,10 @@ namespace {
             types.reserve(tuple.fields.size());
             fields.reserve(tuple.fields.size());
 
-            for (ast::Expression const& field : tuple.fields) {
-                auto expression = recurse(field);
-                types.push_back(hir::expression_type(expression));
-                fields.push_back(ctx.arena.hir.expressions.push(std::move(expression)));
+            for (ast::Expression_id field_id : tuple.fields) {
+                hir::Expression field = recurse(ctx.arena.ast.expressions[field_id]);
+                types.push_back(hir::expression_type(field));
+                fields.push_back(ctx.arena.hir.expressions.push(std::move(field)));
             }
 
             return hir::Expression {
@@ -301,8 +301,9 @@ namespace {
         {
             auto const block_env_id = new_scope(ctx, env_id);
 
-            auto const resolve_effect = [&](ast::Expression const& expression) {
-                auto effect = resolve_expression(db, ctx, state, block_env_id, expression);
+            auto const resolve_effect = [&](ast::Expression_id effect_id) {
+                hir::Expression effect = resolve_expression(
+                    db, ctx, state, block_env_id, ctx.arena.ast.expressions[effect_id]);
                 require_subtype_relationship(
                     db,
                     ctx,
@@ -549,14 +550,11 @@ namespace {
                     = ctx.arena.ast.expressions[init.fields.back().expression].range.stop;
             }
 
-            db::add_action(
-                db,
-                ctx.doc_id,
-                this_range,
-                db::Action_fill_in_struct_init {
-                    .field_ids       = std::move(missing_field_ids),
-                    .final_field_end = final_field_end,
-                });
+            db::Action_fill_in_struct_init action {
+                .field_ids       = std::move(missing_field_ids),
+                .final_field_end = final_field_end,
+            };
+            db::add_action(db, ctx.doc_id, this_range, std::move(action));
 
             return error(this_range, std::move(message));
         }

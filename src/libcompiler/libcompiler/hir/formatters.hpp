@@ -250,12 +250,12 @@ namespace ki::hir::dtl {
 
         void operator()(patt::Tuple const& tuple) const
         {
-            std::format_to(out, "({})", wrap(tuple.patterns));
+            std::format_to(out, "({})", wrap(tuple.fields));
         }
 
         void operator()(patt::Slice const& slice) const
         {
-            std::format_to(out, "[{}]", wrap(slice.patterns));
+            std::format_to(out, "[{}]", wrap(slice.elements));
         }
 
         void operator()(patt::Name const& name) const

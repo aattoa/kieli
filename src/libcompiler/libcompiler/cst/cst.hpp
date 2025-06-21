@@ -325,13 +325,13 @@ namespace ki::cst {
 
     struct Expression_variant
         : std::variant<
+              Wildcard,
               db::Error,
               db::Integer,
               db::Floating,
               db::Boolean,
               db::String,
               Path,
-              Wildcard,
               expr::Paren,
               expr::Array,
               expr::Tuple,
@@ -393,7 +393,7 @@ namespace ki::cst {
         };
 
         struct Tuple_constructor {
-            Surrounded<Pattern_id> pattern;
+            Surrounded<Separated<Pattern_id>> fields;
         };
 
         struct Constructor_body
@@ -407,15 +407,15 @@ namespace ki::cst {
         };
 
         struct Tuple {
-            Surrounded<Separated<Pattern_id>> patterns;
+            Surrounded<Separated<Pattern_id>> fields;
         };
 
         struct Top_level_tuple {
-            Separated<Pattern_id> patterns;
+            Separated<Pattern_id> fields;
         };
 
         struct Slice {
-            Surrounded<Separated<Pattern_id>> patterns;
+            Surrounded<Separated<Pattern_id>> elements;
         };
 
         struct Guarded {
@@ -427,11 +427,11 @@ namespace ki::cst {
 
     struct Pattern_variant
         : std::variant<
+              Wildcard,
               db::Integer,
               db::Floating,
               db::Boolean,
               db::String,
-              Wildcard,
               patt::Paren,
               patt::Name,
               patt::Constructor,

@@ -87,20 +87,32 @@ namespace {
 
         auto operator()(ast::patt::Constructor const&) -> hir::Pattern
         {
-            cpputil::todo();
+            std::string message = "Constructor pattern resolution has not been implemented";
+            db::add_error(db, ctx.doc_id, this_range, std::move(message));
+
+            return hir::Pattern {
+                .variant = hir::Wildcard {},
+                .type_id = ctx.constants.type_error,
+                .range   = this_range,
+            };
         }
 
         auto operator()(ast::patt::Tuple const& tuple) -> hir::Pattern
         {
-            auto patterns = tuple.field_patterns
-                          | std::views::transform(std::bind_front(&Visitor::recurse, this))
-                          | std::ranges::to<std::vector>();
+            std::vector<hir::Pattern> fields;
+            std::vector<hir::Type>    types;
 
-            auto types = std::views::transform(patterns, hir::pattern_type)
-                       | std::ranges::to<std::vector>();
+            fields.reserve(tuple.fields.size());
+            types.reserve(tuple.fields.size());
+
+            for (ast::Pattern_id field_id : tuple.fields) {
+                hir::Pattern field = recurse(ctx.arena.ast.patterns[field_id]);
+                types.push_back(hir::pattern_type(field));
+                fields.push_back(std::move(field));
+            }
 
             return hir::Pattern {
-                .variant = hir::patt::Tuple { std::move(patterns) },
+                .variant = hir::patt::Tuple { std::move(fields) },
                 .type_id = ctx.arena.hir.types.push(hir::type::Tuple { std::move(types) }),
                 .range   = this_range,
             };
@@ -108,24 +120,25 @@ namespace {
 
         auto operator()(ast::patt::Slice const& slice) -> hir::Pattern
         {
-            auto patterns = slice.element_patterns
-                          | std::views::transform(std::bind_front(&Visitor::recurse, this))
-                          | std::ranges::to<std::vector>();
+            std::vector<hir::Pattern> elements;
+            elements.reserve(slice.elements.size());
 
-            auto element_type = fresh_general_type_variable(ctx, state, this_range);
+            hir::Type element_type = fresh_general_type_variable(ctx, state, this_range);
 
-            for (hir::Pattern const& pattern : patterns) {
+            for (ast::Pattern_id element_id : slice.elements) {
+                hir::Pattern element = recurse(ctx.arena.ast.patterns[element_id]);
                 require_subtype_relationship(
                     db,
                     ctx,
                     state,
-                    pattern.range,
-                    ctx.arena.hir.types[pattern.type_id],
+                    element.range,
+                    ctx.arena.hir.types[element.type_id],
                     ctx.arena.hir.types[element_type.id]);
+                elements.push_back(std::move(element));
             }
 
             return hir::Pattern {
-                .variant = hir::patt::Slice { std::move(patterns) },
+                .variant = hir::patt::Slice { std::move(elements) },
                 .type_id = ctx.arena.hir.types.push(hir::type::Slice { element_type }),
                 .range   = this_range,
             };
@@ -133,9 +146,9 @@ namespace {
 
         auto operator()(ast::patt::Guarded const& guarded) -> hir::Pattern
         {
-            auto guard = resolve_expression(
+            hir::Expression guard = resolve_expression(
                 db, ctx, state, env_id, ctx.arena.ast.expressions[guarded.guard]);
-            auto pattern = recurse(ctx.arena.ast.patterns[guarded.pattern]);
+            hir::Pattern pattern = recurse(ctx.arena.ast.patterns[guarded.pattern]);
 
             require_subtype_relationship(
                 db,

@@ -15,7 +15,7 @@ namespace {
             },
             [&](cst::patt::Tuple_constructor const& constructor) {
                 format(state, "(");
-                format(state, constructor.pattern.value);
+                format_comma_separated(state, constructor.fields.value.elements);
                 format(state, ")");
             },
             [](cst::patt::Unit_constructor const&) {},
@@ -46,14 +46,14 @@ namespace {
         void operator()(cst::patt::Tuple const& tuple)
         {
             format(state, "(");
-            format_comma_separated(state, tuple.patterns.value.elements);
+            format_comma_separated(state, tuple.fields.value.elements);
             format(state, ")");
         }
 
         void operator()(cst::patt::Slice const& slice)
         {
             format(state, "[");
-            format_comma_separated(state, slice.patterns.value.elements);
+            format_comma_separated(state, slice.elements.value.elements);
             format(state, "]");
         }
 
@@ -83,7 +83,7 @@ namespace {
 
         void operator()(cst::patt::Top_level_tuple const& tuple)
         {
-            format_comma_separated(state, tuple.patterns.elements);
+            format_comma_separated(state, tuple.fields.elements);
         }
     };
 } // namespace

@@ -54,14 +54,12 @@ namespace {
 
         auto operator()(cst::expr::Array const& literal) const -> ast::Expression_variant
         {
-            return ast::expr::Array { std::ranges::to<std::vector>(
-                std::views::transform(literal.elements.value.elements, deref_desugar(ctx))) };
+            return ast::expr::Array { .elements = desugar(ctx, literal.elements) };
         }
 
         auto operator()(cst::expr::Tuple const& tuple) const -> ast::Expression_variant
         {
-            return ast::expr::Tuple { std::ranges::to<std::vector>(
-                std::views::transform(tuple.fields.value.elements, deref_desugar(ctx))) };
+            return ast::expr::Tuple { .fields = desugar(ctx, tuple.fields) };
         }
 
         auto operator()(cst::expr::Conditional const& conditional) const -> ast::Expression_variant
@@ -152,18 +150,18 @@ namespace {
 
         auto operator()(cst::expr::Block const& block) const -> ast::Expression_variant
         {
-            auto desugar_effect
-                = [&](auto const& effect) { return deref_desugar(ctx, effect.expression); };
+            auto side_effects
+                = std::views::transform(
+                      block.effects,
+                      [&](auto const& effect) { return desugar(ctx, effect.expression); })
+                | std::ranges::to<std::vector>();
 
-            auto side_effects = std::views::transform(block.effects, desugar_effect)
-                              | std::ranges::to<std::vector>();
-
-            cst::Range_id const unit_token = //
-                block.effects.empty()        //
+            cst::Range_id unit_token = //
+                block.effects.empty()  //
                     ? block.close_brace_token
                     : block.effects.back().trailing_semicolon_token;
 
-            ast::Expression_id const result = //
+            ast::Expression_id result = //
                 block.result.has_value()
                     ? desugar(ctx, block.result.value())
                     : ctx.ast.expressions.push(unit_value(ctx.cst.ranges[unit_token]));

@@ -90,13 +90,13 @@ auto ki::lsp::write(Range range) noexcept -> Reference
     return Reference { .range = range, .kind = Reference_kind::Write };
 }
 
-auto ki::db::database(Manifest manifest) -> Database
+auto ki::db::database(Configuration config) -> Database
 {
     return Database {
         .documents   = {},
         .paths       = {},
         .string_pool = {},
-        .manifest    = std::move(manifest),
+        .config      = std::move(config),
     };
 }
 
@@ -237,54 +237,68 @@ void ki::db::add_signature_help(
     hir::Function_id function_id,
     std::size_t      parameter_index)
 {
-    auto const edit_pos = db.documents[doc_id].edit_position;
-    if (edit_pos.has_value() and lsp::range_contains(range, edit_pos.value())) {
-        db.documents[doc_id].info.signature_info = Signature_info {
-            .function_id  = function_id,
-            .active_param = cpputil::num::safe_cast<std::uint32_t>(parameter_index),
-        };
+    if (db.config.signature_help) {
+        auto const edit_pos = db.documents[doc_id].edit_position;
+        if (edit_pos.has_value() and lsp::range_contains(range, edit_pos.value())) {
+            db.documents[doc_id].info.signature_info = Signature_info {
+                .function_id  = function_id,
+                .active_param = cpputil::num::safe_cast<std::uint32_t>(parameter_index),
+            };
+        }
     }
 }
 
 void ki::db::add_completion(Database& db, Document_id doc_id, Name name, Completion_variant variant)
 {
-    auto const edit_pos = db.documents[doc_id].edit_position;
-    if (edit_pos.has_value() and lsp::range_contains_inclusive(name.range, edit_pos.value())) {
-        auto const prefix_length = edit_pos.value().column - name.range.start.column;
-        db.documents[doc_id].info.completion_info = Completion_info {
-            .prefix  = std::string(db.string_pool.get(name.id).substr(0, prefix_length)),
-            .range   = lsp::Range(name.range.start, edit_pos.value()),
-            .variant = std::move(variant),
-        };
+    if (db.config.code_completion) {
+        auto const edit_pos = db.documents[doc_id].edit_position;
+        if (edit_pos.has_value() and lsp::range_contains_inclusive(name.range, edit_pos.value())) {
+            auto const prefix_length = edit_pos.value().column - name.range.start.column;
+            db.documents[doc_id].info.completion_info = Completion_info {
+                .prefix  = std::string(db.string_pool.get(name.id).substr(0, prefix_length)),
+                .range   = lsp::Range(name.range.start, edit_pos.value()),
+                .variant = std::move(variant),
+            };
+        }
     }
 }
 
 void ki::db::add_type_hint(
     Database& db, Document_id doc_id, lsp::Position position, hir::Type_id type_id)
 {
-    db.documents[doc_id].info.inlay_hints.emplace_back(position, type_id);
+    if (db.config.inlay_hints) {
+        db.documents[doc_id].info.inlay_hints.emplace_back(position, type_id);
+    }
 }
 
 void ki::db::add_param_hint(
     Database& db, Document_id doc_id, lsp::Position position, hir::Pattern_id param)
 {
-    db.documents[doc_id].info.inlay_hints.emplace_back(position, param);
+    if (db.config.inlay_hints) {
+        db.documents[doc_id].info.inlay_hints.emplace_back(position, param);
+    }
 }
 
 void ki::db::add_action(Database& db, Document_id doc_id, lsp::Range range, Action_variant variant)
 {
-    db.documents[doc_id].info.actions.emplace_back(std::move(variant), range);
+    if (db.config.code_actions) {
+        db.documents[doc_id].info.actions.emplace_back(std::move(variant), range);
+    }
 }
 
 void ki::db::add_reference(
     Database& db, Document_id doc_id, lsp::Reference ref, Symbol_id symbol_id)
 {
-    db.documents[doc_id].info.references.emplace_back(ref, symbol_id);
+    if (db.config.references) {
+        db.documents[doc_id].info.references.emplace_back(ref, symbol_id);
+    }
 }
 
 void ki::db::add_diagnostic(Database& db, Document_id doc_id, lsp::Diagnostic diagnostic)
 {
-    db.documents[doc_id].info.diagnostics.push_back(std::move(diagnostic));
+    if (db.config.diagnostics) {
+        db.documents[doc_id].info.diagnostics.push_back(std::move(diagnostic));
+    }
 }
 
 void ki::db::add_error(Database& db, Document_id doc_id, lsp::Range range, std::string message)

@@ -55,7 +55,7 @@ namespace {
             }
             repl::add_history_line(input.value().c_str());
 
-            auto db     = db::database({ .root_path = std::filesystem::current_path() });
+            auto db     = db::database({});
             auto doc_id = db::test_document(db, std::move(input).value());
 
             try {
@@ -89,7 +89,7 @@ namespace {
 
     auto dump(std::string_view filename, auto const& callback) -> int
     {
-        db::Database db;
+        auto db = db::database({});
         if (auto doc_id = db::read_document(db, filename)) {
             try {
                 callback(db, doc_id.value());

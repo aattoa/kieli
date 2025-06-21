@@ -43,11 +43,11 @@ namespace ki::hir {
 
     namespace patt {
         struct Tuple {
-            std::vector<Pattern> patterns;
+            std::vector<Pattern> fields;
         };
 
         struct Slice {
-            std::vector<Pattern> patterns;
+            std::vector<Pattern> elements;
         };
 
         struct Name {
@@ -64,11 +64,11 @@ namespace ki::hir {
 
     struct Pattern_variant
         : std::variant<
+              Wildcard,
               db::Integer,
               db::Floating,
               db::Boolean,
               db::String,
-              Wildcard,
               patt::Tuple,
               patt::Slice,
               patt::Name,
