@@ -38,7 +38,7 @@ namespace {
 
         (void)prefix; // TODO: filter?
 
-        for (auto const [index, type] : std::views::enumerate(types)) {
+        for (auto const [index, type] : utl::enumerate(types)) {
             lsp::Json::Object item;
 
             item.try_emplace("label", std::to_string(index));
@@ -67,7 +67,7 @@ namespace {
             if (auto const* body = std::get_if<hir::Struct_constructor>(&constructor.body)) {
                 lsp::Json::Array items;
 
-                for (auto const [name_id, field_id] : body->fields) {
+                for (auto const& [name_id, field_id] : body->fields) {
                     if (fuzzy_prefix_match(prefix, db.string_pool.get(name_id))) {
                         items.push_back(lsp::completion_item_to_json(
                             db, doc_id, arena.hir.fields[field_id].symbol_id));
@@ -98,7 +98,7 @@ namespace {
         for (;;) {
             auto const& env = db.documents[doc_id].arena.environments[completion.env_id];
 
-            for (auto const [name_id, symbol_id] : env.map) {
+            for (auto const& [name_id, symbol_id] : env.map) {
                 if (fuzzy_prefix_match(prefix, db.string_pool.get(name_id))) {
                     items.push_back(lsp::completion_item_to_json(db, doc_id, symbol_id));
                 }

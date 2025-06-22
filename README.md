@@ -17,14 +17,14 @@ Dependencies are automatically fetched by CMake.
 
 Prerequisites:
 
-- CMake
-- A build system, such as GNU Make or Ninja
 - A C++23 compiler toolchain
+- A build system, such as GNU Make or Ninja
+- CMake
 
 Note that a relatively recent toolchain with good C++23 support is required for building Kieli. The following should work:
 
 - Compilers: `clang >= 18` or `gcc >= 15`
-- Standard library: `libstdc++ >= 15`
+- Standard libraries: `libc++ >= 20` or `libstdc++ >= 15`
 
 Run the following commands to clone and build Kieli:
 

@@ -120,7 +120,7 @@ namespace {
             },
             [&](ast::Struct_constructor const& structure) -> hir::Constructor_body {
                 hir::Struct_constructor body;
-                for (auto [index, field] : std::views::enumerate(structure.fields)) {
+                for (auto [index, field] : utl::enumerate(structure.fields)) {
                     if (body.fields.contains(field.name.id)) {
                         auto message = std::format(
                             "Duplicate struct field '{}'", db.string_pool.get(field.name.id));
@@ -261,7 +261,7 @@ auto ki::res::resolve_enumeration(db::Database& db, Context& ctx, hir::Enumerati
         std::vector<db::Symbol_id> constructor_ids;
         constructor_ids.reserve(info.ast.constructors.size());
 
-        for (auto [discriminant, constructor] : std::views::enumerate(info.ast.constructors)) {
+        for (auto [discriminant, constructor] : utl::enumerate(info.ast.constructors)) {
             auto symbol_id = bind_symbol(
                 db,
                 ctx,

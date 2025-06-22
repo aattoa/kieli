@@ -7,7 +7,7 @@ namespace {
     struct Move_only {
         int value;
 
-        explicit constexpr Move_only(int const value) noexcept : value(value) {}
+        explicit constexpr Move_only(int value) noexcept : value(value) {}
 
         ~Move_only()                                       = default;
         Move_only(Move_only const&)                        = delete;
@@ -18,9 +18,9 @@ namespace {
         auto operator==(Move_only const&) const -> bool = default;
     };
 
-    consteval auto operator""_mov(unsigned long long const value) -> Move_only
+    consteval auto operator""_mov(unsigned long long value) -> Move_only
     {
-        return Move_only { static_cast<int>(value) };
+        return Move_only(static_cast<int>(value));
     }
 
     static_assert(std::movable<Move_only> and not std::copyable<Move_only>);
@@ -55,4 +55,17 @@ UNITTEST("utl::View")
     REQUIRE_EQUAL(utl::View { .offset = 0, .length = 5 }.string(string), "Hello"sv);
     REQUIRE_EQUAL(utl::View { .offset = 7, .length = 5 }.string(string), "world"sv);
     REQUIRE_THROWS_AS(std::out_of_range, utl::View { .offset = 14, .length = 0 }.string(string));
+}
+
+UNITTEST("utl::enumerate")
+{
+    REQUIRE_EQUAL(
+        std::vector<std::tuple<std::string_view::difference_type, char>> {
+            { 0, 'h' },
+            { 1, 'e' },
+            { 2, 'l' },
+            { 3, 'l' },
+            { 4, 'o' },
+        },
+        std::ranges::to<std::vector>(utl::enumerate("hello"sv)));
 }

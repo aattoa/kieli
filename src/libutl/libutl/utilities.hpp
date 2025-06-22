@@ -110,6 +110,14 @@ namespace ki::utl {
         return std::ranges::to<std::vector>(std::views::as_rvalue(array));
     }
 
+    // LLVM libc++ does not provide `std::views::enumerate` yet. Remove this when it does.
+    template <typename View>
+    [[nodiscard]] constexpr auto enumerate(View&& view)
+    {
+        std::ranges::range_difference_t<View> index {};
+        return std::views::zip(std::views::iota(index), std::forward<View>(view));
+    }
+
 } // namespace ki::utl
 
 #endif // KIELI_LIBUTL_UTILITIES
