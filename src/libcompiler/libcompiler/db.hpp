@@ -146,17 +146,25 @@ namespace ki::db {
         std::optional<lsp::Position> edit_position;
     };
 
+    enum struct Log_level : std::uint8_t { None, Debug };
+    enum struct Semantic_token_mode : std::uint8_t { None, Partial, Full };
+    enum struct Inlay_hint_mode : std::uint8_t { None, Type, Parameter, Full };
+
+    auto type_hints_enabled(Inlay_hint_mode mode) noexcept -> bool;
+    auto parameter_hints_enabled(Inlay_hint_mode mode) noexcept -> bool;
+
     // Compiler configuration.
     struct Configuration {
-        std::string main_name       = "main";
-        std::string extension       = "ki";
-        bool        diagnostics     = true;
-        bool        references      = false;
-        bool        semantic_tokens = false;
-        bool        inlay_hints     = false;
-        bool        code_actions    = false;
-        bool        signature_help  = false;
-        bool        code_completion = false;
+        std::string         main_name       = "main";
+        std::string         extension       = "ki";
+        Log_level           log_level       = Log_level::None;
+        Semantic_token_mode semantic_tokens = Semantic_token_mode::None;
+        Inlay_hint_mode     inlay_hints     = Inlay_hint_mode::None;
+        bool                references      = false;
+        bool                code_actions    = false;
+        bool                signature_help  = false;
+        bool                code_completion = false;
+        bool                diagnostics     = true;
     };
 
     // Compiler database.

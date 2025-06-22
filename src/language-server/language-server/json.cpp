@@ -648,6 +648,81 @@ auto ki::lsp::make_text_edit(Range range, std::string new_text) -> Json
     return Json { std::move(edit) };
 }
 
+auto ki::lsp::log_level_from_json(Json json) -> db::Log_level
+{
+    auto const string = as<Json::String>(std::move(json));
+    if (string == "none") {
+        return db::Log_level::None;
+    }
+    if (string == "debug") {
+        return db::Log_level::Debug;
+    }
+    throw Bad_json(std::format("Expected one of 'none,debug', not '{}'", string));
+}
+
+auto ki::lsp::semantic_token_mode_from_json(Json json) -> db::Semantic_token_mode
+{
+    auto const string = as<Json::String>(std::move(json));
+    if (string == "none") {
+        return db::Semantic_token_mode::None;
+    }
+    if (string == "partial") {
+        return db::Semantic_token_mode::Partial;
+    }
+    if (string == "full") {
+        return db::Semantic_token_mode::Full;
+    }
+    throw Bad_json(std::format("Expected one of 'none,partial,full', not '{}'", string));
+}
+
+auto ki::lsp::inlay_hint_mode_from_json(Json json) -> db::Inlay_hint_mode
+{
+    auto const string = as<Json::String>(std::move(json));
+    if (string == "none") {
+        return db::Inlay_hint_mode::None;
+    }
+    if (string == "type") {
+        return db::Inlay_hint_mode::Type;
+    }
+    if (string == "parameter") {
+        return db::Inlay_hint_mode::Parameter;
+    }
+    if (string == "full") {
+        return db::Inlay_hint_mode::Full;
+    }
+    throw Bad_json(std::format("Expected one of 'none,type,parameter,full', not '{}'", string));
+}
+
+auto ki::lsp::database_config_from_json(Json json) -> db::Configuration
+{
+    auto object = as<Json::Object>(std::move(json));
+    auto config = default_server_config();
+
+    if (auto json = maybe_at(object, "logLevel")) {
+        config.log_level = log_level_from_json(std::move(json).value());
+    }
+    if (auto json = maybe_at(object, "semanticTokens")) {
+        config.semantic_tokens = semantic_token_mode_from_json(std::move(json).value());
+    }
+    if (auto json = maybe_at(object, "inlayHints")) {
+        config.inlay_hints = inlay_hint_mode_from_json(std::move(json).value());
+    }
+    if (auto boolean = maybe_at<Json::Boolean>(object, "references")) {
+        config.references = boolean.value();
+    }
+    if (auto boolean = maybe_at<Json::Boolean>(object, "actions")) {
+        config.code_actions = boolean.value();
+    }
+    if (auto boolean = maybe_at<Json::Boolean>(object, "signatureHelp")) {
+        config.signature_help = boolean.value();
+    }
+    if (auto boolean = maybe_at<Json::Boolean>(object, "completion")) {
+        config.code_completion = boolean.value();
+    }
+
+    return config;
+}
+
 auto ki::lsp::document_item_from_json(Json json) -> Document_item
 {
     auto object = as<Json::Object>(std::move(json));

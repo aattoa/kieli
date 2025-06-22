@@ -91,6 +91,10 @@ namespace ki::lsp {
     auto location_from_json(db::Database const& db, Json json) -> Location;
     auto location_to_json(db::Database const& db, Location location) -> Json;
 
+    auto log_level_from_json(Json json) -> db::Log_level;
+    auto semantic_token_mode_from_json(Json json) -> db::Semantic_token_mode;
+    auto inlay_hint_mode_from_json(Json json) -> db::Inlay_hint_mode;
+    auto database_config_from_json(Json json) -> db::Configuration;
     auto document_item_from_json(Json json) -> Document_item;
     auto format_options_from_json(Json json) -> fmt::Options;
     auto formatting_params_from_json(db::Database const& db, Json json) -> Formatting_params;
@@ -139,7 +143,7 @@ namespace ki::lsp {
     template <typename T>
     auto as(Json json) -> T
     {
-        if (T* const ptr = std::get_if<T>(&json.variant)) {
+        if (T* ptr = std::get_if<T>(&json.variant)) {
             return std::move(*ptr);
         }
         throw Bad_json("Value has unexpected type");
@@ -153,6 +157,17 @@ namespace ki::lsp {
 
     // If `object` contains `key`, moves out the value. Otherwise returns nullopt.
     auto maybe_at(Json::Object& object, std::string_view key) -> std::optional<Json>;
+
+    template <typename T>
+    auto maybe_at(Json::Object& object, std::string_view key) -> std::optional<T>
+    {
+        return maybe_at(object, key).transform([key](Json json) {
+            if (T* ptr = std::get_if<T>(&json.variant)) {
+                return std::move(*ptr);
+            }
+            throw Bad_json(std::format("Key '{}' has unexpected type", key));
+        });
+    }
 
 } // namespace ki::lsp
 

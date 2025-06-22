@@ -20,7 +20,7 @@ UNITTEST("lifecycle")
     lsp::rpc::write_message(input, R"({"jsonrpc":"2.0","id":1,"method":"shutdown"})");
     lsp::rpc::write_message(input, R"({"jsonrpc":"2.0","method":"exit"})");
 
-    REQUIRE_EQUAL(0, lsp::run_server(/*debug=*/false, input, output));
+    REQUIRE_EQUAL(0, lsp::run_server(lsp::default_server_config(), input, output));
 }
 
 UNITTEST("premature exit")
@@ -31,7 +31,7 @@ UNITTEST("premature exit")
     lsp::rpc::write_message(input, R"({"jsonrpc":"2.0","id":0,"method":"initialize"})");
     lsp::rpc::write_message(input, R"({"jsonrpc":"2.0","method":"exit"})");
 
-    REQUIRE_EQUAL(1, lsp::run_server(/*debug=*/false, input, output));
+    REQUIRE_EQUAL(1, lsp::run_server(lsp::default_server_config(), input, output));
 }
 
 UNITTEST("document synchronization")
@@ -82,7 +82,7 @@ UNITTEST("document synchronization")
     lsp::rpc::write_message(input, R"({"jsonrpc":"2.0","method":"exit"})");
 
     // The server should exit normally.
-    REQUIRE_EQUAL(0, lsp::run_server(/*debug=*/false, input, output));
+    REQUIRE_EQUAL(0, lsp::run_server(lsp::default_server_config(), input, output));
 
     auto read_server_message = [&output] { return lsp::rpc::read_message(output).value(); };
 

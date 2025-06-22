@@ -19,20 +19,26 @@ namespace {
         std::istream&      input;
         std::ostream&      output;
         bool               is_initialized {};
-        bool               debug {};
     };
 
     template <typename T>
     using Result = std::expected<T, std::string>;
+
+    template <typename... Args>
+    void debug_log(Server const& server, std::format_string<Args...> fmt, Args&&... args)
+    {
+        if (server.db.config.log_level == db::Log_level::Debug) {
+            std::print(std::cerr, "[debug] ");
+            std::println(std::cerr, fmt, std::forward<Args>(args)...);
+        }
+    }
 
     void publish_diagnostics(Server const& server, db::Document_id doc_id)
     {
         auto message = cpputil::json::encode(make_notification(
             Json::String("textDocument/publishDiagnostics"),
             diagnostic_params_to_json(server.db, doc_id)));
-        if (server.debug) {
-            std::println(std::cerr, "[debug] <-- {}", message);
-        }
+        debug_log(server, "<-- {}", message);
         rpc::write_message(server.output, message);
     }
 
@@ -491,6 +497,14 @@ namespace {
         return {};
     }
 
+    auto handle_change_config(Server& server, Json params) -> Result<void>
+    {
+        auto object      = as<Json::Object>(std::move(params));
+        auto settings    = as<Json::Object>(at(object, "settings"));
+        server.db.config = database_config_from_json(at(settings, "kieli"));
+        return {};
+    }
+
     auto handle_notification(Server& server, std::string_view method, Json params) -> Result<void>
     {
         if (method == "textDocument/didChange") {
@@ -501,6 +515,9 @@ namespace {
         }
         if (method == "textDocument/didClose") {
             return handle_close(server, std::move(params));
+        }
+        if (method == "workspace/didChangeConfiguration") {
+            return handle_change_config(server, std::move(params));
         }
         if (method == "initialized") {
             return {};
@@ -642,40 +659,23 @@ namespace {
     }
 } // namespace
 
-auto ki::lsp::run_server(bool const debug, std::istream& in, std::ostream& out) -> int
+auto ki::lsp::run_server(db::Configuration config, std::istream& in, std::ostream& out) -> int
 {
-    db::Configuration config {
-        .diagnostics     = true,
-        .references      = true,
-        .semantic_tokens = true,
-        .inlay_hints     = true,
-        .code_actions    = true,
-        .signature_help  = true,
-        .code_completion = true,
-    };
-
     Server server {
         .db             = db::database(std::move(config)),
         .exit_code      = std::nullopt,
         .input          = in,
         .output         = out,
         .is_initialized = false,
-        .debug          = debug,
     };
 
-    if (debug) {
-        std::println(std::cerr, "[debug] Started server.");
-    }
+    debug_log(server, "Starting server.");
 
     while (not server.exit_code.has_value()) {
         if (auto const message = rpc::read_message(server.input)) {
-            if (debug) {
-                std::println(std::cerr, "[debug] --> {}", message.value());
-            }
+            debug_log(server, "--> {}", message.value());
             if (auto const reply = handle_client_message(server, message.value())) {
-                if (server.debug) {
-                    std::println(std::cerr, "[debug] <-- {}", reply.value());
-                }
+                debug_log(server, "<-- {}", reply.value());
                 rpc::write_message(server.output, reply.value());
             }
         }
@@ -685,9 +685,20 @@ auto ki::lsp::run_server(bool const debug, std::istream& in, std::ostream& out) 
         }
     }
 
-    if (debug) {
-        std::println(std::cerr, "[debug] Exiting normally.");
-    }
+    debug_log(server, "Stopping server.");
 
     return server.exit_code.value();
+}
+
+auto ki::lsp::default_server_config() -> db::Configuration
+{
+    return db::Configuration {
+        .semantic_tokens = db::Semantic_token_mode::Full,
+        .inlay_hints     = db::Inlay_hint_mode::Full,
+        .references      = true,
+        .code_actions    = true,
+        .signature_help  = true,
+        .code_completion = true,
+        .diagnostics     = true,
+    };
 }

@@ -90,6 +90,16 @@ auto ki::lsp::write(Range range) noexcept -> Reference
     return Reference { .range = range, .kind = Reference_kind::Write };
 }
 
+auto ki::db::type_hints_enabled(Inlay_hint_mode mode) noexcept -> bool
+{
+    return mode == Inlay_hint_mode::Type or mode == Inlay_hint_mode::Full;
+}
+
+auto ki::db::parameter_hints_enabled(Inlay_hint_mode mode) noexcept -> bool
+{
+    return mode == Inlay_hint_mode::Parameter or mode == Inlay_hint_mode::Full;
+}
+
 auto ki::db::database(Configuration config) -> Database
 {
     return Database {
@@ -266,7 +276,7 @@ void ki::db::add_completion(Database& db, Document_id doc_id, Name name, Complet
 void ki::db::add_type_hint(
     Database& db, Document_id doc_id, lsp::Position position, hir::Type_id type_id)
 {
-    if (db.config.inlay_hints) {
+    if (type_hints_enabled(db.config.inlay_hints)) {
         db.documents[doc_id].info.inlay_hints.emplace_back(position, type_id);
     }
 }
@@ -274,7 +284,7 @@ void ki::db::add_type_hint(
 void ki::db::add_param_hint(
     Database& db, Document_id doc_id, lsp::Position position, hir::Pattern_id param)
 {
-    if (db.config.inlay_hints) {
+    if (parameter_hints_enabled(db.config.inlay_hints)) {
         db.documents[doc_id].info.inlay_hints.emplace_back(position, param);
     }
 }
