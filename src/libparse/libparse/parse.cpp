@@ -286,11 +286,12 @@ auto ki::par::extract_path(Context& ctx, cst::Path_root const root) -> cst::Path
         else {
             error_expected(ctx, token.range, "an identifier");
         }
-        segments.push_back(cst::Path_segment {
-            .template_arguments         = parse_template_arguments(ctx),
-            .name                       = name(ctx, token),
-            .leading_double_colon_token = double_colon_token_id,
-        });
+        segments.push_back(
+            cst::Path_segment {
+                .template_arguments         = parse_template_arguments(ctx),
+                .name                       = name(ctx, token),
+                .leading_double_colon_token = double_colon_token_id,
+            });
     };
 
     if (std::holds_alternative<std::monostate>(root)) {

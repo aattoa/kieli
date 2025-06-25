@@ -31,8 +31,7 @@ namespace {
 
         auto operator()(cst::type::Tuple const& tuple) const -> ast::Type_variant
         {
-            return ast::type::Tuple { std::ranges::to<std::vector>(
-                std::views::transform(tuple.field_types.value.elements, deref_desugar(ctx))) };
+            return ast::type::Tuple { .fields = desugar(ctx, tuple.field_types) };
         }
 
         auto operator()(cst::type::Array const& array) const -> ast::Type_variant
@@ -51,10 +50,8 @@ namespace {
         auto operator()(cst::type::Function const& function) const -> ast::Type_variant
         {
             return ast::type::Function {
-                .parameter_types = function.parameter_types.value.elements
-                                 | std::views::transform(deref_desugar(ctx))
-                                 | std::ranges::to<std::vector>(),
-                .return_type = desugar(ctx, function.return_type),
+                .parameter_types = desugar(ctx, function.parameter_types),
+                .return_type     = desugar(ctx, function.return_type),
             };
         }
 

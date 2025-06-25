@@ -67,11 +67,12 @@ namespace {
             auto const mut  = resolve_mutability(db, ctx, env_id, pattern.mutability);
             auto const type = fresh_general_type_variable(ctx, state, pattern.name.range);
 
-            auto const local_id = ctx.arena.hir.local_variables.push(hir::Local_variable {
-                .name    = pattern.name,
-                .mut_id  = mut.id,
-                .type_id = type.id,
-            });
+            auto const local_id = ctx.arena.hir.local_variables.push(
+                hir::Local_variable {
+                    .name    = pattern.name,
+                    .mut_id  = mut.id,
+                    .type_id = type.id,
+                });
             bind_symbol(db, ctx, env_id, pattern.name, local_id);
 
             return hir::Pattern {

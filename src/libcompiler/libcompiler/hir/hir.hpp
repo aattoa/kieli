@@ -406,10 +406,9 @@ namespace ki::hir {
     };
 
     struct Function_info {
-        cst::Function                     cst;
         ast::Function                     ast;
         std::optional<Function_signature> signature;
-        std::optional<Expression>         body;
+        std::optional<Expression_id>      body_id;
         db::Environment_id                env_id;
         db::Document_id                   doc_id;
         db::Lower                         name;
@@ -430,7 +429,6 @@ namespace ki::hir {
     };
 
     struct Structure_info {
-        cst::Struct              cst;
         ast::Struct              ast;
         std::optional<Structure> hir;
         Type_id                  type_id;
@@ -440,7 +438,6 @@ namespace ki::hir {
     };
 
     struct Enumeration_info {
-        cst::Enum                  cst;
         ast::Enum                  ast;
         std::optional<Enumeration> hir;
         Type_id                    type_id;
@@ -450,7 +447,6 @@ namespace ki::hir {
     };
 
     struct Concept_info {
-        cst::Concept           cst;
         ast::Concept           ast;
         std::optional<Concept> hir;
         db::Environment_id     env_id;
@@ -459,7 +455,6 @@ namespace ki::hir {
     };
 
     struct Alias_info {
-        cst::Alias           cst;
         ast::Alias           ast;
         std::optional<Alias> hir;
         db::Environment_id   env_id;

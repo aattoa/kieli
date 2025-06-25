@@ -61,12 +61,12 @@ namespace {
         db::Database& db, Context& ctx, db::Environment_id env_id, ast::Path_segment const& segment)
         -> std::optional<db::Symbol_id>
     {
-        if (segment.template_arguments.has_value()) {
-            db::add_error(db, ctx.doc_id, segment.name.range, "Template arguments are unsupported");
-            return new_symbol(ctx, segment.name, db::Error {});
-        }
         auto& map = ctx.arena.environments[env_id].map;
         if (auto const it = map.find(segment.name.id); it != map.end()) {
+            if (segment.template_arguments.has_value()) {
+                std::string message = "Template argument resolution has not been implemented";
+                db::add_error(db, ctx.doc_id, segment.name.range, std::move(message));
+            }
             ++ctx.arena.symbols[it->second].use_count;
             db::add_reference(db, ctx.doc_id, lsp::read(segment.name.range), it->second);
             return it->second;

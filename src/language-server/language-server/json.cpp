@@ -69,8 +69,9 @@ namespace {
 
                 for (auto const& [name_id, field_id] : body->fields) {
                     if (fuzzy_prefix_match(prefix, db.string_pool.get(name_id))) {
-                        items.push_back(lsp::completion_item_to_json(
-                            db, doc_id, arena.hir.fields[field_id].symbol_id));
+                        items.push_back(
+                            lsp::completion_item_to_json(
+                                db, doc_id, arena.hir.fields[field_id].symbol_id));
                     }
                 }
 

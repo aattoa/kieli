@@ -339,7 +339,7 @@ namespace ki::ast {
         struct Never {};
 
         struct Tuple {
-            std::vector<Type> field_types;
+            std::vector<Type_id> fields;
         };
 
         struct Array {
@@ -352,8 +352,8 @@ namespace ki::ast {
         };
 
         struct Function {
-            std::vector<Type> parameter_types;
-            Type_id           return_type;
+            std::vector<Type_id> parameter_types;
+            Type_id              return_type;
         };
 
         struct Typeof {
@@ -400,7 +400,7 @@ namespace ki::ast {
     struct Function_signature {
         Template_parameters             template_parameters;
         std::vector<Function_parameter> function_parameters;
-        Type                            return_type;
+        Type_id                         return_type;
         db::Lower                       name;
     };
 
@@ -411,12 +411,12 @@ namespace ki::ast {
 
     struct Function {
         Function_signature signature;
-        Expression         body;
+        Expression_id      body;
     };
 
     struct Field {
         db::Lower name;
-        Type      type;
+        Type_id   type;
     };
 
     struct Struct_constructor {
@@ -452,7 +452,7 @@ namespace ki::ast {
 
     struct Alias {
         db::Upper           name;
-        Type                type;
+        Type_id             type;
         Template_parameters template_parameters;
     };
 
@@ -464,7 +464,7 @@ namespace ki::ast {
     };
 
     struct Impl {
-        Type                    type;
+        Type_id                 type;
         std::vector<Definition> definitions;
         Template_parameters     template_parameters;
     };

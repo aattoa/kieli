@@ -25,7 +25,7 @@ namespace {
             ctx.arena.hir.types[type.id]);
 
         auto const resolve_default = [&](ast::Expression_id const argument) {
-            auto expression
+            hir::Expression expression
                 = resolve_expression(db, ctx, state, env_id, ctx.arena.ast.expressions[argument]);
             require_subtype_relationship(
                 db,
@@ -66,12 +66,14 @@ namespace {
         auto parameter_types = std::ranges::to<std::vector>(
             std::views::transform(parameters, &hir::Function_parameter::type));
 
-        auto return_type = resolve_type(db, ctx, state, signature_env_id, signature.return_type);
+        auto const return_type = resolve_type(
+            db, ctx, state, signature_env_id, ctx.arena.ast.types[signature.return_type]);
 
-        auto const type_id = ctx.arena.hir.types.push(hir::type::Function {
-            .parameter_types = std::move(parameter_types),
-            .return_type     = return_type,
-        });
+        auto const type_id = ctx.arena.hir.types.push(
+            hir::type::Function {
+                .parameter_types = std::move(parameter_types),
+                .return_type     = return_type,
+            });
 
         ensure_no_unsolved_variables(db, ctx, state);
 
@@ -130,12 +132,16 @@ namespace {
 
                     auto const symbol_id = new_symbol(ctx, field.name, db::Error {});
 
-                    auto const field_id = ctx.arena.hir.fields.push(hir::Field_info {
-                        .name        = field.name,
-                        .type        = resolve_type(db, ctx, state, env_id, field.type),
-                        .symbol_id   = symbol_id,
-                        .field_index = cpputil::num::safe_cast<std::size_t>(index),
-                    });
+                    auto const field_type
+                        = resolve_type(db, ctx, state, env_id, ctx.arena.ast.types[field.type]);
+
+                    auto const field_id = ctx.arena.hir.fields.push(
+                        hir::Field_info {
+                            .name        = field.name,
+                            .type        = field_type,
+                            .symbol_id   = symbol_id,
+                            .field_index = cpputil::num::safe_cast<std::size_t>(index),
+                        });
 
                     ctx.arena.symbols[symbol_id].variant = field_id;
 
@@ -149,27 +155,29 @@ namespace {
         auto body = std::visit(visitor, constructor.body);
         ensure_no_unsolved_variables(db, ctx, state);
 
-        return ctx.arena.hir.constructors.push(hir::Constructor_info {
-            .body          = std::move(body),
-            .name          = constructor.name,
-            .owner_type_id = owner_type_id,
-            .discriminant  = discriminant,
-        });
+        return ctx.arena.hir.constructors.push(
+            hir::Constructor_info {
+                .body          = std::move(body),
+                .name          = constructor.name,
+                .owner_type_id = owner_type_id,
+                .discriminant  = discriminant,
+            });
     }
 } // namespace
 
 auto ki::res::resolve_function_body(db::Database& db, Context& ctx, hir::Function_id id)
-    -> hir::Expression&
+    -> hir::Expression_id
 {
     hir::Function_info& info = ctx.arena.hir.functions[id];
 
-    if (not info.body.has_value()) {
+    if (not info.body_id.has_value()) {
         auto  state     = Block_state {};
         auto& signature = resolve_function_signature(db, ctx, id);
 
         auto const it = ctx.signature_scope_map.find(id);
         cpputil::always_assert(it != ctx.signature_scope_map.end());
-        info.body = resolve_expression(db, ctx, state, it->second, info.ast.body);
+        hir::Expression body = resolve_expression(
+            db, ctx, state, it->second, ctx.arena.ast.expressions[info.ast.body]);
         report_unused(db, ctx, it->second);
         ctx.signature_scope_map.erase(it);
 
@@ -177,12 +185,14 @@ auto ki::res::resolve_function_body(db::Database& db, Context& ctx, hir::Functio
             db,
             ctx,
             state,
-            info.body.value().range,
-            ctx.arena.hir.types[info.body.value().type_id],
+            body.range,
+            ctx.arena.hir.types[body.type_id],
             ctx.arena.hir.types[signature.return_type.id]);
         ensure_no_unsolved_variables(db, ctx, state);
+
+        info.body_id = ctx.arena.hir.expressions.push(std::move(body));
     }
-    return info.body.value();
+    return info.body_id.value();
 }
 
 auto ki::res::resolve_function_signature(db::Database& db, Context& ctx, hir::Function_id id)
@@ -200,13 +210,14 @@ auto ki::res::resolve_structure(db::Database& db, Context& ctx, hir::Structure_i
 {
     hir::Structure_info& info = ctx.arena.hir.structures[id];
     if (not info.hir.has_value()) {
-        auto const ctor_env_id = ctx.arena.environments.push(db::Environment {
-            .map       = {},
-            .parent_id = info.env_id,
-            .name_id   = info.name.id,
-            .doc_id    = ctx.doc_id,
-            .kind      = db::Environment_kind::Type,
-        });
+        auto const ctor_env_id = ctx.arena.environments.push(
+            db::Environment {
+                .map       = {},
+                .parent_id = info.env_id,
+                .name_id   = info.name.id,
+                .doc_id    = ctx.doc_id,
+                .kind      = db::Environment_kind::Type,
+            });
 
         auto parameters_state    = Block_state {};
         auto template_parameters = resolve_template_parameters(
@@ -236,13 +247,14 @@ auto ki::res::resolve_enumeration(db::Database& db, Context& ctx, hir::Enumerati
 {
     hir::Enumeration_info& info = ctx.arena.hir.enumerations[id];
     if (not info.hir.has_value()) {
-        auto const ctor_env_id = ctx.arena.environments.push(db::Environment {
-            .map       = {},
-            .parent_id = info.env_id,
-            .name_id   = info.name.id,
-            .doc_id    = ctx.doc_id,
-            .kind      = db::Environment_kind::Type,
-        });
+        auto const ctor_env_id = ctx.arena.environments.push(
+            db::Environment {
+                .map       = {},
+                .parent_id = info.env_id,
+                .name_id   = info.name.id,
+                .doc_id    = ctx.doc_id,
+                .kind      = db::Environment_kind::Type,
+            });
 
         auto parameters_state    = Block_state {};
         auto template_parameters = resolve_template_parameters(
@@ -250,13 +262,14 @@ auto ki::res::resolve_enumeration(db::Database& db, Context& ctx, hir::Enumerati
         (void)template_parameters; // TODO
         ensure_no_unsolved_variables(db, ctx, parameters_state);
 
-        auto const associated_env_id = ctx.arena.environments.push(db::Environment {
-            .map       = {},
-            .parent_id = info.env_id,
-            .name_id   = info.name.id,
-            .doc_id    = ctx.doc_id,
-            .kind      = db::Environment_kind::Type,
-        });
+        auto const associated_env_id = ctx.arena.environments.push(
+            db::Environment {
+                .map       = {},
+                .parent_id = info.env_id,
+                .name_id   = info.name.id,
+                .doc_id    = ctx.doc_id,
+                .kind      = db::Environment_kind::Type,
+            });
 
         std::vector<db::Symbol_id> constructor_ids;
         constructor_ids.reserve(info.ast.constructors.size());
@@ -295,7 +308,7 @@ auto ki::res::resolve_alias(db::Database& db, Context& ctx, hir::Alias_id id) ->
     hir::Alias_info& info = ctx.arena.hir.aliases[id];
     if (not info.hir.has_value()) {
         auto state = Block_state {};
-        auto type  = resolve_type(db, ctx, state, info.env_id, info.ast.type);
+        auto type  = resolve_type(db, ctx, state, info.env_id, ctx.arena.ast.types[info.ast.type]);
         ensure_no_unsolved_variables(db, ctx, state);
         info.hir = hir::Alias { .name = info.name, .type = type };
     }

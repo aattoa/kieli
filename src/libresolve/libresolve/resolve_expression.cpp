@@ -185,18 +185,20 @@ namespace {
                 elements.push_back(ctx.arena.hir.expressions.push(std::move(element)));
             }
 
-            auto const length = ctx.arena.hir.expressions.push(hir::Expression {
-                .variant  = db::Integer { ssize(elements) },
-                .type_id  = ctx.constants.type_u64,
-                .mut_id   = ctx.constants.mut_no,
-                .category = hir::Expression_category::Value,
-                .range    = this_range,
-            });
+            auto const length = ctx.arena.hir.expressions.push(
+                hir::Expression {
+                    .variant  = db::Integer { ssize(elements) },
+                    .type_id  = ctx.constants.type_u64,
+                    .mut_id   = ctx.constants.mut_no,
+                    .category = hir::Expression_category::Value,
+                    .range    = this_range,
+                });
 
-            auto const type_id = ctx.arena.hir.types.push(hir::type::Array {
-                .element_type = element_type,
-                .length       = length,
-            });
+            auto const type_id = ctx.arena.hir.types.push(
+                hir::type::Array {
+                    .element_type = element_type,
+                    .length       = length,
+                });
 
             return hir::Expression {
                 .variant  = hir::expr::Array { std::move(elements) },
@@ -677,20 +679,22 @@ namespace {
 
             auto arm = [&](bool boolean, hir::Expression branch) {
                 return hir::Match_arm {
-                    .pattern    = ctx.arena.hir.patterns.push(hir::Pattern {
-                           .variant = db::Boolean { boolean },
-                           .type_id = ctx.constants.type_boolean,
-                           .range   = condition.range,
-                    }),
+                    .pattern = ctx.arena.hir.patterns.push(
+                        hir::Pattern {
+                            .variant = db::Boolean { boolean },
+                            .type_id = ctx.constants.type_boolean,
+                            .range   = condition.range,
+                        }),
                     .expression = ctx.arena.hir.expressions.push(std::move(branch)),
                 };
             };
 
             hir::expr::Match match {
-                .arms      = utl::to_vector({
-                    arm(true, std::move(true_branch)),
-                    arm(false, std::move(false_branch)),
-                }),
+                .arms = utl::to_vector(
+                    {
+                        arm(true, std::move(true_branch)),
+                        arm(false, std::move(false_branch)),
+                    }),
                 .scrutinee = ctx.arena.hir.expressions.push(std::move(condition)),
             };
 
@@ -803,10 +807,12 @@ namespace {
 
         auto operator()(ast::expr::Type_alias const& alias) -> hir::Expression
         {
-            auto const local_id = ctx.arena.hir.local_types.push(hir::Local_type {
-                .name    = alias.name,
-                .type_id = resolve_type(db, ctx, state, env_id, ctx.arena.ast.types[alias.type]).id,
-            });
+            auto const local_id = ctx.arena.hir.local_types.push(
+                hir::Local_type {
+                    .name = alias.name,
+                    .type_id
+                    = resolve_type(db, ctx, state, env_id, ctx.arena.ast.types[alias.type]).id,
+                });
             bind_symbol(db, ctx, env_id, alias.name, local_id);
             return unit_expression(ctx, this_range);
         }

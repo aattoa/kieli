@@ -34,13 +34,15 @@ namespace {
         auto operator()(ast::Template_type_parameter const& parameter)
             -> hir::Template_parameter_variant
         {
-            auto const local_id = ctx.arena.hir.local_types.push(hir::Local_type {
-                .name    = parameter.name,
-                .type_id = ctx.arena.hir.types.push(hir::type::Parameterized {
-                    .tag = tag,
-                    .id  = parameter.name.id,
-                }),
-            });
+            auto const local_id = ctx.arena.hir.local_types.push(
+                hir::Local_type {
+                    .name    = parameter.name,
+                    .type_id = ctx.arena.hir.types.push(
+                        hir::type::Parameterized {
+                            .tag = tag,
+                            .id  = parameter.name.id,
+                        }),
+                });
             bind_symbol(db, ctx, env_id, parameter.name, local_id);
 
             if (not parameter.concepts.empty()) {
@@ -62,10 +64,11 @@ namespace {
         auto operator()(ast::Template_mutability_parameter const& parameter)
             -> hir::Template_parameter_variant
         {
-            auto const local_id = ctx.arena.hir.local_mutabilities.push(hir::Local_mutability {
-                .name   = parameter.name,
-                .mut_id = ctx.arena.hir.mutabilities.push(hir::mut::Parameterized { tag }),
-            });
+            auto const local_id = ctx.arena.hir.local_mutabilities.push(
+                hir::Local_mutability {
+                    .name   = parameter.name,
+                    .mut_id = ctx.arena.hir.mutabilities.push(hir::mut::Parameterized { tag }),
+                });
             bind_symbol(db, ctx, env_id, parameter.name, local_id);
             return hir::Template_mutability_parameter {
                 .name             = parameter.name,

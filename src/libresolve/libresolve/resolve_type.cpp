@@ -12,9 +12,9 @@ namespace {
         db::Environment_id env_id;
         lsp::Range         this_range;
 
-        auto recurse(ast::Type const& type) -> hir::Type
+        auto recurse(ast::Type_id type_id) -> hir::Type
         {
-            return resolve_type(db, ctx, state, env_id, type);
+            return resolve_type(db, ctx, state, env_id, ctx.arena.ast.types[type_id]);
         }
 
         auto operator()(ast::Wildcard const&) -> hir::Type_id
@@ -58,38 +58,41 @@ namespace {
 
         auto operator()(ast::type::Tuple const& tuple) -> hir::Type_id
         {
-            return ctx.arena.hir.types.push(hir::type::Tuple {
-                .types = tuple.field_types
-                       | std::views::transform(std::bind_front(&Visitor::recurse, this))
-                       | std::ranges::to<std::vector>(),
-            });
+            return ctx.arena.hir.types.push(
+                hir::type::Tuple {
+                    .types = tuple.fields
+                           | std::views::transform(std::bind_front(&Visitor::recurse, this))
+                           | std::ranges::to<std::vector>(),
+                });
         }
 
         auto operator()(ast::type::Array const& array) -> hir::Type_id
         {
             auto length = resolve_expression(
                 db, ctx, state, env_id, ctx.arena.ast.expressions[array.length]);
-            return ctx.arena.hir.types.push(hir::type::Array {
-                .element_type = recurse(ctx.arena.ast.types[array.element_type]),
-                .length       = ctx.arena.hir.expressions.push(std::move(length)),
-            });
+            return ctx.arena.hir.types.push(
+                hir::type::Array {
+                    .element_type = recurse(array.element_type),
+                    .length       = ctx.arena.hir.expressions.push(std::move(length)),
+                });
         }
 
         auto operator()(ast::type::Slice const& slice) -> hir::Type_id
         {
-            return ctx.arena.hir.types.push(hir::type::Slice {
-                .element_type = recurse(ctx.arena.ast.types[slice.element_type]),
-            });
+            return ctx.arena.hir.types.push(
+                hir::type::Slice { .element_type = recurse(slice.element_type) });
         }
 
         auto operator()(ast::type::Function const& function) -> hir::Type_id
         {
-            return ctx.arena.hir.types.push(hir::type::Function {
-                .parameter_types = function.parameter_types
-                                 | std::views::transform(std::bind_front(&Visitor::recurse, this))
-                                 | std::ranges::to<std::vector>(),
-                .return_type = recurse(ctx.arena.ast.types[function.return_type]),
-            });
+            return ctx.arena.hir.types.push(
+                hir::type::Function {
+                    .parameter_types
+                    = function.parameter_types
+                    | std::views::transform(std::bind_front(&Visitor::recurse, this))
+                    | std::ranges::to<std::vector>(),
+                    .return_type = recurse(function.return_type),
+                });
         }
 
         auto operator()(ast::type::Typeof const& typeof_) -> hir::Type_id
@@ -104,18 +107,20 @@ namespace {
 
         auto operator()(ast::type::Reference const& reference) -> hir::Type_id
         {
-            return ctx.arena.hir.types.push(hir::type::Reference {
-                .referenced_type = recurse(ctx.arena.ast.types[reference.referenced_type]),
-                .mutability      = resolve_mutability(db, ctx, env_id, reference.mutability),
-            });
+            return ctx.arena.hir.types.push(
+                hir::type::Reference {
+                    .referenced_type = recurse(reference.referenced_type),
+                    .mutability      = resolve_mutability(db, ctx, env_id, reference.mutability),
+                });
         }
 
         auto operator()(ast::type::Pointer const& pointer) -> hir::Type_id
         {
-            return ctx.arena.hir.types.push(hir::type::Pointer {
-                .pointee_type = recurse(ctx.arena.ast.types[pointer.pointee_type]),
-                .mutability   = resolve_mutability(db, ctx, env_id, pointer.mutability),
-            });
+            return ctx.arena.hir.types.push(
+                hir::type::Pointer {
+                    .pointee_type = recurse(pointer.pointee_type),
+                    .mutability   = resolve_mutability(db, ctx, env_id, pointer.mutability),
+                });
         }
 
         auto operator()(ast::type::Impl const&) -> hir::Type_id

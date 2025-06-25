@@ -9,7 +9,7 @@ auto ki::des::desugar(Context& ctx, cst::Field const& field) -> ast::Field
 {
     return ast::Field {
         .name = field.name,
-        .type = deref_desugar(ctx, field.type.type),
+        .type = desugar(ctx, field.type.type),
     };
 };
 
@@ -39,7 +39,7 @@ auto ki::des::desugar(Context& ctx, cst::Function const& function) -> ast::Funct
 {
     return ast::Function {
         .signature = desugar(ctx, function.signature),
-        .body      = deref_desugar(ctx, function.body),
+        .body      = desugar(ctx, function.body),
     };
 }
 
@@ -64,7 +64,7 @@ auto ki::des::desugar(Context& ctx, cst::Alias const& alias) -> ast::Alias
 {
     return ast::Alias {
         .name                = alias.name,
-        .type                = deref_desugar(ctx, alias.type),
+        .type                = desugar(ctx, alias.type),
         .template_parameters = alias.template_parameters.transform(desugar(ctx)),
     };
 }
@@ -76,10 +76,8 @@ auto ki::des::desugar(Context& ctx, cst::Concept const& concept_) -> ast::Concep
 
     for (auto const& requirement : concept_.requirements) {
         auto const visitor = utl::Overload {
-            [&](cst::Function_signature const& signature) {
-                functions.push_back(desugar(ctx, signature));
-            },
-            [&](cst::Type_signature const& signature) { types.push_back(desugar(ctx, signature)); },
+            [&](cst::Function_signature const& sig) { functions.push_back(desugar(ctx, sig)); },
+            [&](cst::Type_signature const& sig) { types.push_back(desugar(ctx, sig)); },
         };
         std::visit(visitor, requirement);
     }
@@ -95,7 +93,7 @@ auto ki::des::desugar(Context& ctx, cst::Concept const& concept_) -> ast::Concep
 auto ki::des::desugar(Context& ctx, cst::Impl const& impl) -> ast::Impl
 {
     return ast::Impl {
-        .type                = deref_desugar(ctx, impl.self_type),
+        .type                = desugar(ctx, impl.self_type),
         .definitions         = desugar(ctx, impl.definitions),
         .template_parameters = impl.template_parameters.transform(desugar(ctx)),
     };

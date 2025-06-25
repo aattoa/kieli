@@ -131,11 +131,12 @@ void ki::par::add_semantic_token(Context& ctx, lsp::Range range, Semantic type)
     if (ctx.db.config.semantic_tokens != db::Semantic_token_mode::None) {
         cpputil::always_assert(not lsp::is_multiline(range));
         cpputil::always_assert(range.start.column < range.stop.column);
-        ctx.semantic_tokens.push_back(lsp::Semantic_token {
-            .position = range.start,
-            .length   = range.stop.column - range.start.column,
-            .type     = type,
-        });
+        ctx.semantic_tokens.push_back(
+            lsp::Semantic_token {
+                .position = range.start,
+                .length   = range.stop.column - range.start.column,
+                .type     = type,
+            });
     }
 }
 

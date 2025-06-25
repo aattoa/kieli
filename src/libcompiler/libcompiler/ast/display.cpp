@@ -631,7 +631,7 @@ namespace {
         void operator()(type::Tuple const& tuple)
         {
             write_line(state, "tuple");
-            display_vector_node(state, Last::Yes, "field types", tuple.field_types);
+            display_vector_node(state, Last::Yes, "field types", tuple.fields);
         }
 
         void operator()(type::Array const& array)

@@ -8,13 +8,14 @@ auto ki::res::context(db::Document_id doc_id) -> Context
 
     auto constants = make_constants(arena.hir);
 
-    auto env_id = arena.environments.push(db::Environment {
-        .map       = {},
-        .parent_id = std::nullopt,
-        .name_id   = std::nullopt,
-        .doc_id    = doc_id,
-        .kind      = db::Environment_kind::Root,
-    });
+    auto env_id = arena.environments.push(
+        db::Environment {
+            .map       = {},
+            .parent_id = std::nullopt,
+            .name_id   = std::nullopt,
+            .doc_id    = doc_id,
+            .kind      = db::Environment_kind::Root,
+        });
 
     return Context {
         .arena               = std::move(arena),
@@ -83,13 +84,14 @@ auto ki::res::unit_expression(Context const& ctx, lsp::Range range) -> hir::Expr
 
 auto ki::res::new_scope(Context& ctx, db::Environment_id parent_id) -> db::Environment_id
 {
-    return ctx.arena.environments.push(db::Environment {
-        .map       = {},
-        .parent_id = parent_id,
-        .name_id   = std::nullopt,
-        .doc_id    = ctx.doc_id,
-        .kind      = db::Environment_kind::Scope,
-    });
+    return ctx.arena.environments.push(
+        db::Environment {
+            .map       = {},
+            .parent_id = parent_id,
+            .name_id   = std::nullopt,
+            .doc_id    = ctx.doc_id,
+            .kind      = db::Environment_kind::Scope,
+        });
 }
 
 auto ki::res::new_symbol(Context& ctx, db::Name name, db::Symbol_variant variant) -> db::Symbol_id
@@ -227,12 +229,13 @@ auto ki::res::fresh_general_type_variable(Context& ctx, Block_state& state, lsp:
 {
     auto const var_id  = hir::Type_variable_id { state.type_vars.size() };
     auto const type_id = ctx.arena.hir.types.push(hir::type::Variable { var_id });
-    state.type_vars.push_back(Type_variable_data {
-        .var_id  = var_id,
-        .type_id = type_id,
-        .origin  = origin,
-        .kind    = hir::Type_variable_kind::General,
-    });
+    state.type_vars.push_back(
+        Type_variable_data {
+            .var_id  = var_id,
+            .type_id = type_id,
+            .origin  = origin,
+            .kind    = hir::Type_variable_kind::General,
+        });
     (void)state.type_var_set.add();
     return hir::Type { .id = type_id, .range = origin };
 }
@@ -242,12 +245,13 @@ auto ki::res::fresh_integral_type_variable(Context& ctx, Block_state& state, lsp
 {
     auto const var_id  = hir::Type_variable_id { state.type_vars.size() };
     auto const type_id = ctx.arena.hir.types.push(hir::type::Variable { var_id });
-    state.type_vars.push_back(Type_variable_data {
-        .var_id  = var_id,
-        .type_id = type_id,
-        .origin  = origin,
-        .kind    = hir::Type_variable_kind::Integral,
-    });
+    state.type_vars.push_back(
+        Type_variable_data {
+            .var_id  = var_id,
+            .type_id = type_id,
+            .origin  = origin,
+            .kind    = hir::Type_variable_kind::Integral,
+        });
     (void)state.type_var_set.add();
     return hir::Type { .id = type_id, .range = origin };
 }
@@ -257,11 +261,12 @@ auto ki::res::fresh_mutability_variable(Context& ctx, Block_state& state, lsp::R
 {
     auto const var_id = hir::Mutability_variable_id { state.mut_vars.size() };
     auto const mut_id = ctx.arena.hir.mutabilities.push(hir::mut::Variable { var_id });
-    state.mut_vars.push_back(Mutability_variable_data {
-        .var_id = var_id,
-        .mut_id = mut_id,
-        .origin = origin,
-    });
+    state.mut_vars.push_back(
+        Mutability_variable_data {
+            .var_id = var_id,
+            .mut_id = mut_id,
+            .origin = origin,
+        });
     (void)state.mut_var_set.add();
     return hir::Mutability { .id = mut_id, .range = origin };
 }

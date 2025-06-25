@@ -152,13 +152,13 @@ auto ki::des::desugar(Context& ctx, cst::Function_signature const& signature)
     -> ast::Function_signature
 {
     // If there is no explicit return type, insert the unit type.
-    ast::Type return_type = signature.return_type.has_value()
-                              ? desugar(ctx, ctx.cst.types[signature.return_type.value().type])
-                              : unit_type(signature.name.range);
+    ast::Type_id return_type = signature.return_type.has_value()
+                                 ? desugar(ctx, signature.return_type.value().type)
+                                 : ctx.ast.types.push(unit_type(signature.name.range));
     return ast::Function_signature {
         .template_parameters = signature.template_parameters.transform(desugar(ctx)),
         .function_parameters = desugar(ctx, signature.function_parameters),
-        .return_type         = std::move(return_type),
+        .return_type         = return_type,
         .name                = signature.name,
     };
 }

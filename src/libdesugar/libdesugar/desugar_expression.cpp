@@ -95,17 +95,18 @@ namespace {
                 }
 
                 return ast::expr::Match {
-                    .arms = utl::to_vector({
-                        ast::Match_arm {
-                            .pattern    = desugar(ctx, let->pattern),
-                            .expression = desugar(ctx, conditional.true_branch),
-                        },
-                        ast::Match_arm {
-                            .pattern    = ctx.ast.patterns.push(wildcard_pattern(
-                                ctx.cst.ranges[ctx.cst.patterns[let->pattern].range])),
-                            .expression = false_branch,
-                        },
-                    }),
+                    .arms = utl::to_vector(
+                        {
+                            ast::Match_arm {
+                                .pattern    = desugar(ctx, let->pattern),
+                                .expression = desugar(ctx, conditional.true_branch),
+                            },
+                            ast::Match_arm {
+                                .pattern    = ctx.ast.patterns.push(wildcard_pattern(
+                                    ctx.cst.ranges[ctx.cst.patterns[let->pattern].range])),
+                                .expression = false_branch,
+                            },
+                        }),
 
                     .scrutinee = initializer,
                 };
@@ -201,16 +202,18 @@ namespace {
                 });
             }
 
-            auto arms = utl::to_vector({
-                ast::Match_arm {
-                    .pattern    = desugar(ctx, let.pattern),
-                    .expression = desugar(ctx, loop.body),
-                },
-                ast::Match_arm {
-                    .pattern    = ctx.ast.patterns.push(wildcard_pattern(ctx.cst.ranges[range_id])),
-                    .expression = break_expression(ctx, ctx.cst.ranges[range_id]),
-                },
-            });
+            auto arms = utl::to_vector(
+                {
+                    ast::Match_arm {
+                        .pattern    = desugar(ctx, let.pattern),
+                        .expression = desugar(ctx, loop.body),
+                    },
+                    ast::Match_arm {
+                        .pattern
+                        = ctx.ast.patterns.push(wildcard_pattern(ctx.cst.ranges[range_id])),
+                        .expression = break_expression(ctx, ctx.cst.ranges[range_id]),
+                    },
+                });
 
             return ast::expr::Loop {
                 .body = ctx.ast.expressions.push(

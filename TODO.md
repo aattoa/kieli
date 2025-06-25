@@ -4,6 +4,7 @@
 - Accept trailing commas
 - Use matching parentheses for recovery
 - Solve template type/value argument conflict
+- Imports are definitions
 
 ## libdesugar
 - Pipe operator, replace wildcards with argument
@@ -13,7 +14,6 @@
 - Unification rollback logs?
 - Warn when last expression in block is defer
 - Lazily parse module when collecting, no Definition_variant
-- Do not store CST or AST when not necessary
 - Move diagnostics from libdesugar
 - Collect semantic tokens for identifiers on path resolution
 - Provide a best-effort type when expression resolution fails
@@ -29,15 +29,15 @@
 - Code completion tests
 
 ## Attributes
-- `@linear`: Apply to type definition, require bindings to be explicitly dropped
-- `@inline`: Apply to function definition or call
-- `@unsafe`: Apply to function definition or call
-- `@test`: Apply to function definition, run on `kieli test`
-- `@hide`: Apply to struct field
-- `@repr`: Apply to type definition ("kieli", "C")
-- `@extern`: Apply to function definition, specify calling convention
-- `@untagged`: Apply to enum definition, disallow match, access with `@unsafe let`
-- `@infix`: Apply to operator definition, specify precedence and associativity
+- `linear`: Apply to type definition, require bindings to be explicitly dropped
+- `inline`: Apply to function definition or call
+- `unsafe`: Apply to function definition or call
+- `test`: Apply to function definition, run on `kieli test`
+- `hide`: Apply to struct field
+- `repr`: Apply to type definition ("kieli", "C")
+- `extern`: Apply to function definition, specify calling convention
+- `untagged`: Apply to enum definition, disallow match, access with `@unsafe let`
+- `infix`: Apply to operator definition, specify precedence and associativity
 
 ## Builtins
 - `@here`
@@ -59,7 +59,9 @@
 - Inline concepts
 - libtommath for arbitrary precision integers?
 - String interpolation
-- Configure builds with `build.kieli`
+- Configure builds with `build.ki`
 - Tree-sitter grammar
-- `perf record`
 - Clean up HIR formatting
+- Do not use LSP terminology outside of `language-server`
+- std::variant<db::Error, Path_segment> cst::Path::head;
+- `-Weverything`

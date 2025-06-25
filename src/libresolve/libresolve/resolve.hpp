@@ -125,7 +125,7 @@ namespace ki::res {
     auto resolve_alias(db::Database& db, Context& ctx, hir::Alias_id id) -> hir::Alias&;
 
     auto resolve_function_body(db::Database& db, Context& ctx, hir::Function_id id)
-        -> hir::Expression&;
+        -> hir::Expression_id;
 
     auto resolve_function_signature(db::Database& db, Context& ctx, hir::Function_id id)
         -> hir::Function_signature&;

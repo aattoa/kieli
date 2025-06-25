@@ -278,10 +278,11 @@ namespace {
         while (auto expression = parse_expression(ctx)) {
             if (auto const semicolon = try_extract(ctx, lex::Type::Semicolon)) {
                 add_punctuation(ctx, semicolon.value().range);
-                side_effects.push_back(cst::expr::Block::Side_effect {
-                    .expression               = expression.value(),
-                    .trailing_semicolon_token = token(ctx, semicolon.value()),
-                });
+                side_effects.push_back(
+                    cst::expr::Block::Side_effect {
+                        .expression               = expression.value(),
+                        .trailing_semicolon_token = token(ctx, semicolon.value()),
+                    });
             }
             else {
                 result_expression = expression.value();
