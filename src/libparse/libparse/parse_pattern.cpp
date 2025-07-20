@@ -12,14 +12,14 @@ namespace {
         if (patterns.elements.size() == 1) {
             return cst::patt::Paren { {
                 .value       = std::move(patterns.elements.front()),
-                .open_token  = token(ctx, paren_open),
-                .close_token = token(ctx, paren_close),
+                .open_token  = paren_open.range,
+                .close_token = paren_close.range,
             } };
         }
         return cst::patt::Tuple { {
             .value       = std::move(patterns),
-            .open_token  = token(ctx, paren_open),
-            .close_token = token(ctx, paren_close),
+            .open_token  = paren_open.range,
+            .close_token = paren_close.range,
         } };
     };
 
@@ -30,8 +30,8 @@ namespace {
         if (auto const bracket_close = try_extract(ctx, lex::Type::Bracket_close)) {
             return cst::patt::Slice { {
                 .value       = std::move(patterns),
-                .open_token  = token(ctx, bracket_open),
-                .close_token = token(ctx, bracket_close.value()),
+                .open_token  = bracket_open.range,
+                .close_token = bracket_close.value().range,
             } };
         }
         error_expected(
@@ -45,7 +45,7 @@ namespace {
             auto equals = try_extract(ctx, lex::Type::Equals).transform([&](lex::Token const& tok) {
                 add_punctuation(ctx, tok.range);
                 return cst::patt::Equals {
-                    .equals_sign_token = token(ctx, tok),
+                    .equals_sign_token = tok.range,
                     .pattern           = require<parse_pattern>(ctx, "a pattern"),
                 };
             });
@@ -111,7 +111,7 @@ namespace {
     auto dispatch_parse_pattern(Context& ctx) -> std::optional<cst::Pattern_variant>
     {
         switch (peek(ctx).type) {
-        case lex::Type::Underscore:   return cst::Wildcard { token(ctx, extract(ctx)) };
+        case lex::Type::Underscore:   return cst::Wildcard { extract(ctx).range };
         case lex::Type::String:       return parse_string(ctx, extract(ctx));
         case lex::Type::Integer:      return parse_integer(ctx, extract(ctx));
         case lex::Type::Floating:     return parse_floating(ctx, extract(ctx));
@@ -133,12 +133,11 @@ namespace {
             [&](cst::Pattern_variant variant) -> cst::Pattern_variant {
                 if (auto const if_keyword = try_extract(ctx, lex::Type::If)) {
                     auto guard = require<parse_expression>(ctx, "a guard expression");
-                    auto range = ctx.arena.ranges.push(
-                        lsp::Range(anchor_range.start, if_keyword.value().range.stop));
+                    auto range = lsp::Range(anchor_range.start, if_keyword.value().range.stop);
                     return cst::patt::Guarded {
                         .pattern  = ctx.arena.patterns.push(std::move(variant), range),
                         .guard    = std::move(guard),
-                        .if_token = token(ctx, if_keyword.value()),
+                        .if_token = if_keyword.value().range,
                     };
                 }
                 return variant;

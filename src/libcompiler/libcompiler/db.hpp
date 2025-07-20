@@ -117,7 +117,6 @@ namespace ki::db {
 
     // Arenas necessary for semantic analysis.
     struct Arena {
-        cst::Arena cst;
         ast::Arena ast;
         hir::Arena hir;
 

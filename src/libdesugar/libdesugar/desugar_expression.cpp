@@ -23,8 +23,8 @@ namespace {
     }
 
     struct Visitor {
-        Context&      ctx;
-        cst::Range_id range_id;
+        Context&   ctx;
+        lsp::Range range;
 
         auto operator()(utl::one_of< //
                         db::Integer,
@@ -43,13 +43,13 @@ namespace {
 
         auto operator()(cst::Wildcard const& wildcard) const -> ast::Expression_variant
         {
-            return ast::Wildcard { .range = ctx.cst.ranges[wildcard.underscore_token] };
+            return ast::Wildcard { .range = wildcard.underscore_token };
         }
 
         auto operator()(cst::expr::Paren const& paren) const -> ast::Expression_variant
         {
             cst::Expression const& expr = ctx.cst.expressions[paren.expression.value];
-            return std::visit(Visitor { .ctx = ctx, .range_id = expr.range }, expr.variant);
+            return std::visit(Visitor { .ctx = ctx, .range = expr.range }, expr.variant);
         }
 
         auto operator()(cst::expr::Array const& literal) const -> ast::Expression_variant
@@ -64,10 +64,10 @@ namespace {
 
         auto operator()(cst::expr::Conditional const& conditional) const -> ast::Expression_variant
         {
-            ast::Expression_id const false_branch
+            ast::Expression_id const false_branch //
                 = conditional.false_branch.has_value()
                     ? desugar(ctx, conditional.false_branch->body)
-                    : ctx.ast.expressions.push(unit_value(ctx.cst.ranges[range_id]));
+                    : ctx.ast.expressions.push(unit_value(range));
 
             if (auto const* const let = std::get_if<cst::expr::Let>(
                     &ctx.cst.expressions[conditional.condition].variant)) {
@@ -90,7 +90,7 @@ namespace {
                             .expression = initializer,
                             .type       = desugar(ctx, let->type.value()),
                         },
-                        .range = ctx.cst.ranges[ctx.cst.expressions[let->initializer].range],
+                        .range = ctx.cst.expressions[let->initializer].range,
                     });
                 }
 
@@ -102,8 +102,8 @@ namespace {
                                 .expression = desugar(ctx, conditional.true_branch),
                             },
                             ast::Match_arm {
-                                .pattern    = ctx.ast.patterns.push(wildcard_pattern(
-                                    ctx.cst.ranges[ctx.cst.patterns[let->pattern].range])),
+                                .pattern = ctx.ast.patterns.push(
+                                    wildcard_pattern(ctx.cst.patterns[let->pattern].range)),
                                 .expression = false_branch,
                             },
                         }),
@@ -115,14 +115,8 @@ namespace {
             ast::Expression condition = deref_desugar(ctx, conditional.condition);
 
             if (std::holds_alternative<db::Boolean>(condition.variant)) {
-                lsp::Diagnostic diagnostic {
-                    .message      = "Constant condition",
-                    .range        = condition.range,
-                    .severity     = lsp::Severity::Information,
-                    .related_info = {},
-                    .tag          = lsp::Diagnostic_tag::None,
-                };
-                db::add_diagnostic(ctx.db, ctx.doc_id, std::move(diagnostic));
+                db::add_diagnostic(
+                    ctx.db, ctx.doc_id, lsp::note(condition.range, "Constant condition"));
             }
 
             return ast::expr::Conditional {
@@ -157,15 +151,15 @@ namespace {
                       [&](auto const& effect) { return desugar(ctx, effect.expression); })
                 | std::ranges::to<std::vector>();
 
-            cst::Range_id unit_token = //
-                block.effects.empty()  //
+            lsp::Range unit_token =   //
+                block.effects.empty() //
                     ? block.close_brace_token
                     : block.effects.back().trailing_semicolon_token;
 
-            ast::Expression_id result = //
-                block.result.has_value()
+            ast::Expression_id result =  //
+                block.result.has_value() //
                     ? desugar(ctx, block.result.value())
-                    : ctx.ast.expressions.push(unit_value(ctx.cst.ranges[unit_token]));
+                    : ctx.ast.expressions.push(unit_value(unit_token));
 
             return ast::expr::Block {
                 .effects = std::move(side_effects),
@@ -198,7 +192,7 @@ namespace {
                         .expression = initializer,
                         .type       = desugar(ctx, let.type.value()),
                     },
-                    .range = ctx.cst.ranges[ctx.cst.expressions[let.initializer].range],
+                    .range = ctx.cst.expressions[let.initializer].range,
                 });
             }
 
@@ -209,9 +203,8 @@ namespace {
                         .expression = desugar(ctx, loop.body),
                     },
                     ast::Match_arm {
-                        .pattern
-                        = ctx.ast.patterns.push(wildcard_pattern(ctx.cst.ranges[range_id])),
-                        .expression = break_expression(ctx, ctx.cst.ranges[range_id]),
+                        .pattern    = ctx.ast.patterns.push(wildcard_pattern(range)),
+                        .expression = break_expression(ctx, range),
                     },
                 });
 
@@ -221,7 +214,7 @@ namespace {
                         .arms      = std::move(arms),
                         .scrutinee = initializer,
                     },
-                    ctx.cst.ranges[ctx.cst.expressions[loop.body].range]),
+                    ctx.cst.expressions[loop.body].range),
                 .source = ast::Loop_source::While_loop,
             };
         }
@@ -238,19 +231,19 @@ namespace {
             */
             ast::Expression condition = deref_desugar(ctx, loop.condition);
             if (auto const* const boolean = std::get_if<db::Boolean>(&condition.variant)) {
-                auto diag = constant_loop_condition_diagnostic(condition.range, boolean->value);
-                db::add_diagnostic(ctx.db, ctx.doc_id, std::move(diag));
+                auto note = constant_loop_condition_diagnostic(condition.range, boolean->value);
+                db::add_diagnostic(ctx.db, ctx.doc_id, std::move(note));
             }
             return ast::expr::Loop {
                 .body = ctx.ast.expressions.push(
                     ast::expr::Conditional {
-                        .condition    = ctx.ast.expressions.push(std::move(condition)),
-                        .true_branch  = desugar(ctx, loop.body),
-                        .false_branch = break_expression(ctx, ctx.cst.ranges[range_id]),
-                        .source       = ast::Conditional_source::While,
+                        .condition                 = ctx.ast.expressions.push(std::move(condition)),
+                        .true_branch               = desugar(ctx, loop.body),
+                        .false_branch              = break_expression(ctx, range),
+                        .source                    = ast::Conditional_source::While,
                         .has_explicit_false_branch = true,
                     },
-                    ctx.cst.ranges[ctx.cst.expressions[loop.body].range]),
+                    ctx.cst.expressions[loop.body].range),
                 .source = ast::Loop_source::While_loop,
             };
         }
@@ -310,7 +303,7 @@ namespace {
             return ast::expr::Tuple_field {
                 .base        = desugar(ctx, field.base),
                 .index       = field.index,
-                .index_range = ctx.cst.ranges[field.index_token],
+                .index_range = field.index_token,
             };
         }
 
@@ -360,18 +353,18 @@ namespace {
         auto operator()(cst::expr::Return const& ret) const -> ast::Expression_variant
         {
             return ast::expr::Return {
-                ret.expression.has_value()
+                ret.expression.has_value() //
                     ? desugar(ctx, ret.expression.value())
-                    : ctx.ast.expressions.push(unit_value(ctx.cst.ranges[range_id])),
+                    : ctx.ast.expressions.push(unit_value(range)),
             };
         }
 
         auto operator()(cst::expr::Break const& break_) const -> ast::Expression_variant
         {
             return ast::expr::Break {
-                break_.result.has_value()
+                break_.result.has_value() //
                     ? desugar(ctx, break_.result.value())
-                    : ctx.ast.expressions.push(unit_value(ctx.cst.ranges[range_id])),
+                    : ctx.ast.expressions.push(unit_value(range)),
             };
         }
 
@@ -388,8 +381,7 @@ namespace {
         auto operator()(cst::expr::Addressof const& addressof) const -> ast::Expression_variant
         {
             return ast::expr::Addressof {
-                .mutability = desugar_opt_mut(
-                    ctx, addressof.mutability, ctx.cst.ranges[addressof.ampersand_token]),
+                .mutability = desugar_opt_mut(ctx, addressof.mutability, addressof.ampersand_token),
                 .expression = desugar(ctx, addressof.expression),
             };
         }
@@ -406,11 +398,7 @@ namespace {
 
         auto operator()(cst::expr::For_loop const& loop) const -> ast::Expression_variant
         {
-            db::add_error(
-                ctx.db,
-                ctx.doc_id,
-                ctx.cst.ranges[loop.for_token],
-                "For loops are not supported yet");
+            db::add_error(ctx.db, ctx.doc_id, loop.for_token, "For loops are not supported yet");
             return db::Error {};
         }
     };
@@ -419,7 +407,7 @@ namespace {
 auto ki::des::desugar(Context& ctx, cst::Expression const& expr) -> ast::Expression
 {
     return ast::Expression {
-        .variant = std::visit(Visitor { .ctx = ctx, .range_id = expr.range }, expr.variant),
-        .range   = ctx.cst.ranges[expr.range],
+        .variant = std::visit(Visitor { .ctx = ctx, .range = expr.range }, expr.variant),
+        .range   = expr.range,
     };
 }

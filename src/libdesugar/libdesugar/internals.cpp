@@ -49,7 +49,8 @@ auto ki::des::desugar(Context& ctx, cst::Type_id const id) -> ast::Type_id
 
 auto ki::des::desugar(Context& ctx, cst::Wildcard const& wildcard) -> ast::Wildcard
 {
-    return ast::Wildcard { .range = ctx.cst.ranges[wildcard.underscore_token] };
+    (void)ctx;
+    return ast::Wildcard { .range = wildcard.underscore_token };
 }
 
 auto ki::des::desugar(Context& ctx, cst::Template_argument const& argument)
@@ -85,7 +86,7 @@ auto ki::des::desugar(Context& ctx, cst::Template_parameter const& template_para
     };
     return ast::Template_parameter {
         .variant = std::visit<ast::Template_parameter_variant>(visitor, template_parameter.variant),
-        .range   = ctx.cst.ranges[template_parameter.range],
+        .range   = template_parameter.range,
     };
 }
 
@@ -118,7 +119,7 @@ auto ki::des::desugar(Context& ctx, cst::Function_parameters const& cst_paramete
 
     auto const desugar_argument = [&](cst::Value_parameter_default_argument const& argument) {
         if (auto const* const wildcard = std::get_if<cst::Wildcard>(&argument.variant)) {
-            auto const range = ctx.cst.ranges[wildcard->underscore_token];
+            auto const range = wildcard->underscore_token;
             db::add_error(ctx.db, ctx.doc_id, range, "A default argument may not be a wildcard");
             return ctx.ast.expressions.push(db::Error {}, range);
         }
@@ -132,7 +133,7 @@ auto ki::des::desugar(Context& ctx, cst::Function_parameters const& cst_paramete
         if (not ast_parameters.empty()) {
             return ast_parameters.front().type;
         }
-        auto const range = ctx.cst.ranges[ctx.cst.patterns[parameter.pattern].range];
+        auto const range = ctx.cst.patterns[parameter.pattern].range;
         db::add_error(ctx.db, ctx.doc_id, range, "The final parameter type must not be omitted");
         return ctx.ast.types.push(db::Error {}, range);
     };
@@ -237,6 +238,8 @@ auto ki::des::desugar(Context& ctx, cst::Type_annotation const& annotation) -> a
 
 auto ki::des::desugar(Context& ctx, cst::Mutability const& mutability) -> ast::Mutability
 {
+    (void)ctx;
+
     auto const visitor = utl::Overload {
         [](cst::Parameterized_mutability const& parameterized) {
             return ast::Parameterized_mutability { parameterized.name };
@@ -245,7 +248,7 @@ auto ki::des::desugar(Context& ctx, cst::Mutability const& mutability) -> ast::M
     };
     return ast::Mutability {
         .variant = std::visit<ast::Mutability_variant>(visitor, mutability.variant),
-        .range   = ctx.cst.ranges[mutability.range],
+        .range   = mutability.range,
     };
 }
 

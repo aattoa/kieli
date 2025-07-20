@@ -80,11 +80,11 @@ namespace {
         ctx.signature_scope_map.insert_or_assign(fun_id, signature_env_id);
 
         ctx.arena.hir.functions[fun_id].signature = hir::Function_signature {
-            .template_paramters = std::move(template_parameters),
-            .parameters         = std::move(parameters),
-            .return_type        = return_type,
-            .function_type      = hir::Type { .id = type_id, .range = signature.name.range },
-            .name               = signature.name,
+            .template_parameters = std::move(template_parameters),
+            .parameters          = std::move(parameters),
+            .return_type         = return_type,
+            .function_type       = hir::Type { .id = type_id, .range = signature.name.range },
+            .name                = signature.name,
         };
     }
 

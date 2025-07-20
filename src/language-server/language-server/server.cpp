@@ -99,27 +99,28 @@ namespace {
     auto handle_formatting(Server& server, Json params) -> Result<Json>
     {
         auto const [doc_id, options] = formatting_params_from_json(server.db, std::move(params));
-
-        auto& doc = server.db.documents[doc_id];
-        doc.info.diagnostics.clear();
-        doc.info.semantic_tokens.clear();
-        auto const cst = par::parse(server.db, doc_id);
+        auto const& doc              = server.db.documents[doc_id];
 
         Json::Array edits;
-        for (auto const& definition : cst.definitions) {
-            std::string new_text;
-            fmt::format(server.db.string_pool, doc.arena.cst, options, definition, new_text);
-            auto text = db::text_range(doc.text, doc.arena.cst.ranges[definition.range]);
-            if (new_text == text) {
-                // Avoid sending redundant edits when nothing changed.
-                // text_range takes linear time, but it's fine for now.
-                continue;
+
+        auto add_edit = [&](lsp::Range range, std::string text) {
+            // Avoid sending redundant edits when nothing changed.
+            // text_range takes linear time, but it's fine for now.
+            if (text != db::text_range(doc.text, range)) {
+                Json::Object edit;
+                edit.try_emplace("range", range_to_json(range));
+                edit.try_emplace("newText", std::move(text));
+                edits.emplace_back(std::move(edit));
             }
-            Json::Object edit;
-            edit.try_emplace("range", range_to_json(doc.arena.cst.ranges[definition.range]));
-            edit.try_emplace("newText", std::move(new_text));
-            edits.emplace_back(std::move(edit));
-        }
+        };
+
+        auto par_ctx = par::context(server.db, doc_id);
+        auto fmt_ctx = fmt::Context { .db = server.db, .arena = par_ctx.arena, .options = options };
+
+        par::parse(par_ctx, [&](auto const& definition) {
+            add_edit(definition.range, fmt::format(fmt_ctx, definition));
+        });
+
         return Json { std::move(edits) };
     }
 
@@ -241,6 +242,7 @@ namespace {
 
                 Json::Object object;
                 object.try_emplace("contents", markdown_content_to_json(std::move(markdown)));
+                object.try_emplace("range", range_to_json(ref.reference.range));
                 return Json { std::move(object) };
             })
             .value_or(Json {});

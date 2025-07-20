@@ -15,42 +15,46 @@ namespace ki::fmt {
     };
 
     struct State {
-        utl::String_pool const& pool;
-        cst::Arena const&       arena;
-        Options const&          options;
-        std::size_t             indentation {};
-        std::string&            output;
+        Context&    ctx;
+        std::string output;
     };
 
     auto newline(State const& state, std::size_t lines = 1) noexcept -> Newline;
 
     void indent(State& state, std::invocable auto block)
     {
-        ++state.indentation;
+        ++state.ctx.indentation;
         std::invoke(std::move(block));
-        --state.indentation;
+        --state.ctx.indentation;
     }
 
-    void format(State&, cst::Definition const&);
-    void format(State&, cst::Expression const&);
-    void format(State&, cst::Expression_id);
-    void format(State&, cst::Pattern const&);
-    void format(State&, cst::Pattern_id);
-    void format(State&, cst::Type const&);
-    void format(State&, cst::Type_id);
-    void format(State&, cst::Type_annotation const&);
-    void format(State&, cst::Wildcard const&);
-    void format(State&, cst::Path const&);
-    void format(State&, cst::Mutability const&);
-    void format(State&, cst::patt::Field const&);
-    void format(State&, cst::Field_init const&);
-    void format(State&, cst::Field const&);
-    void format(State&, cst::Template_arguments const&);
-    void format(State&, cst::Template_parameter const&);
-    void format(State&, cst::Template_parameters const&);
-    void format(State&, cst::Function_arguments const&);
-    void format(State&, cst::Function_parameter const&);
-    void format(State&, cst::Function_parameters const&);
+    void format(State& state, cst::Function const& function);
+    void format(State& state, cst::Struct const& structure);
+    void format(State& state, cst::Enum const& enumeration);
+    void format(State& state, cst::Alias const& alias);
+    void format(State& state, cst::Concept const& concept_);
+    void format(State& state, cst::Impl_begin const& impl);
+    void format(State& state, cst::Submodule_begin const& submodule);
+    void format(State& state, cst::Block_end const& block_end);
+    void format(State& state, cst::Expression const& expression);
+    void format(State& state, cst::Expression_id expression_id);
+    void format(State& state, cst::Pattern const& pattern);
+    void format(State& state, cst::Pattern_id pattern_id);
+    void format(State& state, cst::Type const& type);
+    void format(State& state, cst::Type_id type_id);
+    void format(State& state, cst::Type_annotation const& annotation);
+    void format(State& state, cst::Wildcard const& wildcard);
+    void format(State& state, cst::Path const& path);
+    void format(State& state, cst::Mutability const& mutability);
+    void format(State& state, cst::patt::Field const& field);
+    void format(State& state, cst::Field_init const& init);
+    void format(State& state, cst::Field const& field);
+    void format(State& state, cst::Template_arguments const& arguments);
+    void format(State& state, cst::Template_parameter const& parameter);
+    void format(State& state, cst::Template_parameters const& parameters);
+    void format(State& state, cst::Function_arguments const& arguments);
+    void format(State& state, cst::Function_parameter const& parameter);
+    void format(State& state, cst::Function_parameters const& parameters);
 
     template <typename... Args>
     void format(State& state, std::format_string<Args...> const fmt, Args&&... args)

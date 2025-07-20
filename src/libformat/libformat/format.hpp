@@ -2,8 +2,7 @@
 #define KIELI_LIBFORMAT_FORMAT
 
 #include <libutl/utilities.hpp>
-#include <libutl/string_pool.hpp>
-#include <libcompiler/cst/cst.hpp>
+#include <libcompiler/db.hpp>
 
 namespace ki::fmt {
 
@@ -20,81 +19,28 @@ namespace ki::fmt {
         Function_body function_body                   = Function_body::Leave_as_is;
     };
 
-    auto format_module(
-        utl::String_pool const& pool,
-        cst::Arena const&       arena,
-        Options const&          options,
-        cst::Module const&      module) -> std::string;
-
-    void format(
-        utl::String_pool const& pool,
-        cst::Arena const&       arena,
-        Options const&          options,
-        cst::Definition const&  definition,
-        std::string&            output);
-
-    void format(
-        utl::String_pool const& pool,
-        cst::Arena const&       arena,
-        Options const&          options,
-        cst::Expression const&  expression,
-        std::string&            output);
-
-    void format(
-        utl::String_pool const& pool,
-        cst::Arena const&       arena,
-        Options const&          options,
-        cst::Pattern const&     pattern,
-        std::string&            output);
-
-    void format(
-        utl::String_pool const& pool,
-        cst::Arena const&       arena,
-        Options const&          options,
-        cst::Type const&        type,
-        std::string&            output);
-
-    void format(
-        utl::String_pool const& pool,
-        cst::Arena const&       arena,
-        Options const&          options,
-        cst::Expression_id      expression_id,
-        std::string&            output);
-
-    void format(
-        utl::String_pool const& pool,
-        cst::Arena const&       arena,
-        Options const&          options,
-        cst::Pattern_id         pattern_id,
-        std::string&            output);
-
-    void format(
-        utl::String_pool const& pool,
-        cst::Arena const&       arena,
-        Options const&          options,
-        cst::Type_id            type_id,
-        std::string&            output);
-
-    template <typename T>
-    concept formattable = requires(
-        utl::String_pool const pool,
-        cst::Arena const       arena,
-        Options const          options,
-        T const                object,
-        std::string            output) {
-        { ki::fmt::format(pool, arena, options, object, output) } -> std::same_as<void>;
+    struct Context {
+        db::Database const& db;
+        cst::Arena const&   arena;
+        Options             options {};
+        std::size_t         indentation {};
     };
 
-    auto to_string(
-        utl::String_pool const  pool,
-        cst::Arena const&       arena,
-        Options const&          options,
-        formattable auto const& object) -> std::string
-    {
-        std::string output;
-        ki::fmt::format(pool, arena, options, object, output);
-        return output;
-    }
+    auto format(Context& ctx, cst::Function const& function) -> std::string;
+    auto format(Context& ctx, cst::Struct const& structure) -> std::string;
+    auto format(Context& ctx, cst::Enum const& enumeration) -> std::string;
+    auto format(Context& ctx, cst::Alias const& alias) -> std::string;
+    auto format(Context& ctx, cst::Concept const& concept_) -> std::string;
+    auto format(Context& ctx, cst::Impl_begin const& impl) -> std::string;
+    auto format(Context& ctx, cst::Submodule_begin const& submodule) -> std::string;
+    auto format(Context& ctx, cst::Block_end const& block_end) -> std::string;
+
+    auto format(Context& ctx, cst::Expression const& expression) -> std::string;
+    auto format(Context& ctx, cst::Expression_id expression_id) -> std::string;
+    auto format(Context& ctx, cst::Pattern const& pattern) -> std::string;
+    auto format(Context& ctx, cst::Pattern_id pattern_id) -> std::string;
+    auto format(Context& ctx, cst::Type const& type) -> std::string;
+    auto format(Context& ctx, cst::Type_id type_id) -> std::string;
 
 } // namespace ki::fmt
 

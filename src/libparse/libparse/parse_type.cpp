@@ -14,14 +14,14 @@ namespace {
         if (types.elements.size() == 1) {
             return cst::type::Paren { {
                 .value       = types.elements.front(),
-                .open_token  = token(ctx, open_parenthesis),
-                .close_token = token(ctx, close_parenthesis),
+                .open_token  = open_parenthesis.range,
+                .close_token = close_parenthesis.range,
             } };
         }
         return cst::type::Tuple { {
             .value       = std::move(types),
-            .open_token  = token(ctx, open_parenthesis),
-            .close_token = token(ctx, close_parenthesis),
+            .open_token  = open_parenthesis.range,
+            .close_token = close_parenthesis.range,
         } };
     }
 
@@ -37,9 +37,9 @@ namespace {
                 return cst::type::Array {
                     .element_type        = element_type,
                     .length              = length.value(),
-                    .open_bracket_token  = token(ctx, open_bracket),
-                    .close_bracket_token = token(ctx, close_bracket),
-                    .semicolon_token     = token(ctx, semicolon.value()),
+                    .open_bracket_token  = open_bracket.range,
+                    .close_bracket_token = close_bracket.range,
+                    .semicolon_token     = semicolon.value().range,
                 };
             }
             error_expected(ctx, "the array length; remove the ';' if a slice type was intended");
@@ -48,12 +48,12 @@ namespace {
         add_punctuation(ctx, close_bracket.range);
         return cst::type::Slice { .element_type {
             .value       = element_type,
-            .open_token  = token(ctx, open_bracket),
-            .close_token = token(ctx, close_bracket),
+            .open_token  = open_bracket.range,
+            .close_token = close_bracket.range,
         } };
     }
 
-    auto extract_function(Context& ctx, lex::Token const& fn_keyword) -> cst::Type_variant
+    auto extract_function_type(Context& ctx, lex::Token const& fn_keyword) -> cst::Type_variant
     {
         static constexpr auto extract_parameter_types = require<parse_parenthesized<
             pretend_parse<extract_comma_separated_zero_or_more<parse_type, "a parameter type">>,
@@ -67,7 +67,7 @@ namespace {
         return cst::type::Function {
             .parameter_types = std::move(param_types),
             .return_type     = std::move(return_type),
-            .fn_token        = token(ctx, fn_keyword),
+            .fn_token        = fn_keyword.range,
         };
     }
 
@@ -78,16 +78,17 @@ namespace {
         add_keyword(ctx, typeof_keyword.range);
         return cst::type::Typeof {
             .expression   = extract_inspected(ctx, "a parenthesized expression"),
-            .typeof_token = token(ctx, typeof_keyword),
+            .typeof_token = typeof_keyword.range,
         };
     }
 
-    auto extract_implementation(Context& ctx, lex::Token const& impl_keyword) -> cst::Type_variant
+    auto extract_implementation_type(Context& ctx, lex::Token const& impl_keyword)
+        -> cst::Type_variant
     {
         add_keyword(ctx, impl_keyword.range);
         return cst::type::Impl {
             .concepts   = extract_concept_references(ctx),
-            .impl_token = token(ctx, impl_keyword),
+            .impl_token = impl_keyword.range,
         };
     }
 
@@ -97,7 +98,7 @@ namespace {
         return cst::type::Reference {
             .mutability      = parse_mutability(ctx),
             .referenced_type = require<parse_type>(ctx, "the referenced type"),
-            .ampersand_token = token(ctx, ampersand),
+            .ampersand_token = ampersand.range,
         };
     }
 
@@ -107,20 +108,20 @@ namespace {
         return cst::type::Pointer {
             .mutability     = parse_mutability(ctx),
             .pointee_type   = require<parse_type>(ctx, "the pointee type"),
-            .asterisk_token = token(ctx, asterisk),
+            .asterisk_token = asterisk.range,
         };
     }
 
     auto dispatch_parse_type(Context& ctx) -> std::optional<cst::Type_variant>
     {
         switch (peek(ctx).type) {
-        case lex::Type::Underscore:   return cst::Wildcard { token(ctx, extract(ctx)) };
-        case lex::Type::Exclamation:  return cst::type::Never { token(ctx, extract(ctx)) };
+        case lex::Type::Underscore:   return cst::Wildcard { extract(ctx).range };
+        case lex::Type::Exclamation:  return cst::type::Never { extract(ctx).range };
         case lex::Type::Paren_open:   return extract_tuple(ctx, extract(ctx));
         case lex::Type::Bracket_open: return extract_array_or_slice(ctx, extract(ctx));
-        case lex::Type::Fn:           return extract_function(ctx, extract(ctx));
+        case lex::Type::Fn:           return extract_function_type(ctx, extract(ctx));
         case lex::Type::Typeof:       return extract_typeof(ctx, extract(ctx));
-        case lex::Type::Impl:         return extract_implementation(ctx, extract(ctx));
+        case lex::Type::Impl:         return extract_implementation_type(ctx, extract(ctx));
         case lex::Type::Ampersand:    return extract_reference(ctx, extract(ctx));
         case lex::Type::Asterisk:     return extract_pointer(ctx, extract(ctx));
         default:                      return parse_simple_path(ctx);
@@ -143,7 +144,7 @@ auto ki::par::parse_type(Context& ctx) -> std::optional<cst::Type_id>
             return type_id;
         }
         cst::Path  path  = extract_path(ctx, type_id);
-        lsp::Range range = ctx.arena.ranges[ctx.arena.types[type_id].range];
+        lsp::Range range = ctx.arena.types[type_id].range;
         return ctx.arena.types.push(std::move(path), up_to_current(ctx, range));
     });
 }

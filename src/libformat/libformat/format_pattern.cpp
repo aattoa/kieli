@@ -33,7 +33,7 @@ namespace {
 
         void operator()(db::String const string)
         {
-            format(state, "{:?}", state.pool.get(string.id));
+            format(state, "{:?}", state.ctx.db.string_pool.get(string.id));
         }
 
         void operator()(cst::patt::Paren const& paren)
@@ -65,7 +65,7 @@ namespace {
         void operator()(cst::patt::Name const& name)
         {
             format_mutability_with_whitespace(state, name.mutability);
-            format(state, "{}", state.pool.get(name.name.id));
+            format(state, "{}", state.ctx.db.string_pool.get(name.name.id));
         }
 
         void operator()(cst::patt::Guarded const& guarded)

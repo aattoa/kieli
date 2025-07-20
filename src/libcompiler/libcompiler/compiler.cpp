@@ -69,6 +69,17 @@ auto ki::lsp::warning(Range range, std::string message) -> Diagnostic
     };
 }
 
+auto ki::lsp::note(Range range, std::string message) -> Diagnostic
+{
+    return Diagnostic {
+        .message      = std::move(message),
+        .range        = range,
+        .severity     = Severity::Information,
+        .related_info = {},
+        .tag          = Diagnostic_tag::None,
+    };
+}
+
 auto ki::lsp::severity_string(Severity severity) -> std::string_view
 {
     switch (severity) {

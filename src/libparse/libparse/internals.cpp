@@ -47,7 +47,7 @@ namespace {
     void escape_string_literal(par::Context& ctx, std::string& out, lex::Token token)
     {
         auto view = utl::View { .offset = token.view.offset + 1, .length = token.view.length - 2 };
-        auto string = view.string(ctx.db.documents[ctx.doc_id].text);
+        auto string = view.string(ctx.lex_state.text);
 
         for (std::size_t i = 0; i != view.length; ++i) {
             if (char const ch = string.at(i); ch != '\\') {
@@ -57,7 +57,7 @@ namespace {
                 out.push_back(escaped.value());
             }
             else {
-                auto range = lsp::to_range(lsp::column_offset(token.range.start, i + 1));
+                auto const range = lsp::to_range(lsp::column_offset(token.range.start, i + 1));
                 db::add_error(ctx.db, ctx.doc_id, range, "Unrecognized escape sequence");
             }
         }
@@ -103,10 +103,11 @@ auto ki::par::require_extract(Context& ctx, lex::Type type) -> lex::Token
     error_expected(ctx, token_description(type));
 }
 
-void ki::par::error_expected(Context& ctx, lsp::Range range, std::string_view desc)
+void ki::par::error_expected(Context& ctx, lsp::Range range, std::string_view description)
 {
-    auto found = token_description(peek(ctx).type);
-    db::add_error(ctx.db, ctx.doc_id, range, std::format("Expected {}, but found {}", desc, found));
+    auto found   = token_description(peek(ctx).type);
+    auto message = std::format("Expected {}, but found {}", description, found);
+    db::add_error(ctx.db, ctx.doc_id, range, std::move(message));
     throw Failure {};
 }
 
@@ -115,20 +116,15 @@ void ki::par::error_expected(Context& ctx, std::string_view description)
     error_expected(ctx, peek(ctx).range, description);
 }
 
-auto ki::par::up_to_current(Context& ctx, lsp::Range range) -> cst::Range_id
+auto ki::par::up_to_current(Context& ctx, lsp::Range range) -> lsp::Range
 {
     cpputil::always_assert(ctx.previous_token_end.has_value());
-    return ctx.arena.ranges.push(lsp::Range(range.start, ctx.previous_token_end.value()));
-}
-
-auto ki::par::token(Context& ctx, lex::Token const& token) -> cst::Range_id
-{
-    return ctx.arena.ranges.push(token.range);
+    return lsp::Range(range.start, ctx.previous_token_end.value());
 }
 
 void ki::par::add_semantic_token(Context& ctx, lsp::Range range, Semantic type)
 {
-    if (ctx.db.config.semantic_tokens != db::Semantic_token_mode::None) {
+    if (ctx.db.config.semantic_tokens == db::Semantic_token_mode::Full) {
         cpputil::always_assert(not lsp::is_multiline(range));
         cpputil::always_assert(range.start.column < range.stop.column);
         ctx.semantic_tokens.push_back(
@@ -152,7 +148,7 @@ void ki::par::add_punctuation(Context& ctx, lsp::Range range)
 
 void ki::par::set_previous_path_head_semantic_type(Context& ctx, Semantic const type)
 {
-    if (ctx.db.config.semantic_tokens != db::Semantic_token_mode::None) {
+    if (ctx.db.config.semantic_tokens == db::Semantic_token_mode::Full) {
         ctx.semantic_tokens.at(ctx.previous_path_semantic_offset).type = type;
     }
 }
@@ -173,7 +169,7 @@ auto ki::par::parse_integer(Context& ctx, lex::Token const& literal) -> std::opt
 {
     add_semantic_token(ctx, literal.range, Semantic::Number);
 
-    auto const string = literal.view.string(ctx.db.documents[ctx.doc_id].text);
+    auto const string = literal.view.string(ctx.lex_state.text);
     if (auto const integer = parse_impl<decltype(db::Integer::value)>(string)) {
         return db::Integer { integer.value() };
     }
@@ -185,7 +181,7 @@ auto ki::par::parse_floating(Context& ctx, lex::Token const& literal) -> std::op
 {
     add_semantic_token(ctx, literal.range, Semantic::Number);
 
-    auto const string = literal.view.string(ctx.db.documents[ctx.doc_id].text);
+    auto const string = literal.view.string(ctx.lex_state.text);
     if (auto const floating = parse_impl<double>(string)) {
         return db::Floating { floating.value() };
     }
@@ -208,8 +204,8 @@ auto ki::par::context(db::Database& db, db::Document_id doc_id) -> Context
 {
     return Context {
         .db                            = db,
-        .arena                         = cst::Arena {},
         .doc_id                        = doc_id,
+        .arena                         = cst::Arena {},
         .lex_state                     = lex::state(db.documents[doc_id].text),
         .next_token                    = std::nullopt,
         .previous_token_end            = std::nullopt,
@@ -222,7 +218,7 @@ auto ki::par::context(db::Database& db, db::Document_id doc_id) -> Context
 
 auto ki::par::identifier(Context& ctx, lex::Token const& token) -> utl::String_id
 {
-    return ctx.db.string_pool.make(token.view.string(ctx.db.documents[ctx.doc_id].text));
+    return ctx.db.string_pool.make(token.view.string(ctx.lex_state.text));
 }
 
 auto ki::par::name(Context& ctx, lex::Token const& token) -> db::Name

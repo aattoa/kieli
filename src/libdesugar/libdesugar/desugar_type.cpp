@@ -10,8 +10,7 @@ namespace {
 
         auto operator()(cst::type::Paren const& paren) const -> ast::Type_variant
         {
-            cst::Type const& type = ctx.cst.types[paren.type.value];
-            return std::visit(Visitor { .ctx = ctx }, type.variant);
+            return std::visit(*this, ctx.cst.types[paren.type.value].variant);
         }
 
         auto operator()(cst::Path const& path) const -> ast::Type_variant
@@ -64,8 +63,7 @@ namespace {
         {
             return ast::type::Reference {
                 .referenced_type = desugar(ctx, reference.referenced_type),
-                .mutability      = desugar_opt_mut(
-                    ctx, reference.mutability, ctx.cst.ranges[reference.ampersand_token]),
+                .mutability = desugar_opt_mut(ctx, reference.mutability, reference.ampersand_token),
             };
         }
 
@@ -73,8 +71,7 @@ namespace {
         {
             return ast::type::Pointer {
                 .pointee_type = desugar(ctx, pointer.pointee_type),
-                .mutability
-                = desugar_opt_mut(ctx, pointer.mutability, ctx.cst.ranges[pointer.asterisk_token]),
+                .mutability   = desugar_opt_mut(ctx, pointer.mutability, pointer.asterisk_token),
             };
         }
 
@@ -89,6 +86,6 @@ auto ki::des::desugar(Context& ctx, cst::Type const& type) -> ast::Type
 {
     return ast::Type {
         .variant = std::visit(Visitor { .ctx = ctx }, type.variant),
-        .range   = ctx.cst.ranges[type.range],
+        .range   = type.range,
     };
 }

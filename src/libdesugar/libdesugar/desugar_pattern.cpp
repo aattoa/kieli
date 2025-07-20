@@ -10,8 +10,7 @@ namespace {
 
         auto operator()(cst::patt::Paren const& paren) const -> ast::Pattern_variant
         {
-            return std::visit(
-                Visitor { .ctx = ctx }, ctx.cst.patterns[paren.pattern.value].variant);
+            return std::visit(*this, ctx.cst.patterns[paren.pattern.value].variant);
         }
 
         auto operator()(utl::one_of< //
@@ -73,6 +72,6 @@ auto ki::des::desugar(Context& ctx, cst::Pattern const& pattern) -> ast::Pattern
 {
     return ast::Pattern {
         .variant = std::visit(Visitor { .ctx = ctx }, pattern.variant),
-        .range   = ctx.cst.ranges[pattern.range],
+        .range   = pattern.range,
     };
 }

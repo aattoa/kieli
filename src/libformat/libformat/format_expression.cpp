@@ -44,7 +44,7 @@ namespace {
 
         auto as_block(cst::Expression_id const id) -> cst::expr::Block const&
         {
-            auto const&       expression = state.arena.expressions[id];
+            auto const&       expression = state.ctx.arena.expressions[id];
             auto const* const block      = std::get_if<cst::expr::Block>(&expression.variant);
             cpputil::always_assert(block != nullptr);
             return *block;
@@ -57,7 +57,7 @@ namespace {
 
         void operator()(db::String const string)
         {
-            format(state, "{:?}", state.pool.get(string.id));
+            format(state, "{:?}", state.ctx.db.string_pool.get(string.id));
         }
 
         void operator()(cst::Wildcard const& wildcard)
@@ -92,7 +92,7 @@ namespace {
         void operator()(cst::expr::Infix_call const& call)
         {
             format(state, call.left);
-            format(state, " {} ", state.pool.get(call.op.id));
+            format(state, " {} ", state.ctx.db.string_pool.get(call.op.id));
             format(state, call.right);
         }
 
@@ -113,7 +113,7 @@ namespace {
         void operator()(cst::expr::Method_call const& call)
         {
             format(state, call.expression);
-            format(state, ".{}", state.pool.get(call.name.id));
+            format(state, ".{}", state.ctx.db.string_pool.get(call.name.id));
             format(state, call.template_arguments);
             format(state, call.function_arguments);
         }
@@ -146,7 +146,7 @@ namespace {
 
         void operator()(cst::expr::Type_alias const& alias)
         {
-            format(state, "alias {} = ", state.pool.get(alias.name.id));
+            format(state, "alias {} = ", state.ctx.db.string_pool.get(alias.name.id));
             format(state, alias.type);
         }
 
@@ -175,7 +175,7 @@ namespace {
         void operator()(cst::expr::Struct_field const& field)
         {
             format(state, field.base);
-            format(state, ".{}", state.pool.get(field.name.id));
+            format(state, ".{}", state.ctx.db.string_pool.get(field.name.id));
         }
 
         void operator()(cst::expr::Array_index const& index)
@@ -252,7 +252,7 @@ namespace {
             }
             format(state, "{}else ", newline(state));
             if (auto const* block = std::get_if<cst::expr::Block>(
-                    &state.arena.expressions[conditional.false_branch.value().body].variant)) {
+                    &state.ctx.arena.expressions[conditional.false_branch.value().body].variant)) {
                 format_indented_block_body(*block);
             }
             else {

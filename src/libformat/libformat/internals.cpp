@@ -4,31 +4,31 @@
 auto ki::fmt::newline(State const& state, std::size_t const lines) noexcept -> Newline
 {
     return Newline {
-        .indentation = state.indentation,
+        .indentation = state.ctx.indentation,
         .lines       = lines,
-        .tab_size    = state.options.tab_size,
-        .use_spaces  = state.options.use_spaces,
+        .tab_size    = state.ctx.options.tab_size,
+        .use_spaces  = state.ctx.options.use_spaces,
     };
 }
 
 void ki::fmt::format(State& state, cst::Expression_id const id)
 {
-    format(state, state.arena.expressions[id]);
+    format(state, state.ctx.arena.expressions[id]);
 }
 
 void ki::fmt::format(State& state, cst::Pattern_id const id)
 {
-    format(state, state.arena.patterns[id]);
+    format(state, state.ctx.arena.patterns[id]);
 }
 
 void ki::fmt::format(State& state, cst::Type_id const id)
 {
-    format(state, state.arena.types[id]);
+    format(state, state.ctx.arena.types[id]);
 }
 
 void ki::fmt::format(State& state, cst::Wildcard const& wildcard)
 {
-    auto const [start, stop] = state.arena.ranges[wildcard.underscore_token];
+    auto const [start, stop] = wildcard.underscore_token;
     cpputil::always_assert(start.column < stop.column);
     format(state, "{:_^{}}", "", stop.column - start.column);
 }
@@ -48,7 +48,7 @@ void ki::fmt::format(State& state, cst::Path const& path)
         if (segment.leading_double_colon_token.has_value()) {
             format(state, "::");
         }
-        format(state, "{}", state.pool.get(segment.name.id));
+        format(state, "{}", state.ctx.db.string_pool.get(segment.name.id));
         format(state, segment.template_arguments);
     }
 }
@@ -60,7 +60,7 @@ void ki::fmt::format(State& state, cst::Mutability const& mutability)
             format(state, "{}", db::mutability_string(concrete));
         },
         [&](ki::cst::Parameterized_mutability const& parameterized) {
-            format(state, "mut?{}", state.pool.get(parameterized.name.id));
+            format(state, "mut?{}", state.ctx.db.string_pool.get(parameterized.name.id));
         },
     };
     std::visit(visitor, mutability.variant);
@@ -68,7 +68,7 @@ void ki::fmt::format(State& state, cst::Mutability const& mutability)
 
 void ki::fmt::format(State& state, cst::patt::Field const& field)
 {
-    format(state, "{}", state.pool.get(field.name.id));
+    format(state, "{}", state.ctx.db.string_pool.get(field.name.id));
     if (field.equals.has_value()) {
         format(state, " = ");
         format(state, field.equals.value().pattern);
@@ -77,7 +77,7 @@ void ki::fmt::format(State& state, cst::patt::Field const& field)
 
 void ki::fmt::format(State& state, cst::Field_init const& initializer)
 {
-    format(state, "{}", state.pool.get(initializer.name.id));
+    format(state, "{}", state.ctx.db.string_pool.get(initializer.name.id));
     if (initializer.equals.has_value()) {
         format(state, " = ");
         format(state, initializer.equals.value().expression);
@@ -86,7 +86,7 @@ void ki::fmt::format(State& state, cst::Field_init const& initializer)
 
 void ki::fmt::format(State& state, cst::Field const& field)
 {
-    format(state, "{}", state.pool.get(field.name.id));
+    format(state, "{}", state.ctx.db.string_pool.get(field.name.id));
     format(state, field.type);
 }
 
@@ -112,7 +112,7 @@ void ki::fmt::format(State& state, cst::Template_parameter const& parameter)
     std::visit(
         utl::Overload {
             [&](cst::Template_type_parameter const& parameter) {
-                format(state, "{}", state.pool.get(parameter.name.id));
+                format(state, "{}", state.ctx.db.string_pool.get(parameter.name.id));
                 if (parameter.colon_token.has_value()) {
                     format(state, ": ");
                     format_separated(state, parameter.concepts.elements, " + ");
@@ -120,12 +120,12 @@ void ki::fmt::format(State& state, cst::Template_parameter const& parameter)
                 format(state, parameter.default_argument);
             },
             [&](cst::Template_value_parameter const& parameter) {
-                format(state, "{}", state.pool.get(parameter.name.id));
+                format(state, "{}", state.ctx.db.string_pool.get(parameter.name.id));
                 format(state, parameter.type_annotation);
                 format(state, parameter.default_argument);
             },
             [&](cst::Template_mutability_parameter const& parameter) {
-                format(state, "{}: mut", state.pool.get(parameter.name.id));
+                format(state, "{}: mut", state.ctx.db.string_pool.get(parameter.name.id));
                 format(state, parameter.default_argument);
             },
         },

@@ -304,7 +304,7 @@ namespace ki::hir {
         using variant::variant;
     };
 
-    struct Template_argument : std::variant<Expression, Type, Mutability> {
+    struct Template_argument : std::variant<db::Error, Expression, Type, Mutability> {
         using variant::variant;
     };
 
@@ -347,7 +347,7 @@ namespace ki::hir {
     };
 
     struct Function_signature {
-        std::vector<Template_parameter> template_paramters;
+        std::vector<Template_parameter> template_parameters;
         std::vector<Function_parameter> parameters;
         Type                            return_type;
         Type                            function_type;
@@ -519,5 +519,13 @@ namespace ki::hir {
     };
 
 } // namespace ki::hir
+
+template <>
+struct std::hash<ki::hir::Template_parameter_tag> {
+    static constexpr auto operator()(ki::hir::Template_parameter_tag tag) noexcept -> std::size_t
+    {
+        return static_cast<std::size_t>(tag.value);
+    }
+};
 
 #endif // KIELI_LIBCOMPILER_HIR

@@ -118,6 +118,9 @@ namespace ki::lsp {
     // Construct a warning diagnostic.
     [[nodiscard]] auto warning(Range range, std::string message) -> Diagnostic;
 
+    // Construct a note diagnostic.
+    [[nodiscard]] auto note(Range range, std::string message) -> Diagnostic;
+
     // Capitalized severity description.
     [[nodiscard]] auto severity_string(Severity severity) -> std::string_view;
 

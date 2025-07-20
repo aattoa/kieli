@@ -22,36 +22,31 @@
 
 namespace ki::cst {
 
-    // Since tokens are used all over the CST, this saves a significant amount of memory.
-    struct Range_id : utl::Vector_index<Range_id, std::uint32_t> {
-        using Vector_index::Vector_index;
-    };
-
     template <typename T>
     struct Surrounded {
-        T        value;
-        Range_id open_token;
-        Range_id close_token;
+        T          value;
+        lsp::Range open_token;
+        lsp::Range close_token;
     };
 
     template <typename T>
     struct Separated {
-        std::vector<T>        elements;
-        std::vector<Range_id> separator_tokens;
+        std::vector<T>          elements;
+        std::vector<lsp::Range> separator_tokens;
     };
 
     struct Type_annotation {
-        Type_id  type;
-        Range_id colon_token;
+        Type_id    type;
+        lsp::Range colon_token;
     };
 
     struct Wildcard {
-        Range_id underscore_token;
+        lsp::Range underscore_token;
     };
 
     struct Parameterized_mutability {
-        db::Lower name;
-        Range_id  question_mark_token;
+        db::Lower  name;
+        lsp::Range question_mark_token;
     };
 
     struct Mutability_variant : std::variant<db::Mutability, Parameterized_mutability> {
@@ -60,8 +55,8 @@ namespace ki::cst {
 
     struct Mutability {
         Mutability_variant variant;
-        Range_id           range;
-        Range_id           keyword_token;
+        lsp::Range         range;
+        lsp::Range         keyword_token;
     };
 
     struct Template_argument : std::variant<Type_id, Expression_id, Mutability, Wildcard> {
@@ -73,11 +68,11 @@ namespace ki::cst {
     struct Path_segment {
         std::optional<Template_arguments> template_arguments;
         db::Name                          name;
-        std::optional<Range_id>           leading_double_colon_token;
+        std::optional<lsp::Range>         leading_double_colon_token;
     };
 
     struct Path_root_global {
-        Range_id double_colon_token;
+        lsp::Range double_colon_token;
     };
 
     using Path_root = std::variant<std::monostate, Path_root_global, Type_id>;
@@ -85,7 +80,7 @@ namespace ki::cst {
     struct Path {
         Path_root                 root;
         std::vector<Path_segment> segments;
-        Range_id                  range;
+        lsp::Range                range;
 
         [[nodiscard]] auto head() const -> Path_segment const&;
         [[nodiscard]] auto is_unqualified() const noexcept -> bool;
@@ -94,7 +89,7 @@ namespace ki::cst {
     template <typename T>
     struct Default_argument {
         std::variant<T, Wildcard> variant;
-        Range_id                  equals_sign_token;
+        lsp::Range                equals_sign_token;
     };
 
     using Type_parameter_default_argument       = Default_argument<Type_id>;
@@ -112,7 +107,7 @@ namespace ki::cst {
 
     struct Template_type_parameter {
         db::Upper                                      name;
-        std::optional<Range_id>                        colon_token;
+        std::optional<lsp::Range>                      colon_token;
         Separated<Path>                                concepts;
         std::optional<Type_parameter_default_argument> default_argument;
     };
@@ -125,8 +120,8 @@ namespace ki::cst {
 
     struct Template_mutability_parameter {
         db::Lower                                            name;
-        Range_id                                             colon_token;
-        Range_id                                             mut_token;
+        lsp::Range                                           colon_token;
+        lsp::Range                                           mut_token;
         std::optional<Mutability_parameter_default_argument> default_argument;
     };
 
@@ -140,13 +135,13 @@ namespace ki::cst {
 
     struct Template_parameter {
         Template_parameter_variant variant;
-        Range_id                   range;
+        lsp::Range                 range;
     };
 
     using Template_parameters = Surrounded<Separated<Template_parameter>>;
 
     struct Struct_field_equals {
-        Range_id      equals_sign_token;
+        lsp::Range    equals_sign_token;
         Expression_id expression;
     };
 
@@ -156,10 +151,10 @@ namespace ki::cst {
     };
 
     struct Match_arm {
-        Pattern_id              pattern;
-        Expression_id           handler;
-        Range_id                arrow_token;
-        std::optional<Range_id> semicolon_token;
+        Pattern_id                pattern;
+        Expression_id             handler;
+        lsp::Range                arrow_token;
+        std::optional<lsp::Range> semicolon_token;
     };
 
     namespace expr {
@@ -178,13 +173,13 @@ namespace ki::cst {
         struct Block {
             struct Side_effect {
                 Expression_id expression;
-                Range_id      trailing_semicolon_token;
+                lsp::Range    trailing_semicolon_token;
             };
 
             std::vector<Side_effect>     effects;
             std::optional<Expression_id> result;
-            Range_id                     open_brace_token;
-            Range_id                     close_brace_token;
+            lsp::Range                   open_brace_token;
+            lsp::Range                   close_brace_token;
         };
 
         struct Function_call {
@@ -206,20 +201,20 @@ namespace ki::cst {
         struct Struct_field {
             Expression_id base;
             db::Lower     name;
-            Range_id      dot_token;
+            lsp::Range    dot_token;
         };
 
         struct Tuple_field {
             Expression_id base;
             std::uint16_t index {};
-            Range_id      index_token;
-            Range_id      dot_token;
+            lsp::Range    index_token;
+            lsp::Range    dot_token;
         };
 
         struct Array_index {
             Expression_id             base;
             Surrounded<Expression_id> index;
-            Range_id                  dot_token;
+            lsp::Range                dot_token;
         };
 
         struct Method_call {
@@ -231,25 +226,25 @@ namespace ki::cst {
 
         struct False_branch {
             Expression_id body;
-            Range_id      keyword_token;
+            lsp::Range    keyword_token;
         };
 
         struct Conditional {
             Expression_id               condition;
             Expression_id               true_branch;
             std::optional<False_branch> false_branch;
-            Range_id                    keyword_token;
+            lsp::Range                  keyword_token;
         };
 
         struct Match {
             Surrounded<std::vector<Match_arm>> arms;
             Expression_id                      scrutinee;
-            Range_id                           match_token;
+            lsp::Range                         match_token;
         };
 
         struct Ascription {
             Expression_id expression;
-            Range_id      colon_token;
+            lsp::Range    colon_token;
             Type_id       type;
         };
 
@@ -257,69 +252,69 @@ namespace ki::cst {
             Pattern_id                     pattern;
             std::optional<Type_annotation> type;
             Expression_id                  initializer;
-            Range_id                       let_token;
-            Range_id                       equals_sign_token;
+            lsp::Range                     let_token;
+            lsp::Range                     equals_sign_token;
         };
 
         struct Type_alias {
-            db::Upper name;
-            Type_id   type;
-            Range_id  alias_token;
-            Range_id  equals_sign_token;
+            db::Upper  name;
+            Type_id    type;
+            lsp::Range alias_token;
+            lsp::Range equals_sign_token;
         };
 
         struct Loop {
             Expression_id body;
-            Range_id      loop_token;
+            lsp::Range    loop_token;
         };
 
         struct While_loop {
             Expression_id condition;
             Expression_id body;
-            Range_id      while_token;
+            lsp::Range    while_token;
         };
 
         struct For_loop {
             Pattern_id    iterator;
             Expression_id iterable;
             Expression_id body;
-            Range_id      for_token;
-            Range_id      in_token;
+            lsp::Range    for_token;
+            lsp::Range    in_token;
         };
 
         struct Continue {
-            Range_id continue_token;
+            lsp::Range continue_token;
         };
 
         struct Break {
             std::optional<Expression_id> result;
-            Range_id                     break_token;
+            lsp::Range                   break_token;
         };
 
         struct Return {
             std::optional<Expression_id> expression;
-            Range_id                     ret_token;
+            lsp::Range                   ret_token;
         };
 
         struct Sizeof {
             Surrounded<Type_id> type;
-            Range_id            sizeof_token;
+            lsp::Range          sizeof_token;
         };
 
         struct Addressof {
             std::optional<Mutability> mutability;
             Expression_id             expression;
-            Range_id                  ampersand_token;
+            lsp::Range                ampersand_token;
         };
 
         struct Deref {
             Expression_id expression;
-            Range_id      asterisk_token;
+            lsp::Range    asterisk_token;
         };
 
         struct Defer {
             Expression_id expression;
-            Range_id      defer_token;
+            lsp::Range    defer_token;
         };
     } // namespace expr
 
@@ -363,7 +358,7 @@ namespace ki::cst {
 
     struct Expression {
         Expression_variant variant;
-        Range_id           range;
+        lsp::Range         range;
     };
 
     namespace patt {
@@ -377,7 +372,7 @@ namespace ki::cst {
         };
 
         struct Equals {
-            Range_id   equals_sign_token;
+            lsp::Range equals_sign_token;
             Pattern_id pattern;
         };
 
@@ -421,7 +416,7 @@ namespace ki::cst {
         struct Guarded {
             Pattern_id    pattern;
             Expression_id guard;
-            Range_id      if_token;
+            lsp::Range    if_token;
         };
     } // namespace patt
 
@@ -444,7 +439,7 @@ namespace ki::cst {
 
     struct Pattern {
         Pattern_variant variant;
-        Range_id        range;
+        lsp::Range      range;
     };
 
     namespace type {
@@ -453,7 +448,7 @@ namespace ki::cst {
         };
 
         struct Never {
-            Range_id exclamation_token;
+            lsp::Range exclamation_token;
         };
 
         struct Tuple {
@@ -463,9 +458,9 @@ namespace ki::cst {
         struct Array {
             Type_id       element_type;
             Expression_id length;
-            Range_id      open_bracket_token;
-            Range_id      close_bracket_token;
-            Range_id      semicolon_token;
+            lsp::Range    open_bracket_token;
+            lsp::Range    close_bracket_token;
+            lsp::Range    semicolon_token;
         };
 
         struct Slice {
@@ -475,29 +470,29 @@ namespace ki::cst {
         struct Function {
             Surrounded<Separated<Type_id>> parameter_types;
             Type_annotation                return_type;
-            Range_id                       fn_token;
+            lsp::Range                     fn_token;
         };
 
         struct Typeof {
             Surrounded<Expression_id> expression;
-            Range_id                  typeof_token;
+            lsp::Range                typeof_token;
         };
 
         struct Reference {
             std::optional<Mutability> mutability;
             Type_id                   referenced_type;
-            Range_id                  ampersand_token;
+            lsp::Range                ampersand_token;
         };
 
         struct Pointer {
             std::optional<Mutability> mutability;
             Type_id                   pointee_type;
-            Range_id                  asterisk_token;
+            lsp::Range                asterisk_token;
         };
 
         struct Impl {
             Separated<Path> concepts;
-            Range_id        impl_token;
+            lsp::Range      impl_token;
         };
     } // namespace type
 
@@ -520,7 +515,7 @@ namespace ki::cst {
 
     struct Type {
         Type_variant variant;
-        Range_id     range;
+        lsp::Range   range;
     };
 
     struct Function_signature {
@@ -528,30 +523,31 @@ namespace ki::cst {
         Function_parameters                function_parameters;
         std::optional<Type_annotation>     return_type;
         db::Lower                          name;
-        Range_id                           fn_token;
+        lsp::Range                         fn_token;
     };
 
     struct Type_signature {
         std::optional<Template_parameters> template_parameters;
         Separated<Path>                    concepts;
         db::Upper                          name;
-        std::optional<Range_id>            concepts_colon_token;
-        Range_id                           alias_token;
+        std::optional<lsp::Range>          concepts_colon_token;
+        lsp::Range                         alias_token;
     };
 
     using Concept_requirement = std::variant<Function_signature, Type_signature>;
 
     struct Function {
-        Function_signature      signature;
-        Expression_id           body;
-        std::optional<Range_id> equals_sign_token;
-        Range_id                fn_token;
+        Function_signature        signature;
+        Expression_id             body;
+        std::optional<lsp::Range> equals_sign_token;
+        lsp::Range                fn_token;
+        lsp::Range                range;
     };
 
     struct Field {
         db::Lower       name;
         Type_annotation type;
-        Range_id        range;
+        lsp::Range      range;
     };
 
     struct Struct_constructor {
@@ -577,73 +573,60 @@ namespace ki::cst {
     struct Struct {
         std::optional<Template_parameters> template_parameters;
         Constructor                        constructor;
-        Range_id                           struct_token;
+        lsp::Range                         struct_token;
+        lsp::Range                         range;
     };
 
     struct Enum {
         std::optional<Template_parameters> template_parameters;
         Separated<Constructor>             constructors;
         db::Upper                          name;
-        Range_id                           enum_token;
-        Range_id                           equals_sign_token;
+        lsp::Range                         enum_token;
+        lsp::Range                         equals_sign_token;
+        lsp::Range                         range;
     };
 
     struct Alias {
         std::optional<Template_parameters> template_parameters;
         db::Upper                          name;
         Type_id                            type;
-        Range_id                           alias_token;
-        Range_id                           equals_sign_token;
+        lsp::Range                         alias_token;
+        lsp::Range                         equals_sign_token;
+        lsp::Range                         range;
     };
 
     struct Concept {
         std::optional<Template_parameters> template_parameters;
         std::vector<Concept_requirement>   requirements;
         db::Upper                          name;
-        Range_id                           concept_token;
-        Range_id                           open_brace_token;
-        Range_id                           close_brace_token;
+        lsp::Range                         concept_token;
+        lsp::Range                         open_brace_token;
+        lsp::Range                         close_brace_token;
+        lsp::Range                         range;
     };
 
-    struct Impl {
-        std::optional<Template_parameters>  template_parameters;
-        Surrounded<std::vector<Definition>> definitions;
-        Type_id                             self_type;
-        Range_id                            impl_token;
+    struct Impl_begin {
+        std::optional<Template_parameters> template_parameters;
+        Type_id                            self_type;
+        lsp::Range                         impl_token;
+        lsp::Range                         range;
     };
 
-    struct Submodule {
-        std::optional<Template_parameters>  template_parameters;
-        Surrounded<std::vector<Definition>> definitions;
-        db::Lower                           name;
-        Range_id                            module_token;
+    struct Submodule_begin {
+        db::Lower  name;
+        lsp::Range module_token;
+        lsp::Range open_brace_token;
+        lsp::Range range;
     };
 
-    struct Definition_variant
-        : std::variant<Function, Struct, Enum, Alias, Concept, Impl, Submodule> {
-        using variant::variant;
-    };
-
-    struct Definition {
-        Definition_variant variant;
-        Range_id           range;
+    struct Block_end {
+        lsp::Range range;
     };
 
     struct Arena {
         utl::Index_vector<Expression_id, Expression> expressions;
         utl::Index_vector<Type_id, Type>             types;
         utl::Index_vector<Pattern_id, Pattern>       patterns;
-        utl::Index_vector<Range_id, lsp::Range>      ranges;
-    };
-
-    struct Import {
-        Separated<db::Lower> segments;
-        Range_id             import_token;
-    };
-
-    struct Module {
-        std::vector<cst::Import>     imports;
-        std::vector<cst::Definition> definitions;
     };
 
 } // namespace ki::cst

@@ -16,7 +16,7 @@ namespace {
         add_keyword(ctx, loop_keyword.range);
         return cst::expr::Loop {
             .body       = extract_loop_body(ctx),
-            .loop_token = token(ctx, loop_keyword),
+            .loop_token = loop_keyword.range,
         };
     }
 
@@ -27,7 +27,7 @@ namespace {
         return cst::expr::While_loop {
             .condition   = require<parse_expression>(ctx, "a condition"),
             .body        = extract_loop_body(ctx),
-            .while_token = token(ctx, while_keyword),
+            .while_token = while_keyword.range,
         };
     }
 
@@ -41,8 +41,8 @@ namespace {
             .iterator  = iterator,
             .iterable  = require<parse_expression>(ctx, "an iterable expression"),
             .body      = extract_loop_body(ctx),
-            .for_token = token(ctx, for_keyword),
-            .in_token  = token(ctx, in_keyword),
+            .for_token = for_keyword.range,
+            .in_token  = in_keyword.range,
         };
     }
 
@@ -55,7 +55,7 @@ namespace {
                 .equals
                 = try_extract(ctx, lex::Type::Equals).transform([&](lex::Token const equals_sign) {
                       return cst::Struct_field_equals {
-                          .equals_sign_token = token(ctx, equals_sign),
+                          .equals_sign_token = equals_sign.range,
                           .expression = require<parse_expression>(ctx, "an initializer expression"),
                       };
                   }),
@@ -67,7 +67,7 @@ namespace {
     {
         return cst::expr::Deref {
             .expression     = require<parse_expression>(ctx, "an expression"),
-            .asterisk_token = token(ctx, asterisk),
+            .asterisk_token = asterisk.range,
         };
     }
 
@@ -80,14 +80,14 @@ namespace {
         if (fields.elements.size() == 1) {
             return cst::expr::Paren { {
                 .value       = fields.elements.front(),
-                .open_token  = token(ctx, paren_open),
-                .close_token = token(ctx, paren_close),
+                .open_token  = paren_open.range,
+                .close_token = paren_close.range,
             } };
         }
         return cst::expr::Tuple { {
             .value       = std::move(fields),
-            .open_token  = token(ctx, paren_open),
-            .close_token = token(ctx, paren_close),
+            .open_token  = paren_open.range,
+            .close_token = paren_close.range,
         } };
     }
 
@@ -98,8 +98,8 @@ namespace {
         if (auto const bracket_close = try_extract(ctx, lex::Type::Bracket_close)) {
             return cst::expr::Array { {
                 .value       = std::move(elements),
-                .open_token  = token(ctx, bracket_open),
-                .close_token = token(ctx, bracket_close.value()),
+                .open_token  = bracket_open.range,
+                .close_token = bracket_close.value().range,
             } };
         }
         if (elements.elements.empty()) {
@@ -127,13 +127,13 @@ namespace {
                     .body = ctx.arena.expressions.push(
                         extract_conditional(ctx, second_if_keyword.value()),
                         up_to_current(ctx, second_if_keyword.value().range)),
-                    .keyword_token = token(ctx, second_if_keyword.value()),
+                    .keyword_token = second_if_keyword.value().range,
                 };
             }
             else {
                 false_branch = cst::expr::False_branch {
                     .body = require<parse_block_expression>(ctx, "an else-block expression"),
-                    .keyword_token = token(ctx, else_keyword.value()),
+                    .keyword_token = else_keyword.value().range,
                 };
             }
         }
@@ -142,7 +142,7 @@ namespace {
             .condition     = condition,
             .true_branch   = true_branch,
             .false_branch  = false_branch,
-            .keyword_token = token(ctx, if_keyword),
+            .keyword_token = if_keyword.range,
         };
     }
 
@@ -157,8 +157,8 @@ namespace {
             .pattern           = pattern,
             .type              = type,
             .initializer       = require<parse_expression>(ctx, "the initializer expression"),
-            .let_token         = token(ctx, let_keyword),
-            .equals_sign_token = token(ctx, equals_sign),
+            .let_token         = let_keyword.range,
+            .equals_sign_token = equals_sign.range,
         };
     }
 
@@ -173,8 +173,8 @@ namespace {
         return cst::expr::Type_alias {
             .name              = name,
             .type              = require<parse_type>(ctx, "an aliased type"),
-            .alias_token       = token(ctx, alias_keyword),
-            .equals_sign_token = token(ctx, equals_sign),
+            .alias_token       = alias_keyword.range,
+            .equals_sign_token = equals_sign.range,
         };
     }
 
@@ -183,7 +183,7 @@ namespace {
         add_keyword(ctx, sizeof_keyword.range);
         return cst::expr::Sizeof {
             .type = require<parse_parenthesized<parse_type, "a type">>(ctx, "a parenthesized type"),
-            .sizeof_token = token(ctx, sizeof_keyword),
+            .sizeof_token = sizeof_keyword.range,
         };
     }
 
@@ -197,8 +197,8 @@ namespace {
             return cst::Match_arm {
                 .pattern         = pattern,
                 .handler         = handler,
-                .arrow_token     = token(ctx, arrow),
-                .semicolon_token = semicolon.transform(std::bind_front(token, std::ref(ctx))),
+                .arrow_token     = arrow.range,
+                .semicolon_token = semicolon.transform([](auto const& tok) { return tok.range; }),
             };
         });
     }
@@ -220,7 +220,7 @@ namespace {
             .arms = require<parse_braced<parse_match_arms, "one or more match arms">>(
                 ctx, "a '{' followed by match arms"),
             .scrutinee   = expression,
-            .match_token = token(ctx, match_keyword),
+            .match_token = match_keyword.range,
         };
     }
 
@@ -228,7 +228,7 @@ namespace {
         -> cst::Expression_variant
     {
         add_keyword(ctx, continue_keyword.range);
-        return cst::expr::Continue { token(ctx, continue_keyword) };
+        return cst::expr::Continue { continue_keyword.range };
     }
 
     auto extract_break(Context& ctx, lex::Token const& break_keyword) -> cst::Expression_variant
@@ -236,7 +236,7 @@ namespace {
         add_keyword(ctx, break_keyword.range);
         return cst::expr::Break {
             .result      = parse_expression(ctx),
-            .break_token = token(ctx, break_keyword),
+            .break_token = break_keyword.range,
         };
     }
 
@@ -245,7 +245,7 @@ namespace {
         add_keyword(ctx, ret_keyword.range);
         return cst::expr::Return {
             .expression = parse_expression(ctx),
-            .ret_token  = token(ctx, ret_keyword),
+            .ret_token  = ret_keyword.range,
         };
     }
 
@@ -255,7 +255,7 @@ namespace {
         return cst::expr::Addressof {
             .mutability      = parse_mutability(ctx),
             .expression      = require<parse_expression>(ctx, "the referenced expression"),
-            .ampersand_token = token(ctx, ampersand),
+            .ampersand_token = ampersand.range,
         };
     }
 
@@ -264,7 +264,7 @@ namespace {
         add_keyword(ctx, defer_keyword.range);
         return cst::expr::Defer {
             .expression  = require<parse_expression>(ctx, "an expression"),
-            .defer_token = token(ctx, defer_keyword),
+            .defer_token = defer_keyword.range,
         };
     }
 
@@ -281,7 +281,7 @@ namespace {
                 side_effects.push_back(
                     cst::expr::Block::Side_effect {
                         .expression               = expression.value(),
-                        .trailing_semicolon_token = token(ctx, semicolon.value()),
+                        .trailing_semicolon_token = semicolon.value().range,
                     });
             }
             else {
@@ -295,8 +295,8 @@ namespace {
         return cst::expr::Block {
             .effects           = std::move(side_effects),
             .result            = std::move(result_expression),
-            .open_brace_token  = token(ctx, brace_open),
-            .close_brace_token = token(ctx, brace_close),
+            .open_brace_token  = brace_open.range,
+            .close_brace_token = brace_close.range,
         };
     }
 
@@ -322,7 +322,7 @@ namespace {
     auto dispatch_parse_normal_expression(Context& ctx) -> std::optional<cst::Expression_variant>
     {
         switch (peek(ctx).type) {
-        case lex::Type::Underscore:   return cst::Wildcard { token(ctx, extract(ctx)) };
+        case lex::Type::Underscore:   return cst::Wildcard { extract(ctx).range };
         case lex::Type::Boolean:      return parse_boolean(ctx, extract(ctx));
         case lex::Type::String:       return parse_string(ctx, extract(ctx));
         case lex::Type::Integer:      return parse_integer(ctx, extract(ctx));
@@ -369,7 +369,7 @@ namespace {
                         .arguments = std::move(arguments).value(),
                         .invocable = expression,
                     },
-                    up_to_current(ctx, ctx.arena.ranges[ctx.arena.expressions[expression].range]));
+                    up_to_current(ctx, ctx.arena.expressions[expression].range));
             }
             return expression;
         });
@@ -377,7 +377,7 @@ namespace {
 
     auto extract_struct_field_access(
         db::Lower const          field_name,
-        cst::Range_id const      dot_token,
+        lsp::Range const         dot_token,
         cst::Expression_id const expression,
         Context&                 ctx) -> cst::Expression_variant
     {
@@ -407,7 +407,7 @@ namespace {
         };
     }
 
-    auto extract_member_access(cst::Range_id dot_token, cst::Expression_id base, Context& ctx)
+    auto extract_member_access(lsp::Range dot_token, cst::Expression_id base, Context& ctx)
         -> cst::Expression_variant
     {
         if (auto const name = parse_lower_name(ctx)) {
@@ -427,7 +427,7 @@ namespace {
                     return cst::expr::Tuple_field {
                         .base        = base,
                         .index       = static_cast<std::uint16_t>(index.value().value),
-                        .index_token = token(ctx, literal.value()),
+                        .index_token = literal.value().range,
                         .dot_token   = dot_token,
                     };
                 }
@@ -443,8 +443,8 @@ namespace {
             while (auto const dot = try_extract(ctx, lex::Type::Dot)) {
                 add_semantic_token(ctx, dot.value().range, Semantic::Operator_name);
                 expression = ctx.arena.expressions.push(
-                    extract_member_access(token(ctx, dot.value()), expression, ctx),
-                    up_to_current(ctx, ctx.arena.ranges[ctx.arena.expressions[expression].range]));
+                    extract_member_access(dot.value().range, expression, ctx),
+                    up_to_current(ctx, ctx.arena.expressions[expression].range));
             }
             return expression;
         });
@@ -457,10 +457,10 @@ namespace {
                 expression = ctx.arena.expressions.push(
                     cst::expr::Ascription {
                         .expression  = expression,
-                        .colon_token = token(ctx, colon.value()),
+                        .colon_token = colon.value().range,
                         .type        = require<parse_type>(ctx, "the ascribed type"),
                     },
-                    up_to_current(ctx, ctx.arena.ranges[ctx.arena.expressions[expression].range]));
+                    up_to_current(ctx, ctx.arena.expressions[expression].range));
             }
             return expression;
         });
@@ -522,7 +522,7 @@ namespace {
                             .right = rhs.value(),
                             .op    = db::Name { .id = id.value(), .range = op.range },
                         },
-                        ctx.arena.ranges.push(op.range));
+                        op.range);
                 }
                 else {
                     error_expected(ctx, "an operand");

@@ -14,8 +14,8 @@ namespace ki::par {
 
     struct Context {
         db::Database&                    db;
-        cst::Arena                       arena;
         db::Document_id                  doc_id;
+        cst::Arena                       arena;
         lex::State                       lex_state;
         std::optional<lex::Token>        next_token;
         std::optional<lsp::Position>     previous_token_end;
@@ -44,10 +44,7 @@ namespace ki::par {
     [[nodiscard]] auto require_extract(Context& ctx, lex::Type type) -> lex::Token;
 
     // Source range from `range` up to (but not including) the current token.
-    [[nodiscard]] auto up_to_current(Context& ctx, lsp::Range range) -> cst::Range_id;
-
-    // Add a token range to the CST arena, and return its id.
-    [[nodiscard]] auto token(Context& ctx, lex::Token const& token) -> cst::Range_id;
+    [[nodiscard]] auto up_to_current(Context& ctx, lsp::Range range) -> lsp::Range;
 
     // Add a semantic token corresponding to `range` to the current document.
     void add_semantic_token(Context& ctx, lsp::Range range, Semantic type);
@@ -102,7 +99,6 @@ namespace ki::par {
     auto parse_function_parameter(Context& ctx) -> std::optional<cst::Function_parameter>;
     auto parse_function_arguments(Context& ctx) -> std::optional<cst::Function_arguments>;
 
-    auto parse_definition(Context& ctx) -> std::optional<cst::Definition>;
     auto parse_mutability(Context& ctx) -> std::optional<cst::Mutability>;
     auto parse_type_annotation(Context& ctx) -> std::optional<cst::Type_annotation>;
     auto parse_type_root(Context& ctx) -> std::optional<cst::Type_id>;
@@ -145,8 +141,8 @@ namespace ki::par {
             add_punctuation(ctx, close.range);
             return cst::Surrounded {
                 .value       = std::move(value),
-                .open_token  = token(ctx, open),
-                .close_token = token(ctx, close),
+                .open_token  = open.range,
+                .close_token = close.range,
             };
         });
     }
@@ -173,7 +169,7 @@ namespace ki::par {
             sequence.elements.push_back(std::move(first_element).value());
             while (auto const separator = try_extract(ctx, separator_type)) {
                 add_punctuation(ctx, separator.value().range);
-                sequence.separator_tokens.push_back(token(ctx, separator.value()));
+                sequence.separator_tokens.push_back(separator.value().range);
                 sequence.elements.push_back(require<parser>(ctx, description.view()));
             }
         }
@@ -226,6 +222,14 @@ namespace ki::par {
     auto parse_integer(Context& ctx, lex::Token const& literal) -> std::optional<db::Integer>;
     auto parse_floating(Context& ctx, lex::Token const& literal) -> std::optional<db::Floating>;
     auto parse_boolean(Context& ctx, lex::Token const& literal) -> std::optional<db::Boolean>;
+
+    auto extract_function(Context& ctx, lex::Token const& fn_keyword) -> cst::Function;
+    auto extract_structure(Context& ctx, lex::Token const& struct_keyword) -> cst::Struct;
+    auto extract_enumeration(Context& ctx, lex::Token const& enum_keyword) -> cst::Enum;
+    auto extract_concept(Context& ctx, lex::Token const& concept_keyword) -> cst::Concept;
+    auto extract_alias(Context& ctx, lex::Token const& alias_keyword) -> cst::Alias;
+    auto extract_implementation(Context& ctx, lex::Token const& impl_keyword) -> cst::Impl_begin;
+    auto extract_submodule(Context& ctx, lex::Token const& module_keyword) -> cst::Submodule_begin;
 
 } // namespace ki::par
 

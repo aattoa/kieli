@@ -19,7 +19,6 @@ namespace ki::db {
 
 namespace ki::cst {
     struct Arena;
-    struct Definition;
     struct Expression;
     struct Pattern;
     struct Type;

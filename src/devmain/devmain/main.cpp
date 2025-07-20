@@ -11,93 +11,39 @@
 using namespace ki;
 
 namespace {
-    void debug_lex(db::Database& db, db::Document_id doc_id)
+    void analyze_document(db::Database& db, db::Document_id doc_id)
     {
-        auto state = lex::state(db.documents[doc_id].text);
-        auto token = lex::next(state);
-        while (token.type != lex::Type::End_of_input) {
-            std::print("{} ", lex::token_type_string(token.type));
-            token = lex::next(state);
+        auto ctx = res::context(doc_id);
+
+        db.documents[doc_id].info = {
+            .diagnostics     = {},
+            .semantic_tokens = {},
+            .inlay_hints     = {},
+            .references      = {},
+            .actions         = {},
+            .root_env_id     = ctx.root_env_id,
+            .signature_info  = std::nullopt,
+            .completion_info = std::nullopt,
+        };
+
+        auto symbol_ids = res::collect_document(db, ctx);
+
+        for (db::Symbol_id symbol_id : symbol_ids) {
+            res::resolve_symbol(db, ctx, symbol_id);
         }
-        std::println("");
+        for (db::Symbol_id symbol_id : symbol_ids) {
+            res::warn_if_unused(db, ctx, symbol_id);
+        }
+
+        db.documents[doc_id].arena = std::move(ctx.arena);
     }
 
-    void debug_parse(db::Database& db, db::Document_id doc_id)
-    {
-        auto text = fmt::format_module(
-            db.string_pool,
-            db.documents[doc_id].arena.cst,
-            fmt::Options {},
-            par::parse(db, doc_id));
-        std::print("{}", text);
-    }
-
-    void debug_desugar(db::Database& db, db::Document_id doc_id)
-    {
-        auto mod = par::parse(db, doc_id);
-        auto ctx = des::context(db, doc_id);
-        for (auto const& cst : mod.definitions) {
-            auto ast = des::desugar_definition(ctx, cst);
-            std::println("{}", ast::display(ctx.ast, db.string_pool, ast));
-        }
-    }
-
-    void run_debug_repl(void (&callback)(db::Database&, db::Document_id))
-    {
-        repl::read_history_file();
-
-        while (auto input = cpputil::input::read_line(">>> ")) {
-            if (input == "q") {
-                return;
-            }
-            if (input.value().find_first_not_of(' ') == std::string::npos) {
-                continue;
-            }
-            repl::add_history_line(input.value().c_str());
-
-            auto db     = db::database({});
-            auto doc_id = db::test_document(db, std::move(input).value());
-
-            try {
-                callback(db, doc_id);
-            }
-            catch (std::exception const& exception) {
-                std::print(std::cerr, "Error: {}\n\n", exception.what());
-            }
-
-            db::print_diagnostics(std::cerr, db, doc_id);
-        }
-    }
-
-    auto choose_and_run_repl(std::string_view name) -> int
-    {
-        if (name == "lex") {
-            run_debug_repl(debug_lex);
-            return EXIT_SUCCESS;
-        }
-        if (name == "par") {
-            run_debug_repl(debug_parse);
-            return EXIT_SUCCESS;
-        }
-        if (name == "des") {
-            run_debug_repl(debug_desugar);
-            return EXIT_SUCCESS;
-        }
-        std::println(std::cerr, "Error: Unrecognized REPL name: '{}'", name);
-        return EXIT_FAILURE;
-    }
-
-    auto dump(std::string_view filename, auto const& callback) -> int
+    auto check(std::string_view filename) -> int
     {
         auto db = db::database({});
         if (auto doc_id = db::read_document(db, filename)) {
-            try {
-                callback(db, doc_id.value());
-            }
-            catch (std::exception const& exception) {
-                std::print(std::cerr, "Error: {}\n\n", exception.what());
-            }
-            db::print_diagnostics(std::cerr, db, doc_id.value());
+            analyze_document(db, doc_id.value());
+            db::print_diagnostics(std::cout, db, doc_id.value());
             return EXIT_SUCCESS;
         }
         else {
@@ -139,14 +85,8 @@ auto main(int argc, char const* const* argv) -> int
             else if (*arg == "-h"sv or *arg == "--help"sv) {
                 std::println("Usage: {} [options]\n{}", program, help_string);
             }
-            else if (*arg == "cst"sv) {
-                return next() ? dump(*arg, debug_parse) : error("Missing file path");
-            }
-            else if (*arg == "ast"sv) {
-                return next() ? dump(*arg, debug_desugar) : error("Missing file path");
-            }
-            else if (*arg == "repl"sv) {
-                return next() ? choose_and_run_repl(*arg) : error("Missing REPL name");
+            else if (*arg == "check"sv) {
+                return next() ? check(*arg) : error("Missing file path");
             }
             else {
                 return error("Unrecognized option: '{}'\n\nFor help, use {} --help", *arg, program);

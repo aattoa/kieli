@@ -8,18 +8,24 @@ using namespace ki::res;
 
 namespace {
     struct Collector {
-        std::vector<db::Symbol_id>& symbol_order;
-        db::Database&               db;
-        Context&                    ctx;
-        des::Context&               des_ctx;
-        db::Environment_id          env_id;
+        db::Database&                   db;
+        Context&                        ctx;
+        des::Context&                   des_ctx;
+        std::vector<db::Environment_id> env_id_stack;
+        std::vector<db::Symbol_id>      symbol_order;
+
+        auto env_id() const -> db::Environment_id
+        {
+            cpputil::always_assert(not env_id_stack.empty());
+            return env_id_stack.back();
+        }
 
         void bind(db::Name name, db::Symbol_variant variant)
         {
-            symbol_order.push_back(bind_symbol(db, ctx, env_id, name, variant));
+            symbol_order.push_back(bind_symbol(db, ctx, env_id(), name, variant));
         }
 
-        void operator()(cst::Function& cst)
+        void operator()(cst::Function const& cst)
         {
             auto name = cst.signature.name;
             auto ast  = des::desugar_function(des_ctx, cst);
@@ -29,7 +35,7 @@ namespace {
                     .ast       = std::move(ast),
                     .signature = std::nullopt,
                     .body_id   = std::nullopt,
-                    .env_id    = env_id,
+                    .env_id    = env_id(),
                     .doc_id    = ctx.doc_id,
                     .name      = name,
                 });
@@ -37,7 +43,7 @@ namespace {
             bind(name, fun_id);
         }
 
-        void operator()(cst::Struct& cst)
+        void operator()(cst::Struct const& cst)
         {
             auto name = cst.constructor.name;
             auto ast  = des::desugar_struct(des_ctx, cst);
@@ -48,7 +54,7 @@ namespace {
                     .ast     = std::move(ast),
                     .hir     = std::nullopt,
                     .type_id = type_id,
-                    .env_id  = env_id,
+                    .env_id  = env_id(),
                     .doc_id  = ctx.doc_id,
                     .name    = name,
                 });
@@ -58,7 +64,7 @@ namespace {
             bind(name, struct_id);
         }
 
-        void operator()(cst::Enum& cst)
+        void operator()(cst::Enum const& cst)
         {
             auto name = cst.name;
             auto ast  = des::desugar_enum(des_ctx, cst);
@@ -69,7 +75,7 @@ namespace {
                     .ast     = std::move(ast),
                     .hir     = std::nullopt,
                     .type_id = type_id,
-                    .env_id  = env_id,
+                    .env_id  = env_id(),
                     .doc_id  = ctx.doc_id,
                     .name    = name,
                 });
@@ -79,7 +85,7 @@ namespace {
             bind(name, enum_id);
         }
 
-        void operator()(cst::Alias& cst)
+        void operator()(cst::Alias const& cst)
         {
             auto name = cst.name;
             auto ast  = des::desugar_alias(des_ctx, cst);
@@ -88,7 +94,7 @@ namespace {
                 hir::Alias_info {
                     .ast    = std::move(ast),
                     .hir    = std::nullopt,
-                    .env_id = env_id,
+                    .env_id = env_id(),
                     .doc_id = ctx.doc_id,
                     .name   = name,
                 });
@@ -96,7 +102,7 @@ namespace {
             bind(name, alias_id);
         }
 
-        void operator()(cst::Concept& cst)
+        void operator()(cst::Concept const& cst)
         {
             auto name = cst.name;
             auto ast  = des::desugar_concept(des_ctx, cst);
@@ -105,7 +111,7 @@ namespace {
                 hir::Concept_info {
                     .ast    = std::move(ast),
                     .hir    = std::nullopt,
-                    .env_id = env_id,
+                    .env_id = env_id(),
                     .doc_id = ctx.doc_id,
                     .name   = name,
                 });
@@ -113,29 +119,17 @@ namespace {
             bind(name, concept_id);
         }
 
-        void operator()(cst::Impl& impl)
+        void operator()(cst::Impl_begin const& impl)
         {
-            db::add_error(
-                db,
-                ctx.doc_id,
-                des_ctx.cst.ranges[impl.impl_token],
-                "impl blocks are not supported yet");
+            db::add_error(db, ctx.doc_id, impl.impl_token, "impl blocks are not supported yet");
         }
 
-        void operator()(cst::Submodule& module)
+        void operator()(cst::Submodule_begin const& module)
         {
-            if (module.template_parameters.has_value()) {
-                db::add_error(
-                    db,
-                    ctx.doc_id,
-                    module.name.range,
-                    "Module template parameters are not supported yet");
-            }
-
             auto child_env_id = ctx.arena.environments.push(
                 db::Environment {
                     .map       = {},
-                    .parent_id = env_id,
+                    .parent_id = env_id(),
                     .name_id   = module.name.id,
                     .doc_id    = ctx.doc_id,
                     .kind      = db::Environment_kind::Module,
@@ -144,49 +138,51 @@ namespace {
             auto module_id = ctx.arena.hir.modules.push(
                 hir::Module_info {
                     .mod_env_id = child_env_id,
-                    .env_id     = env_id,
+                    .env_id     = env_id(),
                     .doc_id     = ctx.doc_id,
                     .name       = module.name,
                 });
 
             bind(module.name, module_id);
 
-            auto collector = Collector {
-                .symbol_order = symbol_order,
-                .db           = db,
-                .ctx          = ctx,
-                .des_ctx      = des_ctx,
-                .env_id       = child_env_id,
-            };
+            env_id_stack.push_back(child_env_id);
+        }
 
-            for (cst::Definition& definition : module.definitions.value) {
-                std::visit(collector, definition.variant);
-            }
+        void operator()(cst::Block_end const&)
+        {
+            cpputil::always_assert(not env_id_stack.empty());
+            env_id_stack.pop_back();
         }
     };
 } // namespace
 
 auto ki::res::collect_document(db::Database& db, Context& ctx) -> std::vector<db::Symbol_id>
 {
-    std::vector<db::Symbol_id> symbol_order;
+    auto par_ctx = par::context(db, ctx.doc_id);
 
-    auto module  = par::parse(db, ctx.doc_id);
-    auto des_ctx = des::context(db, ctx.doc_id);
+    auto des_ctx = des::Context {
+        .db     = db,
+        .doc_id = ctx.doc_id,
+        .cst    = par_ctx.arena,
+        .ast    = ast::Arena {},
+    };
 
     auto collector = Collector {
-        .symbol_order = symbol_order,
         .db           = db,
         .ctx          = ctx,
         .des_ctx      = des_ctx,
-        .env_id       = ctx.root_env_id,
+        .env_id_stack = { ctx.root_env_id },
+        .symbol_order = {},
     };
 
-    for (cst::Definition& definition : module.definitions) {
-        std::visit(collector, definition.variant);
-    }
+    par::parse(par_ctx, collector);
 
-    ctx.arena.cst = std::move(db.documents[ctx.doc_id].arena.cst);
     ctx.arena.ast = std::move(des_ctx.ast);
 
-    return symbol_order;
+    if (db.config.semantic_tokens == db::Semantic_token_mode::Full) {
+        db.documents[ctx.doc_id].info.semantic_tokens = std::move(par_ctx.semantic_tokens);
+        // TODO: update identifier tokens with binary search during symbol resolution
+    }
+
+    return std::move(collector.symbol_order);
 }
