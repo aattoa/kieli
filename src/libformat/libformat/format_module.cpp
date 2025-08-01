@@ -1,6 +1,7 @@
 #include <libutl/utilities.hpp>
 #include <libformat/internals.hpp>
 #include <libformat/format.hpp>
+#include <libparse/parse.hpp>
 
 using namespace ki;
 using namespace ki::fmt;
@@ -8,43 +9,36 @@ using namespace ki::fmt;
 // TODO: collapse string literals, expand integer literals, insert digit separators
 
 namespace {
-    auto do_format(Context& ctx, auto const& x) -> std::string
+    void format_function_signature(Context& ctx, cst::Function_signature const& signature)
     {
-        State state { .ctx = ctx, .output = {} };
-        ki::fmt::format(state, x);
-        return std::move(state.output);
+        std::print(ctx.stream, "fn {}", ctx.db.string_pool.get(signature.name.id));
+        format(ctx, signature.template_parameters);
+        format(ctx, signature.function_parameters);
+        format(ctx, signature.return_type);
     }
 
-    void format_function_signature(State& state, cst::Function_signature const& signature)
+    void format_type_signature(Context& ctx, cst::Type_signature const& signature)
     {
-        format(state, "fn {}", state.ctx.db.string_pool.get(signature.name.id));
-        format(state, signature.template_parameters);
-        format(state, signature.function_parameters);
-        format(state, signature.return_type);
-    }
-
-    void format_type_signature(State& state, cst::Type_signature const& signature)
-    {
-        format(state, "alias {}", state.ctx.db.string_pool.get(signature.name.id));
-        format(state, signature.template_parameters);
+        std::print(ctx.stream, "alias {}", ctx.db.string_pool.get(signature.name.id));
+        format(ctx, signature.template_parameters);
         if (signature.concepts_colon_token.has_value()) {
-            format(state, ": ");
-            format_separated(state, signature.concepts.elements, " + ");
+            std::print(ctx.stream, ": ");
+            format_separated(ctx, signature.concepts.elements, " + ");
         }
     }
 
-    void format_constructor(State& state, cst::Constructor_body const& body)
+    void format_constructor(Context& ctx, cst::Constructor_body const& body)
     {
         auto const visitor = utl::Overload {
             [&](cst::Struct_constructor const& constructor) {
-                format(state, " {{ ");
-                format_comma_separated(state, constructor.fields.value.elements);
-                format(state, " }}");
+                std::print(ctx.stream, " {{ ");
+                format_comma_separated(ctx, constructor.fields.value.elements);
+                std::print(ctx.stream, " }}");
             },
             [&](cst::Tuple_constructor const& constructor) {
-                format(state, "(");
-                format_comma_separated(state, constructor.types.value.elements);
-                format(state, ")");
+                std::print(ctx.stream, "(");
+                format_comma_separated(ctx, constructor.types.value.elements);
+                std::print(ctx.stream, ")");
             },
             [&](cst::Unit_constructor const&) {},
         };
@@ -52,205 +46,161 @@ namespace {
     }
 } // namespace
 
-void ki::fmt::format(State& state, cst::Function const& function)
+void ki::fmt::format(Context& ctx, cst::Function const& function)
 {
-    format_function_signature(state, function.signature);
-    cst::Expression const& body = state.ctx.arena.expressions[function.body];
+    indent(ctx);
+    format_function_signature(ctx, function.signature);
+    cst::Expression const& body = ctx.arena.expressions[function.body];
 
-    switch (state.ctx.options.function_body) {
+    switch (ctx.options.function_body) {
     case Function_body::Leave_as_is:
-    {
         if (function.equals_sign_token.has_value()) {
-            format(state, " = ");
-            format(state, body);
+            std::print(ctx.stream, " = ");
+            format(ctx, body);
         }
         else {
-            format(state, " ");
-            format(state, body);
+            std::print(ctx.stream, " ");
+            format(ctx, body);
         }
         return;
-    }
     case Function_body::Normalize_to_equals_sign:
-    {
         if (auto const* const block = std::get_if<cst::expr::Block>(&body.variant)) {
             if (block->result.has_value() and block->effects.empty()) {
-                format(state, " = ");
-                format(state, block->result.value());
+                std::print(ctx.stream, " = ");
+                format(ctx, block->result.value());
             }
             else {
-                format(state, " ");
-                format(state, function.body);
+                std::print(ctx.stream, " ");
+                format(ctx, function.body);
             }
         }
         else {
-            format(state, " = ");
-            format(state, function.body);
+            std::print(ctx.stream, " = ");
+            format(ctx, function.body);
         }
         return;
-    }
     case Function_body::Normalize_to_block:
-    {
         if (std::holds_alternative<cst::expr::Block>(body.variant)) {
-            format(state, " ");
-            format(state, function.body);
+            std::print(ctx.stream, " ");
+            format(ctx, function.body);
         }
         else {
-            format(state, " {{ ");
-            format(state, function.body);
-            format(state, " }}");
+            std::print(ctx.stream, " {{ ");
+            format(ctx, function.body);
+            std::print(ctx.stream, " }}");
         }
         return;
     }
-    default: cpputil::unreachable();
-    }
+
+    cpputil::unreachable();
 }
 
-void ki::fmt::format(State& state, cst::Struct const& structure)
+void ki::fmt::format(Context& ctx, cst::Struct const& structure)
 {
-    format(state, "struct {}", state.ctx.db.string_pool.get(structure.constructor.name.id));
-    format(state, structure.template_parameters);
-    format_constructor(state, structure.constructor.body);
+    indent(ctx);
+    std::print(ctx.stream, "struct {}", ctx.db.string_pool.get(structure.constructor.name.id));
+    format(ctx, structure.template_parameters);
+    format_constructor(ctx, structure.constructor.body);
 }
 
-void ki::fmt::format(State& state, cst::Enum const& enumeration)
+void ki::fmt::format(Context& ctx, cst::Enum const& enumeration)
 {
-    format(state, "enum {}", state.ctx.db.string_pool.get(enumeration.name.id));
-    format(state, enumeration.template_parameters);
-    format(state, " = ");
+    indent(ctx);
+    std::print(ctx.stream, "enum {}", ctx.db.string_pool.get(enumeration.name.id));
+    format(ctx, enumeration.template_parameters);
+    std::print(ctx.stream, " = ");
 
     auto const& ctors = enumeration.constructors.elements;
     cpputil::always_assert(not ctors.empty());
 
-    format(state, "{}", state.ctx.db.string_pool.get(ctors.front().name.id));
-    format_constructor(state, ctors.front().body);
+    std::print(ctx.stream, "{}", ctx.db.string_pool.get(ctors.front().name.id));
+    format_constructor(ctx, ctors.front().body);
 
-    indent(state, [&] {
+    indent(ctx, [&] {
         for (auto it = ctors.begin() + 1; it != ctors.end(); ++it) {
-            format(state, "{}| {}", newline(state), state.ctx.db.string_pool.get(it->name.id));
-            format_constructor(state, it->body);
+            newline(ctx);
+            std::print(ctx.stream, "| {}", ctx.db.string_pool.get(it->name.id));
+            format_constructor(ctx, it->body);
         }
     });
 }
 
-void ki::fmt::format(State& state, cst::Alias const& alias)
+void ki::fmt::format(Context& ctx, cst::Alias const& alias)
 {
-    format(state, "alias {}", state.ctx.db.string_pool.get(alias.name.id));
-    format(state, alias.template_parameters);
-    format(state, " = ");
-    format(state, alias.type);
+    indent(ctx);
+    std::print(ctx.stream, "alias {}", ctx.db.string_pool.get(alias.name.id));
+    format(ctx, alias.template_parameters);
+    std::print(ctx.stream, " = ");
+    format(ctx, alias.type);
 }
 
-void ki::fmt::format(State& state, cst::Concept const& concept_)
+void ki::fmt::format(Context& ctx, cst::Concept const& concept_)
 {
-    format(state, "concept {}", state.ctx.db.string_pool.get(concept_.name.id));
-    format(state, concept_.template_parameters);
-    format(state, " {{");
-    indent(state, [&] {
+    indent(ctx);
+    std::print(ctx.stream, "concept {}", ctx.db.string_pool.get(concept_.name.id));
+    format(ctx, concept_.template_parameters);
+    std::print(ctx.stream, " {{");
+    indent(ctx, [&] {
         for (auto const& requirement : concept_.requirements) {
             auto const visitor = utl::Overload {
                 [&](cst::Function_signature const& signature) {
-                    format_function_signature(state, signature);
+                    format_function_signature(ctx, signature);
                 },
                 [&](cst::Type_signature const& signature) {
-                    format_type_signature(state, signature);
+                    format_type_signature(ctx, signature);
                 },
             };
-            format(state, "{}", newline(state));
+            newline(ctx);
             std::visit(visitor, requirement);
         }
     });
-    format(state, "{}}}", newline(state));
+    newline(ctx);
+    std::print(ctx.stream, "}}");
 }
 
-void ki::fmt::format(State& state, cst::Impl_begin const& impl)
+void ki::fmt::format(Context& ctx, cst::Impl_begin const& impl)
 {
-    format(state, "impl");
-    format(state, impl.template_parameters);
-    format(state, " ");
-    format(state, impl.self_type);
-    format(state, " {{");
-    ++state.ctx.indentation;
+    indent(ctx);
+    std::print(ctx.stream, "impl");
+    format(ctx, impl.template_parameters);
+    std::print(ctx.stream, " ");
+    format(ctx, impl.self_type);
+    std::print(ctx.stream, " {{");
+    ++ctx.indentation;
+    ctx.did_open_block = true;
 }
 
-void ki::fmt::format(State& state, cst::Submodule_begin const& module)
+void ki::fmt::format(Context& ctx, cst::Submodule_begin const& module)
 {
-    format(state, "module {}", state.ctx.db.string_pool.get(module.name.id));
-    format(state, " {{");
-    ++state.ctx.indentation;
+    indent(ctx);
+    std::print(ctx.stream, "module {} {{", ctx.db.string_pool.get(module.name.id));
+    ++ctx.indentation;
+    ctx.did_open_block = true;
 }
 
-void ki::fmt::format(State& state, cst::Block_end const&)
+void ki::fmt::format(Context& ctx, cst::Block_end const&)
 {
-    --state.ctx.indentation;
-    format(state, "}}");
+    --ctx.indentation;
+    newline(ctx);
+    std::print(ctx.stream, "}}");
 }
 
-auto ki::fmt::format(Context& ctx, cst::Function const& function) -> std::string
+auto ki::fmt::format_document(
+    std::ostream& stream, db::Database& db, db::Document_id doc_id, Options const& options)
+    -> lsp::Range
 {
-    return do_format(ctx, function);
-}
+    auto par_ctx = par::context(db, doc_id);
 
-auto ki::fmt::format(Context& ctx, cst::Struct const& structure) -> std::string
-{
-    return do_format(ctx, structure);
-}
+    auto fmt_ctx = Context {
+        .db      = db,
+        .arena   = par_ctx.arena,
+        .stream  = stream,
+        .options = options,
+    };
 
-auto ki::fmt::format(Context& ctx, cst::Enum const& enumeration) -> std::string
-{
-    return do_format(ctx, enumeration);
-}
+    par::parse(par_ctx, [&](auto const& definition) { format(fmt_ctx, definition); });
 
-auto ki::fmt::format(Context& ctx, cst::Alias const& alias) -> std::string
-{
-    return do_format(ctx, alias);
-}
+    std::print(stream, "\n");
 
-auto ki::fmt::format(Context& ctx, cst::Concept const& concept_) -> std::string
-{
-    return do_format(ctx, concept_);
-}
-
-auto ki::fmt::format(Context& ctx, cst::Impl_begin const& impl) -> std::string
-{
-    return do_format(ctx, impl);
-}
-
-auto ki::fmt::format(Context& ctx, cst::Submodule_begin const& submodule) -> std::string
-{
-    return do_format(ctx, submodule);
-}
-
-auto ki::fmt::format(Context& ctx, cst::Block_end const& block_end) -> std::string
-{
-    return do_format(ctx, block_end);
-}
-
-auto ki::fmt::format(Context& ctx, cst::Expression const& expression) -> std::string
-{
-    return do_format(ctx, expression);
-}
-
-auto ki::fmt::format(Context& ctx, cst::Pattern const& pattern) -> std::string
-{
-    return do_format(ctx, pattern);
-}
-
-auto ki::fmt::format(Context& ctx, cst::Type const& type) -> std::string
-{
-    return do_format(ctx, type);
-}
-
-auto ki::fmt::format(Context& ctx, cst::Expression_id expression_id) -> std::string
-{
-    return do_format(ctx, ctx.arena.expressions[expression_id]);
-}
-
-auto ki::fmt::format(Context& ctx, cst::Pattern_id pattern_id) -> std::string
-{
-    return do_format(ctx, ctx.arena.patterns[pattern_id]);
-}
-
-auto ki::fmt::format(Context& ctx, cst::Type_id type_id) -> std::string
-{
-    return do_format(ctx, ctx.arena.types[type_id]);
+    return lsp::Range(lsp::Position {}, par_ctx.lex_state.position);
 }

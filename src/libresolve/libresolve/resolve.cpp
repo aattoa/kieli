@@ -1,6 +1,5 @@
 #include <libutl/utilities.hpp>
 #include <libresolve/resolve.hpp>
-#include <libcompiler/ast/display.hpp>
 
 auto ki::res::context(db::Document_id doc_id) -> Context
 {

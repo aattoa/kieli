@@ -13,14 +13,10 @@
 - Unique zero-sized type for each function, coerce to function pointer type
 - Unification rollback logs?
 - Warn when last expression in block is defer
-- Lazily parse module when collecting, no Definition_variant
-- Move diagnostics from libdesugar
 - Collect semantic tokens for identifiers on path resolution
 - Provide a best-effort type when expression resolution fails
 
 ## Language server
-- Semantic tokens for escape sequences
-- Handle command line properly
 - Avoid collecting hints, actions, and references when the client does not support them
 - Option to display intermediate representations on hover
 - Thread pool, monitor client PID on main thread
@@ -46,16 +42,15 @@
 
 ## Executable
 - `kieli build`: Build given file or entire project
-- `kieli check`: Analyze given file or entire project but do not generate code
 - `kieli clean`: Clean up compiler output directory
-- `kieli format`: Format given file or entire project
 - `kieli test`: Run all tests in the current project
 - `kieli init`: Initialize a project in the current directory
 - `kieli new`: Initialize a project in a new directory
 - `kieli run`: Build and run given file or project main executable
-- `kieli dump-ast`: Dump the AST for given file
 
 ## Miscellaneous
+- Error limit, return error code from driver
+- Generic diagnostic consumer, format to stdout/stderr for the driver
 - Inline concepts
 - libtommath for arbitrary precision integers?
 - String interpolation

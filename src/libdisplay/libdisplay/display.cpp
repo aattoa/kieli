@@ -1,16 +1,18 @@
 #include <libutl/utilities.hpp>
-#include <libcompiler/ast/display.hpp>
+#include <libparse/parse.hpp>
+#include <libdesugar/desugar.hpp>
+#include <libdisplay/display.hpp>
 
 using namespace ki;
 using namespace ki::ast;
 
 namespace {
     struct Display_state {
-        std::string             output;
-        std::string             indent;
-        bool                    unicode {};
-        Arena const&            arena;
-        utl::String_pool const& pool;
+        db::Database const& db;
+        Arena const&        arena;
+        std::ostream&       stream;
+        std::string         indent;
+        bool                unicode {};
     };
 
     enum struct Last : std::uint8_t { No, Yes };
@@ -20,22 +22,15 @@ namespace {
         { do_display(state, node) } -> std::same_as<void>;
     };
 
-    template <typename... Args>
-    auto write_line(Display_state& state, std::format_string<Args...> const fmt, Args&&... args)
-    {
-        std::format_to(std::back_inserter(state.output), fmt, std::forward<Args>(args)...);
-        state.output.push_back('\n');
-    }
-
     void write_indent(Display_state& state, Last last)
     {
-        state.output.append(state.indent);
+        std::print(state.stream, "{}", state.indent);
         if (last == Last::Yes) {
-            state.output.append(state.unicode ? "└─ " : "+- ");
+            std::print(state.stream, "{}", state.unicode ? "└─ " : "+- ");
             state.indent.append("   ");
         }
         else {
-            state.output.append(state.unicode ? "├─ " : "|- ");
+            std::print(state.stream, "{}", state.unicode ? "├─ " : "|- ");
             state.indent.append(state.unicode ? "│  " : "|  ");
         }
     }
@@ -55,7 +50,7 @@ namespace {
         displayable auto const& node)
     {
         write_node(state, last, [&] {
-            write_line(state, "{}", description);
+            std::println(state.stream, "{}", description);
             write_node(state, Last::Yes, [&] { do_display(state, node); });
         });
     }
@@ -68,7 +63,7 @@ namespace {
         std::vector<T> const&  vector)
     {
         write_node(state, last, [&] {
-            write_line(state, "{}", description);
+            std::println(state.stream, "{}", description);
             for (std::size_t i = 0; i != vector.size(); ++i) {
                 write_node(state, i == vector.size() - 1 ? Last::Yes : Last::No, [&] {
                     do_display(state, vector[i]);
@@ -77,7 +72,6 @@ namespace {
         });
     }
 
-    void do_display(Display_state& state, Definition const& definition);
     void do_display(Display_state& state, Expression const& expression);
     void do_display(Display_state& state, Pattern const& pattern);
     void do_display(Display_state& state, Type const& type);
@@ -99,22 +93,22 @@ namespace {
 
     void do_display(Display_state& state, Wildcard const&)
     {
-        write_line(state, "built-in wildcard");
+        std::println(state.stream, "built-in wildcard");
     }
 
     void do_display(Display_state& state, db::Name const& name)
     {
-        write_line(state, "{:?}", state.pool.get(name.id));
+        std::println(state.stream, "{:?}", state.db.string_pool.get(name.id));
     }
 
     void do_display(Display_state& state, Mutability const& mutability)
     {
         auto const visitor = utl::Overload {
-            [&](db::Mutability concrete) { //
-                write_line(state, "concrete {}", db::mutability_string(concrete));
+            [&](db::Mutability concrete) {
+                std::println(state.stream, "concrete {}", db::mutability_string(concrete));
             },
-            [&](Parameterized_mutability const& parameterized) {
-                write_line(state, "parameterized {}", state.pool.get(parameterized.name.id));
+            [&](Parameterized_mutability const& m) {
+                std::println(state.stream, "parameterized {}", state.db.string_pool.get(m.name.id));
             },
         };
         std::visit(visitor, mutability.variant);
@@ -127,7 +121,7 @@ namespace {
 
     void do_display(Display_state& state, Path_segment const& segment)
     {
-        write_line(state, "path segment");
+        std::println(state.stream, "path segment");
         if (segment.template_arguments.has_value()) {
             display_vector_node(
                 state, Last::No, "template arguments", segment.template_arguments.value());
@@ -138,8 +132,8 @@ namespace {
     void do_display(Display_state& state, Path_root const& root)
     {
         auto const visitor = utl::Overload {
-            [&](std::monostate) { write_line(state, "none"); },
-            [&](Path_root_global const&) { write_line(state, "global"); },
+            [&](std::monostate) { std::println(state.stream, "none"); },
+            [&](Path_root_global const&) { std::println(state.stream, "global"); },
             [&](Type_id const type) { do_display(state, type); },
         };
         std::visit(visitor, root);
@@ -147,7 +141,7 @@ namespace {
 
     void do_display(Display_state& state, Path const& path)
     {
-        write_line(state, "path");
+        std::println(state.stream, "path");
         display_node(state, Last::No, "root", path.root);
         display_vector_node(state, Last::Yes, "segments", path.segments);
     }
@@ -157,7 +151,7 @@ namespace {
         auto display_default = [&](auto const& argument) {
             if (argument.has_value()) {
                 write_node(state, Last::No, [&] {
-                    write_line(state, "default argument");
+                    std::println(state.stream, "default argument");
                     write_node(state, Last::Yes, [&] {
                         auto const visitor
                             = [&](auto const& alternative) { do_display(state, alternative); };
@@ -168,19 +162,19 @@ namespace {
         };
         auto const visitor = utl::Overload {
             [&](Template_type_parameter const& parameter) {
-                write_line(state, "type parameter");
+                std::println(state.stream, "type parameter");
                 display_default(parameter.default_argument);
                 display_node(state, Last::No, "name", parameter.name);
                 display_vector_node(state, Last::Yes, "concepts", parameter.concepts);
             },
             [&](Template_value_parameter const& parameter) {
-                write_line(state, "value parameter");
+                std::println(state.stream, "value parameter");
                 display_default(parameter.default_argument);
                 display_node(state, Last::No, "name", parameter.name);
                 display_node(state, Last::Yes, "type", parameter.type);
             },
             [&](Template_mutability_parameter const& parameter) {
-                write_line(state, "mutability parameter");
+                std::println(state.stream, "mutability parameter");
                 display_default(parameter.default_argument);
                 display_node(state, Last::Yes, "name", parameter.name);
             },
@@ -198,31 +192,31 @@ namespace {
 
     void do_display(Display_state& state, Loop_source const source)
     {
-        write_line(state, "loop source: {}", describe_loop_source(source));
+        std::println(state.stream, "loop source: {}", describe_loop_source(source));
     }
 
     void do_display(Display_state& state, Conditional_source const source)
     {
-        write_line(state, "conditional source: {}", describe_conditional_source(source));
+        std::println(state.stream, "conditional source: {}", describe_conditional_source(source));
     }
 
     void do_display(Display_state& state, Field const& field)
     {
-        write_line(state, "field");
+        std::println(state.stream, "field");
         display_node(state, Last::No, "name", field.name);
         display_node(state, Last::Yes, "type", field.type);
     }
 
     void do_display(Display_state& state, Field_init const& field)
     {
-        write_line(state, "struct field initializer");
+        std::println(state.stream, "struct field initializer");
         display_node(state, Last::No, "name", field.name);
         display_node(state, Last::Yes, "expression", field.expression);
     }
 
     void do_display(Display_state& state, patt::Field const& field)
     {
-        write_line(state, "field");
+        std::println(state.stream, "field");
         display_node(state, Last::No, "name", field.name);
         display_node(state, Last::Yes, "pattern", field.pattern);
     }
@@ -231,14 +225,14 @@ namespace {
     {
         auto const visitor = utl::Overload {
             [&](Struct_constructor const& constructor) {
-                write_line(state, "struct constructor");
+                std::println(state.stream, "struct constructor");
                 display_vector_node(state, Last::Yes, "fields", constructor.fields);
             },
             [&](Tuple_constructor const& constructor) {
-                write_line(state, "tuple constructor");
+                std::println(state.stream, "tuple constructor");
                 display_vector_node(state, Last::Yes, "types", constructor.types);
             },
-            [&](Unit_constructor const&) { write_line(state, "unit constructor"); },
+            [&](Unit_constructor const&) { std::println(state.stream, "unit constructor"); },
         };
         std::visit(visitor, body);
     }
@@ -247,28 +241,28 @@ namespace {
     {
         auto const visitor = utl::Overload {
             [&](patt::Struct_constructor const& constructor) {
-                write_line(state, "struct constructor");
+                std::println(state.stream, "struct constructor");
                 display_vector_node(state, Last::Yes, "fields", constructor.fields);
             },
             [&](patt::Tuple_constructor const& constructor) {
-                write_line(state, "tuple constructor");
+                std::println(state.stream, "tuple constructor");
                 display_vector_node(state, Last::Yes, "fields", constructor.fields);
             },
-            [&](patt::Unit_constructor const&) { write_line(state, "unit constructor"); },
+            [&](patt::Unit_constructor const&) { std::println(state.stream, "unit constructor"); },
         };
         std::visit(visitor, body);
     }
 
     void do_display(Display_state& state, Constructor const& constructor)
     {
-        write_line(state, "constructor");
+        std::println(state.stream, "constructor");
         display_node(state, Last::No, "name", constructor.name);
         display_node(state, Last::Yes, "body", constructor.body);
     }
 
     void do_display(Display_state& state, Function_parameter const& parameter)
     {
-        write_line(state, "function parameter");
+        std::println(state.stream, "function parameter");
         display_node(state, Last::No, "type", parameter.type);
         if (parameter.default_argument.has_value()) {
             display_node(state, Last::No, "default argument", parameter.default_argument.value());
@@ -278,7 +272,7 @@ namespace {
 
     void do_display(Display_state& state, Function_signature const& signature)
     {
-        write_line(state, "function signature");
+        std::println(state.stream, "function signature");
         display_node(state, Last::No, "name", signature.name);
         display_template_parameters_node(state, Last::No, signature.template_parameters);
         display_node(state, Last::No, "return type", signature.return_type);
@@ -287,35 +281,35 @@ namespace {
 
     void do_display(Display_state& state, Type_signature const& signature)
     {
-        write_line(state, "type signature");
+        std::println(state.stream, "type signature");
         display_node(state, Last::No, "name", signature.name);
         display_vector_node(state, Last::Yes, "concepts", signature.concepts);
     }
 
     void do_display(Display_state& state, Match_arm const& arm)
     {
-        write_line(state, "arm");
+        std::println(state.stream, "arm");
         display_node(state, Last::No, "pattern", arm.pattern);
         display_node(state, Last::Yes, "handler", arm.expression);
     }
 
     void do_display(Display_state& state, Function const& function)
     {
-        write_line(state, "function");
+        std::println(state.stream, "function");
         display_node(state, Last::No, "signature", function.signature);
         display_node(state, Last::Yes, "body", function.body);
     }
 
     void do_display(Display_state& state, Struct const& structure)
     {
-        write_line(state, "structure");
+        std::println(state.stream, "structure");
         display_template_parameters_node(state, Last::No, structure.template_parameters);
         display_node(state, Last::Yes, "constructor", structure.constructor);
     }
 
     void do_display(Display_state& state, Enum const& enumeration)
     {
-        write_line(state, "enumeration");
+        std::println(state.stream, "enumeration");
         display_node(state, Last::No, "name", enumeration.name);
         display_template_parameters_node(state, Last::No, enumeration.template_parameters);
         display_vector_node(state, Last::Yes, "constructors", enumeration.constructors);
@@ -323,7 +317,7 @@ namespace {
 
     void do_display(Display_state& state, Alias const& alias)
     {
-        write_line(state, "type alias");
+        std::println(state.stream, "type alias");
         display_node(state, Last::No, "name", alias.name);
         display_template_parameters_node(state, Last::No, alias.template_parameters);
         display_node(state, Last::Yes, "aliased type", alias.type);
@@ -331,47 +325,31 @@ namespace {
 
     void do_display(Display_state& state, Concept const& concept_)
     {
-        write_line(state, "concept");
+        std::println(state.stream, "concept");
         display_node(state, Last::No, "name", concept_.name);
         display_template_parameters_node(state, Last::No, concept_.template_parameters);
         display_vector_node(state, Last::No, "functions", concept_.function_signatures);
         display_vector_node(state, Last::Yes, "types", concept_.type_signatures);
     }
 
-    void do_display(Display_state& state, Impl const& implementation)
-    {
-        write_line(state, "implementation");
-        display_template_parameters_node(state, Last::No, implementation.template_parameters);
-        display_node(state, Last::No, "type", implementation.type);
-        display_vector_node(state, Last::Yes, "definitions", implementation.definitions);
-    }
-
-    void do_display(Display_state& state, Submodule const& submodule)
-    {
-        write_line(state, "submodule");
-        display_node(state, Last::No, "name", submodule.name);
-        display_template_parameters_node(state, Last::No, submodule.template_parameters);
-        display_vector_node(state, Last::Yes, "definitions", submodule.definitions);
-    }
-
     void display_literal(Display_state& state, db::Integer const& integer)
     {
-        write_line(state, "integer literal {}", integer.value);
+        std::println(state.stream, "integer literal {}", integer.value);
     }
 
     void display_literal(Display_state& state, db::Floating const& floating)
     {
-        write_line(state, "floating point literal {}", floating.value);
+        std::println(state.stream, "floating point literal {}", floating.value);
     }
 
     void display_literal(Display_state& state, db::Boolean const& boolean)
     {
-        write_line(state, "boolean literal {}", boolean.value);
+        std::println(state.stream, "boolean literal {}", boolean.value);
     }
 
     void display_literal(Display_state& state, db::String const& string)
     {
-        write_line(state, "string literal {:?}", state.pool.get(string.id));
+        std::println(state.stream, "string literal {:?}", state.db.string_pool.get(string.id));
     }
 
     struct Expression_display_visitor {
@@ -395,58 +373,58 @@ namespace {
 
         void operator()(expr::Array const& array)
         {
-            write_line(state, "array literal");
+            std::println(state.stream, "array literal");
             display_vector_node(state, Last::Yes, "elements", array.elements);
         }
 
         void operator()(expr::Tuple const& tuple)
         {
-            write_line(state, "tuple");
+            std::println(state.stream, "tuple");
             display_vector_node(state, Last::Yes, "fields", tuple.fields);
         }
 
         void operator()(expr::Loop const& loop)
         {
-            write_line(state, "loop");
+            std::println(state.stream, "loop");
             display_node(state, Last::No, "body", loop.body);
             display_node(state, Last::Yes, "source", loop.source);
         }
 
         void operator()(expr::Break const& break_)
         {
-            write_line(state, "break");
+            std::println(state.stream, "break");
             display_node(state, Last::Yes, "result", break_.result);
         }
 
         void operator()(expr::Continue const&)
         {
-            write_line(state, "continue");
+            std::println(state.stream, "continue");
         }
 
         void operator()(expr::Block const& block)
         {
-            write_line(state, "block");
+            std::println(state.stream, "block");
             display_vector_node(state, Last::No, "side effects", block.effects);
             display_node(state, Last::Yes, "result", block.result);
         }
 
         void operator()(expr::Function_call const& call)
         {
-            write_line(state, "function call");
+            std::println(state.stream, "function call");
             display_node(state, Last::No, "invocable", call.invocable);
             display_vector_node(state, Last::Yes, "arguments", call.arguments);
         }
 
         void operator()(expr::Struct_init const& initializer)
         {
-            write_line(state, "struct initializer");
+            std::println(state.stream, "struct initializer");
             display_node(state, Last::No, "constructor path", initializer.path);
             display_vector_node(state, Last::Yes, "field initializers", initializer.fields);
         }
 
         void operator()(expr::Infix_call const& application)
         {
-            write_line(state, "infix call");
+            std::println(state.stream, "infix call");
             display_node(state, Last::No, "left operand", application.left);
             display_node(state, Last::No, "right operand", application.right);
             display_node(state, Last::Yes, "operator", application.op);
@@ -454,28 +432,30 @@ namespace {
 
         void operator()(expr::Struct_field const& field)
         {
-            write_line(state, "struct index");
+            std::println(state.stream, "struct index");
             display_node(state, Last::No, "base expression", field.base);
             display_node(state, Last::Yes, "field name", field.name);
         }
 
         void operator()(expr::Tuple_field const& field)
         {
-            write_line(state, "tuple index");
+            std::println(state.stream, "tuple index");
             display_node(state, Last::No, "base expression", field.base);
-            write_node(state, Last::Yes, [&] { write_line(state, "field index {}", field.index); });
+            write_node(state, Last::Yes, [&] {
+                std::println(state.stream, "field index {}", field.index);
+            });
         }
 
         void operator()(expr::Array_index const& index)
         {
-            write_line(state, "array index");
+            std::println(state.stream, "array index");
             display_node(state, Last::No, "base expression", index.base);
             display_node(state, Last::Yes, "index expression", index.index);
         }
 
         void operator()(expr::Method_call const& call)
         {
-            write_line(state, "method call");
+            std::println(state.stream, "method call");
             display_node(state, Last::No, "method name", call.name);
             display_node(state, Last::No, "base expression", call.expression);
             if (call.template_arguments.has_value()) {
@@ -487,7 +467,7 @@ namespace {
 
         void operator()(expr::Conditional const& conditional)
         {
-            write_line(state, "conditional");
+            std::println(state.stream, "conditional");
             display_node(state, Last::No, "condition", conditional.condition);
             display_node(state, Last::No, "true branch", conditional.true_branch);
             display_node(state, Last::No, "false branch", conditional.false_branch);
@@ -496,21 +476,21 @@ namespace {
 
         void operator()(expr::Match const& match)
         {
-            write_line(state, "match");
+            std::println(state.stream, "match");
             display_node(state, Last::No, "scrutinee", match.scrutinee);
             display_vector_node(state, Last::Yes, "arms", match.arms);
         }
 
         void operator()(expr::Ascription const& ascription)
         {
-            write_line(state, "type ascription");
+            std::println(state.stream, "type ascription");
             display_node(state, Last::No, "expression", ascription.expression);
             display_node(state, Last::Yes, "ascribed type", ascription.type);
         }
 
         void operator()(expr::Let const& let)
         {
-            write_line(state, "let binding");
+            std::println(state.stream, "let binding");
             if (let.type.has_value()) {
                 display_node(state, Last::No, "type", let.type.value());
             }
@@ -520,45 +500,45 @@ namespace {
 
         void operator()(expr::Type_alias const& alias)
         {
-            write_line(state, "local type alias");
+            std::println(state.stream, "local type alias");
             display_node(state, Last::No, "name", alias.name);
             display_node(state, Last::Yes, "aliased type", alias.type);
         }
 
         void operator()(expr::Return const& ret)
         {
-            write_line(state, "ret");
+            std::println(state.stream, "ret");
             display_node(state, Last::Yes, "returned expression", ret.expression);
         }
 
         void operator()(expr::Sizeof const& sizeof_)
         {
-            write_line(state, "sizeof");
+            std::println(state.stream, "sizeof");
             display_node(state, Last::Yes, "inspected type", sizeof_.type);
         }
 
         void operator()(expr::Addressof const& addressof)
         {
-            write_line(state, "addressof");
+            std::println(state.stream, "addressof");
             display_node(state, Last::No, "reference mutability", addressof.mutability);
             display_node(state, Last::Yes, "place expression", addressof.expression);
         }
 
         void operator()(expr::Deref const& dereference)
         {
-            write_line(state, "dereference");
+            std::println(state.stream, "dereference");
             display_node(state, Last::Yes, "reference expression", dereference.expression);
         }
 
         void operator()(expr::Defer const& defer)
         {
-            write_line(state, "defer");
+            std::println(state.stream, "defer");
             display_node(state, Last::Yes, "effect", defer.expression);
         }
 
         void operator()(db::Error)
         {
-            write_line(state, "error");
+            std::println(state.stream, "error");
         }
     };
 
@@ -578,33 +558,33 @@ namespace {
 
         void operator()(patt::Name const& name)
         {
-            write_line(state, "name");
+            std::println(state.stream, "name");
             display_node(state, Last::No, "name", name.name);
             display_node(state, Last::Yes, "mutability", name.mutability);
         }
 
         void operator()(patt::Constructor const& constructor)
         {
-            write_line(state, "constructor");
+            std::println(state.stream, "constructor");
             display_node(state, Last::No, "constructor path", constructor.path);
             display_node(state, Last::Yes, "body", constructor.body);
         }
 
         void operator()(patt::Tuple const& tuple)
         {
-            write_line(state, "tuple");
+            std::println(state.stream, "tuple");
             display_vector_node(state, Last::Yes, "field patterns", tuple.fields);
         }
 
         void operator()(patt::Slice const& slice)
         {
-            write_line(state, "slice");
+            std::println(state.stream, "slice");
             display_vector_node(state, Last::Yes, "element patterns", slice.elements);
         }
 
         void operator()(patt::Guarded const& guarded)
         {
-            write_line(state, "guarded");
+            std::println(state.stream, "guarded");
             display_node(state, Last::No, "guarded pattern", guarded.pattern);
             display_node(state, Last::Yes, "guard expression", guarded.guard);
         }
@@ -620,7 +600,7 @@ namespace {
 
         void operator()(type::Never const&)
         {
-            write_line(state, "built-in never");
+            std::println(state.stream, "built-in never");
         }
 
         void operator()(Wildcard const& wildcard)
@@ -630,66 +610,61 @@ namespace {
 
         void operator()(type::Tuple const& tuple)
         {
-            write_line(state, "tuple");
+            std::println(state.stream, "tuple");
             display_vector_node(state, Last::Yes, "field types", tuple.fields);
         }
 
         void operator()(type::Array const& array)
         {
-            write_line(state, "tuple");
+            std::println(state.stream, "tuple");
             display_node(state, Last::No, "length", array.length);
             display_node(state, Last::Yes, "element type", array.element_type);
         }
 
         void operator()(type::Slice const& slice)
         {
-            write_line(state, "slice");
+            std::println(state.stream, "slice");
             display_node(state, Last::Yes, "element type", slice.element_type);
         }
 
         void operator()(type::Function const& function)
         {
-            write_line(state, "function");
+            std::println(state.stream, "function");
             display_vector_node(state, Last::No, "parameter types", function.parameter_types);
             display_node(state, Last::Yes, "return type", function.return_type);
         }
 
         void operator()(type::Typeof const& typeof_)
         {
-            write_line(state, "typeof");
+            std::println(state.stream, "typeof");
             display_node(state, Last::Yes, "inspected expression", typeof_.expression);
         }
 
         void operator()(type::Reference const& reference)
         {
-            write_line(state, "reference");
+            std::println(state.stream, "reference");
             display_node(state, Last::No, "reference mutability", reference.mutability);
             display_node(state, Last::Yes, "referenced type", reference.referenced_type);
         }
 
         void operator()(type::Pointer const& pointer)
         {
-            write_line(state, "pointer");
+            std::println(state.stream, "pointer");
             display_node(state, Last::No, "pointer mutability", pointer.mutability);
             display_node(state, Last::Yes, "pointee type", pointer.pointee_type);
         }
 
         void operator()(type::Impl const& implementation)
         {
-            write_line(state, "implementation");
+            std::println(state.stream, "implementation");
             display_vector_node(state, Last::Yes, "concepts", implementation.concepts);
         }
 
         void operator()(db::Error const&)
         {
-            write_line(state, "error");
+            std::println(state.stream, "error");
         }
     };
-
-    void do_display(Display_state& state, Definition const& definition)
-    {
-        std::visit([&](auto const& def) { do_display(state, def); }, definition.variant);
-    }
 
     void do_display(Display_state& state, Expression const& expression)
     {
@@ -706,71 +681,95 @@ namespace {
         std::visit(Type_display_visitor { state }, type.variant);
     }
 
-    auto display_string(Arena const& arena, utl::String_pool const& pool, auto const& object)
-        -> std::string
-    {
-        Display_state state {
-            .output  = {},
-            .indent  = {},
-            .unicode = true,
-            .arena   = arena,
-            .pool    = pool,
-        };
-        do_display(state, object);
-        return std::move(state.output);
-    }
+    struct Indent_info {
+        std::size_t      width {};
+        std::string_view description;
+    };
+
+    struct Definition_visitor {
+        Display_state&           state;
+        des::Context&            des_ctx;
+        std::vector<Indent_info> indent_stack;
+
+        void push_indent(std::string_view description)
+        {
+            indent_stack.emplace_back(state.indent.size(), description);
+        }
+
+        void operator()(auto const& def)
+
+        {
+            write_node(state, Last::No, [&] { do_display(state, des::desugar(des_ctx, def)); });
+        }
+
+        void operator()(cst::Impl_begin const& impl)
+        {
+            push_indent("impl");
+
+            write_indent(state, Last::No);
+            std::println(state.stream, "impl");
+
+            auto const self = des::desugar(des_ctx, des_ctx.cst.types[impl.self_type]);
+            display_node(state, Last::No, "self", self);
+
+            write_indent(state, Last::Yes);
+            std::println(state.stream, "definitions");
+        }
+
+        void operator()(cst::Submodule_begin const& submodule)
+        {
+            push_indent(state.db.string_pool.get(submodule.name.id));
+
+            write_indent(state, Last::No);
+            std::println(state.stream, "submodule");
+
+            display_node(state, Last::No, "name", submodule.name);
+
+            write_indent(state, Last::Yes);
+            std::println(state.stream, "definitions");
+        }
+
+        void operator()(cst::Block_end const&)
+        {
+            cpputil::always_assert(not indent_stack.empty());
+            auto indent = indent_stack.back();
+            indent_stack.pop_back();
+
+            write_node(state, Last::Yes, [&] {
+                std::println(state.stream, "end of {}", indent.description);
+            });
+
+            state.indent.resize(indent.width);
+        }
+    };
 } // namespace
 
-auto ki::ast::display(Arena const& arena, utl::String_pool const& pool, Function const& function)
-    -> std::string
+void ki::dis::display_document(std::ostream& stream, db::Database& db, db::Document_id doc_id)
 {
-    return display_string(arena, pool, function);
-}
+    auto par_ctx = par::context(db, doc_id);
 
-auto ki::ast::display(Arena const& arena, utl::String_pool const& pool, Enum const& enumeration)
-    -> std::string
-{
-    return display_string(arena, pool, enumeration);
-}
+    auto des_ctx = des::Context {
+        .db     = db,
+        .doc_id = doc_id,
+        .cst    = par_ctx.arena,
+        .ast    = ast::Arena {},
+    };
 
-auto ki::ast::display(Arena const& arena, utl::String_pool const& pool, Alias const& alias)
-    -> std::string
-{
-    return display_string(arena, pool, alias);
-}
+    auto state = Display_state {
+        .db      = db,
+        .arena   = des_ctx.ast,
+        .stream  = stream,
+        .indent  = {},
+        .unicode = true,
+    };
 
-auto ki::ast::display(Arena const& arena, utl::String_pool const& pool, Concept const& concept_)
-    -> std::string
-{
-    return display_string(arena, pool, concept_);
-}
+    auto visitor = Definition_visitor {
+        .state        = state,
+        .des_ctx      = des_ctx,
+        .indent_stack = {},
+    };
 
-auto ki::ast::display(Arena const& arena, utl::String_pool const& pool, Submodule const& submodule)
-    -> std::string
-{
-    return display_string(arena, pool, submodule);
-}
-
-auto ki::ast::display(
-    Arena const& arena, utl::String_pool const& pool, Definition const& definition) -> std::string
-{
-    return display_string(arena, pool, definition);
-}
-
-auto ki::ast::display(
-    Arena const& arena, utl::String_pool const& pool, Expression const& expression) -> std::string
-{
-    return display_string(arena, pool, expression);
-}
-
-auto ki::ast::display(Arena const& arena, utl::String_pool const& pool, Pattern const& pattern)
-    -> std::string
-{
-    return display_string(arena, pool, pattern);
-}
-
-auto ki::ast::display(Arena const& arena, utl::String_pool const& pool, Type const& type)
-    -> std::string
-{
-    return display_string(arena, pool, type);
+    std::println(state.stream, "module");
+    par::parse(par_ctx, visitor);
+    write_node(state, Last::Yes, [&] { std::println(state.stream, "end of module"); });
 }

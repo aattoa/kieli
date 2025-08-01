@@ -1,161 +1,174 @@
 #include <libutl/utilities.hpp>
 #include <libformat/internals.hpp>
 
-auto ki::fmt::newline(State const& state, std::size_t const lines) noexcept -> Newline
+void ki::fmt::newline(Context& ctx, std::size_t lines)
 {
-    return Newline {
-        .indentation = state.ctx.indentation,
-        .lines       = lines,
-        .tab_size    = state.ctx.options.tab_size,
-        .use_spaces  = state.ctx.options.use_spaces,
+    auto write_n = [&](std::size_t n, char c) {
+        for (std::size_t i = 0; i != n; ++i) {
+            ctx.stream.put(c);
+        }
     };
+
+    write_n(lines, '\n');
+    if (ctx.options.use_spaces) {
+        write_n(ctx.indentation * ctx.options.tab_size, ' ');
+    }
+    else {
+        write_n(ctx.indentation, '\t');
+    }
 }
 
-void ki::fmt::format(State& state, cst::Expression_id const id)
+void ki::fmt::indent(Context& ctx)
 {
-    format(state, state.ctx.arena.expressions[id]);
+    auto const take = [](bool& ref) { return std::exchange(ref, false); };
+    newline(ctx, take(ctx.is_first_definition) ? 0 : take(ctx.did_open_block) ? 1 : 2);
 }
 
-void ki::fmt::format(State& state, cst::Pattern_id const id)
+void ki::fmt::format(Context& ctx, cst::Expression_id const id)
 {
-    format(state, state.ctx.arena.patterns[id]);
+    format(ctx, ctx.arena.expressions[id]);
 }
 
-void ki::fmt::format(State& state, cst::Type_id const id)
+void ki::fmt::format(Context& ctx, cst::Pattern_id const id)
 {
-    format(state, state.ctx.arena.types[id]);
+    format(ctx, ctx.arena.patterns[id]);
 }
 
-void ki::fmt::format(State& state, cst::Wildcard const& wildcard)
+void ki::fmt::format(Context& ctx, cst::Type_id const id)
 {
-    auto const [start, stop] = wildcard.underscore_token;
+    format(ctx, ctx.arena.types[id]);
+}
+
+void ki::fmt::format(Context& ctx, cst::Wildcard const& wildcard)
+{
+    auto [start, stop] = wildcard.underscore_token;
     cpputil::always_assert(start.column < stop.column);
-    format(state, "{:_^{}}", "", stop.column - start.column);
+    std::print(ctx.stream, "{:_^{}}", "", stop.column - start.column);
 }
 
-void ki::fmt::format(State& state, cst::Type_annotation const& annotation)
+void ki::fmt::format(Context& ctx, cst::Type_annotation const& annotation)
 {
-    format(state, ": ");
-    format(state, annotation.type);
+    std::print(ctx.stream, ": ");
+    format(ctx, annotation.type);
 }
 
-void ki::fmt::format(State& state, cst::Path const& path)
+void ki::fmt::format(Context& ctx, cst::Path const& path)
 {
     if (auto const* type = std::get_if<cst::Type_id>(&path.root)) {
-        format(state, *type);
+        format(ctx, *type);
     }
     for (auto const& segment : path.segments) {
         if (segment.leading_double_colon_token.has_value()) {
-            format(state, "::");
+            std::print(ctx.stream, "::");
         }
-        format(state, "{}", state.ctx.db.string_pool.get(segment.name.id));
-        format(state, segment.template_arguments);
+        std::print(ctx.stream, "{}", ctx.db.string_pool.get(segment.name.id));
+        format(ctx, segment.template_arguments);
     }
 }
 
-void ki::fmt::format(State& state, cst::Mutability const& mutability)
+void ki::fmt::format(Context& ctx, cst::Mutability const& mutability)
 {
     auto const visitor = utl::Overload {
         [&](db::Mutability const concrete) {
-            format(state, "{}", db::mutability_string(concrete));
+            std::print(ctx.stream, "{}", db::mutability_string(concrete));
         },
         [&](ki::cst::Parameterized_mutability const& parameterized) {
-            format(state, "mut?{}", state.ctx.db.string_pool.get(parameterized.name.id));
+            std::print(ctx.stream, "mut?{}", ctx.db.string_pool.get(parameterized.name.id));
         },
     };
     std::visit(visitor, mutability.variant);
 }
 
-void ki::fmt::format(State& state, cst::patt::Field const& field)
+void ki::fmt::format(Context& ctx, cst::patt::Field const& field)
 {
-    format(state, "{}", state.ctx.db.string_pool.get(field.name.id));
+    std::print(ctx.stream, "{}", ctx.db.string_pool.get(field.name.id));
     if (field.equals.has_value()) {
-        format(state, " = ");
-        format(state, field.equals.value().pattern);
+        std::print(ctx.stream, " = ");
+        format(ctx, field.equals.value().pattern);
     }
 }
 
-void ki::fmt::format(State& state, cst::Field_init const& initializer)
+void ki::fmt::format(Context& ctx, cst::Field_init const& initializer)
 {
-    format(state, "{}", state.ctx.db.string_pool.get(initializer.name.id));
+    std::print(ctx.stream, "{}", ctx.db.string_pool.get(initializer.name.id));
     if (initializer.equals.has_value()) {
-        format(state, " = ");
-        format(state, initializer.equals.value().expression);
+        std::print(ctx.stream, " = ");
+        format(ctx, initializer.equals.value().expression);
     }
 }
 
-void ki::fmt::format(State& state, cst::Field const& field)
+void ki::fmt::format(Context& ctx, cst::Field const& field)
 {
-    format(state, "{}", state.ctx.db.string_pool.get(field.name.id));
-    format(state, field.type);
+    std::print(ctx.stream, "{}", ctx.db.string_pool.get(field.name.id));
+    format(ctx, field.type);
 }
 
 void ki::fmt::format_mutability_with_whitespace(
-    State& state, std::optional<cst::Mutability> const& mutability)
+    Context& ctx, std::optional<cst::Mutability> const& mutability)
 {
     if (not mutability.has_value()) {
         return;
     }
-    format(state, mutability.value());
-    format(state, " ");
+    format(ctx, mutability.value());
+    std::print(ctx.stream, " ");
 }
 
-void ki::fmt::format(State& state, cst::Template_arguments const& arguments)
+void ki::fmt::format(Context& ctx, cst::Template_arguments const& arguments)
 {
-    format(state, "[");
-    format_comma_separated(state, arguments.value.elements);
-    format(state, "]");
+    std::print(ctx.stream, "[");
+    format_comma_separated(ctx, arguments.value.elements);
+    std::print(ctx.stream, "]");
 }
 
-void ki::fmt::format(State& state, cst::Template_parameter const& parameter)
+void ki::fmt::format(Context& ctx, cst::Template_parameter const& parameter)
 {
     std::visit(
         utl::Overload {
             [&](cst::Template_type_parameter const& parameter) {
-                format(state, "{}", state.ctx.db.string_pool.get(parameter.name.id));
+                std::print(ctx.stream, "{}", ctx.db.string_pool.get(parameter.name.id));
                 if (parameter.colon_token.has_value()) {
-                    format(state, ": ");
-                    format_separated(state, parameter.concepts.elements, " + ");
+                    std::print(ctx.stream, ": ");
+                    format_separated(ctx, parameter.concepts.elements, " + ");
                 }
-                format(state, parameter.default_argument);
+                format(ctx, parameter.default_argument);
             },
             [&](cst::Template_value_parameter const& parameter) {
-                format(state, "{}", state.ctx.db.string_pool.get(parameter.name.id));
-                format(state, parameter.type_annotation);
-                format(state, parameter.default_argument);
+                std::print(ctx.stream, "{}", ctx.db.string_pool.get(parameter.name.id));
+                format(ctx, parameter.type_annotation);
+                format(ctx, parameter.default_argument);
             },
             [&](cst::Template_mutability_parameter const& parameter) {
-                format(state, "{}: mut", state.ctx.db.string_pool.get(parameter.name.id));
-                format(state, parameter.default_argument);
+                std::print(ctx.stream, "{}: mut", ctx.db.string_pool.get(parameter.name.id));
+                format(ctx, parameter.default_argument);
             },
         },
         parameter.variant);
 }
 
-void ki::fmt::format(State& state, cst::Template_parameters const& parameters)
+void ki::fmt::format(Context& ctx, cst::Template_parameters const& parameters)
 {
-    format(state, "[");
-    format_comma_separated(state, parameters.value.elements);
-    format(state, "]");
+    std::print(ctx.stream, "[");
+    format_comma_separated(ctx, parameters.value.elements);
+    std::print(ctx.stream, "]");
 }
 
-void ki::fmt::format(State& state, cst::Function_arguments const& arguments)
+void ki::fmt::format(Context& ctx, cst::Function_arguments const& arguments)
 {
-    format(state, "(");
-    format_comma_separated(state, arguments.value.elements);
-    format(state, ")");
+    std::print(ctx.stream, "(");
+    format_comma_separated(ctx, arguments.value.elements);
+    std::print(ctx.stream, ")");
 }
 
-void ki::fmt::format(State& state, cst::Function_parameter const& parameter)
+void ki::fmt::format(Context& ctx, cst::Function_parameter const& parameter)
 {
-    format(state, parameter.pattern);
-    format(state, parameter.type);
-    format(state, parameter.default_argument);
+    format(ctx, parameter.pattern);
+    format(ctx, parameter.type);
+    format(ctx, parameter.default_argument);
 }
 
-void ki::fmt::format(State& state, cst::Function_parameters const& parameters)
+void ki::fmt::format(Context& ctx, cst::Function_parameters const& parameters)
 {
-    format(state, "(");
-    format_comma_separated(state, parameters.value.elements);
-    format(state, ")");
+    std::print(ctx.stream, "(");
+    format_comma_separated(ctx, parameters.value.elements);
+    std::print(ctx.stream, ")");
 }

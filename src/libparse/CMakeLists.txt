@@ -1,7 +1,6 @@
 add_library(libparse STATIC)
 
 target_sources(libparse
-    PRIVATE libparse/internals.cpp
     PRIVATE libparse/internals.hpp
     PRIVATE libparse/parse.cpp
     PRIVATE libparse/parse.hpp

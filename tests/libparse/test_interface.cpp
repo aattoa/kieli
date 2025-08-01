@@ -16,8 +16,7 @@ namespace {
         auto result  = require<parser>(par_ctx, expectation);
 
         if (is_finished(par_ctx)) {
-            auto fmt_ctx = fmt::Context { .db = db, .arena = par_ctx.arena };
-            return fmt::format(fmt_ctx, result);
+            return fmt::to_string(db, par_ctx.arena, result);
         }
         error_expected(par_ctx, expectation);
     }

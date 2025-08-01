@@ -18,7 +18,6 @@ namespace ki::db {
 } // namespace ki::db
 
 namespace ki::cst {
-    struct Arena;
     struct Expression;
     struct Pattern;
     struct Type;
@@ -28,11 +27,9 @@ namespace ki::cst {
 } // namespace ki::cst
 
 namespace ki::ast {
-    struct Arena;
     struct Expression;
     struct Type;
     struct Pattern;
-    struct Definition;
     DEFINE_INDEX(Expression_id);
     DEFINE_INDEX(Pattern_id);
     DEFINE_INDEX(Type_id);

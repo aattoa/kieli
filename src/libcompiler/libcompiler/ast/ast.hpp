@@ -463,28 +463,6 @@ namespace ki::ast {
         Template_parameters             template_parameters;
     };
 
-    struct Impl {
-        Type_id                 type;
-        std::vector<Definition> definitions;
-        Template_parameters     template_parameters;
-    };
-
-    struct Submodule {
-        std::vector<Definition> definitions;
-        db::Lower               name;
-        Template_parameters     template_parameters;
-    };
-
-    struct Definition_variant
-        : std::variant<Function, Enum, Struct, Alias, Concept, Impl, Submodule> {
-        using variant::variant;
-    };
-
-    struct Definition {
-        Definition_variant variant;
-        lsp::Range         range;
-    };
-
     struct Arena {
         utl::Index_vector<Expression_id, Expression> expressions;
         utl::Index_vector<Pattern_id, Pattern>       patterns;

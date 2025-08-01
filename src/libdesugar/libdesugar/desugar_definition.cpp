@@ -89,28 +89,3 @@ auto ki::des::desugar(Context& ctx, cst::Concept const& concept_) -> ast::Concep
         .template_parameters = concept_.template_parameters.transform(desugar(ctx)),
     };
 }
-
-auto ki::des::desugar_function(Context& ctx, cst::Function const& function) -> ast::Function
-{
-    return desugar(ctx, function);
-}
-
-auto ki::des::desugar_struct(Context& ctx, cst::Struct const& structure) -> ast::Struct
-{
-    return desugar(ctx, structure);
-}
-
-auto ki::des::desugar_enum(Context& ctx, cst::Enum const& enumeration) -> ast::Enum
-{
-    return desugar(ctx, enumeration);
-}
-
-auto ki::des::desugar_alias(Context& ctx, cst::Alias const& alias) -> ast::Alias
-{
-    return desugar(ctx, alias);
-}
-
-auto ki::des::desugar_concept(Context& ctx, cst::Concept const& concept_) -> ast::Concept
-{
-    return desugar(ctx, concept_);
-}

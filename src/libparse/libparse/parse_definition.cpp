@@ -214,10 +214,14 @@ auto ki::par::extract_implementation(Context& ctx, lex::Token const& impl_keywor
     -> cst::Impl_begin
 {
     add_keyword(ctx, impl_keyword.range);
+    auto const self_type  = require<parse_type>(ctx, "the Self type");
+    auto const open_brace = require_extract(ctx, lex::Type::Brace_open);
+    ++ctx.block_depth;
     return cst::Impl_begin {
         .template_parameters = parse_template_parameters(ctx),
-        .self_type           = require<parse_type>(ctx, "the Self type"),
+        .self_type           = self_type,
         .impl_token          = impl_keyword.range,
+        .open_brace_token    = open_brace.range,
         .range               = up_to_current(ctx, impl_keyword.range),
     };
 }
@@ -228,10 +232,43 @@ auto ki::par::extract_submodule(Context& ctx, lex::Token const& module_keyword)
     add_keyword(ctx, module_keyword.range);
     auto const name = extract_lower_name(ctx, "a module name");
     add_semantic_token(ctx, name.range, Semantic::Module);
+    auto const open_brace = require_extract(ctx, lex::Type::Brace_open);
+    ++ctx.block_depth;
     return cst::Submodule_begin {
         .name             = name,
         .module_token     = module_keyword.range,
-        .open_brace_token = require_extract(ctx, lex::Type::Brace_open).range,
+        .open_brace_token = open_brace.range,
         .range            = up_to_current(ctx, module_keyword.range),
     };
+}
+
+auto ki::par::extract_block_end(Context& ctx, lex::Token const& brace_close) -> cst::Block_end
+{
+    if (ctx.block_depth == 0) {
+        db::add_error(ctx.db, ctx.doc_id, brace_close.range, "Unexpected closing brace");
+        throw Failure {};
+    }
+    --ctx.block_depth;
+    return cst::Block_end { .range = brace_close.range };
+}
+
+void ki::par::handle_end_of_input(Context& ctx, lex::Token const& end)
+{
+    cpputil::always_assert(end.type == lex::Type::End_of_input);
+
+    if (ctx.block_depth != 0) {
+        auto message = ctx.block_depth == 1
+                         ? "Expected a closing brace"
+                         : std::format("Expected {} closing braces", ctx.block_depth);
+        db::add_error(ctx.db, ctx.doc_id, end.range, std::move(message));
+    }
+}
+
+void ki::par::handle_bad_token(Context& ctx, lex::Token const& token)
+{
+    auto message
+        = std::format("Expected a definition, but found {}", lex::token_description(token.type));
+    db::add_error(ctx.db, ctx.doc_id, token.range, std::move(message));
+    skip_to_next_recovery_point(ctx);
+    throw Failure {};
 }

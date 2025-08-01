@@ -9,16 +9,7 @@
 
 namespace ki::des {
 
-    auto desugar(Context&, cst::Expression const&) -> ast::Expression;
-    auto desugar(Context&, cst::Pattern const&) -> ast::Pattern;
-    auto desugar(Context&, cst::Type const&) -> ast::Type;
     auto desugar(Context&, cst::Function_signature const&) -> ast::Function_signature;
-    auto desugar(Context&, cst::Function const&) -> ast::Function;
-    auto desugar(Context&, cst::Struct const&) -> ast::Struct;
-    auto desugar(Context&, cst::Enum const&) -> ast::Enum;
-    auto desugar(Context&, cst::Alias const&) -> ast::Alias;
-    auto desugar(Context&, cst::Concept const&) -> ast::Concept;
-
     auto desugar(Context&, cst::Function_parameters const&) -> std::vector<ast::Function_parameter>;
     auto desugar(Context&, cst::Template_argument const&) -> ast::Template_argument;
     auto desugar(Context&, cst::Template_parameter const&) -> ast::Template_parameter;

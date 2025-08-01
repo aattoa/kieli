@@ -99,28 +99,17 @@ namespace {
     auto handle_formatting(Server& server, Json params) -> Result<Json>
     {
         auto const [doc_id, options] = formatting_params_from_json(server.db, std::move(params));
-        auto const& doc              = server.db.documents[doc_id];
+
+        std::ostringstream stream;
+
+        auto range = fmt::format_document(stream, server.db, doc_id, options);
+
+        Json::Object edit;
+        edit.try_emplace("range", range_to_json(range));
+        edit.try_emplace("newText", std::move(stream).str());
 
         Json::Array edits;
-
-        auto add_edit = [&](lsp::Range range, std::string text) {
-            // Avoid sending redundant edits when nothing changed.
-            // text_range takes linear time, but it's fine for now.
-            if (text != db::text_range(doc.text, range)) {
-                Json::Object edit;
-                edit.try_emplace("range", range_to_json(range));
-                edit.try_emplace("newText", std::move(text));
-                edits.emplace_back(std::move(edit));
-            }
-        };
-
-        auto par_ctx = par::context(server.db, doc_id);
-        auto fmt_ctx = fmt::Context { .db = server.db, .arena = par_ctx.arena, .options = options };
-
-        par::parse(par_ctx, [&](auto const& definition) {
-            add_edit(definition.range, fmt::format(fmt_ctx, definition));
-        });
-
+        edits.emplace_back(std::move(edit));
         return Json { std::move(edits) };
     }
 
@@ -389,7 +378,7 @@ namespace {
     auto handle_shutdown(Server& server) -> Json
     {
         if (not std::exchange(server.is_initialized, false)) {
-            std::println(std::cerr, "Received shutdown request while uninitialized");
+            debug_log(server, "Received shutdown request while uninitialized");
         }
         server.db = db::Database {}; // Reset the compilation database.
         return Json {};
@@ -535,7 +524,7 @@ namespace {
     {
         if (method == "initialize") {
             if (std::exchange(server.is_initialized, true)) {
-                std::println(std::cerr, "Received duplicate initialize request");
+                debug_log(server, "Received duplicate initialize request");
             }
             return success_response(handle_initialize(), id);
         }

@@ -17,4 +17,5 @@ target_precompile_headers(libformat
 
 target_link_libraries(libformat
     PUBLIC libutl
+    PUBLIC libparse
     PUBLIC libcompiler)

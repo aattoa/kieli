@@ -609,6 +609,7 @@ namespace ki::cst {
         std::optional<Template_parameters> template_parameters;
         Type_id                            self_type;
         lsp::Range                         impl_token;
+        lsp::Range                         open_brace_token;
         lsp::Range                         range;
     };
 

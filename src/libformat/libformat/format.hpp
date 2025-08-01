@@ -22,25 +22,41 @@ namespace ki::fmt {
     struct Context {
         db::Database const& db;
         cst::Arena const&   arena;
+        std::ostream&       stream;
         Options             options {};
         std::size_t         indentation {};
+        bool                did_open_block {};
+        bool                is_first_definition = true;
     };
 
-    auto format(Context& ctx, cst::Function const& function) -> std::string;
-    auto format(Context& ctx, cst::Struct const& structure) -> std::string;
-    auto format(Context& ctx, cst::Enum const& enumeration) -> std::string;
-    auto format(Context& ctx, cst::Alias const& alias) -> std::string;
-    auto format(Context& ctx, cst::Concept const& concept_) -> std::string;
-    auto format(Context& ctx, cst::Impl_begin const& impl) -> std::string;
-    auto format(Context& ctx, cst::Submodule_begin const& submodule) -> std::string;
-    auto format(Context& ctx, cst::Block_end const& block_end) -> std::string;
+    // Parse and format the given document.
+    auto format_document(
+        std::ostream& stream, db::Database& db, db::Document_id doc_id, Options const& options)
+        -> lsp::Range;
 
-    auto format(Context& ctx, cst::Expression const& expression) -> std::string;
-    auto format(Context& ctx, cst::Expression_id expression_id) -> std::string;
-    auto format(Context& ctx, cst::Pattern const& pattern) -> std::string;
-    auto format(Context& ctx, cst::Pattern_id pattern_id) -> std::string;
-    auto format(Context& ctx, cst::Type const& type) -> std::string;
-    auto format(Context& ctx, cst::Type_id type_id) -> std::string;
+    void format(Context& ctx, cst::Function const& function);
+    void format(Context& ctx, cst::Struct const& structure);
+    void format(Context& ctx, cst::Enum const& enumeration);
+    void format(Context& ctx, cst::Alias const& alias);
+    void format(Context& ctx, cst::Concept const& concept_);
+    void format(Context& ctx, cst::Impl_begin const& impl);
+    void format(Context& ctx, cst::Submodule_begin const& submodule);
+    void format(Context& ctx, cst::Block_end const& block_end);
+
+    void format(Context& ctx, cst::Expression const& expression);
+    void format(Context& ctx, cst::Expression_id expression_id);
+    void format(Context& ctx, cst::Pattern const& pattern);
+    void format(Context& ctx, cst::Pattern_id pattern_id);
+    void format(Context& ctx, cst::Type const& type);
+    void format(Context& ctx, cst::Type_id type_id);
+
+    auto to_string(db::Database const& db, cst::Arena const& arena, auto const& x) -> std::string
+    {
+        auto out = std::stringstream {};
+        auto ctx = Context { .db = db, .arena = arena, .stream = out };
+        ki::fmt::format(ctx, x);
+        return std::move(out).str();
+    }
 
 } // namespace ki::fmt
 

@@ -28,7 +28,7 @@ namespace {
         void operator()(cst::Function const& cst)
         {
             auto name = cst.signature.name;
-            auto ast  = des::desugar_function(des_ctx, cst);
+            auto ast  = des::desugar(des_ctx, cst);
 
             auto fun_id = ctx.arena.hir.functions.push(
                 hir::Function_info {
@@ -46,7 +46,7 @@ namespace {
         void operator()(cst::Struct const& cst)
         {
             auto name = cst.constructor.name;
-            auto ast  = des::desugar_struct(des_ctx, cst);
+            auto ast  = des::desugar(des_ctx, cst);
 
             auto type_id   = ctx.arena.hir.types.push(db::Error {}); // Overwritten below
             auto struct_id = ctx.arena.hir.structures.push(
@@ -67,7 +67,7 @@ namespace {
         void operator()(cst::Enum const& cst)
         {
             auto name = cst.name;
-            auto ast  = des::desugar_enum(des_ctx, cst);
+            auto ast  = des::desugar(des_ctx, cst);
 
             auto type_id = ctx.arena.hir.types.push(db::Error {}); // Overwritten below
             auto enum_id = ctx.arena.hir.enumerations.push(
@@ -88,7 +88,7 @@ namespace {
         void operator()(cst::Alias const& cst)
         {
             auto name = cst.name;
-            auto ast  = des::desugar_alias(des_ctx, cst);
+            auto ast  = des::desugar(des_ctx, cst);
 
             auto alias_id = ctx.arena.hir.aliases.push(
                 hir::Alias_info {
@@ -105,7 +105,7 @@ namespace {
         void operator()(cst::Concept const& cst)
         {
             auto name = cst.name;
-            auto ast  = des::desugar_concept(des_ctx, cst);
+            auto ast  = des::desugar(des_ctx, cst);
 
             auto concept_id = ctx.arena.hir.concepts.push(
                 hir::Concept_info {

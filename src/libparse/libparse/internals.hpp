@@ -1,41 +1,11 @@
 #ifndef KIELI_LIBPARSE_INTERNALS
 #define KIELI_LIBPARSE_INTERNALS
 
-#include <liblex/lex.hpp>
-#include <libcompiler/db.hpp>
+#include <libparse/parse.hpp>
 
 namespace ki::par {
 
     using Semantic = lsp::Semantic_token_type;
-
-    struct Failure : std::exception {
-        [[nodiscard]] auto what() const noexcept -> char const* override;
-    };
-
-    struct Context {
-        db::Database&                    db;
-        db::Document_id                  doc_id;
-        cst::Arena                       arena;
-        lex::State                       lex_state;
-        std::optional<lex::Token>        next_token;
-        std::optional<lsp::Position>     previous_token_end;
-        std::vector<lsp::Semantic_token> semantic_tokens;
-        std::size_t                      previous_path_semantic_offset {};
-        utl::String_id                   plus_id;
-        utl::String_id                   asterisk_id;
-    };
-
-    // Create a parse context.
-    [[nodiscard]] auto context(db::Database& db, db::Document_id doc_id) -> Context;
-
-    // Check whether the current token is the end-of-input token.
-    [[nodiscard]] auto is_finished(Context& ctx) -> bool;
-
-    // Inspect the current token without consuming it.
-    [[nodiscard]] auto peek(Context& ctx) -> lex::Token;
-
-    // Consume the current token.
-    [[nodiscard]] auto extract(Context& ctx) -> lex::Token;
 
     // Consume the current token if it matches `type`.
     [[nodiscard]] auto try_extract(Context& ctx, lex::Type type) -> std::optional<lex::Token>;
@@ -74,9 +44,6 @@ namespace ki::par {
 
     // Check whether `type` is a recovery point.
     [[nodiscard]] auto is_recovery_point(lex::Type type) -> bool;
-
-    // Skip every token up to the next potential recovery point.
-    void skip_to_next_recovery_point(Context& ctx);
 
     auto parse_simple_path_root(Context& ctx) -> std::optional<cst::Path_root>;
     auto parse_simple_path(Context& ctx) -> std::optional<cst::Path>;
@@ -222,14 +189,6 @@ namespace ki::par {
     auto parse_integer(Context& ctx, lex::Token const& literal) -> std::optional<db::Integer>;
     auto parse_floating(Context& ctx, lex::Token const& literal) -> std::optional<db::Floating>;
     auto parse_boolean(Context& ctx, lex::Token const& literal) -> std::optional<db::Boolean>;
-
-    auto extract_function(Context& ctx, lex::Token const& fn_keyword) -> cst::Function;
-    auto extract_structure(Context& ctx, lex::Token const& struct_keyword) -> cst::Struct;
-    auto extract_enumeration(Context& ctx, lex::Token const& enum_keyword) -> cst::Enum;
-    auto extract_concept(Context& ctx, lex::Token const& concept_keyword) -> cst::Concept;
-    auto extract_alias(Context& ctx, lex::Token const& alias_keyword) -> cst::Alias;
-    auto extract_implementation(Context& ctx, lex::Token const& impl_keyword) -> cst::Impl_begin;
-    auto extract_submodule(Context& ctx, lex::Token const& module_keyword) -> cst::Submodule_begin;
 
 } // namespace ki::par
 

@@ -330,7 +330,7 @@ void ki::db::add_error(Database& db, Document_id doc_id, lsp::Range range, std::
 void ki::db::print_diagnostics(std::ostream& stream, Database const& db, Document_id doc_id)
 {
     for (lsp::Diagnostic const& diag : db.documents[doc_id].info.diagnostics) {
-        std::println(stream, "{} {}: {}", severity_string(diag.severity), diag.range, diag.message);
+        std::println(stream, "{} {}: {}", diag.range, severity_string(diag.severity), diag.message);
     }
 }
 
