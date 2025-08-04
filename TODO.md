@@ -6,9 +6,6 @@
 - Solve template type/value argument conflict
 - Imports are definitions
 
-## libdesugar
-- Pipe operator, replace wildcards with argument
-
 ## libresolve
 - Unique zero-sized type for each function, coerce to function pointer type
 - Unification rollback logs?
@@ -49,7 +46,7 @@
 - `kieli run`: Build and run given file or project main executable
 
 ## Miscellaneous
-- Error limit, return error code from driver
+- libdb, liblsp
 - Inline concepts
 - libtommath for arbitrary precision integers?
 - String interpolation

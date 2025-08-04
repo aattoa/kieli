@@ -466,6 +466,22 @@ namespace {
         });
     }
 
+    auto parse_potential_pipe(Context& ctx) -> std::optional<cst::Expression_id>
+    {
+        return parse_potential_type_ascriptions(ctx).transform([&](cst::Expression_id expression) {
+            while (auto const pipe = try_extract(ctx, lex::Type::Pipe)) {
+                expression = ctx.arena.expressions.push(
+                    cst::expr::Pipe {
+                        .left  = expression,
+                        .right = require<parse_potential_type_ascriptions>(ctx, "an expression"),
+                        .pipe_token = pipe.value().range,
+                    },
+                    up_to_current(ctx, ctx.arena.expressions[expression].range));
+            }
+            return expression;
+        });
+    }
+
     auto operator_id(Context& ctx, lex::Token const& token) -> std::optional<utl::String_id>
     {
         switch (token.type) {
@@ -504,7 +520,7 @@ namespace {
         -> std::optional<cst::Expression_id>
     {
         if (level == operator_table.size() + 1) {
-            return parse_potential_type_ascriptions(ctx);
+            return parse_potential_pipe(ctx);
         }
         return parse_infix_chain(ctx, level + 1).transform([&](cst::Expression_id expression) {
             for (;;) {

@@ -395,6 +395,38 @@ namespace {
             return ast::expr::Defer { desugar(ctx, defer.expression) };
         }
 
+        auto operator()(cst::expr::Pipe const& pipe) const -> ast::Expression_variant
+        {
+            auto left  = desugar(ctx, pipe.left);
+            auto right = desugar(ctx, ctx.cst.expressions[pipe.right]);
+
+            if (auto* call = std::get_if<ast::expr::Function_call>(&right.variant)) {
+                /*
+                   a | b(c)
+
+                   is transformed into
+
+                   b(a, c)
+               */
+
+                call->arguments.insert(call->arguments.begin(), left);
+                return std::move(right.variant);
+            }
+
+            /*
+               a | b
+
+               is transformed into
+
+               b(a)
+           */
+
+            return ast::expr::Function_call {
+                .arguments = { left },
+                .invocable = ctx.ast.expressions.push(std::move(right)),
+            };
+        }
+
         auto operator()(cst::expr::For_loop const& loop) const -> ast::Expression_variant
         {
             ctx.add_diagnostic(lsp::error(loop.for_token, "For loops are not supported yet"));

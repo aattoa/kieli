@@ -9,6 +9,14 @@ It also trivializes the implementation of future language features, as long as t
 
 # List of transformations
 
+## Pipeline operator to function call
+
+`x | f` → `f(x)`
+
+`x | f | g` → `g(f(x))`
+
+`x | f(y)` → `f(x, y)`
+
 ## While loop to plain loop
 
 `while a { b }` → `loop { if a { b } else { break () } }`

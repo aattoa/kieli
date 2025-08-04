@@ -263,6 +263,11 @@ namespace {
             }
         }
 
+        void operator()(cst::expr::Continue const&)
+        {
+            std::print(ctx.stream, "continue");
+        }
+
         void operator()(cst::expr::Break const& break_)
         {
             if (break_.result.has_value()) {
@@ -280,9 +285,11 @@ namespace {
             format(ctx, defer.expression);
         }
 
-        void operator()(cst::expr::Continue const&)
+        void operator()(cst::expr::Pipe const& pipe)
         {
-            std::print(ctx.stream, "continue");
+            format(ctx, pipe.left);
+            std::print(ctx.stream, " | ");
+            format(ctx, pipe.right);
         }
 
         void operator()(db::Error)

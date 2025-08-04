@@ -316,6 +316,12 @@ namespace ki::cst {
             Expression_id expression;
             lsp::Range    defer_token;
         };
+
+        struct Pipe {
+            Expression_id left;
+            Expression_id right;
+            lsp::Range    pipe_token;
+        };
     } // namespace expr
 
     struct Expression_variant
@@ -352,7 +358,8 @@ namespace ki::cst {
               expr::Sizeof,
               expr::Addressof,
               expr::Deref,
-              expr::Defer> {
+              expr::Defer,
+              expr::Pipe> {
         using variant::variant;
     };
 
