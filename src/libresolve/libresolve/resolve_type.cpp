@@ -26,7 +26,7 @@ namespace {
 
         auto operator()(ast::type::Never const&) -> hir::Type_id
         {
-            db::add_error(db, ctx.doc_id, this_range, "'!' resolution has not been implemented");
+            ctx.add_diagnostic(lsp::error(this_range, "'!' resolution has not been implemented"));
             return ctx.constants.type_error;
         }
 
@@ -52,7 +52,7 @@ namespace {
 
             auto kind    = db::describe_symbol_kind(symbol.variant);
             auto message = std::format("Expected a type, but found {}", kind);
-            db::add_error(db, ctx.doc_id, this_range, std::move(message));
+            ctx.add_diagnostic(lsp::error(this_range, std::move(message)));
             return ctx.constants.type_error;
         }
 
@@ -125,7 +125,7 @@ namespace {
 
         auto operator()(ast::type::Impl const&) -> hir::Type_id
         {
-            db::add_error(db, ctx.doc_id, this_range, "Impl resolution has not been implemented");
+            ctx.add_diagnostic(lsp::error(this_range, "Impl resolution has not been implemented"));
             return ctx.constants.type_error;
         }
 

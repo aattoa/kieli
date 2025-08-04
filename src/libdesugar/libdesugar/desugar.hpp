@@ -7,10 +7,9 @@
 namespace ki::des {
 
     struct Context {
-        db::Database&     db;
-        db::Document_id   doc_id;
-        cst::Arena const& cst;
-        ast::Arena        ast;
+        cst::Arena const&   cst;
+        ast::Arena          ast;
+        db::Diagnostic_sink add_diagnostic;
     };
 
     auto desugar(Context& ctx, cst::Expression const& expression) -> ast::Expression;

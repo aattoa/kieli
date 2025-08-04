@@ -126,7 +126,7 @@ namespace {
                     if (body.fields.contains(field.name.id)) {
                         auto message = std::format(
                             "Duplicate struct field '{}'", db.string_pool.get(field.name.id));
-                        db::add_error(db, ctx.doc_id, field.name.range, std::move(message));
+                        ctx.add_diagnostic(lsp::error(field.name.range, std::move(message)));
                         continue;
                     }
 

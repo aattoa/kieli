@@ -89,7 +89,7 @@ namespace {
         auto operator()(ast::patt::Constructor const&) -> hir::Pattern
         {
             std::string message = "Constructor pattern resolution has not been implemented";
-            db::add_error(db, ctx.doc_id, this_range, std::move(message));
+            ctx.add_diagnostic(lsp::error(this_range, std::move(message)));
 
             return hir::Pattern {
                 .variant = hir::Wildcard {},

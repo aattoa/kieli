@@ -111,6 +111,43 @@ auto ki::db::parameter_hints_enabled(Inlay_hint_mode mode) noexcept -> bool
     return mode == Inlay_hint_mode::Parameter or mode == Inlay_hint_mode::Full;
 }
 
+ki::db::Max_errors_reached::Max_errors_reached(std::size_t count) : count { count } {}
+
+auto ki::db::Max_errors_reached::what() const noexcept -> char const*
+{
+    return "ki::db::Max_errors_reached";
+}
+
+// NOLINTNEXTLINE(performance-unnecessary-value-param)
+void ki::db::Diagnostic_stream_sink::operator()(lsp::Diagnostic diagnostic)
+{
+    format_diagnostic(stream, diagnostic);
+    count_diagnostic(db, diagnostic.severity);
+}
+
+void ki::db::format_diagnostic(std::ostream& stream, lsp::Diagnostic const& diagnostic)
+{
+    std::println(
+        stream,
+        "{} {}: {}",
+        diagnostic.range,
+        severity_string(diagnostic.severity),
+        diagnostic.message);
+}
+
+void ki::db::count_diagnostic(db::Database& db, lsp::Severity severity)
+{
+    if (severity == lsp::Severity::Error and db.config.maximum_errors == ++db.error_count) {
+        throw Max_errors_reached(db.config.maximum_errors);
+    }
+}
+
+// NOLINTNEXTLINE(performance-unnecessary-value-param)
+void ki::db::ignore_sink(lsp::Diagnostic diagnostic)
+{
+    (void)diagnostic;
+}
+
 auto ki::db::database(Configuration config) -> Database
 {
     return Database {
@@ -312,25 +349,6 @@ void ki::db::add_reference(
 {
     if (db.config.references) {
         db.documents[doc_id].info.references.emplace_back(ref, symbol_id);
-    }
-}
-
-void ki::db::add_diagnostic(Database& db, Document_id doc_id, lsp::Diagnostic diagnostic)
-{
-    if (db.config.diagnostics) {
-        db.documents[doc_id].info.diagnostics.push_back(std::move(diagnostic));
-    }
-}
-
-void ki::db::add_error(Database& db, Document_id doc_id, lsp::Range range, std::string message)
-{
-    add_diagnostic(db, doc_id, error(range, std::move(message)));
-}
-
-void ki::db::print_diagnostics(std::ostream& stream, Database const& db, Document_id doc_id)
-{
-    for (lsp::Diagnostic const& diag : db.documents[doc_id].info.diagnostics) {
-        std::println(stream, "{} {}: {}", diag.range, severity_string(diag.severity), diag.message);
     }
 }
 

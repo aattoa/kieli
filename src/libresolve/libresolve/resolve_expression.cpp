@@ -26,7 +26,7 @@ namespace {
 
         auto error(lsp::Range range, std::string message) -> hir::Expression
         {
-            db::add_error(db, ctx.doc_id, range, std::move(message));
+            ctx.add_diagnostic(lsp::error(range, std::move(message)));
             return error_expression(ctx, this_range);
         }
 
@@ -489,7 +489,7 @@ namespace {
                         auto message = std::format(
                             "Duplicate initializer for field '{}'",
                             db.string_pool.get(field.name.id));
-                        db::add_error(db, ctx.doc_id, field.name.range, std::move(message));
+                        ctx.add_diagnostic(lsp::error(field.name.range, std::move(message)));
                     }
 
                     map.insert_or_assign(info.field_index, std::move(expression));
@@ -499,7 +499,7 @@ namespace {
                         "No field '{}' on constructor {}",
                         db.string_pool.get(field.name.id),
                         db.string_pool.get(ctor.name.id));
-                    db::add_error(db, ctx.doc_id, field.name.range, std::move(message));
+                    ctx.add_diagnostic(lsp::error(field.name.range, std::move(message)));
                 }
             }
 

@@ -744,15 +744,15 @@ namespace {
     };
 } // namespace
 
-void ki::dis::display_document(std::ostream& stream, db::Database& db, db::Document_id doc_id)
+void ki::dis::display_document(
+    std::ostream& stream, db::Database& db, db::Document_id doc_id, db::Diagnostic_sink sink)
 {
-    auto par_ctx = par::context(db, doc_id);
+    auto par_ctx = par::context(db, doc_id, sink);
 
     auto des_ctx = des::Context {
-        .db     = db,
-        .doc_id = doc_id,
-        .cst    = par_ctx.arena,
-        .ast    = ast::Arena {},
+        .cst            = par_ctx.arena,
+        .ast            = ast::Arena {},
+        .add_diagnostic = sink,
     };
 
     auto state = Display_state {

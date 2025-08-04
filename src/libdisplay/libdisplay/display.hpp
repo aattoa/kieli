@@ -6,7 +6,8 @@
 namespace ki::dis {
 
     // Parse and desugar the given document and display its AST in a tree format.
-    void display_document(std::ostream& stream, db::Database& db, db::Document_id doc_id);
+    void display_document(
+        std::ostream& stream, db::Database& db, db::Document_id doc_id, db::Diagnostic_sink sink);
 
 } // namespace ki::dis
 

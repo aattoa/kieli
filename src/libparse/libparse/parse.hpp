@@ -13,6 +13,7 @@ namespace ki::par {
     struct Context {
         db::Database&                    db;
         db::Document_id                  doc_id;
+        db::Diagnostic_sink              add_diagnostic;
         cst::Arena                       arena;
         lex::State                       lex_state;
         std::optional<lex::Token>        next_token;
@@ -25,7 +26,8 @@ namespace ki::par {
     };
 
     // Create a parse context.
-    [[nodiscard]] auto context(db::Database& db, db::Document_id doc_id) -> Context;
+    [[nodiscard]] auto context(db::Database& db, db::Document_id doc_id, db::Diagnostic_sink sink)
+        -> Context;
 
     // Check whether the current token is the end-of-input token.
     [[nodiscard]] auto is_finished(Context& ctx) -> bool;

@@ -65,7 +65,7 @@ namespace {
         if (auto const it = map.find(segment.name.id); it != map.end()) {
             if (segment.template_arguments.has_value()) {
                 std::string message = "Template argument resolution has not been implemented";
-                db::add_error(db, ctx.doc_id, segment.name.range, std::move(message));
+                ctx.add_diagnostic(lsp::error(segment.name.range, std::move(message)));
             }
             ++ctx.arena.symbols[it->second].use_count;
             db::add_reference(db, ctx.doc_id, lsp::read(segment.name.range), it->second);
@@ -104,7 +104,7 @@ namespace {
                         "Expected a module, but '{}' is {}",
                         db.string_pool.get(segment.name.id),
                         db::describe_symbol_kind(ctx.arena.symbols[symbol.value()].variant));
-                    db::add_error(db, ctx.doc_id, segment.name.range, std::move(message));
+                    ctx.add_diagnostic(lsp::error(segment.name.range, std::move(message)));
                     return new_symbol(ctx, segment.name, db::Error {});
                 }
             }
@@ -113,7 +113,7 @@ namespace {
                     "{} does not contain '{}'",
                     environment_name(db, ctx, lookup_env_id),
                     db.string_pool.get(segment.name.id));
-                db::add_error(db, ctx.doc_id, segment.name.range, std::move(message));
+                ctx.add_diagnostic(lsp::error(segment.name.range, std::move(message)));
                 return new_symbol(ctx, segment.name, db::Error {});
             }
         }
@@ -154,7 +154,7 @@ auto ki::res::resolve_path(
             set_completion(db, ctx.doc_id, env_id, front, db::Completion_mode::Top);
 
             auto message = std::format("Undeclared identifier: '{}'", db.string_pool.get(front.id));
-            db::add_error(db, ctx.doc_id, front.range, std::move(message));
+            ctx.add_diagnostic(lsp::error(front.range, std::move(message)));
             return new_symbol(ctx, front, db::Error {});
         },
         [&](ast::Path_root_global) {
@@ -177,7 +177,7 @@ auto ki::res::resolve_path(
             auto message = std::format(
                 "'{}' has no associated environment",
                 hir::to_string(ctx.arena.hir, db.string_pool, type));
-            db::add_error(db, ctx.doc_id, type.range, std::move(message));
+            ctx.add_diagnostic(lsp::error(type.range, std::move(message)));
 
             db::Name name { .id = db.string_pool.make("(ERROR)"sv), .range = type.range };
             return new_symbol(ctx, name, db::Error {});

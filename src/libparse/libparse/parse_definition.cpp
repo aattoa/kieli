@@ -245,7 +245,7 @@ auto ki::par::extract_submodule(Context& ctx, lex::Token const& module_keyword)
 auto ki::par::extract_block_end(Context& ctx, lex::Token const& brace_close) -> cst::Block_end
 {
     if (ctx.block_depth == 0) {
-        db::add_error(ctx.db, ctx.doc_id, brace_close.range, "Unexpected closing brace");
+        ctx.add_diagnostic(lsp::error(brace_close.range, "Unexpected closing brace"));
         throw Failure {};
     }
     --ctx.block_depth;
@@ -260,7 +260,7 @@ void ki::par::handle_end_of_input(Context& ctx, lex::Token const& end)
         auto message = ctx.block_depth == 1
                          ? "Expected a closing brace"
                          : std::format("Expected {} closing braces", ctx.block_depth);
-        db::add_error(ctx.db, ctx.doc_id, end.range, std::move(message));
+        ctx.add_diagnostic(lsp::error(end.range, std::move(message)));
     }
 }
 
@@ -268,7 +268,7 @@ void ki::par::handle_bad_token(Context& ctx, lex::Token const& token)
 {
     auto message
         = std::format("Expected a definition, but found {}", lex::token_description(token.type));
-    db::add_error(ctx.db, ctx.doc_id, token.range, std::move(message));
+    ctx.add_diagnostic(lsp::error(token.range, std::move(message)));
     skip_to_next_recovery_point(ctx);
     throw Failure {};
 }

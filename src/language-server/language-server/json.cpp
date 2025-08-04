@@ -720,6 +720,9 @@ auto ki::lsp::database_config_from_json(Json json) -> db::Configuration
     if (auto boolean = maybe_at<Json::Boolean>(object, "completion")) {
         config.code_completion = boolean.value();
     }
+    if (auto integer = maybe_at<Json::Number>(object, "maximumErrors")) {
+        config.maximum_errors = cpputil::num::safe_cast<std::size_t>(integer.value());
+    }
 
     return config;
 }

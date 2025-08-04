@@ -18,4 +18,5 @@ target_precompile_headers(libutl
 
 target_link_libraries(libutl
     PUBLIC cpputil::util
-    PUBLIC cpputil::num)
+    PUBLIC cpputil::num
+    PUBLIC cpputil::fn)

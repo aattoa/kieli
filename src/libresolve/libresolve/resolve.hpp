@@ -71,11 +71,12 @@ namespace ki::res {
         Signature_scope_map signature_scope_map;
         db::Environment_id  root_env_id;
         db::Document_id     doc_id;
+        db::Diagnostic_sink add_diagnostic;
         Tags                tags;
     };
 
     // Create a resolution context for the given document.
-    auto context(db::Document_id doc_id) -> Context;
+    auto context(db::Document_id doc_id, db::Diagnostic_sink sink) -> Context;
 
     auto make_constants(hir::Arena& arena) -> Constants;
 

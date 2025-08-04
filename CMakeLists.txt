@@ -8,7 +8,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 include(FetchContent)
 FetchContent_Declare(cpputil
     GIT_REPOSITORY https://github.com/aattoa/cpputil.git
-    GIT_TAG        c39d236308e4857a6590ab3449dbdebfc606cf5d)
+    GIT_TAG        1e67d69055751068ba36440bf747ebc1853ca7cb)
 set(CPPUTIL_BUILD_TESTS OFF)
 
 message(STATUS "[kieli] Fetching dependencies...")

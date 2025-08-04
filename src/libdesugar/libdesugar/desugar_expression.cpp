@@ -115,8 +115,7 @@ namespace {
             ast::Expression condition = deref_desugar(ctx, conditional.condition);
 
             if (std::holds_alternative<db::Boolean>(condition.variant)) {
-                db::add_diagnostic(
-                    ctx.db, ctx.doc_id, lsp::note(condition.range, "Constant condition"));
+                ctx.add_diagnostic(lsp::note(condition.range, "Constant condition"));
             }
 
             return ast::expr::Conditional {
@@ -231,8 +230,8 @@ namespace {
             */
             ast::Expression condition = deref_desugar(ctx, loop.condition);
             if (auto const* const boolean = std::get_if<db::Boolean>(&condition.variant)) {
-                auto note = constant_loop_condition_diagnostic(condition.range, boolean->value);
-                db::add_diagnostic(ctx.db, ctx.doc_id, std::move(note));
+                ctx.add_diagnostic(
+                    constant_loop_condition_diagnostic(condition.range, boolean->value));
             }
             return ast::expr::Loop {
                 .body = ctx.ast.expressions.push(
@@ -398,7 +397,7 @@ namespace {
 
         auto operator()(cst::expr::For_loop const& loop) const -> ast::Expression_variant
         {
-            db::add_error(ctx.db, ctx.doc_id, loop.for_token, "For loops are not supported yet");
+            ctx.add_diagnostic(lsp::error(loop.for_token, "For loops are not supported yet"));
             return db::Error {};
         }
     };

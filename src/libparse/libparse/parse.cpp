@@ -53,15 +53,15 @@ namespace {
         auto string = view.string(ctx.lex_state.text);
 
         for (std::size_t i = 0; i != view.length; ++i) {
-            if (char const ch = string.at(i); ch != '\\') {
+            if (char ch = string.at(i); ch != '\\') {
                 out.push_back(ch);
             }
-            else if (auto const escaped = escape_character(string.at(++i))) {
+            else if (auto escaped = escape_character(string.at(++i))) {
                 out.push_back(escaped.value());
             }
             else {
-                auto const range = lsp::to_range(lsp::column_offset(token.range.start, i + 1));
-                db::add_error(ctx.db, ctx.doc_id, range, "Unrecognized escape sequence");
+                auto range = lsp::to_range(lsp::column_offset(token.range.start, i + 1));
+                ctx.add_diagnostic(lsp::error(range, "Unrecognized escape sequence"));
             }
         }
     }
@@ -216,7 +216,7 @@ void ki::par::error_expected(Context& ctx, lsp::Range range, std::string_view de
 {
     auto found   = token_description(peek(ctx).type);
     auto message = std::format("Expected {}, but found {}", description, found);
-    db::add_error(ctx.db, ctx.doc_id, range, std::move(message));
+    ctx.add_diagnostic(lsp::error(range, std::move(message)));
     throw Failure {};
 }
 
@@ -282,7 +282,7 @@ auto ki::par::parse_integer(Context& ctx, lex::Token const& literal) -> std::opt
     if (auto const integer = parse_impl<decltype(db::Integer::value)>(string)) {
         return db::Integer { integer.value() };
     }
-    db::add_error(ctx.db, ctx.doc_id, literal.range, "Invalid integer literal");
+    ctx.add_diagnostic(lsp::error(literal.range, "Invalid integer literal"));
     return std::nullopt;
 }
 
@@ -294,7 +294,7 @@ auto ki::par::parse_floating(Context& ctx, lex::Token const& literal) -> std::op
     if (auto const floating = parse_impl<double>(string)) {
         return db::Floating { floating.value() };
     }
-    db::add_error(ctx.db, ctx.doc_id, literal.range, "Invalid floating point literal");
+    ctx.add_diagnostic(lsp::error(literal.range, "Invalid floating point literal"));
     return std::nullopt;
 }
 
@@ -309,11 +309,12 @@ auto ki::par::parse_boolean(Context& ctx, lex::Token const& literal) -> std::opt
     return db::Boolean { literal.view.length == 4 };
 }
 
-auto ki::par::context(db::Database& db, db::Document_id doc_id) -> Context
+auto ki::par::context(db::Database& db, db::Document_id doc_id, db::Diagnostic_sink sink) -> Context
 {
     return Context {
         .db                            = db,
         .doc_id                        = doc_id,
+        .add_diagnostic                = sink,
         .arena                         = cst::Arena {},
         .lex_state                     = lex::state(db.documents[doc_id].text),
         .next_token                    = std::nullopt,

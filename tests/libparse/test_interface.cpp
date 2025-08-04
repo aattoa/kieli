@@ -12,7 +12,7 @@ namespace {
     {
         auto db      = db::Database {};
         auto doc_id  = db::test_document(db, std::move(text));
-        auto par_ctx = context(db, doc_id);
+        auto par_ctx = context(db, doc_id, db::ignore_sink);
         auto result  = require<parser>(par_ctx, expectation);
 
         if (is_finished(par_ctx)) {

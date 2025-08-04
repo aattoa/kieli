@@ -46,11 +46,9 @@ namespace {
             bind_symbol(db, ctx, env_id, parameter.name, local_id);
 
             if (not parameter.concepts.empty()) {
-                db::add_error(
-                    db,
-                    ctx.doc_id,
-                    parameter.concepts.front().head().name.range,
-                    "Concept requirements are not supported yet");
+                lsp::Range  range   = parameter.concepts.front().head().name.range;
+                std::string message = "Concept requirements are not supported yet";
+                ctx.add_diagnostic(lsp::error(range, std::move(message)));
             }
 
             return hir::Template_type_parameter {
@@ -80,11 +78,8 @@ namespace {
         auto operator()(ast::Template_value_parameter const& parameter)
             -> hir::Template_parameter_variant
         {
-            db::add_error(
-                db,
-                ctx.doc_id,
-                parameter.name.range,
-                "Template value parameters are not supported yet");
+            std::string message = "Template value parameters are not supported yet";
+            ctx.add_diagnostic(lsp::error(parameter.name.range, std::move(message)));
             return hir::Template_value_parameter {
                 .type = error_type(ctx, parameter.name.range),
                 .name = parameter.name,

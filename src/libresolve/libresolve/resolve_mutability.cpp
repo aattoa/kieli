@@ -48,7 +48,7 @@ auto ki::res::resolve_mutability(
                     "Expected a mutability binding, but '{}' is {}",
                     db.string_pool.get(mut.name.id),
                     db::describe_symbol_kind(symbol.variant));
-                db::add_error(db, ctx.doc_id, mut.name.range, std::move(message));
+                ctx.add_diagnostic(lsp::error(mut.name.range, std::move(message)));
             }
             return hir::Mutability {
                 .id    = ctx.constants.mut_error,

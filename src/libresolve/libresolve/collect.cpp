@@ -121,7 +121,7 @@ namespace {
 
         void operator()(cst::Impl_begin const& impl)
         {
-            db::add_error(db, ctx.doc_id, impl.impl_token, "impl blocks are not supported yet");
+            ctx.add_diagnostic(lsp::error(impl.impl_token, "impl blocks are not supported yet"));
         }
 
         void operator()(cst::Submodule_begin const& module)
@@ -158,13 +158,12 @@ namespace {
 
 auto ki::res::collect_document(db::Database& db, Context& ctx) -> std::vector<db::Symbol_id>
 {
-    auto par_ctx = par::context(db, ctx.doc_id);
+    auto par_ctx = par::context(db, ctx.doc_id, ctx.add_diagnostic);
 
     auto des_ctx = des::Context {
-        .db     = db,
-        .doc_id = ctx.doc_id,
-        .cst    = par_ctx.arena,
-        .ast    = ast::Arena {},
+        .cst            = par_ctx.arena,
+        .ast            = ast::Arena {},
+        .add_diagnostic = ctx.add_diagnostic,
     };
 
     auto collector = Collector {

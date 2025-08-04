@@ -9,7 +9,7 @@ using namespace ki;
 
 namespace {
     template <typename... Args>
-    [[noreturn]] void error(std::format_string<Args...> fmt, Args&&... args)
+    [[noreturn]] void die(std::format_string<Args...> fmt, Args&&... args)
     {
         std::println(std::cerr, fmt, std::forward<Args>(args)...);
         std::quick_exit(EXIT_FAILURE);
@@ -17,11 +17,11 @@ namespace {
 
     auto read_document(db::Database& db, std::string_view path) -> db::Document_id
     {
-        if (auto id = db::read_document(db, path)) {
-            return id.value();
+        if (auto doc_id = db::read_document(db, path)) {
+            return doc_id.value();
         }
         else {
-            error("Error: Failed to read '{}': {}", path, db::describe_read_failure(id.error()));
+            die("Error: {}: '{}'", db::describe_read_failure(doc_id.error()), path);
         }
     }
 
@@ -29,7 +29,8 @@ namespace {
     {
         auto db     = db::database({});
         auto doc_id = read_document(db, path);
-        auto ctx    = res::context(doc_id);
+        auto sink   = db::Diagnostic_stream_sink(db, std::cout);
+        auto ctx    = res::context(doc_id, sink);
 
         db.documents[doc_id].info.root_env_id = ctx.root_env_id;
 
@@ -41,37 +42,31 @@ namespace {
         for (db::Symbol_id symbol_id : symbol_ids) {
             res::warn_if_unused(db, ctx, symbol_id);
         }
-
-        db::print_diagnostics(std::cout, db, doc_id);
     }
 
     void parse(std::string_view path)
     {
         auto db     = db::database({});
         auto doc_id = read_document(db, path);
-
-        auto ctx = par::context(db, doc_id);
+        auto sink   = db::Diagnostic_stream_sink(db, std::cout);
+        auto ctx    = par::context(db, doc_id, sink);
         par::parse(ctx, [](auto const&) {});
-
-        db::print_diagnostics(std::cout, db, doc_id);
     }
 
     void format(std::string_view path)
     {
         auto db     = db::database({});
         auto doc_id = read_document(db, path);
-
-        fmt::format_document(std::cout, db, doc_id, fmt::Options {});
-        db::print_diagnostics(std::cerr, db, doc_id);
+        auto sink   = db::Diagnostic_stream_sink(db, std::cerr);
+        fmt::format_document(std::cout, db, doc_id, sink, fmt::Options {});
     }
 
     void dump_ast(std::string_view path)
     {
         auto db     = db::database({});
         auto doc_id = read_document(db, path);
-
-        dis::display_document(std::cout, db, doc_id);
-        db::print_diagnostics(std::cerr, db, doc_id);
+        auto sink   = db::Diagnostic_stream_sink(db, std::cerr);
+        dis::display_document(std::cout, db, doc_id, sink);
     }
 
     auto const help_text = R"(Usage: kieli [OPTIONS] [COMMAND]
@@ -93,8 +88,9 @@ auto main(int argc, char const* const* argv) -> int
         if (arg != argv + argc) {
             return std::string_view(*arg++);
         }
-        error("Missing required argument {}", desc);
+        die("Missing required argument {}", desc);
     };
+
     try {
         if (argc == 1) {
             std::println("{}", help_text);
@@ -123,17 +119,20 @@ auto main(int argc, char const* const* argv) -> int
         }
         else {
             char const* desc = arg.starts_with('-') ? "option" : "command";
-            error("Unrecognized {}: '{}'\n\nFor help, try 'kieli --help'", desc, arg);
+            die("Unrecognized {}: '{}'\n\nFor help, try 'kieli --help'", desc, arg);
         }
 
         return EXIT_SUCCESS;
     }
+    catch (db::Max_errors_reached const& error) {
+        std::println(std::cerr, "{} errors occurred, stopping compilation", error.count);
+    }
     catch (std::exception const& exception) {
         std::println(std::cerr, "Error: Unhandled exception: {}", exception.what());
-        return EXIT_FAILURE;
     }
     catch (...) {
         std::println(std::cerr, "Error: Caught unrecognized exception");
-        return EXIT_FAILURE;
     }
+
+    return EXIT_FAILURE;
 }

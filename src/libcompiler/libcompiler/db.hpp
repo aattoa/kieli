@@ -145,6 +145,9 @@ namespace ki::db {
         std::optional<lsp::Position> edit_position;
     };
 
+    // Represents a file read failure.
+    enum struct Read_failure : std::uint8_t { Does_not_exist, Failed_to_open, Failed_to_read };
+
     enum struct Log_level : std::uint8_t { None, Debug };
     enum struct Semantic_token_mode : std::uint8_t { None, Partial, Full };
     enum struct Inlay_hint_mode : std::uint8_t { None, Type, Parameter, Full };
@@ -159,6 +162,7 @@ namespace ki::db {
         Log_level           log_level       = Log_level::None;
         Semantic_token_mode semantic_tokens = Semantic_token_mode::None;
         Inlay_hint_mode     inlay_hints     = Inlay_hint_mode::None;
+        std::size_t         maximum_errors  = 0;
         bool                references      = false;
         bool                code_actions    = false;
         bool                signature_help  = false;
@@ -166,16 +170,44 @@ namespace ki::db {
         bool                diagnostics     = true;
     };
 
+    using Document_map    = std::unordered_map<std::filesystem::path, Document_id>;
+    using Document_arena  = utl::Index_vector<Document_id, Document>;
+    using Diagnostic_sink = cpputil::fn::Function_ref<void(lsp::Diagnostic)>;
+
     // Compiler database.
     struct Database {
-        utl::Index_vector<Document_id, Document>               documents;
-        std::unordered_map<std::filesystem::path, Document_id> paths;
-        utl::String_pool                                       string_pool;
-        Configuration                                          config;
+        Document_arena   documents;
+        Document_map     paths;
+        utl::String_pool string_pool;
+        Configuration    config;
+        std::size_t      error_count {};
     };
 
-    // Represents a file read failure.
-    enum struct Read_failure : std::uint8_t { Does_not_exist, Failed_to_open, Failed_to_read };
+    // Thrown to indicate job termination when a user-configured maximum error count is reached.
+    struct Max_errors_reached : std::exception {
+        std::size_t count {};
+
+        explicit Max_errors_reached(std::size_t count);
+
+        [[nodiscard]] auto what() const noexcept -> char const* override;
+    };
+
+    // The diagnostic sink for regular compilation. Logs diagnostic messages to the given stream.
+    struct Diagnostic_stream_sink {
+        Database&     db;
+        std::ostream& stream;
+
+        void operator()(lsp::Diagnostic diagnostic);
+    };
+
+    // Format `diagnostic` to `stream`.
+    void format_diagnostic(std::ostream& stream, lsp::Diagnostic const& diagnostic);
+
+    // Throws `Max_errors_reached` if `db.config.maximum_errors` has been reached.
+    void count_diagnostic(db::Database& db, lsp::Severity severity);
+
+    // Diagnostic sink that ignores its argument.
+    void ignore_sink(lsp::Diagnostic diagnostic);
 
     // Create a compiler database.
     [[nodiscard]] auto database(Configuration config) -> Database;
@@ -244,15 +276,6 @@ namespace ki::db {
 
     // Add a symbol reference to the document identified by `doc_id`.
     void add_reference(Database& db, Document_id doc_id, lsp::Reference ref, Symbol_id symbol_id);
-
-    // Add `diagnostic` to the document identified by `doc_id`.
-    void add_diagnostic(Database& db, Document_id doc_id, lsp::Diagnostic diagnostic);
-
-    // Add an error diagnostic to the document identified by `doc_id`.
-    void add_error(Database& db, Document_id doc_id, lsp::Range range, std::string message);
-
-    // Print diagnostics belonging to the document identified by `doc_id` to `stream`.
-    void print_diagnostics(std::ostream& stream, Database const& db, Document_id doc_id);
 
     // Get the primary type associated with the given symbol.
     auto symbol_type(Arena const& arena, Symbol_id symbol_id) -> std::optional<hir::Type_id>;

@@ -120,7 +120,7 @@ auto ki::des::desugar(Context& ctx, cst::Function_parameters const& cst_paramete
     auto const desugar_argument = [&](cst::Value_parameter_default_argument const& argument) {
         if (auto const* const wildcard = std::get_if<cst::Wildcard>(&argument.variant)) {
             auto const range = wildcard->underscore_token;
-            db::add_error(ctx.db, ctx.doc_id, range, "A default argument may not be a wildcard");
+            ctx.add_diagnostic(lsp::error(range, "A default argument may not be a wildcard"));
             return ctx.ast.expressions.push(db::Error {}, range);
         }
         return desugar(ctx, std::get<cst::Expression_id>(argument.variant));
@@ -134,7 +134,7 @@ auto ki::des::desugar(Context& ctx, cst::Function_parameters const& cst_paramete
             return ast_parameters.front().type;
         }
         auto const range = ctx.cst.patterns[parameter.pattern].range;
-        db::add_error(ctx.db, ctx.doc_id, range, "The final parameter type must not be omitted");
+        ctx.add_diagnostic(lsp::error(range, "The final parameter type must not be omitted"));
         return ctx.ast.types.push(db::Error {}, range);
     };
 

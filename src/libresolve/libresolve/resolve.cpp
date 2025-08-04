@@ -1,7 +1,7 @@
 #include <libutl/utilities.hpp>
 #include <libresolve/resolve.hpp>
 
-auto ki::res::context(db::Document_id doc_id) -> Context
+auto ki::res::context(db::Document_id doc_id, db::Diagnostic_sink sink) -> Context
 {
     auto arena = db::Arena {};
 
@@ -22,6 +22,7 @@ auto ki::res::context(db::Document_id doc_id) -> Context
         .signature_scope_map = {},
         .root_env_id         = env_id,
         .doc_id              = doc_id,
+        .add_diagnostic      = sink,
         .tags                = {},
     };
 }
@@ -114,7 +115,7 @@ void ki::res::warn_if_unused(db::Database& db, Context& ctx, db::Symbol_id symbo
             .tag          = lsp::Diagnostic_tag::Unnecessary,
         };
 
-        db::add_diagnostic(db, ctx.doc_id, std::move(warning));
+        ctx.add_diagnostic(std::move(warning));
         db::add_action(db, ctx.doc_id, symbol.name.range, db::Action_silence_unused { symbol_id });
     }
 }
@@ -148,7 +149,7 @@ auto ki::res::bind_symbol(
         }
         else {
             auto message = std::format("Redefinition of '{}'", db.string_pool.get(name.id));
-            db::add_error(db, ctx.doc_id, name.range, std::move(message));
+            ctx.add_diagnostic(lsp::error(name.range, std::move(message)));
             return symbol_id;
         }
     }
@@ -285,7 +286,7 @@ void ki::res::ensure_no_unsolved_variables(db::Database& db, Context& ctx, Block
             }
             else {
                 auto message = std::format("Unsolved type variable: ?{}", data.var_id.get());
-                db::add_error(db, ctx.doc_id, data.origin, std::move(message));
+                ctx.add_diagnostic(lsp::error(data.origin, std::move(message)));
                 set_type_solution(db, ctx, state, data.var_id, db::Error {});
             }
         }

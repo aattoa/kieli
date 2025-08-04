@@ -186,10 +186,13 @@ void ki::fmt::format(Context& ctx, cst::Block_end const&)
 }
 
 auto ki::fmt::format_document(
-    std::ostream& stream, db::Database& db, db::Document_id doc_id, Options const& options)
-    -> lsp::Range
+    std::ostream&       stream,
+    db::Database&       db,
+    db::Document_id     doc_id,
+    db::Diagnostic_sink sink,
+    Options const&      options) -> lsp::Range
 {
-    auto par_ctx = par::context(db, doc_id);
+    auto par_ctx = par::context(db, doc_id, sink);
 
     auto fmt_ctx = Context {
         .db      = db,

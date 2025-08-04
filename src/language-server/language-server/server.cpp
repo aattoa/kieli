@@ -44,7 +44,14 @@ namespace {
 
     void analyze_document(Server& server, db::Document_id doc_id)
     {
-        auto ctx = res::context(doc_id);
+        auto sink = [&](lsp::Diagnostic diagnostic) {
+            if (server.db.config.diagnostics) {
+                server.db.documents[doc_id].info.diagnostics.push_back(std::move(diagnostic));
+                db::count_diagnostic(server.db, diagnostic.severity);
+            }
+        };
+
+        auto ctx = res::context(doc_id, sink);
 
         server.db.documents[doc_id].info = {
             .diagnostics     = {},
@@ -57,13 +64,19 @@ namespace {
             .completion_info = std::nullopt,
         };
 
-        auto symbol_ids = res::collect_document(server.db, ctx);
+        try {
+            auto symbol_ids = res::collect_document(server.db, ctx);
 
-        for (db::Symbol_id symbol_id : symbol_ids) {
-            res::resolve_symbol(server.db, ctx, symbol_id);
+            for (db::Symbol_id symbol_id : symbol_ids) {
+                res::resolve_symbol(server.db, ctx, symbol_id);
+            }
+            for (db::Symbol_id symbol_id : symbol_ids) {
+                res::warn_if_unused(server.db, ctx, symbol_id);
+            }
         }
-        for (db::Symbol_id symbol_id : symbol_ids) {
-            res::warn_if_unused(server.db, ctx, symbol_id);
+        catch (db::Max_errors_reached const& error) {
+            auto message = std::format("{} errors occurred, stopping analysis", error.count);
+            sink(lsp::error(lsp::to_range(lsp::Position {}), std::move(message)));
         }
 
         server.db.documents[doc_id].arena = std::move(ctx.arena);
@@ -102,7 +115,7 @@ namespace {
 
         std::ostringstream stream;
 
-        auto range = fmt::format_document(stream, server.db, doc_id, options);
+        auto range = fmt::format_document(stream, server.db, doc_id, db::ignore_sink, options);
 
         Json::Object edit;
         edit.try_emplace("range", range_to_json(range));

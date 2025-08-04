@@ -4,6 +4,8 @@
 // This file is intended to be used as a precompiled header across the entire project.
 
 #include <cpputil/util.hpp>
+#include <cpputil/num.hpp>
+#include <cpputil/function_ref.hpp>
 
 #include <algorithm>
 #include <array>

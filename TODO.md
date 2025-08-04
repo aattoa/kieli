@@ -50,7 +50,6 @@
 
 ## Miscellaneous
 - Error limit, return error code from driver
-- Generic diagnostic consumer, format to stdout/stderr for the driver
 - Inline concepts
 - libtommath for arbitrary precision integers?
 - String interpolation

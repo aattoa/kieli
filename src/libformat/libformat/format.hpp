@@ -23,7 +23,7 @@ namespace ki::fmt {
         db::Database const& db;
         cst::Arena const&   arena;
         std::ostream&       stream;
-        Options             options {};
+        Options const&      options {};
         std::size_t         indentation {};
         bool                did_open_block {};
         bool                is_first_definition = true;
@@ -31,8 +31,11 @@ namespace ki::fmt {
 
     // Parse and format the given document.
     auto format_document(
-        std::ostream& stream, db::Database& db, db::Document_id doc_id, Options const& options)
-        -> lsp::Range;
+        std::ostream&       stream,
+        db::Database&       db,
+        db::Document_id     doc_id,
+        db::Diagnostic_sink sink,
+        Options const&      options) -> lsp::Range;
 
     void format(Context& ctx, cst::Function const& function);
     void format(Context& ctx, cst::Struct const& structure);
@@ -52,7 +55,7 @@ namespace ki::fmt {
 
     auto to_string(db::Database const& db, cst::Arena const& arena, auto const& x) -> std::string
     {
-        auto out = std::stringstream {};
+        auto out = std::ostringstream {};
         auto ctx = Context { .db = db, .arena = arena, .stream = out };
         ki::fmt::format(ctx, x);
         return std::move(out).str();

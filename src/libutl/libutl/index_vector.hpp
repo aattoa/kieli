@@ -2,7 +2,6 @@
 #define KIELI_LIBUTL_INDEX_VECTOR
 
 #include <libutl/utilities.hpp>
-#include <cpputil/num.hpp>
 
 namespace ki::utl {
 
