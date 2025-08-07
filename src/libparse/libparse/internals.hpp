@@ -50,6 +50,7 @@ namespace ki::par {
     auto parse_complex_path(Context& ctx) -> std::optional<cst::Path>;
     auto extract_path(Context& ctx, cst::Path_root) -> cst::Path;
     auto extract_concept_references(Context& ctx) -> cst::Separated<cst::Path>;
+    auto extract_builtin(Context& ctx, lex::Token const& at) -> cst::Builtin;
 
     auto parse_block_expression(Context& ctx) -> std::optional<cst::Expression_id>;
     auto parse_expression(Context& ctx) -> std::optional<cst::Expression_id>;

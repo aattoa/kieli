@@ -49,6 +49,7 @@ auto ki::lex::recovery_semantic_token(Type const type) -> std::optional<lsp::Sem
     case Type::Equals:
     case Type::Question:
     case Type::Exclamation:
+    case Type::At:
     case Type::Pipe:
     case Type::Left_arrow:
     case Type::Right_arrow:

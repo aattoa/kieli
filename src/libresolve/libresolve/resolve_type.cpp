@@ -12,22 +12,26 @@ namespace {
         db::Environment_id env_id;
         lsp::Range         this_range;
 
-        auto recurse(ast::Type_id type_id) -> hir::Type
+        auto recurse(ast::Type_id type_id) -> hir::Type_id
         {
             return resolve_type(db, ctx, state, env_id, ctx.arena.ast.types[type_id]);
         }
 
         auto operator()(ast::Wildcard const&) -> hir::Type_id
         {
-            auto type = fresh_general_type_variable(ctx, state, this_range);
-            db::add_type_hint(db, ctx.doc_id, this_range.stop, type.id);
-            return type.id;
+            auto type_id = fresh_general_type_variable(ctx, state, this_range);
+            db::add_type_hint(db, ctx.doc_id, this_range.stop, type_id);
+            return type_id;
         }
 
-        auto operator()(ast::type::Never const&) -> hir::Type_id
+        auto operator()(ast::Builtin const& builtin) -> hir::Type_id
         {
-            ctx.add_diagnostic(lsp::error(this_range, "'!' resolution has not been implemented"));
-            return ctx.constants.type_error;
+            db::add_completion(db, ctx.doc_id, builtin.name, db::Builtin_completion::Type);
+            if (auto type = hir::get_builtin_type(db.string_pool.get(builtin.name.id))) {
+                return builtin_type_id(ctx.builtins, type.value());
+            }
+            ctx.add_diagnostic(lsp::error(builtin.name.range, "Unknown built-in type"));
+            return ctx.builtins.type_error;
         }
 
         auto operator()(ast::Path const& path) -> hir::Type_id
@@ -44,16 +48,16 @@ namespace {
                 return ctx.arena.hir.enumerations[*enum_id].type_id;
             }
             if (auto const* alias_id = std::get_if<hir::Alias_id>(&symbol.variant)) {
-                return resolve_alias(db, ctx, *alias_id).type.id;
+                return resolve_alias(db, ctx, *alias_id).type_id;
             }
             if (std::holds_alternative<db::Error>(symbol.variant)) {
-                return ctx.constants.type_error;
+                return ctx.builtins.type_error;
             }
 
             auto kind    = db::describe_symbol_kind(symbol.variant);
             auto message = std::format("Expected a type, but found {}", kind);
             ctx.add_diagnostic(lsp::error(this_range, std::move(message)));
-            return ctx.constants.type_error;
+            return ctx.builtins.type_error;
         }
 
         auto operator()(ast::type::Tuple const& tuple) -> hir::Type_id
@@ -126,12 +130,12 @@ namespace {
         auto operator()(ast::type::Impl const&) -> hir::Type_id
         {
             ctx.add_diagnostic(lsp::error(this_range, "Impl resolution has not been implemented"));
-            return ctx.constants.type_error;
+            return ctx.builtins.type_error;
         }
 
         auto operator()(db::Error const&) const -> hir::Type_id
         {
-            return ctx.constants.type_error;
+            return ctx.builtins.type_error;
         }
     };
 } // namespace
@@ -141,7 +145,7 @@ auto ki::res::resolve_type(
     Context&                 ctx,
     Block_state&             state,
     db::Environment_id const env_id,
-    ast::Type const&         type) -> hir::Type
+    ast::Type const&         type) -> hir::Type_id
 {
     Visitor visitor {
         .db         = db,
@@ -150,5 +154,5 @@ auto ki::res::resolve_type(
         .env_id     = env_id,
         .this_range = type.range,
     };
-    return hir::Type { .id = std::visit(visitor, type.variant), .range = type.range };
+    return std::visit(visitor, type.variant);
 }

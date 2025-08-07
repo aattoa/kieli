@@ -6,12 +6,16 @@
 - Solve template type/value argument conflict
 - Imports are definitions
 
+## libdesugar
+- Pipe placeholder
+
 ## libresolve
 - Unique zero-sized type for each function, coerce to function pointer type
 - Unification rollback logs?
 - Warn when last expression in block is defer
 - Collect semantic tokens for identifiers on path resolution
 - Provide a best-effort type when expression resolution fails
+- Consider `extern "intrinsic" fn` instead of built-in expressions
 
 ## Language server
 - Avoid collecting hints, actions, and references when the client does not support them
@@ -31,11 +35,6 @@
 - `extern`: Apply to function definition, specify calling convention
 - `untagged`: Apply to enum definition, disallow match, access with `@unsafe let`
 - `infix`: Apply to operator definition, specify precedence and associativity
-
-## Builtins
-- `@here`
-- `@todo`
-- `@unreachable`
 
 ## Executable
 - `kieli build`: Build given file or entire project

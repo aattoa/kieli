@@ -64,6 +64,10 @@ namespace ki::ast {
         [[nodiscard]] auto is_unqualified() const noexcept -> bool;
     };
 
+    struct Builtin {
+        db::Name name;
+    };
+
     struct Template_type_parameter {
         using Default = std::variant<Type_id, Wildcard>;
         db::Upper              name;
@@ -232,12 +236,12 @@ namespace ki::ast {
 
     struct Expression_variant
         : std::variant<
-              Wildcard,
               db::Error,
               db::Integer,
               db::Floating,
               db::Boolean,
               db::String,
+              Builtin,
               Path,
               expr::Array,
               expr::Tuple,
@@ -336,8 +340,6 @@ namespace ki::ast {
     };
 
     namespace type {
-        struct Never {};
-
         struct Tuple {
             std::vector<Type_id> fields;
         };
@@ -379,8 +381,8 @@ namespace ki::ast {
         : std::variant<
               db::Error,
               Wildcard,
+              Builtin,
               Path,
-              type::Never,
               type::Tuple,
               type::Array,
               type::Slice,

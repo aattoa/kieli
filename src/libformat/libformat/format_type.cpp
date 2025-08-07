@@ -13,14 +13,14 @@ namespace {
             format(ctx, wildcard);
         }
 
+        void operator()(cst::Builtin const& builtin)
+        {
+            std::print(ctx.stream, "@{}", ctx.db.string_pool.get(builtin.name.id));
+        }
+
         void operator()(cst::Path const& path)
         {
             format(ctx, path);
-        }
-
-        void operator()(cst::type::Never const&)
-        {
-            std::print(ctx.stream, "!");
         }
 
         void operator()(cst::type::Paren const& paren)

@@ -555,3 +555,22 @@ auto ki::par::extract_concept_references(Context& ctx) -> cst::Separated<cst::Pa
         parse_separated_one_or_more<parse_concept_path, "a concept path", lex::Type::Plus>>(
         ctx, "one or more concept paths separated by '+'");
 }
+
+auto ki::par::extract_builtin(Context& ctx, lex::Token const& at) -> cst::Builtin
+{
+    auto const token = extract(ctx);
+
+    if (token.type == lex::Type::Upper_name) {
+        add_semantic_token(ctx, at.range, Semantic::Type);
+        add_semantic_token(ctx, token.range, Semantic::Type);
+    }
+    else if (token.type == lex::Type::Lower_name) {
+        add_semantic_token(ctx, at.range, Semantic::Function);
+        add_semantic_token(ctx, token.range, Semantic::Function);
+    }
+    else {
+        error_expected(ctx, token.range, "the built-in name");
+    }
+
+    return cst::Builtin { .name = name(ctx, token), .at_sign_token = at.range };
+}

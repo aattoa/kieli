@@ -20,7 +20,7 @@ namespace {
                     [&](ast::Wildcard const&) {
                         return hir::Wildcard {}; //
                     },
-                    [&](ast::Type_id const type) -> hir::Type {
+                    [&](ast::Type_id const type) {
                         return resolve_type(db, ctx, state, env_id, ctx.arena.ast.types[type]);
                     },
                     [&](ast::Mutability const& mutability) {
@@ -81,7 +81,7 @@ namespace {
             std::string message = "Template value parameters are not supported yet";
             ctx.add_diagnostic(lsp::error(parameter.name.range, std::move(message)));
             return hir::Template_value_parameter {
-                .type = error_type(ctx, parameter.name.range),
+                .type = ctx.builtins.type_error,
                 .name = parameter.name,
             };
         }

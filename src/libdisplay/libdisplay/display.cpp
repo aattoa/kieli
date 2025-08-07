@@ -96,6 +96,11 @@ namespace {
         std::println(state.stream, "built-in wildcard");
     }
 
+    void do_display(Display_state& state, Builtin const& builtin)
+    {
+        std::println(state.stream, "built-in {}", state.db.string_pool.get(builtin.name.id));
+    }
+
     void do_display(Display_state& state, db::Name const& name)
     {
         std::println(state.stream, "{:?}", state.db.string_pool.get(name.id));
@@ -366,6 +371,11 @@ namespace {
             do_display(state, wildcard);
         }
 
+        void operator()(Builtin const& builtin)
+        {
+            do_display(state, builtin);
+        }
+
         void operator()(Path const& path)
         {
             do_display(state, path);
@@ -593,19 +603,19 @@ namespace {
     struct Type_display_visitor {
         Display_state& state;
 
-        void operator()(Path const& path)
-        {
-            do_display(state, path);
-        }
-
-        void operator()(type::Never const&)
-        {
-            std::println(state.stream, "built-in never");
-        }
-
         void operator()(Wildcard const& wildcard)
         {
             do_display(state, wildcard);
+        }
+
+        void operator()(Builtin const& builtin)
+        {
+            do_display(state, builtin);
+        }
+
+        void operator()(Path const& path)
+        {
+            do_display(state, path);
         }
 
         void operator()(type::Tuple const& tuple)

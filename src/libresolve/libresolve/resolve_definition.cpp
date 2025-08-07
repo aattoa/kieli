@@ -14,7 +14,7 @@ namespace {
     {
         auto pattern
             = resolve_pattern(db, ctx, state, env_id, ctx.arena.ast.patterns[parameter.pattern]);
-        auto type = resolve_type(db, ctx, state, env_id, ctx.arena.ast.types[parameter.type]);
+        auto type_id = resolve_type(db, ctx, state, env_id, ctx.arena.ast.types[parameter.type]);
 
         require_subtype_relationship(
             db,
@@ -22,7 +22,7 @@ namespace {
             state,
             pattern.range,
             ctx.arena.hir.types[pattern.type_id],
-            ctx.arena.hir.types[type.id]);
+            ctx.arena.hir.types[type_id]);
 
         auto const resolve_default = [&](ast::Expression_id const argument) {
             hir::Expression expression
@@ -33,13 +33,13 @@ namespace {
                 state,
                 expression.range,
                 ctx.arena.hir.types[expression.type_id],
-                ctx.arena.hir.types[type.id]);
+                ctx.arena.hir.types[type_id]);
             return ctx.arena.hir.expressions.push(std::move(expression));
         };
 
         return hir::Function_parameter {
             .pattern_id       = ctx.arena.hir.patterns.push(std::move(pattern)),
-            .type             = type,
+            .type_id          = type_id,
             .default_argument = parameter.default_argument.transform(resolve_default),
         };
     }
@@ -64,12 +64,12 @@ namespace {
         auto parameters = std::ranges::to<std::vector>(
             std::views::transform(signature.function_parameters, resolve_parameter));
         auto parameter_types = std::ranges::to<std::vector>(
-            std::views::transform(parameters, &hir::Function_parameter::type));
+            std::views::transform(parameters, &hir::Function_parameter::type_id));
 
         auto const return_type = resolve_type(
             db, ctx, state, signature_env_id, ctx.arena.ast.types[signature.return_type]);
 
-        auto const type_id = ctx.arena.hir.types.push(
+        auto const function_type_id = ctx.arena.hir.types.push(
             hir::type::Function {
                 .parameter_types = std::move(parameter_types),
                 .return_type     = return_type,
@@ -82,8 +82,8 @@ namespace {
         ctx.arena.hir.functions[fun_id].signature = hir::Function_signature {
             .template_parameters = std::move(template_parameters),
             .parameters          = std::move(parameters),
-            .return_type         = return_type,
-            .function_type       = hir::Type { .id = type_id, .range = signature.name.range },
+            .return_type_id      = return_type,
+            .function_type_id    = function_type_id,
             .name                = signature.name,
         };
     }
@@ -112,7 +112,7 @@ namespace {
 
                 hir::type::Function function_type {
                     .parameter_types = field_types,
-                    .return_type     = { .id = owner_type_id, .range = constructor.name.range },
+                    .return_type     = owner_type_id,
                 };
 
                 return hir::Tuple_constructor {
@@ -138,7 +138,7 @@ namespace {
                     auto const field_id = ctx.arena.hir.fields.push(
                         hir::Field_info {
                             .name        = field.name,
-                            .type        = field_type,
+                            .type_id     = field_type,
                             .symbol_id   = symbol_id,
                             .field_index = cpputil::num::safe_cast<std::size_t>(index),
                         });
@@ -187,7 +187,7 @@ auto ki::res::resolve_function_body(db::Database& db, Context& ctx, hir::Functio
             state,
             body.range,
             ctx.arena.hir.types[body.type_id],
-            ctx.arena.hir.types[signature.return_type.id]);
+            ctx.arena.hir.types[signature.return_type_id]);
         ensure_no_unsolved_variables(db, ctx, state);
 
         info.body_id = ctx.arena.hir.expressions.push(std::move(body));
@@ -294,11 +294,13 @@ auto ki::res::resolve_enumeration(db::Database& db, Context& ctx, hir::Enumerati
 
 auto ki::res::resolve_concept(db::Database& db, Context& ctx, hir::Concept_id id) -> hir::Concept&
 {
+    (void)db;
+
     hir::Concept_info& info = ctx.arena.hir.concepts[id];
     if (not info.hir.has_value()) {
-        (void)db;
-        (void)ctx;
-        cpputil::todo();
+        std::string message = "Concept resolution has not been implemented yet";
+        ctx.add_diagnostic(lsp::error(info.name.range, std::move(message)));
+        info.hir = hir::Concept {};
     }
     return info.hir.value();
 }
@@ -310,7 +312,7 @@ auto ki::res::resolve_alias(db::Database& db, Context& ctx, hir::Alias_id id) ->
         auto state = Block_state {};
         auto type  = resolve_type(db, ctx, state, info.env_id, ctx.arena.ast.types[info.ast.type]);
         ensure_no_unsolved_variables(db, ctx, state);
-        info.hir = hir::Alias { .name = info.name, .type = type };
+        info.hir = hir::Alias { .name = info.name, .type_id = type };
     }
     return info.hir.value();
 }

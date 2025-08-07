@@ -31,11 +31,6 @@ namespace ki::hir {
         lsp::Range    range;
     };
 
-    struct Type {
-        Type_id    id;
-        lsp::Range range;
-    };
-
     struct Match_arm {
         Pattern_id    pattern;
         Expression_id expression;
@@ -83,6 +78,12 @@ namespace ki::hir {
     };
 
     namespace expr {
+        enum struct Builtin : std::uint8_t {
+#define KIELI_X_BUILTIN_DO(identifier, spelling) identifier,
+#include <libcompiler/hir/builtin-x-macro-table.hpp>
+#undef KIELI_X_BUILTIN_DO
+        };
+
         struct Array {
             std::vector<Expression_id> elements;
         };
@@ -154,7 +155,7 @@ namespace ki::hir {
         };
 
         struct Sizeof {
-            Type inspected_type;
+            Type_id inspected_type;
         };
 
         struct Addressof {
@@ -178,6 +179,7 @@ namespace ki::hir {
               db::Floating,
               db::Boolean,
               db::String,
+              expr::Builtin,
               expr::Array,
               expr::Tuple,
               expr::Loop,
@@ -210,32 +212,39 @@ namespace ki::hir {
     };
 
     namespace type {
-        enum struct Integer : std::uint8_t { I8, I16, I32, I64, U8, U16, U32, U64 };
-
-        struct Floating {};
-
-        struct Boolean {};
-
-        struct Character {};
-
-        struct String {};
+        enum struct Builtin : std::uint8_t {
+            I8,
+            I16,
+            I32,
+            I64,
+            U8,
+            U16,
+            U32,
+            U64,
+            F32,
+            F64,
+            Bool,
+            Char,
+            String,
+            Never,
+        };
 
         struct Array {
-            Type          element_type;
+            Type_id       element_type;
             Expression_id length;
         };
 
         struct Slice {
-            Type element_type;
+            Type_id element_type;
         };
 
         struct Tuple {
-            std::vector<Type> types;
+            std::vector<Type_id> types;
         };
 
         struct Function {
-            std::vector<Type> parameter_types;
-            Type              return_type;
+            std::vector<Type_id> parameter_types;
+            Type_id              return_type;
         };
 
         struct Structure {
@@ -249,12 +258,12 @@ namespace ki::hir {
         };
 
         struct Reference {
-            Type       referenced_type;
+            Type_id    referenced_type;
             Mutability mutability;
         };
 
         struct Pointer {
-            Type       pointee_type;
+            Type_id    pointee_type;
             Mutability mutability;
         };
 
@@ -271,11 +280,7 @@ namespace ki::hir {
     struct Type_variant
         : std::variant<
               db::Error,
-              type::Integer,
-              type::Floating,
-              type::Character,
-              type::Boolean,
-              type::String,
+              type::Builtin,
               type::Array,
               type::Slice,
               type::Reference,
@@ -304,12 +309,12 @@ namespace ki::hir {
         using variant::variant;
     };
 
-    struct Template_argument : std::variant<db::Error, Expression, Type, Mutability> {
+    struct Template_argument : std::variant<db::Error, Expression, Type_id, Mutability> {
         using variant::variant;
     };
 
     struct Template_type_parameter {
-        using Default = std::variant<Type, Wildcard>;
+        using Default = std::variant<Type_id, Wildcard>;
         std::vector<Concept_id> concept_ids;
         db::Upper               name;
         std::optional<Default>  default_argument;
@@ -322,7 +327,7 @@ namespace ki::hir {
     };
 
     struct Template_value_parameter {
-        Type      type;
+        Type_id   type;
         db::Lower name;
     };
 
@@ -342,15 +347,15 @@ namespace ki::hir {
 
     struct Function_parameter {
         Pattern_id                   pattern_id;
-        Type                         type;
+        Type_id                      type_id;
         std::optional<Expression_id> default_argument;
     };
 
     struct Function_signature {
         std::vector<Template_parameter> template_parameters;
         std::vector<Function_parameter> parameters;
-        Type                            return_type;
-        Type                            function_type;
+        Type_id                         return_type_id;
+        Type_id                         function_type_id;
         db::Lower                       name;
     };
 
@@ -359,8 +364,8 @@ namespace ki::hir {
     };
 
     struct Tuple_constructor {
-        std::vector<Type> types;
-        Type_id           function_type_id;
+        std::vector<Type_id> types;
+        Type_id              function_type_id;
     };
 
     struct Unit_constructor {};
@@ -382,7 +387,7 @@ namespace ki::hir {
 
     struct Alias {
         db::Upper name;
-        Type      type;
+        Type_id   type_id;
     };
 
     struct Concept {
@@ -423,7 +428,7 @@ namespace ki::hir {
 
     struct Field_info {
         db::Lower     name;
-        Type          type;
+        Type_id       type_id;
         db::Symbol_id symbol_id;
         std::size_t   field_index {};
     };
@@ -487,14 +492,20 @@ namespace ki::hir {
         utl::Index_vector<Local_type_id, Local_type>             local_types;
     };
 
-    // Get the name of a built-in integer type.
-    auto integer_name(type::Integer type) -> std::string_view;
+    // Get the name of a built-in expression.
+    auto builtin_expr_name(expr::Builtin builtin) -> std::string_view;
 
-    // Get the type of an expression.
-    auto expression_type(Expression const& expression) -> Type;
+    // Get the name of a built-in type.
+    auto builtin_type_name(type::Builtin builtin) -> std::string_view;
 
-    // Get the type of a pattern.
-    auto pattern_type(Pattern const& pattern) -> Type;
+    // Get the built-in expression corresponding to `name`.
+    auto get_builtin_expr(std::string_view name) -> std::optional<expr::Builtin>;
+
+    // Get the built-in type corresponding to `name`.
+    auto get_builtin_type(std::string_view name) -> std::optional<type::Builtin>;
+
+    // Check whether `builtin` is one of the built-in integer types.
+    auto is_integral(type::Builtin builtin) -> bool;
 
     // Get a one-word description of the constructor kind.
     auto describe_constructor(Constructor_body const& body) -> std::string_view;
@@ -503,7 +514,6 @@ namespace ki::hir {
     void format_to(std::string&, Arena const&, utl::String_pool const&, Expression_id const&);
     void format_to(std::string&, Arena const&, utl::String_pool const&, Pattern const&);
     void format_to(std::string&, Arena const&, utl::String_pool const&, Pattern_id const&);
-    void format_to(std::string&, Arena const&, utl::String_pool const&, Type const&);
     void format_to(std::string&, Arena const&, utl::String_pool const&, Type_id const&);
     void format_to(std::string&, Arena const&, utl::String_pool const&, Type_variant const&);
     void format_to(std::string&, Arena const&, utl::String_pool const&, Mutability const&);

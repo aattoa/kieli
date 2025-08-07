@@ -322,7 +322,6 @@ namespace {
     auto dispatch_parse_normal_expression(Context& ctx) -> std::optional<cst::Expression_variant>
     {
         switch (peek(ctx).type) {
-        case lex::Type::Underscore:   return cst::Wildcard { extract(ctx).range };
         case lex::Type::Boolean:      return parse_boolean(ctx, extract(ctx));
         case lex::Type::String:       return parse_string(ctx, extract(ctx));
         case lex::Type::Integer:      return parse_integer(ctx, extract(ctx));
@@ -342,6 +341,7 @@ namespace {
         case lex::Type::Break:        return extract_break(ctx, extract(ctx));
         case lex::Type::Ret:          return extract_ret(ctx, extract(ctx));
         case lex::Type::Ampersand:    return extract_addressof(ctx, extract(ctx));
+        case lex::Type::At:           return extract_builtin(ctx, extract(ctx));
         case lex::Type::Defer:        return extract_defer(ctx, extract(ctx));
         case lex::Type::Brace_open:   return extract_block_expression(ctx, extract(ctx));
         default:

@@ -21,7 +21,7 @@ namespace {
         {
             return hir::Pattern {
                 .variant = integer,
-                .type_id = fresh_integral_type_variable(ctx, state, this_range).id,
+                .type_id = fresh_integral_type_variable(ctx, state, this_range),
                 .range   = this_range,
             };
         }
@@ -30,7 +30,7 @@ namespace {
         {
             return hir::Pattern {
                 .variant = floating,
-                .type_id = ctx.constants.type_floating,
+                .type_id = ctx.builtins.type_f32, // TODO
                 .range   = this_range,
             };
         }
@@ -39,7 +39,7 @@ namespace {
         {
             return hir::Pattern {
                 .variant = boolean,
-                .type_id = ctx.constants.type_boolean,
+                .type_id = ctx.builtins.type_bool,
                 .range   = this_range,
             };
         }
@@ -48,7 +48,7 @@ namespace {
         {
             return hir::Pattern {
                 .variant = string,
-                .type_id = ctx.constants.type_string,
+                .type_id = ctx.builtins.type_string,
                 .range   = this_range,
             };
         }
@@ -57,7 +57,7 @@ namespace {
         {
             return hir::Pattern {
                 .variant = hir::Wildcard {},
-                .type_id = fresh_general_type_variable(ctx, state, this_range).id,
+                .type_id = fresh_general_type_variable(ctx, state, this_range),
                 .range   = this_range,
             };
         }
@@ -71,7 +71,7 @@ namespace {
                 hir::Local_variable {
                     .name    = pattern.name,
                     .mut_id  = mut.id,
-                    .type_id = type.id,
+                    .type_id = type,
                 });
             bind_symbol(db, ctx, env_id, pattern.name, local_id);
 
@@ -81,7 +81,7 @@ namespace {
                     .mut_id  = mut.id,
                     .var_id  = local_id,
                 },
-                .type_id = type.id,
+                .type_id = type,
                 .range   = this_range,
             };
         }
@@ -93,7 +93,7 @@ namespace {
 
             return hir::Pattern {
                 .variant = hir::Wildcard {},
-                .type_id = ctx.constants.type_error,
+                .type_id = ctx.builtins.type_error,
                 .range   = this_range,
             };
         }
@@ -101,14 +101,14 @@ namespace {
         auto operator()(ast::patt::Tuple const& tuple) -> hir::Pattern
         {
             std::vector<hir::Pattern> fields;
-            std::vector<hir::Type>    types;
+            std::vector<hir::Type_id> types;
 
             fields.reserve(tuple.fields.size());
             types.reserve(tuple.fields.size());
 
             for (ast::Pattern_id field_id : tuple.fields) {
                 hir::Pattern field = recurse(ctx.arena.ast.patterns[field_id]);
-                types.push_back(hir::pattern_type(field));
+                types.push_back(field.type_id);
                 fields.push_back(std::move(field));
             }
 
@@ -124,7 +124,7 @@ namespace {
             std::vector<hir::Pattern> elements;
             elements.reserve(slice.elements.size());
 
-            hir::Type element_type = fresh_general_type_variable(ctx, state, this_range);
+            auto element_type_id = fresh_general_type_variable(ctx, state, this_range);
 
             for (ast::Pattern_id element_id : slice.elements) {
                 hir::Pattern element = recurse(ctx.arena.ast.patterns[element_id]);
@@ -134,13 +134,13 @@ namespace {
                     state,
                     element.range,
                     ctx.arena.hir.types[element.type_id],
-                    ctx.arena.hir.types[element_type.id]);
+                    ctx.arena.hir.types[element_type_id]);
                 elements.push_back(std::move(element));
             }
 
             return hir::Pattern {
                 .variant = hir::patt::Slice { std::move(elements) },
-                .type_id = ctx.arena.hir.types.push(hir::type::Slice { element_type }),
+                .type_id = ctx.arena.hir.types.push(hir::type::Slice { element_type_id }),
                 .range   = this_range,
             };
         }
@@ -157,7 +157,7 @@ namespace {
                 state,
                 guard.range,
                 ctx.arena.hir.types[guard.type_id],
-                ctx.arena.hir.types[ctx.constants.type_boolean]);
+                ctx.arena.hir.types[ctx.builtins.type_bool]);
 
             return hir::Pattern {
                 .variant = hir::patt::Guarded {

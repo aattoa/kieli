@@ -8,7 +8,13 @@
 
 namespace ki::res {
 
-    struct Constants {
+    struct Builtins {
+        hir::Type_id       type_error;
+        hir::Type_id       type_never;
+        hir::Type_id       type_char;
+        hir::Type_id       type_string;
+        hir::Type_id       type_unit;
+        hir::Type_id       type_bool;
         hir::Type_id       type_i8;
         hir::Type_id       type_i16;
         hir::Type_id       type_i32;
@@ -17,12 +23,8 @@ namespace ki::res {
         hir::Type_id       type_u16;
         hir::Type_id       type_u32;
         hir::Type_id       type_u64;
-        hir::Type_id       type_boolean;
-        hir::Type_id       type_floating;
-        hir::Type_id       type_string;
-        hir::Type_id       type_character;
-        hir::Type_id       type_unit;
-        hir::Type_id       type_error;
+        hir::Type_id       type_f32;
+        hir::Type_id       type_f64;
         hir::Mutability_id mut_yes;
         hir::Mutability_id mut_no;
         hir::Mutability_id mut_error;
@@ -67,7 +69,7 @@ namespace ki::res {
     // Resolution context for a single document.
     struct Context {
         db::Arena           arena;
-        Constants           constants;
+        Builtins            builtins;
         Signature_scope_map signature_scope_map;
         db::Environment_id  root_env_id;
         db::Document_id     doc_id;
@@ -78,17 +80,34 @@ namespace ki::res {
     // Create a resolution context for the given document.
     auto context(db::Document_id doc_id, db::Diagnostic_sink sink) -> Context;
 
-    auto make_constants(hir::Arena& arena) -> Constants;
+    // Construct `Builtins`.
+    auto make_builtins(hir::Arena& arena) -> Builtins;
 
+    // Get the type id that corresponds to `builtin`.
+    auto builtin_type_id(Builtins const& builtins, hir::type::Builtin builtin) -> hir::Type_id;
+
+    // Get the type of a built-in expression.
+    auto builtin_expr_type(Context& ctx, hir::expr::Builtin builtin) -> hir::Type_id;
+
+    // For a type `T`, construct the type `fn(T, T): T`.
+    auto arith_bin_op_type(Context& ctx, hir::Type_id operand) -> hir::Type_id;
+
+    // For a type `T`, construct the type `fn(T, T): @Bool`.
+    auto cmp_bin_op_type(Context& ctx, hir::Type_id operand) -> hir::Type_id;
+
+    // For a type `T`, construct the type `fn(T): T`.
+    auto id_op_type(Context& ctx, hir::Type_id operand) -> hir::Type_id;
+
+    // Create a fresh template parameter tag.
     auto fresh_template_parameter_tag(Tags& tags) -> hir::Template_parameter_tag;
 
     // Create a fresh unification type variable for general use.
     auto fresh_general_type_variable(Context& ctx, Block_state& state, lsp::Range origin)
-        -> hir::Type;
+        -> hir::Type_id;
 
     // Create a fresh unification type variable for an integer literal.
     auto fresh_integral_type_variable(Context& ctx, Block_state& state, lsp::Range origin)
-        -> hir::Type;
+        -> hir::Type_id;
 
     // Create a fresh unification mutability variable.
     auto fresh_mutability_variable(Context& ctx, Block_state& state, lsp::Range origin)
@@ -179,7 +198,7 @@ namespace ki::res {
         Context&           ctx,
         Block_state&       state,
         db::Environment_id env_id,
-        ast::Type const&   type) -> hir::Type;
+        ast::Type const&   type) -> hir::Type_id;
 
     void resolve_symbol(db::Database& db, Context& ctx, db::Symbol_id symbol_id);
 
@@ -204,9 +223,6 @@ namespace ki::res {
         lsp::Range                     range,
         hir::Mutability_variant const& sub,
         hir::Mutability_variant const& super);
-
-    // Get the HIR representation of the error type with `range`.
-    auto error_type(Context const& ctx, lsp::Range range) -> hir::Type;
 
     // Get the HIR representation of an error expression with `range`.
     auto error_expression(Context const& ctx, lsp::Range range) -> hir::Expression;

@@ -11,6 +11,7 @@ namespace {
         { ".", Type::Dot },
         { ":", Type::Colon },
         { "::", Type::Double_colon },
+        { "@", Type::At },
         { "|", Type::Pipe },
         { "=", Type::Equals },
         { "&", Type::Ampersand },

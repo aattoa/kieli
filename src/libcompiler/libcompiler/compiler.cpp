@@ -361,13 +361,13 @@ auto ki::db::symbol_type(Arena const& arena, Symbol_id symbol_id) -> std::option
         [](hir::Local_mutability_id) { return std::nullopt; },
 
         [&](hir::Function_id id) {
-            return arena.hir.functions[id].signature.value().function_type.id;
+            return arena.hir.functions[id].signature.value().function_type_id;
         },
         [&](hir::Structure_id id) { return arena.hir.structures[id].type_id; },
         [&](hir::Enumeration_id id) { return arena.hir.enumerations[id].type_id; },
         [&](hir::Constructor_id id) { return arena.hir.constructors[id].owner_type_id; },
-        [&](hir::Field_id id) { return arena.hir.fields[id].type.id; },
-        [&](hir::Alias_id id) { return arena.hir.aliases[id].hir.value().type.id; },
+        [&](hir::Field_id id) { return arena.hir.fields[id].type_id; },
+        [&](hir::Alias_id id) { return arena.hir.aliases[id].hir.value().type_id; },
         [&](hir::Local_variable_id id) { return arena.hir.local_variables[id].type_id; },
         [&](hir::Local_type_id id) { return arena.hir.local_types[id].type_id; },
     };
@@ -384,13 +384,13 @@ auto ki::db::type_definition(Arena const& arena, hir::Type_id type_id) -> std::o
         return arena.hir.structures[structure->id].name.range;
     }
     if (auto const* reference = std::get_if<hir::type::Reference>(&variant)) {
-        return type_definition(arena, reference->referenced_type.id);
+        return type_definition(arena, reference->referenced_type);
     }
     if (auto const* pointer = std::get_if<hir::type::Pointer>(&variant)) {
-        return type_definition(arena, pointer->pointee_type.id);
+        return type_definition(arena, pointer->pointee_type);
     }
     if (auto const* function = std::get_if<hir::type::Function>(&variant)) {
-        return type_definition(arena, function->return_type.id);
+        return type_definition(arena, function->return_type);
     }
     return std::nullopt;
 }

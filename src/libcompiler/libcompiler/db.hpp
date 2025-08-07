@@ -5,7 +5,6 @@
 #include <libutl/index_vector.hpp>
 #include <libutl/string_pool.hpp>
 #include <libcompiler/ast/ast.hpp>
-#include <libcompiler/cst/cst.hpp>
 #include <libcompiler/hir/hir.hpp>
 #include <libcompiler/fwd.hpp>
 #include <libcompiler/lsp.hpp>
@@ -98,7 +97,11 @@ namespace ki::db {
         hir::Type_id type_id;
     };
 
-    struct Completion_variant : std::variant<Environment_completion, Field_completion> {
+    // Provide completions for builtins.
+    enum struct Builtin_completion : std::uint8_t { Type, Expressions };
+
+    struct Completion_variant
+        : std::variant<Environment_completion, Field_completion, Builtin_completion> {
         using variant::variant;
     };
 

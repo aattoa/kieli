@@ -13,6 +13,11 @@ namespace {
             return std::visit(*this, ctx.cst.types[paren.type.value].variant);
         }
 
+        auto operator()(cst::Builtin const& builtin) const -> ast::Type_variant
+        {
+            return ast::Builtin { .name = builtin.name };
+        }
+
         auto operator()(cst::Path const& path) const -> ast::Type_variant
         {
             return desugar(ctx, path);
@@ -21,11 +26,6 @@ namespace {
         auto operator()(cst::Wildcard const& wildcard) const -> ast::Type_variant
         {
             return desugar(ctx, wildcard);
-        }
-
-        auto operator()(cst::type::Never const&) const -> ast::Type_variant
-        {
-            return ast::type::Never {};
         }
 
         auto operator()(cst::type::Tuple const& tuple) const -> ast::Type_variant

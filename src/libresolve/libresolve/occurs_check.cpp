@@ -21,36 +21,34 @@ namespace {
 
         auto operator()(hir::type::Array const& array) const -> bool
         {
-            return recurse(array.element_type.id)
-                or recurse(arena.expressions[array.length].type_id);
+            return recurse(array.element_type) or recurse(arena.expressions[array.length].type_id);
         }
 
         auto operator()(hir::type::Slice const& slice) const -> bool
         {
-            return recurse(slice.element_type.id);
+            return recurse(slice.element_type);
         }
 
         auto operator()(hir::type::Reference const& reference) const -> bool
         {
-            return recurse(reference.referenced_type.id);
+            return recurse(reference.referenced_type);
         }
 
         auto operator()(hir::type::Pointer const& pointer) const -> bool
         {
-            return recurse(pointer.pointee_type.id);
+            return recurse(pointer.pointee_type);
         }
 
         auto operator()(hir::type::Function const& function) const -> bool
         {
-            return recurse(function.return_type.id)
+            return recurse(function.return_type)
                 or std::ranges::any_of(
-                       function.parameter_types, [&](hir::Type type) { return recurse(type.id); });
+                       function.parameter_types, std::bind_front(&Visitor::recurse, this));
         }
 
         auto operator()(hir::type::Tuple const& tuple) const -> bool
         {
-            return std::ranges::any_of(
-                tuple.types, [&](hir::Type type) { return recurse(type.id); });
+            return std::ranges::any_of(tuple.types, std::bind_front(&Visitor::recurse, this));
         }
 
         auto operator()(hir::type::Structure const&) const -> bool
@@ -63,14 +61,9 @@ namespace {
             return false; // TODO
         }
 
-        auto operator()(utl::one_of<
-                        db::Error,
-                        hir::type::Integer,
-                        hir::type::Floating,
-                        hir::type::Character,
-                        hir::type::Boolean,
-                        hir::type::String,
-                        hir::type::Parameterized> auto const&) const -> bool
+        auto operator()(
+            utl::one_of<db::Error, hir::type::Builtin, hir::type::Parameterized> auto const&) const
+            -> bool
         {
             return false;
         }

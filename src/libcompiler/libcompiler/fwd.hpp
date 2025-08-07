@@ -39,7 +39,6 @@ namespace ki::hir {
     struct Mutability;
     struct Expression;
     struct Pattern;
-    struct Type;
     DEFINE_INDEX(Expression_id);
     DEFINE_INDEX(Pattern_id);
     DEFINE_INDEX(Type_id);

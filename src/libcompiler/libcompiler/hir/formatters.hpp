@@ -4,6 +4,8 @@
 #include <libutl/utilities.hpp>
 #include <libcompiler/hir/hir.hpp>
 
+// TODO: clean this up
+
 namespace ki::hir::dtl {
     template <typename T>
     struct With_arena {
@@ -54,7 +56,6 @@ LIBRESOLVE_DECLARE_FORMATTER(ki::hir::Expression);
 
 LIBRESOLVE_DECLARE_FORMATTER(ki::hir::Type_variant);
 LIBRESOLVE_DECLARE_FORMATTER(ki::hir::Type_id);
-LIBRESOLVE_DECLARE_FORMATTER(ki::hir::Type);
 
 LIBRESOLVE_DECLARE_FORMATTER(ki::hir::Mutability_variant);
 LIBRESOLVE_DECLARE_FORMATTER(ki::hir::Mutability_id);
@@ -89,6 +90,11 @@ namespace ki::hir::dtl {
         auto wrap(auto const& x) const
         {
             return With_arena { std::cref(pool), std::cref(arena), std::cref(x) };
+        }
+
+        void operator()(hir::expr::Builtin builtin) const
+        {
+            std::format_to(out, "@{}", hir::builtin_expr_name(builtin));
         }
 
         void operator()(hir::Wildcard const&) const
@@ -286,29 +292,9 @@ namespace ki::hir::dtl {
             return With_arena { std::cref(pool), std::cref(arena), std::cref(x) };
         }
 
-        void operator()(type::Integer const integer) const
+        void operator()(type::Builtin builtin) const
         {
-            std::format_to(out, "{}", integer_name(integer));
-        }
-
-        void operator()(type::Floating const&) const
-        {
-            std::format_to(out, "Float");
-        }
-
-        void operator()(type::Character const&) const
-        {
-            std::format_to(out, "Char");
-        }
-
-        void operator()(type::Boolean const&) const
-        {
-            std::format_to(out, "Bool");
-        }
-
-        void operator()(type::String const&) const
-        {
-            std::format_to(out, "String");
+            std::format_to(out, "@{}", builtin_type_name(builtin));
         }
 
         void operator()(type::Array const& array) const
@@ -432,11 +418,6 @@ LIBRESOLVE_DEFINE_FORMATTER(ki::hir::Type_id)
     return std::format_to(ctx.out(), "{}", value.wrap(value.arena.get().types[value.get()]));
 }
 
-LIBRESOLVE_DEFINE_FORMATTER(ki::hir::Type)
-{
-    return std::format_to(ctx.out(), "{}", value.wrap(value->id));
-}
-
 LIBRESOLVE_DEFINE_FORMATTER(ki::hir::Mutability_variant)
 {
     auto const visitor = ki::utl::Overload {
@@ -468,7 +449,7 @@ LIBRESOLVE_DEFINE_FORMATTER(ki::hir::Mutability)
 
 LIBRESOLVE_DEFINE_FORMATTER(ki::hir::Function_parameter)
 {
-    std::format_to(ctx.out(), "{}: {}", value.wrap(value->pattern_id), value.wrap(value->type.id));
+    std::format_to(ctx.out(), "{}: {}", value.wrap(value->pattern_id), value.wrap(value->type_id));
     if (value->default_argument.has_value()) {
         std::format_to(ctx.out(), " = {}", value.wrap(value->default_argument.value()));
     }

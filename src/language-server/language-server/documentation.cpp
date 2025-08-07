@@ -61,7 +61,7 @@ namespace {
                 std::format_to(
                     std::back_inserter(markdown),
                     "\nType: `{}`",
-                    display(info.signature.value().function_type));
+                    display(info.signature.value().function_type_id));
             }
             return markdown;
         }
@@ -90,7 +90,7 @@ namespace {
         {
             auto const& info = arena.hir.fields[id];
             return std::format(
-                "# Field `{}`\n---\nType: `{}`", display(info.name.id), display(info.type));
+                "# Field `{}`\n---\nType: `{}`", display(info.name.id), display(info.type_id));
         }
 
         auto operator()(hir::Concept_id id)
@@ -106,7 +106,7 @@ namespace {
                 std::format_to(
                     std::back_inserter(markdown),
                     "\nAlias for `{}`",
-                    display(info.hir.value().type));
+                    display(info.hir.value().type_id));
             }
             return markdown;
         }

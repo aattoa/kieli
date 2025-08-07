@@ -5,11 +5,11 @@ using namespace ki;
 using namespace ki::res;
 
 namespace {
-    auto resolve_concrete(Constants const& constants, db::Mutability mut)
+    auto resolve_concrete(Builtins const& builtins, db::Mutability mut)
     {
         switch (mut) {
-        case db::Mutability::Mut:   return constants.mut_yes;
-        case db::Mutability::Immut: return constants.mut_no;
+        case db::Mutability::Mut:   return builtins.mut_yes;
+        case db::Mutability::Immut: return builtins.mut_no;
         }
         cpputil::unreachable();
     }
@@ -28,7 +28,7 @@ auto ki::res::resolve_mutability(
     auto const visitor = utl::Overload {
         [&](db::Mutability const& concrete) {
             return hir::Mutability {
-                .id    = resolve_concrete(ctx.constants, concrete),
+                .id    = resolve_concrete(ctx.builtins, concrete),
                 .range = mut.range,
             };
         },
@@ -51,7 +51,7 @@ auto ki::res::resolve_mutability(
                 ctx.add_diagnostic(lsp::error(mut.name.range, std::move(message)));
             }
             return hir::Mutability {
-                .id    = ctx.constants.mut_error,
+                .id    = ctx.builtins.mut_error,
                 .range = mut.name.range,
             };
         },

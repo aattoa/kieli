@@ -22,16 +22,17 @@ namespace {
 
     auto fuzzy_prefix_match(std::string_view prefix, std::string_view string) -> bool
     {
-        return std::ranges::all_of(prefix, [&](char c) {
-            return string.contains(ascii_to_lower(c)) or string.contains(ascii_to_upper(c));
+        return std::ranges::all_of(prefix, [string](char a) {
+            return std::ranges::any_of(
+                string, [a](char b) { return b == ascii_to_lower(a) or b == ascii_to_upper(a); });
         });
     }
 
     auto tuple_completions(
-        db::Database const&        db,
-        db::Arena const&           arena,
-        std::string_view           prefix,
-        std::span<hir::Type const> types) -> lsp::Json::Array
+        db::Database const&           db,
+        db::Arena const&              arena,
+        std::string_view              prefix,
+        std::span<hir::Type_id const> types) -> lsp::Json::Array
     {
         lsp::Json::Array items;
         items.reserve(types.size());
@@ -110,6 +111,62 @@ namespace {
             }
             else {
                 break;
+            }
+        }
+
+        return items;
+    }
+
+    auto builtins(db::Builtin_completion builtin) -> std::span<std::string_view const>
+    {
+        static constexpr auto expressions = std::to_array<std::string_view>({
+#define KIELI_X_BUILTIN_DO(identifier, spelling) spelling,
+#include <libcompiler/hir/builtin-x-macro-table.hpp>
+#undef KIELI_X_BUILTIN_DO
+        });
+
+        static constexpr auto types = std::to_array<std::string_view>({
+            "I8",
+            "I16",
+            "I32",
+            "I64",
+            "U8",
+            "U16",
+            "U32",
+            "U64",
+            "F32",
+            "F64",
+            "Char",
+            "Bool",
+            "String",
+            "Never",
+        });
+
+        switch (builtin) {
+        case db::Builtin_completion::Type:        return types;
+        case db::Builtin_completion::Expressions: return expressions;
+        }
+        cpputil::unreachable();
+    }
+
+    auto completion_items(
+        db::Database const&    db,
+        db::Document_id        doc_id,
+        std::string_view       prefix,
+        db::Builtin_completion completion) -> lsp::Json::Array
+    {
+        (void)db;
+        (void)doc_id;
+
+        lsp::Json::Array items;
+
+        for (auto name : builtins(completion)) {
+            if (fuzzy_prefix_match(prefix, name)) {
+                lsp::Json::Object item;
+                item.try_emplace("label", lsp::Json::String(name));
+                item.try_emplace("detail", "Built-in");
+                item.try_emplace("kind", 21); // kind=constant
+                items.emplace_back(std::move(item));
             }
         }
 
@@ -452,7 +509,7 @@ auto ki::lsp::signature_help_to_json(
     }
 
     label.append("): ");
-    hir::format_to(label, hir, db.string_pool, sig.return_type);
+    hir::format_to(label, hir, db.string_pool, sig.return_type_id);
 
     Json::Object object;
     object.try_emplace("label", std::move(label));
@@ -498,8 +555,7 @@ auto ki::lsp::completion_item_to_json(
     item.try_emplace("documentation", markdown_content_to_json(std::move(markdown)));
 
     if (auto const type = db::symbol_type(arena, symbol_id)) {
-        auto detail = hir::to_string(arena.hir, db.string_pool, type.value());
-        item.try_emplace("detail", std::move(detail));
+        item.try_emplace("detail", hir::to_string(arena.hir, db.string_pool, type.value()));
     }
 
     return Json { std::move(item) };
@@ -539,10 +595,10 @@ auto ki::lsp::symbol_to_json(
     auto const detail_visitor = utl::Overload {
         [&](hir::Function_id id) {
             auto const& signature = arena.hir.functions[id].signature.value();
-            return hir::to_string(arena.hir, db.string_pool, signature.function_type);
+            return hir::to_string(arena.hir, db.string_pool, signature.function_type_id);
         },
         [&](hir::Field_id id) {
-            return hir::to_string(arena.hir, db.string_pool, arena.hir.fields[id].type);
+            return hir::to_string(arena.hir, db.string_pool, arena.hir.fields[id].type_id);
         },
         [](auto) { return std::string(); },
     };

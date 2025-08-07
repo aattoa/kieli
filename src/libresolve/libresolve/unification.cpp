@@ -133,9 +133,9 @@ namespace {
             return std::visit(visitor, sub, super);
         }
 
-        auto unify(hir::Type sub, hir::Type super) const -> Result
+        auto unify(hir::Type_id sub, hir::Type_id super) const -> Result
         {
-            return unify(ctx.arena.hir.types[sub.id], ctx.arena.hir.types[super.id]);
+            return unify(ctx.arena.hir.types[sub], ctx.arena.hir.types[super]);
         }
 
         auto unify(hir::Mutability const sub, hir::Mutability const super) const -> Result
@@ -151,7 +151,8 @@ namespace {
             return visitor.unify(sub, super);
         }
 
-        auto unify(std::span<hir::Type const> sub, std::span<hir::Type const> super) const -> Result
+        auto unify(std::span<hir::Type_id const> sub, std::span<hir::Type_id const> super) const
+            -> Result
         {
             if (sub.size() != super.size()) {
                 return Result::Mismatch;
@@ -174,46 +175,48 @@ namespace {
             return Result::Ok;
         }
 
-        auto operator()(hir::type::Variable sub, hir::type::Integer) const -> Result
+        auto try_solve(hir::type::Variable variable, hir::Type_variant const& variant) const
+            -> Result
         {
-            return solution(sub.id, current_super);
-        }
-
-        auto operator()(hir::type::Integer, hir::type::Variable super) const -> Result
-        {
-            return solution(super.id, current_sub);
+            if (state.type_vars.at(variable.id.get()).kind == hir::Type_variable_kind::Integral) {
+                if (auto const* builtin = std::get_if<hir::type::Builtin>(&variant)) {
+                    if (hir::is_integral(*builtin)) {
+                        return solution(variable.id, variant);
+                    }
+                }
+                return Result::Mismatch;
+            }
+            return solution(variable.id, variant);
         }
 
         auto operator()(hir::type::Variable sub, auto const&) const -> Result
         {
-            if (state.type_vars.at(sub.id.get()).kind == hir::Type_variable_kind::Integral) {
-                return Result::Mismatch;
-            }
-            return solution(sub.id, current_super);
+            return try_solve(sub, current_super);
         }
 
         auto operator()(auto const&, hir::type::Variable super) const -> Result
         {
-            if (state.type_vars.at(super.id.get()).kind == hir::Type_variable_kind::Integral) {
-                return Result::Mismatch;
+            return try_solve(super, current_sub);
+        }
+
+        auto operator()(hir::type::Builtin sub, hir::type::Builtin super) const -> Result
+        {
+            return result(sub == super or sub == hir::type::Builtin::Never);
+        }
+
+        template <typename T>
+            requires(not utl::one_of<T, db::Error>)
+        auto operator()(hir::type::Builtin sub, T const&) const -> Result
+        {
+            return result(sub == hir::type::Builtin::Never);
+        }
+
+        auto operator()(hir::type::Builtin sub, hir::type::Variable super) const -> Result
+        {
+            if (sub == hir::type::Builtin::Never) {
+                return Result::Ok;
             }
-            return solution(super.id, current_sub);
-        }
-
-        template <utl::one_of<
-            hir::type::Floating,
-            hir::type::Character,
-            hir::type::Boolean,
-            hir::type::String> T>
-        auto operator()(T, T) const -> Result
-        {
-            return Result::Ok;
-        }
-
-        auto operator()(hir::type::Integer const sub, hir::type::Integer const super) const
-            -> Result
-        {
-            return result(sub == super);
+            return try_solve(super, sub);
         }
 
         auto operator()(hir::type::Parameterized const& sub, hir::type::Parameterized const& super)
@@ -231,8 +234,8 @@ namespace {
         {
             return bind(unify(sub.element_type, super.element_type), [&] {
                 return unify(
-                    hir::expression_type(ctx.arena.hir.expressions[sub.length]),
-                    hir::expression_type(ctx.arena.hir.expressions[super.length]));
+                    ctx.arena.hir.expressions[sub.length].type_id,
+                    ctx.arena.hir.expressions[super.length].type_id);
             });
         }
 

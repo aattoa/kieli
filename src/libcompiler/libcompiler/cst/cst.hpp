@@ -86,6 +86,11 @@ namespace ki::cst {
         [[nodiscard]] auto is_unqualified() const noexcept -> bool;
     };
 
+    struct Builtin {
+        db::Name   name;
+        lsp::Range at_sign_token;
+    };
+
     template <typename T>
     struct Default_argument {
         std::variant<T, Wildcard> variant;
@@ -326,12 +331,12 @@ namespace ki::cst {
 
     struct Expression_variant
         : std::variant<
-              Wildcard,
               db::Error,
               db::Integer,
               db::Floating,
               db::Boolean,
               db::String,
+              Builtin,
               Path,
               expr::Paren,
               expr::Array,
@@ -454,10 +459,6 @@ namespace ki::cst {
             Surrounded<Type_id> type;
         };
 
-        struct Never {
-            lsp::Range exclamation_token;
-        };
-
         struct Tuple {
             Surrounded<Separated<Type_id>> field_types;
         };
@@ -506,9 +507,9 @@ namespace ki::cst {
     struct Type_variant
         : std::variant<
               Wildcard,
+              Builtin,
               Path,
               type::Paren,
-              type::Never,
               type::Tuple,
               type::Array,
               type::Slice,

@@ -5,7 +5,7 @@ auto ki::res::context(db::Document_id doc_id, db::Diagnostic_sink sink) -> Conte
 {
     auto arena = db::Arena {};
 
-    auto constants = make_constants(arena.hir);
+    auto builtins = make_builtins(arena.hir);
 
     auto env_id = arena.environments.push(
         db::Environment {
@@ -18,7 +18,7 @@ auto ki::res::context(db::Document_id doc_id, db::Diagnostic_sink sink) -> Conte
 
     return Context {
         .arena               = std::move(arena),
-        .constants           = constants,
+        .builtins            = builtins,
         .signature_scope_map = {},
         .root_env_id         = env_id,
         .doc_id              = doc_id,
@@ -27,27 +27,162 @@ auto ki::res::context(db::Document_id doc_id, db::Diagnostic_sink sink) -> Conte
     };
 }
 
-auto ki::res::make_constants(hir::Arena& arena) -> Constants
+auto ki::res::make_builtins(hir::Arena& arena) -> Builtins
 {
-    return Constants {
-        .type_i8        = arena.types.push(hir::type::Integer::I8),
-        .type_i16       = arena.types.push(hir::type::Integer::I16),
-        .type_i32       = arena.types.push(hir::type::Integer::I32),
-        .type_i64       = arena.types.push(hir::type::Integer::I64),
-        .type_u8        = arena.types.push(hir::type::Integer::U8),
-        .type_u16       = arena.types.push(hir::type::Integer::U16),
-        .type_u32       = arena.types.push(hir::type::Integer::U32),
-        .type_u64       = arena.types.push(hir::type::Integer::U64),
-        .type_boolean   = arena.types.push(hir::type::Boolean {}),
-        .type_floating  = arena.types.push(hir::type::Floating {}),
-        .type_string    = arena.types.push(hir::type::String {}),
-        .type_character = arena.types.push(hir::type::Character {}),
-        .type_unit      = arena.types.push(hir::type::Tuple {}),
-        .type_error     = arena.types.push(db::Error {}),
-        .mut_yes        = arena.mutabilities.push(db::Mutability::Mut),
-        .mut_no         = arena.mutabilities.push(db::Mutability::Immut),
-        .mut_error      = arena.mutabilities.push(db::Error {}),
+    return Builtins {
+        .type_error  = arena.types.push(db::Error {}),
+        .type_never  = arena.types.push(hir::type::Builtin::Never),
+        .type_char   = arena.types.push(hir::type::Builtin::Char),
+        .type_string = arena.types.push(hir::type::Builtin::String),
+        .type_unit   = arena.types.push(hir::type::Tuple {}),
+        .type_bool   = arena.types.push(hir::type::Builtin::Bool),
+        .type_i8     = arena.types.push(hir::type::Builtin::I8),
+        .type_i16    = arena.types.push(hir::type::Builtin::I16),
+        .type_i32    = arena.types.push(hir::type::Builtin::I32),
+        .type_i64    = arena.types.push(hir::type::Builtin::I64),
+        .type_u8     = arena.types.push(hir::type::Builtin::U8),
+        .type_u16    = arena.types.push(hir::type::Builtin::U16),
+        .type_u32    = arena.types.push(hir::type::Builtin::U32),
+        .type_u64    = arena.types.push(hir::type::Builtin::U64),
+        .type_f32    = arena.types.push(hir::type::Builtin::F32),
+        .type_f64    = arena.types.push(hir::type::Builtin::F64),
+        .mut_yes     = arena.mutabilities.push(db::Mutability::Mut),
+        .mut_no      = arena.mutabilities.push(db::Mutability::Immut),
+        .mut_error   = arena.mutabilities.push(db::Error {}),
     };
+}
+
+auto ki::res::builtin_type_id(Builtins const& builtins, hir::type::Builtin builtin) -> hir::Type_id
+{
+    switch (builtin) {
+    case hir::type::Builtin::I8:     return builtins.type_i8;
+    case hir::type::Builtin::I16:    return builtins.type_i16;
+    case hir::type::Builtin::I32:    return builtins.type_i32;
+    case hir::type::Builtin::I64:    return builtins.type_i64;
+    case hir::type::Builtin::U8:     return builtins.type_u8;
+    case hir::type::Builtin::U16:    return builtins.type_u16;
+    case hir::type::Builtin::U32:    return builtins.type_u32;
+    case hir::type::Builtin::U64:    return builtins.type_u64;
+    case hir::type::Builtin::F32:    return builtins.type_f32;
+    case hir::type::Builtin::F64:    return builtins.type_f64;
+    case hir::type::Builtin::Bool:   return builtins.type_bool;
+    case hir::type::Builtin::Char:   return builtins.type_char;
+    case hir::type::Builtin::String: return builtins.type_string;
+    case hir::type::Builtin::Never:  return builtins.type_never;
+    }
+    cpputil::unreachable();
+}
+
+auto ki::res::builtin_expr_type(Context& ctx, hir::expr::Builtin builtin) -> hir::Type_id
+{
+    switch (builtin) {
+    case hir::expr::Builtin::AddI8:
+    case hir::expr::Builtin::SubI8:
+    case hir::expr::Builtin::MulI8:
+    case hir::expr::Builtin::DivI8:
+    case hir::expr::Builtin::ModI8:       return arith_bin_op_type(ctx, ctx.builtins.type_i8);
+    case hir::expr::Builtin::AddI16:
+    case hir::expr::Builtin::SubI16:
+    case hir::expr::Builtin::MulI16:
+    case hir::expr::Builtin::DivI16:
+    case hir::expr::Builtin::ModI16:      return arith_bin_op_type(ctx, ctx.builtins.type_i16);
+    case hir::expr::Builtin::AddI32:
+    case hir::expr::Builtin::SubI32:
+    case hir::expr::Builtin::MulI32:
+    case hir::expr::Builtin::DivI32:
+    case hir::expr::Builtin::ModI32:      return arith_bin_op_type(ctx, ctx.builtins.type_i32);
+    case hir::expr::Builtin::AddI64:
+    case hir::expr::Builtin::SubI64:
+    case hir::expr::Builtin::MulI64:
+    case hir::expr::Builtin::DivI64:
+    case hir::expr::Builtin::ModI64:      return arith_bin_op_type(ctx, ctx.builtins.type_i64);
+    case hir::expr::Builtin::AddU8:
+    case hir::expr::Builtin::SubU8:
+    case hir::expr::Builtin::MulU8:
+    case hir::expr::Builtin::DivU8:
+    case hir::expr::Builtin::ModU8:       return arith_bin_op_type(ctx, ctx.builtins.type_u8);
+    case hir::expr::Builtin::AddU16:
+    case hir::expr::Builtin::SubU16:
+    case hir::expr::Builtin::MulU16:
+    case hir::expr::Builtin::DivU16:
+    case hir::expr::Builtin::ModU16:      return arith_bin_op_type(ctx, ctx.builtins.type_u16);
+    case hir::expr::Builtin::AddU32:
+    case hir::expr::Builtin::SubU32:
+    case hir::expr::Builtin::MulU32:
+    case hir::expr::Builtin::DivU32:
+    case hir::expr::Builtin::ModU32:      return arith_bin_op_type(ctx, ctx.builtins.type_u32);
+    case hir::expr::Builtin::AddU64:
+    case hir::expr::Builtin::SubU64:
+    case hir::expr::Builtin::MulU64:
+    case hir::expr::Builtin::DivU64:
+    case hir::expr::Builtin::ModU64:      return arith_bin_op_type(ctx, ctx.builtins.type_u64);
+    case hir::expr::Builtin::AddF32:
+    case hir::expr::Builtin::SubF32:
+    case hir::expr::Builtin::MulF32:
+    case hir::expr::Builtin::DivF32:
+    case hir::expr::Builtin::ModF32:      return arith_bin_op_type(ctx, ctx.builtins.type_f32);
+    case hir::expr::Builtin::AddF64:
+    case hir::expr::Builtin::SubF64:
+    case hir::expr::Builtin::MulF64:
+    case hir::expr::Builtin::DivF64:
+    case hir::expr::Builtin::ModF64:      return arith_bin_op_type(ctx, ctx.builtins.type_f64);
+    case hir::expr::Builtin::EqI8:
+    case hir::expr::Builtin::LtI8:        return cmp_bin_op_type(ctx, ctx.builtins.type_i8);
+    case hir::expr::Builtin::EqI16:
+    case hir::expr::Builtin::LtI16:       return cmp_bin_op_type(ctx, ctx.builtins.type_i16);
+    case hir::expr::Builtin::EqI32:
+    case hir::expr::Builtin::LtI32:       return cmp_bin_op_type(ctx, ctx.builtins.type_i32);
+    case hir::expr::Builtin::EqI64:
+    case hir::expr::Builtin::LtI64:       return cmp_bin_op_type(ctx, ctx.builtins.type_i64);
+    case hir::expr::Builtin::EqU8:
+    case hir::expr::Builtin::LtU8:        return cmp_bin_op_type(ctx, ctx.builtins.type_u8);
+    case hir::expr::Builtin::EqU16:
+    case hir::expr::Builtin::LtU16:       return cmp_bin_op_type(ctx, ctx.builtins.type_u16);
+    case hir::expr::Builtin::EqU32:
+    case hir::expr::Builtin::LtU32:       return cmp_bin_op_type(ctx, ctx.builtins.type_u32);
+    case hir::expr::Builtin::EqU64:
+    case hir::expr::Builtin::LtU64:       return cmp_bin_op_type(ctx, ctx.builtins.type_u64);
+    case hir::expr::Builtin::EqF32:
+    case hir::expr::Builtin::LtF32:       return cmp_bin_op_type(ctx, ctx.builtins.type_f32);
+    case hir::expr::Builtin::EqF64:
+    case hir::expr::Builtin::LtF64:       return cmp_bin_op_type(ctx, ctx.builtins.type_f64);
+    case hir::expr::Builtin::EqBool:      return cmp_bin_op_type(ctx, ctx.builtins.type_bool);
+    case hir::expr::Builtin::EqChar:      return cmp_bin_op_type(ctx, ctx.builtins.type_char);
+    case hir::expr::Builtin::LogicAnd:
+    case hir::expr::Builtin::LogicOr:     return cmp_bin_op_type(ctx, ctx.builtins.type_bool);
+    case hir::expr::Builtin::LogicNot:    return id_op_type(ctx, ctx.builtins.type_bool);
+    case hir::expr::Builtin::Abort:
+    case hir::expr::Builtin::Todo:
+    case hir::expr::Builtin::Unreachable: return ctx.builtins.type_never;
+    }
+    cpputil::unreachable();
+}
+
+auto ki::res::arith_bin_op_type(Context& ctx, hir::Type_id operand) -> hir::Type_id
+{
+    return ctx.arena.hir.types.push(
+        hir::type::Function {
+            .parameter_types = { operand, operand },
+            .return_type     = operand,
+        });
+}
+
+auto ki::res::cmp_bin_op_type(Context& ctx, hir::Type_id operand) -> hir::Type_id
+{
+    return ctx.arena.hir.types.push(
+        hir::type::Function {
+            .parameter_types = { operand, operand },
+            .return_type     = ctx.builtins.type_bool,
+        });
+}
+
+auto ki::res::id_op_type(Context& ctx, hir::Type_id operand) -> hir::Type_id
+{
+    return ctx.arena.hir.types.push(
+        hir::type::Function {
+            .parameter_types = { operand },
+            .return_type     = operand,
+        });
 }
 
 auto ki::res::fresh_template_parameter_tag(Tags& tags) -> hir::Template_parameter_tag
@@ -55,17 +190,12 @@ auto ki::res::fresh_template_parameter_tag(Tags& tags) -> hir::Template_paramete
     return hir::Template_parameter_tag { ++tags.current_template_parameter_tag };
 }
 
-auto ki::res::error_type(Context const& ctx, lsp::Range range) -> hir::Type
-{
-    return hir::Type { .id = ctx.constants.type_error, .range = range };
-}
-
 auto ki::res::error_expression(Context const& ctx, lsp::Range range) -> hir::Expression
 {
     return hir::Expression {
         .variant  = db::Error {},
-        .type_id  = ctx.constants.type_error,
-        .mut_id   = ctx.constants.mut_yes,
+        .type_id  = ctx.builtins.type_error,
+        .mut_id   = ctx.builtins.mut_yes,
         .category = hir::Expression_category::Place,
         .range    = range,
     };
@@ -75,8 +205,8 @@ auto ki::res::unit_expression(Context const& ctx, lsp::Range range) -> hir::Expr
 {
     return hir::Expression {
         .variant  = hir::expr::Tuple {},
-        .type_id  = ctx.constants.type_unit,
-        .mut_id   = ctx.constants.mut_no,
+        .type_id  = ctx.builtins.type_unit,
+        .mut_id   = ctx.builtins.mut_no,
         .category = hir::Expression_category::Value,
         .range    = range,
     };
@@ -225,7 +355,7 @@ void ki::res::set_mut_solution(
 }
 
 auto ki::res::fresh_general_type_variable(Context& ctx, Block_state& state, lsp::Range origin)
-    -> hir::Type
+    -> hir::Type_id
 {
     auto const var_id  = hir::Type_variable_id { state.type_vars.size() };
     auto const type_id = ctx.arena.hir.types.push(hir::type::Variable { var_id });
@@ -237,11 +367,11 @@ auto ki::res::fresh_general_type_variable(Context& ctx, Block_state& state, lsp:
             .kind    = hir::Type_variable_kind::General,
         });
     (void)state.type_var_set.add();
-    return hir::Type { .id = type_id, .range = origin };
+    return type_id;
 }
 
 auto ki::res::fresh_integral_type_variable(Context& ctx, Block_state& state, lsp::Range origin)
-    -> hir::Type
+    -> hir::Type_id
 {
     auto const var_id  = hir::Type_variable_id { state.type_vars.size() };
     auto const type_id = ctx.arena.hir.types.push(hir::type::Variable { var_id });
@@ -253,7 +383,7 @@ auto ki::res::fresh_integral_type_variable(Context& ctx, Block_state& state, lsp
             .kind    = hir::Type_variable_kind::Integral,
         });
     (void)state.type_var_set.add();
-    return hir::Type { .id = type_id, .range = origin };
+    return type_id;
 }
 
 auto ki::res::fresh_mutability_variable(Context& ctx, Block_state& state, lsp::Range origin)
@@ -282,7 +412,7 @@ void ki::res::ensure_no_unsolved_variables(db::Database& db, Context& ctx, Block
         flatten_type(ctx, state, ctx.arena.hir.types[data.type_id]);
         if (not data.is_solved) {
             if (data.kind == hir::Type_variable_kind::Integral) {
-                set_type_solution(db, ctx, state, data.var_id, hir::type::Integer::I32);
+                set_type_solution(db, ctx, state, data.var_id, hir::type::Builtin::I32);
             }
             else {
                 auto message = std::format("Unsolved type variable: ?{}", data.var_id.get());

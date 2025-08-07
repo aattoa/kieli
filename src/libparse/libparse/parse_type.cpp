@@ -116,7 +116,6 @@ namespace {
     {
         switch (peek(ctx).type) {
         case lex::Type::Underscore:   return cst::Wildcard { extract(ctx).range };
-        case lex::Type::Exclamation:  return cst::type::Never { extract(ctx).range };
         case lex::Type::Paren_open:   return extract_tuple(ctx, extract(ctx));
         case lex::Type::Bracket_open: return extract_array_or_slice(ctx, extract(ctx));
         case lex::Type::Fn:           return extract_function_type(ctx, extract(ctx));
@@ -124,6 +123,7 @@ namespace {
         case lex::Type::Impl:         return extract_implementation_type(ctx, extract(ctx));
         case lex::Type::Ampersand:    return extract_reference(ctx, extract(ctx));
         case lex::Type::Asterisk:     return extract_pointer(ctx, extract(ctx));
+        case lex::Type::At:           return extract_builtin(ctx, extract(ctx));
         default:                      return parse_simple_path(ctx);
         }
     }

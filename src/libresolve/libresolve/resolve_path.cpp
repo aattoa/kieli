@@ -52,7 +52,7 @@ namespace {
         }
         if (auto const* alias_id = std::get_if<hir::Alias_id>(&symbol.variant)) {
             auto const& alias = resolve_alias(db, ctx, *alias_id);
-            return type_associated_environment(db, ctx, alias.type.id);
+            return type_associated_environment(db, ctx, alias.type_id);
         }
         return std::nullopt;
     }
@@ -164,7 +164,7 @@ auto ki::res::resolve_path(
         [&](ast::Type_id type_id) {
             auto type = resolve_type(db, ctx, state, env_id, ctx.arena.ast.types[type_id]);
 
-            if (auto associated_env_id = type_associated_environment(db, ctx, type.id)) {
+            if (auto associated_env_id = type_associated_environment(db, ctx, type)) {
                 return lookup(
                     db,
                     ctx,
@@ -174,12 +174,14 @@ auto ki::res::resolve_path(
                     path.segments);
             }
 
+            auto range = path.head().name.range; // TODO: fix range
+
             auto message = std::format(
                 "'{}' has no associated environment",
                 hir::to_string(ctx.arena.hir, db.string_pool, type));
-            ctx.add_diagnostic(lsp::error(type.range, std::move(message)));
+            ctx.add_diagnostic(lsp::error(range, std::move(message)));
 
-            db::Name name { .id = db.string_pool.make("(ERROR)"sv), .range = type.range };
+            db::Name name { .id = db.string_pool.make("(ERROR)"sv), .range = range };
             return new_symbol(ctx, name, db::Error {});
         },
     };

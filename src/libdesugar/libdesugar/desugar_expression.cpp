@@ -36,14 +36,14 @@ namespace {
             return passthrough;
         }
 
+        auto operator()(cst::Builtin const& builtin) const -> ast::Expression_variant
+        {
+            return ast::Builtin { .name = builtin.name };
+        }
+
         auto operator()(cst::Path const& path) const -> ast::Expression_variant
         {
             return desugar(ctx, path);
-        }
-
-        auto operator()(cst::Wildcard const& wildcard) const -> ast::Expression_variant
-        {
-            return ast::Wildcard { .range = wildcard.underscore_token };
         }
 
         auto operator()(cst::expr::Paren const& paren) const -> ast::Expression_variant

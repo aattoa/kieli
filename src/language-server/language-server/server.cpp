@@ -6,7 +6,6 @@
 #include <language-server/rpc.hpp>
 #include <language-server/server.hpp>
 #include <libformat/format.hpp>
-#include <libparse/parse.hpp>
 #include <libresolve/resolve.hpp>
 
 using namespace ki;
@@ -28,7 +27,6 @@ namespace {
     void debug_log(Server const& server, std::format_string<Args...> fmt, Args&&... args)
     {
         if (server.db.config.log_level == db::Log_level::Debug) {
-            std::print(std::cerr, "[debug] ");
             std::println(std::cerr, fmt, std::forward<Args>(args)...);
         }
     }
@@ -113,9 +111,8 @@ namespace {
     {
         auto const [doc_id, options] = formatting_params_from_json(server.db, std::move(params));
 
-        std::ostringstream stream;
-
-        auto range = fmt::format_document(stream, server.db, doc_id, db::ignore_sink, options);
+        auto stream = std::ostringstream {};
+        auto range  = fmt::format_document(stream, server.db, doc_id, db::ignore_sink, options);
 
         Json::Object edit;
         edit.try_emplace("range", range_to_json(range));
